@@ -10,13 +10,13 @@ const SpellRecordClass = preload("res://scripts/data/spell_record.gd")
 
 ## 清理幽灵记录（防御：编辑器/外部写入可能塞入 stage=0 空壳——
 ## 例：Godot 里编辑 .tres 删记录时块残留 + 数组引用 → 加载生成空对象）。
-## 正常记录 stage>=1；空壳 = stage<1 或 无名字/uid/统计的空对象。
+## 正常记录 stage>=1；空壳 = stage<1 或 无 uid/统计的空对象。
 func prune_empty() -> void:
 	var kept: Array[SpellRecord] = []
 	for r in records:
 		if r.stage < 1:
 			continue
-		if r.name == "" and r.uid == 0 and r.attempts == 0 and r.captures == 0 \
+		if r.uid == 0 and r.attempts == 0 and r.captures == 0 \
 				and r.practice_attempts == 0 and r.practice_captures == 0:
 			continue
 		kept.append(r)
@@ -33,13 +33,9 @@ func get_record(stage: int, phase_index: int, boss_index: int, character: int, d
 
 
 func get_or_create(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
-		uid: int = 0, phase_type: int = 0, phase_number: int = 1,
-		pname: String = "", p_phase_data: PhaseData = null, p_boss_scene: PackedScene = null,
-		p_boss_name: String = "") -> SpellRecord:
+		uid: int = 0, phase_type: int = 0, phase_number: int = 1) -> SpellRecord:
 	var r := get_record(stage, phase_index, boss_index, character, difficulty)
 	if r:
-		if p_boss_name != "" and r.boss_name == "":
-			r.boss_name = p_boss_name  # 旧记录自动补 Boss 名（配置入记录）
 		return r
 	r = SpellRecordClass.new()
 	r.stage = stage
@@ -50,10 +46,6 @@ func get_or_create(stage: int, phase_index: int, boss_index: int, character: int
 	if uid > 0: r.uid = uid
 	r.phase_type = phase_type
 	r.phase_number = phase_number
-	if pname != "": r.name = pname
-	if p_phase_data: r.phase_data = p_phase_data
-	if p_boss_scene: r.boss_scene = p_boss_scene
-	if p_boss_name != "": r.boss_name = p_boss_name
 	records.append(r)
 	return r
 
@@ -62,8 +54,7 @@ func record_attempt(stage: int, phase_index: int, boss_index: int, character: in
 		captured: bool, score: int, elapsed: float, extra: Dictionary = {}) -> void:
 	var r := get_or_create(stage, phase_index, boss_index, character, difficulty,
 		extra.get("uid", 0), extra.get("phase_type", 0),
-		extra.get("phase_number", 1), extra.get("name", ""),
-		extra.get("phase_data"), extra.get("boss_scene"), extra.get("boss_name", ""))
+		extra.get("phase_number", 1))
 	r.attempts += 1
 	if captured:
 		r.captures += 1

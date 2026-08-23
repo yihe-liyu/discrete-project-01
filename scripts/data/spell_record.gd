@@ -25,15 +25,8 @@ enum PhaseType { NONSPELL, SPELL }
 @export var phase_number: int = 1
 ## 难度
 @export var difficulty: int = 1
-## 符卡名（非符也存）
-@export var name: String = ""
-@export var boss_name: String = ""  ## Boss 名（左上角显示；练习用）
 ## 第几个 Boss（多 Boss 关卡区分记录；0 = 第一个/唯一）
 @export var boss_index: int = 0
-## 战斗配置（血量/脚本/时限等）——解锁时自动存，练习菜单直接使用（无需 CardDef）
-@export var phase_data: PhaseData
-## Boss 视觉——解锁时自动存（练习时 Boss 外观）
-@export var boss_scene: PackedScene
 ## 尝试次数（普通模式）
 @export var attempts: int = 0
 ## 收取次数（普通模式）

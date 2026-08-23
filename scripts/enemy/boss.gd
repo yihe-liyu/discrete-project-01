@@ -39,6 +39,10 @@ var _cleared: bool = false
 
 func current_phase() -> PhaseData: return _current_phase
 
+## 关卡上下文（含本次时钟 ctx.runner —— 练习/工作台清理用）。只读。
+var ctx: StageContext:
+	get: return _ctx
+
 
 ## Boss 残血（供命中音效等）：血量 < 当前阶段满血的 45%，且非无敌/非时符
 func is_low_hp() -> bool:
@@ -55,13 +59,27 @@ func set_exit_controlled() -> void:
 	_exit_controlled = true
 
 
-## 延续战斗计数：同一 Boss 多段战斗（如道中战 + 面战）时，把前一段已打的阶段编号接续过来。
-## 例：道中打完 1 个非符 → 面战 continue_from(1, 0) → 面非符是"非符2"、phase_index 从 1 开始。
-## （同一角色的多段战斗共享 boss_index=0；不同角色 Boss 才用 boss_index 区分）
-func continue_from(prev_non: int, prev_spell: int) -> void:
-	_non_count = prev_non
-	_spell_count = prev_spell
-	_phase_index = prev_non + prev_spell - 1  # start_phase 里 _phase_index += 1 → 接续到下一索引
+## 阶段序号 + 第几张非符/符卡，直接从 boss_data.phases 推导（花名册唯一真相，无计数器/continue_from）。
+## 同一 Boss 分多段打（道中 + 面战）时，每段的 BossData 都带完整阶段链，start_phase 一查即知序号。
+func _locate_phase(data: PhaseData) -> void:
+	var arr: Array = boss_data.phases if boss_data else []
+	for i in arr.size():
+		if arr[i] == data:
+			_phase_index = i
+			_non_count = 0
+			_spell_count = 0
+			for j in range(i + 1):
+				if arr[j].uid != 0:
+					_spell_count += 1
+				else:
+					_non_count += 1
+			return
+	# 未在阶段链找到（异常/老记录）→ 回退旧计数器，避免崩溃/撞键
+	_phase_index += 1
+	if data.uid != 0:
+		_spell_count += 1
+	else:
+		_non_count += 1
 
 
 func setup(data: BossData, p_ctx: StageContext = null) -> void:
@@ -155,7 +173,7 @@ func start_phase(data: PhaseData) -> void:
 	if GameState.is_practice_mode:
 		_phase_index = GameState.practice_phase_index  # 练习：用记录键（正篇阶段序），不递增
 	else:
-		_phase_index += 1
+		_locate_phase(data)  # 阶段序号/第几张从 boss_data.phases 推导（花名册唯一真相）
 	_current_phase = data
 	_elapsed = 0.0
 	_bonus = data.bonus
@@ -171,16 +189,7 @@ func start_phase(data: PhaseData) -> void:
 			child.visible = true
 			break
 	
-	# 计数
-	if data.uid != 0:
-		_spell_count += 1
-	else:
-		_non_count += 1
-	
 	_pid = PhaseIdentity.from_phase(data, _stage_id, _phase_index, _spell_count, _non_count, boss_index)
-	if boss_data:
-		_pid.boss_scene = boss_data.visual  # 练习用 Boss 视觉（随解锁存入记录；测试直构无 setup 时跳过）
-		_pid.boss_name = boss_data.boss_name  # Boss 名（左上角显示用）
 	if not GameState.is_practice_mode:
 		GameState.unlock_spell(_pid)
 		GameState.record_spell(_pid, false, 0, 0.0)  # 进入符卡即记一次尝试（挑战开始）

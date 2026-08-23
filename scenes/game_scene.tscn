@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/bgm_hint.tscn" id="11_bgm_hint"]
 [ext_resource type="Script" uid="uid://dhos0505bof7l" path="res://scripts/components/rect_outline.gd" id="12_rect_outline"]
 [ext_resource type="Shader" uid="uid://dbi40qjrrq0q4" path="res://gdshader/water_flow.gdshader" id="13_water"]
+[ext_resource type="Script" uid="uid://c2fb36xommdvt" path="res://scripts/item/item_pool.gd" id="14_pool"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
 atlas = ExtResource("6_mw25s")
@@ -117,6 +118,10 @@ unique_name_in_owner = true
 unique_name_in_owner = true
 position = Vector2(448, 840)
 player_data = ExtResource("6_b5spy")
+
+[node name="ItemPool" type="Node" parent="World" unique_id=1710100000]
+unique_name_in_owner = true
+script = ExtResource("14_pool")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=476199]
 limit_left = 0

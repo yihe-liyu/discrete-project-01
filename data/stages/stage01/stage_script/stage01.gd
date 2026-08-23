@@ -11,10 +11,6 @@ const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 const REIMU_PROFILE = preload("res://data/dialogue/profile/reimu_profile.tres")
 const KA_PROFILE = preload("res://data/dialogue/profile/ka_profile.tres")
 
-const BOSS_POINT = preload("res://data/enemy_visual/boss/stage01/kamorui.tscn")
-
-const NON_MID01 = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
-const NON01 = preload("res://data/stages/stage01/phase/non01/non01.tres")
 #const SPELL01 = [preload("res://data/stages/stage01/phase/spell01/spell001.tres"),\
 				 #preload("res://data/stages/stage01/phase/spell01/spell002.tres"),\
 				 #preload("res://data/stages/stage01/phase/spell01/spell003.tres"),\
@@ -23,6 +19,7 @@ const NON01 = preload("res://data/stages/stage01/phase/non01/non01.tres")
 ## 最终 Boss（战前对话中进场）：对话事件回调（_on_dialogue_event）需要跨函数访问
 ## _boss_holder 用数组容器（闭包/回调共享引用）
 var _kamorui: BossData
+var _kamorui_mid: BossData
 var _boss_holder: Array = [null]
 
 func start(p_ctx: StageContext, p_target: Node2D = null):
@@ -110,11 +107,15 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		)
 
 	# ── Boss ──
+	# 唯一权威：卡摩瑞的立绘 + 阶段列表都从花名册取（道中非符 + 面非符）。
+	var kamorui := BossCatalog.boss(1, 0)
+	var kamorui_phases := kamorui.phases_for_difficulty(GameState.selected_difficulty)
 	var boss_holder := [null]
-	var kamorui_mid := BossData.new().name("卡摩瑞").look(BOSS_POINT).phase(NON_MID01)
+	_kamorui_mid = BossData.new().name("？？？").look(kamorui.visual) \
+		.phase(kamorui_phases[0])  # 完整阶段链，start_phase 定位序号
 
 	tl.at(35.0).do(func():
-		boss_holder[0] = StageManager.spawn_boss(kamorui_mid, Vector2(-50, 500), ctx)
+		boss_holder[0] = StageManager.spawn_boss(_kamorui_mid, Vector2(-50, 500), ctx)
 		var b := boss_holder[0] as Boss
 		var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 		tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -122,7 +123,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	)
 
 	# 非符 1
-	tl.at(38.0).start_phase(func(): return boss_holder[0], NON_MID01)
+	tl.at(38.0).start_phase(func(): return boss_holder[0], _kamorui_mid.phases[0])
 	# ← 非符 被击破后 1s → 符卡（phase 继承 wait 偏移，击破后激活）
 	#tl.wait(1.0).start_phase(func(): return boss_holder[0], diff_pick(SPELL03))
 	# ← 符卡被击破后 2s → 退场
@@ -207,7 +208,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		d.bubble("卡摩瑞", Vector2(-650, 250))
 		d.line("哦呀，弱小的人类怎么会在永夜出门？", {"emotion": "疑惑"})
 		d.line("快回家去吧。")
-		d.line("虽然我只是蝙蝠，但是再不走的话…", {"emotion": "耍帅"})
+		d.line("虽然卡摩瑞我只是蝙蝠，但是再不走的话…", {"emotion": "耍帅"})
 		d.say(REIMU_PROFILE, "已经是人形了却不好好长眼睛啊。")
 		d.line("把日食当夜晚吗？", {"emotion": "疑惑"})
 		d.line("我是巫女，我若是回家了，谁来解决异变呐，小小的蝙蝠哟？", {"emotion": "叹气"})
@@ -216,14 +217,13 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		d.line("所以让开吧？", {"emotion": "笑"})
 		d.say(KA_PROFILE, "不，不行。\n如果真见到了传说中的巫女，怎么能不打一场！", {"emotion": "震惊"})
 		d.event("bgm_switch")  # 行间事件：该一句说完 → 切 Boss 主题曲
-		d.wait(0.5)
 		d.line("而且\n在黑暗中，我可更胜一筹！", {"emotion": "耍帅"})
 		d.event("boss_fight")  # 行间事件：最后一句说完 → Boss 开战
 		ctx.play_dialogue_steps(d.steps)
 	)
 	
-	_kamorui = BossData.new().name("卡摩瑞").look(BOSS_POINT) \
-	.phase(NON01) #.phase(diff_pick(SPELL03))
+	_kamorui = BossData.new().name("卡摩瑞").look(kamorui.visual) \
+	.phase(kamorui_phases[1]) #.phase(diff_pick(SPELL03))
 
 	super.start(ctx, target)
 
@@ -242,8 +242,7 @@ func _on_dialogue_event(event_name: String) -> void:
 			if _boss_holder[0] == null and ctx and ctx.active():
 				_boss_holder[0] = StageManager.spawn_boss(_kamorui, Vector2(1000, 500), ctx)
 				var b := _boss_holder[0] as Boss
-				# 同一 Boss（卡摩瑞）的两段战斗：延续道中计数 → 面非符是"非符2"、记录 phase_index 接续
-				b.continue_from(1, 0)
+				# 同一 Boss（卡摩瑞）：段 BossData 带完整阶段链，start_phase 自动定位面非符为 index 1
 				var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 				tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 				tw.tween_property(b, "global_position", Vector2(GameConfig.FIELD_CENTER_X, 250), 1.5)
@@ -255,7 +254,7 @@ func _on_dialogue_event(event_name: String) -> void:
 			# 最后一句说完 → Boss 直接开战（start_phase 不冻结时间轴，绝对时刻事件照常）
 			var b := _boss_holder[0] as Boss
 			if b and b.current_phase() == null:
-				b.start_phase(NON01)
+				b.start_phase(_kamorui.phases[1])  # 面非符，序号 1（由完整链推导）
 		_:
 			pass  # 未处理事件静默忽略
 

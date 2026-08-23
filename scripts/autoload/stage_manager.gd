@@ -128,6 +128,24 @@ func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -
 func spawn_bullet(data: BulletData, position: Vector2, direction: Vector2) -> Bullet:
 	return BulletManager.shoot_enemy_bullet(data, position, direction)
 
+## 开一场"仅单个阶段"的战（符卡练习）：自建一个可运行的协程时钟作 ctx，
+## 生成对应 Boss 并直接让它进入该阶段。
+## 与 load_stage（整关编排）不同：本方法只服务"点杀单阶段"，故自建 clock，不复用整关脚本。
+## 返回 Boss；Boss.ctx.runner 即本次时钟（可 stop/queue_free 清理）。
+func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: String, position: Vector2) -> Boss:
+	var runner := CoroutineRunner.new()
+	runner.run(func(): return true)  # 保活：让 ctx.runner 保持 is_running（ctx.active/clock 依赖）
+	var ctx := StageContext.new(runner)
+	var single := BossData.new()
+	single.boss_name = boss_name
+	single.visual = boss_scene
+	single.phases = [p_phase]
+	var boss := spawn_boss(single, position, ctx) as Boss
+	if boss:
+		boss.get_parent().add_child(runner)  # 把时钟放进场景树（Boss 所在 World），随场景一起释放
+		boss.start_phase(p_phase)
+	return boss
+
 ## 把关卡上下文注入给场景中的自机（供系统操作服务）
 func _inject_player_ctx(p_ctx: StageContext) -> void:
 	var scene := get_tree().current_scene

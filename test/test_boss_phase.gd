@@ -190,11 +190,12 @@ func _mk_phase(p_name: String) -> PhaseData:
 
 func test_phases_for_difficulty_groups():
 	var bd := BossData.new()
-	bd.phase(_mk_phase("N1")).easy_phase(_mk_phase("E1")).hard_phase(_mk_phase("H1")).lunatic_phase(_mk_phase("L1"))
+	bd.phase(_mk_phase("N1")).easy_phase(_mk_phase("E1")).hard_phase(_mk_phase("H1")).lunatic_phase(_mk_phase("L1")).extra_phase(_mk_phase("X1"))
 	assert_eq(bd.phases_for_difficulty(1)[0].name, "N1", "Normal 取 phases")
 	assert_eq(bd.phases_for_difficulty(0)[0].name, "E1", "Easy 取 phases_easy")
 	assert_eq(bd.phases_for_difficulty(2)[0].name, "H1", "Hard 取 phases_hard")
 	assert_eq(bd.phases_for_difficulty(3)[0].name, "L1", "Lunatic 取 phases_lunatic")
+	assert_eq(bd.phases_for_difficulty(4)[0].name, "X1", "Extra 取 phases_extra")
 
 func test_phases_for_difficulty_fallback():
 	var bd := BossData.new()
@@ -204,6 +205,11 @@ func test_phases_for_difficulty_fallback():
 	assert_eq(bd.phases_for_difficulty(2)[0].name, "N1", "Hard 空回退 Normal")
 	assert_eq(bd.phases_for_difficulty(3)[0].name, "N1", "Lunatic 空回退 Normal")
 	assert_eq(bd.phases_for_difficulty(99)[0].name, "N1", "未知难度回退 Normal")
+	assert_eq(bd.phases_for_difficulty(4)[0].name, "N1", "Extra 空回退 Normal")
+
+func test_difficulty_name_extra():
+	assert_eq(BossData.difficulty_name(4), "Extra", "难度 4 应叫 Extra")
+	assert_eq(BossData.difficulty_name(1), "Normal", "难度 1 应叫 Normal")
 
 func test_validate_checks_all_difficulty_groups():
 	var bd := BossData.new()
@@ -222,7 +228,7 @@ func test_boss_index_in_phase_identity():
 	assert_eq(pid2.boss_index, 0, "默认 boss_index = 0")
 
 
-## 同一 Boss 多段战斗（道中战 + 面战）：continue_from 延续阶段编号 → 记录连续、不撞键
+## 同一 Boss 多段战斗（道中战 + 面战）：段 BossData 带完整阶段链，start_phase 从链定位序号 → 记录连续、不撞键
 ## （回归：stage01 最终 Boss 曾漏设延续，导致 NON01 与道中非符同键被吞 / 或误用 boss_index 拆成两个 Boss）
 func test_same_boss_continued_phases_are_separate_records():
 	GameState.selected_character = 0
@@ -233,10 +239,11 @@ func test_same_boss_continued_phases_are_separate_records():
 	var non_mid: PhaseData = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
 	var non01: PhaseData = preload("res://data/stages/stage01/phase/non01/non01.tres")
 
-	# 道中 Boss：boss_index 默认 0，非符1 → (phase_index 0)
+	# 道中 Boss：同一 BossData 带完整阶段链 → non_mid 在链上定位为 (phase_index 0, 非符1)
+	var bd := BossData.new().name("卡摩瑞").phase(non_mid).phase(non01)
 	var boss1: Boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss1)
-	boss1.setup(BossData.new().name("卡摩瑞"), null)
+	boss1.setup(bd, null)
 	boss1._stage_id = stage_id
 	boss1.start_phase(non_mid)
 	var mid_rec: SpellRecord = GameState.spell_book.get_record(stage_id, 0, 0, 0, 1)
@@ -244,12 +251,11 @@ func test_same_boss_continued_phases_are_separate_records():
 	if mid_rec:
 		assert_eq(mid_rec.phase_number, 1, "道中非符是'非符1'")
 
-	# 面 Boss：continue_from(1, 0) → 同一 boss_index=0，阶段接续 → (phase_index 1, 非符2)
+	# 面 Boss：同一完整链 BossData，start_phase(non01) 自动定位 → (phase_index 1, 非符2)，无需 continue_from
 	var boss2: Boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss2)
-	boss2.setup(BossData.new().name("卡摩瑞"), null)
+	boss2.setup(bd, null)
 	boss2._stage_id = stage_id
-	boss2.continue_from(1, 0)
 	boss2.start_phase(non01)
 	var final_rec: SpellRecord = GameState.spell_book.get_record(stage_id, 1, 0, 0, 1)
 	assert_not_null(final_rec, "面非符应入簿 (phase 1, boss_index 0)")

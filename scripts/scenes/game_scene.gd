@@ -7,15 +7,12 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
-var _practice_runner: CoroutineRunner
 
 
 func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
-	var item_pool: Node = load("res://scripts/item/item_pool.gd").new()
-	item_pool.name = "ItemPool"
-	%World.add_child(item_pool)
+	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
 
 	GameEvents.player_death.connect(_on_player_death)
 	GameManager.game_state_changed.connect(_on_game_state_changed)
@@ -45,27 +42,20 @@ func _start_normal_game() -> void:
 func _start_practice_game() -> void:
 	_load_background(GameState.practice_background)
 
-	_practice_runner = CoroutineRunner.new()
-	add_child(_practice_runner)
-	_practice_runner.run(func(): return true)
-	var ctx := StageContext.new(_practice_runner)
-	var player := %Player
-	if player:
-		player.ctx = ctx
-
 	var phase: PhaseData = GameState.practice_phase
 	if not phase:
 		push_error("GameScene: practice_phase 未设置")
 		return
 
-	# 用记录里的阶段配置 + Boss 视觉直接构建练习用 Boss
-	var single := BossData.new()
-	single.boss_name = GameState.practice_name
-	single.visual = GameState.practice_boss_scene
-	single.phases = [phase]
-
-	var boss := StageManager.spawn_boss(single, Vector2(GameConfig.FIELD_CENTER_X, 240), ctx)
-	boss.start_phase(phase)
+	var boss := StageManager.start_spell_card(
+		phase, GameState.practice_boss_scene, GameState.practice_name,
+		Vector2(GameConfig.FIELD_CENTER_X, 240)
+	)
+	if not boss:
+		return
+	var player := %Player
+	if player:
+		player.ctx = boss.ctx
 	boss.phase_cleared.connect(func(_c: bool, _b: int): boss.die())
 	GameEvents.boss_defeated.connect(_on_practice_cleared)
 
@@ -106,10 +96,6 @@ func _exit_tree():
 	if _background_instance and is_instance_valid(_background_instance):
 		_background_instance.queue_free()
 		_background_instance = null
-	if _practice_runner and is_instance_valid(_practice_runner):
-		_practice_runner.stop()
-		_practice_runner.queue_free()
-		_practice_runner = null
 	StageManager.stop_stage()
 
 
@@ -149,10 +135,11 @@ func _on_stage_cleared():
 
 
 func _on_practice_cleared(_boss: Node) -> void:
-	if _practice_runner:
-		_practice_runner.stop()
-		_practice_runner.queue_free()
-		_practice_runner = null
+	if _boss is Boss:
+		var runner: CoroutineRunner = (_boss as Boss).ctx.runner
+		if runner and is_instance_valid(runner):
+			runner.stop()
+			runner.queue_free()
 	GameEvents.boss_defeated.disconnect(_on_practice_cleared)
 	GameState.end_practice()
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)

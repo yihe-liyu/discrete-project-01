@@ -92,31 +92,9 @@ func test_open_reduce_expires():
 	assert_between(boss.hp, 898, 902, "减伤结束后扣满 100（float 容差）")
 
 
-# ═══════════ boss_name：记录补全 ═══════════
-
-func test_record_boss_name_default_empty():
-	var rec := SpellRecord.new()
-	assert_eq(rec.boss_name, "", "新记录 boss_name 默认空")
-
-
-func test_record_boss_name_auto_fill():
-	# 旧记录（无 boss_name）在解锁/击破时自动补
-	var book := SpellRecordBook.new()
-	var r0 := book.get_or_create(1, 2, 0, 0, 1, 303, 1, 2, "黄粱「不可测之梦」")
-	assert_eq(r0.boss_name, "", "旧记录无 boss_name")
-	var r1 := book.get_or_create(1, 2, 0, 0, 1, 303, 1, 2, "黄粱「不可测之梦」", null, null, "卡摩瑞")
-	assert_eq(r1.boss_name, "卡摩瑞", "解锁时自动补 Boss 名")
-
-
-func test_practice_label_prefers_boss_name():
-	var rec := SpellRecord.new()
-	rec.name = "黄粱「不可测之梦」"
-	rec.boss_name = "卡摩瑞"
-	var label: String = rec.boss_name if rec.boss_name != "" else rec.name
-	assert_eq(label, "卡摩瑞", "练习名优先 Boss 名")
-	rec.boss_name = ""
-	var label2: String = rec.boss_name if rec.boss_name != "" else rec.name
-	assert_eq(label2, "黄粱「不可测之梦」", "旧记录（无 boss_name）回退符卡名")
+# ═══════════ 瘦身：记录不再存卡定义快照 ═══════════
+# name / boss_name / phase_data / boss_scene 已从 SpellRecord 移除，
+# 卡定义统一由 BossCatalog 按 (stage, boss_index, phase_index, difficulty) 提供。
 
 
 func test_practice_miss_records_failure():
@@ -132,7 +110,7 @@ func test_practice_miss_records_failure():
 	phase.hp = 1000
 	phase.time_limit = 10.0
 	var book: SpellRecordBook = GameState.spell_book
-	book.get_or_create(99, 7, 0, 0, 1, 303, 1, 2, "黄粱")
+	book.get_or_create(99, 7, 0, 0, 1, 303, 1, 2)
 	GameState.is_practice_mode = true
 	GameState.start_practice(phase, null, "卡摩瑞", 99, 7)
 	var boss = load("res://scripts/enemy/boss.gd").new()

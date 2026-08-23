@@ -30,7 +30,7 @@ func _init_enemy() -> void:
 		bullet.coroutine_script = null
 		var dir = Vector2.ONE.rotated(RNG.randf_range(-PI, PI))
 		for i in diff_pick([1, 2, 2, 3]):
-			bullet.velocity = Vector2(0, 150 + i * 150)
+			bullet.velocity = Vector2(0, 100 + i * 100)
 			ctx.bullets.shoot_spread(bullet, diff_pick([10, 14, 20, 20]),
 				TAU, dir,
 				target.global_position, AssetRegistry.sounds["shoot"])
