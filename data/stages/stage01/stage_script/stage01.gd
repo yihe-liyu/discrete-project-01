@@ -8,8 +8,7 @@ const ENEMY04 = preload("res://data/stages/stage01/enemy/enemy04.gd")
 
 const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 
-const REIMU_PROFILE = preload("res://data/dialogue/profile/reimu_profile.tres")
-const KA_PROFILE = preload("res://data/dialogue/profile/ka_profile.tres")
+const STAGE01_INTRO = preload("res://data/dialogue/stage01/intro.gd")
 
 #const SPELL01 = [preload("res://data/stages/stage01/phase/spell01/spell001.tres"),\
 				 #preload("res://data/stages/stage01/phase/spell01/spell002.tres"),\
@@ -195,43 +194,15 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 			_spawn_mid_enemy(1, i, false, 1)
 		)
 	
-	# 战前对话（台词内联 DSL，已抽成独立构建函数 _build_stage01_intro）
+	# 战前对话（独立构建脚本 data/dialogue/stage01/intro.gd）
 	tl.at(93).do(func():
-		ctx.play_dialogue_steps(_build_stage01_intro().steps)
+		ctx.play_dialogue_steps(STAGE01_INTRO.build().steps)
 	)
 	
 	_kamorui = BossData.new().name("卡摩瑞").look(kamorui.visual) \
 	.phase(kamorui_phases[1]) #.phase(diff_pick(SPELL03))
 
 	super.start(ctx, target)
-
-
-## 第一面战前对话编排（台词内联 DSL）—— 只构建步骤，不做任何 ctx/编排（纯函数化，可单测/可预览）
-## 灵梦左出场 → 卡摩瑞右出场 → 台词 → 行间切 BGM → 结束开打
-static func _build_stage01_intro() -> DialogueSteps:
-	var d := DialogueSteps.new()
-	d.enter(REIMU_PROFILE, Vector2(50, 230))
-	d.bubble("灵梦", Vector2(-150, 250))
-	d.line("啊，什么线索都没有，怎么解决异变啊…")
-	d.line("除非…\n刚才的小妖怪～", {"emotion": "笑"})
-	d.event("boss_enter")  # ← r2 说完：卡摩瑞本体（Boss 实体）进场
-	d.wait(2.0)
-	d.enter(KA_PROFILE, Vector2(550, 230))
-	d.bubble("卡摩瑞", Vector2(-650, 250))
-	d.line("哦呀，弱小的人类怎么会在永夜出门？", {"emotion": "疑惑"})
-	d.line("快回家去吧。")
-	d.line("虽然卡摩瑞我只是蝙蝠，但是再不走的话…", {"emotion": "耍帅"})
-	d.say(REIMU_PROFILE, "已经是人形了却不好好长眼睛啊。")
-	d.line("把日食当夜晚吗？", {"emotion": "疑惑"})
-	d.line("我是巫女，我若是回家了，谁来解决异变呐，小小的蝙蝠哟？", {"emotion": "叹气"})
-	d.say(KA_PROFILE, "啊，竟然遇到巫女了吗？", {"emotion": "震惊"})
-	d.say(REIMU_PROFILE, "唉，肯定没有线索啦。")
-	d.line("所以让开吧？", {"emotion": "笑"})
-	d.say(KA_PROFILE, "不，不行。\n如果真见到了传说中的巫女，怎么能不打一场！", {"emotion": "震惊"})
-	d.event("bgm_switch")  # 行间事件：该一句说完 → 切 Boss 主题曲
-	d.line("而且\n在黑暗中，我可更胜一筹！", {"emotion": "耍帅"})
-	d.event("boss_fight")  # 行间事件：最后一句说完 → Boss 开战
-	return d
 
 
 ## 信号生命周期约定：场景 _exit_tree 统一断开 autoload 连接

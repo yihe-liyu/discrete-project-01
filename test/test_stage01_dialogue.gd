@@ -2,11 +2,11 @@ extends GutTest
 ## 第一面战前对话构建函数测试：验证抽出的 _build_stage01_intro() 内容（台词/说话者/表情/事件顺序）
 ## 纯逻辑（.new() 无树），不改游戏运行时；顺带校验 stage01.gd 能正常解析。
 
-const STAGE01 = preload("res://data/stages/stage01/stage_script/stage01.gd")
+const STAGE01_INTRO = preload("res://data/dialogue/stage01/intro.gd")
 
 
 func _intro() -> DialogueSteps:
-	return STAGE01._build_stage01_intro()
+	return STAGE01_INTRO.build()
 
 
 ## 抽取所有 LINE 步骤的非空台词文本（同屏多气泡按序并入）
