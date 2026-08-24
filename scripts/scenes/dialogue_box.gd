@@ -63,6 +63,10 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	if _is_closing or not _runner:
 		return
+	# 暂停（暂停菜单）时冻结对话计时，恢复后从暂停处继续；
+	# 保留 PROCESS_MODE_ALWAYS 让淡出动画照常，仅停掉 _runner.tick
+	if GameManager.current_state == GameManager.AppState.PAUSED:
+		return
 	# 步骤计时（WAIT / auto_advance）
 	_runner.tick(delta)
 	if not _input_ready:
