@@ -45,6 +45,35 @@ func say(profile: CharacterProfile, text: String, opts: Dictionary = {}) -> Dial
 	return line(text, opts)
 
 
+## 一屏台词（多人）—— 数组每项：谁 / 什么表情 / 说什么话。
+## 每项可写为数组 [speaker, emotion, text]，或字典 {speaker, emotion, text}。
+## text 为空 → 该角色在场但沉默（自动变暗）；多气泡 → 同屏多人（齐声/一起在场）。
+## 延续说话者 = 最后一个真正开口的（text 非空），方便后续用 line() 继续。
+func screen(specs: Array, opts: Dictionary = {}) -> DialogueSteps:
+	assert(not specs.is_empty(), "DialogueSteps.screen: specs 不能为空")
+	var line_data := DialogueLine.new()
+	line_data.skippable = opts.get("skippable", true)
+	line_data.auto_advance = opts.get("auto_advance", 0.0)
+	for spec in specs:
+		var b := DialogueBubble.new()
+		if spec is Array:
+			if spec.size() > 0: b.speaker = spec[0]
+			if spec.size() > 1: b.emotion = spec[1]
+			if spec.size() > 2: b.text = spec[2]
+		else:
+			b.speaker = spec.get("speaker")
+			b.emotion = spec.get("emotion", "通常")
+			b.text = spec.get("text", "")
+		if b.emotion.is_empty(): b.emotion = "通常"
+		line_data.bubbles.append(b)
+		if b.speaker and not b.text.is_empty():
+			_current_speaker = b.speaker
+	var s := DialogueStep.new()
+	s.type = DialogueStep.Type.LINE
+	s.line_data = line_data
+	return _add(s)
+
+
 func _build_line(speaker: CharacterProfile, text: String, opts: Dictionary) -> DialogueLine:
 	var line_data := DialogueLine.new()
 	var bubble_data := DialogueBubble.new()  # 不叫 bubble：避免遮蔽 DSL 的 bubble() 方法

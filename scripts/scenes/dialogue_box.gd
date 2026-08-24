@@ -165,18 +165,23 @@ func _render_state(state: StageState, speakers: Array, duration: float = 0.0) ->
 
 
 func _apply_actor(info: Dictionary, actor: ActorState, speakers: Array, pos_dur: float) -> void:
-	info.node.visible = actor.visible
+	var node: Control = info.node
+	if actor.visible != info.get("last_visible", true):
+		node.visible = actor.visible
+		info["last_visible"] = actor.visible
 	if not actor.visible:
 		return
 	info.profile = actor.profile
 
-	# 位置渐变
-	var tw_pos := create_tween().set_parallel(true)
-	tw_pos.tween_property(info.node, "position", actor.position, pos_dur)\
-		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+	# 位置渐变：仅在目标位置变化时重建（去无操作 Tween）
+	if info.get("last_pos", node.position) != actor.position:
+		var tw_pos := create_tween().set_parallel(true)
+		tw_pos.tween_property(node, "position", actor.position, pos_dur)\
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+		info["last_pos"] = actor.position
 
 	# 翻转（立绘贴图）
-	var tex := info.node.get_child(0) as TextureRect
+	var tex := node.get_child(0) as TextureRect
 	if tex:
 		tex.flip_h = actor.flip_h
 
@@ -186,12 +191,14 @@ func _apply_actor(info: Dictionary, actor: ActorState, speakers: Array, pos_dur:
 		target_mod = Color.WHITE if speakers.has(actor.char_name) else Color(0.35, 0.35, 0.35)
 	else:
 		target_mod = Color(actor.light, actor.light, actor.light)
-	var tw_mod := create_tween()
-	tw_mod.tween_property(info.node, "modulate", target_mod, MOD_TWEEN_DEFAULT)
+	if target_mod != info.get("last_mod", node.modulate):
+		var tw_mod := create_tween()
+		tw_mod.tween_property(node, "modulate", target_mod, MOD_TWEEN_DEFAULT)
+		info["last_mod"] = target_mod
 
 	# UI 内相对排序（讲话者立绘置顶）
 	var is_speaker: bool = speakers.has(actor.char_name)
-	info.node.z_index = 10 if is_speaker else 0
+	node.z_index = 10 if is_speaker else 0
 
 	# 表情
 	_apply_emotion(info, actor.emotion)
@@ -199,6 +206,8 @@ func _apply_actor(info: Dictionary, actor: ActorState, speakers: Array, pos_dur:
 # ═══ 表情切换 ═══
 
 func _apply_emotion(info: Dictionary, emotion: String) -> void:
+	if info.get("last_emotion", "通常") == emotion:
+		return  # 表情未变，不重复设贴图
 	var profile: CharacterProfile = info.get("profile")
 	if not profile:
 		return
@@ -208,6 +217,7 @@ func _apply_emotion(info: Dictionary, emotion: String) -> void:
 		var key := emotion if not emotion.is_empty() else "通常"
 		if profile.portraits.has(key):
 			tex.texture = profile.portraits[key]
+	info["last_emotion"] = emotion
 
 # ═══ 立绘节点 ═══
 
@@ -231,7 +241,7 @@ func _add_portrait(actor: ActorState) -> Dictionary:
 	# 新角色淡入
 	ctrl.modulate.a = 0.0
 	_root.add_child(ctrl)
-	return {node = ctrl, profile = profile}
+	return {node = ctrl, profile = profile, last_pos = ctrl.position, last_mod = ctrl.modulate, last_visible = true, last_emotion = "通常"}
 
 
 # ═══ 清理 ═══

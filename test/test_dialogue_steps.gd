@@ -270,3 +270,58 @@ func test_runner_line_applies_emotion():
 	d.line("在黑暗中", {"emotion": "耍帅"})
 	runner.start(d.steps)
 	assert_eq(runner.state.actor("卡摩瑞").emotion, "耍帅", "LINE 步骤应用表情")
+
+
+# ═══════════ screen() 一屏多泡 ═══════════
+
+## screen 单泡：一项 → 一个气泡，speaker/text/emotion 正确
+func test_screen_single_bubble():
+	var r := _make_profile("灵梦")
+	var d := DialogueSteps.new()
+	d.screen([[r, "笑", "单句"]])
+	assert_eq(d.steps.size(), 1, "一个 LINE 步骤")
+	var line: DialogueLine = d.steps[0].line_data
+	assert_eq(line.bubbles.size(), 1, "一个气泡")
+	assert_eq(line.bubbles[0].speaker.char_name, "灵梦", "说话者")
+	assert_eq(line.bubbles[0].text, "单句", "台词")
+	assert_eq(line.bubbles[0].emotion, "笑", "表情")
+
+
+## screen 多泡：两人同屏，一人说话一个沉默（空 text = 在场但暗）
+func test_screen_multi_bubble_silent_dim():
+	var r := _make_profile("灵梦")
+	var k := _make_profile("卡摩瑞")
+	var d := DialogueSteps.new()
+	d.screen([[r, "通常", "说话"], [k, "震惊", ""]])
+	assert_eq(d.steps.size(), 1, "一个 LINE 步骤")
+	var line: DialogueLine = d.steps[0].line_data
+	assert_eq(line.bubbles.size(), 2, "两个气泡")
+	var state := StageState.new()
+	var speakers := state.apply_line(line)
+	assert_eq(speakers, ["灵梦"], "只有开口者算说话者")
+	assert_eq(state.actor("灵梦").light, 1.0, "说话者亮")
+	assert_eq(state.actor("卡摩瑞").visible, true, "沉默者也应在场")
+	assert_eq(state.actor("卡摩瑞").light, 0.35, "沉默在场者变暗")
+	assert_eq(state.actor("卡摩瑞").emotion, "震惊", "沉默者表情仍应用")
+
+
+## screen 延续说话者 = 最后一个真正开口的（text 非空）
+func test_screen_continuation_picks_last_speaker():
+	var r := _make_profile("灵梦")
+	var k := _make_profile("卡摩瑞")
+	var d := DialogueSteps.new()
+	d.screen([[r, "通常", "灵梦说话"], [k, "震惊", ""]])  # 卡摩瑞没开口
+	d.line("下一句")  # 应延续灵梦
+	var line: DialogueLine = d.steps[1].line_data
+	assert_eq(line.bubbles[0].speaker.char_name, "灵梦", "延续说话者应为灵梦")
+
+
+## screen 支持字典 spec 形式
+func test_screen_dict_spec():
+	var r := _make_profile("灵梦")
+	var d := DialogueSteps.new()
+	d.screen([{"speaker": r, "text": "字典句", "emotion": "叹气"}])
+	var line: DialogueLine = d.steps[0].line_data
+	assert_eq(line.bubbles[0].speaker.char_name, "灵梦", "说话者")
+	assert_eq(line.bubbles[0].emotion, "叹气", "表情")
+	assert_eq(line.bubbles[0].text, "字典句", "台词")

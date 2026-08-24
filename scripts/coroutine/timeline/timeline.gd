@@ -85,11 +85,7 @@ func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 	)
 
 
-## 快捷符卡宣言（_paused 期间显示）
-func dialogue(data) -> Timeline:
-	return do(func(): ctx.play_dialogue(data.lines))
-
-## 步骤版对话（DSL 步骤，台词内联）—— 新流程入口
+## 步骤版对话（DSL 步骤，台词内联）—— 唯一入口
 func dialogue_steps(steps: Array) -> Timeline:
 	return do(func(): ctx.play_dialogue_steps(steps))
 
@@ -104,9 +100,6 @@ func spawn_boss(data: BossData, pos: Vector2) -> Timeline:
 
 func play_bgm(stream: AudioStream) -> Timeline:
 	return do(func(): ctx.audio.play_bgm(stream))
-
-func play_dialogue(dialogue_data) -> Timeline:
-	return do(func(): ctx.play_dialogue(dialogue_data.lines))
 
 
 # ═══ 内部 ═══

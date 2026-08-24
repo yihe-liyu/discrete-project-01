@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("2_g4tib")
 char_name = "灵梦"
+default_bubble_offset = Vector2(-150, 250)
 portraits = {
 "叹气": ExtResource("3_vrb1n"),
 "疑惑": ExtResource("2_vrb1n"),

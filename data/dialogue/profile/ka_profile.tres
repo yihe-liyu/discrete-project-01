@@ -9,6 +9,7 @@
 [resource]
 script = ExtResource("1_m3fj5")
 char_name = "卡摩瑞"
+default_bubble_offset = Vector2(-650, 250)
 portraits = {
 "疑惑": ExtResource("2_chua2"),
 "耍帅": ExtResource("4_pwglj"),

@@ -77,16 +77,9 @@ var decor: DecorManager:
 func active() -> bool:
 	return is_instance_valid(runner) and runner.is_running
 
-## 对话框（便捷委托）
-func play_dialogue(lines: Array) -> float:
-	return dialogue.play(lines)
-
-## 步骤版对话（DSL 步骤，台词内联）—— 新流程入口
+## 步骤版对话（DSL 步骤，台词内联）—— 唯一入口
 func play_dialogue_steps(steps: Array) -> float:
 	return dialogue.play_steps(steps)
-
-func dialogue_show(char_name: String, text: String, pos: Vector2 = Vector2(100, 200), portrait: Texture2D = null) -> void:
-	dialogue.show(char_name, text, pos, portrait)
 
 func get_field_rect() -> Rect2:
 	if not is_instance_valid(runner): return Rect2()

@@ -10,3 +10,5 @@ class_name CharacterProfile
 @export var default_pos: Vector2 = Vector2(50, 230)
 ## 对话首次登场默认水平翻转
 @export var default_flip: bool = false
+## 对话气泡相对立绘右缘的默认偏移（ActorState 用；避免每段手调 d.bubble）
+@export var default_bubble_offset: Vector2 = Vector2(12, 0)
