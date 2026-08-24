@@ -30,6 +30,7 @@ static func build() -> DialogueSteps:
 	d.screen([[REIMU, "笑", "所以让开吧？"]])
 	d.screen([[KA, "震惊", "不，不行。\n如果真见到了传说中的巫女，怎么能不打一场！"]])
 	d.event("bgm_switch")  # 行间事件：该一句说完 → 切 Boss 主题曲
-	d.screen([[KA, "耍帅", "而且\n在黑暗中，我可更胜一筹！"]])
+	d.screen([[REIMU, "叹气", ""],
+			  [KA, "耍帅", "而且\n在黑暗中，我可更胜一筹！"]])
 	d.event("boss_fight")  # 行间事件：最后一句说完 → Boss 开战
 	return d
