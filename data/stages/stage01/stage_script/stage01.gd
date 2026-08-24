@@ -200,7 +200,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	)
 	
 	_kamorui = BossData.new().name("卡摩瑞").look(kamorui.visual) \
-	.phase(kamorui_phases[1]) #.phase(diff_pick(SPELL03))
+	.phase(kamorui_phases[0]).phase(kamorui_phases[1])  # 完整阶段链：道中非符(0)+面非符(1)；start_phase 定位面非符为 index 1
 
 	super.start(ctx, target)
 
