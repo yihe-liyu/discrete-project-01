@@ -127,7 +127,6 @@ func _on_line_shown(line: DialogueLine, speakers: Array, state: StageState) -> v
 		panel.position = Vector2(info.node.size.x, 0) + actor.bubble_offset
 		if panel._shake_dur > 0.0:
 			panel.shake(info.node)
-		info.node.set_meta("_bubble_panel", panel)
 
 	# 输入冷却
 	if input_cooldown > 0.0:
@@ -247,11 +246,10 @@ func _add_portrait(actor: ActorState) -> Dictionary:
 # ═══ 清理 ═══
 
 func _clear_child_bubbles(parent: Control) -> void:
-	if parent.has_meta("_bubble_panel"):
-		var p: BubblePanel = parent.get_meta("_bubble_panel")
-		if is_instance_valid(p):
-			p.queue_free()
-		parent.remove_meta("_bubble_panel")
+	# 同屏同角色可能出现多个气泡 → 清掉该立绘下所有 BubblePanel 子节点（含先建的）
+	for child in parent.get_children():
+		if child is BubblePanel:
+			child.queue_free()
 
 func _clear_bubbles() -> void:
 	for info in _portrait_map.values():

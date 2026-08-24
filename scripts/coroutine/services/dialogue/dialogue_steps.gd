@@ -48,12 +48,14 @@ func say(profile: CharacterProfile, text: String, opts: Dictionary = {}) -> Dial
 ## 一屏台词（多人）—— 数组每项：谁 / 什么表情 / 说什么话。
 ## 每项可写为数组 [speaker, emotion, text]，或字典 {speaker, emotion, text}。
 ## text 为空 → 该角色在场但沉默（自动变暗）；多气泡 → 同屏多人（齐声/一起在场）。
+## 显式要求：每屏至少一个真正开口的（text 非空）；纯沉默转场请用 wait()。
 ## 延续说话者 = 最后一个真正开口的（text 非空），方便后续用 line() 继续。
 func screen(specs: Array, opts: Dictionary = {}) -> DialogueSteps:
 	assert(not specs.is_empty(), "DialogueSteps.screen: specs 不能为空")
 	var line_data := DialogueLine.new()
 	line_data.skippable = opts.get("skippable", true)
 	line_data.auto_advance = opts.get("auto_advance", 0.0)
+	var has_spoke := false
 	for spec in specs:
 		var b := DialogueBubble.new()
 		if spec is Array:
@@ -68,6 +70,8 @@ func screen(specs: Array, opts: Dictionary = {}) -> DialogueSteps:
 		line_data.bubbles.append(b)
 		if b.speaker and not b.text.is_empty():
 			_current_speaker = b.speaker
+			has_spoke = true
+	assert(has_spoke, "DialogueSteps.screen: 每屏至少需一个真正开口的角色（text 非空）；纯沉默转场请用 wait()")
 	var s := DialogueStep.new()
 	s.type = DialogueStep.Type.LINE
 	s.line_data = line_data
