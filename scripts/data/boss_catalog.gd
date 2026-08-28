@@ -1,12 +1,12 @@
 class_name BossCatalog
 ## Boss 谱（花名册）—— 唯一权威的关卡内容表
 ##
-## 结构：stage -> Array[BossData]（boss_index = 数组下标）
-## 阶段数组顺序 = phase_index；符卡（uid != 0）在此登记；非符（uid == 0）只作阶段。
-## 练习占位、收集率、正篇编排最终都从这里扫/取，避免内容散在 stage.gd 里。
+## 阶段身份（phase_index / 非符N / 符卡N / boss_index）一律由"每面规范阶段顺序"
+## （static func stage_phase_order）决定，与 Boss 怎么拆分/怎么命名无关 —— 这就是 C 方案：
+## 阶段身份独立于 Boss 组织。
+## 每个 BossData 只带它"自己打"的阶段（spawn / BossUI 分点用）；真正的编号看规范顺序。
 ##
-## 自机差分（换卡 = 换 uid）暂未落地：当前内容无自机差分；未来在"取 Boss"这层按
-## selected_character 路由到不同 BossData 即可，结构无需推翻。
+## 自机差分（换卡 = 换 uid）暂未落地；未来在"取 Boss"这层按 selected_character 路由即可。
 
 const KAMORUI = preload("res://data/enemy_visual/boss/stage01/kamorui.tscn")
 const NON_MID01 = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
@@ -15,14 +15,16 @@ const NON01 = preload("res://data/stages/stage01/phase/non01/non01.tres")
 static var _cache: Dictionary = {}
 
 
-## 全部 Boss 谱（惰性构建，缓存）
+## 全部 Boss 谱（惰性构建，缓存）：stage -> Array[BossData]（boss_index = 数组下标）
+## 注意：拆分"道中 / 关底"只影响"谁登场、ui 点数分段"，不影响阶段编号。
 static func all() -> Dictionary:
 	if _cache.is_empty():
 		_cache = {
 			1: [
+				BossData.new().name("？？？").look(KAMORUI)
+					.phase(NON_MID01),  # boss 0：道中，只打道中非符1
 				BossData.new().name("卡摩瑞").look(KAMORUI)
-					.phase(NON_MID01)  # phase 0：道中非符1
-					.phase(NON01),     # phase 1：面非符2（同一 Boss 两段，序号由链定位）
+					.phase(NON01),     # boss 1：关底，只打面非符2
 			],
 		}
 	return _cache
@@ -36,8 +38,65 @@ static func boss(stage: int, boss_index: int) -> BossData:
 	return arr[boss_index]
 
 
-## 取某面某 Boss 的第 N 个阶段（按难度解析到正确难度列）。越界/空 Boss 返回 null。
-## 练习接线用：代替旧记录里存的 phase_data 快照（快照只记了首次解锁时的难度，跨难度会错）。
+# ═══════════ 规范阶段顺序（C 的核心：阶段身份与 Boss 组织解耦）═══════════
+
+## 某面的"规范阶段顺序"：跨所有 Boss 扁平展开（每个 phase 唯一确定）。
+## 这是 phase_index / 非符N·符卡N / boss_index 的唯一真相来源。
+static func stage_phase_order(stage: int) -> Array[PhaseData]:
+	var order: Array[PhaseData] = []
+	for b: BossData in all().get(stage, []):
+		for p: PhaseData in b.phases:
+			order.append(p)
+	return order
+
+
+## 某 phase 在该面规范顺序中的位置（找不到返回 -1）。按 Resource 引用匹配（同一共享资源）。
+static func phase_canonical_index(stage: int, phase: PhaseData) -> int:
+	return stage_phase_order(stage).find(phase)
+
+
+## 规范顺序第 phase_index 个阶段（跨越 Boss）；越界返回 null。
+## 按难度列取：定位到所属 Boss + 其内部下标，再用该 Boss 的 phases_for_difficulty(difficulty) 取。
+## 当前各难度共用同名阶段资源 → 各难度结果一致；未来有难度专属阶段时按此路由即可。
+static func phase_at(stage: int, phase_index: int, difficulty: int) -> PhaseData:
+	var order := stage_phase_order(stage)
+	if phase_index < 0 or phase_index >= order.size():
+		return null
+	var acc := 0
+	for b: BossData in all().get(stage, []):
+		var sz: int = b.phases.size()
+		if phase_index < acc + sz:
+			var off := phase_index - acc
+			var arr := b.phases_for_difficulty(difficulty)
+			if off >= 0 and off < arr.size():
+				return arr[off]
+			return null
+		acc += sz
+	return null
+
+
+## 规范顺序第 phase_index 个阶段属于哪个 Boss（boss_index）；找不到返回 -1
+static func boss_index_of_phase(stage: int, phase_index: int) -> int:
+	var order := stage_phase_order(stage)
+	if phase_index < 0 or phase_index >= order.size():
+		return -1
+	var acc := 0
+	for bi in all().get(stage, []).size():
+		var sz: int = all().get(stage, [])[bi].phases.size()
+		if phase_index < acc + sz:
+			return bi
+		acc += sz
+	return -1
+
+
+## 取拥有该规范 phase_index 的 BossData；越界返回 null
+static func boss_of_phase(stage: int, phase_index: int) -> BossData:
+	return boss(stage, boss_index_of_phase(stage, phase_index))
+
+
+## 兼容旧入口：按 (stage, boss_index, phase_index, difficulty) 取阶段。
+## 旧语义：boss 内 phase_index。新语义统一走 stage_phase_order（见 phase_at）。
+## 保留仅供测试/调用方过渡，新代码请用 phase_at。
 static func card(stage: int, boss_index: int, phase_index: int, difficulty: int) -> PhaseData:
 	var b: BossData = boss(stage, boss_index)
 	if not b:

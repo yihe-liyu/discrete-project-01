@@ -185,7 +185,7 @@ func _build_diff_list() -> void:
 
 	var info: Dictionary = _phases[_phase_index]
 	var rec: SpellRecord = info["rec"]
-	var boss: BossData = BossCatalog.boss(rec.stage, rec.boss_index)
+	var boss: BossData = BossCatalog.boss_of_phase(rec.stage, rec.phase_index)
 
 	# 候选难度 = 花名册里该 Boss 实际配置的难度档（Easy~Lunatic；Extra 是独立一面，暂不列）
 	var candidate := _candidate_diffs(boss)
@@ -203,7 +203,7 @@ func _build_diff_list() -> void:
 		if locked:
 			nl.text = "?"
 		else:
-			var card := BossCatalog.card(rec.stage, rec.boss_index, rec.phase_index, d)
+			var card := BossCatalog.phase_at(rec.stage, rec.phase_index, d)
 			nl.text = card.name if (card and card.name != "") else "-"
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nl.add_theme_font_size_override("font_size", 30)
@@ -266,7 +266,7 @@ func _make_label(text: String) -> Label:
 ## phase 状态：该 phase 在花名册里所有难度槽的练习收取
 ## 全部收 → 2；部分 → 1；无 → 0。锁定 "?" 槽计 0 收取（该难度也收齐才整条蓝）
 func _phase_capture_all(st: int, boss: int, phase_idx: int) -> int:
-	var candidate: Array = _candidate_diffs(BossCatalog.boss(st, boss))
+	var candidate: Array = _candidate_diffs(BossCatalog.boss_of_phase(st, phase_idx))
 	if candidate.is_empty():
 		return 0  # 花名册未收录，无法判定
 	var captured := 0
@@ -571,10 +571,12 @@ func _start_practice() -> void:
 
 	# 接线：卡定义优先从花名册按 (stage, boss, phase_index, difficulty) 取——难度正确，
 	# 且不依赖解锁时的快照（快照只记首次遇到的那个难度，跨难度练习会错）。
-	var phase: PhaseData = BossCatalog.card(rec.stage, rec.boss_index, rec.phase_index, diff)
-	var boss: BossData = BossCatalog.boss(rec.stage, rec.boss_index)
-	if not rec or phase == null:
-		push_warning("SpellPractice: 记录缺少阶段配置 phase_index=%d（重新解锁一次）" % info["phase_index"])
+	# C 方案：阶段用规范顺序取（phase_at），Boss 按"拥有该阶段"取（boss_of_phase）。
+	# 记录主键 = 规范 phase_index；boss_index 不参与，拆分 Boss 后仍解析到正确 Boss/阶段。
+	var phase: PhaseData = BossCatalog.phase_at(rec.stage, rec.phase_index, diff)
+	var boss: BossData = BossCatalog.boss_of_phase(rec.stage, rec.phase_index)
+	if not rec or phase == null or boss == null:
+		push_warning("SpellPractice: 记录缺少阶段配置 stage=%d phase_index=%d（重新解锁一次）" % [rec.stage, rec.phase_index])
 		return
 
 	GameState.selected_difficulty = diff

@@ -23,10 +23,12 @@ func prune_empty() -> void:
 	records = kept
 
 
-## 以 (stage, phase_index, boss_index, character, difficulty) 查重
-func get_record(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int) -> SpellRecord:
+## 记录主键 = (stage, phase_index, character, difficulty)。
+## 注意：boss_index **不参与主键**（阶段身份由规范 phase_index 唯一确定；boss_index 只作归属/展示）。
+## 参数仍保留 boss_index 以兼容调用方，但查找时忽略它。
+func get_record(stage: int, phase_index: int, _boss_index: int, character: int, difficulty: int) -> SpellRecord:
 	for r in records:
-		if r.stage == stage and r.phase_index == phase_index and r.boss_index == boss_index \
+		if r.stage == stage and r.phase_index == phase_index \
 				and r.character == character and r.difficulty == difficulty:
 			return r
 	return null
@@ -35,6 +37,7 @@ func get_record(stage: int, phase_index: int, boss_index: int, character: int, d
 func get_or_create(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
 		uid: int = 0, phase_type: int = 0, phase_number: int = 1) -> SpellRecord:
 	var r := get_record(stage, phase_index, boss_index, character, difficulty)
+	# 命中时仍写 boss_index（归属/展示用）—— 但主键不含它，不会因此新建/拆分记录
 	if r:
 		return r
 	r = SpellRecordClass.new()

@@ -1,19 +1,19 @@
 [gd_resource type="Resource" script_class="CharacterProfile" format=3 uid="uid://cb288be12u388"]
 
-[ext_resource type="Texture2D" uid="uid://br8vr3n284kcl" path="res://assets/Textures/character/kamorui/kamouri1.png" id="1_axvx3"]
 [ext_resource type="Script" uid="uid://bx50hqvly0v0c" path="res://scripts/data/character_profile.gd" id="1_m3fj5"]
-[ext_resource type="Texture2D" uid="uid://dgmyikof0yys7" path="res://assets/Textures/character/kamorui/kamouri2.png" id="2_chua2"]
-[ext_resource type="Texture2D" uid="uid://dnkrd517swb2u" path="res://assets/Textures/character/kamorui/kamouri3.png" id="3_y06ab"]
-[ext_resource type="Texture2D" uid="uid://d1wuvjj8uxycc" path="res://assets/Textures/character/kamorui/kamouri4.png" id="4_pwglj"]
+[ext_resource type="Texture2D" uid="uid://dgmyikof0yys7" path="res://assets/Textures/character/kamorui/kamorui2.png" id="1_pwglj"]
+[ext_resource type="Texture2D" uid="uid://d1wuvjj8uxycc" path="res://assets/Textures/character/kamorui/kamorui4.png" id="2_ym4uk"]
+[ext_resource type="Texture2D" uid="uid://br8vr3n284kcl" path="res://assets/Textures/character/kamorui/kamorui1.png" id="3_cbf3t"]
+[ext_resource type="Texture2D" uid="uid://dnkrd517swb2u" path="res://assets/Textures/character/kamorui/kamorui3.png" id="4_xxb6p"]
 
 [resource]
 script = ExtResource("1_m3fj5")
 char_name = "卡摩瑞"
-default_bubble_offset = Vector2(-650, 250)
 portraits = {
-"疑惑": ExtResource("2_chua2"),
-"耍帅": ExtResource("4_pwglj"),
-"通常": ExtResource("1_axvx3"),
-"震惊": ExtResource("3_y06ab")
+"疑惑": ExtResource("1_pwglj"),
+"耍帅": ExtResource("2_ym4uk"),
+"通常": ExtResource("3_cbf3t"),
+"震惊": ExtResource("4_xxb6p")
 }
+default_bubble_offset = Vector2(-650, 250)
 metadata/_custom_type_script = "uid://bx50hqvly0v0c"

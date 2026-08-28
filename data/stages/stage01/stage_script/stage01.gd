@@ -17,8 +17,8 @@ const STAGE01_INTRO = preload("res://data/dialogue/stage01/intro.gd")
 
 ## 最终 Boss（战前对话中进场）：对话事件回调（_on_dialogue_event）需要跨函数访问
 ## _boss_holder 用数组容器（闭包/回调共享引用）
-var _kamorui: BossData
-var _kamorui_mid: BossData
+var _kamorui_mid: BossData = BossCatalog.boss(1, 0)
+var _kamorui: BossData = BossCatalog.boss(1, 1)
 var _boss_holder: Array = [null]
 
 func start(p_ctx: StageContext, p_target: Node2D = null):
@@ -106,12 +106,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		)
 
 	# ── Boss ──
-	# 唯一权威：卡摩瑞的立绘 + 阶段列表都从花名册取（道中非符 + 面非符）。
-	var kamorui := BossCatalog.boss(1, 0)
-	var kamorui_phases := kamorui.phases_for_difficulty(GameState.selected_difficulty)
 	var boss_holder := [null]
-	_kamorui_mid = BossData.new().name("？？？").look(kamorui.visual) \
-		.phase(kamorui_phases[0])  # 完整阶段链，start_phase 定位序号
 
 	tl.at(35.0).do(func():
 		boss_holder[0] = StageManager.spawn_boss(_kamorui_mid, Vector2(-50, 500), ctx)
@@ -198,9 +193,6 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	tl.at(93).do(func():
 		ctx.play_dialogue_steps(STAGE01_INTRO.build().steps)
 	)
-	
-	_kamorui = BossData.new().name("卡摩瑞").look(kamorui.visual) \
-	.phase(kamorui_phases[0]).phase(kamorui_phases[1])  # 完整阶段链：道中非符(0)+面非符(1)；start_phase 定位面非符为 index 1
 
 	super.start(ctx, target)
 
@@ -231,7 +223,7 @@ func _on_dialogue_event(event_name: String) -> void:
 			# 最后一句说完 → Boss 直接开战（start_phase 不冻结时间轴，绝对时刻事件照常）
 			var b := _boss_holder[0] as Boss
 			if b and b.current_phase() == null:
-				b.start_phase(_kamorui.phases[1])  # 面非符，序号 1（由完整链推导）
+				b.start_phase(_kamorui.phases[0])  # 面非符，序号 1（由完整链推导）
 		_:
 			pass  # 未处理事件静默忽略
 

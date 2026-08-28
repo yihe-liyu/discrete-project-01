@@ -14,6 +14,7 @@ const INDICATOR_FADE_POW := 0.5      ## 透明度缓动指数：<1 → 越近透
 signal phase_cleared(captured: bool, bonus: int)
 
 var boss_data: BossData
+var _display_name: String = ""   ## 运行时显示名覆盖（空 = 用 boss_data.boss_name）
 var hp: int = 0
 var hitbox_radius: float
 
@@ -52,6 +53,16 @@ func is_low_hp() -> bool:
 func current_bonus() -> int: return _bonus
 func get_elapsed() -> float: return _elapsed
 func get_phase_id() -> PhaseIdentity: return _pid
+
+
+## 显示名：运行时覆盖优先，否则用 boss_data.boss_name（UI/外部系统只读这个）
+func get_boss_name() -> String:
+	return _display_name if _display_name != "" else (boss_data.boss_name if boss_data else "")
+
+
+## 运行时改显示名（外部系统可调用 —— 揭示真名 / 练习显示卡名 等；BossUI 每帧同步读取）
+func set_boss_name(n: String) -> void:
+	_display_name = n
 func is_in_gap() -> bool:
 	return _cleared
 
@@ -59,22 +70,23 @@ func set_exit_controlled() -> void:
 	_exit_controlled = true
 
 
-## 阶段序号 + 第几张非符/符卡，直接从 boss_data.phases 推导（花名册唯一真相，无计数器/continue_from）。
-## 同一 Boss 分多段打（道中 + 面战）时，每段的 BossData 都带完整阶段链，start_phase 一查即知序号。
+## 阶段序号 + 第几张非符/符卡，一律从"每面规范阶段顺序"推导（BossCatalog —— 与 Boss 拆分无关）。
+## phase_index = 规范顺序位置；非符N/符卡N = 规范顺序里数；boss_index = 拥有该阶段的 Boss。
 func _locate_phase(data: PhaseData) -> void:
-	var arr: Array = boss_data.phases if boss_data else []
-	for i in arr.size():
-		if arr[i] == data:
-			_phase_index = i
-			_non_count = 0
-			_spell_count = 0
-			for j in range(i + 1):
-				if arr[j].uid != 0:
-					_spell_count += 1
-				else:
-					_non_count += 1
-			return
-	# 未在阶段链找到（异常/老记录）→ 回退旧计数器，避免崩溃/撞键
+	var idx := BossCatalog.phase_canonical_index(_stage_id, data)
+	if idx >= 0:
+		_phase_index = idx
+		_non_count = 0
+		_spell_count = 0
+		var order := BossCatalog.stage_phase_order(_stage_id)
+		for j in range(idx + 1):
+			if order[j].uid != 0:
+				_spell_count += 1
+			else:
+				_non_count += 1
+		boss_index = BossCatalog.boss_index_of_phase(_stage_id, idx)
+		return
+	# 未在规范顺序找到（异常/老记录）→ 回退旧计数器，避免崩溃/撞键
 	_phase_index += 1
 	if data.uid != 0:
 		_spell_count += 1
@@ -173,7 +185,9 @@ func start_phase(data: PhaseData) -> void:
 	if GameState.is_practice_mode:
 		_phase_index = GameState.practice_phase_index  # 练习：用记录键（正篇阶段序），不递增
 	else:
-		_locate_phase(data)  # 阶段序号/第几张从 boss_data.phases 推导（花名册唯一真相）
+		_locate_phase(data)  # 阶段序号/第几张从规范顺序推导
+	# 规范归属：该阶段属于第几个 Boss（记录/展示用；不参与记录主键）
+	boss_index = BossCatalog.boss_index_of_phase(_stage_id, _phase_index) if _phase_index >= 0 else boss_index
 	_current_phase = data
 	_elapsed = 0.0
 	_bonus = data.bonus

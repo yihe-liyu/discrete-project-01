@@ -233,34 +233,37 @@ func test_boss_index_in_phase_identity():
 func test_same_boss_continued_phases_are_separate_records():
 	GameState.selected_character = 0
 	GameState.selected_difficulty = 1
-	var stage_id := 96  # 独立 stage，避免撞真实记录
-	GameState.current_stage_id = stage_id
+	# C：阶段身份走规范顺序（BossCatalog.stage_phase_order），用真实 stage 1 才能正确解析。
+	# 备份/还原 spell_book 记录，避免污染持久存档（不泄露 —— 与 test_recent_mechanics 同法）。
+	var book_backup: Array = GameState.spell_book.records.duplicate(true)
+	GameState.current_stage_id = 1
 	GameState.is_practice_mode = false
 	var non_mid: PhaseData = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
 	var non01: PhaseData = preload("res://data/stages/stage01/phase/non01/non01.tres")
 
-	# 道中 Boss：同一 BossData 带完整阶段链 → non_mid 在链上定位为 (phase_index 0, 非符1)
+	# 道中 Boss：完整链 → 规范顺序定位 (phase_index 0, 非符1)
 	var bd := BossData.new().name("卡摩瑞").phase(non_mid).phase(non01)
 	var boss1: Boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss1)
 	boss1.setup(bd, null)
-	boss1._stage_id = stage_id
+	boss1._stage_id = 1
 	boss1.start_phase(non_mid)
-	var mid_rec: SpellRecord = GameState.spell_book.get_record(stage_id, 0, 0, 0, 1)
+	var mid_rec: SpellRecord = GameState.spell_book.get_record(1, 0, 0, 0, 1)
 	assert_not_null(mid_rec, "道中非符应入簿 (phase 0)")
 	if mid_rec:
 		assert_eq(mid_rec.phase_number, 1, "道中非符是'非符1'")
 
-	# 面 Boss：同一完整链 BossData，start_phase(non01) 自动定位 → (phase_index 1, 非符2)，无需 continue_from
+	# 面 Boss：同一完整链，start_phase(non01) 规范序定位 → (phase_index 1, 非符2)
 	var boss2: Boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss2)
 	boss2.setup(bd, null)
-	boss2._stage_id = stage_id
+	boss2._stage_id = 1
 	boss2.start_phase(non01)
-	var final_rec: SpellRecord = GameState.spell_book.get_record(stage_id, 1, 0, 0, 1)
-	assert_not_null(final_rec, "面非符应入簿 (phase 1, boss_index 0)")
+	var final_rec: SpellRecord = GameState.spell_book.get_record(1, 1, 0, 0, 1)
+	assert_not_null(final_rec, "面非符应入簿 (phase 1)")
 	if final_rec:
 		assert_eq(final_rec.phase_number, 2, "面非符是'非符2'")
 	if mid_rec:
 		assert_eq(mid_rec.phase_number, 1, "道中记录不被覆盖")
+	GameState.spell_book.records = book_backup  # 还原，防污染持久记录
 	GameState.current_stage_id = 1

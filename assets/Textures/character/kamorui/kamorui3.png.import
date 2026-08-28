@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d1wuvjj8uxycc"
-path="res://.godot/imported/kamouri4.png-de646ce438a339648ecf76ae2576115e.ctex"
+uid="uid://dnkrd517swb2u"
+path="res://.godot/imported/kamorui3.png-c4754f579407f5c01ddb3ee915d56aa9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/Textures/character/kamorui/kamouri4.png"
-dest_files=["res://.godot/imported/kamouri4.png-de646ce438a339648ecf76ae2576115e.ctex"]
+source_file="res://assets/Textures/character/kamorui/kamorui3.png"
+dest_files=["res://.godot/imported/kamorui3.png-c4754f579407f5c01ddb3ee915d56aa9.ctex"]
 
 [params]
 
