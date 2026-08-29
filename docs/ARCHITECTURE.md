@@ -74,7 +74,7 @@
 - **内容只碰动词**：内容文件不再 import `StageManager/GameState/StageObjects/BulletManager/AudioManager`，不再 `create_tween`。一旦不得不在内容里写 `.do(func(): <机制>)`，说明还缺一个动词（判据）。
 - **一知识一 owner**：`dir.boss` 内部才 `spawn_boss + register + hide_name + tween`；`BossHandle.retreat` 内部才 `set_exit_controlled + die + tween`。内容只看到"进 Boss / 揭名 / 退场"。
 - **响亮**：动词缺 Boss/阶段越界等 → `push_warning`/`push_error`，绝不静默。
-- **Timeline 动词与 Director 动词未来统一**（避免双路）：目前 `tl.play_bgm/spawn_boss` 与 `dir.bgm/boss` 并存，后续让 Timeline 委托给 Director。
+- **Timeline 动词委托给导演（已统一）**：`tl.play_bgm/spawn_wave/spawn_enemy/spawn_boss/dialogue_steps` 都是 `do(func(): _get_director().xxx())` 的薄委托，**单一 owner = `StageDirector`**；Timeline 只管时序（`at/wait/every/do`）+ `start_phase`（时符等待机制，保留）。关卡用 `start_timeline(_dir)` 把导演传给 Timeline。
 
 ### 已落地（D Part 1）
 

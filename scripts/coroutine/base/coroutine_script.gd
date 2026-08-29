@@ -21,9 +21,10 @@ var auto_stop: bool = false
 var _tl: Timeline
 
 
-## 创建并绑定 Timeline
-func start_timeline() -> Timeline:
+## 创建并绑定 Timeline（stage 关卡传入导演，便捷动词由导演统一承担）
+func start_timeline(p_director: StageDirector = null) -> Timeline:
 	_tl = Timeline.new(ctx)
+	_tl.director = p_director
 	return _tl
 
 
