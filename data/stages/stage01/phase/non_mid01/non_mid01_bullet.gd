@@ -66,12 +66,13 @@ func _tick_flee(p_ctx: StageContext):
 		if GameState.selected_difficulty >= 2:
 			var away := (target.global_position - boss.global_position).normalized()
 			var num: int = diff_pick([0, 0, 1, 2])
+			var count: int = diff_pick([0, 0, 4, 8])
 			var red := BulletData.new()\
 				.tex("棱弹")\
 				.color(Color.RED)\
 				.blend(true)\
 				.enemy()
-			for i in diff_pick([0, 0, 4, 8]):
+			for i in count:
 				red.speed(RING_SPEED + i * 50)
 				p_ctx.bullets.shoot_spread(red, num, 1 / TAU / 3, away, target.global_position)
 		
