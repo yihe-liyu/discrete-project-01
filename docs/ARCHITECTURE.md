@@ -82,7 +82,7 @@
 
 | # | 债 | 层 | 该修成 | 优先级 |
 |---|---|---|---|---|
-| A | `params` 反射（C4） | 内容/参数 | typed 参数 + 校验 | 🔥高（作者踩雷最多） |
+| A | ~~`params` 反射（C4）~~ | 内容/参数 | ✅ 已修到「校验+响亮」（`ParamValidator`）；「全 typed 资源」未做 | 已做（2026） |
 | B | 双路 `if ctx else Global` | 领域/接口 | 统一走 `ctx.*` | 中 |
 | C | 调用方拼内容（`EnemyData.new()...spawn`） | 内容/接口 | 内容做资源 | 中 |
 | D | 关卡脚本胖（大 match + 手工 spawn/tween） | 编排/接口 | 事件派发 + intent 层接口 | 中 |

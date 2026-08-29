@@ -225,8 +225,10 @@ tl.at(7.0).  custom(_show_logo)
 
 > 每个 Step 可独立提交、可回滚、有明确验收。**顺序设计成"低风险先行、大重构殿后"。**
 > **重要**：**Step 1~4 都不依赖 cmd（Step 5）**——它们只是把现状理顺（对象变干净、少耦合、身份归位），可以**保留 `do(cb)`** 走完。cmd 只有在你要"编辑/枚举/回放编排"的收益时才做（可推迟，甚至不做）。详见 §7。
+>
+> **进度（2026）**：✅ **Step 1 / Step 3 / Step 4 已完成**（第 1 层对象/身份模型落地）。**第 2 层（typed params / C4）** 已做到「校验 + 响亮」（`ParamValidator`，尚未全 typed 资源）。Step 2 / 5 / 6 / 7 待做。
 
-### Step 1 —— 可观察属性（零风险，立即见效）
+### Step 1 —— 可观察属性 ✅ **已完成**（零风险，立即见效）
 - **目标**：Boss 改名信号化，UI 从轮询变订阅；删掉 `_last_name`/`_process` 轮询。
 - **文件**：`scripts/enemy/boss.gd`（加 `display_name_changed` 信号），`scripts/scenes/boss_ui.gd`（订阅，删 `_last_name` + `_process` 里的 get_boss_name 比对），`test/test_boss_name.gd`（补信号断言）。
 - **验收**：`set_boss_name` 触发一次信号；UI 无轮询；改名即时同步；测试通过。
@@ -238,13 +240,13 @@ tl.at(7.0).  custom(_show_logo)
 - **验收**：工作台书签不再依赖正则；能显示每个时刻的命令（对象+动作）。
 - **风险**：中低（涉及 time 提取逻辑）。
 
-### Step 3 —— 身份硬化（命令可持久化的前提）
+### Step 3 —— 身份硬化 ✅ **已完成**（命令可持久化的前提）
 - **目标**：引入 `StageObjects` 槽位注册表；stage01 的 Boss 引用从 `boss_holder[0]`/闭包改成 `register("boss_mid", b)` + 槽位引用。
 - **文件**：新增 `scripts/data/stage_objects.gd`（或 autoload）；`stage01.gd`（`_boss_holder` 改 `StageObjects`）；`timeline.gd` `start_phase(boss_getter)` 改 `start_phase(slot, phase_id)`。
 - **验收**：命令表能持久化/编辑（slot 稳定）；Boss 拆分/存储改动不再破坏引用。
 - **险**：中。
 
-### Step 4 —— 记录服务（Boss 瘦身，身份归位）
+### Step 4 —— 记录服务 ✅ **已完成**（Boss 瘦身，身份归位）
 - **目标**：`Boss` 迁走 `record_*`/`_pid`/`_spell_count`/`_non_count`/`_stage_id`；身份解析收口到 `RecordService`(经 BossCatalog)；`PhaseIdentity.boss_index` 退场。
 - **文件**：新增 `scripts/data/record_service.gd`；`boss.gd`（删身份计算/记录调用）；`spell_record_book.gd`/相关（去掉对 `_pid` 的依赖）；`stage_context.gd`（挂 `_records` 服务）；`test` 改。
 - **验收**：Boss 不再摸 GameState 记录；身份只由目录/记录服务解析；无 `boss_index` 冗余。
