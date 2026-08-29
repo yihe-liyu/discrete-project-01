@@ -111,6 +111,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	tl.at(35.0).do(func():
 		boss_holder[0] = StageManager.spawn_boss(_kamorui_mid, Vector2(-50, 500), ctx)
 		var b := boss_holder[0] as Boss
+		b.set_boss_name("？？？")   # 道中也隐藏真名（不开战前对话、不揭名，全程"？？？"）
 		var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 		tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tw.tween_property(b, "global_position", Vector2(GameConfig.FIELD_CENTER_X, 250), 1.5)
@@ -211,10 +212,15 @@ func _on_dialogue_event(event_name: String) -> void:
 			if _boss_holder[0] == null and ctx and ctx.active():
 				_boss_holder[0] = StageManager.spawn_boss(_kamorui, Vector2(1000, 500), ctx)
 				var b := _boss_holder[0] as Boss
+				b.set_boss_name("？？？")   # 开场隐藏真名（战前对话 display_name 事件揭名）
 				# 同一 Boss（卡摩瑞）：段 BossData 带完整阶段链，start_phase 自动定位面非符为 index 1
 				var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 				tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 				tw.tween_property(b, "global_position", Vector2(GameConfig.FIELD_CENTER_X, 250), 1.5)
+		"display_name":
+			var b := _boss_holder[0] as Boss
+			if b:
+				b.set_boss_name("卡摩瑞")
 		"bgm_switch":
 			# 战前对话最后一句 → 切卡摩瑞主题曲（洞窟蝙蝠），说完即开打
 			if ctx and ctx.active():

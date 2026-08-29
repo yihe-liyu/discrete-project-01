@@ -12,6 +12,7 @@ const INDICATOR_ALPHA_NEAR := 0.25   ## 最近处透明度（半透明但可见�
 const INDICATOR_FADE_POW := 0.5      ## 透明度缓动指数：<1 → 越近透明得越快（近处斜率陡）
 
 signal phase_cleared(captured: bool, bonus: int)
+signal display_name_changed(name: String)
 
 var boss_data: BossData
 var _display_name: String = ""   ## 运行时显示名覆盖（空 = 用 boss_data.boss_name）
@@ -60,9 +61,12 @@ func get_boss_name() -> String:
 	return _display_name if _display_name != "" else (boss_data.boss_name if boss_data else "")
 
 
-## 运行时改显示名（外部系统可调用 —— 揭示真名 / 练习显示卡名 等；BossUI 每帧同步读取）
+## 运行时改显示名（外部系统可调用 —— 揭示真名 / 练习显示卡名 等；改名会发 display_name_changed，BossUI 订阅同步）
 func set_boss_name(n: String) -> void:
+	if _display_name == n:
+		return
 	_display_name = n
+	display_name_changed.emit(get_boss_name())   # 用有效名：清空覆盖时回退 boss_data.boss_name
 func is_in_gap() -> bool:
 	return _cleared
 

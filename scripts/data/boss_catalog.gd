@@ -21,7 +21,7 @@ static func all() -> Dictionary:
 	if _cache.is_empty():
 		_cache = {
 			1: [
-				BossData.new().name("？？？").look(KAMORUI)
+				BossData.new().name("卡摩瑞").look(KAMORUI)
 					.phase(NON_MID01),  # boss 0：道中，只打道中非符1
 				BossData.new().name("卡摩瑞").look(KAMORUI)
 					.phase(NON01),     # boss 1：关底，只打面非符2

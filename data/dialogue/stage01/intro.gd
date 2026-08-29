@@ -22,6 +22,7 @@ static func build() -> DialogueSteps:
 	d.screen([[KA, "疑惑", "哦呀，弱小的人类怎么会在永夜出门？"]])
 	d.screen([[KA, "通常", "快回家去吧。"]])
 	d.screen([[KA, "耍帅", "虽然卡摩瑞我只是蝙蝠，但是再不走的话…"]])
+	d.event("display_name")
 	d.screen([[REIMU, "通常", "已经是人形了却不好好长眼睛啊。"]])
 	d.screen([[REIMU, "疑惑", "把日食当夜晚吗？"]])
 	d.screen([[REIMU, "叹气", "我是巫女，我若是回家了，谁来解决异变呐，小小的蝙蝠哟？"]])

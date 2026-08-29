@@ -18,7 +18,6 @@ var _bonus_label: Label
 var _capture_label: Label
 var _boss_ref: Boss
 var _timer_label: Label
-var _last_name := ""   ## 已显示的 Boss 名（缓存，避免每帧重设文本）
 
 func _ready() -> void:
 	visible = false
@@ -39,12 +38,19 @@ func _exit_tree() -> void:
 	]:
 		if conn[0].is_connected(conn[1]):
 			conn[0].disconnect(conn[1])
+	if _boss_ref and is_instance_valid(_boss_ref) and _boss_ref.display_name_changed.is_connected(_on_display_name_changed):
+		_boss_ref.display_name_changed.disconnect(_on_display_name_changed)
 
 func _on_boss_spawned(boss: Node) -> void:
+	# 断开上一只 Boss 的显示名连接（换 Boss / spawn 新 Boss 时）
+	if _boss_ref and is_instance_valid(_boss_ref) and _boss_ref.display_name_changed.is_connected(_on_display_name_changed):
+		_boss_ref.display_name_changed.disconnect(_on_display_name_changed)
 	_boss_ref = boss as Boss
 	var boss_data: BossData = boss.boss_data
-	_last_name = _boss_ref.get_boss_name()
-	_name_label.text = _last_name if _last_name != "" else "???"
+	# 订阅显示名变化——改名即时同步，不再每帧轮询 get_boss_name()
+	if _boss_ref and is_instance_valid(_boss_ref):
+		_boss_ref.display_name_changed.connect(_on_display_name_changed)
+		_on_display_name_changed(_boss_ref.get_boss_name())
 	
 	if not _timer_label:
 		_timer_label = Label.new()
@@ -68,14 +74,12 @@ func _on_boss_spawned(boss: Node) -> void:
 	
 	visible = true
 
+func _on_display_name_changed(name: String) -> void:
+	_name_label.text = name if name != "" else "???"
+
 func _process(_delta: float) -> void:
 	if not _boss_ref or not is_instance_valid(_boss_ref) or not visible:
 		return
-	# 同步显示名（改名即时生效；缓存避免每帧重设文本）
-	var nm := _boss_ref.get_boss_name()
-	if nm != _last_name:
-		_last_name = nm
-		_name_label.text = nm if nm != "" else "???"
 	var phase := _boss_ref.current_phase()
 	# 间隙期（换阶段之间）不显示
 	if not phase or phase.time_limit <= 0 or _boss_ref.is_in_gap():

@@ -75,7 +75,7 @@ func test_intro_speakers_match_script():
 
 func test_intro_events_in_order():
 	var d := _intro()
-	assert_eq(_events(d), ["boss_enter", "bgm_switch", "boss_fight"], "行间事件顺序应精确")
+	assert_eq(_events(d), ["boss_enter", "display_name", "bgm_switch", "boss_fight"], "行间事件顺序应精确（含揭露真名 display_name）")
 
 
 func test_intro_line_emotion_applied():
