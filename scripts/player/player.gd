@@ -302,26 +302,20 @@ func miss() -> void:
 		GameEvents.player_death.emit()
 
 
-# ═══ 系统操作服务（ctx 注入时走服务，否则回退全局） ═══
+# ═══ 系统操作服务（统一走 ctx 服务；ctx 为 null 时跳过，不回退全局） ═══
 
 func _miss_circle(world_pos: Vector2, duration: float, max_radius: float,
 		start_radius: float = 0.0, start_delay: float = 0.0, fade_out: float = 0.0) -> void:
 	if ctx:
 		ctx.effects.add_miss_circle(world_pos, duration, max_radius, start_radius, start_delay, fade_out)
-	else:
-		MissEffectManager.add_circle(world_pos, duration, max_radius, start_radius, start_delay, fade_out)
 
 
 func _play_sfx(stream: AudioStream, volume_db: float = 0.0) -> void:
 	if ctx:
 		ctx.audio.play_sfx(stream, volume_db)
-	else:
-		AudioManager.play_sfx(stream, volume_db)
 
 
 func _death_clear(pos: Vector2, max_radius: float, duration: float,
 		start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
 	if ctx:
 		ctx.bullets.death_clear(pos, max_radius, duration, start_radius, on_clear)
-	else:
-		BulletManager.start_death_clear(pos, max_radius, duration, start_radius, on_clear)

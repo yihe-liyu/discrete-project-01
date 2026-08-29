@@ -139,8 +139,6 @@ func _explode(bullet: Bullet, _ctx: StageContext) -> void:
 	# 爆炸消弹
 	if ctx:
 		ctx.bullets.death_clear(pos, EXPLODE_RADIUS, EXPLODE_DURATION, EXPLODE_START_RADIUS)
-	else:
-		BulletManager.start_death_clear(pos, EXPLODE_RADIUS, EXPLODE_DURATION, EXPLODE_START_RADIUS)
 	# 爆炸伤害
 	for enemy in GameState.get_active_enemies():
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():

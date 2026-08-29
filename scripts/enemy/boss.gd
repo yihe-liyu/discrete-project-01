@@ -277,8 +277,6 @@ func _clear_phase(captured: bool) -> void:
 	_drop_items()
 	if _ctx:
 		_ctx.bullets.death_clear(global_position, 960, 0.75, 30)
-	else:
-		BulletManager.start_death_clear(global_position, 960, 0.75, 30)
 	phase_cleared.emit(captured, _bonus)
 
 
