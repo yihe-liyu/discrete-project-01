@@ -29,6 +29,7 @@ MissEffectManager="*res://scripts/autoload/miss_effect_manager.gd"
 HitEffectPool="*res://scripts/autoload/hit_effect_pool.gd"
 LayerConfig="*res://scripts/autoload/layer_config.gd"
 AssetRegistry="*res://scripts/autoload/asset_registry.gd"
+StageObjects="*res://scripts/autoload/stage_objects.gd"
 
 [display]
 
