@@ -4,7 +4,6 @@ extends Area2D
 
 const HPRingClass = preload("res://scripts/scenes/boss_hp_ring.gd")
 const POS_INDICATOR_TEX := preload("res://assets/Textures/front/boss_position.png")
-const RecordService = preload("res://scripts/coroutine/services/record_service.gd")   # 记录服务（显式 preload，不依赖全局类缓存）
 
 ## Boss 位置指示器距离淡出：离自机 x 越远越清晰（近处半透明，远处醒目）
 const INDICATOR_FADE_NEAR := 60.0    ## |dx| ≤ 60px 时最淡
