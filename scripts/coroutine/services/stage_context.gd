@@ -2,6 +2,9 @@ class_name StageContext
 extends RefCounted
 ## 关卡上下文 —— 协程拿这个代替 StageAPI
 
+const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
+const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
+
 var runner: CoroutineRunner
 var _decor_mgr: DecorManager
 
@@ -14,6 +17,8 @@ var _dialogue: DialogueService
 var _items: ItemService
 var _audio: AudioService
 var _effects: EffectService
+var _boss: BossService
+var _diff: DifficultyService
 
 var clock: ClockService:
 	get:
@@ -53,6 +58,16 @@ var effects: EffectService:
 	get:
 		if _effects == null: _effects = EffectService.new()
 		return _effects
+
+var boss: BossService:
+	get:
+		if _boss == null: _boss = BossService.new()
+		return _boss
+
+var diff: DifficultyService:
+	get:
+		if _diff == null: _diff = DifficultyService.new()
+		return _diff
 
 func _init(p_runner: CoroutineRunner) -> void:
 	runner = p_runner

@@ -46,7 +46,7 @@ func _tick(p_ctx: StageContext):
 func _spawn_split(p_ctx: StageContext) -> void:
 	var dir := _dir0.rotated(diff_pick(split_dir))
 	# 仅"hold 阶段发射的探测弹"（发射方注入 hold_aim_probe）+ H/L：15% 变自机狙
-	var hold_aim: bool = GameState.selected_difficulty >= 2 and hold_aim_probe
+	var hold_aim: bool = p_ctx.diff.at_least(2) and hold_aim_probe
 	var is_aim: bool = hold_aim and RNG.randf() < split_aim_chance
 	var fire_dir := dir
 	if is_aim:
@@ -63,5 +63,5 @@ func _spawn_split(p_ctx: StageContext) -> void:
 		.blend(true) \
 		.enemy() \
 		.grace(diff_pick([4, 4, 0.75, 0.75]))
-	AudioManager.play_sfx(AssetRegistry.sounds["kira"], -8.0)
+	p_ctx.audio.play_sfx(AssetRegistry.sounds["kira"], -8.0)
 	p_ctx.bullets.shoot_spread(red, 1, 0.0, fire_dir, target.global_position)

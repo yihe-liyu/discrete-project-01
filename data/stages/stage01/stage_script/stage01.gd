@@ -123,12 +123,12 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	# 打得快增援多、打得慢被 if 吞掉 —— 内容/资源节奏由玩家速度决定）
 	for i in 9:
 		tl.at(52.0 + i).do(func():
-			if GameState.get_boss() == null:
+			if not ctx.boss.exists():
 				_spawn_mid_enemy(0, i, true)
 		)
 	for i in 7:
 		tl.at(54.5 + i).do(func():
-			if GameState.get_boss() == null:
+			if not ctx.boss.exists():
 				_spawn_mid_enemy(1, i, true)
 		)
 		

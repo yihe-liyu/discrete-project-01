@@ -35,7 +35,7 @@ func _init_enemy() -> void:
 				TAU, dir,
 				target.global_position, AssetRegistry.sounds["shoot"])
 	)
-	if GameState.selected_difficulty >= 2:
+	if ctx.diff.at_least(2):
 		for i in 3:
 			tl.at(1.0 + i * 2.4).every(0.1).times(diff_pick([0, 0, 4, 8])).do(func():
 				bullet.tex("米弹").color(Color.GOLD)

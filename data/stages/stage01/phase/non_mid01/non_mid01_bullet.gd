@@ -44,7 +44,7 @@ func _tick_travel(p_ctx: StageContext):
 
 
 func _tick_flee(p_ctx: StageContext):
-	var boss: Boss = GameState.get_boss()
+	var boss: Boss = p_ctx.boss.current()
 	if not is_instance_valid(boss):
 		return
 	
@@ -63,7 +63,7 @@ func _tick_flee(p_ctx: StageContext):
 		p_ctx.bullets.shoot_spread(normal, diff_pick([2, 4, 6, 8]), TAU, rand_dir, target.global_position, AssetRegistry.sounds["kira"])
 		
 		# Hard 以上：额外射红色弹丸，远离 Boss
-		if GameState.selected_difficulty >= 2:
+		if p_ctx.diff.at_least(2):
 			var away := (target.global_position - boss.global_position).normalized()
 			var num: int = diff_pick([0, 0, 1, 2])
 			var count: int = diff_pick([0, 0, 4, 8])

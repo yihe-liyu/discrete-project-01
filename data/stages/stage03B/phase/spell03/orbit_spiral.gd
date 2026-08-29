@@ -34,7 +34,7 @@ func _tick(p_ctx: StageContext):
 		return p_ctx.clock.wait(diff_pick(interval))
 	var dt := get_dt()
 	var itv: float = diff_pick(interval)
-	var hard: bool = GameState.selected_difficulty >= 2
+	var hard: bool = p_ctx.diff.at_least(2)
 	var rmax: float = diff_pick(radius_max)
 
 	# ── 首帧初始化（哨兵统一在此，不再每帧判断）──
@@ -95,7 +95,7 @@ func _tick(p_ctx: StageContext):
 	var dir: Vector2 = Vector2(-sin(_angle), cos(_angle)) if hard \
 		else Vector2(-cos(_angle), -sin(_angle))
 	if count > 0:
-		AudioManager.play_sfx(AssetRegistry.sounds["shoot"], -8.0)
+		p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"], -8.0)
 		var step := TAU / count
 		for i in count:
 			p_ctx.bullets.shoot_spread(bullet, 1, 0.0, dir.rotated(step * i), emit_pos)

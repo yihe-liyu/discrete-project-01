@@ -43,7 +43,7 @@ func _init_enemy() -> void:
 			ctx.bullets.shoot_spread(bullet, 1, 0, dir,
 				target.global_position, AssetRegistry.sounds["shoot"])
 
-		if GameState.selected_difficulty >= 2 and heavy_wave:
+		if ctx.diff.at_least(2) and heavy_wave:
 			bullet.tex("棱弹").color(Color.GOLD).grace(3)
 			bullet.coroutine_script = GRAVITY_BULLET
 			for i in diff_pick([0, 0, 1, 2]):

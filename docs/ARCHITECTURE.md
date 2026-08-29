@@ -62,7 +62,7 @@
 
 | 类别 | 形态 | 例子 | 归属 |
 |---|---|---|---|
-| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` | `StageContext` 下各服务 |
+| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
 | **场景动词**（宏观，跨子系统，一意图） | `dir.verb()` | `dir.boss("boss_mid", data, from, to)` `dir.on(event, handler)` `dir.dialogue(steps)` | `StageDirector` `BossHandle` |
 | **名词构建词** | `Data.builder()` | `EnemyData.new().with_script().pos().param().spawn(ctx)` | 各 `*Data` |
 | **时序粘合剂** | `tl.at()/wait()/every()` | `tl.at(35).do(func(): dir.boss(...))` | `Timeline` |
@@ -79,6 +79,8 @@
 ### 已落地（D Part 1）
 
 `StageDirector`（`scripts/coroutine/director/stage_director.gd`）+ `BossHandle`（`…/boss_handle.gd`）：`dir.boss/boss_ref/dialogue/bgm/on/dispose` + 句柄 `reveal/hide_name/enter/phase/retreat`。`stage01.gd` 的 Boss 段与 `_on_dialogue_event` 大 match 已改为动词 + 事件路由。`Timeline.start_phase(boss_getter, data)` 接口未变（有测试锁定）。
+
+**服务动词补齐（b）**：`ctx.boss`（`BossService`：`current/exists`）+ `ctx.diff`（`DifficultyService`：`picked/pick/pick_from/at_least`）。内容里的 `GameState.get_boss()`、`GameState.selected_difficulty`、`AudioManager.play_sfx` 改用 `ctx.*`（仅改关卡/行为/玩家协程内容；UI/菜单/工作台属表现/基建层仍可直接摸全局）。两个服务用 **preload const（无 class_name）**，避免 headless 全局类缓存问题（同 `ParamValidator`）。
 
 ## 3. 接口契约原则（好/坏接口的判据）
 

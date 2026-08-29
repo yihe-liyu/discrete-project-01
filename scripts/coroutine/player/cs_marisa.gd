@@ -77,7 +77,7 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 		b.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
 		b.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option02.tscn")
 		_shoot_options(ctx, b, 1, 0.0, Vector2.UP, Vector2.ZERO)
-		AudioManager.play_sfx(AssetRegistry.sounds["msl"], -8.0)
+		ctx.audio.play_sfx(AssetRegistry.sounds["msl"], -8.0)
 		return ctx.clock.wait_frames(5)
 	else:
 		# 非 focus：流水激光（按间距喷段，频率自动跟随漂移速度 → 任何速度都无缝）

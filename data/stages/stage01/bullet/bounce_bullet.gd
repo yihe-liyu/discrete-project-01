@@ -49,7 +49,7 @@ func _bounce_and_split(p_ctx: StageContext, bullet: Bullet) -> bool:
 		bullet.global_position = pos
 		return false
 
-	var boss: Boss = GameState.get_boss()
+	var boss: Boss = p_ctx.boss.current()
 	var aim := Vector2.DOWN  # 无 Boss 时退化为竖直向下
 	if is_instance_valid(boss):
 		aim = (boss.global_position - pos).normalized()
