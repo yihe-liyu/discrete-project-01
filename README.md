@@ -44,24 +44,27 @@
 
 ## 📖 文档索引
 
+> 文档地图 —— 每件事找"该读的那一份"，避免到处翻。
+
 | 文档 | 内容 | 适合 |
 |------|------|------|
-| **[SPEC.md](SPEC.md)** | 系统规格书 —— 架构、数据流、API 契约、生命周期 | 开发者 |
-| **[REFACTORING_PLAN.md](REFACTORING_PLAN.md)** | 重构专项计划 —— 分阶段路线 + 已完成/待办 | 维护者 |
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | 架构契约 —— 分层 / 系统地图 / 所有权 / 边界铁律 / 债清单 / 命名禁令 | 开发者（首选） |
+| **[docs/STAGE_FLOW_PLAN.md](docs/STAGE_FLOW_PLAN.md)** | 改进路线 —— 对象自治 / 身份归位 / 记录服务 / 命令化 七步 | 维护者 |
 | **[CONTENT_GUIDE.md](CONTENT_GUIDE.md)** | 内容制作流程 —— 怎么加关卡/敌人/Boss/符卡 | 关卡设计师 |
-| **[DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集 —— 各面角色台词 | 编剧 |
-| **[ARCHITECTURE_ROADMAP.md](ARCHITECTURE_ROADMAP.md)** | 架构路线图 —— 已完成/计划中的改进 + 技术债 | 维护者 |
-| **[omake.txt](docs/omake.txt)** | 附言、Extra Story、全角色设定 | 玩家/读者 |
+| **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对话系统 | 编剧 |
+| **[docs/SPELL_SYSTEM_TARGET.md](docs/SPELL_SYSTEM_TARGET.md)** | 符卡系统目标 | 维护者 |
+| **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划 | 维护者 |
+| **[docs/archive/SPEC.md](docs/archive/SPEC.md)** | 系统规格书（**已归档**，原"代码现状"，精华已并入 ARCHITECTURE §8） | 已归档 |
+| **[docs/omake.txt](docs/omake.txt)** | 附言、Extra Story、全角色设定 | 玩家/读者 |
 
 ### 我在做什么？看哪份？
 
 | 你的问题 | 打开哪份 |
 |---------|---------|
-| 「这个类怎么用 / 数据怎么流动」 | SPEC.md |
+| 「这项目怎么组织 / 谁归谁管 / 怎么改对」 | docs/ARCHITECTURE.md |
+| 「接下来要修什么架构问题」 | docs/STAGE_FLOW_PLAN.md |
 | 「怎么加一个新敌人 / 符卡」 | CONTENT_GUIDE.md |
-| 「接下来要修什么架构问题」 | REFACTORING_PLAN.md |
-| 「游戏还要做哪些功能」 | ARCHITECTURE_ROADMAP.md |
-| 「某面角色说什么台词」 | DIALOGUE.md |
+| 「某面角色说什么台词」 | docs/DIALOGUE.md |
 | 「怎么跑 / 怎么测 / 快捷键」 | README.md（本页） |
 
 ---
