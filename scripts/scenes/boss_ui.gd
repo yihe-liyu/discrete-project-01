@@ -74,8 +74,8 @@ func _on_boss_spawned(boss: Node) -> void:
 	
 	visible = true
 
-func _on_display_name_changed(name: String) -> void:
-	_name_label.text = name if name != "" else "???"
+func _on_display_name_changed(display_name: String) -> void:
+	_name_label.text = display_name if display_name != "" else "???"
 
 func _process(_delta: float) -> void:
 	if not _boss_ref or not is_instance_valid(_boss_ref) or not visible:

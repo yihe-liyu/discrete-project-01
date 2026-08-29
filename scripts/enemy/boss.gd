@@ -13,7 +13,7 @@ const INDICATOR_ALPHA_NEAR := 0.25   ## 最近处透明度（半透明但可见�
 const INDICATOR_FADE_POW := 0.5      ## 透明度缓动指数：<1 → 越近透明得越快（近处斜率陡）
 
 signal phase_cleared(captured: bool, bonus: int)
-signal display_name_changed(name: String)
+signal display_name_changed(display_name: String)
 
 var boss_data: BossData
 var _display_name: String = ""   ## 运行时显示名覆盖（空 = 用 boss_data.boss_name）
