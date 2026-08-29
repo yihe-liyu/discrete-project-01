@@ -1,5 +1,6 @@
 extends Node2D
-## Boss 环形血条，跟随 Boss 位置
+## Boss 环形血条，跟随 Boss 位置。**订阅 hp_changed / phase_cleared —— 不轮询**（铁律5：UI 订阅，不拉状态）。
+## hp 由 boss 的 _set_hp 统一改并广播；本环只画。
 
 @export var radius: float = 128.0
 @export var thickness: float = 5.0
@@ -14,44 +15,36 @@ func setup(p_boss: Boss) -> void:
 	_boss = p_boss
 	position = Vector2.ZERO
 	z_index = LayerConfig.BOSS_HP_RING
-	GameEvents.phase_start.connect(_on_phase_start)
+	if not _boss.hp_changed.is_connected(_on_hp_changed):
+		_boss.hp_changed.connect(_on_hp_changed)
+	if not _boss.phase_cleared.is_connected(_on_phase_cleared):
+		_boss.phase_cleared.connect(_on_phase_cleared)
 	queue_redraw()
 
 func _exit_tree() -> void:
-	if GameEvents.phase_start.is_connected(_on_phase_start):
-		GameEvents.phase_start.disconnect(_on_phase_start)
+	if _boss and is_instance_valid(_boss):
+		if _boss.hp_changed.is_connected(_on_hp_changed):
+			_boss.hp_changed.disconnect(_on_hp_changed)
+		if _boss.phase_cleared.is_connected(_on_phase_cleared):
+			_boss.phase_cleared.disconnect(_on_phase_cleared)
 
-
-func _on_phase_start(phase: PhaseData) -> void:
-	_max_hp = phase.hp
-	_hp = phase.hp
+## hp 变了 → 更新并重画（涨血/扣血都由 boss._set_hp 广播）
+func _on_hp_changed(new_hp: int, max_hp: int) -> void:
+	_hp = new_hp
+	_max_hp = max_hp
 	queue_redraw()
 
-func _process(_delta: float) -> void:
-	if not _boss or not is_instance_valid(_boss):
-		queue_redraw(); return
-	
-	var ph := _boss.current_phase()
-	if not ph or _boss.is_in_gap():
-		visible = false; return  # 还没开战 或 阶段间隙
-	visible = true
-	
-	if ph.hp <= 0:
-		return
-	var ch := _boss.hp
-	if ch != _hp or ph.hp != _max_hp:
-		_hp = ch
-		_max_hp = ph.hp
-		queue_redraw()
+## 阶段击破 → 阶段间隙隐藏；下次 start_phase 由 Boss 重新显示
+func _on_phase_cleared(_captured: bool, _bonus: int) -> void:
+	visible = false
 
 func _draw() -> void:
 	if _max_hp <= 0: return
-	
+
 	var ratio := clampf(float(_hp) / float(_max_hp), 0.0, 1.0)
 	var start_angle := -PI / 2.0
 	var end_angle := start_angle - TAU * ratio
-	
-	
+
 	# 红色空心环 = 内外两圈细线
 	var ring_half := thickness * 0.5 + 1.0
 	draw_arc(Vector2.ZERO, radius + ring_half, 0, TAU, 64, edge_color, 2.0, true)

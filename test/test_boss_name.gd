@@ -6,7 +6,7 @@ func _make_boss(p_name: String) -> Boss:
 	var b := Boss.new()
 	var d := BossData.new()
 	d.boss_name = p_name
-	b.boss_data = d
+	b._boss_data = d
 	autofree(b)
 	return b
 

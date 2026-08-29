@@ -40,7 +40,7 @@ func _make_boss(pos: Vector2, phase_hp: int) -> Boss:
 	boss.start_phase(phase)
 	boss._invincible = false
 	boss.global_position = pos
-	boss.hitbox_radius = 30.0
+	boss._hitbox_radius = 30.0
 	return boss
 
 
@@ -60,7 +60,7 @@ func test_normal_damage_not_played_for_normal_enemy():
 func test_normal_damage_not_played_for_full_hp_boss():
 	var phys := _make_phys()
 	var boss := _make_boss(Vector2(400, 300), 100)
-	boss.hp = 80
+	boss._hp = 80
 	phys._enemy_hash.insert(boss)
 	var bullet := _shoot_player_bullet(Vector2(400, 300))
 	phys._player_vs_enemies(bullet)
@@ -70,7 +70,7 @@ func test_normal_damage_not_played_for_full_hp_boss():
 func test_normal_damage_played_for_low_hp_boss():
 	var phys := _make_phys()
 	var boss := _make_boss(Vector2(400, 300), 100)
-	boss.hp = 20  # 20% < 30%
+	boss._hp = 20  # 20% < 30%
 	phys._enemy_hash.insert(boss)
 	var bullet := _shoot_player_bullet(Vector2(400, 300))
 	phys._player_vs_enemies(bullet)
@@ -94,11 +94,11 @@ func test_boss_is_low_hp_bounds():
 	phase.time_limit = 10.0
 	boss.start_phase(phase)
 	boss._invincible = false
-	boss.hp = 100
+	boss._hp = 100
 	assert_false(boss.is_low_hp(), "满血不残")
-	boss.hp = 45
+	boss._hp = 45
 	assert_false(boss.is_low_hp(), "恰好 45% 不算残血")
-	boss.hp = 44
+	boss._hp = 44
 	assert_true(boss.is_low_hp(), "44% 算残血")
 	# 时符阶段不判定
 	var tp := PhaseData.new()
@@ -107,5 +107,5 @@ func test_boss_is_low_hp_bounds():
 	tp.is_timeout_only = true
 	boss.start_phase(tp)
 	boss._invincible = false
-	boss.hp = 5
+	boss._hp = 5
 	assert_false(boss.is_low_hp(), "时符不判定残血")

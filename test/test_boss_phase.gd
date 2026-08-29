@@ -81,7 +81,7 @@ func test_destroy_spell_is_captured():
 func test_damage_ignored_while_invincible():
 	var phase := _make_phase(100)
 	_boss.start_phase(phase)
-	_boss.hp = 100
+	_boss._hp = 100
 	_boss._invincible = true
 	_boss.take_damage(100)
 	assert_eq(_boss.hp, 100, "无敌期间不应扣血")

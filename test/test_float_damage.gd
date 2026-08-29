@@ -29,7 +29,7 @@ func test_boss_fractional_damage():
 	phase.bonus = 100
 	boss.start_phase(phase)
 	boss._invincible = false
-	boss.hp = 5
+	boss._hp = 5
 	boss.take_damage(0.25)
 	assert_eq(boss.hp, 5, "0.25 不足 1 不扣血")
 	boss.take_damage(0.25)

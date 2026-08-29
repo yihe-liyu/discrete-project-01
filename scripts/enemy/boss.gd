@@ -14,11 +14,20 @@ const INDICATOR_FADE_POW := 0.5      ## 透明度缓动指数：<1 → 越近透
 
 signal phase_cleared(captured: bool, bonus: int)
 signal display_name_changed(display_name: String)
+signal hp_changed(hp: int, max_hp: int)
 
-var boss_data: BossData
-var _display_name: String = ""   ## 运行时显示名覆盖（空 = 用 boss_data.boss_name）
-var hp: int = 0
-var hitbox_radius: float
+var _boss_data: BossData
+var _display_name: String = ""   ## 运行时显示名覆盖（空 = 用 _boss_data.boss_name）
+var _hp: int = 0
+var _hitbox_radius: float
+
+## 只读访问器：hp / boss_data / hitbox_radius 外部只读，改写只经本类方法（封装，防作弊/防割裂）
+var boss_data: BossData:
+	get: return _boss_data
+var hp: int:
+	get: return _hp
+var hitbox_radius: float:
+	get: return _hitbox_radius
 
 var _ctx: StageContext
 var _current_phase: PhaseData
@@ -47,7 +56,7 @@ var ctx: StageContext:
 func is_low_hp() -> bool:
 	if _invincible or not _current_phase or _current_phase.is_timeout_only:
 		return false
-	return _current_phase.hp > 0 and float(hp) < _current_phase.hp * 0.45
+	return _current_phase.hp > 0 and float(_hp) < _current_phase.hp * 0.45
 func current_bonus() -> int: return _bonus
 func get_elapsed() -> float: return _elapsed
 func get_phase_id() -> PhaseIdentity: return _pid
@@ -55,7 +64,7 @@ func get_phase_id() -> PhaseIdentity: return _pid
 
 ## 显示名：运行时覆盖优先，否则用 boss_data.boss_name（UI/外部系统只读这个）
 func get_boss_name() -> String:
-	return _display_name if _display_name != "" else (boss_data.boss_name if boss_data else "")
+	return _display_name if _display_name != "" else (_boss_data.boss_name if _boss_data else "")
 
 
 ## 运行时改显示名（外部系统可调用 —— 揭示真名 / 练习显示卡名 等；改名会发 display_name_changed，BossUI 订阅同步）
@@ -72,7 +81,7 @@ func set_exit_controlled() -> void:
 
 
 func setup(data: BossData, p_ctx: StageContext = null) -> void:
-	boss_data = data
+	_boss_data = data
 	_ctx = p_ctx
 	z_index = LayerConfig.BOSS
 	if not GameEvents.player_missed.is_connected(_on_player_death):
@@ -87,9 +96,9 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	ring.setup(self)
 	add_child(ring)
 	
-	hitbox_radius = data.hitbox_radius
+	_hitbox_radius = data.hitbox_radius
 	var shape := CircleShape2D.new()
-	shape.radius = hitbox_radius
+	shape.radius = _hitbox_radius
 	var col := CollisionShape2D.new()
 	col.shape = shape
 	add_child(col)
@@ -97,10 +106,7 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	collision_layer = 0
 	collision_mask = 0
 
-	for child in get_children():
-		if child.get_script() == HPRingClass:
-			child.visible = false
-			break
+	_set_ring_visible(false)
 
 func start_boss() -> void:
 	set_process(true)
@@ -163,16 +169,13 @@ func start_phase(data: PhaseData) -> void:
 	_elapsed = 0.0
 	_bonus = data.bonus
 	_invincible = true
-	hp = 0
+	_set_hp(0)
 	# 开局减伤参数暂存，计时从"无敌解除"（涨血完，玩家能打伤）开始
 	_open_reduce_ratio = data.open_reduce_ratio
 	_open_reduce_left = 0.0
 	
 	# 显示血条
-	for child in get_children():
-		if child.get_script() == HPRingClass:
-			child.visible = true
-			break
+	_set_ring_visible(true)
 	
 	_pid = BossCatalog.resolve_identity(_stage_id, data, GameState.practice_phase_index if GameState.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
 	if _pid:
@@ -183,11 +186,11 @@ func start_phase(data: PhaseData) -> void:
 	
 	# HP 从 0 涨到满
 	var twn := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	twn.tween_property(self, "hp", data.hp, 1.0)
+	twn.tween_method(_set_hp, 0, data.hp, 1.0)
 	twn.tween_callback(func():
 		if data.is_timeout_only:
 			_invincible = true
-			hp = 999999
+			_set_hp(999999)
 		else:
 			_invincible = false
 			# 玩家能打伤时才开始减伤计时（完整 open_reduce_time 秒）
@@ -242,8 +245,8 @@ func take_damage(damage: float) -> void:
 	if full <= 0:
 		return
 	_dmg_acc -= full
-	hp -= full
-	if hp <= 0 and not _current_phase.is_timeout_only:
+	_set_hp(_hp - full)
+	if _hp <= 0 and not _current_phase.is_timeout_only:
 		_clear_phase(true)
 
 
@@ -289,12 +292,25 @@ func _die() -> void:
 	# 注意：不停 _process——指示器 x 跟随在其中，死后离场演出期间仍需跟随 Boss
 	# （阶段逻辑由 _process 开头的 `if not _current_phase: return` 自然跳过）
 	_current_phase = null
+	_set_ring_visible(false)
 	if GameState.is_practice_mode and _pid and not _cleared:
 		pass  # 练习 attempt 已在进入阶段时记过（玩家 miss/超时退出也覆盖），这里不再重复记
 	GameState.active_enemies.erase(self)
 	GameEvents.boss_defeated.emit(self)
 	if not _exit_controlled:
 		queue_free()
+
+## 血量改写唯一入口（封装）：改 _hp 并发 hp_changed 供 UI 订阅
+func _set_hp(v) -> void:
+	_hp = int(v)
+	hp_changed.emit(_hp, _current_phase.hp if _current_phase else 0)
+
+## 血条显隐（统一）
+func _set_ring_visible(v: bool) -> void:
+	for child in get_children():
+		if child.get_script() == HPRingClass:
+			child.visible = v
+			break
 
 
 func _drop_items() -> void:
