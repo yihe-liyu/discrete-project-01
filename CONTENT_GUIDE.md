@@ -8,7 +8,7 @@
 
 1. 在 Godot 编辑器里打开 `data/stages/stage01/stage_script/stage01.gd`（Timeline 编排）
 2. 加 `tl.at(时刻).do(func(): EnemyData.new().with_script(...).pos(...).spawn(ctx))`
-   或给 Boss 加阶段（`BossData.new().phase(...)` + `tl.start_phase(...)` 阶段链）
+   或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `tl.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. F6 运行工作台 → 命中框/固定种子/逐帧看效果；改完代码**重启工作台**生效
 4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完同样重启工作台看
 
@@ -37,25 +37,37 @@
 
 ```gdscript
 const ENEMY01 = preload("res://data/stages/stage01/enemy/enemy01.gd")
-const NON_01  = preload("res://data/stages/stage01/phase/non01/non01.tres")
-const NON_MID_01 = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
+const CAMORUI_MID = BossCatalog.boss(1, 0)   # 道中 Boss 数据（BossCatalog 单源）
+const CAMORUI     = BossCatalog.boss(1, 1)   # 关底 Boss 数据（完整阶段链）
+
+var _dir: StageDirector   # 场景导演：bgm/boss/dialogue/on —— 场景动词唯一 owner
+var _mid: BossHandle      # 道中 Boss 句柄（reveal/phase/retreat）
+var _final: BossHandle    # 关底 Boss 句柄
 
 func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
-	var tl := start_timeline()
-	tl.at(0.0).play_bgm(...)
+	_dir = StageDirector.new(ctx)          # 导演：场景动词 + 事件路由
+	var tl := start_timeline(_dir)         # 传导演：Timeline 便捷动词委托给它（单一 owner）
+	tl.at(0.0).play_bgm("stage1")          # 按 key（走 _dir.bgm；_dir 是唯一实现）
 	tl.at(1.0).do(func(): EnemyData.new().with_script(ENEMY01)...
 		.pos(Vector2(...)).red_little_fairy().param("target_y", 200).spawn(ctx))
-	# Boss + 阶段链（phase 击破后 Timeline 冻结 → 击破继续 → 激活下一个 wait 事件）
-	tl.at(35.0).do(func(): boss_holder[0] = StageManager.spawn_boss(kamorui, ...))
-	tl.at(38.0).start_phase(func(): return boss_holder[0], NON_01)   # 非符1
-	tl.wait(1.0).start_phase(func(): return boss_holder[0], NON_MID_01)  # 道中非符
-	tl.wait(2.0).do(func(): 退场)
+	# Boss 进场：spawn + register + 隐藏名 + tween —— 全在 _dir.boss 里
+	tl.at(35.0).do(func():
+		_mid = _dir.boss("boss_mid", CAMORUI_MID, Vector2(-50, 500), Vector2(FIELD_CENTER_X, 250))
+	)
+	# 时轴驱动的阶段（保留 start_phase 的 wait 偏移继承）
+	tl.at(38.0).start_phase(func(): return _mid.resolve(), CAMORUI_MID.phases[0])  # 非符1
+	# 战前对话事件路由（取代 _on_dialogue_event 大 match）：只调动词
+	_dir.on("boss_enter",   func(): _final = _dir.boss("boss_final", CAMORUI, Vector2(1000, 500), Vector2(FIELD_CENTER_X, 250)))
+	_dir.on("display_name", func(): _final.reveal("卡摩瑞"))
+	_dir.on("boss_fight",   func(): _final.phase(0, true))
 	super.start(ctx, target)
 ```
 
 Timeline 链式 API：`at(t)` 绝对时刻 · `wait(n)` 相对上一 blocking 结束 · `do(cb)` 任意逻辑 ·
-`start_phase(boss_getter, PhaseData)` 起阶段并冻结直到击破 · `every(times)` 重复 · `play_bgm/spawn_enemy/spawn_boss/dialogue` 快捷。
+`start_phase(boss_getter, PhaseData)` 起阶段（保留时符等待：击破后激活后续 wait） · `every(times)` 重复。
+**场景动词（bgm/spawn_*/dialogue）由 `StageDirector` 承担**，Timeline 只是薄委托：
+`tl.play_bgm/spawn_boss/spawn_enemy/spawn_wave/dialogue_steps` = `do(func(): _dir.xxx())`，**不用重复实现**。
 
 > ⚠️ start_phase 链注意：`wait()` 后接 `start_phase()` 必须直接链（`tl.wait(1.0).start_phase(...)`），
 > 中间插 `do(pass)` 会破坏 wait 偏移继承（阶段会立即触发）。
@@ -136,7 +148,7 @@ data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见
 ```
 
 **加新阶段 = 建目录 + 写 .gd + 建 .tres，`.tres` 里用 `move_script=ExtResource(...)` 指脚本**，
-再在关卡脚本 `start_phase(boss_getter, that_tres)` 引用。脚本文件即复用单元，跨阶段复用用 `params` 覆盖。
+再在关卡脚本 `tl.start_phase(getter, that_tres)`（时轴驱动）或 `handle.phase(index)`（事件驱动）引用。脚本文件即复用单元，跨阶段复用用 `params` 覆盖。
 
 ---
 
