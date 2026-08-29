@@ -4,6 +4,7 @@ extends Area2D
 
 const HPRingClass = preload("res://scripts/scenes/boss_hp_ring.gd")
 const POS_INDICATOR_TEX := preload("res://assets/Textures/front/boss_position.png")
+const RecordService = preload("res://scripts/coroutine/services/record_service.gd")   # 记录服务（显式 preload，不依赖全局类缓存）
 
 ## Boss 位置指示器距离淡出：离自机 x 越远越清晰（近处半透明，远处醒目）
 const INDICATOR_FADE_NEAR := 60.0    ## |dx| ≤ 60px 时最淡
@@ -175,11 +176,7 @@ func start_phase(data: PhaseData) -> void:
 	
 	_pid = BossCatalog.resolve_identity(_stage_id, data, GameState.practice_phase_index if GameState.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
 	if _pid:
-		if not GameState.is_practice_mode:
-			GameState.unlock_spell(_pid)
-			GameState.record_spell(_pid, false, 0, 0.0)  # 进入符卡即记一次尝试（挑战开始）
-		else:
-			GameState.record_practice(_pid, false)  # 练习：进入即记一次尝试（覆盖击破/玩家死/退出所有结束路径）
+		RecordService.record_phase_start(_pid)   # 记录服务：解锁/记尝试（Boss 不再摸 GameState.record_*）
 	
 	if data.name != "":
 		GameEvents.phase_start.emit(data)
@@ -269,10 +266,9 @@ func _clear_phase(captured: bool) -> void:
 	if _pid:
 		# 阶段已开始（_pid 已生成）才记录；Ctrl+G 在阶段开始前触发时只跳阶段不落盘
 		if GameState.is_practice_mode:
-			GameState.record_practice_capture(_pid)  # 练习收取：attempt 已在进入时记过，这里只补 capture
+			RecordService.record_phase_capture(_pid, false, 0, 0.0)  # 练习收取
 		elif captured and not _phase_missed:
-			# 干净收取：attempts 已在进入阶段时记过，这里只补收取
-			GameState.record_capture(_pid, _bonus, _elapsed)
+			RecordService.record_phase_capture(_pid, true, _bonus, _elapsed)  # 干净收取
 	
 	GameEvents.phase_end.emit(captured, _bonus)
 	if captured and _bonus > 0:
