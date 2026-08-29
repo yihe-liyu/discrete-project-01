@@ -54,6 +54,32 @@
 
 ---
 
+## 2.2 使用层（接口）—— 动词，不是协程/Timeline
+
+> **接口 = 一组"意图动词"，各归其主，且时序无关。** 协程 / Timeline **不是接口**，是接口下方的**运行时原语**（行为的引擎 / 编排的引擎）。"使用层"是**基建层**与**内容层**之间的缝：内容只写左边，基建在右边，缝上就是动词。
+
+### 动词三族 + 时序 + 原语
+
+| 类别 | 形态 | 例子 | 归属 |
+|---|---|---|---|
+| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` | `StageContext` 下各服务 |
+| **场景动词**（宏观，跨子系统，一意图） | `dir.verb()` | `dir.boss("boss_mid", data, from, to)` `dir.on(event, handler)` `dir.dialogue(steps)` | `StageDirector` `BossHandle` |
+| **名词构建词** | `Data.builder()` | `EnemyData.new().with_script().pos().param().spawn(ctx)` | 各 `*Data` |
+| **时序粘合剂** | `tl.at()/wait()/every()` | `tl.at(35).do(func(): dir.boss(...))` | `Timeline` |
+| **原语** | 协程 / 事件 | `CoroutineScript` `TimelineEvent` | `coroutine/*` |
+
+### 关键惯例
+
+- **动词时序无关**：`dir.boss("x").phase(0)` 必须能不靠 timeline 单独跑（符卡练习用）。"能不能无 timeline 调用"是检查法。
+- **内容只碰动词**：内容文件不再 import `StageManager/GameState/StageObjects/BulletManager/AudioManager`，不再 `create_tween`。一旦不得不在内容里写 `.do(func(): <机制>)`，说明还缺一个动词（判据）。
+- **一知识一 owner**：`dir.boss` 内部才 `spawn_boss + register + hide_name + tween`；`BossHandle.retreat` 内部才 `set_exit_controlled + die + tween`。内容只看到"进 Boss / 揭名 / 退场"。
+- **响亮**：动词缺 Boss/阶段越界等 → `push_warning`/`push_error`，绝不静默。
+- **Timeline 动词与 Director 动词未来统一**（避免双路）：目前 `tl.play_bgm/spawn_boss` 与 `dir.bgm/boss` 并存，后续让 Timeline 委托给 Director。
+
+### 已落地（D Part 1）
+
+`StageDirector`（`scripts/coroutine/director/stage_director.gd`）+ `BossHandle`（`…/boss_handle.gd`）：`dir.boss/boss_ref/dialogue/bgm/on/dispose` + 句柄 `reveal/hide_name/enter/phase/retreat`。`stage01.gd` 的 Boss 段与 `_on_dialogue_event` 大 match 已改为动词 + 事件路由。`Timeline.start_phase(boss_getter, data)` 接口未变（有测试锁定）。
+
 ## 3. 接口契约原则（好/坏接口的判据）
 
 > **好的接口：调用方只说“我要什么”，不碰“怎么实现”。**（intent 层，而非 how 层）
@@ -85,7 +111,7 @@
 | A | ~~`params` 反射（C4）~~ | 内容/参数 | ✅ 已修到「校验+响亮」（`ParamValidator`）；「全 typed 资源」未做 | 已做（2026） |
 | B | ~~双路 `if ctx else Global`~~ | 领域/接口 | ✅ 已修：系统操作统一走 `ctx.*`，删除 else-Global 回退 | 已做（2026） |
 | C | 调用方拼内容（`EnemyData.new()...spawn`） | 内容/接口 | 内容做资源 | 中 |
-| D | 关卡脚本胖（大 match + 手工 spawn/tween） | 编排/接口 | 事件派发 + intent 层接口 | 中 |
+| D | 关卡脚本胖（大 match + 手工 spawn/tween） | 编排/接口 | D1 ✅ 事件派发 + 场景动词（`StageDirector`/`BossHandle`）；D2 命令化/数据化 未做 | 中 |
 | E | Boss 公开可变（`hp`“boss_data） | 运行时/封装 | 只读/访问器 | 低 |
 | F | 时间分片/暂停缝（C6） | 运行时/时间 | 统一时间所有权 | 低（系统性） |
 

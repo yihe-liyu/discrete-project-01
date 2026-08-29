@@ -19,12 +19,15 @@ const STAGE01_INTRO = preload("res://data/dialogue/stage01/intro.gd")
 var _kamorui_mid: BossData = BossCatalog.boss(1, 0)
 var _kamorui: BossData = BossCatalog.boss(1, 1)
 
+## 场景导演 + Boss 句柄（内容只调动词，不再摸 StageManager/StageObjects/create_tween）
+var _dir: StageDirector
+var _mid: BossHandle
+var _final: BossHandle
+
 func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	if p_target: target = p_target
-	# 监听对话事件（dialogue_event）：战前对话触发切 BGM / Boss 进场 / 开战
-	if not GameEvents.dialogue_event.is_connected(_on_dialogue_event):
-		GameEvents.dialogue_event.connect(_on_dialogue_event)
+	_dir = StageDirector.new(ctx)   # 导演：场景动词 + 事件路由（内部监听 dialogue_event）
 	var tl := start_timeline()
 	var bgm: AudioStream = AssetRegistry.get_bgm("stage1")
 	var logo_tex: Texture2D = preload("res://assets/Textures/front/logo/logo1.png")
@@ -105,28 +108,16 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	# ── Boss ──
 	tl.at(35.0).do(func():
-		var b := StageManager.spawn_boss(_kamorui_mid, Vector2(-50, 500), ctx) as Boss
-		StageObjects.register("boss_mid", b, Boss)
-		b.set_boss_name("？？？")   # 道中也隐藏真名（不开战前对话、不揭名，全程"？？？"）
-		var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-		tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tw.tween_property(b, "global_position", Vector2(GameConfig.FIELD_CENTER_X, 250), 1.5)
+		_mid = _dir.boss("boss_mid", _kamorui_mid,
+			Vector2(-50, 500), Vector2(GameConfig.FIELD_CENTER_X, 250))
 	)
 
 	# 非符 1
-	tl.at(38.0).start_phase(func(): return StageObjects.resolve("boss_mid"), _kamorui_mid.phases[0])
+	tl.at(38.0).start_phase(func(): return _mid.resolve(), _kamorui_mid.phases[0])
 	# ← 非符 被击破后 1s → 符卡（phase 继承 wait 偏移，击破后激活）
-	#tl.wait(1.0).start_phase(func(): return StageObjects.resolve("boss_mid"), diff_pick(SPELL03))
+	#tl.wait(1.0).start_phase(func(): return _mid.resolve(), diff_pick(SPELL03))
 	# ← 符卡被击破后 2s → 退场
-	tl.wait(2.0).do(func():
-		var b := StageObjects.resolve("boss_mid") as Boss
-		b.set_exit_controlled()
-		b.die()
-		var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-		tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tw.tween_property(b, "global_position", Vector2(GameConfig.FIELD_CENTER_X, -150), 2.0)
-		tw.tween_callback(b.queue_free)
-	)
+	tl.wait(2.0).do(func(): _mid.retreat(Vector2(GameConfig.FIELD_CENTER_X, -150)))
 
 	# Boss 后增援波次（设计：提前击破 Boss → 固定时刻增援趁 Boss 已死触发，
 	# 打得快增援多、打得慢被 if 吞掉 —— 内容/资源节奏由玩家速度决定）
@@ -188,47 +179,47 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	
 	# 战前对话（独立构建脚本 data/dialogue/stage01/intro.gd）
 	tl.at(93).do(func():
-		ctx.play_dialogue_steps(STAGE01_INTRO.build().steps)
+		_dir.dialogue(STAGE01_INTRO.build().steps)
 	)
+
+	# 对话事件路由（取代大 match）：战前对话触发进 Boss / 揭名 / 切歌 / 开战
+	_dir.on("boss_enter", _on_boss_enter)
+	_dir.on("display_name", _on_display_name)
+	_dir.on("bgm_switch", _on_bgm_switch)
+	_dir.on("boss_fight", _on_boss_fight)
 
 	super.start(ctx, target)
 
 
 ## 信号生命周期约定：场景 _exit_tree 统一断开 autoload 连接
 func _exit_tree() -> void:
-	if GameEvents.dialogue_event.is_connected(_on_dialogue_event):
-		GameEvents.dialogue_event.disconnect(_on_dialogue_event)
-	StageObjects.clear()   # 关卡结束清空命名槽位（防跨关残留）
+	if _dir:
+		_dir.dispose()   # 断 dialogue_event 连接 + 清空本关命名槽位
 
 
 ## 对话事件处理：DSL 步骤 d.event() 广播（dialogue_box 转发 GameEvents.dialogue_event）
-func _on_dialogue_event(event_name: String) -> void:
-	match event_name:
-		"boss_enter":
-			# r2 说完：最终 Boss 本体从场外飞入（对话期间只就位，不开火）
-			if not StageObjects.has("boss_final") and ctx and ctx.active():
-				var b := StageManager.spawn_boss(_kamorui, Vector2(1000, 500), ctx) as Boss
-				StageObjects.register("boss_final", b, Boss)
-				b.set_boss_name("？？？")   # 开场隐藏真名（战前对话 display_name 事件揭名）
-				# 同一 Boss（卡摩瑞）：段 BossData 带完整阶段链，start_phase 自动定位面非符为 index 1
-				var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-				tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-				tw.tween_property(b, "global_position", Vector2(GameConfig.FIELD_CENTER_X, 250), 1.5)
-		"display_name":
-			var b := StageObjects.resolve_as("boss_final", Boss)
-			if b:
-				b.set_boss_name("卡摩瑞")
-		"bgm_switch":
-			# 战前对话最后一句 → 切卡摩瑞主题曲（洞窟蝙蝠），说完即开打
-			if ctx and ctx.active():
-				ctx.audio.play_bgm(AssetRegistry.get_bgm("music_3"))
-		"boss_fight":
-			# 最后一句说完 → Boss 直接开战（start_phase 不冻结时间轴，绝对时刻事件照常）
-			var b := StageObjects.resolve_as("boss_final", Boss)
-			if b and b.current_phase() == null:
-				b.start_phase(_kamorui.phases[0])  # 面非符，序号 1（由完整链推导）
-		_:
-			pass  # 未处理事件静默忽略
+## 事件路由（取代大 match）：_dir.on(key, handler) 注册，handler 只调动词。
+
+func _on_boss_enter() -> void:
+	# r2 说完：最终 Boss 本体从场外飞入（对话期间只就位，不开火）
+	if ctx and ctx.active() and not (_final and _final.exists()):
+		_final = _dir.boss("boss_final", _kamorui,
+			Vector2(1000, 500), Vector2(GameConfig.FIELD_CENTER_X, 250))
+
+func _on_display_name() -> void:
+	# 战前对话 display_name 事件揭真名
+	if _final:
+		_final.reveal("卡摩瑞")
+
+func _on_bgm_switch() -> void:
+	# 战前对话最后一句 → 切卡摩瑞主题曲（洞窟蝙蝠），说完即开打
+	if ctx and ctx.active():
+		_dir.bgm("music_3")
+
+func _on_boss_fight() -> void:
+	# 最后一句说完 → Boss 直接开战（面非符，序号 1，由完整链推导）
+	if _final:
+		_final.phase(0, true)
 
 
 ## Boss 后横穿增援：side 0=右→左，1=左→右（i 决定颜色/位置随机偏移）
