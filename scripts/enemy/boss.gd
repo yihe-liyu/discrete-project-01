@@ -4,6 +4,7 @@ extends Area2D
 
 const HPRingClass = preload("res://scripts/scenes/boss_hp_ring.gd")
 const POS_INDICATOR_TEX := preload("res://assets/Textures/front/boss_position.png")
+const ParamValidator = preload("res://scripts/data/param_validator.gd")
 
 ## Boss 位置指示器距离淡出：离自机 x 越远越清晰（近处半透明，远处醒目）
 const INDICATOR_FADE_NEAR := 60.0    ## |dx| ≤ 60px 时最淡
@@ -322,6 +323,4 @@ func _drop_items() -> void:
 ## 注意：这里只有参数注入，掉落逻辑在 _drop_items（_clear_phase 击破时）——
 ## 曾经残留过一份掉落代码导致 start_phase 时误掉道具（已删，勿再贴回）
 func _apply_phase_params(script: Node, params: Dictionary) -> void:
-	for k in params:
-		if k in script:  # 脚本有该属性才设置（避免乱设）
-			script.set(k, params[k])
+	ParamValidator.apply(script, params)   # C4：校验 + 只设合法键 + 打错键名/类型响亮报错
