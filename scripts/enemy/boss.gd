@@ -20,7 +20,6 @@ var hp: int = 0
 var hitbox_radius: float
 
 var _ctx: StageContext
-var _phase_index: int = -1
 var _current_phase: PhaseData
 var _pos_indicator: Sprite2D  # Boss 位置指示器（x 跟随 Boss，y 固定游戏框底）
 var _bonus: int = 0
@@ -32,9 +31,6 @@ var _open_reduce_ratio: float = 0.0  # 开局减伤比例（0~1）
 var _move: CoroutineRunner
 var _shoot: CoroutineRunner
 var _stage_id: int
-var boss_index: int = 0   ## 第几个 Boss（多 Boss 关卡时设置；记录区分用）
-var _spell_count: int = 0
-var _non_count: int = 0
 var _pid: PhaseIdentity
 var _exit_controlled: bool = false
 var _cleared: bool = false
@@ -72,30 +68,6 @@ func is_in_gap() -> bool:
 
 func set_exit_controlled() -> void:
 	_exit_controlled = true
-
-
-## 阶段序号 + 第几张非符/符卡，一律从"每面规范阶段顺序"推导（BossCatalog —— 与 Boss 拆分无关）。
-## phase_index = 规范顺序位置；非符N/符卡N = 规范顺序里数；boss_index = 拥有该阶段的 Boss。
-func _locate_phase(data: PhaseData) -> void:
-	var idx := BossCatalog.phase_canonical_index(_stage_id, data)
-	if idx >= 0:
-		_phase_index = idx
-		_non_count = 0
-		_spell_count = 0
-		var order := BossCatalog.stage_phase_order(_stage_id)
-		for j in range(idx + 1):
-			if order[j].uid != 0:
-				_spell_count += 1
-			else:
-				_non_count += 1
-		boss_index = BossCatalog.boss_index_of_phase(_stage_id, idx)
-		return
-	# 未在规范顺序找到（异常/老记录）→ 回退旧计数器，避免崩溃/撞键
-	_phase_index += 1
-	if data.uid != 0:
-		_spell_count += 1
-	else:
-		_non_count += 1
 
 
 func setup(data: BossData, p_ctx: StageContext = null) -> void:
@@ -186,12 +158,6 @@ func start_phase(data: PhaseData) -> void:
 		push_error("Boss.start_phase 配置错误: " + e)
 	_cleared = false
 	_phase_missed = false  # 每阶段独立判定 miss
-	if GameState.is_practice_mode:
-		_phase_index = GameState.practice_phase_index  # 练习：用记录键（正篇阶段序），不递增
-	else:
-		_locate_phase(data)  # 阶段序号/第几张从规范顺序推导
-	# 规范归属：该阶段属于第几个 Boss（记录/展示用；不参与记录主键）
-	boss_index = BossCatalog.boss_index_of_phase(_stage_id, _phase_index) if _phase_index >= 0 else boss_index
 	_current_phase = data
 	_elapsed = 0.0
 	_bonus = data.bonus
@@ -207,12 +173,13 @@ func start_phase(data: PhaseData) -> void:
 			child.visible = true
 			break
 	
-	_pid = PhaseIdentity.from_phase(data, _stage_id, _phase_index, _spell_count, _non_count, boss_index)
-	if not GameState.is_practice_mode:
-		GameState.unlock_spell(_pid)
-		GameState.record_spell(_pid, false, 0, 0.0)  # 进入符卡即记一次尝试（挑战开始）
-	else:
-		GameState.record_practice(_pid, false)  # 练习：进入即记一次尝试（覆盖击破/玩家死/退出所有结束路径）
+	_pid = BossCatalog.resolve_identity(_stage_id, data, GameState.practice_phase_index if GameState.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
+	if _pid:
+		if not GameState.is_practice_mode:
+			GameState.unlock_spell(_pid)
+			GameState.record_spell(_pid, false, 0, 0.0)  # 进入符卡即记一次尝试（挑战开始）
+		else:
+			GameState.record_practice(_pid, false)  # 练习：进入即记一次尝试（覆盖击破/玩家死/退出所有结束路径）
 	
 	if data.name != "":
 		GameEvents.phase_start.emit(data)

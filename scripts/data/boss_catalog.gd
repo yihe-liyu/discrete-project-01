@@ -94,6 +94,39 @@ static func boss_of_phase(stage: int, phase_index: int) -> BossData:
 	return boss(stage, boss_index_of_phase(stage, phase_index))
 
 
+## 解析一个阶段的完整身份（phase_index / 第N张非符·符卡 / boss_index）。
+## 身份知识唯一来源：Boss / 记录服务 / 任何调用方一律从这里拿（消除 C5 冗余 / 重复推导）。
+## - 阶段在该面规范顺序里 → 从目录推导 phase_index / 第N张 / boss_index。
+## - 不在目录（合成/测试阶段、或练习用记录键）→ 用 prefer_phase_index 兜底，
+##   只保证"记录键"（stage, phase_index, char, diff）正确；phase_number/boss_index 给默认。
+## 返回 null 仅当两者都不可得。
+static func resolve_identity(stage: int, phase: PhaseData, prefer_phase_index: int = -1) -> PhaseIdentity:
+	var phase_index := phase_canonical_index(stage, phase)
+	if phase_index >= 0:
+		var spell_count := 0
+		var non_count := 0
+		var order := stage_phase_order(stage)
+		for j in range(phase_index + 1):
+			if order[j].uid != 0:
+				spell_count += 1
+			else:
+				non_count += 1
+		var boss_index := boss_index_of_phase(stage, phase_index)
+		return PhaseIdentity.from_phase(phase, stage, phase_index, spell_count, non_count, boss_index)
+	if prefer_phase_index < 0:
+		return null
+	var pid := PhaseIdentity.new()
+	pid.stage_id = stage
+	pid.phase_index = prefer_phase_index
+	pid.uid = phase.uid
+	pid.phase_type = SpellRecord.PhaseType.SPELL if phase.uid != 0 else SpellRecord.PhaseType.NONSPELL
+	pid.character = GameState.selected_character
+	pid.difficulty = GameState.selected_difficulty
+	pid.boss_index = -1
+	pid.phase_number = 1
+	return pid
+
+
 ## 兼容旧入口：按 (stage, boss_index, phase_index, difficulty) 取阶段。
 ## 旧语义：boss 内 phase_index。新语义统一走 stage_phase_order（见 phase_at）。
 ## 保留仅供测试/调用方过渡，新代码请用 phase_at。
