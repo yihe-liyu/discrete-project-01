@@ -215,7 +215,7 @@ func _on_dialogue_event(event_name: String) -> void:
 				tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 				tw.tween_property(b, "global_position", Vector2(GameConfig.FIELD_CENTER_X, 250), 1.5)
 		"display_name":
-			var b := StageObjects.resolve("boss_final") as Boss
+			var b := StageObjects.resolve_as("boss_final", Boss)
 			if b:
 				b.set_boss_name("卡摩瑞")
 		"bgm_switch":
@@ -224,7 +224,7 @@ func _on_dialogue_event(event_name: String) -> void:
 				ctx.audio.play_bgm(AssetRegistry.get_bgm("music_3"))
 		"boss_fight":
 			# 最后一句说完 → Boss 直接开战（start_phase 不冻结时间轴，绝对时刻事件照常）
-			var b := StageObjects.resolve("boss_final") as Boss
+			var b := StageObjects.resolve_as("boss_final", Boss)
 			if b and b.current_phase() == null:
 				b.start_phase(_kamorui.phases[0])  # 面非符，序号 1（由完整链推导）
 		_:
