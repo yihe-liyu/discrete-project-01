@@ -19,11 +19,11 @@ var boss_data: BossData         ## Boss 数据
 
 ## ── 构造链 ──
 
-var _script: Script
-var _pos: Vector2 = Vector2.ZERO
-var _params: Dictionary = {}
+@export var behavior_script: Script  ## 行为脚本（可序列化：.tres 可引用）
+@export var params: Dictionary = {}  ## 行为脚本参数覆盖（可序列化）
+var _pos: Vector2 = Vector2.ZERO  ## 生成位置（运行时/逐实例，不入 .tres）
 
-func with_script(s: Script) -> EnemyData:   _script = s; return self
+func with_script(s: Script) -> EnemyData:   behavior_script = s; return self
 func pos(p: Vector2) -> EnemyData:     _pos = p; return self
 func hp(v: int) -> EnemyData:          max_hp = v; return self
 func hbox(v: float) -> EnemyData:      hitbox_radius = v; return self
@@ -35,25 +35,41 @@ func bomb(v: int) -> EnemyData:        item_bomb = v; return self
 func life_full(v: int) -> EnemyData:   item_life_full = v; return self
 func bomb_full(v: int) -> EnemyData:   item_bomb_full = v; return self
 func scatter(v: float) -> EnemyData:   item_scatter = v; return self
-func param(k: String, v) -> EnemyData: _params[k] = v; return self
+func param(k: String, v) -> EnemyData: params[k] = v; return self
 func visual(key: String) -> EnemyData:
 	visual_scene = AssetRegistry.enemy_visuals.get(key, preload("res://data/enemy_visual/red_little_fairy.tscn"))
 	return self
 
 ## 生成敌人 —— 数据类不持有场景，实例化/挂载委托给 StageManager
 func spawn(p_ctx: StageContext = null) -> Enemy:
+	var errs := validate()
+	for e in errs:
+		push_error("EnemyData 配置错误: " + e)
+	if not errs.is_empty():
+		return null
 	return StageManager.spawn_enemy_data(self, p_ctx)
 
 ## ── 生成参数（供 StageManager 读取） ──
 
-func has_script() -> bool:            return _script != null
-func get_enemy_script() -> Script:    return _script
+func has_script() -> bool:            return behavior_script != null
+func get_enemy_script() -> Script:    return behavior_script
 func get_spawn_pos() -> Vector2:      return _pos
-func get_params() -> Dictionary:      return _params
+func get_params() -> Dictionary:      return params
 func make_script() -> CoroutineScript:
-	if _script:
-		return _script.new()
+	if behavior_script:
+		return behavior_script.new()
 	return null
+
+## 配置校验（可序列化数据类）：非法配置拒绝生成；行为脚本类型/参数键名在生成时由 StageManager + ParamValidator 响亮校验
+func validate() -> Array[String]:
+	var errs: Array[String] = []
+	if behavior_script == null:
+		errs.append("EnemyData 未设置行为脚本（behavior_script），无法生成")
+	if max_hp <= 0:
+		errs.append("EnemyData.max_hp 必须 > 0（当前 %d）" % max_hp)
+	if hitbox_radius <= 0.0:
+		errs.append("EnemyData.hitbox_radius 必须 > 0（当前 %s）" % str(hitbox_radius))
+	return errs
 
 ## ── 构造链模板 ──
 

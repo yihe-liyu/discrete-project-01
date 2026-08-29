@@ -112,7 +112,7 @@
 |---|---|---|---|---|
 | A | ~~`params` 反射（C4）~~ | 内容/参数 | ✅ 已修到「校验+响亮」（`ParamValidator`）；「全 typed 资源」未做 | 已做（2026） |
 | B | ~~双路 `if ctx else Global`~~ | 领域/接口 | ✅ 已修：系统操作统一走 `ctx.*`，删除 else-Global 回退 | 已做（2026） |
-| C | 调用方拼内容（`EnemyData.new()...spawn`） | 内容/接口 | 内容做资源 | 中 |
+| C | 调用方拼内容（`EnemyData.new()...spawn`） | 内容/接口 | C1 ✅ **EnemyData 可序列化**（`behavior_script`/`params` `@export` + `validate()`）；C2 内容→原型（`.tres` 或命名 const）未做 | 中 |
 | D | 关卡脚本胖（大 match + 手工 spawn/tween） | 编排/接口 | D1 ✅ 事件派发 + 场景动词（`StageDirector`/`BossHandle`）；D2 命令化/数据化 未做 | 中 |
 | E | ~~Boss 公开可变（`hp`/`boss_data`/`hitbox_radius`）~~ | 运行时/封装 | ✅ 已做：只读 getter + `_set_hp` 唯一改写 + `hp_changed` 信号（血条订阅，不轮询） | 已做（2026） |
 | F | 时间分片/暂停缝（C6） | 运行时/时间 | 统一时间所有权 | 低（系统性） |
