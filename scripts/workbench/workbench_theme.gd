@@ -67,6 +67,32 @@ static func build() -> Theme:
 	t.set_color("font_pressed_color", "CheckButton", ACCENT)
 	t.set_color("font_color", "CheckBox", TEXT)
 
+	# ── Tree（内容目录树）：逐项套卡片族 + 宋体描边 ──
+	var tree_font: Font = t.default_font
+	t.set_font("font", "Tree", tree_font)
+	t.set_stylebox("panel", "Tree", _panel())
+	t.set_stylebox("button_pressed", "Tree", _panel())
+	var tree_btn := StyleBoxFlat.new()
+	tree_btn.bg_color = Color(0, 0, 0, 0.30)
+	tree_btn.set_corner_radius_all(4)
+	tree_btn.set_content_margin_all(2)
+	t.set_stylebox("button_unpressed", "Tree", tree_btn)
+	t.set_stylebox("button_hover", "Tree", tree_btn)
+	t.set_stylebox("selected_focus", "Tree", StyleBoxFlat.new())
+	t.set_color("font_color", "Tree", TEXT)
+	t.set_color("font_hover_color", "Tree", Color.WHITE)
+	t.set_color("font_selected_color", "Tree", Color.WHITE)
+	t.set_color("font_outline_color", "Tree", Color(0, 0, 0, 1))
+	t.set_constant("outline_size", "Tree", 2)
+	t.set_color("selected", "Tree", SELECT)
+	t.set_color("cursor", "Tree", ACCENT)
+	t.set_color("lines", "Tree", Color(1, 1, 1, 0.06))
+	t.set_color("title_button_color", "Tree", Color(1, 1, 1, 0.45))
+	t.set_color("title_button_hover_color", "Tree", Color.WHITE)
+	t.set_color("guide_color", "Tree", Color(1, 1, 1, 0.08))
+	t.set_color("relationship_line_color", "Tree", Color(1, 1, 1, 0.10))
+	t.set_color("drop_position_color", "Tree", ACCENT)
+
 	# ── ItemList（目录树/列表）──
 	var il := StyleBoxFlat.new()
 	il.bg_color = PANEL_BG
