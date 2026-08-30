@@ -24,12 +24,16 @@ const SELECT := Color(0.92, 0.73, 0.32, 0.28)
 static func build() -> Theme:
 	var t := Theme.new()
 	# ── 字体：全局思源宋体（逐字复刻游戏页面观感），符号/emoji 走系统回退 ──
+	# 关键：回退链第一优先放【衬线】Noto Serif CJK（与思源宋体同源）——本引擎对
+	# fallback 的字形分配按链序取，若符号字体打头，拉丁会被抽成无衬线（标题混排露馅）
 	var font: FontFile = (load("res://assets/fonts/SourceHanSerifCN-Medium.otf") as FontFile).duplicate() as FontFile
+	var serif_cjk := SystemFont.new()
+	serif_cjk.font_names = PackedStringArray(["Noto Serif CJK SC", "Noto Serif CJK JP", "Noto Serif CJK TC", "Source Han Serif CN"])
 	var symbols := SystemFont.new()
 	symbols.font_names = PackedStringArray(["Noto Sans Symbols", "Noto Sans Symbols 2"])
 	var emoji := SystemFont.new()
 	emoji.font_names = PackedStringArray(["Noto Color Emoji"])
-	font.fallbacks = [symbols, emoji]
+	font.fallbacks = [serif_cjk, symbols, emoji]
 	t.default_font = font
 	t.default_font_size = 14
 	# Label：与 ui_theme.tres 完全一致（黑描边 + 右下投影；颜色用默认白）
