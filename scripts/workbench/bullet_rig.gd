@@ -92,7 +92,7 @@ func _build_ui() -> void:
 	panel.offset_left = 856.0
 	panel.offset_top = 8.0
 	panel.offset_right = 1288.0
-	panel.offset_bottom = 560.0
+	panel.offset_bottom = 690.0  # M2b 加开发块后内容约 640 高；底部保留余量
 	add_child(panel)
 	# 内部滚动：未来加字段也不会裁内容
 	var panel_scroll := ScrollContainer.new()
