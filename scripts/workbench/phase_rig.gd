@@ -14,7 +14,7 @@ const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.5-param"
+const VERSION_TAG := "v0.6-param"
 
 var _shell: Variant
 var _catalog: Variant

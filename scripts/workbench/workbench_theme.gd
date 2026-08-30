@@ -36,12 +36,13 @@ static func build() -> Theme:
 	font.fallbacks = [serif_cjk, symbols, emoji]
 	t.default_font = font
 	t.default_font_size = 14
-	# Label：与 ui_theme.tres 完全一致（黑描边 + 右下投影；颜色用默认白）
+	# Label：描边 1 + 关阴影——工作台字号 12-14，游戏主题的 2px 描边 + 偏移阴影
+	# 在小字上会把字形糊成一团（屏幕上看起来像乱码）；大字号页面才用重描边
 	t.set_color("font_outline_color", "Label", Color(0, 0, 0, 1))
-	t.set_color("font_shadow_color", "Label", Color(0, 0, 0, 0.55))
-	t.set_constant("outline_size", "Label", 2)
-	t.set_constant("shadow_offset_x", "Label", 1)
-	t.set_constant("shadow_offset_y", "Label", 2)
+	t.set_color("font_shadow_color", "Label", Color(0, 0, 0, 0))
+	t.set_constant("outline_size", "Label", 1)
+	t.set_constant("shadow_offset_x", "Label", 0)
+	t.set_constant("shadow_offset_y", "Label", 0)
 
 	# ── 卡片（PanelContainer：区块/弹窗面板）──
 	t.set_stylebox("panel", "PanelContainer", _panel())
@@ -87,7 +88,7 @@ static func build() -> Theme:
 	t.set_color("font_hover_color", "Tree", Color.WHITE)
 	t.set_color("font_selected_color", "Tree", Color.WHITE)
 	t.set_color("font_outline_color", "Tree", Color(0, 0, 0, 1))
-	t.set_constant("outline_size", "Tree", 2)
+	t.set_constant("outline_size", "Tree", 1)
 	t.set_color("selected", "Tree", SELECT)
 	t.set_color("cursor", "Tree", ACCENT)
 	t.set_color("lines", "Tree", Color(1, 1, 1, 0.06))
