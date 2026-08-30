@@ -7,7 +7,11 @@ extends VBoxContainer
 
 const CAT = preload("res://scripts/data/content_catalog.gd")
 
+signal preset_requested(entry)  # 双击条目 → 组合台直达
+
 var _tree: Tree
+var _search: LineEdit
+var _role_filter: OptionButton
 var _stats_label: Label
 var _stats_roles: Label
 var _info_name: Label
@@ -37,6 +41,22 @@ func _ready() -> void:
 	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 4)
 	add_child(box)
+
+	# ── 搜索 + 角色筛选 ──
+	var filter_row := HBoxContainer.new()
+	filter_row.add_theme_constant_override("separation", 6)
+	_search = LineEdit.new()
+	_search.placeholder_text = "搜索名称/路径…"
+	_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_search.text_changed.connect(func(_t): _rebuild_tree())
+	filter_row.add_child(_search)
+	_role_filter = OptionButton.new()
+	_role_filter.add_item("全部角色")
+	for role in CAT.ROLE_ORDER:
+		_role_filter.add_item(CAT.ROLE_LABELS[role])
+	_role_filter.item_selected.connect(func(_i): _rebuild_tree())
+	filter_row.add_child(_role_filter)
+	add_child(filter_row)
 
 	# ── 头行：统计 + 刷新 ──
 	var head := HBoxContainer.new()
@@ -69,6 +89,7 @@ func _ready() -> void:
 	_tree.hide_root = true
 	_tree.add_theme_constant_override("v_separation", 2)
 	_tree.item_selected.connect(_on_item_selected)
+	_tree.gui_input.connect(_on_tree_input)
 	_split_area.add_child(_tree)
 	_tree.set_anchors_preset(Control.PRESET_TOP_WIDE)
 
@@ -138,8 +159,20 @@ func _rebuild_tree() -> void:
 	var root_item = _tree.get_root()
 	if root_item == null:
 		root_item = _tree.create_item()
+	var want_role: String = ""
+	if _role_filter and _role_filter.selected > 0:
+		want_role = CAT.ROLE_ORDER[_role_filter.selected - 1]
+	var q: String = _search.text.strip_edges().to_lower()
 	for role in CAT.ROLE_ORDER:
+		if want_role != "" and role != want_role:
+			continue
 		var items = _catalog.by_role(role)
+		if q != "":
+			var filtered := []
+			for e in items:
+				if String(e.name).to_lower().contains(q) or String(e.path).to_lower().contains(q):
+					filtered.append(e)
+			items = filtered
 		if items.is_empty():
 			continue
 		var head := _tree.create_item(root_item)
@@ -195,6 +228,18 @@ func _apply_split() -> void:
 	# 注意：信息卡锚点=底边（BOTTOM_WIDE），offset 相对底锚点 → 必须为负
 	_info_panel.offset_top = _divider_y + 6.0 - h
 	_info_panel.offset_bottom = 0.0
+
+
+## 双击条目 → 发给创作台（组合台直达）
+func _on_tree_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT \
+			and event.double_click and event.pressed:
+		var item := _tree.get_selected()
+		if item == null:
+			return
+		var e = item.get_metadata(0)
+		if e != null:
+			preset_requested.emit(e)
 
 
 func _on_item_selected() -> void:

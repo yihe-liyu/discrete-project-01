@@ -48,6 +48,43 @@ func test_drag_follows_mouse_and_clamps():
 	panel._on_info_sep_input(btn)
 	panel.queue_free()
 
+
+func test_search_filter_and_double_click_signal():
+	var panel = PANEL.new()
+	add_child_autofree(panel)
+	await get_tree().process_frame
+	# 搜索"试符" → 树中阶段条目被过滤
+	panel._search.text = "试符"
+	await get_tree().process_frame
+	var root = panel._tree.get_root()
+	var hit := 0
+	for i in root.get_child_count():
+		var h = root.get_child(i)
+		for j in h.get_child_count():
+			if h.get_child(j).get_text(0).contains("试符"):
+				hit += 1
+	assert_true(hit >= 2, "搜索命中试符条目（%d）" % hit)
+	# 双击 → 信号带条目
+	var got := {}
+	panel.preset_requested.connect(func(e): got["e"] = e)
+	# 选中第一个 phase 条目并双击树
+	for i in root.get_child_count():
+		var h = root.get_child(i)
+		for j in h.get_child_count():
+			var it = h.get_child(j)
+			panel._tree.set_selected(it, 0)
+			var ev := InputEventMouseButton.new()
+			ev.button_index = MOUSE_BUTTON_LEFT
+			ev.double_click = true
+			ev.pressed = true
+			panel._on_tree_input(ev)
+			if got.has("e"):
+				break
+		if got.has("e"):
+			break
+	assert_true(got.has("e") and got["e"] is ContentCatalog.Entry, "双击发出条目")
+	panel.queue_free()
+
 func test_panel_tree_has_role_headers_and_unique_names():
 	# 模拟真实 %Pages：面板放进固定尺寸容器，靠 size_flags 撑满（不手动设 size）
 	var host := VBoxContainer.new()

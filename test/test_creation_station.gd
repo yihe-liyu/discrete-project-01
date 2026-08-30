@@ -7,6 +7,8 @@ const BUTTON_KIND := 0  # 占位（无类型化断言直接检查脚本路径）
 
 
 func test_tabs_switch_and_keep_rig_instances():
+	DirAccess.remove_absolute("user://creation_station.cfg")  # 清工作区配置（测试隔离）
+	DirAccess.remove_absolute("user://creation_station.cfg")
 	var cs: Control = CS.instantiate()
 	add_child_autofree(cs)
 	await get_tree().process_frame
@@ -37,7 +39,25 @@ func test_tabs_switch_and_keep_rig_instances():
 	assert_true(cs._page.get_script().resource_path.ends_with("phase_rig.gd"), "整关释放后回阶段台")
 
 
+
+func test_preset_route_switches_tab_and_assembles():
+	DirAccess.remove_absolute("user://creation_station.cfg")  # 清工作区配置（测试隔离）
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# 取目录里第一颗子弹条目 → 路由 → 应切弹幕台且装配+发射
+	var entry = cs._rig_instances[0]._catalog.by_role("bullet")[0]
+	BulletManager.clear_all()
+	cs._route_preset(entry)
+	await get_tree().process_frame
+	assert_eq(cs._current, 1, "路由到弹幕台")
+	assert_true(cs._page._script_sel.selected > 0, "装配了脚本")
+	assert_true(BulletManager.active_bullets.size() >= 1, "直达即发射（%d）" % BulletManager.active_bullets.size())
+	cs.queue_free()
+
 func test_switch_clears_runtime():
+	DirAccess.remove_absolute("user://creation_station.cfg")  # 清工作区配置（测试隔离）
 	var cs: Control = CS.instantiate()
 	add_child_autofree(cs)
 	await get_tree().process_frame

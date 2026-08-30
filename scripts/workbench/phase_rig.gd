@@ -249,6 +249,52 @@ func _resolve_slot(sel: OptionButton, role: String) -> Script:
 	return load(list[i - 1].path)
 
 
+# ═══ 目录直达 / 工作区恢复 ═══
+
+func _preset_from_entry(entry) -> void:
+	var phases = _catalog.by_role("phase")
+	for i in phases.size():
+		if phases[i].path == entry.path:
+			_phase_sel.selected = i
+			_select_phase(i)
+			_play()
+			return
+
+
+func _snapshot() -> Dictionary:
+	var phases = _catalog.by_role("phase")
+	var path := ""
+	if _phase_sel.selected >= 0 and _phase_sel.selected < phases.size():
+		path = phases[_phase_sel.selected].path
+	return {
+		"phase": path, "seed": _seed, "diff": GameState.selected_difficulty,
+		"hp": _hp_spin.value, "time": _time_spin.value,
+		"pos_x": _boss_pos.x, "pos_y": _boss_pos.y,
+	}
+
+
+func _restore(d: Dictionary) -> void:
+	if d.has("seed"):
+		_seed = d.seed
+	if d.has("diff"):
+		GameState.selected_difficulty = d.diff
+		_diff_sel.selected = int(d.diff)
+	if d.has("hp"):
+		_hp_spin.value = d.hp
+	if d.has("time"):
+		_time_spin.value = d.time
+	if d.has("pos_x"):
+		_boss_pos = Vector2(d.pos_x, d.pos_y)
+		_field.queue_redraw()
+	if d.has("phase") and str(d.phase) != "":
+		var phases = _catalog.by_role("phase")
+		for i in phases.size():
+			if phases[i].path == str(d.phase):
+				_phase_sel.selected = i
+				_select_phase(i)
+				break
+
+
 # ═══ 开演 ═══
 
 func _play() -> void:

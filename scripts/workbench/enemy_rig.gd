@@ -211,6 +211,52 @@ func _label(text: String, font_size: int) -> Label:
 	return RIG_COMMON.label(text, font_size)
 
 
+# ═══ 目录直达 / 工作区恢复 ═══
+
+func _preset_from_entry(entry) -> void:
+	var list = _catalog.by_role("enemy")
+	for i in list.size():
+		if list[i].path == entry.path:
+			_script_sel.selected = i + 1
+			_on_script_changed(i + 1)
+			_spawn()
+			return
+
+
+func _snapshot() -> Dictionary:
+	return {
+		"script": _cur_script_path, "seed": _seed, "diff": GameState.selected_difficulty,
+		"visual": _shell.visual_key, "hp": _shell.max_hp, "pos_x": _spawn_pos.x, "pos_y": _spawn_pos.y,
+	}
+
+
+func _restore(d: Dictionary) -> void:
+	if d.has("seed"):
+		_seed = d.seed
+	if d.has("diff"):
+		GameState.selected_difficulty = d.diff
+		_diff_sel.selected = int(d.diff)
+	if d.has("visual"):
+		_shell.visual_key = d.visual
+		for i in _visual_sel.item_count:
+			if _visual_sel.get_item_text(i) == d.visual:
+				_visual_sel.selected = i
+				break
+	if d.has("hp"):
+		_shell.max_hp = int(d.hp)
+		_hp_spin.value = d.hp
+	if d.has("pos_x"):
+		_spawn_pos = Vector2(d.pos_x, d.pos_y)
+		_field.queue_redraw()
+	if d.has("script") and str(d.script) != "":
+		var list = _catalog.by_role("enemy")
+		for i in list.size():
+			if list[i].path == str(d.script):
+				_script_sel.selected = i + 1
+				_on_script_changed(i + 1)
+				break
+
+
 # ═══ 生成 ═══
 
 func _spawn() -> void:

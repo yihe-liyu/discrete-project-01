@@ -260,6 +260,55 @@ func _label(text: String, font_size: int) -> Label:
 	return l
 
 
+# ═══ 目录直达 / 工作区恢复 ═══
+
+## 目录双击直达：自动选脚本 + 重建参数 + 立即发射
+func _preset_from_entry(entry) -> void:
+	var list = _catalog.by_role("bullet")
+	for i in list.size():
+		if list[i].path == entry.path:
+			_script_sel.selected = i + 1
+			_on_script_changed(i + 1)
+			_fire()
+			return
+
+
+func _snapshot() -> Dictionary:
+	return {
+		"script": _cur_script_path, "seed": _seed,
+		"diff": GameState.selected_difficulty,
+		"tex": _shell.tex_key, "tint": _shell.tint, "speed": _shell.speed,
+	}
+
+
+func _restore(d: Dictionary) -> void:
+	if d.has("seed"):
+		_seed = d.seed
+	if d.has("diff"):
+		GameState.selected_difficulty = d.diff
+		_diff_sel.selected = int(d.diff)
+	if d.has("tex"):
+		_shell.tex_key = d.tex
+		for i in _tex_sel.item_count:
+			if _tex_sel.get_item_text(i) == d.tex:
+				_tex_sel.selected = i
+				break
+	if d.has("tint"):
+		_shell.tint = d.tint
+		_color_btn.color = d.tint
+	if d.has("speed"):
+		_shell.speed = d.speed
+		_speed_spin.value = d.speed
+	if d.has("script") and str(d.script) != "":
+		var list = _catalog.by_role("bullet")
+		for i in list.size():
+			if list[i].path == str(d.script):
+				_script_sel.selected = i + 1
+				_on_script_changed(i + 1)
+				break
+	_refresh_dir_label()
+
+
 # ═══ 发射 ═══
 
 func _fire() -> void:
