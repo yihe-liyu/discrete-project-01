@@ -27,8 +27,7 @@ func _init_shoot_script() -> void:
 func _physics_process(delta: float) -> void:
 	match mode:
 		Mode.MOUSE:
-			# make_canvas_position_local：世界缩放时把画布鼠标点转回世界坐标（无缩放=同一结果）
-			var m := make_canvas_position_local(get_viewport().get_mouse_position())
+			var m := get_global_mouse_position()
 			position = Vector2(
 				clampf(m.x, GameConfig.FIELD_LEFT + 12.0, GameConfig.FIELD_RIGHT - 12.0),
 				clampf(m.y, GameConfig.FIELD_TOP + 12.0, GameConfig.FIELD_BOTTOM - 60.0))
