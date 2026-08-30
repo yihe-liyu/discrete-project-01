@@ -157,8 +157,13 @@ func _inject_player_ctx(p_ctx: StageContext) -> void:
 
 func add_enemy_to_scene(node: Node2D):
 	var parent: Node = get_tree().current_scene
+	if parent == null:
+		parent = get_tree().root  # 兜底：headless 测试/无场景上下文（组合台沙盒）
 	if parent:
 		var world = parent.get_node_or_null("World")
 		if world:
 			parent = world
-	parent.add_child(node)
+	if parent:
+		parent.add_child(node)
+	else:
+		node.queue_free()
