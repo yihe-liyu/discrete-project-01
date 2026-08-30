@@ -4,6 +4,7 @@ extends VBoxContainer
 ## 零值 Vector2 染橙提醒；自带可折叠标题（行数多默认收起）
 
 const _label_hint_color := Color(1, 1, 0.7, 0.8)
+const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
 
 var _rows: Array = []  # [{name, kind, ctrl}]
 var body: VBoxContainer   # 参数行容器（测试/外部读取 children 用）
@@ -15,7 +16,7 @@ func _ready() -> void:
 	_header = Button.new()
 	_header.flat = true
 	_header.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_header.add_theme_font_size_override("font_size", 16)
+	_header.add_theme_font_size_override("font_size", RIG_COMMON.SECTION_SIZE)
 	_header.pressed.connect(_toggle)
 	add_child(_header)
 	body = VBoxContainer.new()
@@ -131,7 +132,7 @@ func _new_spin(step: float, mn: float, mx: float, value: Variant) -> SpinBox:
 func _add_row(nm: String, kind: String, ctrl: Control) -> Label:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
-	var lb := _mk_label(nm, 13)
+	var lb := _mk_label(nm, RIG_COMMON.HINT_SIZE)
 	lb.custom_minimum_size = Vector2(90, 0)
 	row.add_child(lb)
 	row.add_child(ctrl)
@@ -141,7 +142,7 @@ func _add_row(nm: String, kind: String, ctrl: Control) -> Label:
 
 
 func _add_note(text: String, color: Color) -> void:
-	var l := _mk_label(text, 10)
+	var l := _mk_label(text, RIG_COMMON.HINT_SIZE)
 	l.modulate = color
 	body.add_child(l)
 

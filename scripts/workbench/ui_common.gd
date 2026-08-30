@@ -4,13 +4,14 @@ extends RefCounted
 
 const TEXT_DIM := Color(0.72, 0.72, 0.72)  # 中性灰（与游戏页面弱化文字一致，不再蓝灰）
 const ACCENT := Color(0.92, 0.73, 0.32)
+const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
 
 
-## 区块标题（金色 16，与组合台 section_label 同级）：── 状态 ── / ── 书签 ── 等
+## 区块标题（金色，与组合台 section_label 同级）：── 状态 ── / ── 书签 ── 等
 static func section_title(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_font_size_override("font_size", RIG_COMMON.SECTION_SIZE)
 	l.add_theme_color_override("font_color", ACCENT)
 	l.custom_minimum_size = Vector2(0, 20)
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -23,7 +24,7 @@ static func param_label(text: String) -> Label:
 	l.text = text
 	l.custom_minimum_size = Vector2(52, 0)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_font_size_override("font_size", RIG_COMMON.LABEL_SIZE)
 	l.add_theme_color_override("font_color", TEXT_DIM)
 	return l
 
@@ -32,7 +33,7 @@ static func param_label(text: String) -> Label:
 static func label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_font_size_override("font_size", RIG_COMMON.LABEL_SIZE)
 	l.add_theme_color_override("font_color", TEXT_DIM)
 	return l
 
@@ -70,7 +71,7 @@ static func param_key_label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.custom_minimum_size = Vector2(48, 0)
-	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_font_size_override("font_size", RIG_COMMON.LABEL_SIZE)
 	l.add_theme_color_override("font_color", TEXT_DIM)
 	return l
 

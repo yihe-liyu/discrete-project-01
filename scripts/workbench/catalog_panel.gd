@@ -6,6 +6,7 @@ extends VBoxContainer
 ## 注意：这里不能是 ScrollContainer——它不拉伸子节点，split_area 会塌成 0 高。
 
 const CAT = preload("res://scripts/data/content_catalog.gd")
+const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
 
 signal preset_requested(entry)  # 双击条目 → 组合台直达
 
@@ -64,12 +65,12 @@ func _ready() -> void:
 	_stats_label = Label.new()
 	_stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_stats_label.add_theme_font_size_override("font_size", 16)
+	_stats_label.add_theme_font_size_override("font_size", RIG_COMMON.LABEL_SIZE)
 	_stats_roles = Label.new()
 	_stats_roles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stats_roles.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stats_roles.modulate = Color(1, 1, 1, 0.6)
-	_stats_roles.add_theme_font_size_override("font_size", 16)
+	_stats_roles.add_theme_font_size_override("font_size", RIG_COMMON.LABEL_SIZE)
 	var refresh_btn := Button.new()
 	refresh_btn.text = "刷新"
 	refresh_btn.pressed.connect(refresh)
@@ -89,7 +90,7 @@ func _ready() -> void:
 	_tree.columns = 1
 	_tree.hide_root = true
 	_tree.add_theme_constant_override("v_separation", 2)
-	_tree.add_theme_font_size_override("font_size", 16)  # 与其他文字同尺度
+	_tree.add_theme_font_size_override("font_size", RIG_COMMON.LABEL_SIZE)  # 与其他文字同尺度
 	_tree.add_theme_stylebox_override("panel", StyleBoxEmpty.new())  # 单卡片内：树区无边框
 	_tree.item_selected.connect(_on_item_selected)
 	_tree.gui_input.connect(_on_tree_input)
@@ -120,7 +121,7 @@ func _ready() -> void:
 	var info_title := Label.new()
 	info_title.text = "详情"
 	info_title.modulate = Color(1.0, 0.83, 0.5, 0.92)  # 金色（三台 section 同族）
-	info_title.add_theme_font_size_override("font_size", 16)
+	info_title.add_theme_font_size_override("font_size", RIG_COMMON.SECTION_SIZE)
 	info_box.add_child(info_title)
 	_info_name = Label.new()
 	_info_role = Label.new()

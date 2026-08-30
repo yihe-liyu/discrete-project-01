@@ -2,6 +2,11 @@ extends RefCounted
 ## 组合台共享 UI 基建：标签/面板样式/标题（三台统一样式单一来源）
 ## 视觉与游戏页面统一：半透明黑底 + 金边卡片（ui_theme 同款）
 
+## 字号阶梯（全创作台唯一来源）：改字号只动这里 + workbench_theme.default_font_size
+const SECTION_SIZE := 16  ## 金色节标题（魂/壳/参数/操作/开发…）+ 各台标题
+const LABEL_SIZE := 16    ## 字段标签（贴图/染色/外观/HP/难度…）
+const HINT_SIZE := 13     ## 提示行（左键=… · 鼠标=自机）
+
 static func label(text: String, font_size: int) -> Label:
 	var l := Label.new()
 	l.text = text
@@ -12,9 +17,14 @@ static func label(text: String, font_size: int) -> Label:
 
 ## 二级标题（魂/壳/参数/操作/开发…）：金色小字，统一层级
 static func section_label(text: String) -> Label:
-	var l := label(text, 16)
+	var l := label(text, SECTION_SIZE)
 	l.modulate = Color(1.0, 0.83, 0.5, 0.92)
 	return l
+
+
+## 提示行（左键=… · 鼠标=自机 等弱化说明）
+static func hint_label(text: String) -> Label:
+	return label(text, HINT_SIZE)
 
 
 ## 主操作按钮（发射/生成/开演）：金底，与其他按钮区分

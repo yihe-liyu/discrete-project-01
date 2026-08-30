@@ -2,6 +2,8 @@ extends Control
 ## 右下角浮动状态条（三台统一）
 ## 测试/调用方可直接读 .label.text（与旧 _reload_status 兼容）
 
+const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
+
 var label: Label
 
 var _timer := 0.0
@@ -20,7 +22,7 @@ func _ready() -> void:
 	z_index = 200
 	label = Label.new()
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_font_size_override("font_size", RIG_COMMON.HINT_SIZE)
 	add_child(label)
 	label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	visible = false
