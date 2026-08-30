@@ -11,7 +11,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v1.1-workbench"
+const VERSION_TAG := "v1.2-dbg"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -41,6 +41,8 @@ var _field: Control
 var _dir_angle_label: Label
 var _root_hbox: HBoxContainer  # 已废弃（workbench 式绝对布局）
 var _reload_status: Label
+var _panel_ref: PanelContainer
+var _dbg_label: Label
 var _hot_chk: CheckBox
 
 # ── 热更新状态 ──
@@ -92,13 +94,17 @@ func _build_world() -> void:
 # ═══ UI ═══
 
 func _build_ui() -> void:
-	# 面板：与工作台 RightPanel 逐字同款——右锚(1,0)+负偏移(-440..-8, 8..952)
+	# 面板：与工作台 RightPanel 同款——【显式】右锚(1,0)+负偏移(-440..-8, 8..952)
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.anchor_left = 1.0
+	panel.anchor_right = 1.0
+	panel.anchor_top = 0.0
+	panel.anchor_bottom = 0.0
 	panel.offset_left = -440.0
 	panel.offset_top = 8.0
 	panel.offset_right = -8.0
 	panel.offset_bottom = 952.0
+	_panel_ref = panel
 	# 不透明实心背景：半透明默认主题会透出场地边框（重叠错觉）
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.085, 0.09, 0.115, 1.0)
@@ -215,6 +221,9 @@ func _build_ui() -> void:
 	_reload_status = _label("", 11)
 	box.add_child(_reload_status)
 	box.add_child(_label("点击场地 = 发射点；右键 = 指向；幽灵玩家 = 鼠标", 11))
+	# 调试：窗口/面板真实几何（截图即见真相，结束盲猜）
+	_dbg_label = _label("", 10)
+	box.add_child(_dbg_label)
 
 
 func _label(text: String, font_size: int) -> Label:
@@ -251,6 +260,14 @@ func _next_seed() -> void:
 	_update_stats()
 
 
+func _update_dbg() -> void:
+	if _dbg_label == null or _panel_ref == null:
+		return
+	var win: Vector2 = get_window().size
+	var pr := _panel_ref.get_global_rect()
+	_dbg_label.text = "窗 %dx%d 面板x %.0f..%.0f（应=窗宽-440..-8）" % [int(win.x), int(win.y), pr.position.x, pr.end.x]
+
+
 func _update_stats() -> void:
 	if _stats_label:
 		_stats_label.text = "场上弹数：%d · 种子：%d" % [BulletManager.active_bullets.size(), _seed]
@@ -264,6 +281,7 @@ func _process(delta: float) -> void:
 			_fire()
 	_process_hot_reload(delta)
 	_update_stats()
+	_update_dbg()
 
 
 # ═══ 热更新（M2b）：保存脚本 → 自动重载重演 ═══
