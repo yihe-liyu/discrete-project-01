@@ -4,7 +4,7 @@ extends RefCounted
 ## 参数注入校验（C4：把"打错键名 / 类型不匹配静默失效"变成"校验 + 响亮报错"）。
 ## 用法：把注入点原来那个 `for k in params: if k in script: script.set(...)`
 ##       替换成 `ParamValidator.apply(script, params)`。
-## - 未在脚本属性列表里的键 → push_error（打错键名）。
+## - 未在脚本属性列表里的键 → push_warning（共享字典跨脚本合法：PhaseData.params 同灌 move+shoot）。
 ## - 类型明显不匹配（数字/向量/颜色等互不兼容）→ push_error。
 ## - 宽松放行：int↔float、String↔数字（Godot 会 coerce），避免误报。
 ## 返回错误列表（供测试/更细处理；apply 会 push_error）。
@@ -18,21 +18,39 @@ static func validate(target: Object, params: Dictionary) -> Array[String]:
 		types[p.name] = p.type
 	for k in params:
 		if not types.has(k):
-			errs.append("参数 '%s' 不是 %s 的属性（打错键名？）" % [str(k), target.get_class()])
-			continue
+			continue  # 未知键归入 warning（validate_unknown_keys）
 		_check_type(errs, str(k), params[k], types[k], target.get_class())
 	return errs
 
 
-## 校验 + 只设合法键 + 响亮报错
+## 未知键（跨脚本共享 params 时属合法情形）→ warning 级
+static func validate_unknown_keys(target: Object, params: Dictionary) -> Array[String]:
+	var warns: Array[String] = []
+	if target == null:
+		return warns
+	var types := {}
+	for p in target.get_property_list():
+		types[p.name] = p.type
+	for k in params:
+		if not types.has(k):
+			warns.append("参数 '%s' 不是 %s 的属性（共享字典跨脚本属正常；若确实打错请检查）" % [str(k), target.get_class()])
+	return warns
+
+
+## 校验 + 只设合法键 + 响亮报错（类型错）warn（未知键）
 static func apply(target: Object, params: Dictionary) -> void:
 	if target == null:
 		return
 	for e in validate(target, params):
 		push_error("ParamValidator: " + e)
+	for w in validate_unknown_keys(target, params):
+		push_warning("ParamValidator: " + w)
 	for k in params:
 		if k in target:
 			target.set(k, params[k])
+
+
+
 
 
 static func _check_type(errs: Array[String], key: String, val, prop_type: int, owner: String) -> void:

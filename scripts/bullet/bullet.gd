@@ -123,7 +123,7 @@ func bind(data: BulletData, direction: Vector2):
 	else:
 		fog.visible = false
 		is_ready = true
-		sprite.visible = true
+		sprite.visible = not _uses_batch()  # 批量渲染时 Sprite 只作数据源（防双份叠加渲染）
 
 	# 挂载移动协程：只有自定义脚本才走协程
 	if data.coroutine_script:
@@ -135,8 +135,13 @@ func bind(data: BulletData, direction: Vector2):
 	is_ready = true
 
 func _on_fog_ready():
-	sprite.visible = true  # 雾结束，显示子弹
+	sprite.visible = not _uses_batch()  # 雾结束：批量模式仍隐藏（数据源）
 	is_ready = true
+
+
+## 是否批量渲染（Sprite 隐藏；Modulate/纹理仍被 MultiMesh 读取）
+func _uses_batch() -> bool:
+	return BulletManager.use_multi_mesh
 
 func _physics_process(_delta):
 	if not is_ready:
