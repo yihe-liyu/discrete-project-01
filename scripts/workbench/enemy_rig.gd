@@ -11,7 +11,7 @@ const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.1-m3"
+const VERSION_TAG := "v0.2-params"
 
 var _shell: Variant
 var _catalog: Variant
@@ -34,6 +34,9 @@ var _seed_btn: Button
 var _stats_label: Label
 var _field: Control
 var _reload_status: Label
+var _diff_sel: OptionButton
+var _params_container: VBoxContainer
+var _param_rows: Array = []  # [{name, kind, ctrl}]（脚本 var 枚举结果）
 var _hot_chk: CheckBox
 
 # ── 热更新状态 ──
@@ -55,6 +58,7 @@ func _ready() -> void:
 	_build_ui()
 	_set_seed(FIXED_SEED)
 	_set_current_script()
+	_rebuild_params()
 	_reload_status.text = "热更新：开 · 等待修改…"
 	_reload_status.modulate = Color(0.5, 0.95, 0.6)
 
@@ -118,6 +122,14 @@ func _build_ui() -> void:
 	_script_sel.item_selected.connect(_on_script_changed)
 	box.add_child(_script_sel)
 
+	box.add_child(_label("难度（即时生效）", 12))
+	_diff_sel = OptionButton.new()
+	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
+		_diff_sel.add_item(d)
+	_diff_sel.selected = GameState.selected_difficulty
+	_diff_sel.item_selected.connect(_on_diff_changed)
+	box.add_child(_diff_sel)
+
 	box.add_child(_label("壳：外形/属性", 12))
 	box.add_child(_label("外观", 12))
 	_visual_sel = OptionButton.new()
@@ -152,6 +164,11 @@ func _build_ui() -> void:
 	for sp in [_power_spin, _point_spin, _life_spin, _bomb_spin]:
 		drops.add_child(sp)
 	box.add_child(drops)
+
+	box.add_child(_label("参数（脚本 var 注入，可调）", 12))
+	_params_container = VBoxContainer.new()
+	_params_container.add_theme_constant_override("separation", 2)
+	box.add_child(_params_container)
 
 	box.add_child(_label("操作", 12))
 	var ops := GridContainer.new()
@@ -212,6 +229,15 @@ func _spawn() -> void:
 	_shell.item_life = int(_life_spin.value)
 	_shell.item_bomb = int(_bomb_spin.value)
 	var data: EnemyData = _shell.build(_cur_script)
+	# 参数注入（与游戏 params 同路径：ParamValidator.apply 同名 var 注入）
+	for row in _param_rows:
+		match row.kind:
+			"num":
+				data.param(row.name, row.ctrl.value)
+			"bool":
+				data.param(row.name, row.ctrl.button_pressed)
+			"str":
+				data.param(row.name, row.ctrl.text)
 	data.pos(_spawn_pos)
 	RNG.set_seed(_seed)
 	data.spawn(BulletManager.get_bullet_ctx())
@@ -251,6 +277,7 @@ func _process(delta: float) -> void:
 
 func _on_script_changed(_idx: int) -> void:
 	_set_current_script()
+	_rebuild_params()
 	if _reload_status:
 		_reload_status.text = "魂：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（无移动）")
 		_reload_status.modulate = Color(1, 1, 1, 0.8)
@@ -266,6 +293,70 @@ func _set_current_script() -> void:
 		_cur_script_path = entry.path
 		_cur_script = load(_cur_script_path)
 	_rebuild_watch()
+
+
+## 从脚本枚举 var（get_script_property_list）→ 生成可调参数行；参数与游戏 params 注入同源
+func _rebuild_params() -> void:
+	for c in _params_container.get_children():
+		c.queue_free()
+	_param_rows.clear()
+	if _cur_script == null:
+		return
+	var inst = _cur_script.new()
+	var prop_list: Array = _cur_script.get_script_property_list()
+	var skipped := 0
+	for p in prop_list:
+		var nm: String = p.get("name", "")
+		if nm == "" or nm.begins_with("_"):
+			continue
+		if not (int(p.get("usage", 0)) & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var prop_type: int = p.get("type", TYPE_NIL)
+		match prop_type:
+			TYPE_FLOAT, TYPE_INT:
+				var sp := SpinBox.new()
+				sp.min_value = -100000.0
+				sp.max_value = 100000.0
+				sp.step = 0.5
+				sp.value = inst.get(nm)
+				sp.custom_minimum_size = Vector2(120, 0)
+				_add_param_row(nm, "num", sp)
+			TYPE_BOOL:
+				var chk := CheckBox.new()
+				chk.button_pressed = bool(inst.get(nm))
+				_add_param_row(nm, "bool", chk)
+			TYPE_STRING:
+				var le := LineEdit.new()
+				le.text = str(inst.get(nm))
+				_add_param_row(nm, "str", le)
+			_:
+				skipped += 1
+	if skipped > 0:
+		var hint := _label("（%d 个复杂类型参数走代码）" % skipped, 10)
+		hint.modulate = Color(1, 1, 0.7, 0.8)
+		_params_container.add_child(hint)
+	if _param_rows.is_empty():
+		var none := _label("（该脚本无可调 var；默认值即脚本内声明）", 10)
+		none.modulate = Color(1, 1, 1, 0.5)
+		_params_container.add_child(none)
+	inst.free()
+
+
+func _add_param_row(nm: String, kind: String, ctrl: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	var lb := _label(nm, 11)
+	lb.custom_minimum_size = Vector2(90, 0)
+	row.add_child(lb)
+	row.add_child(ctrl)
+	_params_container.add_child(row)
+	_param_rows.append({"name": nm, "kind": kind, "ctrl": ctrl})
+
+
+## 难度切换：diff_pick 运行时实时读取 → 立即生效
+func _on_diff_changed(idx: int) -> void:
+	GameState.selected_difficulty = idx
+	_update_stats()
 
 
 func _rebuild_watch() -> void:

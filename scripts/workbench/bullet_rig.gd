@@ -12,7 +12,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v2.0-clean"
+const VERSION_TAG := "v2.1-diff"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -44,6 +44,7 @@ var _dir_angle_label: Label
 var _reload_status: Label
 
 var _hot_chk: CheckBox
+var _diff_sel: OptionButton
 
 # ── 热更新状态 ──
 var _cur_script: Script = null          # 当前魂（发射用它；热重载后替换）
@@ -137,6 +138,14 @@ func _build_ui() -> void:
 	_script_sel.selected = 0
 	_script_sel.item_selected.connect(_on_script_changed)
 	box.add_child(_script_sel)
+
+	box.add_child(_label("难度（即时生效）", 12))
+	_diff_sel = OptionButton.new()
+	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
+		_diff_sel.add_item(d)
+	_diff_sel.selected = GameState.selected_difficulty
+	_diff_sel.item_selected.connect(_on_diff_changed)
+	box.add_child(_diff_sel)
 
 	box.add_child(_label("壳：外形", 12))
 
@@ -325,6 +334,11 @@ func _rebuild_watch() -> void:
 func _refresh_watch_mtimes() -> void:
 	for p in _watch_paths:
 		_watch_mtimes[p] = int(FileAccess.get_modified_time(p))
+
+
+## 难度切换：diff_pick 运行时实时读取 → 立即生效
+func _on_diff_changed(idx: int) -> void:
+	GameState.selected_difficulty = idx
 
 
 func _on_hot_toggled(on: bool) -> void:

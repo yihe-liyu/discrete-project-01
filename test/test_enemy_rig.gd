@@ -25,6 +25,33 @@ func test_enemy_shell_build():
 	assert_eq(SHELL.visual_keys().size(), AssetRegistry.enemy_visuals.size(), "外观清单来自 AssetRegistry")
 
 
+
+func test_param_listing_and_difficulty():
+	var rig = RIG.new()
+	add_child_autofree(rig)
+	await get_tree().process_frame
+	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy01.gd"
+	rig._cur_script = load(rig._cur_script_path)
+	rig._rebuild_params()
+	assert_true(rig._param_rows.size() >= 3, "枚举出参数行（%d）" % rig._param_rows.size())
+	var names: Array[String] = []
+	var target_y_spin := -1
+	for i in rig._param_rows.size():
+		var row = rig._param_rows[i]
+		names.append(row.name)
+		if row.name == "target_y":
+			target_y_spin = i
+	assert_true(names.has("target_y"), "含 target_y")
+	assert_true(names.has("rate"), "含 rate")
+	if target_y_spin >= 0:
+		assert_eq(float(rig._param_rows[target_y_spin].ctrl.value), 300.0, "默认值=脚本 var 值（target_y=300）")
+	# 难度切换：diff_pick 实时读取 → 立即可变
+	rig._on_diff_changed(2)
+	assert_eq(GameState.selected_difficulty, 2, "难度切 Hard(2)")
+	rig._on_diff_changed(0)
+	assert_eq(GameState.selected_difficulty, 0, "难度切 Easy(0)")
+	rig.queue_free()
+
 func test_rig_spawn_and_hot_reload():
 	var rig = RIG.new()
 	add_child_autofree(rig)
