@@ -11,7 +11,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v1.2-dbg"
+const VERSION_TAG := "v1.3-slim"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -39,7 +39,7 @@ var _seed_btn: Button
 var _stats_label: Label
 var _field: Control
 var _dir_angle_label: Label
-var _root_hbox: HBoxContainer  # 已废弃（workbench 式绝对布局）
+
 var _reload_status: Label
 var _panel_ref: PanelContainer
 var _dbg_label: Label
@@ -169,7 +169,7 @@ func _build_ui() -> void:
 	_speed_spin.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	box.add_child(_speed_spin)
 
-	box.add_child(_label("方向（右击场地=自选指向）", 12))
+	box.add_child(_label("方向（右键=指向）", 12))
 	_dir_sel = OptionButton.new()
 	_dir_sel.add_item("自选（右键场地）")
 	for d in SHELL.DIR_NAMES:
@@ -214,13 +214,13 @@ func _build_ui() -> void:
 	box.add_child(_stats_label)
 	box.add_child(_label("开发", 12))
 	_hot_chk = CheckBox.new()
-	_hot_chk.text = "热更新（保存自动重载）"
+	_hot_chk.text = "热更新"
 	_hot_chk.button_pressed = true
 	_hot_chk.toggled.connect(_on_hot_toggled)
 	box.add_child(_hot_chk)
 	_reload_status = _label("", 11)
 	box.add_child(_reload_status)
-	box.add_child(_label("点击场地 = 发射点；右键 = 指向；幽灵玩家 = 鼠标", 11))
+	box.add_child(_label("左键=发射点 · 右键=指向 · 鼠标=自机", 11))
 	# 调试：窗口/面板真实几何（截图即见真相，结束盲猜）
 	_dbg_label = _label("", 10)
 	box.add_child(_dbg_label)
@@ -265,7 +265,9 @@ func _update_dbg() -> void:
 		return
 	var win: Vector2 = get_window().size
 	var pr := _panel_ref.get_global_rect()
-	_dbg_label.text = "窗 %dx%d 面板x %.0f..%.0f（应=窗宽-440..-8）" % [int(win.x), int(win.y), pr.position.x, pr.end.x]
+	var exp_right: float = win.x - 8.0
+	var exp_left: float = exp_right - (pr.size.x)
+	_dbg_label.text = "窗 %dx%d 面板 %.0f..%.0f（应右缘 %.0f）" % [int(win.x), int(win.y), pr.position.x, pr.end.x, exp_right]
 
 
 func _update_stats() -> void:
