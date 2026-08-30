@@ -12,7 +12,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v1.6-name"
+const VERSION_TAG := "v2.0-clean"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -42,8 +42,7 @@ var _field: Control
 var _dir_angle_label: Label
 
 var _reload_status: Label
-var _panel_ref: PanelContainer
-var _dbg_label: Label
+
 var _hot_chk: CheckBox
 
 # ── 热更新状态 ──
@@ -107,7 +106,6 @@ func _build_ui() -> void:
 	panel.offset_top = 8.0
 	panel.offset_right = -8.0
 	panel.offset_bottom = 952.0
-	_panel_ref = panel
 	# 不透明实心背景：半透明默认主题会透出场地边框（重叠错觉）
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.085, 0.09, 0.115, 1.0)
@@ -232,9 +230,6 @@ func _build_ui() -> void:
 	_reload_status = _label("", 11)
 	box.add_child(_reload_status)
 	box.add_child(_label("左键=发射点 · 右键=指向 · 鼠标=自机", 11))
-	# 调试：窗口/面板真实几何（截图即见真相，结束盲猜）
-	_dbg_label = _label("", 10)
-	box.add_child(_dbg_label)
 
 
 func _label(text: String, font_size: int) -> Label:
@@ -272,16 +267,6 @@ func _next_seed() -> void:
 	_update_stats()
 
 
-func _update_dbg() -> void:
-	if _dbg_label == null or _panel_ref == null:
-		return
-	var win: Vector2 = get_window().size
-	var pr := _panel_ref.get_global_rect()
-	var exp_right: float = win.x - 8.0
-	var exp_left: float = exp_right - (pr.size.x)
-	_dbg_label.text = "窗 %dx%d 面板 %.0f..%.0f（应右缘 %.0f）" % [int(win.x), int(win.y), pr.position.x, pr.end.x, exp_right]
-
-
 func _update_stats() -> void:
 	if _stats_label:
 		_stats_label.text = "场上弹数：%d · 种子：%d" % [BulletManager.active_bullets.size(), _seed]
@@ -295,7 +280,6 @@ func _process(delta: float) -> void:
 			_fire()
 	_process_hot_reload(delta)
 	_update_stats()
-	_update_dbg()
 
 
 # ═══ 热更新（M2b）：保存脚本 → 自动重载重演 ═══

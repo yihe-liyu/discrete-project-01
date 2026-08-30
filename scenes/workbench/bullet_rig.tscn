@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bx8t6a1vupo4m"]
 
-[ext_resource type="Script" path="res://scripts/workbench/bullet_rig.gd" id="1_rig"]
+[ext_resource type="Script" uid="uid://blnprk61kle5d" path="res://scripts/workbench/bullet_rig.gd" id="1_rig"]
 
-[node name="BulletRig" type="Control"]
+[node name="BulletRig" type="Control" unique_id=1854058681]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
