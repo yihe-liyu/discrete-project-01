@@ -67,16 +67,21 @@ func _build_world() -> void:
 # ═══ UI ═══
 
 func _build_ui() -> void:
-	# 面板停靠场地右侧（不遮挡演出），同工作台右侧面板惯例
+	# 面板停靠场地右侧（不遮挡演出），同工作台右侧面板规格：432 宽 × 712 高
 	var panel := PanelContainer.new()
 	panel.offset_left = 856.0
 	panel.offset_top = 8.0
-	panel.offset_right = 1592.0
-	panel.offset_bottom = 520.0
+	panel.offset_right = 1288.0
+	panel.offset_bottom = 720.0
 	add_child(panel)
+	# 内部滚动：未来加字段也不会裁内容
+	var panel_scroll := ScrollContainer.new()
+	panel_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(panel_scroll)
 	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 4)
-	panel.add_child(box)
+	panel_scroll.add_child(box)
 
 	box.add_child(_label("弹幕试验台 v0（M2a）", 16))
 	box.add_child(_label("魂：行为脚本", 12))
