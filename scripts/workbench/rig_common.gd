@@ -1,5 +1,6 @@
 extends RefCounted
 ## 组合台共享 UI 基建：标签/面板样式/标题（三台统一样式单一来源）
+## 视觉与游戏页面统一：半透明黑底 + 金边卡片（ui_theme 同款）
 
 static func label(text: String, font_size: int) -> Label:
 	var l := Label.new()
@@ -22,15 +23,15 @@ static func accent_button(text: String) -> Button:
 	b.text = text
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.83, 0.68, 0.35)
-	normal.set_corner_radius_all(4)
+	normal.set_corner_radius_all(6)
 	normal.set_content_margin_all(6)
 	var hover := StyleBoxFlat.new()
 	hover.bg_color = Color(0.9, 0.76, 0.45)
-	hover.set_corner_radius_all(4)
+	hover.set_corner_radius_all(6)
 	hover.set_content_margin_all(6)
 	var pressed := StyleBoxFlat.new()
 	pressed.bg_color = Color(0.72, 0.56, 0.26)
-	pressed.set_corner_radius_all(4)
+	pressed.set_corner_radius_all(6)
 	pressed.set_content_margin_all(6)
 	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", hover)
@@ -42,10 +43,24 @@ static func accent_button(text: String) -> Button:
 
 static func panel_style() -> StyleBoxFlat:
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.085, 0.09, 0.115, 1.0)
+	# 游戏菜单同款：半透明黑 + 金边（与 ui_theme StyleBoxPanel 完全一致）
+	st.bg_color = Color(0, 0, 0, 0.32)
+	st.set_border_width_all(1)
+	st.border_color = Color(0.62, 0.52, 0.28, 0.55)
 	st.set_corner_radius_all(6)
-	st.set_content_margin_all(10)
+	st.set_content_margin_all(8)
 	return st
+
+
+## 暗色舞台底（与整关预览一致的深黑底；作为根控件的第一个子节点垫底）
+## 备注：组合台页签在创建站页区下，背景原是引擎默认灰——与游戏页面格格不入
+static func add_stage_bg(parent: Control) -> void:
+	var bg := ColorRect.new()
+	bg.color = Color(0.03, 0.03, 0.05)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(bg)
+	parent.move_child(bg, 0)
 
 
 static func make_panel() -> PanelContainer:

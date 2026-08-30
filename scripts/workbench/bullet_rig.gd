@@ -15,7 +15,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v2.3-ui"
+const VERSION_TAG := "v2.4-ui"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -82,6 +82,7 @@ func _ready() -> void:
 # ═══ 世界 ═══
 
 func _build_world() -> void:
+	RIG_COMMON.add_stage_bg(self)
 	# 场地：与工作台同款——直接子节点绝对定位；(0,0) 起、832x928 → 局部坐标=游戏坐标
 	_field = Control.new()
 	_field.position = Vector2.ZERO
@@ -115,12 +116,8 @@ func _build_ui() -> void:
 	panel.offset_top = 8.0
 	panel.offset_right = -8.0
 	panel.offset_bottom = 952.0
-	# 不透明实心背景：半透明默认主题会透出场地边框（重叠错觉）
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.085, 0.09, 0.115, 1.0)
-	panel_style.set_corner_radius_all(6)
-	panel_style.set_content_margin_all(10)
-	panel.add_theme_stylebox_override("panel", panel_style)
+	# 与游戏页面统一：半透明黑底 + 金边卡片（rig_common 单一来源）
+	panel.add_theme_stylebox_override("panel", RIG_COMMON.panel_style())
 	add_child(panel)
 	# 内部滚动：未来加字段也不会裁内容
 	var panel_scroll := ScrollContainer.new()
@@ -421,7 +418,7 @@ func _process_hot_reload(delta: float) -> void:
 	if changed:
 		if _hot_dirty_since < 0.0:
 			_hot_dirty_since = 0.0
-			_toast.show_msg("↻ 检测到修改…", Color(1, 1, 0.6))
+			_toast.show_msg("＊ 检测到修改…", Color(1, 1, 0.6))
 		_hot_dirty_since += HOT_POLL_INTERVAL
 		if _hot_dirty_since >= HOT_DEBOUNCE:
 			_hot_dirty_since = -1.0
@@ -462,7 +459,7 @@ func _do_hot_reload() -> void:
 	BulletManager.clear_all()
 	RNG.set_seed(_seed)
 	_fire()
-	_toast.show_msg("↻ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))
+	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))
 
 
 # ═══ 场地交互 ═══
@@ -499,7 +496,7 @@ func _refresh_dir_label() -> void:
 func _on_field_draw() -> void:
 	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
-	_field.draw_rect(field, Color(0.35, 0.45, 0.7, 0.5), false, 2.0)
+	_field.draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
 	var p := _emitter_pos
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.85, 0.3), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.85, 0.3), 2.0)

@@ -14,7 +14,7 @@ const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.6-ui"
+const VERSION_TAG := "v0.7-ui"
 
 var _shell: Variant
 var _catalog: Variant
@@ -73,6 +73,7 @@ func _ready() -> void:
 # ═══ 世界 ═══
 
 func _build_world() -> void:
+	RIG_COMMON.add_stage_bg(self)
 	_field = Control.new()
 	_field.position = Vector2.ZERO
 	_field.size = Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_BOTTOM)
@@ -369,7 +370,7 @@ func _process_hot_reload(delta: float) -> void:
 	if changed:
 		if _hot_dirty_since < 0.0:
 			_hot_dirty_since = 0.0
-			_toast.show_msg("↻ 检测到修改…", Color(1, 1, 0.6))
+			_toast.show_msg("＊ 检测到修改…", Color(1, 1, 0.6))
 		_hot_dirty_since += HOT_POLL_INTERVAL
 		if _hot_dirty_since >= HOT_DEBOUNCE:
 			_hot_dirty_since = -1.0
@@ -414,7 +415,7 @@ func _do_hot_reload() -> void:
 	_clear_all()
 	RNG.set_seed(_seed)
 	_spawn()
-	_toast.show_msg("↻ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))
+	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))
 
 
 # ═══ 场地交互 ═══
@@ -428,7 +429,7 @@ func _on_field_input(event: InputEvent) -> void:
 func _on_field_draw() -> void:
 	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
-	_field.draw_rect(field, Color(0.35, 0.45, 0.7, 0.5), false, 2.0)
+	_field.draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
 	var p := _spawn_pos
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.6, 0.2), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.6, 0.2), 2.0)

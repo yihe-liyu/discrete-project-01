@@ -179,7 +179,7 @@ func _draw() -> void:
 		draw_rect(Rect2(0, field.position.y, field.position.x, field.size.y), Color(0.03, 0.03, 0.05))
 		draw_rect(Rect2(field.end.x, field.position.y, size.x - field.end.x, field.size.y), Color(0.03, 0.03, 0.05))
 	# 东方框边框（保留，提示边界）+ 网格/路径线（仅背景关闭时画，避免浮在 3D 上）
-	draw_rect(field, Color(0.35, 0.45, 0.7, 0.5), false, 2.0)
+	draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
 	if not has_bg:
 		for x in range(64, 833, 64):
 			draw_line(Vector2(x, 32), Vector2(x, 928), Color(1, 1, 1, 0.05))

@@ -2,7 +2,7 @@ class_name WorkbenchUI
 extends RefCounted
 ## 工作台 UI 公共工具：统一的小控件工厂（标签/标题/参数行）
 
-const TEXT_DIM := Color(0.72, 0.77, 0.85)
+const TEXT_DIM := Color(0.72, 0.72, 0.72)  # 中性灰（与游戏页面弱化文字一致，不再蓝灰）
 const ACCENT := Color(0.92, 0.73, 0.32)
 
 
@@ -102,7 +102,7 @@ static func _axis_spin(v: float, axis: String) -> Dictionary:
 	var l := Label.new()
 	l.text = axis
 	l.custom_minimum_size = Vector2(12, 0)
-	l.add_theme_color_override("font_color", Color(0.45, 0.50, 0.60))
+	l.add_theme_color_override("font_color", Color(0.52, 0.52, 0.55))
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(l)
 	var spin := SpinBox.new()
