@@ -11,6 +11,7 @@ func test_batch_mode_sprite_hidden_as_data_source():
 	bd.tex("环玉")
 	bd.speed(300.0)
 	bd.enemy()
+	bd.spawn_fog = false  # 测试去掉雾：is_ready 立即为 true
 	var bullet := BulletManager.shoot_enemy_bullet(bd, Vector2(400, 200), Vector2.DOWN) as Bullet
 	assert_not_null(bullet, "射出子弹")
 	if bullet:
@@ -23,6 +24,7 @@ func test_batch_mode_sprite_hidden_as_data_source():
 	b2d.tex("环玉")
 	b2d.speed(300.0)
 	b2d.enemy()
+	b2d.spawn_fog = false
 	var bullet2 := BulletManager.shoot_enemy_bullet(b2d, Vector2(400, 200), Vector2.DOWN) as Bullet
 	if bullet2:
 		assert_true(bullet2.get_node("Sprite2D").visible, "非批量模式：Sprite 显示")
@@ -38,12 +40,14 @@ func test_additive_and_multiply_separate_groups():
 	add.speed(200.0)
 	add.blend(true)
 	add.enemy()
+	add.spawn_fog = false
 	BulletManager.shoot_enemy_bullet(add, Vector2(400, 200), Vector2.RIGHT)
 	var mul := BulletData.new()
 	mul.tex("环玉")
 	mul.speed(200.0)
 	mul.blend(false)
 	mul.enemy()
+	mul.spawn_fog = false
 	BulletManager.shoot_enemy_bullet(mul, Vector2(400, 200), Vector2.LEFT)
 	await get_tree().process_frame
 	var mm = BulletManager.get_node_or_null("BulletMultiMesh")
