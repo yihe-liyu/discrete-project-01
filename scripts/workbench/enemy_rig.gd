@@ -8,6 +8,8 @@ const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/enemy_shell.gd")
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
+const RIG_COMMON := preload("res://scripts/workbench/rig_common.gd")
+const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
@@ -37,6 +39,7 @@ var _seed_btn: Button
 var _stats_label: Label
 var _field: Control
 var _reload_status: Label
+var _toast: Control
 var _diff_sel: OptionButton
 var _param_panel: VBoxContainer  # 共享参数面板（param_panel.gd）
 var _hot_chk: CheckBox
@@ -58,11 +61,13 @@ func _ready() -> void:
 	theme = WORKBENCH_THEME.build()
 	_build_world()
 	_build_ui()
+	_toast = STATUS_TOAST.new()
+	add_child(_toast)
+	_reload_status = _toast.label
 	_set_seed(FIXED_SEED)
 	_set_current_script()
 	_param_panel.rebuild(_cur_script)
-	_reload_status.text = "热更新：开 · 等待修改…"
-	_reload_status.modulate = Color(0.5, 0.95, 0.6)
+	_toast.show_msg("热更新：开", Color(0.5, 0.95, 0.6))
 
 
 # ═══ 世界 ═══
@@ -88,20 +93,7 @@ func _build_world() -> void:
 # ═══ UI ═══
 
 func _build_ui() -> void:
-	var panel := PanelContainer.new()
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
-	panel.anchor_top = 0.0
-	panel.anchor_bottom = 0.0
-	panel.offset_left = -440.0
-	panel.offset_top = 8.0
-	panel.offset_right = -8.0
-	panel.offset_bottom = 952.0
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.085, 0.09, 0.115, 1.0)
-	panel_style.set_corner_radius_all(6)
-	panel_style.set_content_margin_all(10)
-	panel.add_theme_stylebox_override("panel", panel_style)
+	var panel: PanelContainer = RIG_COMMON.make_panel()
 	add_child(panel)
 	var panel_scroll := ScrollContainer.new()
 	panel_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -174,7 +166,6 @@ func _build_ui() -> void:
 		drops.add_child(cell)
 	box.add_child(drops)
 
-	box.add_child(_label("参数（脚本 var 注入，可调）", 12))
 	_param_panel = PARAM_PANEL.new()
 	box.add_child(_param_panel)
 
@@ -204,8 +195,6 @@ func _build_ui() -> void:
 	_hot_chk.button_pressed = true
 	_hot_chk.toggled.connect(_on_hot_toggled)
 	box.add_child(_hot_chk)
-	_reload_status = _label("", 11)
-	box.add_child(_reload_status)
 	box.add_child(_label("左键=出生点 · 鼠标=自机", 11))
 
 
@@ -219,11 +208,7 @@ func _drop_spin(v: float) -> SpinBox:
 
 
 func _label(text: String, font_size: int) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", font_size)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return l
+	return RIG_COMMON.label(text, font_size)
 
 
 # ═══ 生成 ═══
@@ -283,9 +268,7 @@ func _process(delta: float) -> void:
 func _on_script_changed(_idx: int) -> void:
 	_set_current_script()
 	_param_panel.rebuild(_cur_script)
-	if _reload_status:
-		_reload_status.text = "魂：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（无移动）")
-		_reload_status.modulate = Color(1, 1, 1, 0.8)
+	_toast.show_msg("魂：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（无移动）"), Color(1, 1, 1, 0.85))
 
 
 func _set_current_script() -> void:
@@ -323,9 +306,7 @@ func _rebuild_watch() -> void:
 
 func _on_hot_toggled(on: bool) -> void:
 	_hot_enabled = on
-	if _reload_status:
-		_reload_status.text = "热更新：开" if on else "热更新：关"
-		_reload_status.modulate = Color(0.5, 0.95, 0.6) if on else Color(1, 1, 1, 0.6)
+	_toast.show_msg("热更新：开" if on else "热更新：关", Color(0.5, 0.95, 0.6) if on else Color(1, 1, 1, 0.6))
 
 
 func _process_hot_reload(delta: float) -> void:
@@ -343,8 +324,7 @@ func _process_hot_reload(delta: float) -> void:
 	if changed:
 		if _hot_dirty_since < 0.0:
 			_hot_dirty_since = 0.0
-			_reload_status.text = "↻ 检测到修改…"
-			_reload_status.modulate = Color(1, 1, 0.6)
+			_toast.show_msg("↻ 检测到修改…", Color(1, 1, 0.6))
 		_hot_dirty_since += HOT_POLL_INTERVAL
 		if _hot_dirty_since >= HOT_DEBOUNCE:
 			_hot_dirty_since = -1.0
@@ -378,8 +358,7 @@ func _do_hot_reload() -> void:
 	elif failed == "":
 		failed = _cur_script_path
 	if failed != "":
-		_reload_status.text = "⚠ 重载失败：%s（旧版继续）" % failed.get_file()
-		_reload_status.modulate = Color(1, 0.4, 0.4)
+		_toast.show_msg("⚠ 重载失败：%s（旧版继续）" % failed.get_file(), Color(1, 0.4, 0.4))
 		_refresh_watch_mtimes()
 		_hot_dirty_since = -1.0
 		return
@@ -390,8 +369,7 @@ func _do_hot_reload() -> void:
 	_clear_all()
 	RNG.set_seed(_seed)
 	_spawn()
-	_reload_status.text = "↻ 已重载：%s" % _cur_script_path.get_file()
-	_reload_status.modulate = Color(0.5, 0.95, 0.6)
+	_toast.show_msg("↻ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))
 
 
 # ═══ 场地交互 ═══

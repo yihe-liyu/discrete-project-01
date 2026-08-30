@@ -81,7 +81,7 @@ func test_vector2_and_color_params():
 	assert_true(found_vec, "target_pos 是 Vector2 可调")
 	# 零值(0,0)陷阱：标签应为橙色提醒
 	var warn_found := false
-	for c in rig._param_panel.get_children():
+	for c in rig._param_panel.body.get_children():
 		if c is HBoxContainer and c.get_child_count() >= 2:
 			var lb: Label = c.get_child(0)
 			if lb.text == "target_pos" and lb.modulate.r > 0.9 and lb.modulate.g < 0.8:

@@ -1,20 +1,36 @@
 extends VBoxContainer
-## 参数面板共享组件（M3 共用）—— 脚本 var 枚举 → 可调控件行 → collect() 字典
+## 参数面板共享组件 —— 脚本 var 枚举 → 可调控件行 → collect() 字典
 ## 与游戏注入同源：EnemyData.params / BulletData.params → 脚本同名 var 注入
-## 零值 Vector2 染橙提醒（(0,0) 默认=跑向左上角的经典陷阱）
+## 零值 Vector2 染橙提醒；自带可折叠标题（行数多默认收起）
 
 const _label_hint_color := Color(1, 1, 0.7, 0.8)
 
 var _rows: Array = []  # [{name, kind, ctrl}]
+var body: VBoxContainer   # 参数行容器（测试/外部读取 children 用）
+var _header: Button
+
+
+func _ready() -> void:
+	add_theme_constant_override("separation", 2)
+	_header = Button.new()
+	_header.flat = true
+	_header.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_header.add_theme_font_size_override("font_size", 12)
+	_header.pressed.connect(_toggle)
+	add_child(_header)
+	body = VBoxContainer.new()
+	body.add_theme_constant_override("separation", 2)
+	add_child(body)
 
 
 ## 重建参数行（脚本为 null = 清空）
 func rebuild(script: Script) -> void:
-	for c in get_children():
+	for c in body.get_children():
 		c.queue_free()
 	_rows.clear()
 	if script == null:
-		_add_note("（选择脚本后显示参数）", Color(1, 1, 1, 0.5))
+		_header.text = "参数（选择脚本后显示）"
+		body.visible = true
 		return
 	var inst = script.new()
 	var prop_list: Array = script.get_script_property_list()
@@ -62,7 +78,19 @@ func rebuild(script: Script) -> void:
 		_add_note("（%d 个复杂类型参数走代码）" % skipped, _label_hint_color)
 	if _rows.is_empty():
 		_add_note("（该脚本无可调 var；默认值即脚本内声明）", Color(1, 1, 1, 0.5))
+	_header.text = "参数 ▾（%d 个）" % _rows.size() if _rows.size() > 0 else "参数（无可调 var）"
+	# 行数多默认收起；Toggle 文本同步
+	body.visible = _rows.size() <= 6
+	_header.text = ("参数 ▾（%d 个，点击折叠）" % _rows.size()) if body.visible \
+		else ("参数 ▸（%d 个，点击展开）" % _rows.size())
 	inst.free()
+
+
+func _toggle() -> void:
+	body.visible = not body.visible
+	if _rows.size() > 0:
+		_header.text = ("参数 ▾（%d 个，点击折叠）" % _rows.size()) if body.visible \
+			else ("参数 ▸（%d 个，点击展开）" % _rows.size())
 
 
 ## 收集面板值 → 参数字典（与游戏 params 同构）
@@ -107,7 +135,7 @@ func _add_row(nm: String, kind: String, ctrl: Control) -> Label:
 	lb.custom_minimum_size = Vector2(90, 0)
 	row.add_child(lb)
 	row.add_child(ctrl)
-	add_child(row)
+	body.add_child(row)
 	_rows.append({"name": nm, "kind": kind, "ctrl": ctrl})
 	return lb
 
@@ -115,7 +143,7 @@ func _add_row(nm: String, kind: String, ctrl: Control) -> Label:
 func _add_note(text: String, color: Color) -> void:
 	var l := _mk_label(text, 10)
 	l.modulate = color
-	add_child(l)
+	body.add_child(l)
 
 
 func _mk_label(text: String, font_size: int) -> Label:
