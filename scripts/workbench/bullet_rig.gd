@@ -289,6 +289,12 @@ func _rebuild_watch() -> void:
 		_watch_mtimes[p] = FileAccess.get_modified_time(p)
 
 
+## 重载完成后刷新监听基线（避免同一改动反复触发）
+func _refresh_watch_mtimes() -> void:
+	for p in _watch_paths:
+		_watch_mtimes[p] = int(FileAccess.get_modified_time(p))
+
+
 func _on_hot_toggled(on: bool) -> void:
 	_hot_enabled = on
 	if _reload_status:
@@ -308,7 +314,7 @@ func _process_hot_reload(delta: float) -> void:
 		var mt := int(FileAccess.get_modified_time(p))
 		if mt != int(_watch_mtimes.get(p, 0)):
 			changed = true
-			_watch_mtimes[p] = mt
+			# 注意：检测期间【不】更新基线！更新会把防抖清零导致永不重载；重载完成后统一刷新
 	if changed:
 		if _hot_dirty_since < 0.0:
 			_hot_dirty_since = 0.0
@@ -345,8 +351,12 @@ func _do_hot_reload() -> void:
 	if failed != "":
 		_reload_status.text = "⚠ 重载失败：%s（旧版继续）" % failed.get_file()
 		_reload_status.modulate = Color(1, 0.4, 0.4)
+		_refresh_watch_mtimes()
+		_hot_dirty_since = -1.0
 		return
 	_cur_script = main_new
+	_refresh_watch_mtimes()
+	_hot_dirty_since = -1.0
 	BulletManager.clear_all()
 	RNG.set_seed(_seed)
 	_fire()

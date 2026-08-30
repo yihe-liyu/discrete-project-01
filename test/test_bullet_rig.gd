@@ -4,6 +4,27 @@ extends GutTest
 const RIG := preload("res://scripts/workbench/bullet_rig.gd")
 
 
+
+func test_hot_reload_debounce_fires_after_stability():
+	var rig = RIG.new()
+	add_child_autofree(rig)
+	await get_tree().process_frame
+	rig._cur_script_path = "res://data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd"
+	rig._watch_paths.clear()
+	rig._watch_paths.append(rig._cur_script_path)
+	rig._watch_mtimes.clear()
+	rig._watch_mtimes[rig._cur_script_path] = FileAccess.get_modified_time(rig._cur_script_path) - 30
+	rig._hot_enabled = true
+	BulletManager.clear_all()
+	rig._process_hot_reload(0.5)
+	assert_true(rig._reload_status.text.contains("检测到修改"), "首检测提示")
+	rig._process_hot_reload(0.5)
+	rig._process_hot_reload(0.5)
+	assert_true(rig._reload_status.text.contains("已重载"),
+		"防抖后触发重载（状态：%s）" % rig._reload_status.text)
+	assert_true(BulletManager.active_bullets.size() >= 1, "重演发弹")
+	rig.queue_free()
+
 func test_hot_reload_replays_and_keeps_old_on_failure():
 	var rig = RIG.new()
 	add_child_autofree(rig)
