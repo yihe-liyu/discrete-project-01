@@ -37,6 +37,7 @@ var _seed_btn: Button
 var _stats_label: Label
 var _field: Control
 var _dir_angle_label: Label
+var _root_hbox: HBoxContainer
 var _reload_status: Label
 var _hot_chk: CheckBox
 
@@ -51,9 +52,14 @@ var _hot_dirty_since := -1.0
 
 
 func _ready() -> void:
-	get_window().size = Vector2i(1600, 960)  # 与工作台一致：横向给右侧面板腾位置
+	get_window().size = Vector2i(1600, 960)
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
+	# 布局容器：场地 | 面板 由 HBox 左右分配（面板靠右由容器保证，与窗口尺寸无关）
+	_root_hbox = HBoxContainer.new()
+	_root_hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root_hbox.add_theme_constant_override("separation", 0)
+	add_child(_root_hbox)
 	_build_world()
 	_build_ui()
 	_set_seed(FIXED_SEED)
@@ -68,11 +74,12 @@ func _ready() -> void:
 func _build_world() -> void:
 	# 场地（画框 + 发射点十字；点击设发射点）
 	_field = Control.new()
-	_field.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_field.mouse_filter = Control.MOUSE_FILTER_STOP
 	_field.gui_input.connect(_on_field_input)
 	_field.draw.connect(_on_field_draw)
-	add_child(_field)
+	_root_hbox.add_child(_field)
 	# 幽灵玩家：鼠标跟随（自机狙目标）
 	_ghost = PLAYER_SCENE.instantiate()
 	_ghost.set_script(GHOST)
@@ -87,14 +94,20 @@ func _build_world() -> void:
 # ═══ UI ═══
 
 func _build_ui() -> void:
-	# 面板停靠【右缘】（右锚点 + 负偏移，与窗口尺寸完全解耦——绝不依赖"窗口=1600 宽"的假设）
+	# 面板：由 HBox 分配在右侧，固定 432 宽、上下 8px 边距（容器保证位置，绝不浮空）
+	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_theme_constant_override("margin_left", 8.0)
+	margin.add_theme_constant_override("margin_right", 8.0)
+	margin.add_theme_constant_override("margin_top", 8.0)
+	margin.add_theme_constant_override("margin_bottom", 8.0)
+	_root_hbox.add_child(margin)
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	panel.offset_left = -440.0    # 432 宽 + 8 边距
-	panel.offset_top = 8.0
-	panel.offset_right = -8.0
-	panel.offset_bottom = 690.0   # M2b 加开发块后内容约 640 高；底部保留余量
-	add_child(panel)
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.custom_minimum_size = Vector2(432, 0)
+	margin.add_child(panel)
 	# 内部滚动：未来加字段也不会裁内容
 	var panel_scroll := ScrollContainer.new()
 	panel_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
