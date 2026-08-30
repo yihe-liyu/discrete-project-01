@@ -10,10 +10,10 @@ var _status_label: Label
 func _init() -> void:
 	add_theme_constant_override("separation", 2)
 	_time_label = Label.new()
-	_time_label.add_theme_font_size_override("font_size", 12)
+	_time_label.add_theme_font_size_override("font_size", 14)
 	add_child(_time_label)
 	_status_label = Label.new()
-	_status_label.add_theme_font_size_override("font_size", 12)
+	_status_label.add_theme_font_size_override("font_size", 14)
 	add_child(_status_label)
 
 

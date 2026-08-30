@@ -14,7 +14,7 @@ const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.4-param"
+const VERSION_TAG := "v0.5-param"
 
 var _shell: Variant
 var _catalog: Variant
@@ -116,11 +116,11 @@ func _build_ui() -> void:
 		phase_idx += 1
 	_phase_sel.item_selected.connect(_select_phase)
 	box.add_child(_phase_sel)
-	_name_label = _label("", 11)
+	_name_label = _label("", 12)
 	box.add_child(_name_label)
 
 	box.add_child(RIG_COMMON.section_label("魂：双槽（阶段内 move×shoot）"))
-	box.add_child(_label("移动脚本", 11))
+	box.add_child(_label("移动脚本", 12))
 	_move_sel = OptionButton.new()
 	_move_sel.add_item("（空）— Boss 原地")
 	_fill_script_options(_move_sel, "boss_move")
@@ -128,7 +128,7 @@ func _build_ui() -> void:
 	_move_params = PARAM_PANEL.new()
 	box.add_child(_move_params)
 	_move_sel.item_selected.connect(_on_slots_changed)
-	box.add_child(_label("弹幕脚本", 11))
+	box.add_child(_label("弹幕脚本", 12))
 	_shoot_sel = OptionButton.new()
 	_shoot_sel.add_item("（空）— 不发弹")
 	_fill_script_options(_shoot_sel, "boss_shoot")
@@ -142,7 +142,7 @@ func _build_ui() -> void:
 	hr.add_theme_constant_override("separation", 8)
 	var hp_row := HBoxContainer.new()
 	hp_row.add_theme_constant_override("separation", 4)
-	var hp_lb := _label("血量", 11)
+	var hp_lb := _label("血量", 12)
 	hp_lb.custom_minimum_size = Vector2(34, 0)
 	hp_row.add_child(hp_lb)
 	_hp_spin = _num_spin(100.0, 100000.0, 4000.0)
@@ -150,7 +150,7 @@ func _build_ui() -> void:
 	hp_row.add_child(_hp_spin)
 	var time_row := HBoxContainer.new()
 	time_row.add_theme_constant_override("separation", 4)
-	var time_lb := _label("时限(s)", 11)
+	var time_lb := _label("时限(s)", 12)
 	time_lb.custom_minimum_size = Vector2(46, 0)
 	time_row.add_child(time_lb)
 	_time_spin = _num_spin(5.0, 300.0, 30.0)
@@ -185,7 +185,7 @@ func _build_ui() -> void:
 		ops.add_child(c)
 	box.add_child(ops)
 
-	_stats_label = _label("", 12)
+	_stats_label = _label("", 14)
 	box.add_child(_stats_label)
 	box.add_child(RIG_COMMON.section_label("开发"))
 	_hot_chk = CheckBox.new()
@@ -193,7 +193,7 @@ func _build_ui() -> void:
 	_hot_chk.button_pressed = true
 	_hot_chk.toggled.connect(_on_hot_toggled)
 	box.add_child(_hot_chk)
-	box.add_child(_label("左键=Boss落点 · 鼠标=自机", 11))
+	box.add_child(_label("左键=Boss落点 · 鼠标=自机", 12))
 
 
 func _num_spin(mn: float, mx: float, val: float) -> SpinBox:

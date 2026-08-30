@@ -14,7 +14,7 @@ const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.7-ui"
+const VERSION_TAG := "v0.8-ui"
 
 var _shell: Variant
 var _catalog: Variant
@@ -126,12 +126,12 @@ func _build_ui() -> void:
 	box.add_child(_diff_sel)
 
 	box.add_child(RIG_COMMON.section_label("壳：外形/属性"))
-	box.add_child(_label("外观", 12))
+	box.add_child(_label("外观", 14))
 	_visual_sel = OptionButton.new()
 	for k in SHELL.visual_keys():
 		_visual_sel.add_item(k)
 	box.add_child(_visual_sel)
-	box.add_child(_label("HP · 判定半径", 12))
+	box.add_child(_label("HP · 判定半径", 14))
 	var hrow := HBoxContainer.new()
 	_hp_spin = SpinBox.new()
 	_hp_spin.min_value = 1.0
@@ -146,7 +146,7 @@ func _build_ui() -> void:
 	_hbox_spin.custom_minimum_size = Vector2(120, 0)
 	hrow.add_child(_hbox_spin)
 	box.add_child(hrow)
-	box.add_child(_label("掉落（P/点/残/雷/整残/整B）", 12))
+	box.add_child(_label("掉落（P/点/残/雷/整残/整B）", 14))
 	var drops := GridContainer.new()
 	drops.columns = 2
 	drops.add_theme_constant_override("h_separation", 8)
@@ -160,7 +160,7 @@ func _build_ui() -> void:
 	for pair in [["P", _power_spin], ["点", _point_spin], ["残", _life_spin], ["雷", _bomb_spin], ["整残", _life_full_spin], ["整B", _bomb_full_spin]]:
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 6)
-		var lb := _label(pair[0], 11)
+		var lb := _label(pair[0], 12)
 		lb.custom_minimum_size = Vector2(34, 0)
 		cell.add_child(lb)
 		cell.add_child(pair[1])
@@ -187,7 +187,7 @@ func _build_ui() -> void:
 		ops.add_child(c)
 	box.add_child(ops)
 
-	_stats_label = _label("", 12)
+	_stats_label = _label("", 14)
 	box.add_child(_stats_label)
 	box.add_child(RIG_COMMON.section_label("开发"))
 	_hot_chk = CheckBox.new()
@@ -195,7 +195,7 @@ func _build_ui() -> void:
 	_hot_chk.button_pressed = true
 	_hot_chk.toggled.connect(_on_hot_toggled)
 	box.add_child(_hot_chk)
-	box.add_child(_label("左键=出生点 · 鼠标=自机", 11))
+	box.add_child(_label("左键=出生点 · 鼠标=自机", 12))
 
 
 func _drop_spin(v: float) -> SpinBox:
