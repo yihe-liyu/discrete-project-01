@@ -14,7 +14,7 @@ const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v1.0-ui"
+const VERSION_TAG := "v1.1-ui"
 
 var _shell: Variant
 var _catalog: Variant

@@ -34,7 +34,7 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v3.8-ui"
+const VERSION := "v3.9-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
@@ -384,7 +384,7 @@ func _apply_bookmarks_from_cache() -> void:
 	_auto_bookmarks = _static_extract()
 	_bookmarks.set_bookmarks(_auto_bookmarks, _manual_bookmarks)
 	_refresh_timeline_bookmarks()
-	_log_line("📖 书签（静态提取 %d 个）" % _auto_bookmarks.size())
+	_log_line("＊ 书签（静态提取 %d 个）" % _auto_bookmarks.size())
 
 
 ## 静态提取书签：扫描 tl.at() 时刻
@@ -416,7 +416,7 @@ func _on_bookmarks_changed(auto: Array, manual: Array) -> void:
 func _restart() -> void:
 	_stop_fast_forward()
 	_load_stage()
-	_log_line("↺ 重跑")
+	_log_line("＊ 重跑")
 
 
 ## 取消进行中的书签收集（切换关卡/重跑时调用，避免旧收集与新流程重叠）
@@ -435,7 +435,7 @@ func _pause() -> void:
 	_paused = true
 	_playback.set_playing(false)
 	_apply_audio()
-	_log_line("⏸ 暂停")
+	_log_line("＊ 暂停")
 
 
 func _resume() -> void:
@@ -525,7 +525,7 @@ func _jump_to(t: float) -> void:
 	var cur := runner.game_time() if runner else 0.0
 	if t < cur - 0.5:
 		# 目标在过去：无法倒带 → 重跑再快进
-		_log_line("↺ 目标 %.1fs 在过去（当前 %.1fs），重跑后快进" % [t, cur])
+		_log_line("＊ 目标 %.1fs 在过去（当前 %.1fs），重跑后快进" % [t, cur])
 		_load_stage()
 	if t <= 0.05:
 		return
@@ -541,7 +541,7 @@ func _start_fast_forward(t: float) -> void:
 	Engine.max_physics_steps_per_frame = 64
 	_apply_audio()
 	AudioManager.set_bgm_pitch(Engine.time_scale)  # 音乐跟随快进变速
-	_log_line("⏩ 快进到 %.1fs ..." % t)
+	_log_line("▶ 快进到 %.1fs ..." % t)
 
 
 func _stop_fast_forward() -> void:
@@ -561,7 +561,7 @@ func _stop_fast_forward() -> void:
 func _on_stage_selected(idx: int) -> void:
 	_stage_data = STAGE1_COROUTINE
 	_restart()
-	_log_line("🎚 切换关卡：%s" % (_stage_sel.get_item_text(idx)))
+	_log_line("＊ 切换关卡：%s" % (_stage_sel.get_item_text(idx)))
 
 
 func _on_speed_selected(idx: int) -> void:
@@ -570,16 +570,16 @@ func _on_speed_selected(idx: int) -> void:
 		# 不在书签快进中：直接应用（慢放时 BGM 同步变速）
 		Engine.time_scale = SPEEDS[_speed_idx]
 		AudioManager.set_bgm_pitch(Engine.time_scale)
-		_log_line("⏱ 速度 ×%.2f" % SPEEDS[_speed_idx])
+		_log_line("＊ 速度 ×%.2f" % SPEEDS[_speed_idx])
 
 
 ## 固定种子：重跑复用同一随机序列（弹幕可复现）
 func _on_seed_toggled(on: bool) -> void:
 	_fixed_seed_on = on
 	if on:
-		_log_line("🎲 固定种子 %d：重跑弹幕序列可复现" % FIXED_SEED)
+		_log_line("＊ 固定种子 %d：重跑弹幕序列可复现" % FIXED_SEED)
 	else:
-		_log_line("🎲 随机种子：每次重跑弹幕不同")
+		_log_line("＊ 随机种子：每次重跑弹幕不同")
 	_restart()
 
 
@@ -663,11 +663,11 @@ func _on_divider_input(event: InputEvent) -> void:
 func _debug_force_clear() -> void:
 	var boss = GameState.get_boss()
 	if not boss:
-		_log_line("ℹ 无 Boss（先跑到 Boss 阶段再按 Ctrl+G）")
+		_log_line("＊ 无 Boss（先跑到 Boss 阶段再按 Ctrl+G）")
 		return
 	var p_name: String = boss._current_phase.name if boss._current_phase else "?"
 	boss._clear_phase(true)
-	_log_line("⚡ 强制击破：%s（记录已解锁，阶段链继续）" % p_name)
+	_log_line("！ 强制击破：%s（记录已解锁，阶段链继续）" % p_name)
 
 
 ## 启动检查：扫描全部阶段 .tres 的 uid，冲突报日志（防手滑；配置入记录后无注册表兜底）
@@ -691,6 +691,6 @@ func _check_phase_uid_conflicts() -> void:
 				continue
 			var path := "%s/%s" % [phase_dir, f]
 			if seen.has(phase.uid):
-				_log_line("⚠️ uid 冲突：%d 同时用于 %s 和 %s" % [phase.uid, seen[phase.uid], path])
+				_log_line("⚠ uid 冲突：%d 同时用于 %s 和 %s" % [phase.uid, seen[phase.uid], path])
 			else:
 				seen[phase.uid] = path

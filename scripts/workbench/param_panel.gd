@@ -79,19 +79,19 @@ func rebuild(script: Script) -> void:
 		_add_note("（%d 个复杂类型参数走代码）" % skipped, _label_hint_color)
 	if _rows.is_empty():
 		_add_note("（该脚本无可调 var；默认值即脚本内声明）", Color(1, 1, 1, 0.5))
-	_header.text = "参数 ▾（%d 个）" % _rows.size() if _rows.size() > 0 else "参数（无可调 var）"
+	_header.text = "参数 ▼（%d 个）" % _rows.size() if _rows.size() > 0 else "参数（无可调 var）"
 	# 行数多默认收起；Toggle 文本同步
 	body.visible = _rows.size() <= 6
-	_header.text = ("参数 ▾（%d 个，点击折叠）" % _rows.size()) if body.visible \
-		else ("参数 ▸（%d 个，点击展开）" % _rows.size())
+	_header.text = ("参数 ▼（%d 个，点击折叠）" % _rows.size()) if body.visible \
+		else ("参数 ▶（%d 个，点击展开）" % _rows.size())
 	inst.free()
 
 
 func _toggle() -> void:
 	body.visible = not body.visible
 	if _rows.size() > 0:
-		_header.text = ("参数 ▾（%d 个，点击折叠）" % _rows.size()) if body.visible \
-			else ("参数 ▸（%d 个，点击展开）" % _rows.size())
+		_header.text = ("参数 ▼（%d 个，点击折叠）" % _rows.size()) if body.visible \
+			else ("参数 ▶（%d 个，点击展开）" % _rows.size())
 
 
 ## 收集面板值 → 参数字典（与游戏 params 同构）

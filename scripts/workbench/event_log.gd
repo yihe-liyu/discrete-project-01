@@ -46,16 +46,16 @@ func log_line(text: String) -> void:
 # ═══ 关卡事件（自连，无需主控制器转发）═══
 
 func _on_boss_spawned(_boss: Node) -> void:
-	log_line("👑 Boss 登场")
+	log_line("★ Boss 登场")
 
 
 func _on_phase_start(phase: PhaseData) -> void:
-	log_line("🎴 符卡开始：%s" % (phase.name if phase else "？"))
+	log_line("◆ 符卡开始：%s" % (phase.name if phase else "？"))
 
 
 func _on_phase_end(_captured: bool, _bonus: int) -> void:
-	log_line("🏁 符卡结束")
+	log_line("◆ 符卡结束")
 
 
 func _on_boss_defeated(_boss: Node) -> void:
-	log_line("💀 Boss 击破")
+	log_line("★ Boss 击破")

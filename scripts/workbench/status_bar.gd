@@ -20,7 +20,7 @@ func _init() -> void:
 
 
 func set_time(t: float, is_ff: bool) -> void:
-	_time_label.text = "t = %.1f s%s" % [t, " ⏩" if is_ff else ""]
+	_time_label.text = "t = %.1f s%s" % [t, " ▶" if is_ff else ""]
 
 
 func set_status(bullets: int, enemies: int, boss_alive: bool, fps: int) -> void:

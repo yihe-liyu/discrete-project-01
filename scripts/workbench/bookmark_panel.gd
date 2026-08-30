@@ -70,7 +70,7 @@ static func merged(auto: Array, manual: Array) -> Array:
 func _refresh() -> void:
 	_list.clear()
 	for it in merged(_auto, _manual):
-		var label: String = ("📌 " + it.label) if it.is_manual else it.label
+		var label: String = ("◆ " + it.label) if it.is_manual else it.label
 		var idx := _list.add_item(label)
 		_list.set_item_metadata(idx, it)
 
@@ -87,11 +87,11 @@ func _on_list_clicked(index: int, _pos: Vector2, btn: int) -> void:
 		_menu_index = index
 		_menu.clear()
 		if bm.get("is_manual", false):
-			_menu.add_item("✏️ 重命名")
-			_menu.add_item("🗑 删除")
+			_menu.add_item("＊ 重命名")
+			_menu.add_item("× 删除")
 		else:
-			_menu.add_item("✏️ 重命名（转为人工）")
-			_menu.add_item("🗑 删除")
+			_menu.add_item("＊ 重命名（转为人工）")
+			_menu.add_item("× 删除")
 			_menu.set_item_disabled(1, true)  # 自动书签不可直接删
 		_menu.popup(Rect2i(get_viewport().get_mouse_position(), Vector2i()))
 
@@ -110,7 +110,7 @@ func open_add(t: float = -1.0) -> void:
 	if cur < 0.0:
 		var runner := StageManager.current_stage_script()
 		cur = runner.game_time() if runner else 0.0
-	var vb := _dialog.open("📌 添加书签")
+	var vb := _dialog.open("◆ 添加书签")
 	# 时刻输入（默认当前/点击处，可自选）
 	var time_row := HBoxContainer.new()
 	time_row.add_child(WorkbenchUI.label("时刻"))
@@ -129,7 +129,7 @@ func open_add(t: float = -1.0) -> void:
 		if label.is_empty():
 			label = "t=%.1fs" % t_use
 		_manual.append({"t": t_use, "label": label})
-		log_requested.emit("📌 添加书签：%s" % label)
+		log_requested.emit("◆ 添加书签：%s" % label)
 		_emit_changed()
 	)
 	line.text_submitted.connect(func(_s: String): _dialog.confirm())  # 回车确认
@@ -140,7 +140,7 @@ func open_add(t: float = -1.0) -> void:
 func _open_rename(index: int) -> void:
 	var meta: Dictionary = _list.get_item_metadata(index)
 	var is_manual: bool = meta.get("is_manual", false)
-	var vb := _dialog.open("✏️ 重命名书签")
+	var vb := _dialog.open("＊ 重命名书签")
 	var line := LineEdit.new()
 	line.text = meta.label
 	vb.add_child(line)
@@ -156,7 +156,7 @@ func _open_rename(index: int) -> void:
 		else:
 			# 自动书签重命名 → 加人工书签（保留 auto；删除人工后自动项恢复）
 			_manual.append({"t": meta.t, "label": new_label})
-		log_requested.emit("✏️ 重命名书签：%s" % new_label)
+		log_requested.emit("＊ 重命名书签：%s" % new_label)
 		_emit_changed()
 	)
 	line.text_submitted.connect(func(_s: String): _dialog.confirm())
@@ -166,7 +166,7 @@ func _open_rename(index: int) -> void:
 
 func _open_delete_confirm(index: int) -> void:
 	var meta: Dictionary = _list.get_item_metadata(index)
-	var vb := _dialog.open("🗑 删除书签")
+	var vb := _dialog.open("× 删除书签")
 	var msg := Label.new()
 	msg.text = "确定删除「%s」？" % meta.label
 	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -177,14 +177,14 @@ func _open_delete_confirm(index: int) -> void:
 func _delete_at(index: int) -> void:
 	var meta: Dictionary = _list.get_item_metadata(index)
 	if not meta.get("is_manual", false):
-		log_requested.emit("ℹ 自动书签不可删（改关卡脚本才刷新）")
+		log_requested.emit("＊ 自动书签不可删（改关卡脚本才刷新）")
 		return
 	for i in range(_manual.size() - 1, -1, -1):
 		var bm: Dictionary = _manual[i]
 		if absf(bm.t - meta.t) < 0.01 and bm.get("label", "") == meta.label:
 			_manual.remove_at(i)
 			break
-	log_requested.emit("🗑 删除书签：%s" % meta.label)
+	log_requested.emit("× 删除书签：%s" % meta.label)
 	_emit_changed()
 
 

@@ -20,20 +20,20 @@ const ACCENT := Color(0.92, 0.73, 0.32, 1.0)
 const SELECT := Color(0.92, 0.73, 0.32, 0.28)
 
 
-## 构建主题（每次调用新实例；workbench 只调一次）
+## 构建主题：**单例缓存**——创作台（站根一套 + 每页一套）若各自 build()，
+## 会产生多个 FontFile 实例，同文本被绘制两次（双绘重影 bug）；
+## 全站共享一个 Theme 实例即单一字体来源
+static var _cached: Theme = null
+
 static func build() -> Theme:
+	if _cached != null:
+		return _cached
 	var t := Theme.new()
-	# ── 字体：全局思源宋体（逐字复刻游戏页面观感），符号/emoji 走系统回退 ──
-	# 关键：回退链第一优先放【衬线】Noto Serif CJK（与思源宋体同源）——本引擎对
-	# fallback 的字形分配按链序取，若符号字体打头，拉丁会被抽成无衬线（标题混排露馅）
+	# ── 字体：全局思源宋体（逐字复刻游戏页面观感）──
+	# 【重要】不配 fallbacks！本引擎会把回退字体里"主字体也有的字形"再画一遍 →
+	# 所有文字双绘重影（曾误认成乱码）。UI 符号一律用宋体自带字形
+	# （▾▸ 用 ▼▶；emoji 用 ★◆×＊！⚠ 等代替，Scripts 内已统一）
 	var font: FontFile = (load("res://assets/fonts/SourceHanSerifCN-Medium.otf") as FontFile).duplicate() as FontFile
-	var serif_cjk := SystemFont.new()
-	serif_cjk.font_names = PackedStringArray(["Noto Serif CJK SC", "Noto Serif CJK JP", "Noto Serif CJK TC", "Source Han Serif CN"])
-	var symbols := SystemFont.new()
-	symbols.font_names = PackedStringArray(["Noto Sans Symbols", "Noto Sans Symbols 2"])
-	var emoji := SystemFont.new()
-	emoji.font_names = PackedStringArray(["Noto Color Emoji"])
-	font.fallbacks = [serif_cjk, symbols, emoji]
 	t.default_font = font
 	t.default_font_size = 16  # 控件默认字号；标签阶梯见 rig_common（SECTION/LABEL/HINT_SIZE）
 	# Label：描边 1 + 关阴影——工作台字号 12-14，游戏主题的 2px 描边 + 偏移阴影
@@ -137,7 +137,9 @@ static func build() -> Theme:
 
 	# ── SpinBox 微调（组合 LineEdit + 箭头按钮）──
 	t.set_constant("separation", "SpinBox", 0)
+	_cached = t
 	return t
+
 
 
 ## 面板卡片样式（游戏菜单同款：半透明黑 + 金边 + 圆角 6 + 内容距 8）
