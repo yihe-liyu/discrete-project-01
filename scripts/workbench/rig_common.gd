@@ -12,7 +12,7 @@ static func label(text: String, font_size: int) -> Label:
 
 ## 二级标题（魂/壳/参数/操作/开发…）：金色小字，统一层级
 static func section_label(text: String) -> Label:
-	var l := label(text, 14)
+	var l := label(text, 16)
 	l.modulate = Color(1.0, 0.83, 0.5, 0.92)
 	return l
 

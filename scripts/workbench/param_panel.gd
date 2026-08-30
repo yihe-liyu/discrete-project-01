@@ -15,7 +15,7 @@ func _ready() -> void:
 	_header = Button.new()
 	_header.flat = true
 	_header.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_header.add_theme_font_size_override("font_size", 14)
+	_header.add_theme_font_size_override("font_size", 16)
 	_header.pressed.connect(_toggle)
 	add_child(_header)
 	body = VBoxContainer.new()
@@ -131,7 +131,7 @@ func _new_spin(step: float, mn: float, mx: float, value: Variant) -> SpinBox:
 func _add_row(nm: String, kind: String, ctrl: Control) -> Label:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
-	var lb := _mk_label(nm, 12)
+	var lb := _mk_label(nm, 13)
 	lb.custom_minimum_size = Vector2(90, 0)
 	row.add_child(lb)
 	row.add_child(ctrl)

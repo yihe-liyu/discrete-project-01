@@ -154,7 +154,7 @@ func _build_ui() -> void:
 
 	box.add_child(RIG_COMMON.section_label("壳：外形"))
 
-	box.add_child(_label("贴图（含判定）", 14))
+	box.add_child(_label("贴图（含判定）", 16))
 	_tex_sel = OptionButton.new()
 	var tex_idx := 0
 	for key in AssetRegistry.bullet_configs:
@@ -168,7 +168,7 @@ func _build_ui() -> void:
 		tex_idx += 1
 	box.add_child(_tex_sel)
 
-	box.add_child(_label("染色", 14))
+	box.add_child(_label("染色", 16))
 	_color_btn = ColorPickerButton.new()
 	_color_btn.color = Color.WHITE
 	_color_btn.text = "染色"
@@ -178,7 +178,7 @@ func _build_ui() -> void:
 	_blend_chk.text = "加色混合"
 	box.add_child(_blend_chk)
 
-	box.add_child(_label("初速（px/s）", 14))
+	box.add_child(_label("初速（px/s）", 16))
 	_speed_spin = SpinBox.new()
 	_speed_spin.min_value = 10.0
 	_speed_spin.max_value = 4000.0
@@ -188,14 +188,14 @@ func _build_ui() -> void:
 	_speed_spin.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	box.add_child(_speed_spin)
 
-	box.add_child(_label("方向（右键=指向）", 14))
+	box.add_child(_label("方向（右键=指向）", 16))
 	_dir_sel = OptionButton.new()
 	_dir_sel.add_item("自选（右键场地）")
 	for d in SHELL.DIR_NAMES:
 		_dir_sel.add_item(d)
 	_dir_sel.item_selected.connect(_on_dir_preset)
 	box.add_child(_dir_sel)
-	_dir_angle_label = _label("", 12)
+	_dir_angle_label = _label("", 13)
 	box.add_child(_dir_angle_label)
 
 	_param_panel = PARAM_PANEL.new()
@@ -225,7 +225,7 @@ func _build_ui() -> void:
 	var itv := HBoxContainer.new()
 	itv.add_theme_constant_override("separation", 8)
 	itv.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	var itv_label := _label("间隔", 14)
+	var itv_label := _label("间隔", 16)
 	itv_label.custom_minimum_size = Vector2(36, 0)
 	itv.add_child(itv_label)
 	_interval_spin = SpinBox.new()
@@ -237,7 +237,7 @@ func _build_ui() -> void:
 	itv.add_child(_interval_spin)
 	box.add_child(itv)
 
-	_stats_label = _label("", 14)
+	_stats_label = _label("", 16)
 	box.add_child(_stats_label)
 	box.add_child(RIG_COMMON.section_label("开发"))
 	_hot_chk = CheckBox.new()
@@ -245,7 +245,7 @@ func _build_ui() -> void:
 	_hot_chk.button_pressed = true
 	_hot_chk.toggled.connect(_on_hot_toggled)
 	box.add_child(_hot_chk)
-	box.add_child(_label("左键=发射点 · 右键=指向 · 鼠标=自机", 12))
+	box.add_child(_label("左键=发射点 · 右键=指向 · 鼠标=自机", 13))
 
 
 func _label(text: String, font_size: int) -> Label:

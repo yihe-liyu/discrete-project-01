@@ -35,7 +35,7 @@ static func build() -> Theme:
 	emoji.font_names = PackedStringArray(["Noto Color Emoji"])
 	font.fallbacks = [serif_cjk, symbols, emoji]
 	t.default_font = font
-	t.default_font_size = 14
+	t.default_font_size = 16
 	# Label：描边 1 + 关阴影——工作台字号 12-14，游戏主题的 2px 描边 + 偏移阴影
 	# 在小字上会把字形糊成一团（屏幕上看起来像乱码）；大字号页面才用重描边
 	t.set_color("font_outline_color", "Label", Color(0, 0, 0, 1))

@@ -64,12 +64,12 @@ func _ready() -> void:
 	_stats_label = Label.new()
 	_stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_stats_label.add_theme_font_size_override("font_size", 14)
+	_stats_label.add_theme_font_size_override("font_size", 16)
 	_stats_roles = Label.new()
 	_stats_roles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stats_roles.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stats_roles.modulate = Color(1, 1, 1, 0.6)
-	_stats_roles.add_theme_font_size_override("font_size", 14)
+	_stats_roles.add_theme_font_size_override("font_size", 16)
 	var refresh_btn := Button.new()
 	refresh_btn.text = "刷新"
 	refresh_btn.pressed.connect(refresh)
@@ -89,7 +89,7 @@ func _ready() -> void:
 	_tree.columns = 1
 	_tree.hide_root = true
 	_tree.add_theme_constant_override("v_separation", 2)
-	_tree.add_theme_font_size_override("font_size", 14)  # 与其他文字同尺度
+	_tree.add_theme_font_size_override("font_size", 16)  # 与其他文字同尺度
 	_tree.add_theme_stylebox_override("panel", StyleBoxEmpty.new())  # 单卡片内：树区无边框
 	_tree.item_selected.connect(_on_item_selected)
 	_tree.gui_input.connect(_on_tree_input)
@@ -120,7 +120,7 @@ func _ready() -> void:
 	var info_title := Label.new()
 	info_title.text = "详情"
 	info_title.modulate = Color(1.0, 0.83, 0.5, 0.92)  # 金色（三台 section 同族）
-	info_title.add_theme_font_size_override("font_size", 14)
+	info_title.add_theme_font_size_override("font_size", 16)
 	info_box.add_child(info_title)
 	_info_name = Label.new()
 	_info_role = Label.new()
