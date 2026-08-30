@@ -14,7 +14,7 @@ const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.9-ui"
+const VERSION_TAG := "v1.0-ui"
 
 var _shell: Variant
 var _catalog: Variant
@@ -55,7 +55,9 @@ var _hot_dirty_since := -1.0
 
 
 func _ready() -> void:
-	get_window().size = Vector2i(1600, 960)
+	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
+	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
+	get_window().size = Vector2i(1280, 960)
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()

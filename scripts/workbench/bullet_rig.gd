@@ -15,7 +15,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v2.6-ui"
+const VERSION_TAG := "v2.7-ui"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -62,7 +62,9 @@ var _hot_dirty_since := -1.0
 
 
 func _ready() -> void:
-	get_window().size = Vector2i(1600, 960)
+	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
+	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
+	get_window().size = Vector2i(1280, 960)
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
 	# 关键：用工作台同款主题——项目全局 ui_theme 字体大，面板会被内容撑爆（513>432）

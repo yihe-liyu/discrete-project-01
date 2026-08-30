@@ -34,7 +34,7 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v3.7-ui"
+const VERSION := "v3.8-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
@@ -122,7 +122,9 @@ func _ready() -> void:
 	%Title.add_theme_color_override("font_color", WorkbenchUI.ACCENT)
 	# 工作台专用窗口：纵向 1:1（1600x960 对 1280x960 视口纵向无拉伸 → 文字清晰）
 	# 横向 1.25x 给右侧面板腾位置（东方框 64,32~832,928 完整可见）
-	get_window().size = Vector2i(1600, 960)
+	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
+	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
+	get_window().size = Vector2i(1280, 960)
 	%Title.text = "内容工作台 %s" % VERSION
 	_build_ui()
 	_setup_phase_timer()
