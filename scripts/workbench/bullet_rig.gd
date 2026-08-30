@@ -5,6 +5,7 @@ extends Control
 
 const GHOST := preload("res://scripts/workbench/ghost_player.gd")
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
+const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
@@ -34,6 +35,7 @@ var _field: Control
 
 
 func _ready() -> void:
+	get_window().size = Vector2i(1600, 960)  # 与工作台一致：横向给右侧面板腾位置
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
 	_build_world()
@@ -56,6 +58,7 @@ func _build_world() -> void:
 	_ghost.set_script(GHOST)
 	_ghost.name = "GhostPlayer"
 	_ghost.set("mode", 1)  # GhostPlayer.Mode.MOUSE（AUTO=0/MOUSE=1/STATIC=2；静态类型 Player 无 mode，用 set 动态写）
+	_ghost.player_data = REIMU_DATA  # 必须：Player._ready 会应用角色数据（工作台同款）
 	_ghost.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
 	_ghost.z_index = 30
 	add_child(_ghost)
@@ -64,10 +67,11 @@ func _build_world() -> void:
 # ═══ UI ═══
 
 func _build_ui() -> void:
+	# 面板停靠场地右侧（不遮挡演出），同工作台右侧面板惯例
 	var panel := PanelContainer.new()
-	panel.offset_left = 8.0
+	panel.offset_left = 856.0
 	panel.offset_top = 8.0
-	panel.offset_right = 300.0
+	panel.offset_right = 1592.0
 	panel.offset_bottom = 520.0
 	add_child(panel)
 	var box := VBoxContainer.new()
@@ -146,10 +150,10 @@ func _build_ui() -> void:
 	box.add_child(_label("点击场地 = 发射点；幽灵玩家 = 鼠标", 11))
 
 
-func _label(text: String, size: int) -> Label:
+func _label(text: String, font_size: int) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_font_size_override("font_size", font_size)
 	return l
 
 
