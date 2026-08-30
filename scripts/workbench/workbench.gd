@@ -34,7 +34,7 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v4.0-ui"
+const VERSION := "v4.1-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")

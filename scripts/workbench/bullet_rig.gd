@@ -15,7 +15,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v2.9-ui"
+const VERSION_TAG := "v3.0-ui"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -84,10 +84,13 @@ func _ready() -> void:
 
 # ═══ 世界 ═══
 
-## 创作台嵌入时：场地/幽灵归一到游戏坐标（视口空间），与子弹/敌人同系
-## （页面在页签横栏下方 page_y 像素；standalone 时页面在原点，偏移为 0）
+## 创作台嵌入时：记录页面偏移（横栏下方 page_y 像素；standalone 为 0）。
+## 场地【不】移动——移动会让可点击区域盖住页签横栏（按钮点不到）；
+## 改为在输入/绘制边界换算：游戏坐标 = 输入/绘制局部 + _world_offset
+var _world_offset := Vector2.ZERO
+
 func _sync_world_offset() -> void:
-	_field.position.y = -get_global_rect().position.y
+	_world_offset = get_global_rect().position
 
 
 func _build_world() -> void:
@@ -480,7 +483,7 @@ func _do_hot_reload() -> void:
 
 func _on_field_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		var pos := (event as InputEventMouseButton).position
+		var pos := (event as InputEventMouseButton).position + _world_offset  # 场地局部 → 游戏坐标
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			_emitter_pos = pos
 			_field.queue_redraw()
@@ -508,10 +511,10 @@ func _refresh_dir_label() -> void:
 
 
 func _on_field_draw() -> void:
-	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
+	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - _world_offset.y,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 	_field.draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
-	var p := _emitter_pos
+	var p := _emitter_pos - _world_offset
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.85, 0.3), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.85, 0.3), 2.0)
 	# 发射方向箭头（绿色，从发射点指向）
