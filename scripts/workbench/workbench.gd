@@ -34,7 +34,7 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v3.0-cs"
+const VERSION := "v3.1-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
@@ -111,6 +111,11 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# 主题：东方风深色面板（中文字体 + 卡片 + 控件样式）
 	theme = WorkbenchTheme.build()
+	# 关键：右侧 UI 挂在 CanvasLayer 下——Control 主题链在非 Control 父节点处断裂
+	# （parent_control=null，祖先主题找不到）→ CanvasLayer 的每个 Control 子节点单独挂
+	for ui_child in $UI.get_children():
+		if ui_child is Control:
+			ui_child.theme = theme
 	%Title.add_theme_color_override("font_color", WorkbenchUI.ACCENT)
 	# 工作台专用窗口：纵向 1:1（1600x960 对 1280x960 视口纵向无拉伸 → 文字清晰）
 	# 横向 1.25x 给右侧面板腾位置（东方框 64,32~832,928 完整可见）
