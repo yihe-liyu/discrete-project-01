@@ -87,12 +87,13 @@ func _build_world() -> void:
 # ═══ UI ═══
 
 func _build_ui() -> void:
-	# 面板停靠场地右侧（不遮挡演出），同工作台右侧面板规格：432 宽 × 712 高
+	# 面板停靠【右缘】（右锚点 + 负偏移，与窗口尺寸完全解耦——绝不依赖"窗口=1600 宽"的假设）
 	var panel := PanelContainer.new()
-	panel.offset_left = 856.0
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.offset_left = -440.0    # 432 宽 + 8 边距
 	panel.offset_top = 8.0
-	panel.offset_right = 1288.0
-	panel.offset_bottom = 690.0  # M2b 加开发块后内容约 640 高；底部保留余量
+	panel.offset_right = -8.0
+	panel.offset_bottom = 690.0   # M2b 加开发块后内容约 640 高；底部保留余量
 	add_child(panel)
 	# 内部滚动：未来加字段也不会裁内容
 	var panel_scroll := ScrollContainer.new()
