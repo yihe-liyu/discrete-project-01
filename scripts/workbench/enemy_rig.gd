@@ -7,6 +7,7 @@ const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/enemy_shell.gd")
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
+const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
@@ -37,8 +38,7 @@ var _stats_label: Label
 var _field: Control
 var _reload_status: Label
 var _diff_sel: OptionButton
-var _params_container: VBoxContainer
-var _param_rows: Array = []  # [{name, kind, ctrl}]（脚本 var 枚举结果）
+var _param_panel: VBoxContainer  # 共享参数面板（param_panel.gd）
 var _hot_chk: CheckBox
 
 # ── 热更新状态 ──
@@ -60,7 +60,7 @@ func _ready() -> void:
 	_build_ui()
 	_set_seed(FIXED_SEED)
 	_set_current_script()
-	_rebuild_params()
+	_param_panel.rebuild(_cur_script)
 	_reload_status.text = "热更新：开 · 等待修改…"
 	_reload_status.modulate = Color(0.5, 0.95, 0.6)
 
@@ -175,9 +175,8 @@ func _build_ui() -> void:
 	box.add_child(drops)
 
 	box.add_child(_label("参数（脚本 var 注入，可调）", 12))
-	_params_container = VBoxContainer.new()
-	_params_container.add_theme_constant_override("separation", 2)
-	box.add_child(_params_container)
+	_param_panel = PARAM_PANEL.new()
+	box.add_child(_param_panel)
 
 	box.add_child(_label("操作", 12))
 	var ops := GridContainer.new()
@@ -242,33 +241,13 @@ func _spawn() -> void:
 	var data: EnemyData = _shell.build(_cur_script)
 	# 参数注入（与游戏 params 同路径：ParamValidator.apply 同名 var 注入）
 	# 注意：for-in 字典迭代的是键（GDScript 语义）
-	var params := _collect_params()
+	var params = _param_panel.collect()
 	for k in params:
 		data.param(k, params[k])
 	data.pos(_spawn_pos)
 	RNG.set_seed(_seed)
 	data.spawn(BulletManager.get_bullet_ctx())
 	_update_stats()
-
-
-## 从参数面板收集 {参数名: 值}（与游戏 params 字典同构；可单测）
-func _collect_params() -> Dictionary:
-	var out := {}
-	for row in _param_rows:
-		match row.kind:
-			"num":
-				out[row.name] = row.ctrl.value
-			"bool":
-				out[row.name] = row.ctrl.button_pressed
-			"str":
-				out[row.name] = row.ctrl.text
-			"vec2":
-				var vec_row: HBoxContainer = row.ctrl
-				out[row.name] = Vector2(vec_row.get_child(0).value, vec_row.get_child(1).value)
-			"color":
-				out[row.name] = row.ctrl.color
-	return out
-
 
 func _clear_all() -> void:
 	for e in GameState.get_active_enemies():
@@ -303,7 +282,7 @@ func _process(delta: float) -> void:
 
 func _on_script_changed(_idx: int) -> void:
 	_set_current_script()
-	_rebuild_params()
+	_param_panel.rebuild(_cur_script)
 	if _reload_status:
 		_reload_status.text = "魂：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（无移动）")
 		_reload_status.modulate = Color(1, 1, 1, 0.8)
@@ -320,92 +299,6 @@ func _set_current_script() -> void:
 		_cur_script = load(_cur_script_path)
 	_rebuild_watch()
 
-
-## 从脚本枚举 var（get_script_property_list）→ 生成可调参数行；参数与游戏 params 注入同源
-func _rebuild_params() -> void:
-	for c in _params_container.get_children():
-		c.queue_free()
-	_param_rows.clear()
-	if _cur_script == null:
-		return
-	var inst = _cur_script.new()
-	var prop_list: Array = _cur_script.get_script_property_list()
-	var skipped := 0
-	for p in prop_list:
-		var nm: String = p.get("name", "")
-		if nm == "" or nm.begins_with("_"):
-			continue
-		if not (int(p.get("usage", 0)) & PROPERTY_USAGE_SCRIPT_VARIABLE):
-			continue
-		var prop_type: int = p.get("type", TYPE_NIL)
-		match prop_type:
-			TYPE_FLOAT, TYPE_INT:
-				var sp := SpinBox.new()
-				sp.min_value = -100000.0
-				sp.max_value = 100000.0
-				sp.step = 0.5
-				sp.value = inst.get(nm)
-				sp.custom_minimum_size = Vector2(120, 0)
-				_add_param_row(nm, "num", sp)
-			TYPE_BOOL:
-				var chk := CheckBox.new()
-				chk.button_pressed = bool(inst.get(nm))
-				_add_param_row(nm, "bool", chk)
-			TYPE_STRING:
-				var le := LineEdit.new()
-				le.text = str(inst.get(nm))
-				_add_param_row(nm, "str", le)
-			TYPE_VECTOR2:
-				var vec_row := HBoxContainer.new()
-				vec_row.add_theme_constant_override("separation", 4)
-				var vx := SpinBox.new()
-				vx.min_value = -100000.0
-				vx.max_value = 100000.0
-				vx.step = 10.0
-				vx.value = (inst.get(nm) as Vector2).x
-				vx.custom_minimum_size = Vector2(70, 0)
-				var vy := SpinBox.new()
-				vy.min_value = -100000.0
-				vy.max_value = 100000.0
-				vy.step = 10.0
-				vy.value = (inst.get(nm) as Vector2).y
-				vy.custom_minimum_size = Vector2(70, 0)
-				vec_row.add_child(vx)
-				vec_row.add_child(vy)
-				var lbt := _add_param_row(nm, "vec2", vec_row)
-				if (inst.get(nm) as Vector2).length() < 0.01:
-					lbt.modulate = Color(1, 0.65, 0.2)  # 默认 (0,0)=左上角陷阱提醒
-			TYPE_COLOR:
-				var cp := ColorPickerButton.new()
-				cp.color = inst.get(nm)
-				cp.custom_minimum_size = Vector2(120, 0)
-				_add_param_row(nm, "color", cp)
-			_:
-				skipped += 1
-	if skipped > 0:
-		var hint := _label("（%d 个复杂类型参数走代码）" % skipped, 10)
-		hint.modulate = Color(1, 1, 0.7, 0.8)
-		_params_container.add_child(hint)
-	if _param_rows.is_empty():
-		var none := _label("（该脚本无可调 var；默认值即脚本内声明）", 10)
-		none.modulate = Color(1, 1, 1, 0.5)
-		_params_container.add_child(none)
-	inst.free()
-
-
-func _add_param_row(nm: String, kind: String, ctrl: Control) -> Label:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	var lb := _label(nm, 11)
-	lb.custom_minimum_size = Vector2(90, 0)
-	row.add_child(lb)
-	row.add_child(ctrl)
-	_params_container.add_child(row)
-	_param_rows.append({"name": nm, "kind": kind, "ctrl": ctrl})
-	return lb
-
-
-## 难度切换：diff_pick 运行时实时读取 → 立即生效
 func _on_diff_changed(idx: int) -> void:
 	GameState.selected_difficulty = idx
 	_update_stats()
@@ -493,7 +386,7 @@ func _do_hot_reload() -> void:
 	_cur_script = main_new
 	_refresh_watch_mtimes()
 	_hot_dirty_since = -1.0
-	_rebuild_params()  # 新脚本可能新增/改名参数 → 面板同步
+	_param_panel.rebuild(_cur_script)  # 新脚本可能新增/改名参数 → 面板同步
 	_clear_all()
 	RNG.set_seed(_seed)
 	_spawn()

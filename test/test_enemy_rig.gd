@@ -36,19 +36,19 @@ func test_param_listing_and_difficulty():
 	await get_tree().process_frame
 	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy01.gd"
 	rig._cur_script = load(rig._cur_script_path)
-	rig._rebuild_params()
-	assert_true(rig._param_rows.size() >= 3, "枚举出参数行（%d）" % rig._param_rows.size())
+	rig._param_panel.rebuild(rig._cur_script)
+	assert_true(rig._param_panel.get_rows().size() >= 3, "枚举出参数行（%d）" % rig._param_panel.get_rows().size())
 	var names: Array[String] = []
 	var target_y_spin := -1
-	for i in rig._param_rows.size():
-		var row = rig._param_rows[i]
+	for i in rig._param_panel.get_rows().size():
+		var row = rig._param_panel.get_rows()[i]
 		names.append(row.name)
 		if row.name == "target_y":
 			target_y_spin = i
 	assert_true(names.has("target_y"), "含 target_y")
 	assert_true(names.has("rate"), "含 rate")
 	if target_y_spin >= 0:
-		assert_eq(float(rig._param_rows[target_y_spin].ctrl.value), 300.0, "默认值=脚本 var 值（target_y=300）")
+		assert_eq(float(rig._param_panel.get_rows()[target_y_spin].ctrl.value), 300.0, "默认值=脚本 var 值（target_y=300）")
 	# 难度切换：diff_pick 实时读取 → 立即可变（注意还原，避免污染其他用例）
 	var saved_diff := GameState.selected_difficulty
 	rig._on_diff_changed(2)
@@ -65,11 +65,11 @@ func test_vector2_and_color_params():
 	await get_tree().process_frame
 	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy03.gd"
 	rig._cur_script = load(rig._cur_script_path)
-	rig._rebuild_params()
+	rig._param_panel.rebuild(rig._cur_script)
 	# enemy03: target_pos(默认 0,0)/rate=int 1/bullet_color=RED/start_time=2.0
 	var found_vec := false
 	var found_color := false
-	for row in rig._param_rows:
+	for row in rig._param_panel.get_rows():
 		if row.name == "target_pos" and row.kind == "vec2":
 			found_vec = true
 			var wrap: HBoxContainer = row.ctrl
@@ -81,14 +81,14 @@ func test_vector2_and_color_params():
 	assert_true(found_vec, "target_pos 是 Vector2 可调")
 	# 零值(0,0)陷阱：标签应为橙色提醒
 	var warn_found := false
-	for c in rig._params_container.get_children():
+	for c in rig._param_panel.get_children():
 		if c is HBoxContainer and c.get_child_count() >= 2:
 			var lb: Label = c.get_child(0)
 			if lb.text == "target_pos" and lb.modulate.r > 0.9 and lb.modulate.g < 0.8:
 				warn_found = true
 	assert_true(warn_found, "零值 Vector2 参数带橙色提醒")
 	assert_true(found_color, "bullet_color 是 Color 可调")
-	var params := rig._collect_params()
+	var params = rig._param_panel.collect()
 	assert_eq(params.get("target_pos", Vector2.ZERO), Vector2(400, 300), "收集到 Vector2 参数")
 	assert_eq(params.get("bullet_color", Color.BLACK), Color.RED, "收集到 Color 参数")
 	assert_eq(params.get("rate", 0), 1.0, "int 参数也在（float 值）")

@@ -4,7 +4,8 @@ extends Control
 ## 快捷键：F=发射 · C=清场 · 点击场地=设发射点
 
 const GHOST := preload("res://scripts/workbench/ghost_player.gd")
-const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")  # WorkbenchTheme 构建器
+const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
+const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")  # WorkbenchTheme 构建器
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
@@ -12,7 +13,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v2.1-diff"
+const VERSION_TAG := "v2.2-params"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -40,6 +41,7 @@ var _seed_btn: Button
 var _stats_label: Label
 var _field: Control
 var _dir_angle_label: Label
+var _param_panel: VBoxContainer
 
 var _reload_status: Label
 
@@ -67,6 +69,7 @@ func _ready() -> void:
 	_set_seed(FIXED_SEED)
 	_refresh_dir_label()
 	_set_current_script()
+	_param_panel.rebuild(_cur_script)
 	_reload_status.text = "热更新：开 · 等待修改…"
 	_reload_status.modulate = Color(0.5, 0.95, 0.6)
 
@@ -193,6 +196,10 @@ func _build_ui() -> void:
 	_dir_angle_label = _label("", 11)
 	box.add_child(_dir_angle_label)
 
+	box.add_child(_label("参数（脚本 var 注入，可调）", 12))
+	_param_panel = PARAM_PANEL.new()
+	box.add_child(_param_panel)
+
 	box.add_child(_label("操作", 12))
 
 	# 操作按钮 2×2 网格：横排 4 个会把面板最小宽顶爆（489>432）
@@ -257,6 +264,7 @@ func _fire() -> void:
 	_shell.blend = _blend_chk.button_pressed
 	_shell.speed = _speed_spin.value
 	var data: BulletData = _shell.build(_cur_script)
+	data.params = _param_panel.collect()
 	BulletManager.shoot_enemy_bullet(data, _emitter_pos, _shell.get_dir())
 	_update_stats()
 
@@ -295,6 +303,7 @@ func _process(delta: float) -> void:
 
 func _on_script_changed(_idx: int) -> void:
 	_set_current_script()
+	_param_panel.rebuild(_cur_script)
 	if _reload_status:
 		_reload_status.text = "魂：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（直线弹）")
 		_reload_status.modulate = Color(1, 1, 1, 0.8)
@@ -403,6 +412,7 @@ func _do_hot_reload() -> void:
 	_cur_script = main_new
 	_refresh_watch_mtimes()
 	_hot_dirty_since = -1.0
+	_param_panel.rebuild(_cur_script)  # 脚本参数变更同步
 	BulletManager.clear_all()
 	RNG.set_seed(_seed)
 	_fire()

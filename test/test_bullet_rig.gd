@@ -25,6 +25,29 @@ func test_hot_reload_debounce_fires_after_stability():
 	assert_true(BulletManager.active_bullets.size() >= 1, "重演发弹")
 	rig.queue_free()
 
+
+func test_param_panel_on_orbit_probe():
+	var rig = RIG.new()
+	add_child_autofree(rig)
+	await get_tree().process_frame
+	rig._cur_script_path = "res://data/stages/stage03B/phase/spell03/orbit_probe.gd"
+	rig._cur_script = load(rig._cur_script_path)
+	rig._param_panel.rebuild(rig._cur_script)
+	var rows = rig._param_panel.get_rows()
+	assert_true(rows.size() >= 4, "枚举出参数行（%d）" % rows.size())
+	var decel_found := false
+	for row in rows:
+		if row.name == "decel" and row.kind == "num":
+			decel_found = true
+			assert_eq(float(row.ctrl.value), 150.0, "decel 默认 150（来自脚本 var）")
+			row.ctrl.value = 300.0
+		if row.name == "hold_aim_probe" and row.kind == "bool":
+			assert_eq(row.ctrl.button_pressed, false, "bool 默认 false")
+	assert_true(decel_found, "decel 为可调数字")
+	var params = rig._param_panel.collect()
+	assert_eq(params.get("decel", 0.0), 300.0, "收集到修改后的 decel")
+	rig.queue_free()
+
 func test_hot_reload_replays_and_keeps_old_on_failure():
 	var rig = RIG.new()
 	add_child_autofree(rig)
