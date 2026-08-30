@@ -72,7 +72,7 @@ func _build_ui() -> void:
 	panel.offset_left = 856.0
 	panel.offset_top = 8.0
 	panel.offset_right = 1288.0
-	panel.offset_bottom = 720.0
+	panel.offset_bottom = 560.0
 	add_child(panel)
 	# 内部滚动：未来加字段也不会裁内容
 	var panel_scroll := ScrollContainer.new()
@@ -96,19 +96,31 @@ func _build_ui() -> void:
 
 	box.add_child(_label("壳：外形", 12))
 
+	box.add_child(_label("贴图（含判定）", 12))
 	_tex_sel = OptionButton.new()
+	var tex_idx := 0
 	for key in AssetRegistry.bullet_configs:
 		_tex_sel.add_item(key)
+		var hb: Dictionary = AssetRegistry.bullet_configs[key].get("hitbox", {})
+		if hb.has("circle"):
+			_tex_sel.set_item_tooltip(tex_idx, "判定：圆 %s px" % str(hb["circle"]))
+		elif hb.has("rect"):
+			var rr: Dictionary = hb["rect"]
+			_tex_sel.set_item_tooltip(tex_idx, "判定：矩形 %s×%s" % [str(rr.get("w", 0)), str(rr.get("h", 0))])
+		tex_idx += 1
 	box.add_child(_tex_sel)
 
+	box.add_child(_label("染色", 12))
 	_color_btn = ColorPickerButton.new()
 	_color_btn.color = Color.WHITE
+	_color_btn.text = "染色"
 	box.add_child(_color_btn)
 
 	_blend_chk = CheckBox.new()
 	_blend_chk.text = "加色混合"
 	box.add_child(_blend_chk)
 
+	box.add_child(_label("初速（px/s）", 12))
 	_speed_spin = SpinBox.new()
 	_speed_spin.min_value = 10.0
 	_speed_spin.max_value = 4000.0
@@ -116,6 +128,7 @@ func _build_ui() -> void:
 	_speed_spin.value = 300.0
 	box.add_child(_speed_spin)
 
+	box.add_child(_label("方向", 12))
 	_dir_sel = OptionButton.new()
 	for d in SHELL.DIR_LABELS:
 		_dir_sel.add_item(d)
