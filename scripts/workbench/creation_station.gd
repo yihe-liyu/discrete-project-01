@@ -45,6 +45,8 @@ func _build_ui() -> void:
 		b.text = TABS[i]
 		b.toggle_mode = true
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# 横栏字号 13 → 按钮自然高度≈32：正好到游戏画框顶(视口 y=32)，不压画框顶线
+		b.add_theme_font_size_override("font_size", 13)
 		b.pressed.connect(_on_tab.bind(i))
 		bar.add_child(b)
 		_tab_btns.append(b)
