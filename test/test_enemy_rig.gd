@@ -52,6 +52,34 @@ func test_param_listing_and_difficulty():
 	assert_eq(GameState.selected_difficulty, 0, "难度切 Easy(0)")
 	rig.queue_free()
 
+
+func test_vector2_and_color_params():
+	var rig = RIG.new()
+	add_child_autofree(rig)
+	await get_tree().process_frame
+	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy03.gd"
+	rig._cur_script = load(rig._cur_script_path)
+	rig._rebuild_params()
+	# enemy03: target_pos(默认 0,0)/rate=int 1/bullet_color=RED/start_time=2.0
+	var found_vec := false
+	var found_color := false
+	for row in rig._param_rows:
+		if row.name == "target_pos" and row.kind == "vec2":
+			found_vec = true
+			var wrap: HBoxContainer = row.ctrl
+			assert_eq(float(wrap.get_child(0).value), 0.0, "x 默认 0（游戏里永远注入，裸跑=左上角陷阱）")
+			wrap.get_child(0).value = 400.0
+			wrap.get_child(1).value = 300.0
+		if row.name == "bullet_color" and row.kind == "color":
+			found_color = true
+	assert_true(found_vec, "target_pos 是 Vector2 可调")
+	assert_true(found_color, "bullet_color 是 Color 可调")
+	var params := rig._collect_params()
+	assert_eq(params.get("target_pos", Vector2.ZERO), Vector2(400, 300), "收集到 Vector2 参数")
+	assert_eq(params.get("bullet_color", Color.BLACK), Color.RED, "收集到 Color 参数")
+	assert_eq(params.get("rate", 0), 1.0, "int 参数也在（float 值）")
+	rig.queue_free()
+
 func test_rig_spawn_and_hot_reload():
 	var rig = RIG.new()
 	add_child_autofree(rig)

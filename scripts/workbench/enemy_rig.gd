@@ -11,7 +11,7 @@ const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.2-params"
+const VERSION_TAG := "v0.3-vec"
 
 var _shell: Variant
 var _catalog: Variant
@@ -230,18 +230,31 @@ func _spawn() -> void:
 	_shell.item_bomb = int(_bomb_spin.value)
 	var data: EnemyData = _shell.build(_cur_script)
 	# 参数注入（与游戏 params 同路径：ParamValidator.apply 同名 var 注入）
-	for row in _param_rows:
-		match row.kind:
-			"num":
-				data.param(row.name, row.ctrl.value)
-			"bool":
-				data.param(row.name, row.ctrl.button_pressed)
-			"str":
-				data.param(row.name, row.ctrl.text)
+	for kv in _collect_params():
+		data.param(kv.key, kv.value)
 	data.pos(_spawn_pos)
 	RNG.set_seed(_seed)
 	data.spawn(BulletManager.get_bullet_ctx())
 	_update_stats()
+
+
+## 从参数面板收集 {参数名: 值}（与游戏 params 字典同构；可单测）
+func _collect_params() -> Dictionary:
+	var out := {}
+	for row in _param_rows:
+		match row.kind:
+			"num":
+				out[row.name] = row.ctrl.value
+			"bool":
+				out[row.name] = row.ctrl.button_pressed
+			"str":
+				out[row.name] = row.ctrl.text
+			"vec2":
+				var wrap: HBoxContainer = row.ctrl
+				out[row.name] = Vector2(wrap.get_child(0).value, wrap.get_child(1).value)
+			"color":
+				out[row.name] = row.ctrl.color
+	return out
 
 
 func _clear_all() -> void:
@@ -329,6 +342,29 @@ func _rebuild_params() -> void:
 				var le := LineEdit.new()
 				le.text = str(inst.get(nm))
 				_add_param_row(nm, "str", le)
+			TYPE_VECTOR2:
+				var wrap := HBoxContainer.new()
+				wrap.add_theme_constant_override("separation", 4)
+				var vx := SpinBox.new()
+				vx.min_value = -100000.0
+				vx.max_value = 100000.0
+				vx.step = 10.0
+				vx.value = (inst.get(nm) as Vector2).x
+				vx.custom_minimum_size = Vector2(70, 0)
+				var vy := SpinBox.new()
+				vy.min_value = -100000.0
+				vy.max_value = 100000.0
+				vy.step = 10.0
+				vy.value = (inst.get(nm) as Vector2).y
+				vy.custom_minimum_size = Vector2(70, 0)
+				wrap.add_child(vx)
+				wrap.add_child(vy)
+				_add_param_row(nm, "vec2", wrap)
+			TYPE_COLOR:
+				var cp := ColorPickerButton.new()
+				cp.color = inst.get(nm)
+				cp.custom_minimum_size = Vector2(120, 0)
+				_add_param_row(nm, "color", cp)
 			_:
 				skipped += 1
 	if skipped > 0:
@@ -441,6 +477,7 @@ func _do_hot_reload() -> void:
 	_cur_script = main_new
 	_refresh_watch_mtimes()
 	_hot_dirty_since = -1.0
+	_rebuild_params()  # 新脚本可能新增/改名参数 → 面板同步
 	_clear_all()
 	RNG.set_seed(_seed)
 	_spawn()
