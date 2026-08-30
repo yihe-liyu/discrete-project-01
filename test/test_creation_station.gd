@@ -56,6 +56,32 @@ func test_preset_route_switches_tab_and_assembles():
 	assert_true(BulletManager.active_bullets.size() >= 1, "直达即发射（%d）" % BulletManager.active_bullets.size())
 	cs.queue_free()
 
+
+func test_burst_stops_after_tab_switch():
+	DirAccess.remove_absolute("user://creation_station.cfg")
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# 开连发并生成数颗弹
+	cs._page._burst_chk.button_pressed = true
+	cs._page._burst_left = 0.0
+	cs._page._fire()
+	assert_true(BulletManager.active_bullets.size() >= 1, "连发已开")
+	# 切敌人台 → 子弹台冻结
+	cs._on_tab(2)
+	await get_tree().process_frame
+	assert_eq(cs._rig_instances[0].process_mode, Node.PROCESS_MODE_DISABLED, "切走后子弹台冻结")
+	# 等若干帧：后台不应再产生新弹
+	for i in 6:
+		await get_tree().process_frame
+	assert_eq(BulletManager.active_bullets.size(), 0, "切换后不再产生新弹")
+	# 切回 → 恢复
+	cs._on_tab(1)
+	await get_tree().process_frame
+	assert_eq(cs._rig_instances[0].process_mode, Node.PROCESS_MODE_INHERIT, "切回恢复运转")
+	cs.queue_free()
+
 func test_switch_clears_runtime():
 	DirAccess.remove_absolute("user://creation_station.cfg")  # 清工作区配置（测试隔离）
 	var cs: Control = CS.instantiate()

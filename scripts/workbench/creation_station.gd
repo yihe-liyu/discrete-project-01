@@ -65,6 +65,7 @@ func _on_tab(i: int) -> void:
 			_rig_instances[ri] = RIGS[ri].instantiate()
 		_page = _rig_instances[ri]
 	_page.visible = true
+	_page.process_mode = Node.PROCESS_MODE_INHERIT  # 恢复运转（连发状态保留，只是不再后台跑）
 	if _page.get_parent():
 		_page.get_parent().remove_child(_page)  # 常驻实例：切换前先脱离旧父
 	_content.add_child(_page)
@@ -152,4 +153,5 @@ func _clear_page() -> void:
 			if is_instance_valid(e):
 				e.queue_free()
 		_page.visible = false
+		_page.process_mode = Node.PROCESS_MODE_DISABLED  # 冻结：连发/热更新/幽灵不后台跑
 	_page = null
