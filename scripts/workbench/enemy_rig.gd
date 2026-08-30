@@ -230,8 +230,10 @@ func _spawn() -> void:
 	_shell.item_bomb = int(_bomb_spin.value)
 	var data: EnemyData = _shell.build(_cur_script)
 	# 参数注入（与游戏 params 同路径：ParamValidator.apply 同名 var 注入）
-	for kv in _collect_params():
-		data.param(kv.key, kv.value)
+	# 注意：for-in 字典迭代的是键（GDScript 语义）
+	var params := _collect_params()
+	for k in params:
+		data.param(k, params[k])
 	data.pos(_spawn_pos)
 	RNG.set_seed(_seed)
 	data.spawn(BulletManager.get_bullet_ctx())
