@@ -40,6 +40,8 @@ var _stats_label: Label
 var _field: Control
 var _dir_angle_label: Label
 var _root_hbox: HBoxContainer
+var _view_area: Control
+var _view_root: Node2D   # 世界缩放容器：场地框/幽灵/发射点 整体 fit
 var _reload_status: Label
 var _hot_chk: CheckBox
 
@@ -70,19 +72,28 @@ func _ready() -> void:
 	_set_current_script()
 	_reload_status.text = "热更新：开 · 等待修改…"
 	_reload_status.modulate = Color(0.5, 0.95, 0.6)
+	_fit_view.call_deferred()
 
 
 # ═══ 世界 ═══
 
 func _build_world() -> void:
-	# 场地（画框 + 发射点十字；点击设发射点）
+	# 视图区（左侧可缩放舞台）：窗口多窄，整个游戏世界等比例缩小、完整可见
+	_view_area = Control.new()
+	_view_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_view_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_view_area.resized.connect(_fit_view)
+	_root_hbox.add_child(_view_area)
+	_view_root = Node2D.new()
+	_view_area.add_child(_view_root)
+	# 场地：固定世界尺寸，局部坐标 = 游戏坐标（点击/绘制/发射点 全部不变）
 	_field = Control.new()
-	_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_field.position = Vector2.ZERO
+	_field.size = Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_BOTTOM)
 	_field.mouse_filter = Control.MOUSE_FILTER_STOP
 	_field.gui_input.connect(_on_field_input)
 	_field.draw.connect(_on_field_draw)
-	_root_hbox.add_child(_field)
+	_view_root.add_child(_field)
 	# 幽灵玩家：鼠标跟随（自机狙目标）
 	_ghost = PLAYER_SCENE.instantiate()
 	_ghost.set_script(GHOST)
@@ -91,8 +102,7 @@ func _build_world() -> void:
 	_ghost.player_data = REIMU_DATA  # 必须：Player._ready 会应用角色数据（工作台同款）
 	_ghost.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
 	_ghost.z_index = 30
-	# 关键：挂到【场地】下（非根）——根节点顺序是 HBox(场地+面板)→幽灵，会画在面板之上
-	_field.add_child(_ghost)
+	_view_root.add_child(_ghost)  # 世界内：位于面板之下，位置坐标=游戏坐标
 
 
 # ═══ UI ═══
@@ -416,6 +426,27 @@ func _on_dir_preset(idx: int) -> void:
 		_shell.dir = SHELL.preset(idx - 1)
 		_refresh_dir_label()
 		_field.queue_redraw()
+
+
+## 尺度自适应：世界(与游戏一致 832x896) 等比例放入视图区；子弹管理器同步变换
+func _fit_view() -> void:
+	if not _view_area or _view_root == null:
+		return
+	var region_w: float = GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT
+	var region_h: float = GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP
+	var pad := 24.0
+	var s: float = 1.0
+	if _view_area.size.x > 0.0 and _view_area.size.y > 0.0:
+		s = minf((_view_area.size.x - pad * 2.0) / region_w, (_view_area.size.y - pad * 2.0) / region_h)
+		s = clampf(s, 0.25, 1.25)
+	_view_root.scale = Vector2(s, s)
+	# 世界中心对准视图区中心
+	_view_root.position = _view_area.size / 2.0 \
+		- Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_CENTER_Y) * s
+	# 子弹/激光/弹雾在 BulletManager（autoload）里：同步同一变换，视觉一致
+	if is_instance_valid(BulletManager):
+		BulletManager.scale = Vector2(s, s)
+		BulletManager.position = _view_root.global_position
 
 
 func _refresh_dir_label() -> void:
