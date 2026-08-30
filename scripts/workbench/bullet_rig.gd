@@ -53,6 +53,7 @@ var _hot_dirty_since := -1.0
 
 func _ready() -> void:
 	get_window().size = Vector2i(1600, 960)
+	get_window().min_size = Vector2i(1120, 700)  # 布局下限：场地 + 面板不可再缩
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
 	# 布局容器：场地 | 面板 由 HBox 左右分配（面板靠右由容器保证，与窗口尺寸无关）
@@ -98,15 +99,15 @@ func _build_ui() -> void:
 	var margin := MarginContainer.new()
 	margin.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_theme_constant_override("margin_left", 8.0)
-	margin.add_theme_constant_override("margin_right", 8.0)
-	margin.add_theme_constant_override("margin_top", 8.0)
-	margin.add_theme_constant_override("margin_bottom", 8.0)
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
 	_root_hbox.add_child(margin)
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.custom_minimum_size = Vector2(432, 0)
+	panel.custom_minimum_size = Vector2(380, 0)
 	margin.add_child(panel)
 	# 内部滚动：未来加字段也不会裁内容
 	var panel_scroll := ScrollContainer.new()
