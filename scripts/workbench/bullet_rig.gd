@@ -4,6 +4,7 @@ extends Control
 ## 快捷键：F=发射 · C=清场 · 点击场地=设发射点
 
 const GHOST := preload("res://scripts/workbench/ghost_player.gd")
+const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")  # WorkbenchTheme 构建器
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
@@ -11,7 +12,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v1.3-slim"
+const VERSION_TAG := "v1.4-theme"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -59,6 +60,8 @@ func _ready() -> void:
 	get_window().size = Vector2i(1600, 960)
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
+	# 关键：用工作台同款主题——项目全局 ui_theme 字体大，面板会被内容撑爆（513>432）
+	theme = WORKBENCH_THEME.build()
 	_build_world()
 	_build_ui()
 	_set_seed(FIXED_SEED)
@@ -230,6 +233,7 @@ func _label(text: String, font_size: int) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", font_size)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # 换行：不撑宽（面板 432 内）
 	return l
 
 
