@@ -34,7 +34,7 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v4.2-ui"
+const VERSION := "v4.3-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
@@ -203,18 +203,27 @@ func _draw() -> void:
 ## CanvasLayer 平移到页面全局位置（独立运行 = 0，嵌入创作台 = 页签横栏下方）
 func _sync_ui_layer_offset() -> void:
 	var pos := get_global_rect().position
-	$UI.offset = pos
 	_stage_shift_y = pos.y
 	if pos.y != 0.0:
-		# 面板/分隔条的底边原本按整窗高度（960）写死 → 底边同步内缩
-		for n in ["RightPanel", "Divider"]:
-			if $UI.has_node(n):
-				var c := $UI.get_node(n) as Control
-				c.offset_bottom -= pos.y
+		# 【重要】不能用 $UI.offset = pos（CanvasLayer.offset）——它会对锚定视口的
+		# 控件（时间轴）二次平移：时间轴被推到窗外（962..994）→ 底部露灰边。
+		# 改为【逐节点】下移：面板/分隔条顶部 +pos.y（底边 960 是窗口锚定值，不动）；
+		# 时间轴锚定视口底部 928..960，天然正确。
+		var rp := %RightPanel as Control
+		rp.offset_top += pos.y
+		var dv := %Divider as Control
+		dv.offset_top += pos.y
+		dv.offset_bottom += pos.y
 		# 舞台（幽灵/背景/边框/网格/命中/计时器）归一到游戏坐标（视口空间）：
 		# 子弹/敌人在 autoload 根空间=游戏坐标，页面偏移会让瞄准/绘制差 page_y 像素
 		$World.position.y -= pos.y
-		$BgContainer.position.y -= pos.y
+		# 3D 背景收进画框内 3px：背景绘制在画框之上会盖住金边线（顶/底线消失，
+		# 底部露出雾的"亮地面"条 → 看起来像灰边）
+		$BgContainer.position = Vector2(
+			GameConfig.FIELD_LEFT + 3.0, GameConfig.FIELD_TOP + 3.0 - pos.y)
+		$BgContainer.size = Vector2(
+			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT - 6.0,
+			GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP - 6.0)
 		_phase_timer_label.position.y -= pos.y
 
 
