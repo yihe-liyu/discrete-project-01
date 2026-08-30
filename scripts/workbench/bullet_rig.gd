@@ -15,7 +15,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v2.2-params"
+const VERSION_TAG := "v2.3-ui"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -128,11 +128,11 @@ func _build_ui() -> void:
 	panel.add_child(panel_scroll)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 4)
+	box.add_theme_constant_override("separation", 6)
 	panel_scroll.add_child(box)
 
-	box.add_child(_label("弹幕试验台 %s" % VERSION_TAG, 16))
-	box.add_child(_label("魂：行为脚本", 12))
+	box.add_child(RIG_COMMON.section_label("弹幕组合台 %s" % VERSION_TAG))
+	box.add_child(RIG_COMMON.section_label("魂：行为脚本"))
 
 	_script_sel = OptionButton.new()
 	_script_sel.add_item("（无）直线弹")
@@ -147,7 +147,7 @@ func _build_ui() -> void:
 	_script_sel.item_selected.connect(_on_script_changed)
 	box.add_child(_script_sel)
 
-	box.add_child(_label("难度（即时生效）", 12))
+	box.add_child(RIG_COMMON.section_label("难度（即时生效）"))
 	_diff_sel = OptionButton.new()
 	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
 		_diff_sel.add_item(d)
@@ -155,7 +155,7 @@ func _build_ui() -> void:
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
-	box.add_child(_label("壳：外形", 12))
+	box.add_child(RIG_COMMON.section_label("壳：外形"))
 
 	box.add_child(_label("贴图（含判定）", 12))
 	_tex_sel = OptionButton.new()
@@ -204,15 +204,14 @@ func _build_ui() -> void:
 	_param_panel = PARAM_PANEL.new()
 	box.add_child(_param_panel)
 
-	box.add_child(_label("操作", 12))
+	box.add_child(RIG_COMMON.section_label("操作"))
 
 	# 操作按钮 2×2 网格：横排 4 个会把面板最小宽顶爆（489>432）
 	var ops := GridContainer.new()
 	ops.columns = 2
 	ops.add_theme_constant_override("h_separation", 8)
 	ops.add_theme_constant_override("v_separation", 4)
-	_fire_btn = Button.new()
-	_fire_btn.text = "发射"
+	_fire_btn = RIG_COMMON.accent_button("发射")
 	_fire_btn.pressed.connect(_fire)
 	_burst_chk = CheckBox.new()
 	_burst_chk.text = "连发"
@@ -243,7 +242,7 @@ func _build_ui() -> void:
 
 	_stats_label = _label("", 12)
 	box.add_child(_stats_label)
-	box.add_child(_label("开发", 12))
+	box.add_child(RIG_COMMON.section_label("开发"))
 	_hot_chk = CheckBox.new()
 	_hot_chk.text = "热更新"
 	_hot_chk.button_pressed = true

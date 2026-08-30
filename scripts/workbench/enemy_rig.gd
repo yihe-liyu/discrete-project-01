@@ -14,7 +14,7 @@ const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.4-fixup"
+const VERSION_TAG := "v0.6-ui"
 
 var _shell: Variant
 var _catalog: Variant
@@ -100,12 +100,12 @@ func _build_ui() -> void:
 	panel.add_child(panel_scroll)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 4)
+	box.add_theme_constant_override("separation", 6)
 	panel_scroll.add_child(box)
 
-	box.add_child(_label("敌人组合台 %s" % VERSION_TAG, 16))
+	box.add_child(RIG_COMMON.section_label("敌人组合台 %s" % VERSION_TAG))
 
-	box.add_child(_label("魂：行为脚本", 12))
+	box.add_child(RIG_COMMON.section_label("魂：行为脚本"))
 	_script_sel = OptionButton.new()
 	_script_sel.add_item("（无）移动")
 	var idx := 0
@@ -116,7 +116,7 @@ func _build_ui() -> void:
 	_script_sel.item_selected.connect(_on_script_changed)
 	box.add_child(_script_sel)
 
-	box.add_child(_label("难度（即时生效）", 12))
+	box.add_child(RIG_COMMON.section_label("难度（即时生效）"))
 	_diff_sel = OptionButton.new()
 	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
 		_diff_sel.add_item(d)
@@ -124,7 +124,7 @@ func _build_ui() -> void:
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
-	box.add_child(_label("壳：外形/属性", 12))
+	box.add_child(RIG_COMMON.section_label("壳：外形/属性"))
 	box.add_child(_label("外观", 12))
 	_visual_sel = OptionButton.new()
 	for k in SHELL.visual_keys():
@@ -169,13 +169,12 @@ func _build_ui() -> void:
 	_param_panel = PARAM_PANEL.new()
 	box.add_child(_param_panel)
 
-	box.add_child(_label("操作", 12))
+	box.add_child(RIG_COMMON.section_label("操作"))
 	var ops := GridContainer.new()
 	ops.columns = 2
 	ops.add_theme_constant_override("h_separation", 8)
 	ops.add_theme_constant_override("v_separation", 4)
-	_spawn_btn = Button.new()
-	_spawn_btn.text = "生成"
+	_spawn_btn = RIG_COMMON.accent_button("生成")
 	_spawn_btn.pressed.connect(_spawn)
 	_clear_btn = Button.new()
 	_clear_btn.text = "清场"
@@ -189,7 +188,7 @@ func _build_ui() -> void:
 
 	_stats_label = _label("", 12)
 	box.add_child(_stats_label)
-	box.add_child(_label("开发", 12))
+	box.add_child(RIG_COMMON.section_label("开发"))
 	_hot_chk = CheckBox.new()
 	_hot_chk.text = "热更新"
 	_hot_chk.button_pressed = true

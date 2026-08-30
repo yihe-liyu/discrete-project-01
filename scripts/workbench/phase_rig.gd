@@ -13,7 +13,7 @@ const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.1-m4"
+const VERSION_TAG := "v0.2-ui"
 
 var _shell: Variant
 var _catalog: Variant
@@ -94,12 +94,12 @@ func _build_ui() -> void:
 	panel.add_child(panel_scroll)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 4)
+	box.add_theme_constant_override("separation", 6)
 	panel_scroll.add_child(box)
 
-	box.add_child(_label("阶段组合台 %s" % VERSION_TAG, 16))
+	box.add_child(RIG_COMMON.section_label("阶段组合台 %s" % VERSION_TAG))
 
-	box.add_child(_label("阶段（目录）", 12))
+	box.add_child(RIG_COMMON.section_label("阶段（目录）"))
 	_phase_sel = OptionButton.new()
 	var phase_idx := 0
 	for e in _catalog.by_role("phase"):
@@ -115,7 +115,7 @@ func _build_ui() -> void:
 	_name_label = _label("", 11)
 	box.add_child(_name_label)
 
-	box.add_child(_label("魂：双槽（阶段内 move×shoot）", 12))
+	box.add_child(RIG_COMMON.section_label("魂：双槽（阶段内 move×shoot）"))
 	box.add_child(_label("移动脚本", 11))
 	_move_sel = OptionButton.new()
 	_move_sel.add_item("（空）— Boss 原地")
@@ -127,7 +127,7 @@ func _build_ui() -> void:
 	_fill_script_options(_shoot_sel, "boss_shoot")
 	box.add_child(_shoot_sel)
 
-	box.add_child(_label("壳：阶段数值", 12))
+	box.add_child(RIG_COMMON.section_label("壳：阶段数值"))
 	var hr := HBoxContainer.new()
 	hr.add_theme_constant_override("separation", 8)
 	var hp_row := HBoxContainer.new()
@@ -150,7 +150,7 @@ func _build_ui() -> void:
 	hr.add_child(time_row)
 	box.add_child(hr)
 
-	box.add_child(_label("难度（即时生效）", 12))
+	box.add_child(RIG_COMMON.section_label("难度（即时生效）"))
 	_diff_sel = OptionButton.new()
 	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
 		_diff_sel.add_item(d)
@@ -158,13 +158,12 @@ func _build_ui() -> void:
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
-	box.add_child(_label("操作", 12))
+	box.add_child(RIG_COMMON.section_label("操作"))
 	var ops := GridContainer.new()
 	ops.columns = 2
 	ops.add_theme_constant_override("h_separation", 8)
 	ops.add_theme_constant_override("v_separation", 4)
-	_play_btn = Button.new()
-	_play_btn.text = "开演"
+	_play_btn = RIG_COMMON.accent_button("开演")
 	_play_btn.pressed.connect(_play)
 	_clear_btn = Button.new()
 	_clear_btn.text = "清场"
@@ -178,7 +177,7 @@ func _build_ui() -> void:
 
 	_stats_label = _label("", 12)
 	box.add_child(_stats_label)
-	box.add_child(_label("开发", 12))
+	box.add_child(RIG_COMMON.section_label("开发"))
 	_hot_chk = CheckBox.new()
 	_hot_chk.text = "热更新"
 	_hot_chk.button_pressed = true
