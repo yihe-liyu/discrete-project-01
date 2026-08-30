@@ -70,8 +70,6 @@ func enemy() -> BulletData:
 	faction = Faction.ENEMY
 	can_be_canceled = true
 	spawn_fog = true
-	hitbox_shape = HitboxShape.CIRCLE
-	hitbox_radius = 4.0
 	return self
 
 func player() -> BulletData:
