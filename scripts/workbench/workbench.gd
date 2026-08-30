@@ -34,7 +34,7 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v4.3-ui"
+const VERSION := "v4.4-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
@@ -117,9 +117,8 @@ func _ready() -> void:
 	for ui_child in $UI.get_children():
 		if ui_child is Control:
 			ui_child.theme = theme
-	# CanvasLayer 无视父节点位置、按视口原点渲染——嵌入创作台时页面在页签横栏下方，
-	# 右面板会整体上顶、盖住页签按钮；用 layer offset 把 $UI 平移到页面全局位置
-	_sync_ui_layer_offset.call_deferred()
+	# 坐标归一等布局依赖（_phase_timer_label 等）就绪后执行（同步：首帧即正确，
+	# 避免切页首帧闪"旧位置"）——见 _ready 尾部调用
 	%Title.add_theme_color_override("font_color", WorkbenchUI.ACCENT)
 	# 工作台专用窗口：纵向 1:1（1600x960 对 1280x960 视口纵向无拉伸 → 文字清晰）
 	# 横向 1.25x 给右侧面板腾位置（东方框 64,32~832,928 完整可见）
@@ -129,6 +128,7 @@ func _ready() -> void:
 	%Title.text = "内容工作台 %s" % VERSION
 	_build_ui()
 	_setup_phase_timer()
+	_sync_ui_layer_offset()  # 同步执行：首帧渲染即正确（见函数注释）
 	_setup_world()
 	_load_stage()
 	_check_phase_uid_conflicts()

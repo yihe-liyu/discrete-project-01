@@ -14,7 +14,7 @@ const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v1.2-param"
+const VERSION_TAG := "v1.3-param"
 
 var _shell: Variant
 var _catalog: Variant
@@ -56,7 +56,7 @@ func _ready() -> void:
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
 	get_window().size = Vector2i(1280, 960)
-	_sync_world_offset.call_deferred()  # 等布局定稿：场地/幽灵归一到游戏坐标（与子弹同系）
+	_sync_world_offset()
 	_shell = PHASE_SHELL.new()
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()
