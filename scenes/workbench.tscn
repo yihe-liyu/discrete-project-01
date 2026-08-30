@@ -54,56 +54,56 @@ offset_bottom = 960.0
 grow_horizontal = 0
 theme_override_constants/margin_left = 10
 
-[node name="VBox" type="VBoxContainer" parent="UI/RightPanel" unique_id=437807338]
+[node name="Card" type="PanelContainer" parent="UI/RightPanel" unique_id=1897930867]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="VBox" type="VBoxContainer" parent="UI/RightPanel/Card" unique_id=437807338]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 6
 
-[node name="TopCard" type="PanelContainer" parent="UI/RightPanel/VBox" unique_id=1897930865]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="TopVBox" type="VBoxContainer" parent="UI/RightPanel/VBox/TopCard" unique_id=697623079]
+[node name="TopVBox" type="VBoxContainer" parent="UI/RightPanel/Card/VBox" unique_id=697623079]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="UI/RightPanel/VBox/TopCard/TopVBox" unique_id=182744113]
+[node name="Title" type="Label" parent="UI/RightPanel/Card/VBox/TopVBox" unique_id=182744113]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "内容工作台"
 
-[node name="StageGrid" type="GridContainer" parent="UI/RightPanel/VBox/TopCard/TopVBox" unique_id=1764809490]
+[node name="StageGrid" type="GridContainer" parent="UI/RightPanel/Card/VBox/TopVBox" unique_id=1764809490]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 4
 columns = 2
 
-[node name="PlaybackSlot" type="VBoxContainer" parent="UI/RightPanel/VBox/TopCard/TopVBox" unique_id=461106651]
+[node name="PlaybackSlot" type="VBoxContainer" parent="UI/RightPanel/Card/VBox/TopVBox" unique_id=461106651]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="StatusSlot" type="VBoxContainer" parent="UI/RightPanel/VBox/TopCard/TopVBox" unique_id=934165539]
+[node name="StatusSlot" type="VBoxContainer" parent="UI/RightPanel/Card/VBox/TopVBox" unique_id=934165539]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="TabBar" type="HBoxContainer" parent="UI/RightPanel/VBox" unique_id=1752295597]
+[node name="TabBar" type="HBoxContainer" parent="UI/RightPanel/Card/VBox" unique_id=1752295597]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
-[node name="Pages" type="VBoxContainer" parent="UI/RightPanel/VBox" unique_id=446639269]
+[node name="Pages" type="VBoxContainer" parent="UI/RightPanel/Card/VBox" unique_id=446639269]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="PageBookmarks" type="ScrollContainer" parent="UI/RightPanel/VBox/Pages" unique_id=1999580426]
+[node name="PageBookmarks" type="ScrollContainer" parent="UI/RightPanel/Card/VBox/Pages" unique_id=1999580426]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -111,14 +111,14 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="BookmarkSlot" type="VBoxContainer" parent="UI/RightPanel/VBox/Pages/PageBookmarks" unique_id=1669372079]
+[node name="BookmarkSlot" type="VBoxContainer" parent="UI/RightPanel/Card/VBox/Pages/PageBookmarks" unique_id=1669372079]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 4
 
-[node name="PageLog" type="ScrollContainer" parent="UI/RightPanel/VBox/Pages" unique_id=818680951]
+[node name="PageLog" type="ScrollContainer" parent="UI/RightPanel/Card/VBox/Pages" unique_id=818680951]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -126,7 +126,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="LogSlot" type="VBoxContainer" parent="UI/RightPanel/VBox/Pages/PageLog" unique_id=1673494203]
+[node name="LogSlot" type="VBoxContainer" parent="UI/RightPanel/Card/VBox/Pages/PageLog" unique_id=1673494203]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

@@ -88,6 +88,7 @@ func _ready() -> void:
 	_tree.columns = 1
 	_tree.hide_root = true
 	_tree.add_theme_constant_override("v_separation", 2)
+	_tree.add_theme_stylebox_override("panel", StyleBoxEmpty.new())  # 单卡片内：树区无边框
 	_tree.item_selected.connect(_on_item_selected)
 	_tree.gui_input.connect(_on_tree_input)
 	_split_area.add_child(_tree)
@@ -103,6 +104,7 @@ func _ready() -> void:
 
 	# ── 信息卡（选中条目详情；内部纵向滚动，内容超出不裁）──
 	var info := PanelContainer.new()
+	info.add_theme_stylebox_override("panel", StyleBoxEmpty.new())  # 单卡片内：信息区无边框
 	_split_area.add_child(info)
 	info.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_info_panel = info
