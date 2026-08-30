@@ -50,6 +50,7 @@ func test_additive_and_multiply_separate_groups():
 	mul.spawn_fog = false
 	BulletManager.shoot_enemy_bullet(mul, Vector2(400, 200), Vector2.LEFT)
 	await get_tree().process_frame
+	await get_tree().process_frame  # process_frame 先于 _process：等两帧让 _sync 建组
 	var mm = BulletManager.get_node_or_null("BulletMultiMesh")
 	if not mm:
 		# BulletManager 的子节点（_multi_mesh）
@@ -59,10 +60,13 @@ func test_additive_and_multiply_separate_groups():
 		var t0 := -1
 		var t1 := -1
 		for k in groups:
-			var tm: int = groups[k].get("tint_mode")
+			# _groups[k] = {mm, mmi}；tint_mode 在材质参数上
+			var eg: Dictionary = groups[k]
+			var tm: int = int(eg.get("mm").material.get_shader_parameter("tint_mode"))
 			if tm == 0:
 				t0 = k
 			elif tm == 1:
 				t1 = k
-		assert_true(t0 != -1 and t1 != -1, "两种 tint_mode 各占一组（分组正确）")
+		assert_eq(groups.size(), 2, "两种 tint_mode 应为 2 组（实际 %d）" % groups.size())
+		assert_true(t0 != -1 and t1 != -1, "t0=%s t1=%s" % [str(t0), str(t1)])
 	BulletManager.clear_all()
