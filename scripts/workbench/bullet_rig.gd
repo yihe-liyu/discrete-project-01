@@ -12,7 +12,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v1.5-grid"
+const VERSION_TAG := "v1.6-name"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -129,9 +129,13 @@ func _build_ui() -> void:
 
 	_script_sel = OptionButton.new()
 	_script_sel.add_item("（无）直线弹")
+	# 注意：选项只放短名（OptionButton 最小宽=最长选项宽；文件名后缀曾把面板顶到 469）
+	var script_idx := 0
 	for e in _catalog.by_role("bullet"):
-		var item_text: String = (e.name if e.name != "" else e.path.get_file()) + "（" + e.path.get_file() + "）"
+		var item_text: String = e.name if e.name != "" else e.path.get_file()
 		_script_sel.add_item(item_text)
+		_script_sel.set_item_tooltip(script_idx + 1, e.path)
+		script_idx += 1
 	_script_sel.selected = 0
 	_script_sel.item_selected.connect(_on_script_changed)
 	box.add_child(_script_sel)
