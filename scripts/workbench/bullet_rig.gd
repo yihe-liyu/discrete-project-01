@@ -32,6 +32,7 @@ var _clear_btn: Button
 var _seed_btn: Button
 var _stats_label: Label
 var _field: Control
+var _dir_angle_label: Label
 
 
 func _ready() -> void:
@@ -41,6 +42,7 @@ func _ready() -> void:
 	_build_world()
 	_build_ui()
 	_set_seed(FIXED_SEED)
+	_refresh_dir_label()
 
 
 # ═══ 世界 ═══
@@ -128,11 +130,15 @@ func _build_ui() -> void:
 	_speed_spin.value = 300.0
 	box.add_child(_speed_spin)
 
-	box.add_child(_label("方向", 12))
+	box.add_child(_label("方向（右击场地=自选指向）", 12))
 	_dir_sel = OptionButton.new()
-	for d in SHELL.DIR_LABELS:
+	_dir_sel.add_item("自选（右键场地）")
+	for d in SHELL.DIR_NAMES:
 		_dir_sel.add_item(d)
+	_dir_sel.item_selected.connect(_on_dir_preset)
 	box.add_child(_dir_sel)
+	_dir_angle_label = _label("", 11)
+	box.add_child(_dir_angle_label)
 
 	box.add_child(_label("操作", 12))
 
@@ -182,7 +188,6 @@ func _fire() -> void:
 	_shell.tint = _color_btn.color
 	_shell.blend = _blend_chk.button_pressed
 	_shell.speed = _speed_spin.value
-	_shell.dir_index = _dir_sel.selected
 	var script: Script = null
 	var idx := _script_sel.selected
 	if idx > 0:
@@ -225,9 +230,32 @@ func _process(delta: float) -> void:
 # ═══ 场地交互 ═══
 
 func _on_field_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		_emitter_pos = (event as InputEventMouseButton).position
+	if event is InputEventMouseButton and event.pressed:
+		var pos := (event as InputEventMouseButton).position
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			_emitter_pos = pos
+			_field.queue_redraw()
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			# 右键：从发射点指向点击处（任意角度）
+			var delta := pos - _emitter_pos
+			if delta.length() > 10.0:
+				_shell.dir = delta.normalized()
+				_dir_sel.selected = 0  # 跳到"自选"
+				_refresh_dir_label()
+				_field.queue_redraw()
+
+
+## 8 方位预设选择（index>=1 = 预设；item 0 = 自选，仅在右键时显示）
+func _on_dir_preset(idx: int) -> void:
+	if idx > 0:
+		_shell.dir = SHELL.preset(idx - 1)
+		_refresh_dir_label()
 		_field.queue_redraw()
+
+
+func _refresh_dir_label() -> void:
+	if _dir_angle_label:
+		_dir_angle_label.text = "%s · %s" % [SHELL.dir_name(_shell.dir), SHELL.angle_text(_shell.dir)]
 
 
 func _on_field_draw() -> void:
@@ -237,3 +265,11 @@ func _on_field_draw() -> void:
 	var p := _emitter_pos
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.85, 0.3), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.85, 0.3), 2.0)
+	# 发射方向箭头（绿色，从发射点指向）
+	if _shell and _shell.dir.length() > 0.001:
+		var d: Vector2 = _shell.dir
+		var tip := p + d * 56.0
+		_field.draw_line(p, tip, Color(0.35, 0.95, 0.45), 2.0)
+		var side := d.rotated(2.6) * 10.0
+		_field.draw_line(tip, tip + side, Color(0.35, 0.95, 0.45), 2.0)
+		_field.draw_line(tip, tip + _shell.dir.rotated(-2.6) * 10.0, Color(0.35, 0.95, 0.45), 2.0)

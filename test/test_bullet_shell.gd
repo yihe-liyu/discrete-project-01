@@ -1,5 +1,5 @@
 extends GutTest
-## BulletShell（弹幕试验台"壳"）测试（M2a）
+## BulletShell（弹幕试验台"壳"）测试（M2a）—— 自由方向 + 显示辅助
 
 const SHELL = preload("res://scripts/workbench/bullet_shell.gd")
 
@@ -10,7 +10,6 @@ func test_shell_builds_enemy_bullet_bundle():
 	s.tint = Color(1, 0, 0)
 	s.blend = true
 	s.speed = 500.0
-	s.dir_index = 2  # 右
 	var d: BulletData = s.build()
 	assert_eq(d.faction, BulletData.Faction.ENEMY, "敌弹阵营")
 	assert_eq(d.texture, AssetRegistry.get_bullet_tex("小玉"), "贴图对应")
@@ -22,9 +21,24 @@ func test_shell_builds_enemy_bullet_bundle():
 	assert_null(d.coroutine_script, "无行为脚本 = 纯直线弹")
 
 
-func test_shell_dir_mapping():
+func test_shell_dir_free_vector():
 	var s = SHELL.new()
-	s.dir_index = 0
-	assert_true(s.get_dir().is_equal_approx(Vector2.DOWN), "0=下")
-	s.dir_index = 2
-	assert_true(s.get_dir().is_equal_approx(Vector2.RIGHT), "2=右")
+	assert_true(s.get_dir().is_equal_approx(Vector2.DOWN), "默认向下")
+	s.dir = Vector2.RIGHT
+	assert_true(s.get_dir().is_equal_approx(Vector2.RIGHT), "自由方向=右")
+	var v := Vector2(0.5, -0.5).normalized()
+	s.dir = v
+	assert_true(s.get_dir().is_equal_approx(v), "任意角度保存")
+
+
+func test_shell_dir_display():
+	assert_eq(SHELL.DIR_NAMES.size(), 8, "8 方位标签")
+	assert_true(SHELL.preset(0).is_equal_approx(Vector2.DOWN), "preset 0 = 下")
+	assert_true(SHELL.preset(2).is_equal_approx(Vector2.RIGHT), "preset 2 = 右")
+	assert_eq(SHELL.dir_name(Vector2.DOWN), "下", "正方位=名字")
+	assert_eq(SHELL.dir_name(Vector2.RIGHT), "右", "正方位=右")
+	assert_eq(SHELL.angle_text(Vector2.RIGHT), "90°", "角度(自下顺时针)")
+	assert_eq(SHELL.angle_text(Vector2.DOWN), "0°", "角度 0° = 下")
+	assert_eq(SHELL.angle_text(Vector2.LEFT), "270°", "角度 270° = 左")
+	var w := Vector2.RIGHT.rotated(0.3)
+	assert_true(SHELL.dir_name(w).begins_with("自选"), "任意角度标记自选")
