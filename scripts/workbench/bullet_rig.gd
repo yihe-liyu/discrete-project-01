@@ -147,6 +147,8 @@ func _build_ui() -> void:
 	_speed_spin.max_value = 4000.0
 	_speed_spin.step = 5.0
 	_speed_spin.value = 300.0
+	_speed_spin.custom_minimum_size = Vector2(160, 0)
+	_speed_spin.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	box.add_child(_speed_spin)
 
 	box.add_child(_label("方向（右击场地=自选指向）", 12))
@@ -178,13 +180,15 @@ func _build_ui() -> void:
 	box.add_child(ops)
 
 	var itv := HBoxContainer.new()
+	itv.add_theme_constant_override("separation", 8)
+	itv.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	itv.add_child(_label("间隔", 12))
 	_interval_spin = SpinBox.new()
 	_interval_spin.min_value = 0.05
 	_interval_spin.max_value = 2.0
 	_interval_spin.step = 0.05
 	_interval_spin.value = 0.5
-	_interval_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_interval_spin.custom_minimum_size = Vector2(140, 0)
 	itv.add_child(_interval_spin)
 	box.add_child(itv)
 
