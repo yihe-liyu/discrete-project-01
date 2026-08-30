@@ -14,6 +14,7 @@ func rebuild(script: Script) -> void:
 		c.queue_free()
 	_rows.clear()
 	if script == null:
+		_add_note("（选择脚本后显示参数）", Color(1, 1, 1, 0.5))
 		return
 	var inst = script.new()
 	var prop_list: Array = script.get_script_property_list()

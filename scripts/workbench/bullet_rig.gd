@@ -225,7 +225,9 @@ func _build_ui() -> void:
 	var itv := HBoxContainer.new()
 	itv.add_theme_constant_override("separation", 8)
 	itv.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	itv.add_child(_label("间隔", 12))
+	var itv_label := _label("间隔", 12)
+	itv_label.custom_minimum_size = Vector2(36, 0)
+	itv.add_child(itv_label)
 	_interval_spin = SpinBox.new()
 	_interval_spin.min_value = 0.05
 	_interval_spin.max_value = 2.0
