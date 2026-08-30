@@ -91,7 +91,8 @@ func _build_world() -> void:
 	_ghost.player_data = REIMU_DATA  # 必须：Player._ready 会应用角色数据（工作台同款）
 	_ghost.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
 	_ghost.z_index = 30
-	add_child(_ghost)
+	# 关键：挂到【场地】下（非根）——根节点顺序是 HBox(场地+面板)→幽灵，会画在面板之上
+	_field.add_child(_ghost)
 
 
 # ═══ UI ═══
