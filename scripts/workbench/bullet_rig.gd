@@ -10,6 +10,8 @@ const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
+## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
+const VERSION_TAG := "v0.9-hbox"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -108,6 +110,12 @@ func _build_ui() -> void:
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.custom_minimum_size = Vector2(380, 0)
+	# 不透明实心背景：半透明默认主题会透出场地边框（重叠错觉）
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.085, 0.09, 0.115, 1.0)
+	panel_style.set_corner_radius_all(6)
+	panel_style.set_content_margin_all(10)
+	panel.add_theme_stylebox_override("panel", panel_style)
 	margin.add_child(panel)
 	# 内部滚动：未来加字段也不会裁内容
 	var panel_scroll := ScrollContainer.new()
@@ -118,7 +126,7 @@ func _build_ui() -> void:
 	box.add_theme_constant_override("separation", 4)
 	panel_scroll.add_child(box)
 
-	box.add_child(_label("弹幕试验台 v0（M2a）", 16))
+	box.add_child(_label("弹幕试验台 %s" % VERSION_TAG, 16))
 	box.add_child(_label("魂：行为脚本", 12))
 
 	_script_sel = OptionButton.new()
