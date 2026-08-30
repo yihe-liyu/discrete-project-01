@@ -11,7 +11,7 @@ const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v0.3-vec"
+const VERSION_TAG := "v0.4-fixup"
 
 var _shell: Variant
 var _catalog: Variant
@@ -28,6 +28,8 @@ var _power_spin: SpinBox
 var _point_spin: SpinBox
 var _life_spin: SpinBox
 var _bomb_spin: SpinBox
+var _life_full_spin: SpinBox
+var _bomb_full_spin: SpinBox
 var _spawn_btn: Button
 var _clear_btn: Button
 var _seed_btn: Button
@@ -151,18 +153,25 @@ func _build_ui() -> void:
 	_hbox_spin.custom_minimum_size = Vector2(120, 0)
 	hrow.add_child(_hbox_spin)
 	box.add_child(hrow)
-	box.add_child(_label("掉落  P/点/残/雷", 12))
+	box.add_child(_label("掉落（P/点/残/雷/整残/整B）", 12))
 	var drops := GridContainer.new()
 	drops.columns = 2
 	drops.add_theme_constant_override("h_separation", 8)
-	for sp in [_power_spin, _point_spin, _life_spin, _bomb_spin]:
-		pass
+	drops.add_theme_constant_override("v_separation", 2)
 	_power_spin = _drop_spin(2.0)
 	_point_spin = _drop_spin(0.0)
 	_life_spin = _drop_spin(0.0)
 	_bomb_spin = _drop_spin(0.0)
-	for sp in [_power_spin, _point_spin, _life_spin, _bomb_spin]:
-		drops.add_child(sp)
+	_life_full_spin = _drop_spin(0.0)
+	_bomb_full_spin = _drop_spin(0.0)
+	for pair in [["P", _power_spin], ["点", _point_spin], ["残", _life_spin], ["雷", _bomb_spin], ["整残", _life_full_spin], ["整B", _bomb_full_spin]]:
+		var cell := HBoxContainer.new()
+		cell.add_theme_constant_override("separation", 6)
+		var lb := _label(pair[0], 11)
+		lb.custom_minimum_size = Vector2(34, 0)
+		cell.add_child(lb)
+		cell.add_child(pair[1])
+		drops.add_child(cell)
 	box.add_child(drops)
 
 	box.add_child(_label("参数（脚本 var 注入，可调）", 12))
@@ -228,6 +237,8 @@ func _spawn() -> void:
 	_shell.item_point = int(_point_spin.value)
 	_shell.item_life = int(_life_spin.value)
 	_shell.item_bomb = int(_bomb_spin.value)
+	_shell.item_life_full = int(_life_full_spin.value)
+	_shell.item_bomb_full = int(_bomb_full_spin.value)
 	var data: EnemyData = _shell.build(_cur_script)
 	# 参数注入（与游戏 params 同路径：ParamValidator.apply 同名 var 注入）
 	# 注意：for-in 字典迭代的是键（GDScript 语义）
@@ -361,7 +372,9 @@ func _rebuild_params() -> void:
 				vy.custom_minimum_size = Vector2(70, 0)
 				vec_row.add_child(vx)
 				vec_row.add_child(vy)
-				_add_param_row(nm, "vec2", vec_row)
+				var lbt := _add_param_row(nm, "vec2", vec_row)
+				if (inst.get(nm) as Vector2).length() < 0.01:
+					lbt.modulate = Color(1, 0.65, 0.2)  # 默认 (0,0)=左上角陷阱提醒
 			TYPE_COLOR:
 				var cp := ColorPickerButton.new()
 				cp.color = inst.get(nm)
@@ -380,7 +393,7 @@ func _rebuild_params() -> void:
 	inst.free()
 
 
-func _add_param_row(nm: String, kind: String, ctrl: Control) -> void:
+func _add_param_row(nm: String, kind: String, ctrl: Control) -> Label:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	var lb := _label(nm, 11)
@@ -389,6 +402,7 @@ func _add_param_row(nm: String, kind: String, ctrl: Control) -> void:
 	row.add_child(ctrl)
 	_params_container.add_child(row)
 	_param_rows.append({"name": nm, "kind": kind, "ctrl": ctrl})
+	return lb
 
 
 ## 难度切换：diff_pick 运行时实时读取 → 立即生效

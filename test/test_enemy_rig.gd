@@ -12,12 +12,16 @@ func test_enemy_shell_build():
 	s.hitbox_radius = 48.0
 	s.item_power = 5
 	s.item_point = 12
+	s.item_life_full = 1
+	s.item_bomb_full = 2
 	var d: EnemyData = s.build()
 	assert_eq(d.visual_scene, AssetRegistry.enemy_visuals["blue_big_fairy"], "外观对应")
 	assert_eq(d.max_hp, 500, "HP")
 	assert_eq(d.hitbox_radius, 48.0, "判定")
 	assert_eq(d.item_power, 5, "P 掉落")
 	assert_eq(d.item_point, 12, "点掉落")
+	assert_eq(d.item_life_full, 1, "整残机掉落")
+	assert_eq(d.item_bomb_full, 2, "整B掉落")
 	assert_null(d.behavior_script, "无魂=纯壳")
 	# 带魂
 	var e: EnemyData = s.build(load("res://data/stages/stage01/enemy/enemy01.gd"))
@@ -75,6 +79,14 @@ func test_vector2_and_color_params():
 		if row.name == "bullet_color" and row.kind == "color":
 			found_color = true
 	assert_true(found_vec, "target_pos 是 Vector2 可调")
+	# 零值(0,0)陷阱：标签应为橙色提醒
+	var warn_found := false
+	for c in rig._params_container.get_children():
+		if c is HBoxContainer and c.get_child_count() >= 2:
+			var lb: Label = c.get_child(0)
+			if lb.text == "target_pos" and lb.modulate.r > 0.9 and lb.modulate.g < 0.8:
+				warn_found = true
+	assert_true(warn_found, "零值 Vector2 参数带橙色提醒")
 	assert_true(found_color, "bullet_color 是 Color 可调")
 	var params := rig._collect_params()
 	assert_eq(params.get("target_pos", Vector2.ZERO), Vector2(400, 300), "收集到 Vector2 参数")

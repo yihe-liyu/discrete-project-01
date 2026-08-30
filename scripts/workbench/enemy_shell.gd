@@ -10,6 +10,8 @@ var item_power: int = 2
 var item_point: int = 0
 var item_life: int = 0
 var item_bomb: int = 0
+var item_life_full: int = 0
+var item_bomb_full: int = 0
 
 
 ## 组装 EnemyData（光壳 → 行为脚本；与游戏内容同款字段）
@@ -22,6 +24,8 @@ func build(behavior_script: Script = null) -> EnemyData:
 	d.point(item_point)
 	d.life(item_life)
 	d.bomb(item_bomb)
+	d.life_full(item_life_full)
+	d.bomb_full(item_bomb_full)
 	if behavior_script:
 		d.with_script(behavior_script)
 	return d
