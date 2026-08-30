@@ -41,6 +41,7 @@ const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
 const HITBOX_OVERLAY := preload("res://scripts/workbench/hitbox_overlay.gd")
 const BOOKMARK_EXTRACTOR := preload("res://scripts/workbench/bookmark_extractor.gd")
 const BOOKMARK_CACHE := preload("res://scripts/workbench/bookmark_cache.gd")
+const CATALOG_PANEL := preload("res://scripts/workbench/catalog_panel.gd")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 ## Stage 1 = 协程版（stage01.gd Timeline 编排；数据关卡系统已移除）
 const STAGE1_COROUTINE := preload("res://data/stages/stage01/stage_data/stage01.tres")
@@ -65,6 +66,7 @@ var _playback: PlaybackBar
 var _status: StatusBar
 var _log_view: EventLog
 var _bookmarks: BookmarkPanel
+var _catalog: VBoxContainer  # 内容目录（M1，CatalogPanel；preload 构造规避类缓存）
 
 # 关卡状态
 var _stage_data: StageData = STAGE1_COROUTINE
@@ -92,7 +94,7 @@ var _prev_time := -1.0   # 时间轴刷新去重
 ## 固定种子：重跑时弹幕序列可复现（调参看效果的必备开关）
 const FIXED_SEED := 20260801
 ## 右侧面板页签：书签（导航）/ 日志（调试）
-const _TABS := ["书签", "日志"]
+const _TABS := ["目录", "书签", "日志"]
 var _tab_btns: Array[Button] = []
 var _fixed_seed_on := false
 var _stepping := false        # 逐帧推进防重入
@@ -243,6 +245,11 @@ func _build_ui() -> void:
 	_log_view = EventLog.new()
 	%LogSlot.add_child(_log_view)
 
+	# ── 目录（M1：扫描+分类展示；M2 起接组合台）──
+	_catalog = CATALOG_PANEL.new()
+	%Pages.add_child(_catalog)
+	_catalog.visible = false
+
 
 	# ── 页签：编排 / 书签 / 日志 / 脚本（播放/状态固定在顶部不滚走）──
 	for i in _TABS.size():
@@ -266,8 +273,9 @@ func _build_ui() -> void:
 
 ## 页签切换：只显示对应页，按钮高亮同步
 func _set_tab(i: int) -> void:
-	%PageBookmarks.visible = i == 0
-	%PageLog.visible = i == 1
+	_catalog.visible = i == 0
+	%PageBookmarks.visible = i == 1
+	%PageLog.visible = i == 2
 	for b in _tab_btns.size():
 		_tab_btns[b].button_pressed = b == i
 

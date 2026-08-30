@@ -199,6 +199,22 @@ func _init_enemy() -> void:
 	# 移动 tween + 发弹（ctx.bullets.shoot_spread / ctx.clock.wait / tl.at ...）
 ```
 
+### 目录注解（创作台自动索引，2026-08+）
+
+协程脚本会被**自动扫描**进创作台目录（`ContentCatalog`，只扫 `res://data/`、只收 `extends CoroutineScript/CoroutineRunner`）。
+角色默认按**路径/命名约定**判定（`*_move.gd`→Boss移动 · `*_shoot.gd`→弹幕发射 · `*_bullet.gd`或`bullet/`→弹丸行为 ·
+`enemy/`→敌人行为 · `stage_script/`→关卡编排 · `background/`→背景演出）；约定判不出时按**真实引用**反推（阶段 .tres 的 move/shoot 字段、发射脚本 preload 的弹丸）。
+
+**注解可选，优先级最高**（写在文件头部注释块，与普通描述行混排即可）：
+
+```gdscript
+extends CoroutineScript
+## 回卷探测弹：飞出→回点→分裂
+## @role: bullet           # 角色覆盖（约定判错时才用；打架会出 warning）
+## @name: 回卷探测弹        # 目录显示名（默认=注释首行）
+## @desc: 描述（默认=其余注释行；@name 存在时=全部注释行）
+```
+
 ---
 
 ## 七、调试（工作台工具链）
