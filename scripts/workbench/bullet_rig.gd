@@ -12,7 +12,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v1.4-theme"
+const VERSION_TAG := "v1.5-grid"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -184,7 +184,11 @@ func _build_ui() -> void:
 
 	box.add_child(_label("操作", 12))
 
-	var ops := HBoxContainer.new()
+	# 操作按钮 2×2 网格：横排 4 个会把面板最小宽顶爆（489>432）
+	var ops := GridContainer.new()
+	ops.columns = 2
+	ops.add_theme_constant_override("h_separation", 8)
+	ops.add_theme_constant_override("v_separation", 4)
 	_fire_btn = Button.new()
 	_fire_btn.text = "发射"
 	_fire_btn.pressed.connect(_fire)
