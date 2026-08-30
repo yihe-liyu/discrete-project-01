@@ -25,12 +25,10 @@ func _init() -> void:
 	row1.add_theme_constant_override("separation", 6)
 	_play_btn = Button.new()
 	_play_btn.text = "暂停"
-	_play_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_play_btn.pressed.connect(func(): play_toggled.emit())
 	row1.add_child(_play_btn)
 	var restart := Button.new()
 	restart.text = "重跑"
-	restart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	restart.pressed.connect(func(): restart_requested.emit())
 	row1.add_child(restart)
 	add_child(row1)

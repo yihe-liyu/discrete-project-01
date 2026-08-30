@@ -34,7 +34,7 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v3.4-ui"
+const VERSION := "v3.5-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
@@ -277,8 +277,7 @@ func _build_ui() -> void:
 		var tb := Button.new()
 		tb.text = _TABS[i]
 		tb.toggle_mode = true
-		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tb.custom_minimum_size = Vector2(0, 26)
+		tb.custom_minimum_size = Vector2(0, 22)
 		tb.pressed.connect(_on_tab_selected.bind(i))
 		%TabBar.add_child(tb)
 		_tab_btns.append(tb)

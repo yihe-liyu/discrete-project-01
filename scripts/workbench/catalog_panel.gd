@@ -64,6 +64,7 @@ func _ready() -> void:
 	_stats_label = Label.new()
 	_stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_stats_label.add_theme_font_size_override("font_size", 12)
 	_stats_roles = Label.new()
 	_stats_roles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stats_roles.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -88,6 +89,7 @@ func _ready() -> void:
 	_tree.columns = 1
 	_tree.hide_root = true
 	_tree.add_theme_constant_override("v_separation", 2)
+	_tree.add_theme_font_size_override("font_size", 12)  # 与组合台文字同尺度
 	_tree.add_theme_stylebox_override("panel", StyleBoxEmpty.new())  # 单卡片内：树区无边框
 	_tree.item_selected.connect(_on_item_selected)
 	_tree.gui_input.connect(_on_tree_input)
