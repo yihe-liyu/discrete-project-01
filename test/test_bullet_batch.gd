@@ -62,7 +62,7 @@ func test_additive_and_multiply_separate_groups():
 		for k in groups:
 			# _groups[k] = {mm, mmi}；tint_mode 在材质参数上
 			var eg: Dictionary = groups[k]
-			var tm: int = int(eg.get("mm").material.get_shader_parameter("tint_mode"))
+			var tm: int = int(eg.get("mmi").material.get_shader_parameter("tint_mode"))
 			if tm == 0:
 				t0 = k
 			elif tm == 1:
