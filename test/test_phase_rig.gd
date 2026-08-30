@@ -54,6 +54,39 @@ func test_phase_rig_select_defaults_from_tres():
 	rig.queue_free()
 
 
+
+func test_dual_param_panels_for_slots():
+	var rig = RIG.new()
+	add_child_autofree(rig)
+	await get_tree().process_frame
+	# 选 spell053（试符：move=random_dir_move, shoot=orbit_spiral）
+	var phases = rig._catalog.by_role("phase")
+	var idx := -1
+	for i in phases.size():
+		if phases[i].path.ends_with("spell053.tres"):
+			idx = i
+	assert_true(idx >= 0, "目录含 spell053")
+	if idx < 0:
+		return
+	rig._select_phase(idx)
+	# shoot 面板枚举出 orbit_spiral 的参数（orbit_speed 等）
+	var shoot_rows = rig._shoot_params.get_rows()
+	var found_speed := false
+	for row in shoot_rows:
+		if row.name == "orbit_speed":
+			found_speed = true
+			row.ctrl.value = 20.0
+	assert_true(found_speed, "弹幕槽参数面板含 orbit_speed（%d 行）" % shoot_rows.size())
+	# move 面板（random_dir_move）也应有行
+	var move_rows = rig._move_params.get_rows()
+	assert_true(move_rows.size() >= 1, "移动槽参数面板有行（%d）" % move_rows.size())
+	# 合并收集
+	var merged := {}
+	merged.merge(rig._move_params.collect())
+	merged.merge(rig._shoot_params.collect())
+	assert_eq(merged.get("orbit_speed", 0.0), 20.0, "合并后 shoot 参数生效")
+	rig.queue_free()
+
 func test_phase_rig_play_spawns_boss():
 	var rig = RIG.new()
 	add_child_autofree(rig)

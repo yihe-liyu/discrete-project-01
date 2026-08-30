@@ -115,7 +115,7 @@ func _ready() -> void:
 	info_scroll.add_child(info_box)
 	var info_title := Label.new()
 	info_title.text = "详情"
-	info_title.modulate = Color(1, 1, 1, 0.6)
+	info_title.modulate = Color(1.0, 0.83, 0.5, 0.92)  # 金色（三台 section 同族）
 	info_title.add_theme_font_size_override("font_size", 12)
 	info_box.add_child(info_title)
 	_info_name = Label.new()
