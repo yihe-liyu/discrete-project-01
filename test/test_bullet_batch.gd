@@ -59,7 +59,7 @@ func test_additive_and_multiply_separate_groups():
 		var t0 := -1
 		var t1 := -1
 		for k in groups:
-			var tm: int = groups[k].tint_mode
+			var tm: int = groups[k].get("tint_mode")
 			if tm == 0:
 				t0 = k
 			elif tm == 1:
