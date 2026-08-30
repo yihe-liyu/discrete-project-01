@@ -27,8 +27,8 @@ const DIR_LABELS: Array[String] = ["下", "右下", "右", "右上", "上", "左
 
 
 ## 组装 BulletData（外形侧 + 可选行为脚本）
-## 注意顺序（与游戏内容一致）：enemy() 在 tex() 之后调用，会强制判定半径 4.0
-## （引擎现状：贴图判定只对玩家弹生效；敌弹判定统一 4.0 —— 待单独决策）
+## 贴图≡判定：enemy() 不覆盖 hitbox（引擎现行为）→ tex 配置的判定/偏移生效，
+## 与游戏内敌弹一致（测试锁定 6.0）
 func build(behavior_script: Script = null) -> BulletData:
 	var d := BulletData.new()
 	d.tex(tex_key)               # 贴图 + 判定 + 偏移 一体
