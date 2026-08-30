@@ -98,6 +98,7 @@ const _TABS := ["目录", "书签", "日志"]
 var _tab_btns: Array[Button] = []
 var _fixed_seed_on := false
 var _stepping := false        # 逐帧推进防重入
+var _stage_shift_y := 0.0    # 嵌入创作台时页面下移量（舞台视觉回移视口坐标用）
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
 var _diff_sel: OptionButton
@@ -116,6 +117,9 @@ func _ready() -> void:
 	for ui_child in $UI.get_children():
 		if ui_child is Control:
 			ui_child.theme = theme
+	# CanvasLayer 无视父节点位置、按视口原点渲染——嵌入创作台时页面在页签横栏下方，
+	# 右面板会整体上顶、盖住页签按钮；用 layer offset 把 $UI 平移到页面全局位置
+	_sync_ui_layer_offset.call_deferred()
 	%Title.add_theme_color_override("font_color", WorkbenchUI.ACCENT)
 	# 工作台专用窗口：纵向 1:1（1600x960 对 1280x960 视口纵向无拉伸 → 文字清晰）
 	# 横向 1.25x 给右侧面板腾位置（东方框 64,32~832,928 完整可见）
@@ -172,7 +176,7 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	# 场景底：有背景时让 3D 背景透出，只在东方框外画暗色；无背景时全屏实心
 	var has_bg: bool = _show_bg and _background and is_instance_valid(_background)
-	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
+	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - _stage_shift_y,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT,
 		GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 	if not has_bg:
@@ -187,12 +191,31 @@ func _draw() -> void:
 	draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
 	if not has_bg:
 		for x in range(64, 833, 64):
-			draw_line(Vector2(x, 32), Vector2(x, 928), Color(1, 1, 1, 0.05))
+			draw_line(Vector2(x, 32 - _stage_shift_y), Vector2(x, 928 - _stage_shift_y), Color(1, 1, 1, 0.05))
 		for y in range(32, 929, 64):
-			draw_line(Vector2(64, y), Vector2(832, y), Color(1, 1, 1, 0.05))
+			draw_line(Vector2(64, y - _stage_shift_y), Vector2(832, y - _stage_shift_y), Color(1, 1, 1, 0.05))
 		# 幽灵玩家路径参考（纵向漂移中线）
-		draw_line(Vector2(64, 620), Vector2(832, 620), Color(0.3, 0.9, 0.5, 0.15))
+		draw_line(Vector2(64, 620 - _stage_shift_y), Vector2(832, 620 - _stage_shift_y), Color(0.3, 0.9, 0.5, 0.15))
 	# 出生点标记（数据关卡波次）
+
+## CanvasLayer 平移到页面全局位置（独立运行 = 0，嵌入创作台 = 页签横栏下方）；
+## 舞台（背景/幽灵/边框/命中框）同步到视口坐标——实体（子弹/敌人/Boss）在
+## autoload 根空间是游戏坐标，页面偏移会让全场错位 page_y 像素（旧 bug）
+func _sync_ui_layer_offset() -> void:
+	var pos := get_global_rect().position
+	$UI.offset = pos
+	_stage_shift_y = pos.y
+	if pos.y != 0.0:
+		# 面板/分隔条的底边原本按整窗高度（960）写死；页面只有 926 高
+		# → 底边同步内缩，平移后仍恰好贴窗口底（不漏出、不截断）
+		for n in ["RightPanel", "Divider"]:
+			if $UI.has_node(n):
+				var c := $UI.get_node(n) as Control
+				c.offset_bottom -= pos.y
+		# 舞台视觉上移到视口坐标
+		$World.position.y -= pos.y
+		$BgContainer.position.y -= pos.y
+
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
