@@ -11,6 +11,10 @@ var path_amplitude: float = 330.0
 var path_center_y: float = 620.0
 var path_y_amp: float = 110.0
 
+## 走位模式（AUTO=自动漂移【工作台默认】/ MOUSE=鼠标跟随【弹幕试验台】/ STATIC=静止）
+enum Mode { AUTO, MOUSE, STATIC }
+var mode: int = Mode.AUTO
+
 var _t: float = 0.0
 
 
@@ -19,15 +23,24 @@ func _init_shoot_script() -> void:
 	pass
 
 
-## 覆写父类：不走输入/受击/动画状态机，只沿固定路径漂
+## 覆写父类：不走输入/受击/动画状态机，只沿固定路径漂 / 跟随鼠标 / 静止
 func _physics_process(delta: float) -> void:
-	_t += delta
-	position.x = clampf(
-		GameConfig.FIELD_CENTER_X + sin(_t * 0.55) * path_amplitude,
-		GameConfig.FIELD_LEFT + 12.0, GameConfig.FIELD_RIGHT - 12.0)
-	position.y = clampf(
-		path_center_y + sin(_t * 0.9) * path_y_amp,
-		GameConfig.FIELD_TOP + 12.0, GameConfig.FIELD_BOTTOM - 60.0)
+	match mode:
+		Mode.MOUSE:
+			var m := get_global_mouse_position()
+			position = Vector2(
+				clampf(m.x, GameConfig.FIELD_LEFT + 12.0, GameConfig.FIELD_RIGHT - 12.0),
+				clampf(m.y, GameConfig.FIELD_TOP + 12.0, GameConfig.FIELD_BOTTOM - 60.0))
+		Mode.STATIC:
+			position = Vector2(GameConfig.FIELD_CENTER_X, path_center_y)
+		_:
+			_t += delta
+			position.x = clampf(
+				GameConfig.FIELD_CENTER_X + sin(_t * 0.55) * path_amplitude,
+				GameConfig.FIELD_LEFT + 12.0, GameConfig.FIELD_RIGHT - 12.0)
+			position.y = clampf(
+				path_center_y + sin(_t * 0.9) * path_y_amp,
+				GameConfig.FIELD_TOP + 12.0, GameConfig.FIELD_BOTTOM - 60.0)
 	# 无敌：bullet_physics 命中判定读 is_invincible，预览不死亡
 	is_invincible = true
 
