@@ -252,8 +252,8 @@ func _collect_params() -> Dictionary:
 			"str":
 				out[row.name] = row.ctrl.text
 			"vec2":
-				var wrap: HBoxContainer = row.ctrl
-				out[row.name] = Vector2(wrap.get_child(0).value, wrap.get_child(1).value)
+				var vec_row: HBoxContainer = row.ctrl
+				out[row.name] = Vector2(vec_row.get_child(0).value, vec_row.get_child(1).value)
 			"color":
 				out[row.name] = row.ctrl.color
 	return out
@@ -345,8 +345,8 @@ func _rebuild_params() -> void:
 				le.text = str(inst.get(nm))
 				_add_param_row(nm, "str", le)
 			TYPE_VECTOR2:
-				var wrap := HBoxContainer.new()
-				wrap.add_theme_constant_override("separation", 4)
+				var vec_row := HBoxContainer.new()
+				vec_row.add_theme_constant_override("separation", 4)
 				var vx := SpinBox.new()
 				vx.min_value = -100000.0
 				vx.max_value = 100000.0
@@ -359,9 +359,9 @@ func _rebuild_params() -> void:
 				vy.step = 10.0
 				vy.value = (inst.get(nm) as Vector2).y
 				vy.custom_minimum_size = Vector2(70, 0)
-				wrap.add_child(vx)
-				wrap.add_child(vy)
-				_add_param_row(nm, "vec2", wrap)
+				vec_row.add_child(vx)
+				vec_row.add_child(vy)
+				_add_param_row(nm, "vec2", vec_row)
 			TYPE_COLOR:
 				var cp := ColorPickerButton.new()
 				cp.color = inst.get(nm)
