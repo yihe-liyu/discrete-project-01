@@ -45,11 +45,13 @@ func test_param_listing_and_difficulty():
 	assert_true(names.has("rate"), "含 rate")
 	if target_y_spin >= 0:
 		assert_eq(float(rig._param_rows[target_y_spin].ctrl.value), 300.0, "默认值=脚本 var 值（target_y=300）")
-	# 难度切换：diff_pick 实时读取 → 立即可变
+	# 难度切换：diff_pick 实时读取 → 立即可变（注意还原，避免污染其他用例）
+	var saved_diff := GameState.selected_difficulty
 	rig._on_diff_changed(2)
 	assert_eq(GameState.selected_difficulty, 2, "难度切 Hard(2)")
 	rig._on_diff_changed(0)
 	assert_eq(GameState.selected_difficulty, 0, "难度切 Easy(0)")
+	GameState.selected_difficulty = saved_diff
 	rig.queue_free()
 
 
