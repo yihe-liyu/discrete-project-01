@@ -11,6 +11,10 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 
+## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
+const HOT_POLL_INTERVAL := 0.5
+const HOT_DEBOUNCE := 0.8
+
 var _shell: Variant      # BulletShell（preload 构造，规避新 class 全局缓存）
 var _catalog: Variant    # ContentCatalog
 var _ghost: Player
@@ -33,6 +37,17 @@ var _seed_btn: Button
 var _stats_label: Label
 var _field: Control
 var _dir_angle_label: Label
+var _reload_status: Label
+var _hot_chk: CheckBox
+
+# ── 热更新状态 ──
+var _cur_script: Script = null          # 当前魂（发射用它；热重载后替换）
+var _cur_script_path: String = ""
+var _watch_paths: Array[String] = []
+var _watch_mtimes: Dictionary = {}
+var _hot_enabled := true
+var _hot_poll := 0.0
+var _hot_dirty_since := -1.0
 
 
 func _ready() -> void:
@@ -43,6 +58,9 @@ func _ready() -> void:
 	_build_ui()
 	_set_seed(FIXED_SEED)
 	_refresh_dir_label()
+	_set_current_script()
+	_reload_status.text = "热更新：开 · 等待修改…"
+	_reload_status.modulate = Color(0.5, 0.95, 0.6)
 
 
 # ═══ 世界 ═══
@@ -94,6 +112,7 @@ func _build_ui() -> void:
 		var item_text: String = (e.name if e.name != "" else e.path.get_file()) + "（" + e.path.get_file() + "）"
 		_script_sel.add_item(item_text)
 	_script_sel.selected = 0
+	_script_sel.item_selected.connect(_on_script_changed)
 	box.add_child(_script_sel)
 
 	box.add_child(_label("壳：外形", 12))
@@ -171,7 +190,15 @@ func _build_ui() -> void:
 
 	_stats_label = _label("", 12)
 	box.add_child(_stats_label)
-	box.add_child(_label("点击场地 = 发射点；幽灵玩家 = 鼠标", 11))
+	box.add_child(_label("开发", 12))
+	_hot_chk = CheckBox.new()
+	_hot_chk.text = "热更新（保存自动重载）"
+	_hot_chk.button_pressed = true
+	_hot_chk.toggled.connect(_on_hot_toggled)
+	box.add_child(_hot_chk)
+	_reload_status = _label("", 11)
+	box.add_child(_reload_status)
+	box.add_child(_label("点击场地 = 发射点；右键 = 指向；幽灵玩家 = 鼠标", 11))
 
 
 func _label(text: String, font_size: int) -> Label:
@@ -188,12 +215,7 @@ func _fire() -> void:
 	_shell.tint = _color_btn.color
 	_shell.blend = _blend_chk.button_pressed
 	_shell.speed = _speed_spin.value
-	var script: Script = null
-	var idx := _script_sel.selected
-	if idx > 0:
-		var entry = _catalog.by_role("bullet")[idx - 1]
-		script = load(entry.path)
-	var data: BulletData = _shell.build(script)
+	var data: BulletData = _shell.build(_cur_script)
 	BulletManager.shoot_enemy_bullet(data, _emitter_pos, _shell.get_dir())
 	_update_stats()
 
@@ -224,7 +246,112 @@ func _process(delta: float) -> void:
 		if _burst_left <= 0.0:
 			_burst_left = _interval_spin.value
 			_fire()
+	_process_hot_reload(delta)
 	_update_stats()
+
+
+# ═══ 热更新（M2b）：保存脚本 → 自动重载重演 ═══
+
+func _on_script_changed(_idx: int) -> void:
+	_set_current_script()
+	if _reload_status:
+		_reload_status.text = "魂：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（直线弹）")
+		_reload_status.modulate = Color(1, 1, 1, 0.8)
+
+
+func _set_current_script() -> void:
+	var idx := _script_sel.selected
+	if idx <= 0:
+		_cur_script = null
+		_cur_script_path = ""
+	else:
+		var entry = _catalog.by_role("bullet")[idx - 1]
+		_cur_script_path = entry.path
+		_cur_script = load(_cur_script_path)
+	_rebuild_watch()
+
+
+## 监听集：主脚本 + 同目录全部 .gd（A preload B 时，只重载 B 无效 → 连坐）
+func _rebuild_watch() -> void:
+	_watch_paths.clear()
+	_watch_mtimes.clear()
+	if _cur_script_path == "":
+		return
+	_watch_paths.append(_cur_script_path)
+	var da := DirAccess.open(_cur_script_path.get_base_dir())
+	if da:
+		for f in da.get_files():
+			if f.ends_with(".gd"):
+				var p := _cur_script_path.get_base_dir().path_join(f)
+				if not _watch_paths.has(p):
+					_watch_paths.append(p)
+	for p in _watch_paths:
+		_watch_mtimes[p] = FileAccess.get_modified_time(p)
+
+
+func _on_hot_toggled(on: bool) -> void:
+	_hot_enabled = on
+	if _reload_status:
+		_reload_status.text = "热更新：开" if on else "热更新：关"
+		_reload_status.modulate = Color(0.5, 0.95, 0.6) if on else Color(1, 1, 1, 0.6)
+
+
+func _process_hot_reload(delta: float) -> void:
+	if not _hot_enabled or _cur_script_path == "":
+		return
+	_hot_poll += delta
+	if _hot_poll < HOT_POLL_INTERVAL:
+		return
+	_hot_poll = 0.0
+	var changed := false
+	for p in _watch_paths:
+		var mt := int(FileAccess.get_modified_time(p))
+		if mt != int(_watch_mtimes.get(p, 0)):
+			changed = true
+			_watch_mtimes[p] = mt
+	if changed:
+		if _hot_dirty_since < 0.0:
+			_hot_dirty_since = 0.0
+			_reload_status.text = "↻ 检测到修改…"
+			_reload_status.modulate = Color(1, 1, 0.6)
+		_hot_dirty_since += HOT_POLL_INTERVAL
+		if _hot_dirty_since >= HOT_DEBOUNCE:
+			_hot_dirty_since = -1.0
+			_do_hot_reload()
+	else:
+		_hot_dirty_since = -1.0
+
+
+## 连坐重载 + 重建演出；解析失败 → 旧版继续 + 红条
+func _do_hot_reload() -> void:
+	var main_new: Script = null
+	var failed := ""
+	for p in _watch_paths:
+		if p == _cur_script_path:
+			continue
+		if not FileAccess.file_exists(p):
+			failed = p
+			break
+		var s: Script = ResourceLoader.load(p, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
+		if s == null:
+			failed = p
+			break
+	if failed == "" and FileAccess.file_exists(_cur_script_path):
+		main_new = ResourceLoader.load(_cur_script_path, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
+		if main_new == null:
+			failed = _cur_script_path
+	elif failed == "":
+		failed = _cur_script_path
+	if failed != "":
+		_reload_status.text = "⚠ 重载失败：%s（旧版继续）" % failed.get_file()
+		_reload_status.modulate = Color(1, 0.4, 0.4)
+		return
+	_cur_script = main_new
+	BulletManager.clear_all()
+	RNG.set_seed(_seed)
+	_fire()
+	_reload_status.text = "↻ 已重载：%s" % _cur_script_path.get_file()
+	_reload_status.modulate = Color(0.5, 0.95, 0.6)
 
 
 # ═══ 场地交互 ═══
