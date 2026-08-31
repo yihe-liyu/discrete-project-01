@@ -32,10 +32,10 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var root := VBoxContainer.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# 布局用场景里挂好的 root(VBoxContainer) 节点（作者在编辑器建的）——填充式，
+	# 和整关预览同为"tscn 挂节点 + 代码填内容"
+	var root := $root as VBoxContainer
 	root.add_theme_constant_override("separation", 0)
-	add_child(root)
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 6)
 	bar.custom_minimum_size = Vector2(0, 34)
