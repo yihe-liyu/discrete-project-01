@@ -6,7 +6,7 @@ extends VBoxContainer
 ## 注意：这里不能是 ScrollContainer——它不拉伸子节点，split_area 会塌成 0 高。
 
 const CAT = preload("res://scripts/data/content_catalog.gd")
-const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
+const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
 
 signal preset_requested(entry)  # 双击条目 → 组合台直达
 

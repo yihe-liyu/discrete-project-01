@@ -2,7 +2,7 @@ extends Control
 ## 右下角浮动状态条（三台统一）
 ## 测试/调用方可直接读 .label.text（与旧 _reload_status 兼容）
 
-const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
+const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
 
 var label: Label
 

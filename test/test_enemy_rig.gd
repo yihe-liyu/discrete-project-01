@@ -2,7 +2,7 @@ extends GutTest
 ## 敌人组合台（M3a）测试：壳组装 / 真实生成 / 热重载重演
 
 const SHELL := preload("res://scripts/workbench/enemy_shell.gd")
-const RIG := preload("res://scripts/workbench/enemy_rig.gd")
+const RIG := preload("res://scripts/workbench/enemy_bench.gd")
 
 
 func test_enemy_shell_build():

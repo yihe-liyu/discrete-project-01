@@ -1,4 +1,4 @@
-extends "res://scripts/workbench/rig_base.gd"
+extends "res://scripts/workbench/bench_base.gd"
 ## 敌人组合台（M3a）—— 选行为（脚本）× 设外形（外观/HP/判定/掉落）× 出生点 × 幽灵玩家（鼠标跟随）
 ## 跑真实 StageManager.spawn_enemy_data：敌人移动/发弹/行为脚本全部真实。
 

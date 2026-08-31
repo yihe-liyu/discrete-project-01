@@ -3,7 +3,7 @@ extends VBoxContainer
 ## 实时状态：当前时间 + 子弹/敌人/Boss/FPS
 ## 纯显示：主控制器每帧调用 set_time / set_status
 
-const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
+const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
 
 var _time_label: Label
 var _status_label: Label

@@ -1,4 +1,4 @@
-extends "res://scripts/workbench/rig_base.gd"
+extends "res://scripts/workbench/bench_base.gd"
 ## 阶段组合台（M4）—— 目录选阶段 × 双槽（move/shoot）× 阶段字段（HP/时限）× Boss 视觉
 ## 运行基于 start_spell_card（符卡练习同款单阶段运行器：自建时钟+ctx+Boss 直进阶段）
 

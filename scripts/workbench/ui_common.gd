@@ -4,7 +4,7 @@ extends RefCounted
 
 const TEXT_DIM := Color(0.72, 0.72, 0.72)  # 中性灰（与游戏页面弱化文字一致，不再蓝灰）
 const ACCENT := Color(0.92, 0.73, 0.32)
-const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
+const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
 
 
 ## 区块标题（金色，与组合台 section_label 同级）：── 状态 ── / ── 书签 ── 等

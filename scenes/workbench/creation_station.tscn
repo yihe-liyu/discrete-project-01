@@ -19,3 +19,13 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="bar" type="HBoxContainer" parent="root" unique_id=1335930980]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="content" type="Control" parent="root" unique_id=1177330428]
+layout_mode = 2
+size_flags_vertical = 3

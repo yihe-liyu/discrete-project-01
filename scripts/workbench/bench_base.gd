@@ -4,7 +4,7 @@ extends Control
 ## 术语：行为（脚本）/ 外形（外观）/ 数值（字段）——"魂/壳" 已弃用
 ## 三台结构一致：只写各自的"行为/外形/数值"专属逻辑，公共骨架在此一处。
 
-const RIG_COMMON := preload("res://scripts/workbench/rig_common.gd")
+const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
 const GHOST := preload("res://scripts/workbench/ghost_player.gd")
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")

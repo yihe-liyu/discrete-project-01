@@ -2,7 +2,7 @@ extends GutTest
 ## 阶段组合台（M4）测试：壳副本 / 双槽默认 / 开演真实生成
 
 const SHELL := preload("res://scripts/workbench/phase_shell.gd")
-const RIG := preload("res://scripts/workbench/phase_rig.gd")
+const RIG := preload("res://scripts/workbench/phase_bench.gd")
 
 
 func test_phase_shell_copy_does_not_mutate_base():

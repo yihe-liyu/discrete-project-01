@@ -4,7 +4,7 @@ extends VBoxContainer
 ## 零值 Vector2 染橙提醒；自带可折叠标题（行数多默认收起）
 
 const _label_hint_color := Color(1, 1, 0.7, 0.8)
-const RIG_COMMON = preload("res://scripts/workbench/rig_common.gd")  # 字号阶梯单一来源
+const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
 
 var _rows: Array = []  # [{name, kind, ctrl}]
 var body: VBoxContainer   # 参数行容器（测试/外部读取 children 用）

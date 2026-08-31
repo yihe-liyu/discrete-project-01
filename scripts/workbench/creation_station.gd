@@ -4,18 +4,17 @@ extends Control
 
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const WORKBENCH := preload("res://scenes/workbench.tscn")
-const RIGS := [
-	preload("res://scenes/workbench/bullet_rig.tscn"),
-	preload("res://scenes/workbench/enemy_rig.tscn"),
-	preload("res://scenes/workbench/phase_rig.tscn"),
+const BENCHS := [
+	preload("res://scenes/workbench/bullet_bench.tscn"),
+	preload("res://scenes/workbench/enemy_bench.tscn"),
+	preload("res://scenes/workbench/phase_bench.tscn"),
 ]
-const TABS := ["整关预览", "弹幕台", "敌人台", "阶段台"]
+const SLOTS := ["整关预览", "弹幕台", "敌人台", "阶段台"]
 
-var _tab_btns: Array[Button] = []
-var _content: Control
-var _page: Control = null
-var _current := -1
-var _rig_instances: Array = [null, null, null]
+var _slot_buttons: Array[Button] = []
+var _view: Control = null
+var _current_slot: int = -1
+var _bench_instances: Array = [null, null, null]
 var _workspace_restores: Array = [{}, {}, {}]
 
 const CFG_PATH := "user://creation_station.cfg"
@@ -28,114 +27,106 @@ func _ready() -> void:
 	theme = WORKBENCH_THEME.build()
 	_build_ui()
 	_load_workspace()
-	_on_tab(_load_tab_override())
+	_on_slot(_load_slot_override())
 
 
 func _build_ui() -> void:
 	# 布局用场景里挂好的 root(VBoxContainer) 节点（作者在编辑器建的）——填充式，
 	# 和整关预览同为"tscn 挂节点 + 代码填内容"
-	var root := $root as VBoxContainer
-	root.add_theme_constant_override("separation", 0)
-	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 6)
-	bar.custom_minimum_size = Vector2(0, 34)
-	root.add_child(bar)
-	for i in TABS.size():
-		var b := Button.new()
-		b.text = TABS[i]
-		b.toggle_mode = true
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		# 横栏字号 13 → 按钮自然高度≈32：正好到游戏画框顶(视口 y=32)，不压画框顶线
-		b.add_theme_font_size_override("font_size", 13)
-		b.pressed.connect(_on_tab.bind(i))
-		bar.add_child(b)
-		_tab_btns.append(b)
-	_content = Control.new()
-	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(_content)
+	var bar: HBoxContainer = $root/bar
+	for i in SLOTS.size():
+		var button := Button.new()
+		button.text = SLOTS[i]
+		button.toggle_mode = true
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 16)
+		button.pressed.connect(_on_slot.bind(i))
+		bar.add_child(button)
+		_slot_buttons.append(button)
 
 
 ## 页签切换
-func _on_tab(i: int) -> void:
-	if _current == i and _page != null:
+func _on_slot(i: int) -> void:
+	if _current_slot == i and _view != null:
 		return
-	_clear_page()
-	_current = i
+	_clear_view()
+	_current_slot = i
 	if i == 0:
-		_page = WORKBENCH.instantiate()
+		_view = WORKBENCH.instantiate()
 	else:
-		var ri := i - 1
-		if _rig_instances[ri] == null:
-			_rig_instances[ri] = RIGS[ri].instantiate()
-		_page = _rig_instances[ri]
-	_page.visible = true
-	_page.process_mode = Node.PROCESS_MODE_INHERIT  # 恢复运转（连发状态保留，只是不再后台跑）
-	if _page.get_parent():
-		_page.get_parent().remove_child(_page)  # 常驻实例：切换前先脱离旧父
-	_content.add_child(_page)
+		var bench_i: int = i - 1
+		if _bench_instances[bench_i] == null:
+			_bench_instances[bench_i] = BENCHS[bench_i].instantiate()
+		_view = _bench_instances[bench_i]
+	_view.visible = true
+	_view.process_mode = Node.PROCESS_MODE_INHERIT  # 恢复运转（连发状态保留，只是不再后台跑）
+	if _view.get_parent():
+		_view.get_parent().remove_child(_view)  # 常驻实例：切换前先脱离旧父
+	var content: Control = $root/content
+	content.add_child(_view)
 	# 目录双击 → 组合台直达（整关页内目录）
 	if i == 0:
-		var wb = _page
+		var wb = _view
 		var catalog = wb.get("_catalog")
 		if catalog and not catalog.preset_requested.is_connected(_route_preset):
 			catalog.preset_requested.connect(_route_preset)
 	# 工作区恢复
 	if i > 0:
 		var ri := i - 1
-		var rig = _page
+		var bench = _view
 		var saved: Dictionary = _workspace_restores[ri]
-		if not saved.is_empty() and rig.has_method("_restore"):
-			rig._restore(saved)
+		if not saved.is_empty() and bench.has_method("_restore"):
+			bench._restore(saved)
 	_save_workspace()
-	for t in _tab_btns.size():
-		_tab_btns[t].button_pressed = t == i
+	for t in _slot_buttons.size():
+		_slot_buttons[t].button_pressed = t == i
 
 
 ## 目录双击条目 → 切对应台并装配
 func _route_preset(entry) -> void:
-	var tab := 1
+	var slot := 1
 	match entry.role:
 		"bullet":
-			tab = 1
+			slot = 1
 		"enemy":
-			tab = 2
+			slot = 2
 		"phase", "boss_move", "boss_shoot":
-			tab = 3
+			slot = 3
 		_:
 			return
-	_on_tab(tab)
-	var rig = _page
-	if rig and rig.has_method("_preset_from_entry"):
-		rig._preset_from_entry(entry)
+	_on_slot(slot)
+	var bench = _view
+	if bench and bench.has_method("_preset_from_entry"):
+		bench._preset_from_entry(entry)
 
 
 # ═══ 工作区自动恢复（user:// 配置）═══
 
-func _load_tab_override() -> int:
-	var cf := ConfigFile.new()
-	if cf.load(CFG_PATH) != OK:
+func _load_slot_override() -> int:
+	var config_file := ConfigFile.new()
+	if config_file.load(CFG_PATH) != OK:
 		return 1  # 默认弹幕台
-	return int(cf.get_value("ws", "tab", 1))
+	return int(config_file.get_value("ws", "slot", 1))
 
 
 func _load_workspace() -> void:
-	var cf := ConfigFile.new()
-	if cf.load(CFG_PATH) != OK:
+	var config_file := ConfigFile.new()
+	if config_file.load(CFG_PATH) != OK:
 		return
 	for i in 3:
-		_workspace_restores[i] = cf.get_value("rig%d" % i, "data", {})
+		_workspace_restores[i] = config_file.get_value("bench%d" % i, "data", {})
 
 
 func _save_workspace() -> void:
-	if _current < 0:
+	if _current_slot < 0:
 		return
-	var cf := ConfigFile.new()
-	cf.set_value("ws", "tab", _current)
+	var config_file := ConfigFile.new()
+	config_file.set_value("ws", "slot", _current_slot)
 	for i in 3:
-		var rig = _rig_instances[i]
-		if rig and rig.has_method("_snapshot"):
-			cf.set_value("rig%d" % i, "data", rig._snapshot())
-	cf.save(CFG_PATH)
+		var bench = _bench_instances[i]
+		if bench and bench.has_method("_snapshot"):
+			config_file.set_value("bench%d" % i, "data", bench._snapshot())
+	config_file.save(CFG_PATH)
 
 
 func _exit_tree() -> void:
@@ -143,19 +134,19 @@ func _exit_tree() -> void:
 
 
 ## 切走：整关 = 停关卡+清弹+停BGM 后释放；试验台 = 清运行时残留（UI 状态保留）
-func _clear_page() -> void:
-	if _page == null:
+func _clear_view() -> void:
+	if _view == null:
 		return
-	if _current == 0:
+	if _current_slot == 0:
 		StageManager.stop_stage()
 		BulletManager.clear_all()
 		AudioManager.stop_bgm()
-		_page.queue_free()
+		_view.queue_free()
 	else:
 		BulletManager.clear_all()
-		for e in GameState.get_active_enemies():
-			if is_instance_valid(e):
-				e.queue_free()
-		_page.visible = false
-		_page.process_mode = Node.PROCESS_MODE_DISABLED  # 冻结：连发/热更新/幽灵不后台跑
-	_page = null
+		for enemy in GameState.get_active_enemies():
+			if is_instance_valid(enemy):
+				enemy.queue_free()
+		_view.visible = false
+		_view.process_mode = Node.PROCESS_MODE_DISABLED  # 冻结：连发/热更新/幽灵不后台跑
+	_view = null

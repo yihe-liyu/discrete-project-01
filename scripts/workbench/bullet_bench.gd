@@ -1,4 +1,4 @@
-extends "res://scripts/workbench/rig_base.gd"
+extends "res://scripts/workbench/bench_base.gd"
 ## 弹幕试验台（M2a）—— 选行为（脚本）× 换外形（贴图/染色/初速/方向）× 发射点 × 幽灵玩家（鼠标跟随）
 ## 跑真实 BulletManager：子弹飞行/碰撞/擦弹/自定义行为 全部真实；所见即最终效果。
 ## 快捷键：F=发射 · C=清场 · 点击场地=设发射点
