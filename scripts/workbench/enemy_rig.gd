@@ -1,24 +1,20 @@
-extends Control
-## 敌人组合台（M3a）—— 选魂（行为脚本）× 换壳（外观/HP/判定/掉落）× 出生点 × 幽灵玩家（鼠标跟随）
+extends "res://scripts/workbench/rig_base.gd"
+## 敌人组合台（M3a）—— 选行为（脚本）× 设外形（外观/HP/判定/掉落）× 出生点 × 幽灵玩家（鼠标跟随）
 ## 跑真实 StageManager.spawn_enemy_data：敌人移动/发弹/行为脚本全部真实。
 
-const GHOST := preload("res://scripts/workbench/ghost_player.gd")
-const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/enemy_shell.gd")
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
-const RIG_COMMON := preload("res://scripts/workbench/rig_common.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 
 const FIXED_SEED := 20260801
 const HOT_POLL_INTERVAL := 0.5
 const HOT_DEBOUNCE := 0.8
-const VERSION_TAG := "v1.6-ui"
+const VERSION_TAG := "v1.7-ui"
 
 var _shell: Variant
 var _catalog: Variant
-var _ghost: Player
 var _spawn_pos := Vector2(GameConfig.FIELD_CENTER_X, 260.0)
 var _seed: int = FIXED_SEED
 
@@ -37,7 +33,6 @@ var _spawn_btn: Button
 var _clear_btn: Button
 var _seed_btn: Button
 var _stats_label: Label
-var _field: Control
 var _reload_status: Label
 var _toast: Control
 var _diff_sel: OptionButton
@@ -58,11 +53,11 @@ func _ready() -> void:
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
 	get_window().size = Vector2i(1280, 960)
-	_sync_world_offset()
+	sync_world_offset()  # 见 rig_base：页面偏移记入（游戏坐标换算用）
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()
-	_build_world()
+	build_world()  # 场地+幽灵（rig_base）
 	_build_ui()
 	_toast = STATUS_TOAST.new()
 	add_child(_toast)
@@ -74,34 +69,6 @@ func _ready() -> void:
 
 
 # ═══ 世界 ═══
-
-## 创作台嵌入时：记录页面偏移（横栏下方 page_y 像素；standalone 为 0）。
-## 场地【不】移动——移动会让可点击区域盖住页签横栏（按钮点不到）；
-## 改为在输入/绘制边界换算：游戏坐标 = 输入/绘制局部 + _world_offset
-var _world_offset := Vector2.ZERO
-
-func _sync_world_offset() -> void:
-	_world_offset = get_global_rect().position
-
-
-func _build_world() -> void:
-	RIG_COMMON.add_stage_bg(self)
-	_field = Control.new()
-	_field.position = Vector2.ZERO
-	_field.size = Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_BOTTOM)
-	_field.mouse_filter = Control.MOUSE_FILTER_STOP
-	_field.gui_input.connect(_on_field_input)
-	_field.draw.connect(_on_field_draw)
-	add_child(_field)
-	_ghost = PLAYER_SCENE.instantiate()
-	_ghost.set_script(GHOST)
-	_ghost.name = "GhostPlayer"
-	_ghost.set("mode", 1)
-	_ghost.player_data = preload("res://data/player_data/reimu_data.tres")
-	_ghost.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
-	_ghost.z_index = 30
-	_field.add_child(_ghost)
-
 
 # ═══ UI ═══
 
@@ -118,7 +85,7 @@ func _build_ui() -> void:
 
 	box.add_child(RIG_COMMON.section_label("敌人组合台 %s" % VERSION_TAG))
 
-	box.add_child(RIG_COMMON.section_label("魂：行为脚本"))
+	box.add_child(RIG_COMMON.section_label("行为脚本"))
 	_script_sel = OptionButton.new()
 	_script_sel.add_item("（无）移动")
 	var idx := 0
@@ -137,7 +104,7 @@ func _build_ui() -> void:
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
-	box.add_child(RIG_COMMON.section_label("壳：外形/属性"))
+	box.add_child(RIG_COMMON.section_label("外形/属性"))
 	box.add_child(_label("外观"))
 	_visual_sel = OptionButton.new()
 	for k in SHELL.visual_keys():
@@ -217,15 +184,6 @@ func _drop_spin(v: float) -> SpinBox:
 	sp.value = v
 	sp.custom_minimum_size = Vector2(70, 0)
 	return sp
-
-
-func _label(text: String, font_size: int = RIG_COMMON.LABEL_SIZE) -> Label:
-	return RIG_COMMON.label(text, font_size)
-
-
-## 提示行（左键=… · 鼠标=自机）：弱化小字
-func _hint(text: String) -> Label:
-	return _label(text, RIG_COMMON.HINT_SIZE)
 
 
 # ═══ 目录直达 / 工作区恢复 ═══
@@ -331,7 +289,7 @@ func _process(delta: float) -> void:
 func _on_script_changed(_idx: int) -> void:
 	_set_current_script()
 	_param_panel.rebuild(_cur_script)
-	_toast.show_msg("魂：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（无移动）"), Color(1, 1, 1, 0.85))
+	_toast.show_msg("行为：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（无移动）"), Color(1, 1, 1, 0.85))
 
 
 func _set_current_script() -> void:
@@ -437,16 +395,13 @@ func _do_hot_reload() -> void:
 
 # ═══ 场地交互 ═══
 
-func _on_field_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		_spawn_pos = (event as InputEventMouseButton).position + _world_offset  # 场地局部 → 游戏坐标
-		_field.queue_redraw()
+## 左键(游戏坐标) → 出生点（rig_base 基类处理坐标换算）
+func _on_click(game_pos: Vector2) -> void:
+	_spawn_pos = game_pos
 
 
-func _on_field_draw() -> void:
-	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - _world_offset.y,
-		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
-	_field.draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
-	var p := _spawn_pos - _world_offset
+## 出生点标记（橙十字；rig_base 已画金框）
+func _draw_marker() -> void:
+	var p := from_game(_spawn_pos)
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.6, 0.2), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.6, 0.2), 2.0)

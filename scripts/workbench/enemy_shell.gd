@@ -1,7 +1,7 @@
 class_name EnemyShell
 extends RefCounted
-## 敌人试验台 —— 敌人"壳"（临时试验道具，不落盘）。
-## 对应 EnemyData 的"外表侧"：外观/HP/判定/掉落；魂=行为脚本，二者独立组合。
+## 敌人试验台 —— 敌人"外形/数值"载体（临时试验道具，不落盘）。
+## 对应 EnemyData 的"外观/数值侧：外观/HP/判定/掉落；行为脚本由组合台选择，二者独立组合。
 
 var visual_key: String = "red_little_fairy"
 var max_hp: int = 100
@@ -14,7 +14,7 @@ var item_life_full: int = 0
 var item_bomb_full: int = 0
 
 
-## 组装 EnemyData（光壳 → 行为脚本；与游戏内容同款字段）
+## 组装 EnemyData（外形/数值 → 行为脚本；与游戏内容同款字段）
 func build(behavior_script: Script = null) -> EnemyData:
 	var d := EnemyData.new()
 	d.visual(visual_key)

@@ -1,21 +1,17 @@
-extends Control
-## 弹幕试验台（M2a）—— 选魂（行为脚本）× 换壳（外形面板）× 发射点 × 幽灵玩家（鼠标跟随）
+extends "res://scripts/workbench/rig_base.gd"
+## 弹幕试验台（M2a）—— 选行为（脚本）× 换外形（贴图/染色/初速/方向）× 发射点 × 幽灵玩家（鼠标跟随）
 ## 跑真实 BulletManager：子弹飞行/碰撞/擦弹/自定义行为 全部真实；所见即最终效果。
 ## 快捷键：F=发射 · C=清场 · 点击场地=设发射点
 
-const GHOST := preload("res://scripts/workbench/ghost_player.gd")
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
-const RIG_COMMON := preload("res://scripts/workbench/rig_common.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")  # WorkbenchTheme 构建器
-const PLAYER_SCENE := preload("res://scenes/player.tscn")
-const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v3.3-ui"
+const VERSION_TAG := "v3.4-ui"
 
 ## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
 const HOT_POLL_INTERVAL := 0.5
@@ -23,7 +19,6 @@ const HOT_DEBOUNCE := 0.8
 
 var _shell: Variant      # BulletShell（preload 构造，规避新 class 全局缓存）
 var _catalog: Variant    # ContentCatalog
-var _ghost: Player
 var _emitter_pos := Vector2(GameConfig.FIELD_CENTER_X, 300.0)
 var _seed: int = FIXED_SEED
 var _burst_left := 0.0
@@ -41,7 +36,6 @@ var _interval_spin: SpinBox
 var _clear_btn: Button
 var _seed_btn: Button
 var _stats_label: Label
-var _field: Control
 var _dir_angle_label: Label
 var _param_panel: VBoxContainer
 
@@ -52,7 +46,7 @@ var _hot_chk: CheckBox
 var _diff_sel: OptionButton
 
 # ── 热更新状态 ──
-var _cur_script: Script = null          # 当前魂（发射用它；热重载后替换）
+var _cur_script: Script = null          # 当前行为脚本（发射用它；热重载后替换）
 var _cur_script_path: String = ""
 var _watch_paths: Array[String] = []
 var _watch_mtimes: Dictionary = {}
@@ -65,12 +59,12 @@ func _ready() -> void:
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
 	get_window().size = Vector2i(1280, 960)
-	_sync_world_offset()
+	sync_world_offset()  # 见 rig_base：页面偏移记入（游戏坐标换算用）
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
 	# 关键：用工作台同款主题——项目全局 ui_theme 字体大，面板会被内容撑爆（513>432）
 	theme = WORKBENCH_THEME.build()
-	_build_world()
+	build_world()  # 场地+幽灵（rig_base）
 	_build_ui()
 	_toast = STATUS_TOAST.new()
 	add_child(_toast)
@@ -83,37 +77,6 @@ func _ready() -> void:
 
 
 # ═══ 世界 ═══
-
-## 创作台嵌入时：记录页面偏移（横栏下方 page_y 像素；standalone 为 0）。
-## 场地【不】移动——移动会让可点击区域盖住页签横栏（按钮点不到）；
-## 改为在输入/绘制边界换算：游戏坐标 = 输入/绘制局部 + _world_offset
-var _world_offset := Vector2.ZERO
-
-func _sync_world_offset() -> void:
-	_world_offset = get_global_rect().position
-
-
-func _build_world() -> void:
-	RIG_COMMON.add_stage_bg(self)
-	# 场地：与工作台同款——直接子节点绝对定位；(0,0) 起、832x928 → 局部坐标=游戏坐标
-	_field = Control.new()
-	_field.position = Vector2.ZERO
-	_field.size = Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_BOTTOM)
-	_field.mouse_filter = Control.MOUSE_FILTER_STOP
-	_field.gui_input.connect(_on_field_input)
-	_field.draw.connect(_on_field_draw)
-	add_child(_field)
-	# 幽灵玩家：鼠标跟随（自机狙目标）
-	_ghost = PLAYER_SCENE.instantiate()
-	_ghost.set_script(GHOST)
-	_ghost.name = "GhostPlayer"
-	_ghost.set("mode", 1)  # GhostPlayer.Mode.MOUSE（AUTO=0/MOUSE=1/STATIC=2；静态类型 Player 无 mode，用 set 动态写）
-	_ghost.player_data = REIMU_DATA  # 必须：Player._ready 会应用角色数据（工作台同款）
-	_ghost.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
-	_ghost.z_index = 30
-	# 关键：挂到【场地】下（非根）——根节点顺序是 HBox(场地+面板)→幽灵，会画在面板之上
-	_field.add_child(_ghost)
-
 
 # ═══ UI ═══
 
@@ -141,7 +104,7 @@ func _build_ui() -> void:
 	panel_scroll.add_child(box)
 
 	box.add_child(RIG_COMMON.section_label("弹幕组合台 %s" % VERSION_TAG))
-	box.add_child(RIG_COMMON.section_label("魂：行为脚本"))
+	box.add_child(RIG_COMMON.section_label("行为脚本"))
 
 	_script_sel = OptionButton.new()
 	_script_sel.add_item("（无）直线弹")
@@ -164,7 +127,7 @@ func _build_ui() -> void:
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
-	box.add_child(RIG_COMMON.section_label("壳：外形"))
+	box.add_child(RIG_COMMON.section_label("外形"))
 
 	box.add_child(_label("贴图（含判定）"))
 	_tex_sel = OptionButton.new()
@@ -258,19 +221,6 @@ func _build_ui() -> void:
 	_hot_chk.toggled.connect(_on_hot_toggled)
 	box.add_child(_hot_chk)
 	box.add_child(_hint("左键=发射点 · 右键=指向 · 鼠标=自机"))
-
-
-func _label(text: String, font_size: int = RIG_COMMON.LABEL_SIZE) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", font_size)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # 换行：不撑宽（面板 432 内）
-	return l
-
-
-## 提示行（左键=… · 鼠标=自机）：弱化小字
-func _hint(text: String) -> Label:
-	return _label(text, RIG_COMMON.HINT_SIZE)
 
 
 # ═══ 目录直达 / 工作区恢复 ═══
@@ -370,7 +320,7 @@ func _process(delta: float) -> void:
 func _on_script_changed(_idx: int) -> void:
 	_set_current_script()
 	_param_panel.rebuild(_cur_script)
-	_toast.show_msg("魂：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（直线弹）"), Color(1, 1, 1, 0.85))
+	_toast.show_msg("行为：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（直线弹）"), Color(1, 1, 1, 0.85))
 
 
 func _set_current_script() -> void:
