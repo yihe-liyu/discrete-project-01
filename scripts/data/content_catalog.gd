@@ -146,14 +146,49 @@ func _scan_script(path: String) -> void:
 	var e := Entry.new()
 	e.role = role
 	e.path = path
+	e.annotations = ann
+	e.stage_key = _stage_key(path)
+	_apply_meta(e, ann, path, text)
+	_add(e)
+
+
+## const META 优先；缺 name 或加载失败 → 回退 @name/@desc 注解/注释块（不静默）
+func _apply_meta(e: Entry, ann: Dictionary, path: String, text: String) -> void:
+	if text.contains("const META"):
+		var meta: Dictionary = _read_meta(path)
+		if not meta.is_empty():
+			var n: Variant = meta.get("name", "")
+			if n is String and n.strip_edges() != "":
+				var name: String = n.strip_edges()
+				e.name = _truncate(name, 18)
+				e.extra["full_title"] = name
+				var d: Variant = meta.get("desc", "")
+				e.description = (d as String).strip_edges() if d is String else ""
+				return
+			_warnings.append("META 缺 name [%s]：回退注解" % path.get_file())
+	# 回退：注解 / 注释块
 	var raw_name: String = ann.get("name", ann.get("_default_name", path.get_file().get_basename()))
 	e.name = _short_name(raw_name)
 	e.extra["full_title"] = raw_name
 	e.description = ann.get("desc",
 		" ".join(ann.get("_comments", [])) if ann.has("name") else ann.get("_desc", ""))
-	e.annotations = ann
-	e.stage_key = _stage_key(path)
-	_add(e)
+
+
+## 读脚本 const META（有则返回字典，无/加载失败返回空）
+func _read_meta(path: String) -> Dictionary:
+	var S := load(path)
+	if S == null:
+		return {}
+	var map: Dictionary = S.get_script_constant_map()
+	var meta: Variant = map.get("META", {})
+	return meta if meta is Dictionary else {}
+
+
+## 仅按长度截断（不再砍"："之后 —— 那是旧 _short_name 的坑）
+func _truncate(s: String, limit: int) -> String:
+	if s.length() > limit:
+		return s.substr(0, limit) + "…"
+	return s
 
 
 func _scan_tres(path: String) -> void:

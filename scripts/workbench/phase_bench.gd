@@ -33,6 +33,8 @@ var _clear_btn: Button
 var _seed_btn: Button
 var _stats_label: Label
 var _name_label: Label
+var _move_desc: Label
+var _shoot_desc: Label
 var _reload_status: Label
 var _toast: Control
 var _hot_chk: CheckBox
@@ -106,6 +108,8 @@ func _build_ui() -> void:
 	_move_sel.add_item("（空）— Boss 原地")
 	_fill_script_options(_move_sel, "boss_move")
 	box.add_child(_move_sel)
+	_move_desc = _desc_label()
+	box.add_child(_move_desc)
 	_move_params = PARAM_PANEL.new()
 	box.add_child(_move_params)
 	_move_sel.item_selected.connect(_on_slots_changed)
@@ -114,6 +118,8 @@ func _build_ui() -> void:
 	_shoot_sel.add_item("（空）— 不发弹")
 	_fill_script_options(_shoot_sel, "boss_shoot")
 	box.add_child(_shoot_sel)
+	_shoot_desc = _desc_label()
+	box.add_child(_shoot_desc)
 	_shoot_params = PARAM_PANEL.new()
 	box.add_child(_shoot_params)
 	_shoot_sel.item_selected.connect(_on_slots_changed)
@@ -149,9 +155,17 @@ func _build_ui() -> void:
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
+	box.add_child(RIG_COMMON.section_label("开发"))
+	_hot_chk = CheckBox.new()
+	_hot_chk.text = "热更新"
+	_hot_chk.button_pressed = true
+	_hot_chk.toggled.connect(_on_hot_toggled)
+	box.add_child(_hot_chk)
+	box.add_child(_hint("左键=Boss落点 · 鼠标=自机"))
+
 	box.add_child(RIG_COMMON.section_label("操作"))
 	var ops := GridContainer.new()
-	ops.columns = 2
+	ops.columns = 3
 	ops.add_theme_constant_override("h_separation", 8)
 	ops.add_theme_constant_override("v_separation", 4)
 	_play_btn = RIG_COMMON.accent_button("开演")
@@ -168,13 +182,6 @@ func _build_ui() -> void:
 
 	_stats_label = _label("")
 	box.add_child(_stats_label)
-	box.add_child(RIG_COMMON.section_label("开发"))
-	_hot_chk = CheckBox.new()
-	_hot_chk.text = "热更新"
-	_hot_chk.button_pressed = true
-	_hot_chk.toggled.connect(_on_hot_toggled)
-	box.add_child(_hot_chk)
-	box.add_child(_hint("左键=Boss落点 · 鼠标=自机"))
 
 
 func _num_spin(mn: float, mx: float, val: float) -> SpinBox:
@@ -213,6 +220,7 @@ func _select_phase(idx: int) -> void:
 	_shoot_path = p.shoot_script.resource_path if p.shoot_script else ""
 	_rebuild_watch()
 	_rebuild_param_panels()
+	_update_slot_desc()
 
 
 func _script_index(role: String, script: Script) -> int:
@@ -233,12 +241,40 @@ func _on_slots_changed(_i: int) -> void:
 	_shoot_path = sh.resource_path if sh else ""
 	_rebuild_watch()
 	_rebuild_param_panels()
+	_update_slot_desc()
 
 
 ## 按当前槽位重建两个参数面板
 func _rebuild_param_panels() -> void:
 	_move_params.rebuild(_resolve_slot(_move_sel, "boss_move"))
 	_shoot_params.rebuild(_resolve_slot(_shoot_sel, "boss_shoot"))
+
+
+## 描述 Label：16 号（同字段标签）+ 弱化金色，与可交互项区分
+func _desc_label() -> Label:
+	var l := _label("")
+	l.modulate = Color(0.82, 0.78, 0.7, 1.0)
+	return l
+
+
+## 刷新两个脚本槽位的描述（来自目录 entry.description = @desc / const META）
+func _update_slot_desc() -> void:
+	_move_desc.text = "▶ 描述：" + _slot_desc(_move_sel, "boss_move")
+	_shoot_desc.text = "▶ 描述：" + _slot_desc(_shoot_sel, "boss_shoot")
+
+
+## 取某槽位当前选项的描述；无选项/无描述给占位
+func _slot_desc(sel: OptionButton, role: String) -> String:
+	var i := sel.selected
+	if i <= 0:
+		return "（无脚本）"
+	var list = _catalog.by_role(role)
+	if i - 1 >= list.size():
+		return ""
+	var e = list[i - 1]
+	if e.description == "":
+		return "（无描述）"
+	return e.description
 
 
 ## 双槽 → 当前脚本路径（空=null）

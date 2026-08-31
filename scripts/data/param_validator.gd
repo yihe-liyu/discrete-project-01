@@ -1,10 +1,11 @@
 ## ParamValidator —— 参数注入校验（无 class_name，使用处 preload 引用）。
 extends RefCounted
 
-## 参数注入校验（C4：把"打错键名 / 类型不匹配静默失效"变成"校验 + 响亮报错"）。
+## 参数注入校验（C4：把"类型不匹配静默失效"变成"校验 + 响亮报错"）。
 ## 用法：把注入点原来那个 `for k in params: if k in script: script.set(...)`
 ##       替换成 `ParamValidator.apply(script, params)`。
-## - 未在脚本属性列表里的键 → push_warning（共享字典跨脚本合法：PhaseData.params 同灌 move+shoot）。
+## - 未在脚本属性列表里的键 → 静默跳过（共享字典跨脚本合法：PhaseData.params 同灌 move+shoot，
+##   未知键通常属于兄弟脚本，无法与"打错键名"可靠区分，故不警告以免刷屏——validate_unknown_keys 仍保留供按需用）。
 ## - 类型明显不匹配（数字/向量/颜色等互不兼容）→ push_error。
 ## - 宽松放行：int↔float、String↔数字（Godot 会 coerce），避免误报。
 ## 返回错误列表（供测试/更细处理；apply 会 push_error）。
@@ -37,14 +38,12 @@ static func validate_unknown_keys(target: Object, params: Dictionary) -> Array[S
 	return warns
 
 
-## 校验 + 只设合法键 + 响亮报错（类型错）warn（未知键）
+## 校验 + 只设合法键 + 类型错响亮报错。未知键不再警告（共享字典跨脚本合法，见文件头）。
 static func apply(target: Object, params: Dictionary) -> void:
 	if target == null:
 		return
 	for e in validate(target, params):
 		push_error("ParamValidator: " + e)
-	for w in validate_unknown_keys(target, params):
-		push_warning("ParamValidator: " + w)
 	for k in params:
 		if k in target:
 			target.set(k, params[k])

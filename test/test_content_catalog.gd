@@ -136,6 +136,18 @@ func test_fixture_annotation_override_and_boundaries():
 	_rmtree(root)
 
 
+## ── const META：内容自带元数据 ──
+
+func test_real_content_meta_const():
+	var cat = CAT.new().scan()
+	var e = cat.find("res://data/boss_scripts/move/random_dir_move.gd")
+	assert_not_null(e, "random_dir_move 在目录")
+	if e:
+		assert_eq(e.name, "随机方向移动", "const META 名字（不再被冒号截断成描述）")
+		assert_true(e.description.begins_with("每隔 jump_interval"), "const META 描述")
+		assert_eq(e.extra["full_title"], "随机方向移动", "完整名保留在 extra")
+
+
 ## ── 工具 ──
 
 func _write(path: String, text: String) -> void:

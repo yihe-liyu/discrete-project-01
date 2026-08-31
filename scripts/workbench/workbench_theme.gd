@@ -35,7 +35,8 @@ static func build() -> Theme:
 	# （▾▸ 用 ▼▶；emoji 用 ★◆×＊！⚠ 等代替，Scripts 内已统一）
 	var font: FontFile = (load("res://assets/fonts/SourceHanSerifCN-Medium.otf") as FontFile).duplicate() as FontFile
 	t.default_font = font
-	t.default_font_size = 16  # 控件默认字号；标签阶梯见 rig_common（SECTION/LABEL/HINT_SIZE）
+	t.default_font_size = 18  # 控件默认字号；标签阶梯见 rig_common（SECTION/LABEL/HINT_SIZE）
+	# 顶部切换按钮用硬编码 16 保持紧凑（creation_station._slot_buttons）
 	# Label：描边 1 + 关阴影——工作台字号 12-14，游戏主题的 2px 描边 + 偏移阴影
 	# 在小字上会把字形糊成一团（屏幕上看起来像乱码）；大字号页面才用重描边
 	t.set_color("font_outline_color", "Label", Color(0, 0, 0, 1))

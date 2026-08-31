@@ -149,9 +149,17 @@ func _build_ui() -> void:
 	_param_panel = PARAM_PANEL.new()
 	box.add_child(_param_panel)
 
+	box.add_child(RIG_COMMON.section_label("开发"))
+	_hot_chk = CheckBox.new()
+	_hot_chk.text = "热更新"
+	_hot_chk.button_pressed = true
+	_hot_chk.toggled.connect(_on_hot_toggled)
+	box.add_child(_hot_chk)
+	box.add_child(_hint("左键=出生点 · 鼠标=自机"))
+
 	box.add_child(RIG_COMMON.section_label("操作"))
 	var ops := GridContainer.new()
-	ops.columns = 2
+	ops.columns = 3
 	ops.add_theme_constant_override("h_separation", 8)
 	ops.add_theme_constant_override("v_separation", 4)
 	_spawn_btn = RIG_COMMON.accent_button("生成")
@@ -168,13 +176,6 @@ func _build_ui() -> void:
 
 	_stats_label = _label("")
 	box.add_child(_stats_label)
-	box.add_child(RIG_COMMON.section_label("开发"))
-	_hot_chk = CheckBox.new()
-	_hot_chk.text = "热更新"
-	_hot_chk.button_pressed = true
-	_hot_chk.toggled.connect(_on_hot_toggled)
-	box.add_child(_hot_chk)
-	box.add_child(_hint("左键=出生点 · 鼠标=自机"))
 
 
 func _drop_spin(v: float) -> SpinBox:

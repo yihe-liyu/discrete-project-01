@@ -38,8 +38,11 @@ func build_world() -> Control:
 	return _field
 
 
-## 创作台嵌入时记录页面偏移（standalone 为 0）。调用点须在页面布局就绪后。
+## 创作台嵌入时记录页面偏移（standalone 为 0）。deferred：等布局就绪再取（首台 _ready 时 add_child 未布局完）。
 func sync_world_offset() -> void:
+	call_deferred("_sync_world_offset_now")
+
+func _sync_world_offset_now() -> void:
 	_world_offset = get_global_rect().position
 
 
@@ -65,6 +68,7 @@ func build_panel_scroll() -> VBoxContainer:
 	box.add_theme_constant_override("separation", 6)
 	scroll.add_child(box)
 	return box
+
 
 
 ## 字段标签（默认 LABEL_SIZE）

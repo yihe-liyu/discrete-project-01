@@ -4,6 +4,11 @@ extends CoroutineScript
 ## RNG 可复现；tween 物理模式
 ## auto_stop = false（持续运行直到 phase 结束）
 
+const META := {
+	"name": "随机方向移动",
+	"desc": "每隔 jump_interval 秒随机选一个方向（360°），移动固定距离；目标点限制在框上方。",
+}
+
 var jump_interval: float = 5   # 移动间隔（秒）
 var move_time: float = 1.2       # 单次移动耗时（秒，tween 时长）
 var move_distance: float = 120.0 # 单次移动距离（像素）

@@ -3,9 +3,9 @@ extends RefCounted
 ## 视觉与游戏页面统一：半透明黑底 + 金边卡片（ui_theme 同款）
 
 ## 字号阶梯（全创作台唯一来源）：改字号只动这里 + workbench_theme.default_font_size
-const SECTION_SIZE := 16  ## 金色节标题（行为/外形/参数/操作/开发…）+ 各台标题
-const LABEL_SIZE := 16    ## 字段标签（贴图/染色/外观/HP/难度…）
-const HINT_SIZE := 13     ## 提示行（左键=… · 鼠标=自机）
+const SECTION_SIZE := 18  ## 金色节标题（行为/外形/参数/操作/开发…）+ 各台标题
+const LABEL_SIZE := 18    ## 字段标签（贴图/染色/外观/HP/难度…）
+const HINT_SIZE := 15     ## 提示行（左键=… · 鼠标=自机）
 
 static func label(text: String, font_size: int) -> Label:
 	var l := Label.new()
@@ -78,10 +78,10 @@ static func make_panel() -> PanelContainer:
 	p.anchor_left = 1.0
 	p.anchor_right = 1.0
 	p.anchor_top = 0.0
-	p.anchor_bottom = 0.0
+	p.anchor_bottom = 1.0
 	p.offset_left = -440.0
 	p.offset_top = 8.0
 	p.offset_right = -8.0
-	p.offset_bottom = 952.0
+	p.offset_bottom = -8.0
 	p.add_theme_stylebox_override("panel", panel_style())
 	return p

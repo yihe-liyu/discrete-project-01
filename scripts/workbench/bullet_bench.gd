@@ -86,11 +86,11 @@ func _build_ui() -> void:
 	panel.anchor_left = 1.0
 	panel.anchor_right = 1.0
 	panel.anchor_top = 0.0
-	panel.anchor_bottom = 0.0
+	panel.anchor_bottom = 1.0
 	panel.offset_left = -440.0
 	panel.offset_top = 8.0
 	panel.offset_right = -8.0
-	panel.offset_bottom = 952.0
+	panel.offset_bottom = -8.0
 	# 与游戏页面统一：半透明黑底 + 金边卡片（rig_common 单一来源）
 	panel.add_theme_stylebox_override("panel", RIG_COMMON.panel_style())
 	add_child(panel)
@@ -176,6 +176,14 @@ func _build_ui() -> void:
 	_param_panel = PARAM_PANEL.new()
 	box.add_child(_param_panel)
 
+	box.add_child(RIG_COMMON.section_label("开发"))
+	_hot_chk = CheckBox.new()
+	_hot_chk.text = "热更新"
+	_hot_chk.button_pressed = true
+	_hot_chk.toggled.connect(_on_hot_toggled)
+	box.add_child(_hot_chk)
+	box.add_child(_hint("左键=发射点 · 右键=指向 · 鼠标=自机"))
+
 	box.add_child(RIG_COMMON.section_label("操作"))
 
 	# 操作按钮 2×2 网格：横排 4 个会把面板最小宽顶爆（489>432）
@@ -214,13 +222,6 @@ func _build_ui() -> void:
 
 	_stats_label = _label("")
 	box.add_child(_stats_label)
-	box.add_child(RIG_COMMON.section_label("开发"))
-	_hot_chk = CheckBox.new()
-	_hot_chk.text = "热更新"
-	_hot_chk.button_pressed = true
-	_hot_chk.toggled.connect(_on_hot_toggled)
-	box.add_child(_hot_chk)
-	box.add_child(_hint("左键=发射点 · 右键=指向 · 鼠标=自机"))
 
 
 # ═══ 目录直达 / 工作区恢复 ═══
