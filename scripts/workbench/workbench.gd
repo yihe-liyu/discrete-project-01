@@ -34,7 +34,7 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v4.4-ui"
+const VERSION := "v4.5-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
@@ -51,8 +51,7 @@ const DIFFICULTIES: Array[String] = ["Easy", "Normal", "Hard", "Lunatic"]
 const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
 
 # ═══ .tscn 框架节点 ═══
-@onready var _right_panel: MarginContainer = %RightPanel
-@onready var _divider: ColorRect = %Divider
+
 @onready var _timeline: TimelineBar = %Timeline
 @onready var _stage_grid: GridContainer = %StageGrid
 @onready var _world: Node2D = $World
@@ -75,9 +74,6 @@ var _background: Node
 var _hitbox_overlay: Node2D  # 实际是 HitboxOverlay（preload，避免类缓存依赖）
 
 # 面板拖拽
-var _drag_divider := false
-var _drag_start_x := 0.0
-var _drag_start_off := 0.0
 # 详情表单高度拖拽
 
 var _auto_bookmarks: Array = []    # 自动收集时刻（当前缓存，编辑后重存用）
@@ -132,8 +128,6 @@ func _ready() -> void:
 	_setup_world()
 	_load_stage()
 	_check_phase_uid_conflicts()
-	# 初始面板宽度校正（延迟一帧：等窗口/布局就绪，基于实际窗口宽）
-	_clamp_panel_width.call_deferred()
 
 
 ## phase 倒计时（仿真游戏 BossUI）：两位秒数、框顶中央，间隙/无 Boss 隐藏
@@ -211,9 +205,6 @@ func _sync_ui_layer_offset() -> void:
 		# 时间轴锚定视口底部 928..960，天然正确。
 		var rp := %RightPanel as Control
 		rp.offset_top += pos.y
-		var dv := %Divider as Control
-		dv.offset_top += pos.y
-		dv.offset_bottom += pos.y
 		# 舞台（幽灵/背景/边框/网格/命中/计时器）归一到游戏坐标（视口空间）：
 		# 子弹/敌人在 autoload 根空间=游戏坐标，页面偏移会让瞄准/绘制差 page_y 像素
 		$World.position.y -= pos.y
@@ -304,8 +295,6 @@ func _build_ui() -> void:
 	_timeline.jump_to.connect(_jump_to)
 	_timeline.right_clicked.connect(_bookmarks.open_add)
 
-	# ── 分割条拖拽（.tscn 节点）──
-	_divider.gui_input.connect(_on_divider_input)
 
 
 ## 页签切换：只显示对应页，按钮高亮同步
@@ -640,36 +629,6 @@ func _update_ui() -> void:
 func _log_line(text: String) -> void:
 	if _log_view:
 		_log_view.log_line(text)
-
-
-# ═══ 右侧面板拖拽 ═══
-
-## 面板初始宽度校正：左边缘不越过游戏框右缘 + 16（仅初始/窗口变化调用）
-func _clamp_panel_width() -> void:
-	var win_w := GameConfig.VIEW_WIDTH
-	var min_left := -(win_w - GameConfig.FIELD_RIGHT - 16.0)
-	if _right_panel and _right_panel.offset_left > min_left:
-		_right_panel.offset_left = min_left
-		_divider.offset_left = min_left - 8.0
-		_divider.offset_right = min_left
-
-
-func _on_divider_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_drag_divider = event.pressed
-		if event.pressed:
-			_drag_start_x = (event as InputEventMouseButton).global_position.x
-			_drag_start_off = _right_panel.offset_left
-	elif event is InputEventMouseMotion and _drag_divider:
-		var mm := event as InputEventMouseMotion
-		var dx: float = mm.global_position.x - _drag_start_x
-		# 宽度范围：面板 300 ~ 窗口-120（offset_left 为负值）
-		var min_w := 300.0
-		var max_w := GameConfig.VIEW_WIDTH - 120.0
-		var new_off := clampf(_drag_start_off + dx, -max_w, -min_w)
-		_right_panel.offset_left = new_off
-		_divider.offset_left = new_off - 8.0
-		_divider.offset_right = new_off
 
 
 ## Ctrl+G：强制击破当前 Boss 阶段（调试解锁 + 跳阶段）
