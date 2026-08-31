@@ -16,6 +16,7 @@ extends Control
 
 signal finished(result: Dictionary)
 signal back()
+signal sfx_requested(kind: String)   # 音效意图：只喊，不碰音频；由 MenuNav 接线播放
 
 # ═══ 内置遮罩（可选） ═══
 
@@ -24,13 +25,8 @@ const OVERLAY_FADE_OUT: float = 0.15
 
 ## 设为 true 则 _on_enter 时自动淡入暗色遮罩
 @export var auto_overlay: bool = true
-## 遮罩颜色
-@export var overlay_color: Color = Color(0, 0, 0, 0.5)
-## 遮罩淡入时长
-@export var overlay_fade_in_dur: float = OVERLAY_FADE_IN
-## 遮罩淡出时长
-@export var overlay_fade_out_dur: float = OVERLAY_FADE_OUT
 
+var overlay_color: Color = Color(0, 0, 0, 0.5)
 var _overlay: ColorRect = null
 
 
@@ -102,71 +98,69 @@ func _fade_overlay_in(duration: float = -1.0) -> void:
 		return
 	_overlay.modulate.a = 0.0
 	_overlay.visible = true
-	var dur := duration if duration >= 0 else overlay_fade_in_dur
-	var tw := _overlay.create_tween()
-	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(_overlay, "modulate:a", 1.0, dur)
+	var tween := _overlay.create_tween()
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_overlay, "modulate:a", 1.0, duration)
 
 
 ## 淡出遮罩
 func _fade_overlay_out(duration: float = -1.0) -> Tween:
 	if not _overlay:
 		return null
-	var dur := duration if duration >= 0 else overlay_fade_out_dur
-	var tw := _overlay.create_tween()
-	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(_overlay, "modulate:a", 0.0, dur)
-	return tw
+	var tween := _overlay.create_tween()
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_overlay, "modulate:a", 0.0, duration)
+	return tween
 
 
 ## 内容淡入（从右侧滑入 + 透明 → 不透明）
-func _fade_content_in(content: Control, duration: float = 0.2, slide: bool = true) -> void:
+func _fade_content_in(content: Control, duration: float = OVERLAY_FADE_IN, slide: bool = true) -> void:
 	content.modulate.a = 0.0
 	if slide:
 		content.position.x += 30
 
-	var tw := create_tween().set_parallel(true)
-	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(content, "modulate:a", 1.0, duration)
+	var tween := create_tween().set_parallel(true)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(content, "modulate:a", 1.0, duration)
 	if slide:
-		tw.tween_property(content, "position:x", content.position.x - 30, duration)
+		tween.tween_property(content, "position:x", content.position.x - 30, duration)
 
 
 ## 内容 + 遮罩 一起淡出
-func _fade_all_out(content: Control, content_dur: float = 0.15, overlay_dur: float = -1.0) -> void:
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(content, "modulate:a", 0.0, content_dur)
+func _fade_all_out(content: Control, content_duration: float = OVERLAY_FADE_OUT, overlay_duration: float = -1.0) -> void:
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(content, "modulate:a", 0.0, content_duration)
 
-	var ov_tw := _fade_overlay_out(overlay_dur)
+	var overlay_tween := _fade_overlay_out(overlay_duration)
 
 	var cb := func():
 		finished.emit({})
 		queue_free()
 
-	if ov_tw:
-		ov_tw.tween_callback(cb)
+	if overlay_tween:
+		overlay_tween.tween_callback(cb)
 	else:
-		tw.tween_callback(cb)
+		tween.tween_callback(cb)
 
 
 ## 覆盖层退场：遮罩淡出 + 内容缩小淡出 → queue_free
 ## 调用前需自行关闭导航（_nav_enabled=false, _stop_pulse()）
 func _overlay_leave(content: Control) -> void:
-	var tw := create_tween().set_parallel(true)
-	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var tween := create_tween().set_parallel(true)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_fade_overlay_out(0.15)
-	tw.tween_property(content, "modulate", Color(1, 1, 1, 0), 0.12)
-	tw.tween_property(content, "scale", Vector2(0.95, 0.95), 0.12)
-	tw.tween_callback(queue_free)
+	tween.tween_property(content, "modulate", Color(1, 1, 1, 0), 0.12)
+	tween.tween_property(content, "scale", Vector2(0.95, 0.95), 0.12)
+	tween.tween_callback(queue_free)
 
 
-# ═══ 音效快捷 ═══
+# ═══ 音效快捷（只表达意图，不碰音频数据；AudioManager 是音效知识唯一 owner） ═══
 
 func sfx_nav() -> void:
-	AudioManager.play_sfx(AssetRegistry.sounds["select"])
+	sfx_requested.emit("nav")
 
 func sfx_confirm() -> void:
-	AudioManager.play_sfx(AssetRegistry.sounds["ok"])
+	sfx_requested.emit("confirm")
 
 func sfx_back() -> void:
-	AudioManager.play_sfx(AssetRegistry.sounds["cancel"])
+	sfx_requested.emit("back")

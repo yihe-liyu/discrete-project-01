@@ -138,6 +138,17 @@ func play_sfx(stream: AudioStream, volume_db: float = 0.0, min_interval: float =
 	player.play()
 
 
+## UI 音效语义键 → 资源键（音效知识唯一 owner：调用方只喊 "nav/confirm/back"，不必知道资源键）
+const UI_SFX_KEYS := {"nav": "select", "confirm": "ok", "back": "cancel"}
+
+## 播放 UI 音效（按语义 kind，如 "nav"/"confirm"/"back"）
+func play_ui_sfx(kind: String) -> void:
+	var key: String = UI_SFX_KEYS.get(kind, "")
+	if key == "":
+		return
+	play_sfx(AssetRegistry.sounds[key])
+
+
 ## 从池中挑一个可用的播放器。
 ## 优先空闲；全忙时先踢不受保护的（最老的），全被保护才踢最老——重要音效不被挤掉。
 func _pick_sfx_player() -> AudioStreamPlayer:

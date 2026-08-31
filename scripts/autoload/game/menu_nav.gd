@@ -254,6 +254,9 @@ func _connect_signals(page: Node) -> void:
 	if page.has_signal("back"):
 		if not page.back.is_connected(_on_page_back):
 			page.back.connect(_on_page_back.bind(page))
+	if page.has_signal("sfx_requested"):
+		if not page.sfx_requested.is_connected(_on_page_sfx):
+			page.sfx_requested.connect(_on_page_sfx.bind(page))
 
 
 func _disconnect_signals(page: Node) -> void:
@@ -263,6 +266,8 @@ func _disconnect_signals(page: Node) -> void:
 		page.finished.disconnect(_on_page_finished)
 	if page.has_signal("back") and page.back.is_connected(_on_page_back):
 		page.back.disconnect(_on_page_back)
+	if page.has_signal("sfx_requested") and page.sfx_requested.is_connected(_on_page_sfx):
+		page.sfx_requested.disconnect(_on_page_sfx)
 
 
 func _set_active(page: Node, active: bool) -> void:
@@ -288,3 +293,8 @@ func _on_page_back(page: Node) -> void:
 		pop()
 	elif page in _overlay_stack:
 		pop_specific_overlay(page)
+
+
+## 页面请求播放音效（BasePage 只发意图，这里转给 AudioManager 执行）
+func _on_page_sfx(kind: String, _page: Node) -> void:
+	AudioManager.play_ui_sfx(kind)
