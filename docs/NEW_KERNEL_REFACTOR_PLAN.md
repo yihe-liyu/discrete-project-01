@@ -489,3 +489,55 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 **坑**：headless（dummy 渲染器）下 `MultiMesh.get_instance_transform_2d()` **读回恒为 0**——逐实例几何不能在 CI 里断言；S2 的断言因此落在批次数 / `visible_instance_count` / `z_index` / 材质 / 网格尺寸，**画面一致性留给 S3 之后的手动试玩**。
 
 **下一拼图 S3**：`BulletManager` 加 `use_kernel` 开关，`shoot_enemy_bullet` 委托后端；需手动试玩 stage01 验证表现一致。
+
+---
+
+## 16. S3 前置决策：碰撞 / 伤害模型（2026-09-11，**待定**）
+
+> 原计划 S3 = "加 `use_kernel` + 委托后端"。读全 `BulletPhysics` / 内核 `CollisionResolver` / `BulletType` 后确认：**S3 不是"换发射入口"，而是"换掉整个弹幕运行时"**——只换发射会让弹幕变成"只飞不判定"或"数值差 10–50 倍"。下面是动手前必须先定的分叉。
+
+### 16.1 硬阻塞：内核 `BulletType` **没有 `damage`**
+
+| | 原项目 | 重建内核 |
+|---|---|---|
+| 伤害载体 | `BulletData.damage`（默认 **10.0**，Bomb **50.0**） | **无此字段** |
+| 结算 | `enemy.take_damage(bullet.damage * bonus)`（记忆 <50 时 `bonus = 1.15~1.05`），`Enemy` 内部**小数累积** | `Enemy._on_bullet_overlap` → `take_damage(1.0)` |
+| 量级 | Boss HP 1000 → 约 100 发 | 同 Boss 需 1000 发 |
+
+→ 直接把原项目弹幕灌进内核，**Boss TTK 差 ~10×，杂兵（HP 3 / 24）差更多**。这是玩法崩坏，不是表现细节。
+
+### 16.2 其他必须一起搬的规则（全在 `BulletPhysics`，内核没有对等物）
+
+| 规则 | 原项目 | 内核现状 |
+|---|---|---|
+| 敌弹 vs 自机 **命中 + 擦弹双阈值** | `_resolve_enemy_bullets_near_player`（`graze_radius` 查询 + `_hit_target` 精判 + `_grazes_player`） | `CollisionResolver` **明确声明不含 graze**（"擦弹属玩家机制"） |
+| 擦弹的**随机清弹**（记忆≥50 时 5%~30%） | 同上 | 无 |
+| `bomb` 弹 vs 敌弹 / 敌人（同一弹对同一敌人只伤一次） | `_bomb_vs_enemy_bullets` / `_bomb_vs_enemies` | 无对等物（内核是 `cancel_bullets` 一次性圆） |
+| 命中音效规则（专属 key；默认仅 Boss <30% 播） | `_player_vs_enemies` | 无 |
+| 命中特效（`bullet.hit_effect`，颜色取弹当前色） | `_spawn_effect` | `BulletType.hit_fx` 有场景，但不带颜色/tint 逻辑 |
+| `out_grace`（出界宽限；探测弹往返） | `BulletManager._physics_process` | 内核只有 `cull_rect + cull_margin`（固定余量，非按型） |
+| 死亡清弹（Miss/Bomb 扩散圈） | `DeathClear` 遍历 `_pool` | `cancel_bullets` 一次性圆，需外部驱动 |
+
+### 16.3 另一个坑：帧序
+
+原项目碰撞在 `BulletManager._physics_process`（autoload，priority 0）；内核 `BulletSystem` 是它的子节点（同为 0，**父先子后**）→ 碰撞会读到**上一帧**位置。必须显式设 `BulletSystem.process_physics_priority = FrameOrder.INTEGRATE(-10)`，并另起一个 `FrameOrder.COLLISION(10)` 的驱动节点。
+
+### 16.4 分叉（选一个）
+
+| 选项 | 做法 | 优点 | 代价 |
+|---|---|---|---|
+| **A（推荐）宿主侧规则移植** | 新建 `KernelBulletPhysics`（宿主桥接）把 `BulletPhysics` 规则**逐条**移植到内核 API；宿主专有字段（`damage` / `out_grace` / `can_be_canceled` / `hit_sfx` / `hitbox_shape` / `hitbox_rotation`）走 `KernelBulletBackend` 的**侧表** | 内核**零改动**；语义 1:1；Strangler 可回退 | 桥接 ~200 行；规则仍散在宿主 |
+| **B 内核补 `damage` + 用内核协调器** | 给 `BulletType` 加 `damage`；宿主改用 `CollisionCoordinator` / `CollisionResolver`（玩家/敌人注册） | 长期干净、双宿主一致 | 改**重建版内核**（`kernel-v2`）+ 重新 vendor；重建版 `Enemy/Boss` 的 damage 用法要跟着改；graze/bomb 仍要宿主补 |
+
+**建议 A**：路 B 的定位是"原项目为干"——A 保持原项目玩法语义不变、内核零改动，风险最小；B 属于"内核定型后"的整理（对应决策备忘"内核稳定再宣布唯一之家"）。
+
+### 16.5 建议把 S3 拆成三步（每步独立回归）
+
+| 步 | 内容 | 可验证 |
+|---|---|---|
+| **S3a** | `use_kernel` + spawn / 积分 / 渲染 / `cull_rect` / pause 路由（**明确不含碰撞**） | headless 回归 + **视觉试玩**（弹幕会飞、会画，但穿过玩家） |
+| **S3b** | 敌弹 ↔ 自机：命中 + 擦弹双阈值 + 擦弹随机清弹（核心生存规则） | headless + 试玩（能中弹、能擦弹） |
+| **S3c** | 自机弹 ↔ 敌人（damage 侧表 + 记忆加成 + 音效/特效）+ bomb + 死亡清弹 + out_grace | headless + 完整试玩 |
+
+> **开关不能用 F1**：`debug_toggle` 已被 `scripts/debug/debug_drawer.gd` 与 `scripts/scenes/main_menu.gd` 占用。分支上的方案是 `use_kernel` 默认 `true`（回退 = 改一行，或切回 `main`）。
+
