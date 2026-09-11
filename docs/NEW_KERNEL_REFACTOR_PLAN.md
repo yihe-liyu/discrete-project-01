@@ -563,4 +563,26 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **下一拼图 S3b**：敌弹 ↔ 自机（命中 + 擦弹双阈值 + 擦弹随机清弹），新建 `KernelBulletPhysics` 宿主桥接。
 
+---
+
+## 18. Track A spike 记录：S3b 敌弹 ↔ 自机（2026-09-11，已完成）
+
+> 分支 `kernel/s2-swap`。**范围**：把旧 `BulletPhysics._resolve_enemy_bullets_near_player` 1:1 移植到内核几何上（命中 + 擦弹双阈值 + 记忆随机清弹）。
+
+**做了什么**
+
+- 新增 `scripts/kernel_bridge/kernel_bullet_physics.gd`（`KernelBulletPhysics`，宿主桥接）：
+  - `process()` 由 `BulletManager._physics_process`（priority 0）在**内核积分之后**调用（内核 `BulletSystem` = priority -10，先跑）。
+  - `_enemy_bullets_vs_player()`：`CollisionResolver.overlap_ids(.., player.graze_radius, ENEMY)` 取候选 → **倒序**逐弹 `hit_test(id, pos, hitbox_radius)` 精判 → `player.miss()` + `despawn`；否则 `hit_test(id, pos, graze_radius)` → `mark_grazed` + 擦弹结算（`graze_count / add_score(10) / add_memory` + 音效）。
+  - 记忆 ≥50 时按旧公式 `remap(50, 100, 0.05, 0.30)` 随机清弹（`RNG.randf()`，S10 可复现）。
+- `BulletManager` 增 `_kernel_physics`，在 `_enable_kernel()` 里装配；`_physics_process` 的 `else` 分支调 `process()`。
+- 新增 `test/test_kernel_physics.gd`（4 用例 / 7 断言）：命中→回收+无敌 / 擦弹→计数且不回收 / 擦弹不重复计 / 无敌时穿过。
+
+**验收**：全量 GUT **60 套 / 300 测试 / 3244 断言全绿**。
+
+**几何语义对齐（关键）**：内核 `hit_test(id, center, radius)` 内部按 `radius + 弹半径` 判圆（矩形/偏移走 `HitGeometry` 统一实现），与旧 `_check_circle / _check_rect` 同义；**擦弹就是"更大 radius 的同一次判定"**。
+
+**下一拼图 S3c**：自机弹 ↔ 敌人（`damage` 侧表 + 记忆加成 + 音效/特效）+ bomb + 死亡清弹 + `out_grace`。
+
+
 

@@ -26,6 +26,7 @@ const BulletMultiMeshClass = preload("res://scripts/bullet/bullet_multi_mesh.gd"
 ## 切换用 set_use_kernel()（试玩 A/B / 测试）；**碰撞规则不在本步**，见 docs/NEW_KERNEL_REFACTOR_PLAN.md §16。
 var use_kernel: bool = false
 var _kernel: KernelBulletBackend
+var _kernel_physics: KernelBulletPhysics
 
 # 共享子弹上下文：所有子弹协程共用一个 ctx（服务全部无状态）
 # 省掉每弹 new StageContext + 服务对象（REFACTORING P-0 债务）
@@ -96,8 +97,11 @@ func _physics_process(_delta: float) -> void:
 				_pool.return_bullet(b)
 			else:
 				b._out_time = 0.0  # 回到界内重置计时
-	# 内核路径（S3a）：积分/剔除由 kernel/bullet_system.gd 的 _physics_process 负责（priority -10）。
-	# 碰撞规则见 §16.5 的 S3b / S3c（本步不含）。
+	else:
+		# 内核路径：积分 / 剔除由 BulletSystem._physics_process（priority -10）先跑；
+		# 宿主（priority 0）在此做碰撞派发。S3b = 敌弹 ↔ 自机；S3c 再补自机弹↔敌人 / bomb / 死亡清弹。
+		if _kernel_physics != null:
+			_kernel_physics.process()
 
 
 # ═══ 子弹 API（委托给 pool）═══
@@ -220,6 +224,8 @@ func _enable_kernel() -> void:
 	_kernel = KernelBulletBackend.new()
 	_kernel.name = "KernelBulletBackend"
 	add_child(_kernel)
+	_kernel_physics = KernelBulletPhysics.new()   # S3b：宿主侧碰撞规则（敌弹↔自机）
+	_kernel_physics.setup(_kernel)
 	# 帧序：内核积分必须在宿主 _physics_process（priority 0）之前执行（§16.3；原项目暂无 FrameOrder）。
 	_kernel.system.process_physics_priority = -10
 	# 剔除范围 = 东方框；margin 对齐旧 is_offscreen 的 90px。
