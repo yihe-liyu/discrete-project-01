@@ -2,9 +2,9 @@
 ##
 ## 边界：本文件是**宿主桥接层**（可引用 GameState / RNG / AudioManager / HitEffectPool 等宿主全局）；
 ## 几何唯一实现归内核（query_circle / hit_test），本层只做"规则"（命中 / 擦弹 / 伤害 / 特效）。
-## 当前覆盖 S3b：敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹），与旧
-## BulletPhysics._resolve_enemy_bullets_near_player 1:1。
-## S3c 再补：自机弹 ↔ 敌人（damage 侧表 + 记忆加成 + 音效/特效）+ bomb + 死亡清弹 + out_grace。
+## 覆盖：S3b 敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹）；S3c 自机弹 ↔ 敌人
+## （damage 侧表 + 记忆加成 + 音效/特效）；S3d 死亡清弹扫掠（sweep_enemy_bullets）。
+## 待补：bomb（X）+ 出界宽限（out_grace）。
 class_name KernelBulletPhysics
 extends RefCounted
 
@@ -83,6 +83,29 @@ func _player_bullets_vs_enemies() -> void:
 			_spawn_hit_fx(sys, i, bt)
 			sys.despawn(i)
 			break
+
+
+## 死亡清弹圈的一帧扫掠：清 center/radius 内的敌弹，逐弹播消散特效 + on_clear。
+## 与旧 DeathClear 的逐弹循环 1:1（颜色取内核该弹当前色；不做出生雾过滤——旧池 is_ready
+## 在 bind() 末尾无条件置真，雾中弹同样参与消弹）。
+## 供 BulletManager 以 DeathClear 的每帧回调形式驱动（Track A / S3d）。
+func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Callable()) -> void:
+	var sys := backend.system
+	if sys == null:
+		return
+	var r2: float = radius * radius
+	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收
+	for i in range(sys.get_active_count() - 1, -1, -1):
+		var bt: BulletType = sys.get_type(i)
+		if bt == null or bt.faction != BulletType.Faction.ENEMY:
+			continue
+		var pos: Vector2 = sys.get_position(i)
+		if pos.distance_squared_to(center) > r2:
+			continue
+		if on_clear.is_valid():
+			on_clear.call(pos)
+		HitEffectPool.play(_CLEAR_EFFECT, pos, Vector2.ZERO, sys.get_color(i))
+		sys.despawn(i)
 
 
 ## 记忆 <50 时的伤害加成（与旧 BulletPhysics 同式）。

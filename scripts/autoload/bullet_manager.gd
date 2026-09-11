@@ -73,7 +73,7 @@ func _ready():
 	_lasers = LaserEngineClass.new()
 	_lasers.setup(self, _physics)
 	_death_clear = DeathClearClass.new()
-	_death_clear.setup(_pool, _lasers)
+	_death_clear.setup(_pool, _lasers, Callable(self, "_kernel_sweep_death_clear"))
 	
 	_pool.init_pool()
 	
@@ -192,6 +192,15 @@ func clear_all_lasers() -> void:
 
 func start_death_clear(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
 	_death_clear.start(pos, max_radius, duration, start_radius, on_clear)
+
+
+## 死亡清弹的双后端扫掠（DeathClear 每帧回调）：内核路径返回 true（已清完），
+## 旧池路径返回 false（交回 DeathClear 原逐弹循环）。Track A / S3d。
+func _kernel_sweep_death_clear(center: Vector2, radius: float, on_clear: Callable) -> bool:
+	if not use_kernel or _kernel == null or _kernel_physics == null:
+		return false
+	_kernel_physics.sweep_enemy_bullets(center, radius, on_clear)
+	return true
 
 
 # ═══ 全局清理 ═══

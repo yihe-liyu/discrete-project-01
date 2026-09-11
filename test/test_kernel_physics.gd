@@ -98,3 +98,23 @@ func test_player_bullet_damages_enemy_via_damage_side_table() -> void:
 	assert_almost_eq(fake.damage_taken, 10.0, 0.01, "伤害应来自后端 damage 侧表（内核无 damage）")
 	assert_eq(_backend.system.get_active_count(), 0, "命中后应回收该弹")
 	GameState.active_enemies.erase(fake)
+
+
+## S3d：死亡清弹扫掠只清圆内敌弹（与旧 DeathClear 逐弹循环 1:1）。
+func test_sweep_enemy_bullets_clears_only_in_radius() -> void:
+	_enemy_bullet_at(Vector2(200, 200))
+	_enemy_bullet_at(Vector2(900, 900))
+	_physics.sweep_enemy_bullets(Vector2(200, 200), 100.0)
+	assert_eq(_backend.system.get_active_count(), 1, "死亡清弹应只清圆内的敌弹")
+	assert_eq(_backend.system.get_position(0), Vector2(900, 900), "圆外弹应保留（swap-with-last 后落 0 槽）")
+
+
+## S3d：死亡清弹不应误伤自机弹。
+func test_sweep_enemy_bullets_spares_player_bullets() -> void:
+	var d := BulletData.new().player().tex("reimu_main")
+	d.velocity = Vector2.UP * 100.0
+	_backend.shoot(d, Vector2(200, 200), Vector2.UP)
+	_enemy_bullet_at(Vector2(200, 200))
+	_physics.sweep_enemy_bullets(Vector2(200, 200), 100.0)
+	assert_eq(_backend.system.get_active_count(), 1, "死亡清弹不应清自机弹")
+	assert_eq(_backend.system.get_type(0).faction, BulletType.Faction.PLAYER, "留下的应是自机弹")

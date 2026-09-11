@@ -44,3 +44,23 @@ func test_kernel_priority_precedes_manager() -> void:
 	BulletManager.set_use_kernel(true)
 	assert_lt(BulletManager.kernel_system().process_physics_priority,
 		BulletManager.process_physics_priority, "内核积分必须先于宿主碰撞（§16.3）")
+
+
+## S3d：展开清弹圈（死亡清弹）应清掉内核敌弹。
+func test_death_clear_sweeps_kernel_bullets() -> void:
+	BulletManager.set_use_kernel(true)
+	BulletManager.shoot_enemy_bullet(_enemy_data(), Vector2(200, 200), Vector2.RIGHT)
+	assert_eq(BulletManager.kernel_system().get_active_count(), 1, "先有 1 颗内核敌弹")
+	BulletManager.start_death_clear(Vector2(200, 200), 100.0, 1.0, 30.0)
+	BulletManager._death_clear.process(0.5)   # 半径 30→100 走到 65，覆盖 (200,200)
+	assert_eq(BulletManager.kernel_system().get_active_count(), 0, "展开清弹圈应清掉内核敌弹")
+
+
+## S3d：旧池路径的死亡清弹保持原样（注入扫掠在旧池下返回 false）。
+func test_death_clear_legacy_path_unchanged() -> void:
+	BulletManager.set_use_kernel(false)
+	BulletManager.shoot_enemy_bullet(_enemy_data(), Vector2(200, 200), Vector2.RIGHT)
+	assert_eq(BulletManager.active_bullets.size(), 1, "旧池先有 1 颗弹")
+	BulletManager.start_death_clear(Vector2(200, 200), 100.0, 1.0, 30.0)
+	BulletManager._death_clear.process(0.5)
+	assert_eq(BulletManager.active_bullets.size(), 0, "旧池路径清弹应仍生效")

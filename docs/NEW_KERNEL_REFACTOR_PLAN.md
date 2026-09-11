@@ -607,12 +607,34 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 **本步仍未接（明确列出，别以为是全的）**：
 
 - `bomb`（X 键）：原项目是 `bomb_bullet` + `BOMB_BEHAVIOR` 协程自爆——依赖 S4 行为移植。
-- **死亡清弹**（Miss / Bomb 扩散圈）：`DeathClear` 仍遍历旧 `_pool`；内核池需另接（用 `cancel_bullets` 驱动扩散半径）。
+- **死亡清弹**（Miss / Boss 击破 / Bomb 扩散圈）：`DeathClear` 仍遍历旧 `_pool`；内核池需另接。 **→ S3d 已接，见 §20。**
 - `out_grace`：内核按 `cull_margin=90` 统一剔除，未按弹型宽限（bomb 的 9999 宽限会失效）。
 - **行为**（`bounce / gravity / radial` 等）：内核不跑 `coroutine_script` → 目前按直线飞（S4）。
 - **自机弹记忆变红**：旧 `Bullet.bind` 在 `memory<50` 时把 `sprite.modulate` 往红 lerp，桥接尚未复现。
 
-**试玩入口**：`BulletManager.set_use_kernel(true)`（默认 `false`）。**完整可玩性还差 S4（行为）+ 上面 4 项**——当前切过去能看到/打到，但 Bomb、Miss 清弹、反弹弹会不对。
+**试玩入口**：`BulletManager.set_use_kernel(true)`（默认 `false`；游戏内按 **F2** 热切）。**完整可玩性还差 S4（行为）+ 上面 3 项**——当前切过去能看到/打到，但 Bomb、反弹弹会不对。
+
+## 20. Track A spike 记录：S3d 死亡清弹（2026-09-11，已完成）
+
+> 分支 `kernel/s2-swap`。**范围**：把旧 `DeathClear` 的展开清弹圈接到内核池。**这是试玩唯一发现的行为缺失**（Boss 阶段击破 / Miss 时弹幕不清）。
+
+**问题**：`DeathClear.process()` 直接遍历 `_pool.active_bullets`（旧 `Bullet` 节点数组）。内核路径下旧池恒空 → 清弹圈空转，弹留在屏幕上。
+
+**做了什么**
+
+- **不重写清弹圈**：`DeathClear` 仍是“展开半径 + 切生长激光头”的唯一实现；只把“清圆内敌弹”抽成注入回调 `_kernel_sweep: Callable`（签名 `(center, radius, on_clear) -> bool`，true = 已由内核清完，跳过旧循环）。旧池逐弹循环**原样保留**在 `if not handled:` 分支。
+- `KernelBulletPhysics.sweep_enemy_bullets()`：倒序遍历内核行，只清 `Faction.ENEMY` 且在半径内的弹；逐弹 `on_clear`（掉道具）→ `HitEffectPool.play(_CLEAR_EFFECT, pos, ZERO, sys.get_color(i))` → `despawn(i)`。与旧循环 1:1（颜色取内核当前色；**含出生雾中的弹**）。**内核零改动**——直接复用现成 `despawn`。
+- `BulletManager._kernel_sweep_death_clear()`：`use_kernel` 为真 → 交内核扫掠并返回 true，否则返回 false 交回旧循环；回调在 `_ready` 注入 `DeathClear.setup()`。
+
+**为什么不用内核现成的 `cancel_bullets()`**：读实现后两点不合——(1) 它是一次性全清，而死亡清弹是**逐帧扩张半径**；(2) 它的消散特效发成内核“纯特效行”（`_type_index < 0`），而当前渲染桥只认弹型行，特效行不会画。故走宿主侧逐弹扫掠、复用 `HitEffectPool`。
+
+**为什么分派落在 BulletManager**：双后端分派的唯一归属地（S3a 起的约定）；`DeathClear` 保持后端无关，旧池路径零风险（原循环一行未改）。
+
+**顺手修正的一处认知**：旧 `Bullet.bind()` 末尾**无条件** `is_ready = true`（`bullet.gd:135`），所以出生雾中的弹也会被死亡清弹清掉——内核扫掠据此**不做** `fx_phase` 过滤，与旧行为一致。
+
+**验收**：`test_kernel_physics` +2（圆内/圆外、自机弹免疫）、`test_kernel_swap` +2（内核集成、旧池回归）；全量 GUT **60 套 / 305 测试 / 3254 断言全绿**。
+
+**S3 收敛后剩余（未接）**：`bomb`（X，依赖 S4）、`out_grace`（按弹型出界宽限）、行为（`bounce / gravity / radial`，S4）、自机弹记忆变红（桥接未复现）。
 
 
 
