@@ -466,4 +466,26 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **验收**：全量 GUT **57 套 / 287 测试 / 3222 断言全绿**。
 
-**未接线**：`BulletManager` 尚未委托后端——S1 仍是纯增量（原路径一行未改）。**下一拼图 S2** = `BulletMultiMesh` 改读后端快照（不再遍历 `Bullet` 节点）。
+**未接线**：`BulletManager` 尚未委托后端——S1 仍是纯增量（原路径一行未改）。
+
+---
+
+## 15. Track A spike 记录：S2 渲染读内核快照（2026-09-11，已完成）
+
+> 分支 `kernel/s2-swap`（自 `main` @ merge S0/S1）。**仍未接线**：`BulletManager` 照旧走旧池，所以 S2 现在是一条**备用渲染路径**。
+
+**做了什么**
+
+- `scripts/bullet/bullet_multi_mesh.gd` 改为**双数据源**（Strangler）：
+  - `set_backend(KernelBulletBackend)` 注入后 → `_sync_kernel()` 读内核 SoA 快照（position / velocity / color / faction / type_index / type_registry + `backend.texture_for_index()`）。
+  - 未注入 → `_sync_nodes()` 旧路径（遍历 `BulletManager.active_bullets`）**逐字保留**，可随时回退。
+  - 抽出 `_group_key()` **两路共用**（纹理 RID + region + 阵营 + tint_mode），批次数才可比对；抽出 `_hide_all()` / `_hide_group()`。
+- **阵营枚举必须显式映射**：内核 `Faction{ENEMY=0, PLAYER=1, NONE=2}` vs 宿主 `Bullet.FACTION_PLAYER=0 / ENEMY=1 / BOMB=2` **顺序不同**；`_host_faction()` 负责转换，否则敌弹/自机弹的 z 会互换。
+- 朝向/颜色对齐旧路径语义：`bt.rotation_for(velocity)` + `colors[i]` + `scale = ONE`。
+- 新增 `test/test_kernel_render.gd`（5 用例 / 7 断言）。
+
+**验收**：全量 GUT **58 套 / 292 测试 / 3229 断言全绿**。
+
+**坑**：headless（dummy 渲染器）下 `MultiMesh.get_instance_transform_2d()` **读回恒为 0**——逐实例几何不能在 CI 里断言；S2 的断言因此落在批次数 / `visible_instance_count` / `z_index` / 材质 / 网格尺寸，**画面一致性留给 S3 之后的手动试玩**。
+
+**下一拼图 S3**：`BulletManager` 加 `use_kernel` 开关，`shoot_enemy_bullet` 委托后端；需手动试玩 stage01 验证表现一致。
