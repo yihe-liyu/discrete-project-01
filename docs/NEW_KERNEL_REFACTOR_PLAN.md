@@ -427,3 +427,23 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 **踩坑**：新增 `class_name` 后要让 Godot 重建 `.godot/global_script_class_cache.cfg`（跑一次 `godot --headless --import`），否则 headless 直接报 `Identifier "LayerConfig" not declared`——不是代码错。
 
 **顺带修（与本波无关，验证时暴露）**：`test/test_recent_mechanics.gd` 的练习记录用例非幂等——历史遗留的 `stage=99` 幽灵记录会让 `get_or_create` 命中旧值继续累加（实测 attempts=6/captures=3）造成假失败；已加起始清除，并清掉本地 `.tres` 幽灵项。
+
+---
+
+## 13. Track A spike 记录：S0 内核 vendor（2026-09-11，已完成）
+
+> 分支 `kernel/s0-vendor`（从 `main` @ tag `pre-kernel-adapter` 起）；内核来源 = 重建版 tag `kernel-v1`（commit `238507a`）。
+
+**做了什么**
+
+- 复制内核核心进 `scripts/kernel/`（14 个 `.gd`，1,221 行）：`bullet_system.gd` + `behavior/` + `collision/` + `bullet_type.gd` / `effect_type.gd`。
+- **不带**渲染与图集：`bullet_renderer.gd` / `bullet_shapes.gd` / `atlas_layout.gd` / `layer_config.gd`——渲染继续用原项目 `BulletMultiMesh`（它本就按纹理分组、且支持独立 PNG 与图集区域；见重建版决策备忘 §10.4 的 hybrid 结论）。
+- **唯一 vendoring 改动**：`bullet_system.gd` 删掉 `BulletRenderer` 注入（`_ready` / `setup_renderers`）——内核本体不引用宿主渲染器类型（R2/R9）。
+- 新增 `scripts/kernel/README.md`：写清**来源 / 单一真相 / 边界规则**（禁止 import 原项目 autoload 与实体层；唯一允许 `LayerConfig`）。
+- 新增 `test/test_kernel_vendor.gd`（2 用例）：证明内核**独立**可 `new` / `spawn` / `query_circle` / `hit_test` / `despawn`。
+
+**验收**：全量 GUT **56 套 / 281 测试 / 3208 断言全绿**（原 279 + S0 的 2）；`--import` 无撞名 / 解析错误。
+
+**结论**：决策备忘 §10.2「内核不认识原项目全局」成立——搬进来除那 4 行渲染注入外，零改动即可编译运行。**下一拼图 S1** = `KernelBulletBackend`（`BulletData → BulletType` 映射 + 纹理旁表）。
+
+**回退点**：原项目 tag `pre-kernel-adapter`；重建版 tag `kernel-v1`。
