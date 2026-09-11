@@ -447,3 +447,23 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 **结论**：决策备忘 §10.2「内核不认识原项目全局」成立——搬进来除那 4 行渲染注入外，零改动即可编译运行。**下一拼图 S1** = `KernelBulletBackend`（`BulletData → BulletType` 映射 + 纹理旁表）。
 
 **回退点**：原项目 tag `pre-kernel-adapter`；重建版 tag `kernel-v1`。
+
+---
+
+## 14. Track A spike 记录：S1 适配层（2026-09-11，已完成）
+
+> 分支 `kernel/s0-vendor`（S0/S1 同分支，尚未并 `main`）。
+
+**做了什么**
+
+- 新增 `scripts/kernel_bridge/kernel_bullet_backend.gd`（`KernelBulletBackend`）——**宿主侧桥接**（内核不认识 `BulletData`）：
+  - `shoot(data: BulletData, pos, direction)` → 内核 `BulletSystem.spawn(...)`；语义对齐 `Bullet.bind`：**direction 定方向，`data.velocity` 只取长度**。
+  - `BulletData → BulletType` 映射：faction / tint_mode / hitbox / hit_fx。**圆判定时把内核 `hitbox_size` 归零**（原项目默认 size(8,8) 但 shape=CIRCLE，不归零每颗圆弹会变矩形）。
+  - **按内容签名缓存** `signature_of()`：原项目两种用法并存——`enemy01` 复用同一实例改速度、`cs_reimu`/`non01_shoot` 每发 `BulletData.new()`；按实例缓存会让内核弹型表**每发长一个**。
+  - **纹理旁表** `texture_for_index(ti)`：内核 `BulletType` 不含 `Texture2D`，S2 渲染靠它取「哪张图」。
+  - S1 只做直线；`coroutine_script` / `accel` 未映射时按直线发射并计入 `unmapped_behavior_count`（S4 接线前用来观察覆盖面）。
+- 新增 `test/test_kernel_backend.gd`（6 用例 / 14 断言）：内容签名复用 / 速度语义 / 纹理旁表 / 阵营映射 / 圆矩形判定 / 未映射计数。
+
+**验收**：全量 GUT **57 套 / 287 测试 / 3222 断言全绿**。
+
+**未接线**：`BulletManager` 尚未委托后端——S1 仍是纯增量（原路径一行未改）。**下一拼图 S2** = `BulletMultiMesh` 改读后端快照（不再遍历 `Bullet` 节点）。
