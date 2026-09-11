@@ -1,0 +1,429 @@
+# 原项目 × 新弹幕内核：迁移与改造方案
+
+> 定位：把原项目「节点弹池 + 12 autoload + 协程行为 + 独立 LaserEngine」的弹幕链路，**逐步**迁到重建版内核的架构（SoA 核心 + 组合根注入 + 数据资源 + 显式帧序/层序 + 无头测试），同时保持游戏可玩、可回退。
+> 前置阅读：`1-st-touhou-star-rebuild/docs/DECISION_DANMAKU_ARCHITECTURE.md`（含「为何不建议 big-bang」与两个方向的对比）。
+> 方法论：**Strangler（绞杀者）** —— 新内核先自包含接入，旧调用点经 adapter 原样可用；再逐子系统替换；最后删旧实现。
+
+---
+
+## 0. 前提与代价（先讲清）
+
+- **方向**：以**原项目为树干**（它有完整游戏外壳与大量内容），新内核作为**自包含子系统**接入，而不是把原项目一次性改造成重建版。
+- **不是**：整体硬搬内核、或 big-bang 重写。那会把「内核移植」与「大改造」两个相反方向的重构叠加（详见决策备忘第 7 节）。
+- **代价**：过渡期同时存在两套弹幕实现（adapter 桥接），需要严格边界与测试；里程碑较多。
+- **硬约束**：**每一步都要能跑**（至少主菜单 + stage01 可玩、GUT 全绿）。
+
+---
+
+## 1. 现状审计（原项目）
+
+### 1.1 体量
+
+| 目录 | 行数 | 文件 |
+|---|---|---|
+| `scripts/autoload/` | 2267 | 17（含 12 autoload） |
+| `scripts/workbench/` | **4286** | 25 |
+| `scripts/scenes/` | 3786 | 21 |
+| `scripts/coroutine/` | 2017 | 32 |
+| `scripts/data/` | 1428 | 21 |
+| `scripts/bullet/` | 557 | 5 |
+| `scripts/laser/` | 500 | 4 |
+| `data/stages/` | 1071 | 16 |
+| 合计 | **18,719** | 170 |
+
+### 1.2 弹幕链路（要被替换的部分）
+
+```text
+BulletData(builder Resource)  --shoot-->  BulletManager(autoload facade)
+                                             |-- BulletPool(node 池, POOL 4000 / MAX 5000)
+                                             |      -- Bullet(Node2D + Sprite2D + Fog + CoroutineScript)
+                                             |-- BulletPhysics(RefCounted)
+                                             |      |-- SpatialHash(敌弹)   每帧 clear + insert
+                                             |      -- SpatialHash(敌人)
+                                             -- LaserEngine(独立：LaserSkeleton/LaserBeam/Presets)
+BulletMultiMesh(Node2D)  --每帧遍历 active_bullets--> 写 MultiMesh（按 贴图×阵营×tint 分组）
+```
+
+要点：
+- 弹是 **Node2D**（不是 pure data），行为是挂在弹上的 **CoroutineScript** 节点。
+- 渲染**已经**是 MultiMesh（`bullet_multi_mesh.gd`），只是数据源是节点列表、且每帧做分组/哈希。
+- 碰撞**已经**有 `SpatialHash`（`scripts/bullet/spatial_hash.gd`），但是 **Dictionary<Vector2i, Array> + 每帧 clear/insert**，且分两张哈希表（敌弹 / 敌人）。
+- 激光是本项目独立体系（`scripts/laser/`），与子弹池分离。
+
+### 1.3 全局耦合
+
+| 符号 | 文件数 / 出现次数 |
+|---|---|
+| `GameState` | 42 / 186 |
+| `StageContext` | 38 / 80 |
+| `BulletData` | 31 / 62 |
+| `AssetRegistry` | 31 / 49 |
+| `CoroutineScript` | 30 / 47 |
+| `BulletManager` | 22 / 46 |
+
+12 个 autoload：`GameEvents / GameManager / BulletManager / GameState / StageManager / RNG / AudioManager / MissEffectManager / HitEffectPool / LayerConfig / AssetRegistry / StageObjects`。
+
+### 1.4 内容模型
+
+```text
+data/stages/<stage>/
+  phase/<phase>/xxx_*.gd     # CoroutineScript 阶段/弹丸行为
+  bullet/*.gd                # 弹丸行为协程（gravity / bounce / radial_accel ...）
+  enemy/*.gd                 # 敌人/杂兵脚本
+  stage_script/*.gd          # 关卡脚本
+  stage_data/*.tres          # StageData 资源
+  background/*
+data/boss_scripts/           # Boss 脚本
+```
+
+阶段脚本继承 `CoroutineScript`，实现 `_tick(p_ctx: StageContext)`；弹丸行为同理，通过 `target.velocity / target.global_position` 驱动。
+
+### 1.5 测试
+
+`test/` 下 58 个 `extends GutTest`（GUT 插件在 `addons/gut`）。
+
+---
+
+## 2. 目标内核契约（迁移目标）
+
+来自重建版，迁移时保持这些**契约**不变：
+
+- **数据**：`BulletType` / `EffectType` / `PlayerData` / `AtlasLayout`（`Resource`，.tres）。
+- **服务**（组合根注入，不 autoload）：`BulletSystem` / `BulletRenderer` / `BehaviorProcessor` / `CollisionCoordinator` / `FxLayer` / `HitFeedback`。
+- **核心**：SoA 行 + `spawn(bullet_data, pos, vel, color, move, params)`；宽相 uniform grid；`Behavior` 注册名 + `params`（共享只读）/ `state`（每弹可写）。
+- **契约**：`FrameOrder`（INTEGRATE/WORLD/BEHAVIOR/COLLISION）、`LayerConfig`（z 顺序）。
+- **测试**：`godot --headless --script` 的无头 SceneTree 套件。
+
+---
+
+## 3. 旧 → 新 接口映射表
+
+| 原项目 | 重建版 | 迁移备注 |
+|---|---|---|
+| `BulletData`（builder Resource） | `BulletType`（数据 .tres）+ `EffectType` | builder 方法 → 一次性编辑 .tres；`.tex(key)` 的 hitbox 元数据来自 `AssetRegistry.bullet_configs` → 迁到 `AtlasLayout` + .tres |
+| `Bullet`(Node2D) + `extra` | SoA 行 + `params` / `state` | 节点字段（velocity/damage/…）→ 行字段或 params；`extra` → 句柄/params |
+| `BulletPool` | `BulletSystem` | 池 + 宽相一体；swap-with-last 语义与旧池不同（旧池是 Array.erase） |
+| `BulletMultiMesh` | `BulletRenderer`（阵营/类别批） | 分组键（贴图×阵营×tint）在旧版每帧算 → 新版按弹型缓存 + `kind` 过滤 |
+| `BulletPhysics` + `SpatialHash` | `CollisionCoordinator` + `CollisionResolver` + BulletSystem 宽相 | 碰撞规则（命中/擦弹/记忆加成/音效）留在实体回调 |
+| `BulletManager`(autoload) | 组合根注入 + **adapter facade** | 过渡期保留同名 API，内部转发新内核 |
+| `LaserEngine` / `LaserBeam` | `LaserShot` + `LaserFollowBehavior`（分段）或保留激光引擎 | 重建版激光是「分段流水」；原版是骨架/曲线体系，需逐个激光预设决策 |
+| `CoroutineScript` 弹行为 | `Behavior`（注册名 + params/state） | 逐行为改写；`target` → `(system, id)`；`get_dt()` → `system.get_delta()` |
+| `BulletService`(`ctx.bullets`) | `Emitter` + `shoot_pattern` / `LaserShot` | 内容 API 由 builder 风格转向 数据 + 发射器 |
+| `HitEffectPool` / `MissEffectManager` | `FxLayer`（池化节点） | `play(scene, pos, vel, color)` 接口近似 |
+| `AssetRegistry.bullet_configs` | `data/atlas/bullet_shapes.tres` + `BulletType` .tres | 图集布局与判定元数据分离 |
+| `GameState.memory_value` 命中加成 | 实体回调里读 `PlayerResources`（或 adapter） | 规则不该进内核 |
+| `SpatialHash`（已有） | BulletSystem 内建宽相 | 旧版可保留给敌人查询，直到敌人也迁移 |
+
+---
+
+## 4. 分阶段计划
+
+> 每阶段都必须：**可运行、GUT 全绿、可回退（独立分支/提交）**。阶段间用 adapter 衔接。
+
+### Phase 0 — 冻结与基线
+- **动作**：
+  - 在原项目打 tag / 建分支 `kernel-migration`。
+  - 记录基线：GUT 全绿；跑一遍重建版的 `tools/bench_danmaku.gd` 做对照；记录当前帧率与最大弹数。
+  - 确认 Godot 4.7 下 GDExtension/原生**暂不引入**（本方案纯 GDScript 迁移）。
+- **产出**：基线快照（帧率、弹数、测试数）。
+- **回退**：无（不动代码）。
+
+### Phase 1 — 内核自包含接入 + adapter（不改任何调用点）
+- **动作**：
+  - 把重建版内核文件作为**子目录**引入原项目（例如 `scripts/danmaku_kernel/`）：`bullet_system / bullet_renderer / behaviors / collision_* / fx_* / defs（BulletType/EffectType/AtlasLayout）/ player_data`。
+  - 在 `GameManager`（或新组合根）里创建内核实例并注入；**保留 `BulletManager` 这个 autoload 名字**，内部改为**持有内核 + adapter**。
+  - adapter 实现 `BulletManager` 现有公开 API：`shoot_bullet / shoot_player_bullet / shoot_enemy_bullet / shoot_bomb_bullet / return_bullet / re_fire / clear_all / pause/resume`。
+  - **最硬的一处**：旧内容会拿 `Bullet` 节点引用（`shoot_spread(count==1)` 返回 Bullet，用于设置 `extra` / `rotation`）。新内核没有节点 → 提供 **`BulletHandle`**（RefCounted，(system,id) 句柄），暴露旧代码用到的成员/方法并转发：
+    - `global_position` / `velocity` / `rotation` / `damage` / `extra` / `is_ready` / `_grazed` …
+    - 只在**内容显式取引用**时创建（不是每弹都建），避免热路径开销。
+  - 本阶段可先只让 `BulletSystem` 跑起来（弹能飞、能画），`BulletManager` 的旧 API 走 adapter；**碰撞/内容仍走旧路径**，或双写过渡。
+- **涉及文件**：`scripts/autoload/bullet_manager.gd`、`scripts/autoload/bullet/*`、新增 `scripts/danmaku_kernel/*`、新增 `scripts/danmaku_kernel/adapter/*`、`game_manager.gd`（组合根）。
+- **验收**：`BulletManager.shoot_*` 调用点不报错；新内核里能看到弹飞行；旧 GUT 全绿。
+- **回退**：删内核目录 + 还原 `bullet_manager.gd`。
+
+### Phase 2 — 渲染切到 BulletRenderer
+- **动作**：关闭 `BulletMultiMesh._sync`（保留文件但不启用）；启用内核的 `BulletRenderer`（阵营/类别批 + `kind` 过滤 + 激光批）。
+- **涉及**：`bullet_manager.gd`（不再 add `BulletMultiMesh`）、`bullet.gd` 的 Sprite2D 可见性、`layer_config.gd`（对齐 z 顺序）。
+- **验收**：视觉与旧版一致（弹型/颜色/朝向/激光）；bench 渲染 CPU 不退化。
+- **回退**：重新启用 `BulletMultiMesh`。
+
+### Phase 3 — 碰撞切到 CollisionCoordinator + 宽相
+- **动作**：
+  - 启用 `BulletSystem` 的宽相 `query_circle`；停用 `BulletPhysics` 的两张 `SpatialHash`（或仅保留敌人查询）。
+  - 把 `BulletPhysics` 的规则（玩家弹 vs 敌人、敌弹 vs 自机 + 擦弹 + 记忆清弹、Bomb vs 敌弹/敌人、命中音效、命中特效）搬到实体回调 / `CollisionCoordinator` 注册 + `HitFeedback`。
+  - 处理旧特殊语义：`out_grace`（出界宽限）、`can_be_canceled`、`memory_value` 命中加成、`is_timeout_only` 的 Boss 不可击。
+- **涉及**：`bullet_physics.gd`、`bullet_manager.gd`、`player.gd`、`enemy.gd`、`boss.gd`、`effect/*`。
+- **验收**：命中/擦弹/清弹行为一致；bench 查询 µs 级；最大弹数下不掉帧。
+- **回退**：切回 `BulletPhysics`。
+
+### Phase 4 — 内容层迁移（逐个 stage / phase 做，最大的一块）
+- **动作**：
+  1. `BulletData` builder 调用 → `BulletType` .tres（贴图/染色/判定/阵营/命中特效）。
+  2. 弹丸 `CoroutineScript` 行为 → 注册 `Behavior`（`accel/curve/avoid_player/laser_follow/...`），`target.velocity` → `set_velocity`，`target.global_position` → `set_position`，`get_dt()` → `get_delta()`。
+  3. 阶段 `CoroutineScript` 的分阶段发射 → `Emitter` + `shoot_pattern`（或保留阶段计时，只替换发射 API）。
+  4. 激光预设 → 重建版分段激光或保留；逐个决策。
+  5. `AssetRegistry.bullet_configs` → `AtlasLayout` + `BulletType` 的 hitbox 字段。
+- **策略**：**一次只迁一个 stage/phase**，例如先 `stage01/phase/non01`，用重建版测试补齐后，再动下一个。
+- **验收**：每迁完一个 phase，与原版逐项对比（弹数、轨迹、颜色、判定、特效）；GUT 对应测试通过。
+- **回退**：该 phase 单独回退。
+
+### Phase 5 — 拆 autoload / GameState（逐步，不追求一次到位）
+- **动作**：
+  - 把 `GameState` 里「弹幕/实体需要」的部分（`player`、`active_enemies`、`memory_value`…）改成**显式注入**到内核/实体（组合根），而不是全局读。
+  - 保留 `GameState` 作为「全局存档/菜单状态」，但内核与弹幕实体不再直接依赖它。
+  - 把 `BulletService` 的 `ctx.bullets` 逐步替换为注入的 `Emitter` / 内核 API。
+- **验收**：内核文件里 `grep GameState` = 0（这是可量化的硬指标）。
+- **回退**：adapter 可临时补全局读。
+
+### Phase 6 — 契约统一 + 测试迁移
+- **动作**：
+  - 引入 `FrameOrder`（显式物理帧顺序）与 `LayerConfig`（层序契约），替换原项目里散落的 `process_priority` / autoload 顺序依赖。
+  - GUT 测试：新内核的部分改为重建版风格的无头 SceneTree 套件；GUT 保留用于旧外壳。
+  - 补行为/碰撞/渲染的等价性测试（重建版已有 45 套可参考/移植）。
+- **验收**：进测试数量不下降；关键语义有等价性测试。
+
+### Phase 7 — 清理与收尾
+- **动作**：删除 `scripts/bullet/bullet.gd` / `bullet_multi_mesh.gd` / `bullet_fog.gd` / `bomb_behavior.gd`、`scripts/autoload/bullet/*`、旧 `laser/*`（若已迁移）；删 adapter 中不再被调用的分支；更新 `ARCHITECTURE.md` / `STAGE_FLOW_PLAN.md`。
+- **验收**：`grep BulletManager` / `grep Bullet` 的调用面收敛到内容层/新 API；GUT + 无头测试全绿。
+
+---
+
+## 5. Adapter 设计（Phase 1 的核心，单独展开）
+
+过渡期的目标是「**旧调用点一行不改**」。adapter 的职责：
+
+1. **名字保留**：`BulletManager` 仍是 autoload，但变成薄壳。
+2. **API 转发**：旧 API → 新内核：
+   - `shoot_bullet(data,pos,dir)` → `BulletSystem.spawn(convert(data), pos, dir, ...)`
+   - `shoot_enemy_bullet / shoot_player_bullet / shoot_bomb_bullet` → 按 faction 转 `spawn`
+   - `return_bullet(bullet)` → 若是 `BulletHandle` 则 `system.despawn(id)`
+   - `re_fire` → 先 `despawn` 再 `spawn`（或内核提供 re-spawn）
+   - `clear_all` → `system.clear()` + `FxLayer.clear_pool()`
+3. **数据转换**：`BulletData` → `BulletType` 的**缓存转换**（按 `BulletData` 实例缓存一份 `BulletType`，避免每次 spawn 新建）。这个转换是过渡期的关键粘合点，Phase 4 完成后删除。
+4. **句柄**：`BulletHandle` 兼容层（见 Phase 1）。注意池化复用 → 句柄要带代际（`generation`）校验，否则悬垂。
+5. **全局读取**：adapter 内部读 `GameState` / `RNG` / `AudioManager` / `HitEffectPool`，但**内核不读**——全局只存在于 adapter 与实体回调。
+
+```gdscript
+# 过渡期 BulletManager 形态（示意）
+var _system: BulletSystem          # 新内核
+var _fx: FxLayer
+var _type_cache: Dictionary = {}   # BulletData -> BulletType
+
+func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletHandle:
+    var bt := _to_bullet_type(data)
+    var id := _system.spawn(bt, pos, dir.normalized() * data.speed_value(), data.tint, _move_of(data), _params_of(data))
+    return BulletHandle.new(_system, id)
+```
+
+---
+
+## 6. 风险与缓解
+
+| 风险 | 说明 | 缓解 |
+|---|---|---|
+| 双实现期语义漂移 | 新旧弹幕同时存在，行为不一致 | 每阶段做**等价性对比**（弹数/轨迹/判定/特效）；adapter 只桥接、不放规则 |
+| 节点引用 → 句柄 | 旧内容持 Bullet 节点引用；句柄化后池化复用会悬垂 | 句柄带 generation；只在显式取引用时创建；提供 `is_valid()` |
+| 一帧时序差 | 旧 autoload 顺序 vs 新 `FrameOrder` | 引入 `FrameOrder` 显式赋值；对激光/锚点类行为做单帧回归 |
+| 确定性 | 旧 `RNG`（可播种）vs 新内核 RNG | 内核 RNG 可播种（S10）；迁移后重放验证 |
+| 测试双轨 | GUT vs 无头 SceneTree | 旧外壳留 GUT；内核用无头套件；关键路径两边都测 |
+| workbench 4286 行 | 大量依赖旧 `BulletManager/BulletData` | 优先迁它依赖的 API；adapter 保证它能跑；必要时后置 |
+| 性能 | adapter 若逐弹跨边界会有开销 | adapter 只做批量/发射级转发；句柄按需创建；bench 把关 |
+| 内容迁移量 | 2 个 stage、多 phase、大量行为 | **一次一个 phase**，先易后难；先迁「纯数学」行为，逃生门行为最后 |
+
+---
+
+## 7. 验收（每阶段通用）
+
+1. 原项目 GUT 全绿；新内核无头套件全绿。
+2. 主流程冒烟：主菜单 → stage01 可玩。
+3. `tools/bench_danmaku.gd` 同口径对比不退化（可临时把内核搬进 bench 工程）。
+4. 关键语义有**等价性测试**（同波弹数、同位置轨迹、同判定结果）。
+5. 一个可独立回退的提交。
+
+---
+
+## 8. 不做 / 暂缓
+
+- **不做 big-bang**：不一次性重写 170 文件。
+- **不动 workbench 的业务逻辑**：只保证它依赖的弹幕 API 可用。
+- **不引入 GDExtension/原生**：本方案纯 GDScript 迁移；原生是之后单独评估的另一条线（见决策备忘第 6 节）。
+- **不做数据驱动 behavior VM**：Phase 4 先「协程 → 代码 Behavior」；VM 化留到之后再议。
+- **不迁移游戏外壳**（菜单/对话/音乐室/存档）：它们与弹幕内核解耦，保持不动。
+
+---
+
+## 9. 工作量粗估（粗粒度，供排期）
+
+| Phase | 内容 | 相对量 |
+|---|---|---|
+| 0 | 基线冻结 | 极小 |
+| 1 | 内核接入 + adapter + 句柄 | **大**（最关键的粘合） |
+| 2 | 渲染切换 | 小-中 |
+| 3 | 碰撞切换 | 中-大（规则多） |
+| 4 | 内容迁移（逐 phase） | **最大**（随内容线性） |
+| 5 | 拆 autoload/GameState | 中（面广） |
+| 6 | 契约统一 + 测试 | 中 |
+| 7 | 清理 | 小 |
+
+> 结论：Phase 1（adapter + 句柄）与 Phase 4（内容）是成败关键；**先把 Phase 1 的句柄方案想透，再开始动任何内容**。
+
+---
+
+## 10. 起步检查清单（开始前逐项确认）
+
+- [ ] 已读 `1-st-touhou-star-rebuild/docs/DECISION_DANMAKU_ARCHITECTURE.md`，接受「以原项目为树干」的代价。
+- [ ] 已打 tag / 分支；GUT 基线全绿。
+- [ ] 已确认 Godot 版本（4.7）下**不引入原生**。
+- [ ] 已选定 Phase 1 的 `BulletHandle` 语义（字段/方法清单、generation、is_valid）。
+- [ ] 已选定第一个要迁的 phase（建议 `stage01/phase/non01`）。
+- [ ] 已准备等价性对比方法（同波弹数/轨迹/判定）。
+
+---
+
+## 11. 轨道 B：外壳工程红线对齐（与轨道 A 并行）
+
+> 目的：新内核不仅换弹幕，也把**工程红线（R1–R22）**带进整个原项目（外壳 / 场景 / workbench / autoload）。
+> 与轨道 A **并行**、共用同一份 baseline（原项目 `docs/BEST_PRACTICES_BASELINE.md` 已同步到 R1–R22 / S1–S13 + 帧序·层序·命名边界契约）。
+
+### B1 baseline 升级（已完成）
+- 把重建版 R1–R22 / S1–S13 + 命名边界 + 帧序/层序契约合并进原项目 baseline。
+- **待办**：逐条重审 S1–S13 状态（原项目自评较旧，部分 `[ ]` 实际已落地，如 S2「碰撞用空间哈希」——原项目已有 `SpatialHash`）。
+
+### B2 去 autoload / 拆 god object（R9 / R18）
+- 12 autoload → 真全局（存档 / 音频 / 设置）+ 注入。
+- 拆 `GameState`(405 行) / `BulletManager` / `workbench`。
+- 与轨道 A 的 **Phase 5** 合流。
+
+### B3 workbench 声明式化（R21）
+- workbench **178 处 `.new()` + 183 处 `add_child`** → 子场景。
+- 优先级可后（开发工具，不影响玩家）。
+
+### B4 私有调用 → 公开虚函数（R6）
+- **12 处 `has_method("_")`**。
+
+### B5 层序 / 帧序契约
+- **30 处散写 `z_index`** → `LayerConfig`。
+- 引入 `FrameOrder`，取代 autoload 的 `_physics_process` 顺序依赖。
+
+### B6 注释规范（R22）
+- 全库审计（机械、量大）。
+
+### B7 数据驱动（R17）
+- 散落魔术数字 → `.tres` / 集中配置。
+
+### B8 其余逐条 spot check
+- R4 / R5 / R7 / R10–R14 / R16。R14（res:// 写存档）与 R15 文件名层目前较干净；R2/R5 也比预期好（`get_node("../")` 0）。
+
+### 外壳红线审计（2026-09 实测，B 的输入）
+
+| 红线 | 实测 | 判断 |
+|---|---|---|
+| R9 autoload | 12 个 | 最大面；多数应改注入 |
+| R18 单一职责 | `GameState` 405 / `BulletManager` / workbench 4286 | god object 需拆 |
+| R21 声明式建树 | workbench 178 `.new()` + 183 `add_child` | 最大表面积（可后） |
+| R6 私有调用 | 12 处 `has_method("_")` | 改公开虚函数 |
+| 层序契约 | 30 处散写 `z_index` | 收敛到 `LayerConfig` |
+| 帧序契约 | 无显式 `FrameOrder` | 引入 `FrameOrder` |
+| R14/R15/R2/R5 | res:// 写存档 0、中文 .gd 文件名 0、`get_node("../")` 0、字符串 `get_node` 5 | 比预期干净 |
+| R4 输入 | 12 文件轮询 `Input.is_action` | 按「移动例外」理解，非硬违规 |
+
+### 验收
+- 每个 R 项从 baseline 的「待改进」删除时附证据（grep 计数 / 测试）。
+
+---
+
+## 12. B2 详解：autoload 分类与去单例方案
+
+> 输入：12 个 autoload 的引用面（下表）+ R9（只放真全局）/ R8（Resource/static 替代）/ R18（拆 god object）。
+> 目标：12 → **≤5 个真全局**；其余改 `class_name` / 注入 / 拆 / 内核替换。
+
+### 12.1 分类总表
+
+| autoload | 行数 | 引用(文件/次数) | 性质 | 处置 | 波次 |
+|---|---|---|---|---|---|
+| `GameEvents` | 22 | 11 / 51 | 纯信号总线（无状态） | **保留**（真全局） | — |
+| `RNG` | 32 | 26 / 51 | 决定论单一随机源 | **保留**（或改 `static` class） | — |
+| `AudioManager` | 206 | 17 / 36 | 音频服务（单路 BGM + 16 路 SFX + 音量） | **保留**（收窄跨 autoload 耦合） | — |
+| `GameManager` | 126 | 10 / 53 | 外壳状态机 + 场景切换 + 暂停 | **保留并升级为组合根** | — |
+| `LayerConfig` | 21 | 13 / 24 | 纯常量 | **改 `class_name`（去 autoload）** | W1 |
+| `MissEffectManager` | 96 | 2 / 3 | 全屏 miss 圆（CanvasLayer + shader） | **改场景节点**（外壳注入） | W1 |
+| `StageObjects` | 42 | 3 / 8 | 关卡命名对象注册表（帧级作用域） | **改注入**（per-stage，`StageContext` 持有） | W2 |
+| `HitEffectPool` | 67 | 6 / 10 | 特效节点池 | **改注入**（`FxLayer`，随轨道 A） | W2 |
+| `AssetRegistry` | 153 | 31 / 49 | 静态资源表 + 内容 key | **改 `class_name`（静态表）+ 数据资源**（R17/S13） | W3 |
+| `StageManager` | 169 | 14 / 35 | 关卡生命周期 + 生成敌人/Boss | **改注入/场景节点**（`StageDirector` under World） | W3 |
+| `BulletManager` | 165 | 22 / 46 | 弹幕门面 | **内核替换**（轨道 A Phase 1 + adapter） | W4 |
+| `GameState` | 405 | **42 / 186** | 全局游戏数据（god object） | **拆分**（最高优先） | W4 |
+
+**目标 autoload 集合（≈4~5）**：`GameEvents / RNG / AudioManager / GameManager` + 一个**瘦身存档全局**（`GameState` → `SaveData/Profile`）。
+
+### 12.2 GameState 拆分（核心）
+
+现在 `GameState` 一身多职：
+
+| 现职责 | 目标归属 |
+|---|---|
+| `selected_difficulty / selected_character / current_stage_id` | 持久化元数据 → `SaveData/Profile`（可留瘦 autoload 或 `static`） |
+| `spell_book / save_mgr / spell_book_mgr` + 高分 | 持久化数据 → 同上（存档全局） |
+| `player / active_enemies / stage_registry` | **运行时引用 → 组合根注入**（Player 节点 / `CollisionCoordinator` 注册表 / stage 数据） |
+| `score / lives / bombs / power / graze / memory_value` | **`PlayerResources`**（注入到 Player，`changed` 信号；对应重建版） |
+| `_apply_ui_theme()` | 外壳/主题初始化（移出 `GameState`） |
+
+**迁移顺序（防双写不一致）**：
+1. 新建 `PlayerResources`，与 `GameState` **双写**并存；
+2. 实体改读 `PlayerResources`（GameState 仍在写，仅作兼容）；
+3. 拆 `player / active_enemies` 为组合根注入（`CollisionCoordinator` / `WorldQuery` 承接）；
+4. 最后把 `GameState` 瘦身为存档全局，删掉运行时字段。
+> 注意：重建版已有现成 `PlayerResources`（`scripts/game/player_resources.gd`）可参考/移植。
+
+### 12.3 关键处置要点
+
+- **LayerConfig → `class_name`**：纯 `const`，去掉 autoload 即可；需同步把所有 `LayerConfig.XXX` 引用改为 `class_name` 静态常量（行为等价）。**零风险、先做**。
+- **AssetRegistry → 静态表 + 数据**：`bullet_configs` 是「代码侧内容配置」，应迁为数据（R17）——但先别一步到位；先把它从 autoload 变 `class_name`（`static const`），再逐项迁 .tres（与 S13 图集一起）。
+- **HitEffectPool → FxLayer**：它的 `Engine.get_main_loop().current_scene.get_node_or_null("World")` 是典型的**全树找父级**（违反 R2/R9）；改成由组合根注入的 `FxLayer`（重建版已有）。
+- **StageObjects → per-stage 注入**：它本来就是「帧级作用域」（load_stage 注册、stop 清空），不该是全局；改由 `StageContext`/`World` 持有，生命周期随关卡。
+- **StageManager → StageDirector**：它直接调 `GameState.reset_all/clear_enemies` 与 `BulletManager.clear_bullets`（跨 autoload 插手）；目标是把「关卡=World 的子节点」+ 注入服务（对应重建版 `game.gd load_stage` + 关卡脚本）。
+- **MissEffectManager → 场景节点**：它是个 CanvasLayer 渲染特效，引用只有 2/3，改由外壳场景挂载并注入最省事。
+- **GameManager → 组合根**：它已经在委派 `SceneTransition`/`MenuNav`；把它作为**唯一的壳入口**，在 `_ready` 里创建并注入内核/服务（对应重建版 `game.gd`）。
+- **AudioManager 的跨耦合**：它 `connect(GameManager.game_state_changed)`、读 `AssetRegistry.sounds` —— 改由组合根接线（或保留，但明确「音频只听事件」）。
+
+### 12.4 迁移波次（按风险从低到高）
+
+| 波次 | 内容 | 风险 | 说明 |
+|---|---|---|---|
+| **W1** | `LayerConfig` → `class_name`；`MissEffectManager` → 场景节点 | 极低 | 引用 24 / 3，机械改 |
+| **W2** | `StageObjects` → per-stage 注入；`HitEffectPool` → `FxLayer` | 低-中 | 引用 8 / 10；后者随轨道 A |
+| **W3** | `AssetRegistry` → `class_name` + 数据；`StageManager` → `StageDirector` | 中-高 | 引用 49 / 35；涉及内容与关卡流程 |
+| **W4** | `GameState` 拆分；`BulletManager` 内核替换 | 最高 | 引用 186 / 46；与轨道 A Phase 1/5 合流 |
+
+### 12.5 验收（可量化）
+
+- autoload 数：**12 → ≤5**。
+- `grep -rIl "\bGameState\b" scripts`：**42 → 仅存档相关**（目标 ≤ 5）。
+- **内核文件里 `GameState` 出现次数 = 0**。
+- 每删/改一个 autoload：GUT 全绿 + 主流程冒烟（主菜单 → stage01 可玩）。
+
+### 12.6 风险
+
+- 引用面大的项（`GameState` / `AssetRegistry` / `BulletManager`）必须先做**兼容门面**再迁，不能直接删。
+- 迁移期**双写**（`GameState` vs `PlayerResources`）要有兜底与对账测试。
+- autoload 之间的横向耦合（`AudioManager → GameManager`、`StageManager → GameState/BulletManager`）要把「谁调谁」改成**组合根接线**，否则拆完还是隐式全局。
+
+### 12.7 W1 实施记录（2026-09-11，已完成）
+
+| 项 | 变更 |
+|---|---|
+| `LayerConfig` | `scripts/autoload/layer_config.gd` → **`scripts/layer_config.gd`**，加 `class_name LayerConfig` 并去掉 autoload 项；25 处 `LayerConfig.XXX` 引用零改动（静态常量，行为等价） |
+| `MissEffectManager` | `scripts/autoload/miss_effect_manager.gd` → **`scripts/effect/miss_effect_manager.gd`**，加 `class_name MissEffectManager` 并去掉 autoload 项 |
+
+**组合根注入链**：`GameScene._ready()` 创建 `MissEffectManager` 子节点 → `StageManager.miss_layer` → `StageContext.effects` → `EffectService.miss_layer`（为空静默跳过，便于测试/无场景上下文）→ `MissEffectManager.add_circle()`。`GameScene._exit_tree()` 置空注入槽；`BulletManager.clear_all()` 删去对 UI 特效的全局直呼（弹幕门面不再知道 miss 圈存在）。
+
+**验收**：
+
+- autoload 数 **12 → 10**。
+- `test/test_miss_effect.gd`（8 用例，含 `ProjectSettings.has_setting("autoload/MissEffectManager")` = false 断言）。
+- `test/test_composition_root.gd`：实例化 `game_scene.tscn`，断言建出 `MissEffectManager` 子节点且已注入 `StageManager.miss_layer`。
+- 全量 GUT **279/279 全绿**（3199 断言）。
+
+**踩坑**：新增 `class_name` 后要让 Godot 重建 `.godot/global_script_class_cache.cfg`（跑一次 `godot --headless --import`），否则 headless 直接报 `Identifier "LayerConfig" not declared`——不是代码错。
+
+**顺带修（与本波无关，验证时暴露）**：`test/test_recent_mechanics.gd` 的练习记录用例非幂等——历史遗留的 `stage=99` 幽灵记录会让 `get_or_create` 命中旧值继续累加（实测 attempts=6/captures=3）造成假失败；已加起始清除，并清掉本地 `.tres` 幽灵项。
