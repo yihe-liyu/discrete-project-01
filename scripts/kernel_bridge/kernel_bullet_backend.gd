@@ -16,6 +16,8 @@ var unmapped_behavior_count: int = 0
 
 var _type_by_sig: Dictionary = {}              # 内容签名(int) → BulletType
 var _texture_by_index: Array[Texture2D] = []   # 内核弹型下标 → 贴图（渲染旁表）
+var _damage_by_index := PackedFloat32Array()   # 宿主专有：伤害（内核 BulletType 无 damage，见 §16.1）
+var _hit_sfx_by_index: Array[String] = []      # 宿主专有：命中音效 key
 
 
 func _ready() -> void:
@@ -42,7 +44,7 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	var speed: float = data.velocity.length()
 	var vel: Vector2 = direction.normalized() * speed if direction != Vector2.ZERO else data.velocity
 	var id: int = system.spawn(type, pos, vel, data.tint)
-	_sync_texture(id, data)
+	_sync_host_tables(id, data)
 	return id
 
 
@@ -62,6 +64,20 @@ func texture_for_index(index: int) -> Texture2D:
 	if index < 0 or index >= _texture_by_index.size():
 		return null
 	return _texture_by_index[index]
+
+
+## 宿主专有：该弹型伤害（内核 BulletType 无 damage；越界回退 10.0 = BulletData 默认）。
+func damage_for_index(index: int) -> float:
+	if index < 0 or index >= _damage_by_index.size():
+		return 10.0
+	return _damage_by_index[index]
+
+
+## 宿主专有：该弹型命中音效 key（"" = 默认规则）。
+func hit_sfx_for_index(index: int) -> String:
+	if index < 0 or index >= _hit_sfx_by_index.size():
+		return ""
+	return _hit_sfx_by_index[index]
 
 
 ## 内容签名：只含决定 BulletType 的字段（**不含** velocity / tint——它们随每次发射传入）。
@@ -103,9 +119,13 @@ func _map_faction(f: int) -> BulletType.Faction:
 			return BulletType.Faction.NONE   # BOMB：原项目靠协程自爆，S4 再接
 
 
-func _sync_texture(id: int, data: BulletData) -> void:
+func _sync_host_tables(id: int, data: BulletData) -> void:
 	var indices: PackedInt32Array = system.get_type_indices()
 	var ti: int = indices[id]
 	if _texture_by_index.size() <= ti:
 		_texture_by_index.resize(ti + 1)
+		_damage_by_index.resize(ti + 1)
+		_hit_sfx_by_index.resize(ti + 1)
 	_texture_by_index[ti] = data.texture
+	_damage_by_index[ti] = data.damage
+	_hit_sfx_by_index[ti] = data.hit_sfx

@@ -4,6 +4,15 @@ extends GutTest
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
 const REIMU_DATA = preload("res://data/player_data/reimu_data.tres")
 
+
+## 轻量假敌人：只实现本层用到的字段/方法（免依赖完整 Enemy/Boss 场景）。
+class FakeEnemy extends Node2D:
+	var hitbox_radius: float = 20.0
+	var damage_taken: float = 0.0
+
+	func take_damage(d: float) -> void:
+		damage_taken += d
+
 var _backend: KernelBulletBackend
 var _physics: KernelBulletPhysics
 var _player: Player
@@ -73,3 +82,19 @@ func test_invincible_player_ignores_bullets() -> void:
 	_enemy_bullet_at(_player.global_position)
 	_physics.process()
 	assert_eq(_backend.system.get_active_count(), 1, "无敌时弹应穿过")
+
+
+func test_player_bullet_damages_enemy_via_damage_side_table() -> void:
+	var fake := FakeEnemy.new()
+	fake.global_position = Vector2(200, 200)
+	add_child_autofree(fake)
+	GameState.active_enemies.append(fake)
+	GameState.memory_value = 100.0   # 关掉记忆加成（<50 才生效）
+	var d := BulletData.new().player().tex("reimu_main")
+	d.velocity = Vector2.UP * 100.0
+	d.damage = 10.0
+	_backend.shoot(d, Vector2(200, 200), Vector2.UP)
+	_physics.process()
+	assert_almost_eq(fake.damage_taken, 10.0, 0.01, "伤害应来自后端 damage 侧表（内核无 damage）")
+	assert_eq(_backend.system.get_active_count(), 0, "命中后应回收该弹")
+	GameState.active_enemies.erase(fake)

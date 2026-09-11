@@ -584,5 +584,36 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **下一拼图 S3c**：自机弹 ↔ 敌人（`damage` 侧表 + 记忆加成 + 音效/特效）+ bomb + 死亡清弹 + `out_grace`。
 
+---
+
+## 19. Track A spike 记录：S3c 自机弹 ↔ 敌人（2026-09-11，已完成）
+
+> 分支 `kernel/s2-swap`。**范围**：把旧 `BulletPhysics._player_vs_enemies` 的规则移植到内核几何上；**damage 走宿主侧表**（内核 `BulletType` 无此字段，见 §16.1）。**A 方案至此验证成立**。
+
+**做了什么**
+
+- `KernelBulletBackend` 新增宿主专有侧表：`_damage_by_index`（伤害）/ `_hit_sfx_by_index`（命中音效 key），随 `_sync_host_tables()` 与纹理旁表一起增长；访问器 `damage_for_index(ti)` / `hit_sfx_for_index(ti)`。**内核零改动**。
+- `KernelBulletPhysics` 新增 `_player_bullets_vs_enemies()`：
+  - 倒序遍历内核行，只处理 `Faction.PLAYER`；对 `GameState.get_active_enemies()` 逐个 `hit_test(i, enemy.pos, enemy.hitbox_radius)`。
+  - 命中 → `enemy.take_damage(damage * bonus)` + `add_memory(MEMORY_HIT_BY_BULLET)` + 音效规则 + 命中特效 + `despawn`。
+  - 与旧实现一致：Boss 时符 / 未开战（`current_phase() == null or is_timeout_only`）时弹穿过；`bonus = 1 + remap(memory, 0, 50, 0.15, 0.05)`（记忆 <50 时）。
+  - 命中音效 1:1：专属 key 任何敌人命中都播（音量表 `HIT_SFX_VOLUME`）；默认仅 Boss 残血播；未知 key 回退 `normal_damage` 并告警。
+- 新增测试：`FakeEnemy`（轻量假敌人）+ damage 侧表用例；`test_kernel_physics` 现 5 用例 / 9 断言。
+
+**验收**：全量 GUT **60 套 / 301 测试 / 3246 断言全绿**。
+
+**A 方案成立的关键证据**：`damage` 不引入内核也能 1:1 保住（侧表 + 宿主规则）→ §16.1 的 "Boss TTK 差 ~10×" 风险被规避，内核仍零改动。
+
+**本步仍未接（明确列出，别以为是全的）**：
+
+- `bomb`（X 键）：原项目是 `bomb_bullet` + `BOMB_BEHAVIOR` 协程自爆——依赖 S4 行为移植。
+- **死亡清弹**（Miss / Bomb 扩散圈）：`DeathClear` 仍遍历旧 `_pool`；内核池需另接（用 `cancel_bullets` 驱动扩散半径）。
+- `out_grace`：内核按 `cull_margin=90` 统一剔除，未按弹型宽限（bomb 的 9999 宽限会失效）。
+- **行为**（`bounce / gravity / radial` 等）：内核不跑 `coroutine_script` → 目前按直线飞（S4）。
+- **自机弹记忆变红**：旧 `Bullet.bind` 在 `memory<50` 时把 `sprite.modulate` 往红 lerp，桥接尚未复现。
+
+**试玩入口**：`BulletManager.set_use_kernel(true)`（默认 `false`）。**完整可玩性还差 S4（行为）+ 上面 4 项**——当前切过去能看到/打到，但 Bomb、Miss 清弹、反弹弹会不对。
+
+
 
 
