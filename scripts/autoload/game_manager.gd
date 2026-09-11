@@ -124,4 +124,3 @@ func toggle_pause():
 		resume_game()
 	elif current_state == AppState.PLAYING:
 		pause_game()
-

@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_o3sb8")
+name = "音符「定点扩散」"
 uid = 1
 bonus = 100000
 time_limit = 40.0

@@ -1,6 +1,9 @@
 extends CoroutineScript
-## 非符1 移动：正弦波左右飘移，两端缓慢，中间最快
-## auto_stop = false（持续运行直到 phase 结束）
+
+const META := {
+	"name": "卡摩瑞道中一非移动",
+	"desc": "正弦波左右飘移"
+}
 
 var _center: float = 448.0     # 中心 x
 var _amplitude: float = 200.0  # 振幅（左右各 200px）
