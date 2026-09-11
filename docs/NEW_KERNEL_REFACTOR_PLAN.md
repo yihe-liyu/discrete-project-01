@@ -539,5 +539,28 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | **S3b** | 敌弹 ↔ 自机：命中 + 擦弹双阈值 + 擦弹随机清弹（核心生存规则） | headless + 试玩（能中弹、能擦弹） |
 | **S3c** | 自机弹 ↔ 敌人（damage 侧表 + 记忆加成 + 音效/特效）+ bomb + 死亡清弹 + out_grace | headless + 完整试玩 |
 
-> **开关不能用 F1**：`debug_toggle` 已被 `scripts/debug/debug_drawer.gd` 与 `scripts/scenes/main_menu.gd` 占用。分支上的方案是 `use_kernel` 默认 `true`（回退 = 改一行，或切回 `main`）。
+> **开关不能用 F1**：`debug_toggle` 已被 `scripts/debug/debug_drawer.gd` 与 `scripts/scenes/main_menu.gd` 占用。**最终决定**：`use_kernel` 默认 `false`（Strangler：主流程零改动），试玩时用 `set_use_kernel(true)` 切换。
+
+---
+
+## 17. Track A spike 记录：S3a 内核路由（2026-09-11，已完成）
+
+> 分支 `kernel/s2-swap`。**范围**：让 `BulletManager` 能把弹幕整个切到内核池（spawn / 积分 / 渲染 / 剔除 / 暂停 / 清空），**不含碰撞**（见 §16.5）。默认 `use_kernel = false`（Strangler：主流程零改动）。
+
+**做了什么**
+
+- `scripts/autoload/bullet_manager.gd`：
+  - 新增 `use_kernel` / `_kernel: KernelBulletBackend` / `kernel_system()` / `set_use_kernel(v)` / `_enable_kernel()`。
+  - `shoot_bullet` / `shoot_player_bullet` / `shoot_enemy_bullet` / `shoot_bomb_bullet` 四入口按开关分流。
+  - `set_use_kernel(true)` 先清旧池再装配；`set_use_kernel(false)` 清内核池并把渲染数据源复位。
+  - `_enable_kernel()`：`process_physics_priority = -10`（§16.3 帧序）、`cull_rect = 东方框`、`cull_margin = 90`（对齐旧 `is_offscreen`）、`_multi_mesh.set_backend(_kernel)`（S2 路径）。
+  - `_physics_process` 的旧碰撞 / 出屏回收整块收进 `if not use_kernel:`；`clear_all / clear_bullets / pause_processing / resume_processing` 同步路由。
+- 新增 `test/test_kernel_swap.gd`（4 用例 / 8 断言）：路由到内核池 / `cull_rect` 对齐 / 切回旧路清空内核池 / 帧序优先。
+
+**验收**：全量 GUT **59 套 / 296 测试 / 3237 断言全绿**。
+
+**切到内核会怎样（不骗你）**：弹幕会**飞、会画**（内核积分 + S2 渲染快照），但**不判定**（碰撞未接），且**行为不全**（`bounce / gravity / radial` 仍是每弹协程，内核不跑 → 这些弹变直线；可用后端 `unmapped_behavior_count` 观察）。所以 S3a 的试玩验证的是"轨迹 / 朝向 / 颜色 / 层次对不对"。
+
+**下一拼图 S3b**：敌弹 ↔ 自机（命中 + 擦弹双阈值 + 擦弹随机清弹），新建 `KernelBulletPhysics` 宿主桥接。
+
 

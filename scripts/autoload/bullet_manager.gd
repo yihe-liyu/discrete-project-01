@@ -21,6 +21,12 @@ var _multi_mesh: Node2D
 var _processing_paused: bool = false
 const BulletMultiMeshClass = preload("res://scripts/bullet/bullet_multi_mesh.gd")
 
+## ═══ Track A / S3a：内核弹幕后端（Strangler 开关）═══
+## true = 弹幕走内核 SoA 池（scripts/kernel/）+ 内核渲染数据源；false = 旧 Bullet 节点池（默认）。
+## 切换用 set_use_kernel()（试玩 A/B / 测试）；**碰撞规则不在本步**，见 docs/NEW_KERNEL_REFACTOR_PLAN.md §16。
+var use_kernel: bool = false
+var _kernel: KernelBulletBackend
+
 # 共享子弹上下文：所有子弹协程共用一个 ctx（服务全部无状态）
 # 省掉每弹 new StageContext + 服务对象（REFACTORING P-0 债务）
 var _world_clock: CoroutineRunner
@@ -56,6 +62,9 @@ func _ready():
 		_multi_mesh = BulletMultiMeshClass.new()
 		_multi_mesh.enabled = true
 		add_child(_multi_mesh)
+	
+	if use_kernel:
+		_enable_kernel()
 
 
 # ═══ 每帧 ═══
@@ -72,35 +81,45 @@ func _physics_process(_delta: float) -> void:
 	# 激光步进 & 碰撞
 	_lasers.step(dt)
 	
-	# 子弹碰撞
-	_physics.process_collisions()
-	
-	# 出屏回收（out_grace：出界宽限内不回收——探测弹等飞出界仍可继续表现/往返）
-	for i in range(_pool.active_bullets.size() - 1, -1, -1):
-		var b: Bullet = _pool.active_bullets[i]
-		if _pool.is_offscreen(b.global_position):
-			if b.out_grace > 0.0:
-				b._out_time += dt
-				if b._out_time < b.out_grace:
-					continue  # 宽限内：出界不回收（继续跑行为）
-			_pool.return_bullet(b)
-		else:
-			b._out_time = 0.0  # 回到界内重置计时
-	# 出屏回收（完）
+	if not use_kernel:
+		# ── 旧路径（Bullet 节点池）──
+		# 子弹碰撞
+		_physics.process_collisions()
+		# 出屏回收（out_grace：出界宽限内不回收——探测弹等飞出界仍可继续表现/往返）
+		for i in range(_pool.active_bullets.size() - 1, -1, -1):
+			var b: Bullet = _pool.active_bullets[i]
+			if _pool.is_offscreen(b.global_position):
+				if b.out_grace > 0.0:
+					b._out_time += dt
+					if b._out_time < b.out_grace:
+						continue  # 宽限内：出界不回收（继续跑行为）
+				_pool.return_bullet(b)
+			else:
+				b._out_time = 0.0  # 回到界内重置计时
+	# 内核路径（S3a）：积分/剔除由 kernel/bullet_system.gd 的 _physics_process 负责（priority -10）。
+	# 碰撞规则见 §16.5 的 S3b / S3c（本步不含）。
 
 
 # ═══ 子弹 API（委托给 pool）═══
 
 func shoot_bullet(data, pos: Vector2, direction: Vector2):
+	if use_kernel and _kernel != null:
+		return _kernel.shoot(data, pos, direction)
 	return _pool.shoot(data, pos, direction)
 
 func shoot_player_bullet(data, pos: Vector2, direction: Vector2):
+	if use_kernel and _kernel != null:
+		return _kernel.shoot(data, pos, direction)
 	return _pool.shoot(data, pos, direction)
 
 func shoot_enemy_bullet(data, pos: Vector2, direction: Vector2):
+	if use_kernel and _kernel != null:
+		return _kernel.shoot(data, pos, direction)
 	return _pool.shoot(data, pos, direction)
 
 func shoot_bomb_bullet(data, pos: Vector2, direction: Vector2):
+	if use_kernel and _kernel != null:
+		return _kernel.shoot(data, pos, direction)
 	return _pool.shoot(data, pos, direction)
 
 func return_bullet(bullet):
@@ -148,6 +167,8 @@ func start_death_clear(pos: Vector2, max_radius: float = 1280.0, duration: float
 
 func clear_all():
 	_pool.clear()
+	if _kernel != null:
+		_kernel.system.clear()
 	_lasers.clear()
 	_death_clear.clear_all()
 	HitEffectPool.clear_all_pool()
@@ -156,9 +177,55 @@ func clear_all():
 
 func clear_bullets():
 	_pool.clear()
+	if _kernel != null:
+		_kernel.system.clear()
 
 func pause_processing() -> void:
 	_processing_paused = true
+	if _kernel != null:
+		_kernel.system.set_physics_process(false)
 
 func resume_processing() -> void:
 	_processing_paused = false
+	if _kernel != null:
+		_kernel.system.set_physics_process(true)
+
+
+# ═══ Track A / S3a：内核后端装配与切换 ═══
+
+## 当前内核弹池（未装配 = null）；供工具 / 测试读快照。
+func kernel_system() -> BulletSystem:
+	return _kernel.system if _kernel != null else null
+
+
+## 切换弹幕后端（Strangler）。切到内核会先清空旧池，避免两套并存。
+func set_use_kernel(v: bool) -> void:
+	if v == use_kernel:
+		return
+	use_kernel = v
+	if v:
+		_pool.clear()          # 避免旧弹残留在两条路之间
+		_enable_kernel()
+	else:
+		if _kernel != null:
+			_kernel.system.clear()
+		if _multi_mesh != null:
+			_multi_mesh.set_backend(null)
+
+
+## 建内核后端（幂等）：设帧序 / 剔除范围 / 渲染数据源。
+func _enable_kernel() -> void:
+	if _kernel != null:
+		return
+	_kernel = KernelBulletBackend.new()
+	_kernel.name = "KernelBulletBackend"
+	add_child(_kernel)
+	# 帧序：内核积分必须在宿主 _physics_process（priority 0）之前执行（§16.3；原项目暂无 FrameOrder）。
+	_kernel.system.process_physics_priority = -10
+	# 剔除范围 = 东方框；margin 对齐旧 is_offscreen 的 90px。
+	_kernel.system.cull_rect = Rect2(
+		GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
+		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
+	_kernel.system.cull_margin = 90.0
+	if _multi_mesh != null:
+		_multi_mesh.set_backend(_kernel)
