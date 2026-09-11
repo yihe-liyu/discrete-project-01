@@ -1,5 +1,7 @@
+class_name MissEffectManager
 extends CanvasLayer
 ## Miss 时全屏圆形特效（Shader 实现），最多 8 圈同时显示
+## 不再是 autoload：由组合根（GameScene）实例化并注入 EffectService。
 
 const MAX_CIRCLES := 8
 

@@ -57,6 +57,7 @@ var audio: AudioService:
 var effects: EffectService:
 	get:
 		if _effects == null: _effects = EffectService.new()
+		_effects.miss_layer = StageManager.miss_layer  # 组合根注入；每取一次保持最新
 		return _effects
 
 var boss: BossService:

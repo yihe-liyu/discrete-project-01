@@ -7,10 +7,17 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
+var _miss_layer: MissEffectManager
 
 
 func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
+
+	# 组合根装配：Miss 圈渲染节点（原 autoload）由本场景创建并注入 ctx 服务。
+	_miss_layer = MissEffectManager.new()
+	_miss_layer.name = "MissEffectManager"
+	add_child(_miss_layer)
+	StageManager.miss_layer = _miss_layer
 
 	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
 
@@ -89,6 +96,7 @@ func _exit_tree():
 	if GameEvents.boss_defeated.is_connected(_on_practice_cleared):
 		GameEvents.boss_defeated.disconnect(_on_practice_cleared)
 
+	StageManager.miss_layer = null  # 解除注入（节点随本场景释放）
 	BulletManager.clear_all()
 	HitEffectPool.clear_all_pool()
 	if GameState.is_practice_mode:

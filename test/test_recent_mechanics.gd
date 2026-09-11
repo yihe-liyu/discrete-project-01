@@ -110,6 +110,11 @@ func test_practice_miss_records_failure():
 	phase.hp = 1000
 	phase.time_limit = 10.0
 	var book: SpellRecordBook = GameState.spell_book
+	# 防污染：清掉历史运行可能残留的 (99,7) 记录——stage 99 不存在于游戏中，
+	# 否则 get_or_create 会命中旧记录，练习次数从旧值继续累加导致本测试假失败。
+	var stale := book.get_record(99, 7, 0, 0, 1)
+	if stale:
+		book.records.erase(stale)
 	book.get_or_create(99, 7, 0, 0, 1, 303, 1, 2)
 	GameState.is_practice_mode = true
 	GameState.start_practice(phase, null, "卡摩瑞", 99, 7)

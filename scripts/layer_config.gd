@@ -1,6 +1,7 @@
-# LayerConfig.gd (autoload)
-extends Node
-## 全局图层管理 — 所有 z_index 在此定义
+## 渲染图层常量（R17：不散落魔术数字）——静态常量类，不再是 autoload。
+## 用法不变：`LayerConfig.PLAYER_BULLET`。
+class_name LayerConfig
+
 
 # ── 游戏物件 ──
 const PLAYER_BULLET := -10  ## 自机子弹
