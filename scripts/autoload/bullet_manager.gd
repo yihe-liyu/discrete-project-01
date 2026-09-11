@@ -23,7 +23,8 @@ const BulletMultiMeshClass = preload("res://scripts/bullet/bullet_multi_mesh.gd"
 
 ## ═══ Track A / S3a：内核弹幕后端（Strangler 开关）═══
 ## true = 弹幕走内核 SoA 池（scripts/kernel/）+ 内核渲染数据源；false = 旧 Bullet 节点池（默认）。
-## 切换用 set_use_kernel()（试玩 A/B / 测试）；**碰撞规则不在本步**，见 docs/NEW_KERNEL_REFACTOR_PLAN.md §16。
+## 切换：游戏内按 **F2**（运行时热键，见 _unhandled_input），或 set_use_kernel()（测试）。
+## **碰撞规则不在本步**，见 docs/NEW_KERNEL_REFACTOR_PLAN.md §16。
 var use_kernel: bool = false
 var _kernel: KernelBulletBackend
 var _kernel_physics: KernelBulletPhysics
@@ -40,7 +41,24 @@ func get_bullet_ctx() -> StageContext:
 	return _bullet_ctx
 
 
+## 试玩 A/B 热键：F2 在「旧 Bullet 节点池」与「内核 SoA 池」之间切换（默认旧池，零源码改动）。
+func _ensure_kernel_toggle_action() -> void:
+	if InputMap.has_action(&"kernel_toggle"):
+		return
+	InputMap.add_action(&"kernel_toggle")
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_F2
+	InputMap.action_add_event(&"kernel_toggle", ev)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"kernel_toggle"):
+		set_use_kernel(not use_kernel)
+		print("[BulletManager] use_kernel = %s" % use_kernel)
+
+
 func _ready():
+	_ensure_kernel_toggle_action()
 	# 世界时钟：永久任务 → is_running 恒 true（子弹协程的 active() 语义 = 世界活跃）
 	_world_clock = CoroutineRunner.new()
 	_world_clock.name = "WorldClock"
@@ -127,13 +145,22 @@ func shoot_bomb_bullet(data, pos: Vector2, direction: Vector2):
 	return _pool.shoot(data, pos, direction)
 
 func return_bullet(bullet):
+	# 内核路径：内容是 int id（Track A / S3）；旧池：Bullet 节点。
+	if use_kernel and _kernel != null and typeof(bullet) == TYPE_INT:
+		_kernel.system.despawn(bullet)
+		return
 	_pool.return_bullet(bullet)
 
 
 ## 原地重新发射：复用现有子弹（重配置），替代"回收旧弹 + 新建新弹"的拆/建开销。
 ## 用于"旧弹变成新弹"这一类（NON01 反弹→直线、radial 撞边→向下等）。
 ## 注意：会 stop 掉旧行为协程、重放雾；bullet 仍在 active_bullets 中，不回收不新建。
-func re_fire(bullet: Bullet, data: BulletData, dir: Vector2, at: Vector2) -> void:
+func re_fire(bullet, data: BulletData, dir: Vector2, at: Vector2) -> void:
+	# 内核路径：内容是 int id → 近似实现为「回收旧行 + 按新配置重发」（行为差异见方案 §19）。
+	if use_kernel and _kernel != null and typeof(bullet) == TYPE_INT:
+		_kernel.system.despawn(bullet)
+		_kernel.shoot(data, at, dir)
+		return
 	bullet.bind(data, dir)
 	bullet.global_position = at
 

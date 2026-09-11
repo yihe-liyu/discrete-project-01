@@ -127,7 +127,8 @@ func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -
 	boss.start_boss()
 	return boss
 
-func spawn_bullet(data: BulletData, position: Vector2, direction: Vector2) -> Bullet:
+## 返回类型同 BulletService.shoot_spread：旧池 = Bullet，内核路径 = int id（Track A / S3）。
+func spawn_bullet(data: BulletData, position: Vector2, direction: Vector2):
 	return BulletManager.shoot_enemy_bullet(data, position, direction)
 
 ## 开一场"仅单个阶段"的战（符卡练习）：自建一个可运行的协程时钟作 ctx，

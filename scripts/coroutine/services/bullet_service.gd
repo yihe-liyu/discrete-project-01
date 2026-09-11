@@ -5,8 +5,9 @@ extends RefCounted
 var active: bool = true
 
 
-## 扇形散弹；count == 1 时等价单弹并返回该子弹引用（供设置 extra 等参数的弹幕用），否则返回 null
-func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> Bullet:
+## 扇形散弹；count == 1 时返回该弹的引用（旧池 = Bullet 节点；内核路径 = int id），否则返回 null。
+## ATTENTION：**不声明返回类型**——两条路返回不同东西（Track A / S3）；用之前先 `is Bullet` 判断。
+func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null):
 	if not active or count <= 0:
 		return null
 	if sfx:
