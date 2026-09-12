@@ -201,6 +201,9 @@ func _port_for(data: BulletData) -> Dictionary:
 				port = raw
 		if probe is Node:
 			(probe as Node).free()
+	if OS.is_debug_build():
+		var src: String = data.coroutine_script.resource_path.get_file()
+		print("[KernelBulletBackend] 端口 %s -> %s" % [src, port.get("move", port.get("program", "(无)"))])
 	_port_by_sig[sig] = port
 	return port
 

@@ -31,6 +31,8 @@ func process(system: BulletSystem, bullet_id: int, _ctx: BehaviorContext) -> voi
 ## 碰顶边：入队一颗向下匀速弹（保留速度大小），并请求回收自己。
 func _re_fire_down(system: BulletSystem, bullet_id: int, params: Dictionary) -> void:
 	var speed: float = system.get_velocity(bullet_id).length()
+	if OS.is_debug_build():
+		print("[RadialAccelBehavior] 顶边换弹 id=%d speed=%.1f" % [bullet_id, speed])
 	var sfx: String = params.get(&"sfx", "")
 	if sfx != "":
 		var stream: AudioStream = AssetRegistry.sounds.get(sfx, null)

@@ -57,6 +57,19 @@ func test_behavior_pipeline_wired() -> void:
 		"行为必须在宿主碰撞之前（-5 < 0）")
 
 
+## S4c-1：走真实 BulletManager 路径（_enable_kernel 装配）验证 radial_accel 顶边换弹。
+func test_radial_accel_via_manager() -> void:
+	BulletManager.set_use_kernel(true)
+	var d := BulletData.new().enemy().blend(true).tex("棱弹")
+	d.velocity = Vector2.UP * 300.0
+	d.coroutine_script = preload("res://data/stages/stage01/bullet/radial_accel_bullet.gd")
+	BulletManager.shoot_enemy_bullet(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
+	for i in 10:
+		await get_tree().physics_frame
+	assert_eq(BulletManager.kernel_system().get_active_count(), 1, "旧弹回收 + 新弹生成")
+	assert_gt(BulletManager.kernel_system().get_velocity(0).y, 0.0, "换成了向下弹")
+
+
 ## S3d：展开清弹圈（死亡清弹）应清掉内核敌弹。
 func test_death_clear_sweeps_kernel_bullets() -> void:
 	BulletManager.set_use_kernel(true)

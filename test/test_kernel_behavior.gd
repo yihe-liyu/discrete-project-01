@@ -118,6 +118,18 @@ func test_radial_accel_re_fires_down_at_top() -> void:
 	assert_almost_eq(_backend.system.get_position(0).y, GameConfig.FIELD_TOP, 0.01, "落在顶边")
 
 
+## S4c-1（真帧）：让引擎物理帧自己跑，验证 system(-10)/behavior(-5)/backend(-4) 链路真的 flush。
+func test_radial_accel_re_fires_via_real_frames() -> void:
+	var d := _enemy()
+	d.velocity = Vector2.UP * 300.0
+	d.coroutine_script = RADIAL_ACCEL
+	_backend.shoot(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
+	for i in 10:
+		await get_tree().physics_frame
+	assert_eq(_backend.system.get_active_count(), 1, "旧弹回收 + 新弹生成")
+	assert_gt(_backend.system.get_velocity(0).y, 0.0, "换成了向下弹")
+
+
 ## S4b：无敌人时 homing 只按速度曲线推进，不转。
 func test_homing_without_enemy_keeps_direction() -> void:
 	var d := BulletData.new().player().tex("reimu_main")
