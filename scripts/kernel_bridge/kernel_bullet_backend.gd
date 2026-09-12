@@ -17,6 +17,7 @@ const BounceBehaviorClass = preload("res://scripts/kernel_bridge/behavior/bounce
 const NonMidFleeBehaviorClass = preload("res://scripts/kernel_bridge/behavior/non_mid_flee_behavior.gd")
 const MarisaLaserFadeClass = preload("res://scripts/kernel_bridge/marisa_laser_fade.gd")
 const MarisaLaserBehaviorClass = preload("res://scripts/kernel_bridge/behavior/marisa_laser_behavior.gd")
+const KernelBombClass = preload("res://scripts/kernel_bridge/kernel_bomb.gd")
 const KernelBehaviorHostClass = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
 const _MOVE_WORLD_ACCEL := &"world_accel"
 const _MOVE_LASER := &"marisa_laser"
@@ -42,6 +43,8 @@ var _port_probes: Array[Node] = []
 var _behavior_host
 ## S4c-4：魔理沙激光整批渐隐控制器。
 var _laser_fade
+## S4d：宿主节点 bomb（不进内核池；out_grace 缘由见 docs §21.17）。
+var _bombs: Array[Node] = []
 
 
 func _ready() -> void:
@@ -53,6 +56,23 @@ func _exit_tree() -> void:
 		if is_instance_valid(p):
 			p.free()
 	_port_probes.clear()
+
+
+## S4d：生成宿主节点 bomb（返回节点，供调用方忽略/持有）。
+func spawn_bomb(data: BulletData, pos: Vector2, direction: Vector2) -> Node:
+	var bomb: Node2D = KernelBombClass.new()
+	add_child(bomb)
+	_bombs.append(bomb)
+	bomb.setup(data, pos, direction)
+	return bomb
+
+
+## 清掉所有宿主 bomb（换关/重开）。
+func clear_bombs() -> void:
+	for b in _bombs:
+		if is_instance_valid(b):
+			b.queue_free()
+	_bombs.clear()
 
 
 ## 懒建内核弹池（幂等）：不强依赖节点已在树中。

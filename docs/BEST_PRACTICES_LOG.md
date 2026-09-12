@@ -119,3 +119,11 @@
 - **做法**：旧 `Bullet.bind` 是在**绑定时**按 `memory_value` 把 `sprite.modulate` 往红 lerp 一次——不是每帧。内核桥接在 `shoot()` 里对 PLAYER 弹算同一个 tint 即可，**内核零改动**。
 - **教训**：先读旧实现确认「一次性 vs 每帧」，能省掉一整套逐帧调制机制。
 - **验收**：全量 GUT **61 套 / 327 测试 / 3310 断言全绿**。
+
+### 2026-09-11 — S4d-2：bomb 宿主节点（B 方案）
+
+- **决策**：bomb 不走内核池，改宿主节点 `KernelBomb`（Node2D）。理由：bomb 需要 `out_grace`（轨道越界不被剔除），而 A 方案下内核 cull 是统一的、没有 per-type grace；bomb 只 8 颗、宿主动作（清弹 / 伤害 / 视觉）多。
+- **实现**：1:1 移植 `bomb_behavior.gd`；`shoot_bomb_bullet` 内核分支 → `_kernel.spawn_bomb`；清场路径 `clear_bombs`。
+- **踩坑**：`Node2D` **没有** `velocity` 属性（那是旧 `Bullet` 的自定义字段）——宿主节点要自己声明。
+- **`out_grace` 决定**：暂缓；将来作为弹幕 / 弹型**属性**接入（正好是 GDExtension 数据属性之一）。出生雾同理暂缓。
+- **验收**：全量 GUT **61 套 / 328 测试 / 3314 断言全绿**。

@@ -819,6 +819,19 @@ func kernel_port() -> Dictionary:
 
 → 待用户选。
 
+### 21.18 S4d-2 落地：bomb 宿主节点（B 方案）（2026-09-11，已完成）
+
+- 新桥接 `KernelBomb`（Node2D + 自带 Sprite）：1:1 移植 `bomb_behavior.gd`（绕自机扩张 → 持有 → 追踪 → 爆炸）。爆炸 = 清弹（`start_death_clear`）+ 范围伤害 + 视觉。
+- `BulletManager.shoot_bomb_bullet` 内核分支改 `_kernel.spawn_bomb()`；`clear_all` / `clear_bullets` 调 `_kernel.clear_bombs()`。
+- **为什么不在内核池**：bomb 需要 `out_grace`（轨道越界不被内核 cull 剔），而 A 方案下内核 cull 统一、无 per-type grace；bomb 只有 8 颗、生命周期短、宿主动作多 → 宿主节点最干净。
+- 验收：`test_kernel_swap` +1（bomb 返回宿主节点且不进内核池 / 读 params）；全量 **61 套 / 328 测试 / 3314 断言全绿**。
+
+### 21.19 `out_grace`（出生保护）与出生雾：暂缓，留给 GDExtension（2026-09-11，决定）
+
+- **`out_grace`**：内核 cull 统一（`cull_rect + margin`），A 方案下无 per-type grace。stage01 + 玩家路径**当前不需要**（只有 stage03B 探测弹用，本轮范围外）；bomb 走宿主节点后也不需要。**决定**：暂缓，将来作为弹幕 / 弹型的**属性**接入（正好是 GDExtension 的数据属性之一）。
+- **出生雾**：`spawn_fog` 只是「弹出生时被雾遮一下」的视觉；内核路径现在立即显示。**决定**：暂缓（低级视觉差）。
+
+
 
 
 

@@ -141,7 +141,7 @@ func shoot_enemy_bullet(data, pos: Vector2, direction: Vector2):
 
 func shoot_bomb_bullet(data, pos: Vector2, direction: Vector2):
 	if use_kernel and _kernel != null:
-		return _kernel.shoot(data, pos, direction)
+		return _kernel.spawn_bomb(data, pos, direction)   # S4d：bomb 走宿主节点（out_grace 缘由）
 	return _pool.shoot(data, pos, direction)
 
 func return_bullet(bullet):
@@ -209,6 +209,7 @@ func clear_all():
 	_pool.clear()
 	if _kernel != null:
 		_kernel.system.clear()
+		_kernel.clear_bombs()
 	_lasers.clear()
 	_death_clear.clear_all()
 	HitEffectPool.clear_all_pool()
@@ -219,6 +220,7 @@ func clear_bullets():
 	_pool.clear()
 	if _kernel != null:
 		_kernel.system.clear()
+		_kernel.clear_bombs()
 
 func pause_processing() -> void:
 	_processing_paused = true

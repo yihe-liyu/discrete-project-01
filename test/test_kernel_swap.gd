@@ -57,6 +57,19 @@ func test_behavior_pipeline_wired() -> void:
 		"行为必须在宿主碰撞之前（-5 < 0）")
 
 
+## S4d：bomb 走宿主节点（不进内核池）——out_grace 缘由见 docs §21.17。
+func test_bomb_spawns_host_node() -> void:
+	BulletManager.set_use_kernel(true)
+	var d := BulletData.new().tex("bomb01_white").bomb()
+	d.coroutine_script = preload("res://scripts/bullet/bomb_behavior.gd")
+	d.params = {"spawn_delay": 0.1}
+	var node = BulletManager.shoot_bomb_bullet(d, Vector2(448, 700), Vector2.RIGHT)
+	assert_not_null(node, "内核 bomb 应返回宿主节点")
+	assert_true(node is Node2D, "应是 Node2D")
+	assert_eq(BulletManager.kernel_system().get_active_count(), 0, "bomb 不应进内核池")
+	assert_almost_eq(node.spawn_delay, 0.1, 0.001, "应读 params.spawn_delay")
+
+
 ## S4c-1：走真实 BulletManager 路径（_enable_kernel 装配）验证 radial_accel 顶边换弹。
 func test_radial_accel_via_manager() -> void:
 	BulletManager.set_use_kernel(true)
