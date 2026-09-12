@@ -7,6 +7,10 @@ extends RefCounted
 
 const BossScript = preload("res://scripts/enemy/boss.gd")
 
+## 组合根绑定的"当前世界"注册表（R8 static var）：
+## 供没有 `stage` 的 StageContext（自机射击 ctx / 子弹共享 ctx）回退解析自机与敌人。
+static var current: EntityRegistry
+
 ## 当前自机（Player / GhostPlayer）；未注入 = null。
 ## 用内建 Node2D 类型：对象释放时 Godot 自动置 null（无类型 Variant 会残留"已释放实例"）。
 var player: Node2D

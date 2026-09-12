@@ -40,6 +40,21 @@ func test_clear_frees_enemies_keeps_player():
 	p.free()
 
 
+func test_stageless_context_falls_back_to_current_world():
+	var saved: EntityRegistry = EntityRegistry.current
+	var reg := EntityRegistry.new()
+	EntityRegistry.current = reg
+	var runner := CoroutineRunner.new()
+	var ctx := StageContext.new(runner)
+	assert_eq(ctx.refs, reg, "无 stage 的 ctx 回退到当前世界注册表")
+	var p: Player = load("res://scenes/player.tscn").instantiate()
+	reg.bind_player(p)
+	assert_eq(ctx.player.get_player(), p, "自机射击 ctx 能解析到自机")
+	EntityRegistry.current = saved   # 还原
+	runner.free()
+	p.free()
+
+
 func test_game_state_facade_forwards_to_registry():
 	var saved: EntityRegistry = GameState._refs
 	var reg := EntityRegistry.new()

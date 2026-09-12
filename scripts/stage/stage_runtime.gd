@@ -31,6 +31,7 @@ var _stage_script: CoroutineScript
 
 ## 入场即把本关卡的注册表绑到 GameState 过渡门面（先于任何实体 _ready）
 func _enter_tree() -> void:
+	EntityRegistry.current = refs
 	GameState.bind_refs(refs)
 
 

@@ -576,6 +576,8 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **踩坑（记录）**：`EntityRegistry.player` 初版写成无类型 Variant，自机 `free()` 后残留「已释放实例」，门面 getter 返回时报 `previously freed instance`（10 个用例红）。改内建 `Node2D` 类型 + getter `is_instance_valid` 兜底后修复。
 
+**试玩修复**：自机不能射击 / 子机消失——`Player._init_shoot_script` 的 `StageContext` 无 `stage`，`ctx.refs` 解析不到自机。加 `EntityRegistry.current`（当前世界 static 回退，R8）+ `StageContext.refs` 回退。验收 **56 套 / 308 测试 / 3205 断言全绿**。
+
 **W4b-3b（下一步）**：把 `refs` 注入 `BulletManager` / `KernelBulletBackend` / `KernelBulletPhysics` / `KernelBomb` / 桥接行为 / `LaserEngine`，拆掉内核弹幕路径对门面的读取。
 
 ---

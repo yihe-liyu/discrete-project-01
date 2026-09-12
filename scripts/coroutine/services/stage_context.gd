@@ -78,9 +78,13 @@ var diff: DifficultyService:
 		if _diff == null: _diff = DifficultyService.new()
 		return _diff
 
-## 战场实体注册表（自机 / 敌机 / Boss）——由 StageRuntime 提供（W4b-3）
+## 战场实体注册表（自机 / 敌机 / Boss）。
+## 优先本关卡 StageRuntime；无 stage 的 ctx（自机射击 / 子弹共享 ctx）回退当前世界。
 var refs: EntityRegistry:
-	get: return stage.refs if stage else null
+	get:
+		if stage and stage.refs:
+			return stage.refs
+		return EntityRegistry.current
 
 ## 命名对象注册表（W2：per-ctx，随关卡生命周期；原 StageObjects autoload）
 var objects: StageObjects:
