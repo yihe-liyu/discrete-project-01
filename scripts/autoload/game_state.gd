@@ -189,7 +189,12 @@ func record_practice_capture(pid: PhaseIdentity) -> void:
 var high_scores: Dictionary:
 	get: return save_mgr.high_scores
 
-var current_score: int = 0
+## 单局资源（W4b-1：GameState 转发到 PlayerResources，单一 owner；后续逐步迁移调用点）
+var resources := PlayerResources.new()
+
+var current_score: int:
+	get: return resources.current_score
+	set(v): resources.current_score = v
 
 
 func load_save_data():
@@ -225,7 +230,7 @@ func get_high_score(stage_id: int) -> int:
 
 
 func add_score(amount: int):
-	current_score += amount
+	resources.add_score(amount)
 
 
 func _on_enemy_killed(score: int, _position: Vector2):
@@ -235,142 +240,115 @@ func _on_enemy_killed(score: int, _position: Vector2):
 # 火力 (Power)
 # ══════════════════════════════════════════════
 
-## 火力值内部表示：0 = 1.00, 300 = 4.00，每 1 单位 = 0.01
-var power_raw: int = 0
+var power_raw: int:
+	get: return resources.power_raw
+	set(v): resources.power_raw = v
 
 
 func get_power_display() -> String:
-	return "%.2f" % get_power_float()
+	return resources.get_power_display()
 
 
 func get_power_float() -> float:
-	return 1.00 + power_raw * 0.01
+	return resources.get_power_float()
 
 
 func add_power(amount: int) -> void:
-	power_raw = clampi(power_raw + amount, 0, 300)
+	resources.add_power(amount)
 
 
 func on_miss_power_penalty() -> void:
-	power_raw = clampi(power_raw - 50, 0, 300)
+	resources.on_miss_power_penalty()
 
 # ══════════════════════════════════════════════
 # Max Point / Graze / Memory
 # ══════════════════════════════════════════════
 
-var max_point: int = 10000
-var graze_count: int = 0
-var memory_value: float = 50.0
+var max_point: int:
+	get: return resources.max_point
+	set(v): resources.max_point = v
 
-# 记忆值每秒自然恢复量
-const MEMORY_REGEN: float = 0.05
-const MEMORY_GRAZE: float = 0.25
-const MEMORY_HIT_BY_BULLET: float = -0.01
-const MEMORY_MISS: float = 25.0
+var graze_count: int:
+	get: return resources.graze_count
+	set(v): resources.graze_count = v
+
+var memory_value: float:
+	get: return resources.memory_value
+	set(v): resources.memory_value = v
+
+# 记忆值常量（单一来源 PlayerResources）
+const MEMORY_REGEN: float = PlayerResources.MEMORY_REGEN
+const MEMORY_GRAZE: float = PlayerResources.MEMORY_GRAZE
+const MEMORY_HIT_BY_BULLET: float = PlayerResources.MEMORY_HIT_BY_BULLET
+const MEMORY_MISS: float = PlayerResources.MEMORY_MISS
 
 
 func add_max_point() -> int:
-	var pts := max_point
-	max_point += 10
-	current_score += pts
-	return pts
+	return resources.add_max_point()
 
 
 func add_memory(amount: float) -> void:
-	memory_value = clampf(memory_value + amount, 0.0, 100.0)
+	resources.add_memory(amount)
 
 
 func reduce_memory(amount: float) -> void:
-	memory_value = clampf(memory_value - amount, 0.0, 100.0)
+	resources.reduce_memory(amount)
 
 # ══════════════════════════════════════════════
 # 残机 & Bomb
 # ══════════════════════════════════════════════
 
-var lives: int = 2          # 0~8
-var life_fragments: int = 0 # 0~4
-var bomb_count: int = 3      # 0~8
-var bomb_fragments: int = 0 # 0~4
+var lives: int:
+	get: return resources.lives
+	set(v): resources.lives = v
+
+var life_fragments: int:
+	get: return resources.life_fragments
+	set(v): resources.life_fragments = v
+
+var bomb_count: int:
+	get: return resources.bomb_count
+	set(v): resources.bomb_count = v
+
+var bomb_fragments: int:
+	get: return resources.bomb_fragments
+	set(v): resources.bomb_fragments = v
 
 
-## 捡到残机碎片：集满 5 个合成一个完整残机
 func collect_life_fragment() -> void:
-	life_fragments += 1
-	if life_fragments >= 5:
-		life_fragments = 0
-		_add_life()
+	resources.collect_life_fragment()
 
 
-func _add_life() -> void:
-	if lives < 8:
-		lives += 1
-
-
-## 被弹扣除残机，返回本次是否存活（减之前有命即可）
 func lose_life() -> bool:
-	var had_life := lives > 0
-	if had_life:
-		lives -= 1
-	return had_life
+	return resources.lose_life()
 
 
 func collect_life_full() -> void:
-	for _i in range(5):
-		collect_life_fragment()
+	resources.collect_life_full()
 
 
-## 捡到 Bomb 碎片：集满 5 个合成一个完整 Bomb
 func collect_bomb_fragment() -> void:
-	bomb_fragments += 1
-	if bomb_fragments >= 5:
-		bomb_fragments = 0
-		_add_bomb()
-
-
-func _add_bomb() -> void:
-	if bomb_count < 8:
-		bomb_count += 1
+	resources.collect_bomb_fragment()
 
 
 func collect_bomb_full() -> void:
-	for _i in range(5):
-		collect_bomb_fragment()
+	resources.collect_bomb_full()
 
 
-## 使用一个 Bomb：有存货返回 true 并扣除，否则 false
 func use_bomb() -> bool:
-	if bomb_count <= 0:
-		return false
-	bomb_count -= 1
-	return true
+	return resources.use_bomb()
 
 # ══════════════════════════════════════════════
 # 关卡生命周期
 # ══════════════════════════════════════════════
 
 func reset_all():
-	current_score = 0
-	max_point = 10000
-	graze_count = 0
-	power_raw = 0
-	lives = 2
-	life_fragments = 0
-	bomb_count = 3
-	bomb_fragments = 0
-	memory_value = 50.0
+	resources.reset_all()
 	is_practice_mode = false
 
 
 func reset_practice():
-	current_score = 0
-	max_point = 10000
-	graze_count = 0
-	power_raw = 300
-	lives = 0
-	life_fragments = 0
-	bomb_count = 0
-	bomb_fragments = 0
-	memory_value = 50.0
+	resources.reset_practice()
 
 # ══════════════════════════════════════════════
 # Memory 自动恢复（仅在 PLAYING 时）
@@ -381,7 +359,7 @@ func _on_state_changed(_old: int, new: int) -> void:
 
 
 func _process(delta: float) -> void:
-	memory_value = clampf(memory_value + MEMORY_REGEN * delta, 0.0, 100.0)
+	resources.regen(delta)
 
 # ══════════════════════════════════════════════
 # 敌人列表

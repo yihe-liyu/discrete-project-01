@@ -128,10 +128,10 @@
 
 ## S6. 资源经济（Power / lives / bombs / score / graze / memory）
 状态：🚧 ｜ 适用红线：R8, R9, R18
-- [x] 掉落→收集→加成链路清晰（power/point/life/bomb 碎片集满合成）—— `enemy.gd _drop_item` + `scripts/item/{item,item_pool}.gd` + `GameState`
+- [x] 掉落→收集→加成链路清晰（power/point/life/bomb 碎片集满合成）—— `enemy.gd _drop_item` + `scripts/item/{item,item_pool}.gd` + `PlayerResources`（经 GameState 转发）
 - [~] 分数来源（击破/Bonus/最大点/擦弹/记忆）可追溯，无黑箱 —— 击破/擦弹/最大点已入账；Bonus 待核
-- [~] 残机/炸弹上限、碎片合成规则集中在单一 owner（不用全局散改）—— 规则集中在 `GameState`（但它是待拆的上帝对象）
-- [~] 各资源只通过显式入口修改（封装，防作弊/防割裂）—— 部分走 `GameState` 方法，部分散改，待收口
+- [x] 残机/炸弹上限、碎片合成规则集中在单一 owner（不用全局散改）—— `PlayerResources`（W4b-1 抽出；GameState 暂转发）
+- [x] 各资源只通过显式入口修改（封装，防作弊/防割裂）—— `PlayerResources` 显式入口 + `changed` 信号
 
 ## S7. 难度曲线（Easy → Lunatic）
 状态：🚧 ｜ 适用红线：R17, R8
@@ -221,3 +221,4 @@
 > - W3b：`StageManager` autoload → `StageRuntime`（World 下场景节点）+ `ctx.stage` 注入。autoload 7→6。详见 §12.10。
 > - W4a-1：内核弹幕后端**转正为默认**（旧池保留回滚，F2 切换）；新增 `active_count()`。详见 §12.11。
 > - W4a-2：删除旧池（`BulletPool`/`Bullet`/`BulletPhysics`/`SpatialHash`/`bomb_behavior`/`bullet_fog`/`bullet.tscn`）+ `use_kernel`/F2；内核成为唯一后端。详见 §12.12。
+> - W4b-1：`GameState` 单局资源抽成 `PlayerResources`（单一 owner），GameState 转发（调用点零改动）。详见 §12.13。

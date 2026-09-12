@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-11 — W4b-1：GameState 资源抽成 PlayerResources（转发，零改动）
+
+- **目标**：`GameState` 的单局资源状态（火力/分数/擦弹/残机/雷/碎片/记忆）抽成单一 owner（R18），为后续"消费者直接注入"铺路。
+- **为什么**：R18（上帝对象要拆）+ R8（共享状态用 `class_name`）。`GameState` 405 行、186 引用，直接大改风险高——先用**转发属性**把状态搬到 `PlayerResources`，调用点零改动、行为不变。
+- **对照旧项目**：旧资源字段散在 `GameState` 里、方法直接改字段；现状态归 `PlayerResources`，对外入口收敛 + `changed` 信号（R7）。
+- **新落点**：`scripts/player/player_resources.gd`；`GameState.resources` + 9 个转发属性 + 方法委托；`MEMORY_*` 常量单一来源。
+- **验收**：`test/test_player_resources.gd`（4）；全量 **55 套 / 303 测试 / 3191 断言全绿**。
+- **注意**：转发是**过渡态**——下一步（W4b-2）把 Player/UI/kernel 改成直接持 `PlayerResources`，再去掉转发属性。
 ### 2026-09-11 — W4a-2：删旧弹幕池（内核唯一后端）
 
 - **目标**：删除整个旧弹幕子系统，内核成为唯一后端，去掉 strangler 开关（W4a 收口）。

@@ -543,6 +543,21 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 ---
 
+### 12.13 W4b-1 实施记录（2026-09-11，已完成）
+
+**目标**：把 `GameState` 的单局资源状态抽成单一 owner `PlayerResources`（R18），**调用点零改动**（GameState 转发属性/方法），行为不变。
+
+**落点**：
+
+- 新增 `scripts/player/player_resources.gd`（`class_name PlayerResources extends RefCounted` + `changed`）：火力 / 分数 / 擦弹 / 残机 / 雷 / 碎片 / 记忆 + 显式入口 + `reset_*` + `regen`。
+- `GameState`：`var resources := PlayerResources.new()`；`current_score / lives / life_fragments / bomb_count / bomb_fragments / power_raw / max_point / graze_count / memory_value` 改**转发属性**；`add_*` / `collect_*` / `lose_life` / `use_bomb` / `reset_*` / `_process` 委托；`MEMORY_*` 常量单一来源 `PlayerResources`。
+
+**验收**：`test/test_player_resources.gd`（4 用例）；全量 **55 套 / 303 测试 / 3191 断言全绿**。
+
+**后续（W4b-2/3/4）**：消费者（Player/UI/kernel）改直接持 `PlayerResources` → 注入 `player` / `active_enemies` → 瘦身 `GameState` 成存档全局。
+
+---
+
 ## 13. Track A spike 记录：S0 内核 vendor（2026-09-11，已完成）
 
 > 分支 `kernel/s0-vendor`（从 `main` @ tag `pre-kernel-adapter` 起）；内核来源 = 重建版 tag `kernel-v1`（commit `238507a`）。
