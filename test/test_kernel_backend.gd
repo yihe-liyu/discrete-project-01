@@ -63,9 +63,21 @@ func test_rect_hitbox_only_when_rect_shape() -> void:
 	assert_eq(b.type_for(rect).hitbox_size, Vector2(48, 24), "矩形判定时保留尺寸")
 
 
+## S4a：`BulletData.accel` 已映射到 `world_accel`，不再计未映射。
+func test_accel_field_mapped_since_s4a() -> void:
+	var b := _make_backend()
+	var d := _enemy_data()
+	d.accel = Vector2(0, -100)
+	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
+	assert_eq(b.unmapped_behavior_count, 0, "S4a 起 accel 已映射，不应计未映射")
+	assert_eq(b.system.get_move_name(b.system.get_behavior_id(0)), &"world_accel", "应挂 world_accel")
+
+
+## 仍无内核端口的行为（homing 留 S4b）应计数并走直线。
 func test_unmapped_behavior_counted() -> void:
 	var b := _make_backend()
 	var d := _enemy_data()
-	d.accel = Vector2(0, -100)   # S1 不映射加速，应计数
+	d.coroutine_script = preload("res://scripts/coroutine/player/move_homing.gd")
 	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
-	assert_eq(b.unmapped_behavior_count, 1, "未映射行为应计数（供 S4 覆盖率观察）")
+	assert_eq(b.unmapped_behavior_count, 1, "无端口行为应计数（供 S4 覆盖率观察）")
+	assert_eq(b.system.get_behavior_id(0), BulletSystem.BEHAVIOR_NONE, "未映射应无行为（直线）")

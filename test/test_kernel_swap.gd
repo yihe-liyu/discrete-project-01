@@ -46,6 +46,17 @@ func test_kernel_priority_precedes_manager() -> void:
 		BulletManager.process_physics_priority, "内核积分必须先于宿主碰撞（§16.3）")
 
 
+## S4a：切内核应装配行为处理器，且帧序在积分之后、宿主碰撞之前。
+func test_behavior_pipeline_wired() -> void:
+	BulletManager.set_use_kernel(true)
+	var b: BehaviorProcessor = BulletManager._kernel.behavior
+	assert_not_null(b, "切内核应装配 BehaviorProcessor")
+	assert_gt(b.process_physics_priority, BulletManager.kernel_system().process_physics_priority,
+		"行为必须在积分之后（-10 < -5）")
+	assert_lt(b.process_physics_priority, BulletManager.process_physics_priority,
+		"行为必须在宿主碰撞之前（-5 < 0）")
+
+
 ## S3d：展开清弹圈（死亡清弹）应清掉内核敌弹。
 func test_death_clear_sweeps_kernel_bullets() -> void:
 	BulletManager.set_use_kernel(true)

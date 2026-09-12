@@ -727,6 +727,15 @@ func kernel_port() -> Dictionary:
 
 每步独立可试玩（F2 切内核）、可回退、单独提交。
 
+### 21.8 S4a 落地（2026-09-11，已完成）
+
+- 桥接 `scripts/kernel_bridge/behavior/world_accel_behavior.gd`：世界方向匀加速，只改 velocity（位置由系统积分）。
+- `KernelBulletBackend`：`setup_behaviors()`（注册 `accel`/`curve`/`laser_follow`/`avoid_player`/`world_accel`，优先级 **-5**）、`_port_for()`（duck-typed `kernel_port()`，按 `Script×params` 缓存）、`shoot()` 端口解析（`move` 归一，无端口计未映射）。
+- `BulletManager._enable_kernel()`：幂等装配行为管道，并刷新自机引用（`is_instance_valid` 守卫，防 freed player 传参会崩）。
+- 内容端口：`gravity_bullet.gd.kernel_port()` → `world_accel`；`BulletData.accel` 直接 `world_accel`。
+- 验收：新 `test_kernel_behavior`（5） + `test_kernel_swap` 管道用例；全量 **61 套 / 312 测试 / 3269 断言全绿**。
+
+
 
 
 

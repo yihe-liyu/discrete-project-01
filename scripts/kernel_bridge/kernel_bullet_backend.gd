@@ -4,10 +4,14 @@
 ## 缓存按**内容签名**而非实例——原项目两种用法并存：enemy01 复用同一实例并改速度，
 ## cs_reimu / non01_shoot 每发 `BulletData.new()`；按实例缓存会让内核弹型表每发长一个。
 ##
-## S1 范围：直线弹。`coroutine_script` / `accel` 的行为映射留 S4（未映射时按直线发射并计数）。
+## S4a 起：`coroutine_script` 走 duck-typed `kernel_port()` 端口映射到内核行为；
+## `BulletData.accel` 走桥接 `world_accel`。未映射（无端口）仍按直线发射并计入 unmapped。
 ## 渲染不在本类：纹理走**旁表**（`texture_for_index`），S2 把它喂给原项目 BulletMultiMesh。
 class_name KernelBulletBackend
 extends Node
+
+const WorldAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/world_accel_behavior.gd")
+const _MOVE_WORLD_ACCEL := &"world_accel"
 
 ## 内核弹池。默认本机新建；S3 交由 BulletManager 注入/接管。
 var system: BulletSystem
@@ -18,6 +22,12 @@ var _type_by_sig: Dictionary = {}              # 内容签名(int) → BulletTyp
 var _texture_by_index: Array[Texture2D] = []   # 内核弹型下标 → 贴图（渲染旁表）
 var _damage_by_index := PackedFloat32Array()   # 宿主专有：伤害（内核 BulletType 无 damage，见 §16.1）
 var _hit_sfx_by_index: Array[String] = []      # 宿主专有：命中音效 key
+
+## S4a：内核行为注册表 + 上下文（由 BulletManager 装配；见 docs §21.4）。
+var behavior: BehaviorProcessor
+var behavior_ctx: BehaviorContext
+## 内容签名 → 端口（{move, params} / 预留 {program}）；按 Script×params 缓存，不每发 instantiate。
+var _port_by_sig: Dictionary = {}
 
 
 func _ready() -> void:
@@ -38,12 +48,24 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	if data == null:
 		return -1
 	_ensure_system()
-	if data.coroutine_script != null or data.accel != Vector2.ZERO:
-		unmapped_behavior_count += 1   # S1 只做直线；S4 接行为
 	var type := type_for(data)
 	var speed: float = data.velocity.length()
 	var vel: Vector2 = direction.normalized() * speed if direction != Vector2.ZERO else data.velocity
-	var id: int = system.spawn(type, pos, vel, data.tint)
+	var move: StringName = &""
+	var params: Variant = null
+	if data.coroutine_script != null:
+		var port: Dictionary = _port_for(data)
+		if port.has("program"):
+			unmapped_behavior_count += 1   # S4 预留：VM 未实现，先直线
+		elif port.has("move"):
+			move = port.get("move")
+			params = port.get("params", null)
+		else:
+			unmapped_behavior_count += 1   # 无端口：按直线发射
+	elif data.accel != Vector2.ZERO:
+		move = _MOVE_WORLD_ACCEL
+		params = {&"world_accel": data.accel}
+	var id: int = system.spawn(type, pos, vel, data.tint, move, params)
 	_sync_host_tables(id, data)
 	return id
 
@@ -117,6 +139,54 @@ func _map_faction(f: int) -> BulletType.Faction:
 			return BulletType.Faction.PLAYER
 		_:
 			return BulletType.Faction.NONE   # BOMB：原项目靠协程自爆，S4 再接
+
+
+## 装配内核行为管道（幂等；可重复调以刷新自机引用）。
+## 优先级：内核积分 -10 → 行为 -5 → 宿主碰撞 0（原项目无 FrameOrder，见 docs §21.4）。
+func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
+	_ensure_system()
+	if behavior_ctx == null:
+		behavior_ctx = BehaviorContext.new()
+		var wq := WorldQuery.new()
+		if enemy_provider.is_valid():
+			wq.setup(enemy_provider)
+		behavior_ctx.setup(player, wq)
+	else:
+		behavior_ctx.setup(player, behavior_ctx.get_world())   # 刷新自机
+	if behavior != null:
+		return
+	behavior = BehaviorProcessor.new()
+	behavior.name = "KernelBehaviorProcessor"
+	behavior.process_physics_priority = -5
+	add_child(behavior)
+	behavior.setup(system, behavior_ctx)
+	behavior.register_behavior(&"accel", AccelBehavior.new())
+	behavior.register_behavior(&"curve", CurveBehavior.new())
+	behavior.register_behavior(&"laser_follow", LaserFollowBehavior.new())
+	behavior.register_behavior(&"avoid_player", AvoidPlayerBehavior.new())
+	behavior.register_behavior(_MOVE_WORLD_ACCEL, WorldAccelBehaviorClass.new())
+
+
+## 取内容脚本的内核端口（duck-typed `kernel_port()`），按内容签名缓存。
+## 脚本先用 `data.params` 覆盖自身变量再问端口，故端口能反映发射参数。
+func _port_for(data: BulletData) -> Dictionary:
+	var sig: int = hash(data.coroutine_script)
+	sig = sig * 31 + hash(data.params)
+	if _port_by_sig.has(sig):
+		return _port_by_sig[sig]
+	var port: Dictionary = {}
+	var probe: Object = data.coroutine_script.new()
+	if probe != null:
+		for k in data.params:
+			probe.set(k, data.params[k])
+		if probe.has_method(&"kernel_port"):
+			var raw: Variant = probe.kernel_port()
+			if raw is Dictionary:
+				port = raw
+		if probe is Node:
+			(probe as Node).free()
+	_port_by_sig[sig] = port
+	return port
 
 
 func _sync_host_tables(id: int, data: BulletData) -> void:

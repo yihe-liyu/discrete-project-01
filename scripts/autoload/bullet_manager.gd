@@ -255,19 +255,23 @@ func set_use_kernel(v: bool) -> void:
 
 ## 建内核后端（幂等）：设帧序 / 剔除范围 / 渲染数据源。
 func _enable_kernel() -> void:
-	if _kernel != null:
-		return
-	_kernel = KernelBulletBackend.new()
-	_kernel.name = "KernelBulletBackend"
-	add_child(_kernel)
-	_kernel_physics = KernelBulletPhysics.new()   # S3b：宿主侧碰撞规则（敌弹↔自机）
-	_kernel_physics.setup(_kernel)
-	# 帧序：内核积分必须在宿主 _physics_process（priority 0）之前执行（§16.3；原项目暂无 FrameOrder）。
-	_kernel.system.process_physics_priority = -10
-	# 剔除范围 = 东方框；margin 对齐旧 is_offscreen 的 90px。
-	_kernel.system.cull_rect = Rect2(
-		GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
-		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
-	_kernel.system.cull_margin = 90.0
+	if _kernel == null:
+		_kernel = KernelBulletBackend.new()
+		_kernel.name = "KernelBulletBackend"
+		add_child(_kernel)
+		_kernel_physics = KernelBulletPhysics.new()   # S3b：宿主侧碰撞规则（敌弹↔自机）
+		_kernel_physics.setup(_kernel)
+		# 帧序：内核积分必须在宿主 _physics_process（priority 0）之前执行（§16.3；原项目暂无 FrameOrder）。
+		_kernel.system.process_physics_priority = -10
+		# 剔除范围 = 东方框；margin 对齐旧 is_offscreen 的 90px。
+		_kernel.system.cull_rect = Rect2(
+			GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
+			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
+		_kernel.system.cull_margin = 90.0
+	# S4a：行为管道（幂等）——每次都刷新自机引用（player 可能刚生成 / 已换 / 测试里已释放）。
+	var p: Node2D = null
+	if is_instance_valid(GameState.player):
+		p = GameState.player
+	_kernel.setup_behaviors(p, Callable(GameState, "get_active_enemies"))
 	if _multi_mesh != null:
 		_multi_mesh.set_backend(_kernel)
