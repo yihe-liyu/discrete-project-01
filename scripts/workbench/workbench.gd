@@ -55,6 +55,7 @@ const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
 @onready var _timeline: TimelineBar = %Timeline
 @onready var _stage_grid: GridContainer = %StageGrid
 @onready var _world: Node2D = $World
+@onready var _stage_runtime: StageRuntime = %StageRuntime
 ## 3D 背景专用子视口（768x896，与真游戏 SubViewport 同规格 → 纵横比/构图一致）
 @onready var _bg_viewport: SubViewport = %BgViewport
 ## phase 倒计时（与真游戏 BossUI 同款：两位秒数、框顶中央）
@@ -126,6 +127,9 @@ func _ready() -> void:
 	_setup_phase_timer()
 	_sync_ui_layer_offset()  # 同步执行：首帧渲染即正确（见函数注释）
 	_setup_world()
+	# W3b-1：注入 world 并绑定关卡运行时（薄门面转发）
+	_stage_runtime.world = _world
+	StageManager.bind_runtime(_stage_runtime)
 	_load_stage()
 	_check_phase_uid_conflicts()
 

@@ -4,7 +4,9 @@ class_name GameScene
 const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 @onready var _sub_viewport: SubViewport = %SubViewport
+@onready var _world: Node2D = %World
 @onready var _fx_layer: FxLayer = %FxLayer
+@onready var _stage_runtime: StageRuntime = %StageRuntime
 @onready var _miss_layer: MissEffectManager = %MissEffectManager
 
 var _blur_rect: ColorRect
@@ -21,6 +23,10 @@ func _ready():
 	# World 下**声明**（R21：声明式建树，不 new()+add_child）；这里只做注入。
 	StageManager.fx_layer = _fx_layer
 	BulletManager.inject_fx_layer(_fx_layer)
+
+	# 关卡运行时（World 下声明，R21）：组合根注入 world 并绑定到薄门面（W3b-1 strangler）
+	_stage_runtime.world = _world
+	StageManager.bind_runtime(_stage_runtime)
 
 	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
 
@@ -109,6 +115,7 @@ func _exit_tree():
 		_background_instance.queue_free()
 		_background_instance = null
 	StageManager.stop_stage()
+	StageManager.unbind_runtime()
 
 
 func _setup_player() -> void:

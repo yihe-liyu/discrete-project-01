@@ -1,0 +1,172 @@
+## 关卡运行时 —— 关卡生命周期 + 生成敌人/Boss（World 下的场景节点）。
+## W3b-1：从 StageManager autoload 抽出的实现体；StageManager 暂留为薄门面转发（strangler）。
+## 依赖由组合根注入 `world`（敌人生成 / 自机 ctx 注入的父节点），不再 get_tree().current_scene 全树找（R2）。
+## 跨 autoload 直呼 GameState / BulletManager 待 W4 收口。
+class_name StageRuntime
+extends Node
+
+const ENEMY_SCENE = preload("res://scenes/enemy.tscn")
+const BossClass = preload("res://scripts/enemy/boss.gd")
+const ParamValidator = preload("res://scripts/data/param_validator.gd")
+
+signal stage_started()
+signal stage_cleared()
+signal all_enemies_defeated()
+
+## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
+var world: Node2D
+
+var current_stage: StageData
+var _stage_active: bool = false
+var _stage_script: CoroutineScript
+
+
+## 当前关卡协程脚本（工作台/调试读取运行时间用）
+func current_stage_script() -> CoroutineScript:
+	return _stage_script
+
+
+## 加载关卡；background = 背景场景实例（由门面/组合根传入，用于启动背景里的协程脚本）
+func load_stage(data: StageData, background: StageBackground = null) -> void:
+	if _stage_active:
+		stop_stage()
+
+	# 配置校验：非法数据拒绝启动，防止除零/空脚本崩溃
+	var errs := data.validate()
+	for e in errs:
+		push_error("StageRuntime 配置错误: " + e)
+	if not errs.is_empty():
+		return
+
+	GameState.reset_all()
+
+	current_stage = data
+	_stage_active = true
+
+	var stage_script: CoroutineScript = data.create_script.new()
+	assert(stage_script is CoroutineScript, "StageRuntime: create_script must be a CoroutineScript")
+	add_child(stage_script)
+	_stage_script = stage_script
+	stage_script.finished.connect(_on_stage_finished)
+
+	var ctx := StageContext.new(stage_script)
+	stage_script.start(ctx)
+	_inject_player_ctx(ctx)
+
+	# 自动启动背景场景里挂的所有协程脚本
+	if background:
+		for child in background.get_children():
+			if child is CoroutineScript:
+				child.start(StageContext.new(child))
+
+	stage_started.emit()
+
+
+func stop_stage() -> void:
+	_stage_active = false
+	current_stage = null
+	if _stage_script and is_instance_valid(_stage_script):
+		_stage_script.stop()
+		_stage_script.queue_free()
+		_stage_script = null
+	GameState.clear_enemies()
+	BulletManager.clear_bullets()  # 清弹幕，激光自己淡出
+
+
+func _on_stage_finished() -> void:
+	if not current_stage:
+		return
+	_stage_active = false
+	stage_cleared.emit()
+	all_enemies_defeated.emit()
+	GameState.save_high_score(current_stage.stage_id, GameState.current_score)
+
+
+## 从 EnemyData 生成敌人（实例化/挂载协程/入场景）
+func spawn_enemy_data(data: EnemyData, p_ctx: StageContext = null) -> Enemy:
+	if not p_ctx or not p_ctx.active():
+		return null
+	if not data.has_script():
+		push_warning("StageRuntime.spawn_enemy_data: no script set")
+		return null
+	var enemy: Enemy = ENEMY_SCENE.instantiate()
+	enemy.global_position = data.get_spawn_pos()
+	enemy.enemy_data = data
+	enemy.ctx = p_ctx
+	var cs: CoroutineScript = data.make_script()
+	if not cs:
+		push_warning("StageRuntime.spawn_enemy_data: script is not a CoroutineScript")
+		enemy.queue_free()
+		return null
+	cs.target = enemy
+	var params: Dictionary = data.get_params()
+	ParamValidator.apply(cs, params)   # C4：校验 + 只设合法键 + 打错键名/类型响亮报错
+	if cs.has_method("setup_custom"):
+		cs.setup_custom(params)
+	enemy.add_child(cs)
+	cs.start(p_ctx, enemy)
+	add_enemy_to_scene(enemy)
+	return enemy
+
+
+func spawn_enemy(data: EnemyData, position: Vector2, auto_start: bool = true) -> Enemy:
+	var enemy: Enemy = ENEMY_SCENE.instantiate()
+	enemy.enemy_data = data
+	enemy.global_position = position
+	add_enemy_to_scene(enemy)
+	if auto_start:
+		enemy.start.call_deferred()
+	return enemy
+
+
+func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -> Node:
+	var boss := BossClass.new()
+	boss.global_position = position
+	if data.visual:
+		var vis := data.visual.instantiate()
+		boss.add_child(vis)
+	add_enemy_to_scene(boss)
+	boss.setup(data, p_ctx)
+	boss.start_boss()
+	return boss
+
+
+## 返回类型同 BulletService.shoot_spread：旧池 = Bullet，内核路径 = int id（Track A / S3）。
+func spawn_bullet(data: BulletData, position: Vector2, direction: Vector2):
+	return BulletManager.shoot_enemy_bullet(data, position, direction)
+
+
+## 开一场"仅单个阶段"的战（符卡练习）：自建一个可运行的协程时钟作 ctx，
+## 生成对应 Boss 并直接让它进入该阶段。
+## 与 load_stage（整关编排）不同：本方法只服务"点杀单阶段"，故自建 clock，不复用整关脚本。
+## 返回 Boss；Boss.ctx.runner 即本次时钟（可 stop/queue_free 清理）。
+func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: String, position: Vector2) -> Boss:
+	var runner := CoroutineRunner.new()
+	runner.run(func(): return true)  # 保活：让 ctx.runner 保持 is_running（ctx.active/clock 依赖）
+	var ctx := StageContext.new(runner)
+	var single := BossData.new()
+	single.boss_name = boss_name
+	single.visual = boss_scene
+	single.phases = [p_phase]
+	var boss := spawn_boss(single, position, ctx) as Boss
+	if boss:
+		boss.get_parent().add_child(runner)  # 把时钟放进场景树（Boss 所在 World），随场景一起释放
+		boss.start_phase(p_phase)
+	return boss
+
+
+## 把关卡上下文注入给场景中的自机（供系统操作服务）
+func _inject_player_ctx(p_ctx: StageContext) -> void:
+	if not is_instance_valid(world):
+		return
+	var player := world.get_node_or_null("Player") as Player
+	if player:
+		player.ctx = p_ctx
+
+
+func add_enemy_to_scene(node: Node2D) -> void:
+	var parent: Node = world if is_instance_valid(world) else get_tree().root
+	if parent:
+		parent.add_child(node)
+	else:
+		node.queue_free()

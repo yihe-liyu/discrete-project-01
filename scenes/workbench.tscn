@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cuxliahwfwdcv" path="res://scripts/workbench/workbench.gd" id="1_wb"]
 [ext_resource type="Script" uid="uid://bjsk81aq1lnug" path="res://scripts/workbench/timeline_bar.gd" id="2_tl"]
+[ext_resource type="Script" uid="uid://bplx0vte3g86s" path="res://scripts/stage/stage_runtime.gd" id="3_stage"]
 
 [node name="Workbench" type="Control" unique_id=469653415]
 layout_mode = 3
@@ -35,6 +36,10 @@ fov = 90.0
 
 [node name="World" type="Node2D" parent="." unique_id=1985106525]
 process_mode = 1
+
+[node name="StageRuntime" type="Node" parent="World" unique_id=2025091105]
+unique_name_in_owner = true
+script = ExtResource("3_stage")
 
 [node name="HitboxLayer" type="CanvasLayer" parent="." unique_id=1813529306]
 layer = 5
