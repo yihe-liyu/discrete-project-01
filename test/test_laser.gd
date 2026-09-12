@@ -2,12 +2,14 @@ extends GutTest
 ## Laser 2.0 骨架 + 状态机 + 判定测试（第 1 步：测试地基）
 
 var _holder: Node
+var _refs: EntityRegistry
 
 ## 激光池 beams 挂在 holder 上，随测试结束 autofree 释放
 ## （LaserEngine.setup 每测试建 64 条 beam，直接挂测试脚本会累计成 unfreed children）
 func before_each():
 	_holder = Node.new()
 	add_child_autofree(_holder)
+	_refs = EntityRegistry.new()
 
 # ── 骨架 ──
 
@@ -204,6 +206,7 @@ func _make_engine() -> LaserEngine:
 	autofree(engine)
 	# W4a-2：LaserEngine 不再依赖 BulletPhysics；擦弹结算走注入 Callable（内核规则）
 	engine.setup(_holder, Callable(BulletManager, "_on_laser_graze"))
+	engine.refs = _refs
 	return engine
 
 func _make_engine_player(x: float) -> Player:
@@ -214,7 +217,7 @@ func _make_engine_player(x: float) -> Player:
 	player._reinit_shoot()
 	player.global_position = Vector2(x, 300)
 	player.is_invincible = false
-	GameState.player = player
+	_refs.bind_player(player)
 	return player
 
 func test_engine_step_detects_hit_and_graze():

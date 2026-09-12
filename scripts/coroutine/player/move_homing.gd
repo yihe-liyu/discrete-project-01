@@ -89,7 +89,7 @@ func _find_nearest_enemy() -> Node2D:
 	var nearest: Node2D = null
 	var nearest_dist := INF
 	var enemies: Array = ctx.refs.get_active_enemies() if ctx and ctx.refs else []
-	for enemy: Node2D in enemies:
+	for enemy in enemies:
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
 		if enemy is Boss:

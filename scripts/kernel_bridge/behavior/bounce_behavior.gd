@@ -44,7 +44,7 @@ func _re_fire(system: BulletSystem, bullet_id: int, params: Dictionary, at: Vect
 	var spawn_speed: float = params.get(&"spawn_speed", 0.0)
 	if spawn_speed > 0.0:
 		speed = spawn_speed
-	var boss = GameState.get_boss()
+	var boss = host.get_boss() if host != null else null
 	var aim := Vector2.DOWN
 	if is_instance_valid(boss):
 		aim = (boss.global_position - at).normalized()

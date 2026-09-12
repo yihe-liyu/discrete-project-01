@@ -24,6 +24,8 @@ const _MOVE_LASER := &"marisa_laser"
 
 ## 内核弹池。默认本机新建；S3 交由 BulletManager 注入/接管。
 var system: BulletSystem
+## W4b-3b：实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
+var refs: EntityRegistry
 ## 未映射行为（有 coroutine_script 或 accel）的发射次数——S4 前用来看覆盖面。
 var unmapped_behavior_count: int = 0
 
@@ -61,6 +63,7 @@ func _exit_tree() -> void:
 ## S4d：生成宿主节点 bomb（返回节点，供调用方忽略/持有）。
 func spawn_bomb(data: BulletData, pos: Vector2, direction: Vector2) -> Node:
 	var bomb: Node2D = KernelBombClass.new()
+	bomb.refs = refs
 	add_child(bomb)
 	_bombs.append(bomb)
 	bomb.setup(data, pos, direction)

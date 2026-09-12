@@ -16,7 +16,7 @@ class FakeEnemy extends Node2D:
 var _backend: KernelBulletBackend
 var _physics: KernelBulletPhysics
 var _player: Player
-var _prev_player: Player
+var _refs: EntityRegistry
 var _prev_memory: float
 var _prev_graze: int
 var _prev_lives: int
@@ -32,8 +32,9 @@ func before_each() -> void:
 	add_child_autofree(_player)
 	_player.global_position = Vector2(448, 640)
 	_player.is_invincible = false
-	_prev_player = GameState.player
-	GameState.player = _player
+	_refs = EntityRegistry.new()
+	_refs.bind_player(_player)
+	_physics.refs = _refs
 	_prev_memory = GameState.memory_value
 	_prev_graze = GameState.graze_count
 	_prev_lives = GameState.lives
@@ -42,7 +43,6 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	GameState.player = _prev_player
 	GameState.memory_value = _prev_memory
 	GameState.graze_count = _prev_graze
 	GameState.lives = _prev_lives
@@ -88,7 +88,7 @@ func test_player_bullet_damages_enemy_via_damage_side_table() -> void:
 	var fake := FakeEnemy.new()
 	fake.global_position = Vector2(200, 200)
 	add_child_autofree(fake)
-	GameState.active_enemies.append(fake)
+	_refs.register_enemy(fake)
 	GameState.memory_value = 100.0   # 关掉记忆加成（<50 才生效）
 	var d := BulletData.new().player().tex("reimu_main")
 	d.velocity = Vector2.UP * 100.0
@@ -97,7 +97,7 @@ func test_player_bullet_damages_enemy_via_damage_side_table() -> void:
 	_physics.process()
 	assert_almost_eq(fake.damage_taken, 10.0, 0.01, "伤害应来自后端 damage 侧表（内核无 damage）")
 	assert_eq(_backend.system.get_active_count(), 0, "命中后应回收该弹")
-	GameState.active_enemies.erase(fake)
+	_refs.unregister_enemy(fake)
 
 
 ## S3d：死亡清弹扫掠只清圆内敌弹（与旧 DeathClear 逐弹循环 1:1）。

@@ -39,7 +39,7 @@ func _flee(system: BulletSystem, bullet_id: int, params: Dictionary) -> void:
 	var burst: Callable = params.get(&"on_flee_burst", Callable())
 	if not burst.is_valid():
 		return
-	var boss = GameState.get_boss()
+	var boss = host.get_boss() if host != null else null
 	var has_boss: bool = is_instance_valid(boss)
 	var boss_pos: Vector2 = boss.global_position if has_boss else Vector2.ZERO
 	# 内容回调返回 true = 已散圈 → 回收自己

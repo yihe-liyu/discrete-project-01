@@ -124,8 +124,8 @@ func _setup_player() -> void:
 		player._reinit_shoot()
 		# 自机 → 本次关卡世界的实体注册表（BulletManager 亦经注入读取）
 		_stage_runtime.refs.bind_player(player)
-	# 自机已就绪：刷新内核行为管道的自机引用（autoload._ready 早于自机）
-	BulletManager.refresh_kernel_player()
+	# 自机已就绪：把本关卡的实体注册表注入内核弹幕后端（autoload._ready 早于自机）
+	BulletManager.inject_world_refs(_stage_runtime.refs)
 
 
 func _on_player_death():

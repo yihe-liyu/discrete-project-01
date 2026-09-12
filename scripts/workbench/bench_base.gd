@@ -34,6 +34,7 @@ func ensure_stage_runtime() -> StageRuntime:
 
 ## 场地 + 幽灵（鼠标跟随 = 自机狙目标）搭建；返回场地
 func build_world() -> Control:
+	ensure_stage_runtime()  # 保证本台有关卡运行时（子弹台不显式建：幽灵/注册表注入依赖它）
 	RIG_COMMON.add_stage_bg(self)
 	# 场地：直接子节点绝对定位；(0,0) 起、832x928 → 局部坐标=游戏坐标
 	_field = Control.new()
@@ -51,11 +52,9 @@ func build_world() -> Control:
 	_ghost.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
 	_ghost.z_index = 30
 	_field.add_child(_ghost)
-	# 幽灵（自机）→ 关卡实体注册表
-	if _stage_runtime:
-		_stage_runtime.refs.bind_player(_ghost)
-	# 幽灵就绪：刷新内核行为管道的自机引用（W4a-1 起内核为默认）
-	BulletManager.refresh_kernel_player()
+	# 幽灵（自机）→ 关卡实体注册表；注册表 → 内核弹幕后端
+	_stage_runtime.refs.bind_player(_ghost)
+	BulletManager.inject_world_refs(_stage_runtime.refs)
 	return _field
 
 

@@ -18,6 +18,9 @@ var _kernel_physics: KernelBulletPhysics
 ## W2：组合根注入的特效层（空则静默）
 var fx_layer: FxLayer
 
+## W4b-3b：组合根注入的实体注册表（自机 / 敌机 / Boss）；空则回退当前世界
+var world_refs: EntityRegistry
+
 # 共享子弹上下文
 var _world_clock: CoroutineRunner
 var _bullet_ctx: StageContext
@@ -168,10 +171,15 @@ func resume_processing() -> void:
 
 # ═══ 内核后端装配 ═══
 
-## 组合根在自机就绪后调用：刷新行为管道的自机引用
+## 组合根在自机就绪后调用：刷新行为管道的自机引用（保留旧入口）
 func refresh_kernel_player() -> void:
-	if _kernel != null:
-		_enable_kernel()
+	_enable_kernel()
+
+
+## 注入本次关卡的实体注册表（自机 / 敌机 / Boss）；组合根装配后调用
+func inject_world_refs(refs: EntityRegistry) -> void:
+	world_refs = refs
+	_enable_kernel()
 
 
 ## 当前内核弹池（未装配 = null）
@@ -193,9 +201,19 @@ func _enable_kernel() -> void:
 			GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
 			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 		_kernel.system.cull_margin = 90.0
+	var refs := world_refs if world_refs != null else EntityRegistry.current
+	if _kernel != null:
+		_kernel.refs = refs
+	if _kernel_physics != null:
+		_kernel_physics.refs = refs
+	if _lasers != null:
+		_lasers.refs = refs
 	var p: Node2D = null
-	if is_instance_valid(GameState.player):
-		p = GameState.player
-	_kernel.setup_behaviors(p, Callable(GameState, "get_active_enemies"))
+	var enemy_provider := Callable()
+	if refs != null:
+		if is_instance_valid(refs.player):
+			p = refs.player
+		enemy_provider = Callable(refs, "get_active_enemies")
+	_kernel.setup_behaviors(p, enemy_provider)
 	if _multi_mesh != null:
 		_multi_mesh.set_backend(_kernel)

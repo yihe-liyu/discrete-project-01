@@ -18,6 +18,8 @@ const HIT_SFX_VOLUME := {
 var backend: KernelBulletBackend
 ## W2：组合根注入的特效层（空则静默）
 var fx: FxLayer
+## W4b-3b：实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
+var refs: EntityRegistry
 
 
 func setup(p_backend: KernelBulletBackend) -> void:
@@ -40,7 +42,8 @@ func process() -> void:
 
 ## 敌弹 ↔ 自机：命中 → miss + 回收；否则擦弹（每弹只计一次）+ 记忆随机清弹。
 func _enemy_bullets_vs_player() -> void:
-	var player: Player = GameState.player
+	var p = refs.player if refs else null
+	var player: Player = p if is_instance_valid(p) else null
 	if not is_instance_valid(player) or player.is_invincible:
 		return
 	var sys := backend.system
@@ -66,7 +69,7 @@ func _enemy_bullets_vs_player() -> void:
 ## 自机弹 ↔ 敌人：与旧 BulletPhysics._player_vs_enemies 1:1（伤害走后端 damage 侧表，内核无 damage）。
 func _player_bullets_vs_enemies() -> void:
 	var sys := backend.system
-	var enemies: Array = GameState.get_active_enemies()
+	var enemies: Array = refs.get_active_enemies() if refs else []
 	if enemies.is_empty():
 		return
 	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收

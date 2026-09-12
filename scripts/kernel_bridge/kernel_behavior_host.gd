@@ -13,6 +13,11 @@ func setup(p_backend) -> void:
 	backend = p_backend
 
 
+## 当前 Boss（经后端注入的实体注册表；无则 null）——桥接行为查询用
+func get_boss():
+	return backend.refs.get_boss() if backend != null and backend.refs != null else null
+
+
 ## 入队一次发射。data 须是已按运行时改好的**副本**（模板会被复用）。
 func queue_spawn(data: BulletData, pos: Vector2, dir: Vector2) -> void:
 	_spawns.append({data = data, pos = pos, dir = dir})

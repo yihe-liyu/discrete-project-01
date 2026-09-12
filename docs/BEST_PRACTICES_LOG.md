@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-11 — W4b-3b：refs 深注入内核弹幕路径（BulletManager / 桥接 / 激光 / 工作台）
+
+- **目标**：把「自机 / 敌机 / Boss」的读取从 `GameState` 门面推进到注入的 `EntityRegistry`，覆盖内核弹幕后端、碰撞/清弹、桥接行为、激光与工作台覆盖层。
+- **做法**：`BulletManager.inject_world_refs(refs)`（组合根调用）→ 传播给 `KernelBulletBackend` / `KernelBulletPhysics` / `LaserEngine`；`KernelBulletBackend.spawn_bomb` 把 `refs` 传给 `KernelBomb`；桥接行为经 `KernelBehaviorHost.get_boss()`（`backend.refs`）；`HitboxOverlay` 由工作台注入 `refs`。无 `refs` 时回退 `EntityRegistry.current`。
+- **对照旧项目**：桥接层原来直呼 `GameState.player/get_active_enemies/get_boss`；现在统一经注入的注册表。
+- **踩坑（承接 W4b-3a）**：`for enemy: Node2D in <含已释放实例的数组>` 与 `var p: Player = refs.player` 会在**赋值/迭代时**抛 `Trying to assign invalid previously freed instance`——必须先 `is_instance_valid` 再赋给类型化变量；迭代用无类型 `for enemy in ...` + 逐个 `is_instance_valid`。
+- **度量**：`grep -rIl "\bGameState\b" scripts` **41 → 35 文件**（引用 172 → 159），清零文件：`autoload/bullet_manager.gd` / `laser/laser_engine.gd` / `kernel_bridge/kernel_bomb.gd` / `kernel_bridge/behavior/bounce_behavior.gd` / `kernel_bridge/behavior/non_mid_flee_behavior.gd` / `workbench/hitbox_overlay.gd`。
+- **验收**：`check_syntax` 191/0；全量 **56 套 / 311 测试 / 3212 断言全绿**；orphans 12。
+- **顺带**：`bench_base.build_world` 先 `ensure_stage_runtime()`（子弹台原来没有关卡运行时 → 幽灵/注册表注入会落空）。
 ### 2026-09-11 — W4b-3a：运行时引用抽成 EntityRegistry（StageRuntime 持有 + GameState 过渡门面）
 
 - **目标**：把 `GameState` 的运行时引用（`player` / `active_enemies` / `get_boss`）搬出 god object，改为「组合根持有的 `EntityRegistry`」，为 W4b-4 瘦身 `GameState` 铺路。

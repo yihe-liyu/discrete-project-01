@@ -7,6 +7,7 @@ const REIMU_DATA = preload("res://data/player_data/reimu_data.tres")
 
 func after_each() -> void:
 	BulletManager.clear_all()
+	BulletManager.inject_world_refs(null)
 
 
 func _enemy_data() -> BulletData:
@@ -47,8 +48,9 @@ func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	player.player_data = REIMU_DATA
 	add_child_autofree(player)
 	player.global_position = Vector2(448, 700)
-	var prev: Player = GameState.player
-	GameState.player = player
+	var refs := EntityRegistry.new()
+	refs.bind_player(player)
+	BulletManager.inject_world_refs(refs)
 	var ed := BulletData.new().enemy().tex("小玉")
 	ed.velocity = Vector2.UP * 10.0
 	BulletManager.shoot_enemy_bullet(ed, Vector2(448, 700), Vector2.UP)
@@ -57,7 +59,6 @@ func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	var bomb = BulletManager.shoot_bomb_bullet(d, Vector2(448, 700), Vector2.RIGHT)
 	bomb._physics_process(1.0 / 60.0)
 	assert_eq(BulletManager.kernel_system().get_active_count(), 0, "bomb 周围敌弹应被持续清")
-	GameState.player = prev
 
 
 func test_bomb_spawns_host_node() -> void:

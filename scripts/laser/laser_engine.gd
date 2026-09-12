@@ -11,6 +11,8 @@ var _active: Array[LaserBeam] = []
 var _parent: Node
 var _pool_index: int = 0
 var _on_graze: Callable = Callable()  ## 擦弹结算回调（BulletManager 注入）
+## W4b-3b：实体注册表（BulletManager 注入）——自机判定用；空则跳过
+var refs: EntityRegistry
 var _graze_cooldown: int = 0
 
 
@@ -71,7 +73,8 @@ func spawn_curve(curve: Curve2D, color: Color, opts: Dictionary = {}, seg_len: f
 
 ## 每帧推进所有活动激光 + 玩家判定（回收 DEAD）
 func step(delta: float) -> void:
-	var player: Player = GameState.player
+	var p = refs.player if refs else null
+	var player: Player = p if is_instance_valid(p) else null
 	var has_player: bool = is_instance_valid(player) and not player.is_invincible
 	var missed: bool = false
 	for i in range(_active.size() - 1, -1, -1):

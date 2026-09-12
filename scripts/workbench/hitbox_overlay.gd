@@ -4,6 +4,9 @@
 extends Node2D
 class_name HitboxOverlay
 
+## W4b-3b：实体注册表（工作台注入）；空则不画敌人/自机
+var refs: EntityRegistry
+
 var enabled: bool = false:
 	set(v):
 		enabled = v
@@ -48,13 +51,13 @@ func _draw() -> void:
 			else:
 				draw_arc(center, bt.hitbox_radius, 0, TAU, 12, Color.RED, 1.0)
 	# 敌人判定（绿）
-	for enemy in GameState.get_active_enemies():
+	for enemy in (refs.get_active_enemies() if refs else []):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
 		var er: float = enemy.get("hitbox_radius") if "hitbox_radius" in enemy else 8.0
 		draw_arc(enemy.global_position, er, 0, TAU, 12, Color.GREEN, 1.5)
 	# 玩家判定（青 = 命中，蓝 = 擦弹范围）
-	var player = GameState.player
+	var player = refs.player if refs else null
 	if is_instance_valid(player):
 		var pr: float = player.get("hitbox_radius") if "hitbox_radius" in player else 2.0
 		var gr: float = player.get("graze_radius") if "graze_radius" in player else 24.0

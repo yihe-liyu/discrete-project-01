@@ -321,6 +321,7 @@ func _setup_world() -> void:
 	_hitbox_overlay = HITBOX_OVERLAY.new()
 	_hitbox_overlay.name = "HitboxOverlay"
 	_hitbox_overlay.z_index = 60
+	_hitbox_overlay.refs = _stage_runtime.refs
 	$HitboxLayer.add_child(_hitbox_overlay)
 	_ghost = PLAYER_SCENE.instantiate()
 	_ghost.set_script(GHOST_SCRIPT)
@@ -329,8 +330,8 @@ func _setup_world() -> void:
 	_world.add_child(_ghost)
 	# 幽灵（自机）→ 关卡实体注册表
 	_stage_runtime.refs.bind_player(_ghost)
-	# 幽灵就绪：刷新内核行为管道的自机引用
-	BulletManager.refresh_kernel_player()
+	# 幽灵就绪：把本台的实体注册表注入内核弹幕后端
+	BulletManager.inject_world_refs(_stage_runtime.refs)
 
 
 # ═══ 关卡加载 / 重跑 ═══

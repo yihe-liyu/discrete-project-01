@@ -583,7 +583,26 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 验收 **56 套 / 311 测试 / 3212 断言全绿**。
 
-**W4b-3b（下一步）**：把 `refs` 注入 `BulletManager` / `KernelBulletBackend` / `KernelBulletPhysics` / `KernelBomb` / 桥接行为 / `LaserEngine`，拆掉内核弹幕路径对门面的读取。
+**W4b-3b（已完成）**：见下。
+
+---
+
+### 12.15 W4b-3b 实施记录（2026-09-11，已完成）
+
+**目标**：把运行时实体读取从 `GameState` 门面推进到注入的 `EntityRegistry`，覆盖内核弹幕后端、桥接碰撞/清弹、桥接行为、激光与工作台覆盖层。
+
+**落点**：
+
+- `BulletManager.inject_world_refs(refs)`：存 `world_refs` 并传播给 `KernelBulletBackend` / `KernelBulletPhysics` / `LaserEngine`，再 `_enable_kernel()`；`_enable_kernel` 用 `world_refs`（回退 `EntityRegistry.current`）取自机与 `enemy_provider`。
+- `KernelBulletBackend.refs` → `spawn_bomb` 注入 `KernelBomb.refs`。
+- `KernelBulletPhysics.refs` / `LaserEngine.refs` / `KernelBomb.refs`：自机与敌机全部走注册表。
+- `KernelBehaviorHost.get_boss()`（读 `backend.refs`）；`bounce` / `non_mid_flee` 改用 `host.get_boss()`。
+- `HitboxOverlay.refs`（工作台注入）；`bench_base.build_world` 先 `ensure_stage_runtime()`。
+- 组合根：`GameScene._setup_player` / `bench_base.build_world` / `workbench._setup_world` 调 `inject_world_refs`。
+
+**验收**：`check_syntax` **191/0**；全量 **56 套 / 311 测试 / 3212 断言全绿**；orphans 12。`grep -rIl "\bGameState\b" scripts` **41 → 35**（引用 172 → 159）；清零文件：`autoload/bullet_manager.gd` / `laser/laser_engine.gd` / `kernel_bridge/kernel_bomb.gd` / `kernel_bridge/behavior/bounce_behavior.gd` / `kernel_bridge/behavior/non_mid_flee_behavior.gd` / `workbench/hitbox_overlay.gd`。
+
+**踩坑（记录）**：内核/桥接里把「可能含已释放实例」的数组用 `for enemy: Node2D in ...` 迭代，或把 `refs.player` 直接赋给 `Player` 类型变量，会在赋值/迭代时抛 `Trying to assign invalid previously freed instance`。规则：**先 `is_instance_valid` 再赋类型化变量；迭代用无类型 `for enemy in ...`**。
 
 ---
 

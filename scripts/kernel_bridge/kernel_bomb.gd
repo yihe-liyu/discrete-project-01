@@ -30,6 +30,8 @@ var _sprite: Sprite2D
 var _init_dir: Vector2 = Vector2.DOWN
 ## Node2D 没有 velocity（旧 Bullet 才有）；bomb 飞行阶段用它。
 var velocity: Vector2 = Vector2.ZERO
+## W4b-3b：实体注册表（自机 / 敌机 / Boss；KernelBulletBackend 注入）
+var refs: EntityRegistry
 
 
 func setup(data: BulletData, pos: Vector2, direction: Vector2) -> void:
@@ -54,7 +56,8 @@ func setup(data: BulletData, pos: Vector2, direction: Vector2) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var player: Player = GameState.player
+	var p = refs.player if refs else null
+	var player: Player = p if is_instance_valid(p) else null
 	if not is_instance_valid(player):
 		return
 	if not _initialized:
@@ -100,7 +103,7 @@ func _physics_process(delta: float) -> void:
 func _find_nearest_enemy() -> Node2D:
 	var nearest: Node2D = null
 	var nearest_dist := INF
-	for enemy: Node2D in GameState.active_enemies:
+	for enemy in (refs.enemies if refs else []):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
 		if enemy is Boss:
@@ -124,7 +127,7 @@ func _explode() -> void:
 	AudioManager.play_sfx(AssetRegistry.sounds["shoot"], -6.0)
 	_spawn_explosion_visual(pos)
 	BulletManager.start_death_clear(pos, EXPLODE_RADIUS, EXPLODE_DURATION, EXPLODE_START_RADIUS)
-	for enemy in GameState.get_active_enemies():
+	for enemy in (refs.get_active_enemies() if refs else []):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
 		if enemy.global_position.distance_to(pos) <= EXPLODE_RADIUS + enemy.hitbox_radius:
