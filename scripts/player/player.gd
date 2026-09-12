@@ -10,6 +10,8 @@ const MIN_MARGIN: int = 8
 
 ## 关卡上下文（StageRuntime/game_scene 注入，系统操作走服务）
 var ctx: StageContext
+## 单局资源（W4b-2：组合根注入同一 PlayerResources 实例；过渡期从 GameState 取）
+var resources: PlayerResources
 
 const IDLE = "idle"
 const LEFTING = "lefting"
@@ -64,6 +66,8 @@ func _apply_player_data() -> void:
 		sprite.play("idle")
 
 	GameState.player = self
+	if resources == null:
+		resources = GameState.resources   # W4b-2：过渡期取同一实例（GameState 仍是 owner）
 
 func _physics_process(delta):
 	# 无敌倒计时（替代 await，不挂起调用链）
@@ -166,7 +170,7 @@ const BOMB_INVINCIBLE_TIME: float = 4.0
 func _bomb() -> void:
 	if is_invincible:
 		return
-	if not GameState.use_bomb():
+	if not resources.use_bomb():
 		return
 	_play_sfx(AssetRegistry.sounds["card"], -6.0)
 	# Bomb 期间短暂无敌
@@ -196,10 +200,10 @@ const MEM_RELEASE_RANGE := 400.0
 const MEM_RELEASE_DURATION := 0.75
 
 func _memory_release() -> void:
-	if is_invincible or GameState.memory_value < 50.0:
+	if is_invincible or resources.memory_value < 50.0:
 		return
 	
-	GameState.reduce_memory(50.0)
+	resources.reduce_memory(50.0)
 	var pos := global_position
 	
 	# 视觉特效：反色圈（走服务）
@@ -284,13 +288,13 @@ func miss() -> void:
 	_death_clear(pos, 2048, 3.0)
 	
 	# Miss 后记忆值增加 25%
-	GameState.add_memory(GameState.MEMORY_MISS)
+	resources.add_memory(PlayerResources.MEMORY_MISS)
 	
 	# 每次 miss 都通知（boss 判定 miss 后不收；player_death 只在残机 0 发，不能复用）
 	GameEvents.player_missed.emit()
 	
 	# 残机扣除
-	if GameState.lose_life():
+	if resources.lose_life():
 		# 无敌：倒计时 3 秒，_physics_process 自动倒数（不 await，不挂起调用链）
 		is_invincible = true
 		_invincible_timer = 3.0

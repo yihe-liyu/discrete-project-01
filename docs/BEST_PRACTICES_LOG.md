@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-11 — W4b-2a：Player 注入 PlayerResources（资源引用清零）
+
+- **目标**：把 `PlayerResources` 注入 `Player`，让玩家逻辑直接持有资源真源（为后续消费者迁移铺路）。
+- **做法**：`Player.resources`（`_ready` 过渡期取 `GameState.resources` 同一实例）；`player.gd` 的 `use_bomb` / `memory_value` / `reduce_memory` / `add_memory` / `lose_life` 改走 `resources`。
+- **验收**：全量 **55 套 / 303 测试 / 3191 断言全绿**。
+- **说明**：`GameState` 仍是 owner（组合根注入统一实例）；全量去除 `GameState` 引用需按文件逐个迁移（UI/道具/Boss/桥接/菜单），是后续小步。
+
 ### 2026-09-11 — W4b-1：GameState 资源抽成 PlayerResources（转发，零改动）
 
 - **目标**：`GameState` 的单局资源状态（火力/分数/擦弹/残机/雷/碎片/记忆）抽成单一 owner（R18），为后续"消费者直接注入"铺路。

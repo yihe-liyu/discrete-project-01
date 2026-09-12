@@ -554,7 +554,9 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **验收**：`test/test_player_resources.gd`（4 用例）；全量 **55 套 / 303 测试 / 3191 断言全绿**。
 
-**后续（W4b-2/3/4）**：消费者（Player/UI/kernel）改直接持 `PlayerResources` → 注入 `player` / `active_enemies` → 瘦身 `GameState` 成存档全局。
+**W4b-2a（本次）**：`Player` 增 `resources`（`_ready` 取同一实例）；`player.gd` 的资源引用清零（`use_bomb`/`memory_value`/`reduce_memory`/`add_memory`/`lose_life`）。全量 55/303/3191 绿。
+
+**后续（W4b-2b/3/4）**：其余消费者（`game_ui` / `item` / `boss` / 内核桥接 / 菜单）改直接持 `PlayerResources` → 注入 `player` / `active_enemies` → 瘦身 `GameState` 成存档全局。注意：W4b-2a 只覆盖有天然注入点的 `Player`；全量去耦合需按文件逐个消除 `GameState` 引用（共 ~45 生产文件）。
 
 ---
 
