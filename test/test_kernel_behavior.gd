@@ -12,12 +12,14 @@ const MARISA_LASER = preload("res://scripts/coroutine/player/marisa_laser_follow
 var _backend: KernelBulletBackend
 var _saved_enemies: Array = []
 var _saved_difficulty: int = 1
+var _saved_memory: float = 50.0
 
 
 func before_each() -> void:
 	_saved_enemies = GameState.active_enemies.duplicate()
 	GameState.active_enemies.clear()   # 保证「无 Boss」分支确定
 	_saved_difficulty = GameState.selected_difficulty
+	_saved_memory = GameState.memory_value
 	_backend = KernelBulletBackend.new()
 	add_child_autofree(_backend)
 	_backend.setup_behaviors(null, Callable())
@@ -27,6 +29,7 @@ func after_each() -> void:
 	GameState.active_enemies.clear()
 	GameState.active_enemies.append_array(_saved_enemies)
 	GameState.selected_difficulty = _saved_difficulty
+	GameState.memory_value = _saved_memory
 
 
 func _enemy(tex := "小玉") -> BulletData:
@@ -101,6 +104,27 @@ func test_homing_turns_toward_enemy() -> void:
 	var v: Vector2 = _backend.system.get_velocity(0)
 	assert_gt(v.x, 0.0, "应朝右侧敌人偏转")
 	assert_almost_eq(v.length(), 512.5, 1.0, "速度量级 ≈ lerp(min_speed, top_speed, dt/accel_time)")
+
+
+## S4d：低记忆自机弹偏红（旧 Bullet.bind 语义，spawn 时定一次）。
+func test_player_bullet_reddens_at_low_memory() -> void:
+	GameState.memory_value = 0.0
+	var d := BulletData.new().player().tex("reimu_main")
+	d.tint = Color.WHITE
+	d.velocity = Vector2.UP * 100.0
+	_backend.shoot(d, Vector2.ZERO, Vector2.UP)
+	var c: Color = _backend.system.get_color(0)
+	assert_almost_eq(c.g, 0.5, 0.01, "memory=0 → 往红 lerp 0.5")
+
+
+## 记忆 50 以上原色不变。（旧语义）
+func test_player_bullet_stays_white_at_max_memory() -> void:
+	GameState.memory_value = 100.0
+	var d := BulletData.new().player().tex("reimu_main")
+	d.tint = Color.WHITE
+	d.velocity = Vector2.UP * 100.0
+	_backend.shoot(d, Vector2.ZERO, Vector2.UP)
+	assert_almost_eq(_backend.system.get_color(0).g, 1.0, 0.001, "高记忆应保持原色")
 
 
 ## S4c-4：正确锚点——子机是玩家兄弟节点，须用 global_position（旧池语义）。

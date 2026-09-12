@@ -103,7 +103,13 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 		type.kind = BulletType.Kind.LASER   # 供渲染桥整批淡出
 		if _laser_fade != null:
 			_laser_fade.on_laser_spawned()
-	var id: int = system.spawn(type, pos, vel, data.tint, move, params)
+	var tint: Color = data.tint
+	if data.faction == BulletData.Faction.PLAYER:
+		# 旧 Bullet.bind：自机弹在记忆 <50 时往红 lerp（spawn 时定一次）
+		var mem: float = GameState.memory_value
+		if mem < 50.0:
+			tint = tint.lerp(Color.RED, remap(mem, 0.0, 50.0, 1.0, 0.0) * 0.5)
+	var id: int = system.spawn(type, pos, vel, tint, move, params)
 	_sync_host_tables(id, data)
 	return id
 

@@ -805,6 +805,21 @@ func kernel_port() -> Dictionary:
 
 **验收**：新增锚点断言（x 贴子机世界位，非翻倍）；全量 **61 套 / 325 测试 / 3308 断言全绿**。
 
+### 21.16 S4d-1 落地：自机弹记忆变红（2026-09-11，已完成）
+
+- `KernelBulletBackend.shoot`：PLAYER 弹在 `GameState.memory_value < 50` 时把 tint 往 `Color.RED` lerp `remap(mem,0,50,1,0)*0.5`（旧 `Bullet.bind` 同式，**spawn 时定一次**）。
+- 验收：`test_kernel_behavior` +2（mem=0 偏红 / mem=100 原色）；全量 **61 套 / 327 测试 / 3310 断言全绿**。
+
+### 21.17 S4d 剩余：bomb 架构决策（2026-09-11，待定）
+
+`bomb_behavior` 需要：绕自机扩张 → 追踪 → 爆炸（清弹 + 伤害 + 视觉）；且 `BulletData.bomb().out_grace = 9999`（防轨道越界被内核 cull 剔除）。内核 cull 是按 `cull_rect + margin` **统一**判定，A 方案（内核零改动）下**没有 per-type out_grace**。两条路：
+
+- **A 内核行为 + cull 守卫**：bomb 留在内核池；桥接临时放大 `cull_margin`。统一 SoA，但 `cull_margin` 是全局 hack，计数 / 清理易漏。
+- **B 宿主节点 bomb（推荐）**：bridge `KernelBomb` Node2D 自带 Sprite 渲染、不走内核池；天然无 cull / out_grace / kind 问题，清弹 / 伤害 / 视觉都是宿主动作。代价：bomb 不在 SoA（8 个实例无所谓），行为逻辑在桥接重复一份。
+
+→ 待用户选。
+
+
 
 
 
