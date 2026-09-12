@@ -4,7 +4,7 @@ extends SceneTree
 ## 改顶部"数值输入"区后重跑即得新表（不需要动公式区）
 
 # ═══════════════════ 数值输入 ═══════════════════
-# 对照 cs_reimu.gd / cs_marisa.gd 的 b.damage / wait_frames / 路数 填写
+# 对照 reimu_shoot.gd / marisa_shoot.gd 的 b.damage / wait_frames / 路数 填写
 
 # ── 灵梦 Reimu ──
 const REIMU_MAIN_DMG := 6.0        # 主射击单发伤害

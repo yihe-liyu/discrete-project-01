@@ -645,6 +645,19 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.19 K1 实施记录（2026-09-11，已完成）
+
+**目标**：清掉脚本层「文件名 ↔ `class_name` 不一致 / `cs_`·`ov_` 黑话缩写」，只动名字与路径字符串，行为不变。
+
+**落点**：
+
+- 文件改名 9 个：`avoid_player.gd` → `avoid_player_behavior.gd`；`cs_player.gd` → `player_shoot_script.gd`；`cs_reimu.gd`/`cs_marisa.gd` → `reimu_shoot.gd`/`marisa_shoot.gd`；`ov_reimu.gd`/`ov_marisa.gd` → `reimu_option_visual.gd`/`marisa_option_visual.gd`；`env_preset.gd` → `background_env_preset.gd`；`dialog.gd`/`ui_common.gd` → `dialog_host.gd`/`workbench_ui.gd`（`.gd.uid` 同步 `git mv`）。
+- `class_name` 对齐：`RigBase` → `BenchBase`（唯一外部 0 引用）。
+- 引用同步：3 个 `.tres` 的 `ext_resource path`、2 处 `preload`、2 处测试 `load`、注释若干。
+
+**度量**：语义不一致 **8 → 0**；余 4 处为 acronym 大小写（`GameUI`/`ScreenFogFX`/`YYJudeVisual`/`UISeparator`），刻意不动。
+
+**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ---
 
 ## 13. Track A spike 记录：S0 内核 vendor（2026-09-11，已完成）

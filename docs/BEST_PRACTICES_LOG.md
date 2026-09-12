@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-11 — K1：脚本命名收口（黑话文件去缩写 + class_name 对齐）
+
+- **目标**：清掉 `scripts/**` 里「文件名 ↔ `class_name` 对不上 / `cs_`·`ov_` 黑话缩写」的命名债；只改名字与路径字符串，不改行为。
+- **做法**：
+  - 文件改名 9 个：`kernel/behavior/avoid_player.gd` → `avoid_player_behavior.gd`（兄弟均带 `_behavior`）；`coroutine/player/{cs_player,cs_reimu,cs_marisa}.gd` → `{player_shoot_script,reimu_shoot,marisa_shoot}.gd`；`{ov_reimu,ov_marisa}.gd` → `{reimu_option_visual,marisa_option_visual}.gd`；`background/env_preset.gd` → `background_env_preset.gd`；`workbench/{dialog,ui_common}.gd` → `{dialog_host,workbench_ui}.gd`。`.gd.uid` 随 `git mv`（uid 不变）。
+  - `class_name` 对齐 1 处：`RigBase` → `BenchBase`（`workbench/` 内 4 个 `bench_*` 是主流词，`RigBase` 是异类；外部 0 引用，仅改声明）。
+  - 路径引用更新：3 个 `.tres` 的 `ext_resource path`（`reimu_data`/`marisa_data`/`stage01_env`）+ 2 处 `preload` + 2 处测试 `load` + 若干注释。
+- **度量**：语义不一致 **8 → 0**（余 4 处为 acronym 大小写）。
+- **对照旧项目**：旧名 `cs_`（character script）/`ov_`（option visual）只能靠记忆猜；现在文件名 = 类名，grep / 跳转直达。
+- **没做什么（刻意）**：acronym 大小写（`GameUI`、`ScreenFogFX`、`YYJudeVisual`、`UISeparator`）——Godot 引擎自身也全大写（`HTTPRequest`/`AABB`），且 `FxLayer`(21 引用) 与 `ScreenFogFX` 的一致性问题属纯风格，churn > 收益，留待专波。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 2026-09-11 — W4c：BulletManager 去 autoload（组合根持有的弹幕世界）
 
 - **目标**：`BulletManager` 从 autoload 改为「组合根创建 / 持有的 `class_name` 场景服务」，autoload **5 → 4**。

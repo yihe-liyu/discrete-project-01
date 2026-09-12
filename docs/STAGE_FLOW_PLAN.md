@@ -306,7 +306,7 @@ tl.at(7.0).  custom(_show_logo)
 - 对象：`scripts/enemy/boss.gd`；`scripts/data/enemy_data.gd`；`scripts/enemy/enemy.gd`
 - 身份/记录：`scripts/data/boss_catalog.gd`；`scripts/data/spell_record_book.gd`；`scripts/data/phase_data.gd`
 - 服务：`scripts/coroutine/services/stage_context.gd`；新增 `record_service.gd`/`background_service.gd`
-- 背景：`scripts/background/stage_background.gd` `env_preset.gd` `decor_layer.gd`
+- 背景：`scripts/background/stage_background.gd` `background_env_preset.gd` `decor_layer.gd`
 - 工作台：`scripts/workbench/workbench.gd` `bookmark_extractor.gd` 等
 - 关卡：`data/stages/stage01/stage_script/stage01.gd`
 - UI：`scripts/scenes/boss_ui.gd`

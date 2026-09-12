@@ -2,7 +2,7 @@
 
 [ext_resource type="SpriteFrames" uid="uid://b7qaawpm1asxi" path="res://data/player_data/marisa_anim.tres" id="1_ewcl1"]
 [ext_resource type="Script" uid="uid://grfvsrralj0y" path="res://scripts/data/player_data.gd" id="2_vvlku"]
-[ext_resource type="Script" uid="uid://1r7vgb3c712x" path="res://scripts/coroutine/player/cs_marisa.gd" id="3_shoot"]
+[ext_resource type="Script" uid="uid://1r7vgb3c712x" path="res://scripts/coroutine/player/marisa_shoot.gd" id="3_shoot"]
 
 [resource]
 script = ExtResource("2_vvlku")

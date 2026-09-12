@@ -107,8 +107,8 @@
 
 ## S3. 自机操控与武器（移动 / Option / 射击 / 炸弹）
 状态：🚧 ｜ 适用红线：R2, R6, R10, R20
-- [x] 射击方向/弹型按角色数据（reimu/marisa）驱动，可复用 —— `scripts/data/player_data.gd` + `coroutine/player/cs_reimu.gd`/`cs_marisa.gd`
-- [x] Option 子机行为独立、可复用 —— `ov_reimu.gd`/`ov_marisa.gd` + `option_follow.gd`
+- [x] 射击方向/弹型按角色数据（reimu/marisa）驱动，可复用 —— `scripts/data/player_data.gd` + `coroutine/player/reimu_shoot.gd`/`marisa_shoot.gd`
+- [x] Option 子机行为独立、可复用 —— `reimu_option_visual.gd`/`marisa_option_visual.gd` + `option_follow.gd`
 - [~] 炸弹：无敌时长、清弹、特效、资源扣除符合预期 —— `cancel&bomb` + Bomb 弹 + `death_clear` 已在；资源扣除（`use_bomb`）待核
 - [~] 武器/行为脚本走注入（ctx），不摸全局 —— 走 `StageContext` + `CoroutineScript`，但仍有全局直读（`GameState`），待收口
 
@@ -227,3 +227,4 @@
 > - W4b-2b：资源消费者直读 `Player.resources`（经 `refs.get_player_resources()`）。`grep GameState` **35 → 31 文件**。详见 §12.16。
 > - W4b-4：`GameState` → `SaveData`（纯 `static`，去 autoload）；资源归 `Player`、实体归 `EntityRegistry`。`grep GameState` **31 → 0**；autoload **6 → 5**。详见 §12.17。
 > - W4c：`BulletManager` 去 autoload（组合根创建 / 注入的弹幕世界 + `static current`）。autoload **5 → 4**。详见 §12.18。
+> - K1（命名收口）：9 个黑话/缩写文件改名（`cs_`/`ov_` 等）、`RigBase` → `BenchBase`、3 个 `.tres` + preload/测试路径同步；语义不一致 **8 → 0**（acronym 大小写刻意不动）。详见 §12.19。

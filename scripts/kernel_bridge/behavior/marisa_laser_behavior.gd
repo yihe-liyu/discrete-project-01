@@ -1,6 +1,6 @@
 ## MarisaLaserBehavior（Track A / S4c-4）—— 魔理沙非 focus 激光段的锚定漂移。
 ## 与内核 LaserFollowBehavior 的唯一差别：原项目子机是**玩家的兄弟节点**
-## （cs_player._sync_options：`leader.get_parent().add_child(opt)`），其 `position` 相对 World，
+## （player_shoot_script._sync_options：`leader.get_parent().add_child(opt)`），其 `position` 相对 World，
 ## 不是相对玩家的 → 必须用 `global_position`（与旧 marisa_laser_follow 一致）。
 ## 子机无效 → 回退「自机 + offset」。
 ## params：anchor_id | anchor_offset | drift_speed | angle | initial_drift

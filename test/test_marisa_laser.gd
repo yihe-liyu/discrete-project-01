@@ -2,8 +2,8 @@ extends GutTest
 ## 验证魔理沙分段激光：切片 + 偏移无缝 + 编译加载
 
 func test_segment_slicing():
-	var cs = load("res://scripts/coroutine/player/cs_marisa.gd")
-	assert_not_null(cs, "cs_marisa 应加载")
+	var cs = load("res://scripts/coroutine/player/marisa_shoot.gd")
+	assert_not_null(cs, "marisa_shoot 应加载")
 	# 验证切片（通过实例调用 _make_laser_segment）
 	var inst = cs.new()
 	autofree(inst)
@@ -18,7 +18,7 @@ func test_segment_slicing():
 	assert_eq(n, int(512.0 / w), "段数应自动 = 图集宽/段宽")
 
 func test_offset_sequence_is_seamless():
-	var cs = load("res://scripts/coroutine/player/cs_marisa.gd")
+	var cs = load("res://scripts/coroutine/player/marisa_shoot.gd")
 	var inst = cs.new()
 	autofree(inst)
 	# 段 i 偏移 = (0, -i*32)：间距=段宽 → 无缝

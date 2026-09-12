@@ -1,7 +1,7 @@
 extends PlayerShootScript
 class_name ReimuShoot
 
-const OPTION_VISUAL = preload("res://scripts/coroutine/player/ov_reimu.gd")
+const OPTION_VISUAL = preload("res://scripts/coroutine/player/reimu_option_visual.gd")
 
 const MAIN_INTERVAL: int = 3
 

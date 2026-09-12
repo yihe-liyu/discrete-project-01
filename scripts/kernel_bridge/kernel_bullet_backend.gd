@@ -2,7 +2,7 @@
 ##
 ## 边界（见 scripts/kernel/README.md）：内核不认识 BulletData；映射只发生在**本文件**（宿主桥接层）。
 ## 缓存按**内容签名**而非实例——原项目两种用法并存：enemy01 复用同一实例并改速度，
-## cs_reimu / non01_shoot 每发 `BulletData.new()`；按实例缓存会让内核弹型表每发长一个。
+## reimu_shoot / non01_shoot 每发 `BulletData.new()`；按实例缓存会让内核弹型表每发长一个。
 ##
 ## S4a 起：`coroutine_script` 走 duck-typed `kernel_port()` 端口映射到内核行为；
 ## `BulletData.accel` 走桥接 `world_accel`。未映射（无端口）仍按直线发射并计入 unmapped。

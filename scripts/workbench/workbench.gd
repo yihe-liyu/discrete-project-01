@@ -27,8 +27,8 @@
 ##   status_bar.gd       —— 实时状态显示（主控制器每帧喂数据）
 ##   event_log.gd        —— 事件日志（自连 GameEvents）
 ##   bookmark_panel.gd   —— 书签列表 + 编辑弹窗（数据自持 + data_changed 信号）
-##   dialog.gd           —— 通用弹窗宿主（书签编辑用）
-##   ui_common.gd        —— 控件工厂
+##   dialog_host.gd      —— 通用弹窗宿主（书签编辑用）
+##   workbench_ui.gd     —— 控件工厂
 ##   布局框架在 scenes/workbench.tscn（容器/锚点/分割条/时间轴）
 ##
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
