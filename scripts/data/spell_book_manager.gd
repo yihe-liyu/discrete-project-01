@@ -1,6 +1,6 @@
 class_name SpellBookManager
 extends RefCounted
-## 符卡簿管理：加载/保存/解锁/记录（从 GameState 拆出，职责单一）
+## 符卡簿管理：加载/保存/解锁/记录（从 SaveData 拆出，职责单一）
 
 const SPELL_BOOK_PATH := "res://data/registry/spell_records.tres"
 

@@ -308,7 +308,7 @@ func _update_difficulty_texture() -> void:
 	var diff := $"diffculty"
 	if not diff:
 		return
-	var idx := clampi(GameState.selected_difficulty, 0, difficulty_textures.size() - 1)
+	var idx := clampi(SaveData.selected_difficulty, 0, difficulty_textures.size() - 1)
 	if idx < difficulty_textures.size() and difficulty_textures[idx]:
 		diff.texture = difficulty_textures[idx]
 
@@ -343,10 +343,7 @@ func _make_number_sprite(p_name: String, pos: Vector2, tex: Texture2D = null, dc
 
 
 func _process(_delta: float) -> void:
-	if not is_instance_valid(GameState):
-		return
-
-	_hi_score_num.value = GameState.get_high_score(0)
+	_hi_score_num.value = SaveData.get_high_score(0)
 	_score_num.value    = resources.current_score
 	_max_point_num.value= resources.max_point
 	_graze_num.value    = resources.graze_count

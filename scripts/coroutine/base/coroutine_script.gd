@@ -88,9 +88,9 @@ func _tick(_ctx: StageContext) -> Variant:
 
 ## 根据当前难度从数组取对应值
 func diff_pick(arr: Array) -> Variant:
-	return arr[GameState.selected_difficulty]
+	return arr[SaveData.selected_difficulty]
 
 
 ## 根据当前难度从嵌套字典取对应值
 func diff_get(dict: Dictionary, key: String, default = null):
-	return dict.get(GameState.selected_difficulty, {}).get(key, default)
+	return dict.get(SaveData.selected_difficulty, {}).get(key, default)

@@ -18,8 +18,8 @@ const DIFF_TEX_PATHS: Array[String] = [
 
 func _on_enter() -> void:
 	_setup_nav()
-	if GameState.selected_character < _nav_items.size():
-		_nav_index = GameState.selected_character
+	if SaveData.selected_character < _nav_items.size():
+		_nav_index = SaveData.selected_character
 
 	# 遮罩淡入
 	_fade_overlay_in(0.4)
@@ -32,7 +32,7 @@ func _on_enter() -> void:
 	tw.tween_property(tex, "modulate:a", 1.0, 0.5)
 
 	# 难度贴图飞入
-	var diff_idx := GameState.selected_difficulty
+	var diff_idx := SaveData.selected_difficulty
 	if diff_idx >= 0 and diff_idx < DIFF_TEX_PATHS.size():
 		var diff_tex := load(DIFF_TEX_PATHS[diff_idx]) as Texture2D
 		if diff_tex:

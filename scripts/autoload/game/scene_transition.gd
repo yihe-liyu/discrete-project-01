@@ -38,7 +38,9 @@ func change_scene(path: String, current_scene_path: String, on_scene_left: Calla
 	await _fade_out()
 
 	BulletManager.clear_all()
-	GameState.clear_enemies()
+	var refs := EntityRegistry.current
+	if refs:
+		refs.clear()
 
 	var err := _parent.get_tree().change_scene_to_file(path)
 	if err != OK:

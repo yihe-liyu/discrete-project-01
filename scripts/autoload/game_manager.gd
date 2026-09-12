@@ -23,6 +23,8 @@ var current_state: AppState = AppState.MENU
 func _ready():
 	process_mode = PROCESS_MODE_ALWAYS
 
+	SaveData.boot()  # W4b-4：原 SaveData._ready（主题/存档/设置/注册表）
+
 	_transition = TransClass.new()
 	_transition.setup(self)
 

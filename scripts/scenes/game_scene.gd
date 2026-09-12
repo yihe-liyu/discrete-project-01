@@ -31,14 +31,14 @@ func _ready():
 	GameManager.game_state_changed.connect(_on_game_state_changed)
 	_stage_runtime.stage_cleared.connect(_on_stage_cleared)
 
-	if GameState.is_practice_mode:
-		GameState.restarting = false
-		GameState.reset_practice()
+	if SaveData.is_practice_mode:
+		SaveData.restarting = false
+		SaveData.reset_practice()
 		_setup_player()
 		_start_practice_game()
 	else:
-		GameState.restarting = false
-		GameState.reset_all()
+		SaveData.restarting = false
+		SaveData.reset_all()
 		_setup_player()
 		_start_normal_game()
 
@@ -46,22 +46,22 @@ func _ready():
 func _start_normal_game() -> void:
 	var data := _resolve_stage_data()
 	if not data:
-		push_error("GameScene: 找不到关卡 stage_id=%d difficulty=%d" % [GameState.current_stage_id, GameState.selected_difficulty])
+		push_error("GameScene: 找不到关卡 stage_id=%d difficulty=%d" % [SaveData.current_stage_id, SaveData.selected_difficulty])
 		return
 	_load_background(data.background_scene)
 	_stage_runtime.load_stage(data)
 
 
 func _start_practice_game() -> void:
-	_load_background(GameState.practice_background)
+	_load_background(SaveData.practice_background)
 
-	var phase: PhaseData = GameState.practice_phase
+	var phase: PhaseData = SaveData.practice_phase
 	if not phase:
 		push_error("GameScene: practice_phase 未设置")
 		return
 
 	var boss := _stage_runtime.start_spell_card(
-		phase, GameState.practice_boss_scene, GameState.practice_name,
+		phase, SaveData.practice_boss_scene, SaveData.practice_name,
 		Vector2(GameConfig.FIELD_CENTER_X, 240)
 	)
 	if not boss:
@@ -74,8 +74,8 @@ func _start_practice_game() -> void:
 
 
 func _resolve_stage_data() -> StageData:
-	if GameState.stage_registry:
-		return GameState.stage_registry.find(GameState.current_stage_id)
+	if SaveData.stage_registry:
+		return SaveData.stage_registry.find(SaveData.current_stage_id)
 	push_error("GameScene: stage_registry 未设置")
 	return null
 
@@ -106,8 +106,8 @@ func _exit_tree():
 	BulletManager.clear_all()       # 内含 fx_layer.clear_pool()
 	BulletManager.inject_fx_layer(null)  # 解除特效层注入（防 autoload 持悬空引用）
 	_stage_runtime.fx_layer = null
-	if GameState.is_practice_mode:
-		GameState.end_practice()
+	if SaveData.is_practice_mode:
+		SaveData.end_practice()
 	if _background_instance and is_instance_valid(_background_instance):
 		_background_instance.queue_free()
 		_background_instance = null
@@ -121,8 +121,8 @@ func _setup_player() -> void:
 		preload("res://data/player_data/marisa_data.tres"),
 	]
 	var player := %Player
-	if player and GameState.selected_character < data_map.size():
-		player.player_data = data_map[GameState.selected_character]
+	if player and SaveData.selected_character < data_map.size():
+		player.player_data = data_map[SaveData.selected_character]
 		player._apply_player_data()
 		player._reinit_shoot()
 		# 自机 → 本次关卡世界的实体注册表（BulletManager 亦经注入读取）
@@ -148,11 +148,11 @@ func _on_game_state_changed(_old: int, new: int) -> void:
 
 
 func _on_stage_cleared():
-	if GameState.is_stage_practice:
-		GameState.is_stage_practice = false
+	if SaveData.is_stage_practice:
+		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
-	elif not GameState.is_practice_mode:
-		GameState.current_stage_id += 1
+	elif not SaveData.is_practice_mode:
+		SaveData.current_stage_id += 1
 		GameManager.reload_current_scene()
 
 
@@ -163,7 +163,7 @@ func _on_practice_cleared(_boss: Node) -> void:
 			runner.stop()
 			runner.queue_free()
 	GameEvents.boss_defeated.disconnect(_on_practice_cleared)
-	GameState.end_practice()
+	SaveData.end_practice()
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 

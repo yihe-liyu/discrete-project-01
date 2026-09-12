@@ -52,12 +52,12 @@ func test_param_listing_and_difficulty():
 	if target_y_spin >= 0:
 		assert_eq(float(rig._param_panel.get_rows()[target_y_spin].ctrl.value), 300.0, "默认值=脚本 var 值（target_y=300）")
 	# 难度切换：diff_pick 实时读取 → 立即可变（注意还原，避免污染其他用例）
-	var saved_diff := GameState.selected_difficulty
+	var saved_diff := SaveData.selected_difficulty
 	rig._on_diff_changed(2)
-	assert_eq(GameState.selected_difficulty, 2, "难度切 Hard(2)")
+	assert_eq(SaveData.selected_difficulty, 2, "难度切 Hard(2)")
 	rig._on_diff_changed(0)
-	assert_eq(GameState.selected_difficulty, 0, "难度切 Easy(0)")
-	GameState.selected_difficulty = saved_diff
+	assert_eq(SaveData.selected_difficulty, 0, "难度切 Easy(0)")
+	SaveData.selected_difficulty = saved_diff
 	rig.queue_free()
 
 
@@ -102,19 +102,19 @@ func test_rig_spawn_and_hot_reload():
 	await get_tree().process_frame
 
 	# 真实生成：默认壳 + enemy01 行为
-	GameState.active_enemies.clear()
+	rig._stage_runtime.refs.enemies.clear()
 	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy01.gd"
 	rig._cur_script = load(rig._cur_script_path)
 	rig._rebuild_watch()
 	rig._spawn_pos = Vector2(GameConfig.FIELD_CENTER_X, 260.0)
 	rig._spawn()
-	assert_true(GameState.get_active_enemies().size() >= 1,
-		"生成出敌人（%d）" % GameState.get_active_enemies().size())
+	assert_true(rig._stage_runtime.refs.get_active_enemies().size() >= 1,
+		"生成出敌人（%d）" % rig._stage_runtime.refs.get_active_enemies().size())
 
 	# 热重载：清场+重新生成
 	rig._do_hot_reload()
-	assert_true(GameState.get_active_enemies().size() >= 1,
-		"重载后重新生成（%d）" % GameState.get_active_enemies().size())
+	assert_true(rig._stage_runtime.refs.get_active_enemies().size() >= 1,
+		"重载后重新生成（%d）" % rig._stage_runtime.refs.get_active_enemies().size())
 	assert_true(rig._reload_status.text.contains("已重载"), "状态成功")
 
 	# 失败路径：坏路径 → 保留旧脚本

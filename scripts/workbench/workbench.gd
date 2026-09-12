@@ -149,7 +149,7 @@ func _setup_phase_timer() -> void:
 func _update_phase_timer() -> void:
 	if _phase_timer_label == null:
 		return
-	var boss: Boss = GameState.get_boss()
+	var boss: Boss = _stage_runtime.refs.get_boss()
 	if boss == null or not is_instance_valid(boss):
 		_phase_timer_label.visible = false
 		return
@@ -366,10 +366,10 @@ func _load_stage() -> void:
 			bg_parent.remove_child(_background)
 		_background.queue_free()
 		_background = null
-	GameState.restarting = false
-	GameState.reset_all()
+	SaveData.restarting = false
+	SaveData.reset_all()
 	if _diff_sel:
-		GameState.selected_difficulty = _diff_sel.selected
+		SaveData.selected_difficulty = _diff_sel.selected
 	# 固定种子：重跑弹幕序列可复现（调参看效果必备）；关闭则随机化
 	if _fixed_seed_on:
 		RNG.set_seed(FIXED_SEED)
@@ -633,10 +633,10 @@ func _update_ui() -> void:
 		_prev_time = t
 		_timeline.time = t
 		_timeline.queue_redraw()
-	var boss = GameState.get_boss()
+	var boss = _stage_runtime.refs.get_boss()
 	_status.set_status(
 		BulletManager.active_count(),
-		GameState.get_active_enemies().size(),
+		_stage_runtime.refs.get_active_enemies().size(),
 		is_instance_valid(boss),
 		int(Engine.get_frames_per_second()))
 
@@ -650,7 +650,7 @@ func _log_line(text: String) -> void:
 ## 配置入记录后：Boss.start_phase 时解锁自动带上战斗配置（无需注册表/CardDef）
 ## 工作台跑关卡到 Boss → 按 Ctrl+G 击破当前阶段 → 解锁记录 + 阶段链推进到下一张
 func _debug_force_clear() -> void:
-	var boss = GameState.get_boss()
+	var boss = _stage_runtime.refs.get_boss()
 	if not boss:
 		_log_line("＊ 无 Boss（先跑到 Boss 阶段再按 Ctrl+G）")
 		return

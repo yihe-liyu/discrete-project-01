@@ -28,8 +28,8 @@ var _page: int = 0
 
 func _ready() -> void:
 	_build_options()
-	_char_index = clampi(GameState.selected_character, 0, CHAR_NAMES.size() - 1)
-	_diff_index = clampi(GameState.selected_difficulty, 0, DIFF_NAMES.size() - 1)
+	_char_index = clampi(SaveData.selected_character, 0, CHAR_NAMES.size() - 1)
+	_diff_index = clampi(SaveData.selected_difficulty, 0, DIFF_NAMES.size() - 1)
 	_collect_cards()
 
 
@@ -89,7 +89,7 @@ func _hide_record_view() -> void:
 func _collect_cards() -> void:
 	var seen := {}
 	_cards.clear()
-	var book: SpellRecordBook = GameState.spell_book
+	var book: SpellRecordBook = SaveData.spell_book
 	for r in book.records:
 		if r.uid == 0 or r.phase_type != SpellRecord.PhaseType.SPELL:
 			continue
@@ -107,7 +107,7 @@ func _collect_cards() -> void:
 
 func _record_of(card: Dictionary) -> SpellRecord:
 	# 记录键不含 uid（同阶段可挂不同 uid 的难度卡）——必须校验记录 uid 与卡一致
-	var r := GameState.spell_book.get_record(card["stage"], card["phase_index"], card["boss_index"],
+	var r := SaveData.spell_book.get_record(card["stage"], card["phase_index"], card["boss_index"],
 		_char_index, _diff_index)
 	if r and r.uid == card["uid"]:
 		return r

@@ -101,7 +101,7 @@ func _build_ui() -> void:
 	_diff_sel = OptionButton.new()
 	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
 		_diff_sel.add_item(d)
-	_diff_sel.selected = GameState.selected_difficulty
+	_diff_sel.selected = SaveData.selected_difficulty
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
@@ -202,7 +202,7 @@ func _preset_from_entry(entry) -> void:
 
 func _snapshot() -> Dictionary:
 	return {
-		"script": _cur_script_path, "seed": _seed, "diff": GameState.selected_difficulty,
+		"script": _cur_script_path, "seed": _seed, "diff": SaveData.selected_difficulty,
 		"visual": _shell.visual_key, "hp": _shell.max_hp, "pos_x": _spawn_pos.x, "pos_y": _spawn_pos.y,
 	}
 
@@ -211,7 +211,7 @@ func _restore(d: Dictionary) -> void:
 	if d.has("seed"):
 		_seed = d.seed
 	if d.has("diff"):
-		GameState.selected_difficulty = d.diff
+		SaveData.selected_difficulty = d.diff
 		_diff_sel.selected = int(d.diff)
 	if d.has("visual"):
 		_shell.visual_key = d.visual
@@ -258,7 +258,7 @@ func _spawn() -> void:
 	_update_stats()
 
 func _clear_all() -> void:
-	for e in GameState.get_active_enemies():
+	for e in _stage_runtime.refs.get_active_enemies():
 		if is_instance_valid(e):
 			e.queue_free()
 	BulletManager.clear_all()
@@ -278,7 +278,7 @@ func _next_seed() -> void:
 func _update_stats() -> void:
 	if _stats_label:
 		_stats_label.text = "敌人：%d · 弹数：%d · 种子：%d" % [
-			GameState.get_active_enemies().size(), BulletManager.active_count(), _seed]
+			_stage_runtime.refs.get_active_enemies().size(), BulletManager.active_count(), _seed]
 
 
 func _process(delta: float) -> void:
@@ -306,7 +306,7 @@ func _set_current_script() -> void:
 	_rebuild_watch()
 
 func _on_diff_changed(idx: int) -> void:
-	GameState.selected_difficulty = idx
+	SaveData.selected_difficulty = idx
 	_update_stats()
 
 

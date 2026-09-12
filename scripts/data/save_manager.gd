@@ -1,6 +1,6 @@
 class_name SaveManager
 extends RefCounted
-## 高分存档管理（从 GameState 拆出，职责单一）
+## 高分存档管理（从 SaveData 拆出，职责单一）
 
 const SAVE_PATH: String = "user://save_data.cfg"
 const SETTINGS_SECTION := "settings"

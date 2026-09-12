@@ -54,7 +54,7 @@ func _build_items() -> void:
 func _refresh_values() -> void:
 	for i in ITEMS.size():
 		var item := ITEMS[i]
-		var v: Variant = GameState.save_mgr.get_setting(item["key"], item["def"])
+		var v: Variant = SaveData.save_mgr.get_setting(item["key"], item["def"])
 		if item["type"] == "range":
 			_values[i].text = TextAlign.pad_cn(TextAlign.full(str(int(round(v * 100.0)))), 3) + "％"
 		elif item["type"] == "choice":
@@ -114,17 +114,17 @@ func _input(event: InputEvent) -> void:
 func _adjust(dir: int) -> void:
 	var item := ITEMS[_nav_index]
 	if item["type"] == "range":
-		var cur: float = float(GameState.save_mgr.get_setting(item["key"], item["def"]))
+		var cur: float = float(SaveData.save_mgr.get_setting(item["key"], item["def"]))
 		var v := clampf(cur + dir * item["step"], item["min"], item["max"])
-		GameState.save_mgr.set_setting(item["key"], v)
+		SaveData.save_mgr.set_setting(item["key"], v)
 		_apply_setting(item["key"], v)
 	elif item["type"] == "choice":
 		var choices: Array = item["choices"]
-		var idx: int = choices.find(GameState.save_mgr.get_setting(item["key"], item["def"]))
+		var idx: int = choices.find(SaveData.save_mgr.get_setting(item["key"], item["def"]))
 		if idx < 0:
 			idx = 0
 		var v2: int = choices[wrapi(idx + dir, 0, choices.size())]
-		GameState.save_mgr.set_setting(item["key"], v2)
+		SaveData.save_mgr.set_setting(item["key"], v2)
 		_apply_setting(item["key"], v2)
 	else:
 		return
@@ -135,9 +135,9 @@ func _toggle() -> void:
 	var item := ITEMS[_nav_index]
 	if item["type"] != "toggle":
 		return
-	var cur: bool = bool(GameState.save_mgr.get_setting(item["key"], item["def"]))
+	var cur: bool = bool(SaveData.save_mgr.get_setting(item["key"], item["def"]))
 	var v: bool = not cur
-	GameState.save_mgr.set_setting(item["key"], v)
+	SaveData.save_mgr.set_setting(item["key"], v)
 	_apply_setting(item["key"], v)
 	_refresh_values()
 	sfx_confirm()

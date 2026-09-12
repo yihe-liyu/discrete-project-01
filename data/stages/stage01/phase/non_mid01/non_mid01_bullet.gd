@@ -101,7 +101,7 @@ func _kernel_on_flee_burst(pos: Vector2, boss_pos: Vector2, has_boss: bool, host
 		.color(Color(0.349, 0.584, 0.798, 1.0)).blend(true).enemy()
 	var rand_dir := Vector2.DOWN.rotated(RNG.randf() * TAU)
 	_kernel_spread(normal, diff_pick([2, 4, 6, 8]), TAU, rand_dir, pos, host)
-	if GameState.selected_difficulty >= 2:
+	if SaveData.selected_difficulty >= 2:
 		var away := (pos - boss_pos).normalized()
 		var num: int = diff_pick([0, 0, 1, 2])
 		var count: int = diff_pick([0, 0, 4, 8])

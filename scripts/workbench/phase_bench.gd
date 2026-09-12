@@ -152,7 +152,7 @@ func _build_ui() -> void:
 	_diff_sel = OptionButton.new()
 	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
 		_diff_sel.add_item(d)
-	_diff_sel.selected = GameState.selected_difficulty
+	_diff_sel.selected = SaveData.selected_difficulty
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
@@ -307,7 +307,7 @@ func _snapshot() -> Dictionary:
 	if _phase_sel.selected >= 0 and _phase_sel.selected < phases.size():
 		path = phases[_phase_sel.selected].path
 	return {
-		"phase": path, "seed": _seed, "diff": GameState.selected_difficulty,
+		"phase": path, "seed": _seed, "diff": SaveData.selected_difficulty,
 		"hp": _hp_spin.value, "time": _time_spin.value,
 		"pos_x": _boss_pos.x, "pos_y": _boss_pos.y,
 	}
@@ -317,7 +317,7 @@ func _restore(d: Dictionary) -> void:
 	if d.has("seed"):
 		_seed = d.seed
 	if d.has("diff"):
-		GameState.selected_difficulty = d.diff
+		SaveData.selected_difficulty = d.diff
 		_diff_sel.selected = int(d.diff)
 	if d.has("hp"):
 		_hp_spin.value = d.hp
@@ -400,7 +400,7 @@ func _process(delta: float) -> void:
 
 ## 难度切换：diff_pick 运行时实时读取 → 立即生效
 func _on_diff_changed(idx: int) -> void:
-	GameState.selected_difficulty = idx
+	SaveData.selected_difficulty = idx
 
 
 func _on_hot_toggled(on: bool) -> void:

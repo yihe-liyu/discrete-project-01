@@ -9,7 +9,6 @@ var draw_velocity_lines: bool = false  # 速度线（每颗子弹 3 图元，默
 
 # 缓存节点引用，避免每帧字符串路径查找
 @onready var bullet_manager: BulletManager = get_node_or_null("/root/BulletManager")
-@onready var game_state: GameState = get_node_or_null("/root/GameState")
 
 func _ready():
 	set_process(false)  # 默认不开启 _process
@@ -36,8 +35,9 @@ func _draw():
 				_draw_kernel_bullet_row(sys, i)
 	
 	# ── 画所有敌人判定 ──
-	if game_state:
-		for enemy in game_state.get_active_enemies():
+	var refs := EntityRegistry.current
+	if refs:
+		for enemy in refs.get_active_enemies():
 			if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 				continue
 			var radius: float = enemy.get("hitbox_radius") if "hitbox_radius" in enemy else 8.0
@@ -45,8 +45,8 @@ func _draw():
 			draw_circle(enemy.global_position, 2.0, Color.GREEN)
 	
 	# ── 画玩家判定 ──
-	if game_state:
-		var player = game_state.player
+	if refs:
+		var player = refs.player
 		if is_instance_valid(player):
 			var r: float = player.get("hitbox_radius") if "hitbox_radius" in player else 2.0
 			var gr: float = player.get("graze_radius") if "graze_radius" in player else 24.0

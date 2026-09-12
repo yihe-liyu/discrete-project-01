@@ -20,8 +20,8 @@ static func from_phase(phase: PhaseData, p_stage_id: int, p_phase_index: int,
 	var pid := PhaseIdentity.new()
 	var is_spell := phase.uid != 0
 	pid.uid = phase.uid
-	pid.character = GameState.selected_character
-	pid.difficulty = GameState.selected_difficulty
+	pid.character = SaveData.selected_character
+	pid.difficulty = SaveData.selected_difficulty
 	pid.stage_id = p_stage_id
 	pid.boss_index = p_boss_index
 	pid.phase_index = p_phase_index

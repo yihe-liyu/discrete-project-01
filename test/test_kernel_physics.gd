@@ -35,17 +35,17 @@ func before_each() -> void:
 	_refs = EntityRegistry.new()
 	_refs.bind_player(_player)
 	_physics.refs = _refs
-	_prev_memory = GameState.memory_value
-	_prev_graze = GameState.graze_count
-	_prev_lives = GameState.lives
-	GameState.memory_value = 0.0    # 关闭擦弹随机清弹（>=50 才触发）
-	GameState.graze_count = 0
+	_prev_memory = _player.resources.memory_value
+	_prev_graze = _player.resources.graze_count
+	_prev_lives = _player.resources.lives
+	_player.resources.memory_value = 0.0    # 关闭擦弹随机清弹（>=50 才触发）
+	_player.resources.graze_count = 0
 
 
 func after_each() -> void:
-	GameState.memory_value = _prev_memory
-	GameState.graze_count = _prev_graze
-	GameState.lives = _prev_lives
+	_player.resources.memory_value = _prev_memory
+	_player.resources.graze_count = _prev_graze
+	_player.resources.lives = _prev_lives
 
 
 func _enemy_bullet_at(pos: Vector2) -> int:
@@ -65,7 +65,7 @@ func test_bullet_within_graze_is_grazed() -> void:
 	# 命中阈值 = 自机 5 + 弹 6 = 11；擦弹阈值 = 40 + 6 = 46 → 放在 30 处只擦不中
 	var id := _enemy_bullet_at(_player.global_position + Vector2(30, 0))
 	_physics.process()
-	assert_eq(GameState.graze_count, 1, "应计 1 次擦弹")
+	assert_eq(_player.resources.graze_count, 1, "应计 1 次擦弹")
 	assert_eq(_backend.system.get_active_count(), 1, "擦弹不回收该弹（随机清弹已关）")
 	assert_true(_backend.system.is_grazed(id), "应标记为已擦弹")
 
@@ -74,7 +74,7 @@ func test_graze_not_counted_twice() -> void:
 	_enemy_bullet_at(_player.global_position + Vector2(30, 0))
 	_physics.process()
 	_physics.process()
-	assert_eq(GameState.graze_count, 1, "同一弹不应重复计擦弹")
+	assert_eq(_player.resources.graze_count, 1, "同一弹不应重复计擦弹")
 
 
 func test_invincible_player_ignores_bullets() -> void:
@@ -89,7 +89,7 @@ func test_player_bullet_damages_enemy_via_damage_side_table() -> void:
 	fake.global_position = Vector2(200, 200)
 	add_child_autofree(fake)
 	_refs.register_enemy(fake)
-	GameState.memory_value = 100.0   # 关掉记忆加成（<50 才生效）
+	_player.resources.memory_value = 100.0   # 关掉记忆加成（<50 才生效）
 	var d := BulletData.new().player().tex("reimu_main")
 	d.velocity = Vector2.UP * 100.0
 	d.damage = 10.0

@@ -1,7 +1,7 @@
 ## 关卡运行时 —— 关卡生命周期 + 生成敌人/Boss（World 下的场景节点）。
 ## W3b-2：StageManager autoload 已删除；本节点是关卡生命周期的唯一实现（World 下声明）。
 ## 依赖由组合根注入 `world`（敌人生成 / 自机 ctx 注入的父节点），不再 get_tree().current_scene 全树找（R2）。
-## 跨 autoload 直呼 GameState / BulletManager 待 W4 收口。
+## W4b-4：运行时引用归 EntityRegistry / SaveData，运行时字段已清空。
 class_name StageRuntime
 extends Node
 
@@ -33,11 +33,10 @@ var _stage_active: bool = false
 var _stage_script: CoroutineScript
 
 
-## 入场即把本关卡的注册表绑到 GameState 过渡门面（先于任何实体 _ready）
+## 入场即把本关卡的注册表登记为「当前世界」（先于任何实体 _ready）
 func _enter_tree() -> void:
 	StageRuntime.current = self
 	EntityRegistry.current = refs
-	GameState.bind_refs(refs)
 
 
 func _exit_tree() -> void:
@@ -63,7 +62,7 @@ func load_stage(data: StageData) -> void:
 	if not errs.is_empty():
 		return
 
-	GameState.reset_all()
+	SaveData.reset_all()
 
 	current_stage = data
 	_stage_active = true
@@ -111,7 +110,7 @@ func _on_stage_finished() -> void:
 	var res: PlayerResources = refs.get_player_resources()
 	if res != null:
 		score = res.current_score
-	GameState.save_high_score(current_stage.stage_id, score)
+	SaveData.save_high_score(current_stage.stage_id, score)
 
 
 ## 从 EnemyData 生成敌人（实例化/挂载协程/入场景）

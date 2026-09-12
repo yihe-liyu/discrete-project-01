@@ -101,23 +101,23 @@ func test_practice_miss_records_failure():
 	# 练习 miss：practice_attempts+1、captures 不加（防重复：击破路径 _cleared=true 已记）
 	# 用独立键（stage=99）避免撞真实持久记录；手动预建记录模拟"已解锁"
 	# 备份/还原 book（record_practice 会改 autoload 内存记录；退出时若触发 save 会污染真实文件）
-	var book_backup: Array = GameState.spell_book.records.duplicate(true)
-	GameState.selected_character = 0
-	GameState.selected_difficulty = 1
+	var book_backup: Array = SaveData.spell_book.records.duplicate(true)
+	SaveData.selected_character = 0
+	SaveData.selected_difficulty = 1
 	var phase := PhaseData.new()
 	phase.uid = 303
 	phase.name = "黄粱"
 	phase.hp = 1000
 	phase.time_limit = 10.0
-	var book: SpellRecordBook = GameState.spell_book
+	var book: SpellRecordBook = SaveData.spell_book
 	# 防污染：清掉历史运行可能残留的 (99,7) 记录——stage 99 不存在于游戏中，
 	# 否则 get_or_create 会命中旧记录，练习次数从旧值继续累加导致本测试假失败。
 	var stale := book.get_record(99, 7, 0, 0, 1)
 	if stale:
 		book.records.erase(stale)
 	book.get_or_create(99, 7, 0, 0, 1, 303, 1, 2)
-	GameState.is_practice_mode = true
-	GameState.start_practice(phase, null, "卡摩瑞", 99, 7)
+	SaveData.is_practice_mode = true
+	SaveData.start_practice(phase, null, "卡摩瑞", 99, 7)
 	var boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss)
 	boss._stage_id = 99  # 裸 new() 无 setup，直设（spawn_boss 会走 setup 自动取 practice_stage_id）
@@ -138,5 +138,5 @@ func test_practice_miss_records_failure():
 	var r2 := book.get_record(99, 7, 0, 0, 1)
 	assert_eq(r2.practice_attempts, 2, "miss 后再 +1（共 2 次）")
 	assert_eq(r2.practice_captures, 1, "miss 不加收取")
-	GameState.is_practice_mode = false
-	GameState.spell_book.records = book_backup  # 还原，防污染持久记录
+	SaveData.is_practice_mode = false
+	SaveData.spell_book.records = book_backup  # 还原，防污染持久记录

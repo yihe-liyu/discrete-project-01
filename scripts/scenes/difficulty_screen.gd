@@ -25,7 +25,7 @@ func _on_enter() -> void:
 	allow_wrap = false
 	_center_x = get_viewport().get_visible_rect().size.x / 2.0
 	_center_y = get_viewport().get_visible_rect().size.y / 2.0
-	_nav_index = GameState.selected_difficulty
+	_nav_index = SaveData.selected_difficulty
 
 	_grayscale_shader = preload("res://gdshader/grayscale.gdshader")
 

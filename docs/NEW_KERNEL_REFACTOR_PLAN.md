@@ -397,8 +397,8 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 ### 12.5 验收（可量化）
 
-- autoload 数：**12 → ≤5**（进度：W1 后 10，W2 后 8，W3a 后 7，W3b 后 **6**：`GameEvents / GameManager / BulletManager / GameState / RNG / AudioManager`）。
-- `grep -rIl "\bGameState\b" scripts`：**42 → 仅存档相关**（目标 ≤ 5）。
+- autoload 数：**12 → ≤5**（**已达 5**：W1 后 10，W2 后 8，W3a 后 7，W3b 后 6，W4b 后 **5**：`GameEvents / GameManager / BulletManager / RNG / AudioManager`）。
+- `grep -rIl "\bGameState\b" scripts`：**42 → 0**（目标 ≤ 5，**已达成**）。
 - **内核文件里 `GameState` 出现次数 = 0**。
 - 每删/改一个 autoload：GUT 全绿 + 主流程冒烟（主菜单 → stage01 可玩）。
 
@@ -616,7 +616,21 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **验收**：`check_syntax` **191/0**；全量 **56 套 / 311 测试 / 3212 断言全绿**；orphans 12。`grep GameState` **35 → 31 文件**（引用 159 → 122）。
 
-**下一步（W4b-4）**：`GameState` → `SaveData`（`class_name` + `static`，不改 autoload）持有持久化/练习/符卡簿/高分；`reset_*` 归 `PlayerResources`；`_apply_ui_theme/_apply_settings` 与 `enemy_killed→score` / `regen` 移出。
+### 12.17 W4b-4 实施记录（2026-09-11，已完成，验收达成）
+
+**目标**：`GameState`（god object）瘦身为「存档 + 菜单/练习状态」并删除 autoload；单局资源归 `Player`，运行时实体归 `EntityRegistry`。
+
+**落点**：
+
+- 新增 `scripts/data/save_data.gd`：`class_name SaveData extends RefCounted`（纯 `static`）——持久化选择 / 关卡注册表 / 符卡簿 / 高分 / 练习配置；`boot()`（主题 / 存档 / 设置 / 注册表）；`reset_all` / `reset_practice` 经 `EntityRegistry.current` 重置自机资源。
+- `Player`：`resources` 自持（`PlayerResources.new()`）；`enemy_killed → score` 与 `memory regen` 迁入。
+- `GameManager._ready` 调 `SaveData.boot()`。
+- 机械改名 31 个 `scripts/**` + 1 个 `data/**` + 测试；工作台/调试/场景切换的实体查询改走 `EntityRegistry.current` / `_stage_runtime.refs`。
+- 删除 `scripts/autoload/game_state.gd`；`project.godot` 去 `GameState` autoload。
+
+**验收**：`grep -rIl "\bGameState\b" scripts` **31 → 0**（全仓 0）；autoload **6 → 5**；`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 12。
+
+**W4c（后续）**：`BulletManager` 去 autoload（引用面 ~22 文件）——目标 autoload 4。
 
 ---
 

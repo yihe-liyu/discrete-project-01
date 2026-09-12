@@ -18,27 +18,26 @@ var _saved_memory: float = 50.0
 
 
 func before_each() -> void:
-	_saved_enemies = GameState.active_enemies.duplicate()
-	GameState.active_enemies.clear()   # 保证「无 Boss」分支确定
-	_saved_difficulty = GameState.selected_difficulty
-	_saved_memory = GameState.memory_value
 	_backend = KernelBulletBackend.new()
 	add_child_autofree(_backend)
-	# 资源读取经 refs.player.resources：绑一个带资源的自机桩（resources 同一全局实例）
+	# 资源读取经 refs.player.resources：绑一个带独立 PlayerResources 的自机桩
 	_refs = EntityRegistry.new()
+	_saved_enemies = _refs.enemies.duplicate()
+	_refs.enemies.clear()   # 保证「无 Boss」分支确定
+	_saved_difficulty = SaveData.selected_difficulty
 	_stub_player = Player.new()
-	_stub_player.resources = GameState.resources
+	_stub_player.resources = PlayerResources.new()
+	_saved_memory = _stub_player.resources.memory_value
 	_refs.bind_player(_stub_player)
 	_backend.refs = _refs
 	_backend.setup_behaviors(null, Callable())
 
 
 func after_each() -> void:
+	_refs.enemies.clear()
+	_refs.enemies.append_array(_saved_enemies)
+	SaveData.selected_difficulty = _saved_difficulty
 	_stub_player.free()
-	GameState.active_enemies.clear()
-	GameState.active_enemies.append_array(_saved_enemies)
-	GameState.selected_difficulty = _saved_difficulty
-	GameState.memory_value = _saved_memory
 
 
 func _enemy(tex := "小玉") -> BulletData:
@@ -117,7 +116,7 @@ func test_homing_turns_toward_enemy() -> void:
 
 ## S4d：低记忆自机弹偏红（旧 Bullet.bind 语义，spawn 时定一次）。
 func test_player_bullet_reddens_at_low_memory() -> void:
-	GameState.memory_value = 0.0
+	_stub_player.resources.memory_value = 0.0
 	var d := BulletData.new().player().tex("reimu_main")
 	d.tint = Color.WHITE
 	d.velocity = Vector2.UP * 100.0
@@ -128,7 +127,7 @@ func test_player_bullet_reddens_at_low_memory() -> void:
 
 ## 记忆 50 以上原色不变。（旧语义）
 func test_player_bullet_stays_white_at_max_memory() -> void:
-	GameState.memory_value = 100.0
+	_stub_player.resources.memory_value = 100.0
 	var d := BulletData.new().player().tex("reimu_main")
 	d.tint = Color.WHITE
 	d.velocity = Vector2.UP * 100.0
@@ -206,7 +205,7 @@ func test_non_mid_flees_from_player() -> void:
 
 ## S4c-3：内容回调——近 Boss 散圈（入队后 flush）。
 func test_non_mid_burst_queues_ring() -> void:
-	GameState.selected_difficulty = 1   # Normal
+	SaveData.selected_difficulty = 1   # Normal
 	var probe = NON_MID.new()
 	autofree(probe)
 	var port: Dictionary = probe.kernel_port()

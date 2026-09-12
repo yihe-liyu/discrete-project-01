@@ -21,7 +21,6 @@ config/icon="res://1st Touhou Star ~ Broadest and Narrowest.png"
 GameEvents="*res://scripts/autoload/game_events.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 BulletManager="*res://scripts/autoload/bullet_manager.gd"
-GameState="*res://scripts/autoload/game_state.gd"
 RNG="*res://scripts/autoload/rng.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 

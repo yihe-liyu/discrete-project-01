@@ -77,9 +77,9 @@ func test_move_diff_skips_locked():
 
 ## phase 级变蓝：花名册里全部难度槽都收齐才算全收
 func test_phase_capture_all_requires_all_difficulty_slots():
-	var original_book: SpellRecordBook = GameState.spell_book
+	var original_book: SpellRecordBook = SaveData.spell_book
 	var book := SpellRecordBook.new()
-	GameState.spell_book = book
+	SaveData.spell_book = book
 	var menu = _mk_menu()
 
 	# 只有 Normal(1) 收 → 不算全收
@@ -99,12 +99,12 @@ func test_phase_capture_all_requires_all_difficulty_slots():
 	book.records = recs
 	assert_eq(menu._phase_capture_all(1, 0, 0), 2, "4 个难度都收齐 → 蓝")
 
-	GameState.spell_book = original_book  # 还原
+	SaveData.spell_book = original_book  # 还原
 
 
 ## 锁定难度不可开始练习
 func test_start_practice_guard_locked():
-	GameState.selected_difficulty = 1
+	SaveData.selected_difficulty = 1
 	var menu = _mk_menu()
 	menu._phases = _mk_phases({1: SpellRecord.new()})
 	menu._phase_index = 0
@@ -112,4 +112,4 @@ func test_start_practice_guard_locked():
 	menu._diff_index = 0  # Easy 锁定
 	# 直接调用应被守卫拦截（不改 selected_difficulty）
 	menu._start_practice()
-	assert_eq(GameState.selected_difficulty, 1, "锁定难度不改变选择")
+	assert_eq(SaveData.selected_difficulty, 1, "锁定难度不改变选择")

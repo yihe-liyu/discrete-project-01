@@ -9,7 +9,6 @@ func _make_player() -> Player:
 	player._reinit_shoot()
 	player.global_position = Vector2(448, 800)
 	player.is_invincible = false
-	GameState.player = player
 	return player
 
 func test_player_data_applied():
@@ -54,14 +53,14 @@ func test_focus_slows_down():
 
 func test_miss_loses_life_and_invincible():
 	var player := _make_player()
-	GameState.lives = 2
+	player.resources.lives = 2
 	player.miss()
-	assert_eq(GameState.lives, 1, "被弹扣 1 命")
+	assert_eq(player.resources.lives, 1, "被弹扣 1 命")
 	assert_true(player.is_invincible, "被弹后进入无敌")
 
 func test_miss_no_life_game_over():
 	var player := _make_player()
-	GameState.lives = 0
+	player.resources.lives = 0
 	var died := false
 	if not GameEvents.player_death.is_connected(func(): pass):
 		pass

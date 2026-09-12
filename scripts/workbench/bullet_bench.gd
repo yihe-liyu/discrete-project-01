@@ -123,7 +123,7 @@ func _build_ui() -> void:
 	_diff_sel = OptionButton.new()
 	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
 		_diff_sel.add_item(d)
-	_diff_sel.selected = GameState.selected_difficulty
+	_diff_sel.selected = SaveData.selected_difficulty
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
 
@@ -240,7 +240,7 @@ func _preset_from_entry(entry) -> void:
 func _snapshot() -> Dictionary:
 	return {
 		"script": _cur_script_path, "seed": _seed,
-		"diff": GameState.selected_difficulty,
+		"diff": SaveData.selected_difficulty,
 		"tex": _shell.tex_key, "tint": _shell.tint, "speed": _shell.speed,
 	}
 
@@ -249,7 +249,7 @@ func _restore(d: Dictionary) -> void:
 	if d.has("seed"):
 		_seed = d.seed
 	if d.has("diff"):
-		GameState.selected_difficulty = d.diff
+		SaveData.selected_difficulty = d.diff
 		_diff_sel.selected = int(d.diff)
 	if d.has("tex"):
 		_shell.tex_key = d.tex
@@ -362,7 +362,7 @@ func _refresh_watch_mtimes() -> void:
 
 ## 难度切换：diff_pick 运行时实时读取 → 立即生效
 func _on_diff_changed(idx: int) -> void:
-	GameState.selected_difficulty = idx
+	SaveData.selected_difficulty = idx
 
 
 func _on_hot_toggled(on: bool) -> void:

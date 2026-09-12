@@ -64,8 +64,8 @@ func _on_boss_spawned(boss: Node) -> void:
 	_dots.clear()
 	_phase_idx = 0
 	
-	for i in range(boss_data.phases_for_difficulty(GameState.selected_difficulty).size() - 1, -1, -1):
-		var phase: PhaseData = boss_data.phases_for_difficulty(GameState.selected_difficulty)[i]
+	for i in range(boss_data.phases_for_difficulty(SaveData.selected_difficulty).size() - 1, -1, -1):
+		var phase: PhaseData = boss_data.phases_for_difficulty(SaveData.selected_difficulty)[i]
 		var dot := ColorRect.new()
 		dot.custom_minimum_size = Vector2(DOT_SIZE, DOT_SIZE)
 		dot.color = GRAY if phase.uid == 0 else GREEN
@@ -157,10 +157,10 @@ func _update_capture_text() -> void:
 	if not _capture_label or not _boss_ref: return
 	var pid := _boss_ref.get_phase_id()
 	if not pid: return
-	var book: SpellRecordBook = GameState.spell_book
+	var book: SpellRecordBook = SaveData.spell_book
 	var rec: SpellRecord = book.get_record(pid.stage_id, pid.phase_index, pid.boss_index, pid.character, pid.difficulty)
 	if rec:
-		if GameState.is_practice_mode:
+		if SaveData.is_practice_mode:
 			_capture_label.text = "%02d/%02d" % [rec.practice_captures, rec.practice_attempts]
 		else:
 			_capture_label.text = "%02d/%02d" % [rec.captures, rec.attempts]

@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-11 — W4b-4：GameState → SaveData（去 autoload，验收收口）
+
+- **目标**：把 `GameState`（god object）瘦身为「存档 + 菜单/练习状态」，删掉 autoload；单局资源归 `Player`，运行时实体归 `EntityRegistry`。
+- **做法**：
+  - 新增 `class_name SaveData extends RefCounted`（纯 `static`、非 autoload）：`selected_*` / `current_stage_id` / `spell_book`/`save_mgr`/高分 / `practice_*` / `is_practice_mode` / `stage_registry` / `restarting`；`boot()`（主题/存档/设置/注册表）；`reset_all`/`reset_practice` 经 `EntityRegistry.current` 重置自机资源。
+  - 移出：`enemy_killed → score` 归 `Player._ready` 监听；`memory regen` 归 `Player._physics_process`；`_apply_ui_theme`/`_apply_settings`/加载归 `SaveData.boot()`（`GameManager._ready` 调一次）。
+  - 机械改名 31 个 `scripts/**` + 1 个 `data/**` + 测试；`workbench`/`enemy_bench`/`creation_station`/`debug_drawer`/`scene_transition` 的 `get_boss`/`get_active_enemies`/`clear_enemies` 改走 `EntityRegistry.current` / `_stage_runtime.refs`。
+  - 删除 `scripts/autoload/game_state.gd`；`project.godot` 去掉 `GameState` autoload。
+- **度量**：`grep -rIl "\bGameState\b" scripts` **31 → 0**；**autoload 6 → 5**（`GameEvents / GameManager / BulletManager / RNG / AudioManager`）。
+- **对照旧项目**：旧 `GameState` 405 行一身多职（存档 + 运行资源 + 实体引用 + 主题 + 信号）；现拆成 `SaveData`（存档）/ `PlayerResources`（资源）/ `EntityRegistry`（实体），主题/设置在壳入口 `boot()`。
+- **踩坑**：`EntityRegistry.player`（`Node2D` 类型）在对象释放后**不会**自动置 null——`PlayerService.get_player` 曾因此抛 `Trying to return a previously freed instance`；所有直接返回 `refs.player` 的地方都要 `is_instance_valid` 兜底。
+- **验收**：`check_syntax` 191/0；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 12。
 ### 2026-09-11 — W4b-2b：资源消费者直读 PlayerResources（经 refs.player）
 
 - **目标**：把单局资源读取从 `GameState` 转发推进到 `Player.resources`（方案 A：Player 持有，消费者经注册表/注入读），过渡期同一实例、行为等价。

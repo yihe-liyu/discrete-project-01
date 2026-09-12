@@ -71,7 +71,7 @@ func _build_data() -> void:
 	_stages.clear()
 	_phases.clear()
 
-	var book: SpellRecordBook = GameState.spell_book
+	var book: SpellRecordBook = SaveData.spell_book
 	if book.records.is_empty():
 		return
 	var seen_stages: Dictionary = {}
@@ -103,7 +103,7 @@ func _change_stage(idx: int) -> void:
 		return
 
 	var st_num: int = _stages[idx]
-	var book: SpellRecordBook = GameState.spell_book
+	var book: SpellRecordBook = SaveData.spell_book
 	var seen_keys: Array[Dictionary] = []
 
 	for rec in book.records:
@@ -271,7 +271,7 @@ func _phase_capture_all(st: int, boss: int, phase_idx: int) -> int:
 		return 0  # 花名册未收录，无法判定
 	var captured := 0
 	for d in candidate:
-		var r: SpellRecord = GameState.spell_book.get_record(st, phase_idx, boss, _char_index, d)
+		var r: SpellRecord = SaveData.spell_book.get_record(st, phase_idx, boss, _char_index, d)
 		if r and r.practice_captures > 0:
 			captured += 1
 	if captured == candidate.size():
@@ -283,7 +283,7 @@ func _phase_capture_all(st: int, boss: int, phase_idx: int) -> int:
 
 ## stage 状态：所有 phase 全收 → 2；有任意收取 → 1；无 → 0
 func _stage_capture_state(st: int) -> int:
-	var book := GameState.spell_book
+	var book := SaveData.spell_book
 	var keys: Array = []
 	var any_captured := false
 	for rec in book.records:
@@ -579,14 +579,14 @@ func _start_practice() -> void:
 		push_warning("SpellPractice: 记录缺少阶段配置 stage=%d phase_index=%d（重新解锁一次）" % [rec.stage, rec.phase_index])
 		return
 
-	GameState.selected_difficulty = diff
-	GameState.selected_character = _char_index
+	SaveData.selected_difficulty = diff
+	SaveData.selected_character = _char_index
 
 	var card_name: String = phase.name if phase.name != "" else "-"
 	print("练习: %s 难度: %s" % [card_name, diff_name(diff)])
 	var boss_scene: PackedScene = boss.visual
 	var boss_label: String = boss.boss_name if boss.boss_name != "" else card_name
-	GameState.start_practice(phase, boss_scene, boss_label, rec.stage, rec.phase_index)
+	SaveData.start_practice(phase, boss_scene, boss_label, rec.stage, rec.phase_index)
 	AudioManager.stop_bgm()
 	_on_leave()
 	GameManager.change_scene("res://scenes/game_scene.tscn")

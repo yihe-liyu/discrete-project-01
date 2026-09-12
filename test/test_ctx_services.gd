@@ -11,8 +11,8 @@ func test_boss_service_no_boss():
 	assert_false(s.exists(), "无活动 Boss 时 exists 应为 false")
 
 func test_diff_service_picks_by_difficulty():
-	var orig := int(GameState.selected_difficulty)
-	GameState.selected_difficulty = 2
+	var orig := int(SaveData.selected_difficulty)
+	SaveData.selected_difficulty = 2
 	var s := DifficultyService.new()
 	assert_eq(s.picked(), 2, "picked 应返回当前难度")
 	assert_eq(s.pick([1, 3, 5, 8]), 5, "arr[2] 应为 5")
@@ -20,12 +20,12 @@ func test_diff_service_picks_by_difficulty():
 	assert_true(s.at_least(1), "难度 2 应 at_least(1)")
 	assert_false(s.at_least(3), "难度 2 不应 at_least(3)")
 	assert_eq(s.pick_from({0: {"a": 1}, 2: {"a": 9}}, "a", 0), 9, "字典按难度取值")
-	GameState.selected_difficulty = orig
+	SaveData.selected_difficulty = orig
 
 func test_diff_service_at_least_lunatic():
-	var orig := int(GameState.selected_difficulty)
-	GameState.selected_difficulty = 3
+	var orig := int(SaveData.selected_difficulty)
+	SaveData.selected_difficulty = 3
 	var s := DifficultyService.new()
 	assert_true(s.at_least(3), "Lunatic 应 at_least(3)")
 	assert_false(s.at_least(4), "Lunatic 不应 at_least(4)")
-	GameState.selected_difficulty = orig
+	SaveData.selected_difficulty = orig

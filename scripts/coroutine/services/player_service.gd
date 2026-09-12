@@ -6,7 +6,10 @@ var ctx: StageContext
 
 
 func get_player() -> Player:
-	return ctx.refs.player if ctx and ctx.refs else null
+	if ctx == null or ctx.refs == null:
+		return null
+	var p = ctx.refs.player
+	return p if is_instance_valid(p) else null
 
 
 func get_position() -> Vector2:

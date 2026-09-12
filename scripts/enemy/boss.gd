@@ -96,10 +96,10 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	if not GameEvents.player_missed.is_connected(_on_player_death):
 		GameEvents.player_missed.connect(_on_player_death)
 	
-	if GameState.is_practice_mode:
-		_stage_id = GameState.practice_stage_id
+	if SaveData.is_practice_mode:
+		_stage_id = SaveData.practice_stage_id
 	else:
-		_stage_id = GameState.current_stage_id
+		_stage_id = SaveData.current_stage_id
 	
 	var ring := HPRingClass.new()
 	ring.setup(self)
@@ -191,9 +191,9 @@ func start_phase(data: PhaseData) -> void:
 	# 显示血条
 	_set_ring_visible(true)
 	
-	_pid = BossCatalog.resolve_identity(_stage_id, data, GameState.practice_phase_index if GameState.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
+	_pid = BossCatalog.resolve_identity(_stage_id, data, SaveData.practice_phase_index if SaveData.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
 	if _pid:
-		RecordService.record_phase_start(_pid)   # 记录服务：解锁/记尝试（Boss 不再摸 GameState.record_*）
+		RecordService.record_phase_start(_pid)   # 记录服务：解锁/记尝试（Boss 不再摸 SaveData.record_*）
 	
 	if data.name != "":
 		GameEvents.phase_start.emit(data)
@@ -266,7 +266,7 @@ func take_damage(damage: float) -> void:
 
 ## 玩家 miss（正篇）：只标记——东方规则：miss 后击破不算收取（尝试次数已在进入阶段时记过）
 func _on_player_death() -> void:
-	if GameState.is_practice_mode:
+	if SaveData.is_practice_mode:
 		return  # 练习 miss 走 _die 逻辑
 	if not _current_phase or _cleared or _phase_missed:
 		return
@@ -282,7 +282,7 @@ func _clear_phase(captured: bool) -> void:
 	
 	if _pid:
 		# 阶段已开始（_pid 已生成）才记录；Ctrl+G 在阶段开始前触发时只跳阶段不落盘
-		if GameState.is_practice_mode:
+		if SaveData.is_practice_mode:
 			RecordService.record_phase_capture(_pid, false, 0, 0.0)  # 练习收取
 		elif captured and not _phase_missed:
 			RecordService.record_phase_capture(_pid, true, _bonus, _elapsed)  # 干净收取
@@ -310,7 +310,7 @@ func _die() -> void:
 	# （阶段逻辑由 _process 开头的 `if not _current_phase: return` 自然跳过）
 	_current_phase = null
 	_set_ring_visible(false)
-	if GameState.is_practice_mode and _pid and not _cleared:
+	if SaveData.is_practice_mode and _pid and not _cleared:
 		pass  # 练习 attempt 已在进入阶段时记过（玩家 miss/超时退出也覆盖），这里不再重复记
 	if registry != null:
 		registry.unregister_enemy(self)
@@ -333,7 +333,7 @@ func _set_ring_visible(v: bool) -> void:
 
 func _drop_items() -> void:
 	if not _current_phase: return
-	if GameState.is_practice_mode: return
+	if SaveData.is_practice_mode: return
 	var pos := global_position
 	var phase := _current_phase
 	var scatter := 50.0

@@ -27,7 +27,9 @@ func _ready():
 	var enemy := Node2D.new()
 	enemy.global_position = Vector2(700, 300)
 	add_child(enemy)
-	GameState.active_enemies.append(enemy)
+	var refs := EntityRegistry.new()
+	refs.register_enemy(enemy)
+	EntityRegistry.current = refs
 	var bscript := GDScript.new()
 	bscript.source_code = "extends Node2D\nvar velocity := Vector2.ZERO\nfunc _ready(): velocity = Vector2(0,-500)"
 	bscript.reload()
@@ -43,5 +45,5 @@ func _ready():
 	for i in 60:
 		homing.tick_fast(1.0 / 60.0)
 	print("[verify] 诱导弹位置=%s 速度=%s（应转向敌人方向）" % [str(bullet_node.global_position), str(bullet_node.velocity)])
-	GameState.active_enemies.erase(enemy)
+	refs.unregister_enemy(enemy)
 	get_tree().quit()

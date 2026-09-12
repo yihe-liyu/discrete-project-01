@@ -1,5 +1,5 @@
 extends GutTest
-## W4b-3：EntityRegistry —— 自机 / 敌机 / Boss 的运行时单一真源 + GameState 过渡门面。
+## W4b-3/4：EntityRegistry —— 自机 / 敌机 / Boss 的运行时单一真源（当前世界经 static current 解析）。
 
 
 func test_register_unregister_and_query():
@@ -53,15 +53,3 @@ func test_stageless_context_falls_back_to_current_world():
 	EntityRegistry.current = saved   # 还原
 	runner.free()
 	p.free()
-
-
-func test_game_state_facade_forwards_to_registry():
-	var saved: EntityRegistry = GameState._refs
-	var reg := EntityRegistry.new()
-	GameState.bind_refs(reg)
-	var e := Enemy.new()
-	GameState.active_enemies.append(e)
-	assert_eq(reg.get_active_enemies().size(), 1, "active_enemies 门面读写同一数组")
-	assert_eq(GameState.get_active_enemies(), reg.get_active_enemies(), "get_active_enemies 同源")
-	GameState.bind_refs(saved)   # 还原，避免污染其他用例
-	e.free()

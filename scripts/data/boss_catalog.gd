@@ -120,8 +120,8 @@ static func resolve_identity(stage: int, phase: PhaseData, prefer_phase_index: i
 	pid.phase_index = prefer_phase_index
 	pid.uid = phase.uid
 	pid.phase_type = SpellRecord.PhaseType.SPELL if phase.uid != 0 else SpellRecord.PhaseType.NONSPELL
-	pid.character = GameState.selected_character
-	pid.difficulty = GameState.selected_difficulty
+	pid.character = SaveData.selected_character
+	pid.difficulty = SaveData.selected_difficulty
 	pid.boss_index = -1
 	pid.phase_number = 1
 	return pid

@@ -22,9 +22,9 @@ class CtxSpy:
 func before_each():
 	_boss = BOSS_CLASS.new()
 	autofree(_boss)
-	# 注：这里不再 stub autoload —— 传字符串名如 stub("GameState", ...) 在 GUT 里不是
+	# 注：这里不再 stub autoload —— 传字符串名在 GUT 里不是
 	# 有效路径，是静默 no-op（stub_target 保持 null），只会产生假警告还给人"已隔离"的错觉。
-	# 真实调用 GameState.record_spell / unlock_spell / BulletManager.start_death_clear 的
+	# 真实调用 SaveData.record_spell / unlock_spell / BulletManager.start_death_clear 的
 	# 副作用由 run_tests.sh 兜底隔离：XDG_DATA_HOME 重定向 user:// + spell_records.tres 备份还原。
 
 
@@ -171,10 +171,10 @@ func test_no_drops_in_practice_mode():
 	var ctx := CtxSpy.new(runner)
 	_boss._ctx = ctx
 
-	var original := GameState.is_practice_mode
-	GameState.is_practice_mode = true
+	var original := SaveData.is_practice_mode
+	SaveData.is_practice_mode = true
 	_boss._drop_items()
-	GameState.is_practice_mode = original
+	SaveData.is_practice_mode = original
 
 	assert_eq(ctx.calls.size(), 0, "练习模式不应掉落")
 
@@ -231,13 +231,13 @@ func test_boss_index_in_phase_identity():
 ## 同一 Boss 多段战斗（道中战 + 面战）：段 BossData 带完整阶段链，start_phase 从链定位序号 → 记录连续、不撞键
 ## （回归：stage01 最终 Boss 曾漏设延续，导致 NON01 与道中非符同键被吞 / 或误用 boss_index 拆成两个 Boss）
 func test_same_boss_continued_phases_are_separate_records():
-	GameState.selected_character = 0
-	GameState.selected_difficulty = 1
+	SaveData.selected_character = 0
+	SaveData.selected_difficulty = 1
 	# C：阶段身份走规范顺序（BossCatalog.stage_phase_order），用真实 stage 1 才能正确解析。
 	# 备份/还原 spell_book 记录，避免污染持久存档（不泄露 —— 与 test_recent_mechanics 同法）。
-	var book_backup: Array = GameState.spell_book.records.duplicate(true)
-	GameState.current_stage_id = 1
-	GameState.is_practice_mode = false
+	var book_backup: Array = SaveData.spell_book.records.duplicate(true)
+	SaveData.current_stage_id = 1
+	SaveData.is_practice_mode = false
 	var non_mid: PhaseData = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
 	var non01: PhaseData = preload("res://data/stages/stage01/phase/non01/non01.tres")
 
@@ -248,7 +248,7 @@ func test_same_boss_continued_phases_are_separate_records():
 	boss1.setup(bd, null)
 	boss1._stage_id = 1
 	boss1.start_phase(non_mid)
-	var mid_rec: SpellRecord = GameState.spell_book.get_record(1, 0, 0, 0, 1)
+	var mid_rec: SpellRecord = SaveData.spell_book.get_record(1, 0, 0, 0, 1)
 	assert_not_null(mid_rec, "道中非符应入簿 (phase 0)")
 	if mid_rec:
 		assert_eq(mid_rec.phase_number, 1, "道中非符是'非符1'")
@@ -259,11 +259,11 @@ func test_same_boss_continued_phases_are_separate_records():
 	boss2.setup(bd, null)
 	boss2._stage_id = 1
 	boss2.start_phase(non01)
-	var final_rec: SpellRecord = GameState.spell_book.get_record(1, 1, 0, 0, 1)
+	var final_rec: SpellRecord = SaveData.spell_book.get_record(1, 1, 0, 0, 1)
 	assert_not_null(final_rec, "面非符应入簿 (phase 1)")
 	if final_rec:
 		assert_eq(final_rec.phase_number, 2, "面非符是'非符2'")
 	if mid_rec:
 		assert_eq(mid_rec.phase_number, 1, "道中记录不被覆盖")
-	GameState.spell_book.records = book_backup  # 还原，防污染持久记录
-	GameState.current_stage_id = 1
+	SaveData.spell_book.records = book_backup  # 还原，防污染持久记录
+	SaveData.current_stage_id = 1

@@ -22,7 +22,7 @@ func _on_item_selected(index: int) -> void:
 	match index:
 		0:
 			AudioManager.stop_bgm()
-			GameState.restarting = true
+			SaveData.restarting = true
 			GameManager.reload_current_scene()
 		1:
 			GameManager.change_scene.call_deferred("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)

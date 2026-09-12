@@ -53,10 +53,6 @@ func test_boss_indicator_alpha_fades_with_distance():
 	# 未进树时 global_position == position，足够测 alpha
 	var refs := EntityRegistry.new()
 	refs.bind_player(fake_player)
-	var prev: Player = GameState.player
-	GameState.player = fake_player
-	if prev != null:
-		autofree(prev)
 
 	var boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss)
@@ -84,7 +80,6 @@ func test_boss_indicator_alpha_fades_with_distance():
 	assert_almost_eq(indicator.modulate.a, expected_a, 0.01, "中间距离应缓动过渡")
 
 	# 还原
-	GameState.player = prev
 	fake_player.free()
 
 

@@ -20,7 +20,7 @@ func _ready() -> void:
 	# 锁定项
 	_container.get_node("Extra Start").set_meta("locked", true)
 
-	if GameState.spell_book.records.is_empty():
+	if SaveData.spell_book.records.is_empty():
 		_container.get_node("Spell Practice").set_meta("locked", true)
 
 	refresh_colors()
@@ -77,7 +77,7 @@ func _on_cancel() -> void:
 # ═══ 开始游戏流程（难度 → 角色） ═══
 
 func _start_game_flow() -> void:
-	GameState.is_stage_practice = false
+	SaveData.is_stage_practice = false
 	_deactivate_title()
 	_push_difficulty()
 
@@ -90,7 +90,7 @@ func _push_difficulty() -> void:
 func _on_difficulty_result(result: Dictionary, _page: Node) -> void:
 	GameManager.pop_page()
 	if result.has("difficulty"):
-		GameState.selected_difficulty = result.difficulty
+		SaveData.selected_difficulty = result.difficulty
 		_push_character()
 	else:
 		_activate_title()
@@ -104,7 +104,7 @@ func _push_character() -> void:
 func _on_character_result(result: Dictionary, _page: Node) -> void:
 	GameManager.pop_page()
 	if result.has("character"):
-		GameState.selected_character = result.character
+		SaveData.selected_character = result.character
 		AudioManager.stop_bgm()
 		GameManager.change_scene("res://scenes/game_scene.tscn")
 	else:

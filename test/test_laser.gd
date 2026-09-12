@@ -234,9 +234,9 @@ func test_engine_graze():
 	var player := _make_engine_player(30.0)  # 擦弹范围（22+graze 40）
 	var beam: LaserBeam = engine.spawn_line(Vector2(0, 0), Vector2(0, 600), Color.RED, {"grow": false})
 	assert_eq(beam.phase, LaserBeam.Phase.SUSTAIN, "opts 生效：瞬间全开")
-	var g0 := GameState.graze_count
+	var g0 := _refs.get_player_resources().graze_count
 	engine.step(0.016)
-	assert_gt(GameState.graze_count, g0, "擦弹应计数")
+	assert_gt(_refs.get_player_resources().graze_count, g0, "擦弹应计数")
 
 # ── 第 3 步：MultiMesh 渲染 ──
 

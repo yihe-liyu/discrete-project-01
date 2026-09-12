@@ -3,7 +3,7 @@ extends BasePage
 
 
 func _on_enter() -> void:
-	GameState.is_stage_practice = true
+	SaveData.is_stage_practice = true
 
 	var ov: ColorRect = $"Overlay"
 	ov.modulate.a = 0.0
@@ -16,7 +16,7 @@ func _on_enter() -> void:
 
 
 func _on_leave() -> void:
-	GameState.is_stage_practice = false
+	SaveData.is_stage_practice = false
 
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)

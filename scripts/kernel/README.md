@@ -8,7 +8,7 @@
 
 `scripts/kernel/**` **禁止**引用原项目的：
 
-- **autoload**：`GameState / BulletManager / RNG / AudioManager / GameEvents / GameManager`（W1–W3 后：`LayerConfig`/`AssetRegistry` 改 class_name，`MissEffectManager`/`StageObjects`/`HitEffectPool`/`StageManager` 改组合根注入/场景节点）
+- **autoload**：`BulletManager / RNG / AudioManager / GameEvents / GameManager`（W1–W3 后 `LayerConfig`/`AssetRegistry` 改 class_name、`MissEffectManager`/`StageObjects`/`HitEffectPool`/`StageManager` 改组合根注入/场景节点；W4 后旧的全局存档状态去 autoload → `SaveData`（static）+ `EntityRegistry` / `PlayerResources`）
 - **实体 / UI 层类型**：`Boss / Enemy / Player / Item / BulletData / PhaseData / BossData / EnemyData / PlayerData / GameConfig`
 - 任何指向 `res://scripts/...` 的 `preload` / `load` 路径
 

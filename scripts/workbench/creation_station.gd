@@ -144,7 +144,8 @@ func _clear_view() -> void:
 		_view.queue_free()
 	else:
 		BulletManager.clear_all()
-		for enemy in GameState.get_active_enemies():
+		var refs := EntityRegistry.current
+		for enemy in (refs.get_active_enemies() if refs else []):
 			if is_instance_valid(enemy):
 				enemy.queue_free()
 		_view.visible = false

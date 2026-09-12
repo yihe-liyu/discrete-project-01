@@ -10,7 +10,7 @@ const MIN_MARGIN: int = 8
 
 ## 关卡上下文（StageRuntime/game_scene 注入，系统操作走服务）
 var ctx: StageContext
-## 单局资源（W4b-2：组合根注入同一 PlayerResources 实例；过渡期从 GameState 取）
+## 单局资源（W4b-4：Player 是 owner；消费者经 EntityRegistry 取同一实例）
 var resources: PlayerResources
 
 const IDLE = "idle"
@@ -47,9 +47,25 @@ func _ready() -> void:
 	z_index = LayerConfig.PLAYER
 	# 连接 animation_finished 信号，用于检测一次性动画播完
 	sprite.animation_finished.connect(_on_animation_finished)
+	# 单局资源（W4b-4：Player 是资源 owner）
+	if resources == null:
+		resources = PlayerResources.new()
+	# 击破入账（原全局状态处理，W4b-4 迁来）
+	if not GameEvents.enemy_killed.is_connected(_on_enemy_killed):
+		GameEvents.enemy_killed.connect(_on_enemy_killed)
 
 	_apply_player_data()
 	_init_shoot_script()
+
+
+func _exit_tree() -> void:
+	if GameEvents.enemy_killed.is_connected(_on_enemy_killed):
+		GameEvents.enemy_killed.disconnect(_on_enemy_killed)
+
+
+func _on_enemy_killed(score: int, _position: Vector2) -> void:
+	if resources != null:
+		resources.add_score(score)
 
 # 应用机体数据
 func _apply_player_data() -> void:
@@ -65,11 +81,10 @@ func _apply_player_data() -> void:
 		sprite.sprite_frames = player_data.animation
 		sprite.play("idle")
 
-	GameState.player = self
-	if resources == null:
-		resources = GameState.resources   # W4b-2：过渡期取同一实例（GameState 仍是 owner）
-
 func _physics_process(delta):
+	# 记忆值自动恢复（原全局状态 _process，W4b-4 迁来）
+	if resources != null:
+		resources.regen(delta)
 	# 无敌倒计时（替代 await，不挂起调用链）
 	if is_invincible:
 		_invincible_timer -= delta
