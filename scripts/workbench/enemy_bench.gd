@@ -278,7 +278,7 @@ func _next_seed() -> void:
 func _update_stats() -> void:
 	if _stats_label:
 		_stats_label.text = "敌人：%d · 弹数：%d · 种子：%d" % [
-			GameState.get_active_enemies().size(), BulletManager.active_bullets.size(), _seed]
+			GameState.get_active_enemies().size(), BulletManager.active_count(), _seed]
 
 
 func _process(delta: float) -> void:

@@ -1,5 +1,5 @@
 extends GutTest
-## S3a：BulletManager.use_kernel 路由（弹幕走内核池 + 内核渲染数据源；**碰撞不在本步**）。
+## 内核路由（W4a-1 起 use_kernel 默认 true）：内核池 + 渲染数据源 + 行为装配 + F2 回滚旧池。
 
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
 const REIMU_DATA = preload("res://data/player_data/reimu_data.tres")

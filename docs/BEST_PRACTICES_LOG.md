@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-11 — W4a-1：内核弹幕后端转正（默认 true，旧池回滚）
+
+- **目标**：把 Track A 装好的内核从"开关后备选"变成**默认**，完成 strangler 的"翻开关"步（W4a-1；W4a-2 才删旧池）。
+- **为什么**：`use_kernel` 的管道完全封闭在 `BulletManager` + `BulletMultiMesh._sync_kernel` + `test_kernel_swap`，翻默认是低成本的收敛验证；未映射内容的回归风险靠"保留旧池 + F2 回滚 + 试玩"兜住。
+- **对照旧项目**：旧默认是旧节点池。若直接删旧池、未映射内容（`kernel_port()` 只有 7 处 vs 17 个内容 CoroutineScript 子类）会退化成直线；故先翻默认、后删。
+- **新落点**：`bullet_manager.gd:use_kernel = true`；新增 `active_count()`（双后端统一计数）；旧池专属测试显式 `set_use_kernel(false)`（语义上它们本就测旧路）；bench/工作台统计迁 `active_count()`。
+- **验收**：kernel 默认下全量 **63 套 / 337 测试 / 3341 断言全绿**。
+- **坑预警**：`active_bullets` 是**旧池专属** API，内核路径恒空——统计/断言必须走 `active_count()`；`hitbox_overlay`/`debug_drawer` 的逐弹遍历在旧池删掉后需补内核遍历。
 ### 2026-09-11 — W3b：StageManager 去 autoload（StageRuntime 场景节点 + ctx.stage）
 
 - **目标**：autoload 7 → 6（轨道 B / §12 W3b）。

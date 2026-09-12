@@ -4,6 +4,16 @@ extends GutTest
 const PhysicsClass = preload("res://scripts/autoload/bullet/bullet_physics.gd")
 
 
+## 本套件测旧 BulletPhysics → 强制旧池（内核命中音效规则见 test_kernel_*）
+func before_each() -> void:
+	BulletManager.set_use_kernel(false)
+
+
+func after_each() -> void:
+	BulletManager.set_use_kernel(true)
+	BulletManager.clear_all()
+
+
 func _make_phys() -> BulletPhysics:
 	var phys: BulletPhysics = PhysicsClass.new()
 	phys._pool = BulletManager._pool

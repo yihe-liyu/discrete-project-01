@@ -351,7 +351,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | `HitEffectPool` | 67 | 6 / 10 | 特效节点池 | **改注入**（`FxLayer`，随轨道 A） | W2 ✅ |
 | `AssetRegistry` | 153 | 31 / 49 | 静态资源表 + 内容 key | **改 `class_name`（静态表）+ 数据资源**（R17/S13） | W3a ✅（.tres 迁移随 S13） |
 | `StageManager` | 169 | 14 / 35 | 关卡生命周期 + 生成敌人/Boss | **改注入/场景节点**（`StageRuntime` under World + `ctx.stage`） | W3b ✅ |
-| `BulletManager` | 165 | 22 / 46 | 弹幕门面 | **内核替换**（轨道 A Phase 1 + adapter） | W4 |
+| `BulletManager` | 165 | 22 / 46 | 弹幕门面 | **内核替换**（轨道 A Phase 1 + adapter） | W4a-1 ✅（转正默认；W4a-2 删旧池） |
 | `GameState` | 405 | **42 / 186** | 全局游戏数据（god object） | **拆分**（最高优先） | W4 |
 
 **目标 autoload 集合（≈4~5）**：`GameEvents / RNG / AudioManager / GameManager` + 一个**瘦身存档全局**（`GameState` → `SaveData/Profile`）。
@@ -393,7 +393,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | **W1** | `LayerConfig` → `class_name`；`MissEffectManager` → 场景节点 | 极低 | 引用 24 / 3，机械改 |
 | **W2** | `StageObjects` → per-stage 注入；`HitEffectPool` → `FxLayer` | 低-中 | 引用 8 / 10；后者随轨道 A —— **已完成（§12.8）** |
 | **W3** | `AssetRegistry` → `class_name` + 数据；`StageManager` → `StageDirector` | 中-高 | 引用 49 / 35；**W3a/W3b 均已完成（§12.9 / §12.10）** |
-| **W4** | `GameState` 拆分；`BulletManager` 内核替换 | 最高 | 引用 186 / 46；与轨道 A Phase 1/5 合流 |
+| **W4** | `GameState` 拆分；`BulletManager` 内核替换 | 最高 | 引用 186 / 46；**拆 W4a（内核转正/删旧池）/ W4b（GameState）/ W4c（去 autoload）** |
 
 ### 12.5 验收（可量化）
 
@@ -498,6 +498,22 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 **踩坑**：`workbench._load_stage()` 的"清 World 残留"循环把新放进 `World` 的 `StageRuntime` 一起 `queue_free` → `_stage_runtime` 变 freed。已排除 `StageRuntime`（与 `_ghost` 同级）。**教训：把结构性服务节点放 World 下时，任何"清 World"循环都要排除它。**
 
 **验收**：autoload **7 → 6**；`test_composition_root` 增 StageRuntime 声明/注入/真加载断言；全量 **63 套 / 337 测试 / 3341 断言全绿**。
+
+---
+
+### 12.11 W4a-1 实施记录（2026-09-11，已完成）
+
+**目标**：把内核从"开关后的备选"**转正为默认弹幕后端**，旧池保留为回滚（strangler 的"翻开关"步）。autoload 数不变。
+
+**变更**：
+
+- `BulletManager.use_kernel` 默认 `false → true`；F2 语义从"切到内核"变为"切回旧池回滚"。
+- 新增后端无关的 `BulletManager.active_count()`；统计/断言从旧池专属 `active_bullets` 迁过来（`bullet_bench` / `enemy_bench` / `phase_bench` / `workbench` / `debug_drawer`）。
+- 旧池专属测试显式 `set_use_kernel(false)`：`test_hit_sfx_rules`（旧 `BulletPhysics`）、`test_bullet_batch`（旧渲染分组）、`test_bounce_bullet`（旧 bounce 脚本）；`test_bullet_rig` / `test_creation_station` 改用 `active_count()`。
+
+**验收**：kernel 默认下全量 **63 套 / 337 测试 / 3341 断言全绿**。
+
+**待办（W4a-2）**：试玩确认未映射内容无回归后，删旧池（`BulletPool`/`Bullet`/`BulletPhysics`/`DeathClear` 旧循环/`BulletMultiMesh._sync_nodes`）+ `use_kernel`/F2/`active_bullets`。
 
 ---
 

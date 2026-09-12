@@ -12,20 +12,28 @@ var _physics: BulletPhysics
 var _lasers: LaserEngine
 var _death_clear: DeathClear
 
-## 暴露给 bullet_multi_mesh 等需要直接遍历子弹的地方
+## 暴露给 bullet_multi_mesh 等需要直接遍历子弹的地方（**旧池专属**；内核路径恒空）
 var active_bullets: Array:
 	get: return _pool.active_bullets if _pool else []
+
+
+## 当前活跃弹数（双后端统一查询）——统计/断言用，别读 active_bullets
+func active_count() -> int:
+	if use_kernel and _kernel != null:
+		return _kernel.system.get_active_count()
+	return _pool.active_bullets.size() if _pool else 0
 
 var use_multi_mesh: bool = true
 var _multi_mesh: Node2D
 var _processing_paused: bool = false
 const BulletMultiMeshClass = preload("res://scripts/bullet/bullet_multi_mesh.gd")
 
-## ═══ Track A / S3a：内核弹幕后端（Strangler 开关）═══
-## true = 弹幕走内核 SoA 池（scripts/kernel/）+ 内核渲染数据源；false = 旧 Bullet 节点池（默认）。
-## 切换：游戏内按 **F2**（运行时热键，见 _unhandled_input），或 set_use_kernel()（测试）。
-## **碰撞规则不在本步**，见 docs/NEW_KERNEL_REFACTOR_PLAN.md §16。
-var use_kernel: bool = false
+## ═══ 内核弹幕后端（W4a-1 起转正为默认）═══
+## true = 弹幕走内核 SoA 池（scripts/kernel/）+ 内核渲染数据源（**默认**）；
+## false = 旧 Bullet 节点池（**仅回滚验证用**）。
+## 切换：游戏内按 **F2**（切回旧池排查），或 set_use_kernel()（测试）。
+## W4a-2 拟删除旧池与开关——先试玩确认未映射内容无回归。见 docs/NEW_KERNEL_REFACTOR_PLAN.md §12.11。
+var use_kernel: bool = true
 var _kernel: KernelBulletBackend
 var _kernel_physics: KernelBulletPhysics
 
@@ -55,7 +63,7 @@ func inject_fx_layer(fx: FxLayer) -> void:
 		_kernel_physics.fx = fx
 
 
-## 试玩 A/B 热键：F2 在「旧 Bullet 节点池」与「内核 SoA 池」之间切换（默认旧池，零源码改动）。
+## 试玩回滚热键：F2 在「内核 SoA 池（默认）」与「旧 Bullet 节点池（回滚）」之间切换。
 func _ensure_kernel_toggle_action() -> void:
 	if InputMap.has_action(&"kernel_toggle"):
 		return

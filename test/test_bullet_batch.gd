@@ -4,6 +4,16 @@ extends GutTest
 const BULLET_SCENE := preload("res://scenes/bullet.tscn")
 
 
+## 本套件测旧渲染分组（BulletMultiMesh._groups）→ 强制旧池
+func before_each() -> void:
+	BulletManager.set_use_kernel(false)
+
+
+func after_each() -> void:
+	BulletManager.set_use_kernel(true)
+	BulletManager.clear_all()
+
+
 func test_batch_mode_sprite_hidden_as_data_source():
 	BulletManager.use_multi_mesh = true
 	BulletManager.clear_all()

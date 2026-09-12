@@ -53,7 +53,7 @@ func test_preset_route_switches_tab_and_assembles():
 	await get_tree().process_frame
 	assert_eq(cs._current_slot, 1, "路由到弹幕台")
 	assert_true(cs._view._script_sel.selected > 0, "装配了脚本")
-	assert_true(BulletManager.active_bullets.size() >= 1, "直达即发射（%d）" % BulletManager.active_bullets.size())
+	assert_true(BulletManager.active_count() >= 1, "直达即发射（%d）" % BulletManager.active_count())
 	cs.queue_free()
 
 
@@ -67,7 +67,7 @@ func test_burst_stops_after_tab_switch():
 	cs._view._burst_chk.button_pressed = true
 	cs._view._burst_left = 0.0
 	cs._view._fire()
-	assert_true(BulletManager.active_bullets.size() >= 1, "连发已开")
+	assert_true(BulletManager.active_count() >= 1, "连发已开")
 	# 切敌人台 → 子弹台冻结
 	cs._on_slot(2)
 	await get_tree().process_frame
@@ -75,7 +75,7 @@ func test_burst_stops_after_tab_switch():
 	# 等若干帧：后台不应再产生新弹
 	for i in 6:
 		await get_tree().process_frame
-	assert_eq(BulletManager.active_bullets.size(), 0, "切换后不再产生新弹")
+	assert_eq(BulletManager.active_count(), 0, "切换后不再产生新弹")
 	# 切回 → 恢复
 	cs._on_slot(1)
 	await get_tree().process_frame
@@ -91,9 +91,9 @@ func test_switch_clears_runtime():
 	# 在弹幕台射一颗弹
 	BulletManager.clear_all()
 	cs._view._fire()
-	assert_true(BulletManager.active_bullets.size() >= 1, "子弹已生成")
+	assert_true(BulletManager.active_count() >= 1, "子弹已生成")
 	# 切敌人台 → 应清弹
 	cs._on_slot(2)
 	await get_tree().process_frame
-	assert_eq(BulletManager.active_bullets.size(), 0, "切换后清场")
+	assert_eq(BulletManager.active_count(), 0, "切换后清场")
 	cs.queue_free()

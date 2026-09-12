@@ -388,7 +388,7 @@ func _update_stats() -> void:
 			boss_hp = _boss.get("hp") if _boss.get("hp") != null else -1
 		_stats_label.text = "Boss状态：%s · 弹数 %d · 种子 %d" % [
 			("运行中 hp=%s" % str(boss_hp)) if boss_hp >= 0 else "无",
-			BulletManager.active_bullets.size(), _seed]
+			BulletManager.active_count(), _seed]
 
 
 func _process(delta: float) -> void:

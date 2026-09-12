@@ -303,7 +303,7 @@ func _next_seed() -> void:
 
 func _update_stats() -> void:
 	if _stats_label:
-		_stats_label.text = "场上弹数：%d · 种子：%d" % [BulletManager.active_bullets.size(), _seed]
+		_stats_label.text = "场上弹数：%d · 种子：%d" % [BulletManager.active_count(), _seed]
 
 
 func _process(delta: float) -> void:

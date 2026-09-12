@@ -219,3 +219,4 @@
 > - R21 收口：`FxLayer` 与 `MissEffectManager` 均已改为 `game_scene.tscn` 声明式节点（后者为 W1 产物，在 W2 补正）。详见 §12.7 / §12.8。
 > - W3a：`AssetRegistry` 去 autoload（→ `class_name` 静态表，调用点 0 改动）。autoload 8→7。详见 §12.9。
 > - W3b：`StageManager` autoload → `StageRuntime`（World 下场景节点）+ `ctx.stage` 注入。autoload 7→6。详见 §12.10。
+> - W4a-1：内核弹幕后端**转正为默认**（旧池保留回滚，F2 切换）；新增 `active_count()`。详见 §12.11。

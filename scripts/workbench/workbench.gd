@@ -630,7 +630,7 @@ func _update_ui() -> void:
 		_timeline.queue_redraw()
 	var boss = GameState.get_boss()
 	_status.set_status(
-		BulletManager.active_bullets.size(),
+		BulletManager.active_count(),
 		GameState.get_active_enemies().size(),
 		is_instance_valid(boss),
 		int(Engine.get_frames_per_second()))

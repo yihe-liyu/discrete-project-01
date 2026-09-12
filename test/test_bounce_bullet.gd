@@ -10,6 +10,7 @@ var _boss: Boss
 
 
 func before_each():
+	BulletManager.set_use_kernel(false)  # 本套件测旧 bounce_bullet 脚本（内核见 test_kernel_behavior）
 	BulletManager.clear_all()
 	_boss = BOSS_CLASS.new()
 	_boss.setup(BossData.new().name("测试Boss"), null)
@@ -22,6 +23,7 @@ func before_each():
 func after_each():
 	GameState.active_enemies.erase(_boss)
 	BulletManager.clear_all()
+	BulletManager.set_use_kernel(true)
 	# 无节点模式协程：clear_all 只 queue_free，等一帧让删除队列真正执行（防孤儿）
 	await get_tree().process_frame
 
