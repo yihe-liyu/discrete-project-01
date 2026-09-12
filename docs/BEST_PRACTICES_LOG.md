@@ -44,6 +44,7 @@
   - `scripts/kernel_bridge/kernel_bullet_physics.gd:sweep_enemy_bullets()`：内核逐弹扫掠（颜色 + 消散特效 + on_clear）。
   - `scripts/autoload/bullet_manager.gd:_kernel_sweep_death_clear()`：按 `use_kernel` 分派。
 - **验收**：全量 GUT **60 套 / 305 测试 / 3254 断言全绿**。
+- **踩坑**：本想用内核现成 `cancel_bullets()` 驱动清弹圈，读实现后发现不合——(1) 它是一次性全清，死亡清弹是逐帧扩张；(2) 其消散特效发成内核纯特效行，而渲染桥只认 `BulletType` 行，画不出来。改回宿主逐弹扫掠 + `HitEffectPool`。
 
 ### 2026-09-11 — S4a：行为管道 + 内容端口契约
 
@@ -78,4 +79,11 @@
 - **修法**：内容端口改提供 **`spawn_factory: Callable`**（每次造新 `BulletData`）；后端**保活**探测实例（Callable 绑在它身上，释放即失效）。
 - **教训**：`Resource.duplicate()` 对 Resource 字段（`texture`）不可靠；「弹在但看不见」先查贴图旁表。诊断顺序：先确认「行为有没有跑」，再查「跑完之后画没画」。
 - **验收**：全量 GUT **61 套 / 319 测试 / 3289 断言全绿**。
-- **踩坑**：本想用内核现成 `cancel_bullets()` 驱动清弹圈，读实现后发现不合——(1) 它是一次性全清，死亡清弹是逐帧扩张；(2) 其消散特效发成内核纯特效行，而渲染桥只认 `BulletType` 行，画不出来。改回宿主逐弹扫掠 + `HitEffectPool`。
+
+### 2026-09-11 — S4c-2：`bounce` 反弹弹
+
+- **目标**：非符1 的反弹弹在内核路径下也能碰框换向。
+- **做法**：桥接 `BounceBehavior` 1:1 移植（沿飞行方向加速 + 左/右/上碰框夹回 + 朝 Boss 转 `bounce_angle` + 换直线弹 + 音效）。替换弹走 §21.11 的 `spawn_factory`。
+- **边界**：Boss 取 `GameState.get_boss()`（宿主），落在桥接层；内核不碰。
+- **对照旧项目**：旧 `spawn_tex` / `spawn_color` 是**死变量**（`_re_fire` 硬编码米弹 / GOLD）——不抄「看起来能配其实没用」的参数。
+- **验收**：全量 GUT **61 套 / 321 测试 / 3296 断言全绿**。

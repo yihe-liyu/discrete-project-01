@@ -769,6 +769,15 @@ func kernel_port() -> Dictionary:
 
 **验收**：新增工厂测试（每次新对象 + 贴图不丢）+ 替换弹贴图断言；全量 **61 套 / 319 测试 / 3289 断言全绿**。
 
+### 21.12 S4c-2 落地：`bounce_bullet`（非符1 反弹弹）（2026-09-11，已完成）
+
+- 桥接 `BounceBehavior`：沿飞行方向加速；碰**左/右/上**框（下墙穿出）→ 位置夹回框边 → 朝 `GameState.get_boss()`（无 Boss 退化向下）转 `bounce_angle` → 工厂造替换弹 + `kira` 音效 + `request_despawn`。
+- `bounce_bullet.gd.kernel_port()` → `bounce`；`spawn_factory` = 米弹 / GOLD / blend（与旧 `_re_fire` 1:1）；`spawn_speed` 可覆盖。
+- 测试：无 Boss 碰左框 → 向下弹；沿飞行方向加速（未碰框不换弹）。
+- 验收：`test_kernel_behavior` +2；全量 **61 套 / 321 测试 / 3296 断言全绿**。
+- 已知：旧脚本的 `spawn_tex` / `spawn_color` 是**死变量**（`_re_fire` 硬编码米弹 / GOLD）——照旧不复刻。
+
+
 
 
 

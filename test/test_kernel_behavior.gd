@@ -5,14 +5,23 @@ const GRAVITY_BULLET = preload("res://data/stages/stage01/bullet/gravity_bullet.
 const MOVE_HOMING = preload("res://scripts/coroutine/player/move_homing.gd")
 const NO_PORT = preload("res://test/fixtures/no_port_behavior.gd")
 const RADIAL_ACCEL = preload("res://data/stages/stage01/bullet/radial_accel_bullet.gd")
+const BOUNCE_BULLET = preload("res://data/stages/stage01/bullet/bounce_bullet.gd")
 
 var _backend: KernelBulletBackend
+var _saved_enemies: Array = []
 
 
 func before_each() -> void:
+	_saved_enemies = GameState.active_enemies.duplicate()
+	GameState.active_enemies.clear()   # 保证「无 Boss」分支确定
 	_backend = KernelBulletBackend.new()
 	add_child_autofree(_backend)
 	_backend.setup_behaviors(null, Callable())
+
+
+func after_each() -> void:
+	GameState.active_enemies.clear()
+	GameState.active_enemies.append_array(_saved_enemies)
 
 
 func _enemy(tex := "小玉") -> BulletData:
@@ -87,6 +96,38 @@ func test_homing_turns_toward_enemy() -> void:
 	var v: Vector2 = _backend.system.get_velocity(0)
 	assert_gt(v.x, 0.0, "应朝右侧敌人偏转")
 	assert_almost_eq(v.length(), 512.5, 1.0, "速度量级 ≈ lerp(min_speed, top_speed, dt/accel_time)")
+
+
+## S4c-2：bounce 端口映射 + 无 Boss 时碰左框 → 换成向下弹。
+func test_bounce_refires_down_without_boss() -> void:
+	var d := _enemy()
+	d.velocity = Vector2.LEFT * 100.0
+	d.coroutine_script = BOUNCE_BULLET
+	d.params = {"bounce_angle": 0.0, "accel": 0.0}
+	_backend.shoot(d, Vector2(GameConfig.FIELD_LEFT - 5.0, 400.0), Vector2.LEFT)
+	assert_eq(_backend.system.get_move_name(_backend.system.get_behavior_id(0)), &"bounce",
+		"bounce_bullet 端口应映射 bounce")
+	_backend.system._physics_process(1.0 / 60.0)
+	_backend.behavior.process()
+	_backend._physics_process(0.0)
+	assert_eq(_backend.system.get_active_count(), 1, "旧弹回收 + 新弹生成")
+	assert_gt(_backend.system.get_velocity(0).y, 0.0, "无 Boss → 朝下")
+	assert_almost_eq(_backend.system.get_position(0).x, GameConfig.FIELD_LEFT, 0.01, "落回左边界")
+	var ti: int = _backend.system.get_type_indices()[0]
+	assert_not_null(_backend.texture_for_index(ti), "替换弹必须有贴图")
+
+
+## S4c-2：bounce 沿飞行方向加速（远离边框时不换弹）。
+func test_bounce_accelerates_along_velocity() -> void:
+	var d := _enemy()
+	d.velocity = Vector2.UP * 100.0
+	d.coroutine_script = BOUNCE_BULLET
+	d.params = {"bounce_angle": 0.0, "accel": 60.0}
+	_backend.shoot(d, Vector2(400, 400), Vector2.UP)
+	_backend.system._physics_process(1.0 / 60.0)
+	_backend.behavior.process()
+	assert_almost_eq(_backend.system.get_velocity(0).y, -101.0, 0.01, "沿飞行方向加速 60/60")
+	assert_eq(_backend.system.get_active_count(), 1, "未碰框不应换弹")
 
 
 ## 替换弹工厂：每次新对象 + 贴图不丢（duplicate 会丢 texture，故不用）。

@@ -13,6 +13,7 @@ extends Node
 const WorldAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/world_accel_behavior.gd")
 const HomingBehaviorClass = preload("res://scripts/kernel_bridge/behavior/homing_behavior.gd")
 const RadialAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/radial_accel_behavior.gd")
+const BounceBehaviorClass = preload("res://scripts/kernel_bridge/behavior/bounce_behavior.gd")
 const KernelBehaviorHostClass = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
 const _MOVE_WORLD_ACCEL := &"world_accel"
 
@@ -195,6 +196,9 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	var radial = RadialAccelBehaviorClass.new()
 	radial.host = _behavior_host
 	behavior.register_behavior(&"radial_accel", radial)
+	var bounce = BounceBehaviorClass.new()
+	bounce.host = _behavior_host
+	behavior.register_behavior(&"bounce", bounce)
 
 
 ## 取内容脚本的内核端口（duck-typed `kernel_port()`），按内容签名缓存。

@@ -68,3 +68,25 @@ func _re_fire(p_ctx: StageContext, bullet: Bullet, at: Vector2, dir: Vector2, cu
 		.enemy()
 	BulletManager.re_fire(bullet, b, dir, at)
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["kira"], -8.0)
+
+
+## 内核端口（Track A / S4c-2）：加速 + 碰框换向（朝 Boss）。替换弹用工厂。
+func kernel_port() -> Dictionary:
+	return {
+		"move": &"bounce",
+		"params": {
+			&"accel": accel,
+			&"bounce_angle": bounce_angle,
+			&"spawn_factory": Callable(self, "_kernel_make_replacement"),
+			&"spawn_speed": spawn_speed,
+			&"sfx": "kira",
+			&"sfx_db": -8.0,
+		},
+	}
+
+
+## 替换弹工厂（与旧 _re_fire 1:1：米弹 / GOLD / blend）。
+func _kernel_make_replacement() -> BulletData:
+	var b := BulletData.new()
+	b.tex("米弹").color(Color.GOLD).blend(true).enemy()
+	return b
