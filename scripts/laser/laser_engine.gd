@@ -10,12 +10,12 @@ var _pool: Array[LaserBeam] = []
 var _active: Array[LaserBeam] = []
 var _parent: Node
 var _pool_index: int = 0
-var _physics: BulletPhysics  ## 擦弹计分/音效委托
+var _on_graze: Callable = Callable()  ## 擦弹结算回调（BulletManager 注入）
 var _graze_cooldown: int = 0
 
 
-func setup(p_parent: Node, p_physics: BulletPhysics = null) -> void:
-	_physics = p_physics
+func setup(p_parent: Node, p_on_graze: Callable = Callable()) -> void:
+	_on_graze = p_on_graze
 	_parent = p_parent
 	for i in POOL_SIZE:
 		var beam := LaserBeam.new()
@@ -89,8 +89,8 @@ func step(delta: float) -> void:
 				player.miss()
 			elif _graze_cooldown <= 0 and beam.is_grazing(pos, player.graze_radius):
 				_graze_cooldown = GRAZE_COOLDOWN_FRAMES
-				if _physics:
-					_physics.on_graze()
+				if _on_graze.is_valid():
+					_on_graze.call()
 	if _graze_cooldown > 0:
 		_graze_cooldown -= 1
 

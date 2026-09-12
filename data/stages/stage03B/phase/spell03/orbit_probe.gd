@@ -20,7 +20,7 @@ var _dist: float = 0.0             # 沿初方向累计位移（OUT 正增 / BAC
 
 
 func _tick(p_ctx: StageContext):
-	var bullet: Bullet = target
+	var bullet = target
 	if not bullet:
 		return false
 	var dt := get_dt()

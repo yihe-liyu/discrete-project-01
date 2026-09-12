@@ -9,7 +9,7 @@
 `scripts/kernel/**` **禁止**引用原项目的：
 
 - **autoload**：`GameState / BulletManager / RNG / AudioManager / GameEvents / GameManager`（W1–W3 后：`LayerConfig`/`AssetRegistry` 改 class_name，`MissEffectManager`/`StageObjects`/`HitEffectPool`/`StageManager` 改组合根注入/场景节点）
-- **实体 / UI 层类型**：`Boss / Enemy / Player / Item / Bullet / BulletData / PhaseData / BossData / EnemyData / PlayerData / GameConfig`
+- **实体 / UI 层类型**：`Boss / Enemy / Player / Item / BulletData / PhaseData / BossData / EnemyData / PlayerData / GameConfig`
 - 任何指向 `res://scripts/...` 的 `preload` / `load` 路径
 
 唯一允许的宿主外部依赖 = `LayerConfig`（仅供适配/渲染层用；内核本体目前 **0 引用**）。

@@ -55,7 +55,7 @@ func _enemy_bullets_vs_player() -> void:
 			sys.despawn(id)
 		elif not sys.is_grazed(id) and sys.hit_test(id, player.global_position, player.graze_radius):
 			sys.mark_grazed(id)
-			_on_graze()
+			on_graze()
 			if GameState.memory_value >= 50.0:
 				var chance := remap(GameState.memory_value, 50.0, 100.0, 0.05, 0.30)
 				if RNG.randf() < chance:
@@ -145,7 +145,7 @@ func _spawn_hit_fx(sys: BulletSystem, id: int, bt: BulletType) -> void:
 
 
 ## 擦弹结算：与旧 BulletPhysics.on_graze 1:1。
-func _on_graze() -> void:
+func on_graze() -> void:
 	GameState.graze_count += 1
 	GameState.add_score(10)
 	GameState.add_memory(GameState.MEMORY_GRAZE)

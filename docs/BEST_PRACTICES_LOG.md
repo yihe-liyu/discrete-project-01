@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-11 — W4a-2：删旧弹幕池（内核唯一后端）
+
+- **目标**：删除整个旧弹幕子系统，内核成为唯一后端，去掉 strangler 开关（W4a 收口）。
+- **为什么**：R9（去单例/开关残留）+ R19（不留死代码）+ 收敛内核合流。
+- **对照旧项目**：旧 `BulletManager` 是"双后端门面"（旧 `Bullet` 节点池 ↔ 内核 SoA）。W4a-1 转正后旧池已是回滚备份，试玩确认无回归后即可整体删除。
+- **删除**：`bullet_pool.gd` / `bullet_physics.gd` / `bullet.gd` / `spatial_hash.gd` / `bomb_behavior.gd` / `bullet_fog.gd` / `bullet.tscn` + `use_kernel`/F2/`active_bullets`/`use_multi_mech` 全部旧分支。
+- **收窄**：`DeathClear` 改调注入的内核扫掠；`BulletMultiMesh` 删 `_sync_nodes`；`LaserEngine` 的 `BulletPhysics` 依赖改为注入 `on_graze` Callable；`player.gd` 去 `bomb_behavior`。
+- **验收**：`check_syntax` 190 脚本 / 0 失败；全量 54 套 / 299 测试 / 3181 断言全绿。
+- **教训/注意**：`active_bullets` 是旧池专属 API，删除时所有统计要换 `active_count()`、调试叠层要换内核行遍历（`debug_drawer`/`hitbox_overlay` 已改）。
 ### 2026-09-11 — W4a-1 修复：内核转正暴露"自机引用未刷新"（道中非符逃跑弹失效）
 
 - **现象**：内核转正为默认后，中boss非符的 `non_mid_flee` 逃跑弹不生效（弹丸直线飞、不转向）。

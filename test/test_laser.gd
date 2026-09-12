@@ -202,9 +202,8 @@ func test_cut_head_ignored_on_fixed():
 func _make_engine() -> LaserEngine:
 	var engine := LaserEngine.new()
 	autofree(engine)
-	var physics := BulletPhysics.new()
-	physics.setup(BulletPool.new())
-	engine.setup(_holder, physics)  # 传 physics 委托擦弹计分
+	# W4a-2：LaserEngine 不再依赖 BulletPhysics；擦弹结算走注入 Callable（内核规则）
+	engine.setup(_holder, Callable(BulletManager, "_on_laser_graze"))
 	return engine
 
 func _make_engine_player(x: float) -> Player:

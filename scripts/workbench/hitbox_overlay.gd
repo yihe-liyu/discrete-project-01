@@ -27,18 +27,26 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	if not enabled:
 		return
-	# 子弹判定（红）
-	for bullet in BulletManager.active_bullets:
-		if not is_instance_valid(bullet) or bullet.is_queued_for_deletion() or not bullet.visible or not bullet.is_ready:
-			continue
-		var center: Vector2 = bullet.global_position + bullet.hitbox_offset.rotated(bullet.rotation)
-		match bullet.hitbox_shape:
-			BulletData.HitboxShape.CIRCLE:
-				draw_arc(center, bullet.hitbox_radius, 0, TAU, 12, Color.RED, 1.0)
-			BulletData.HitboxShape.RECTANGLE:
-				draw_set_transform(center, bullet.rotation + deg_to_rad(bullet.hitbox_rotation), Vector2.ONE)
-				draw_rect(Rect2(-bullet.hitbox_size / 2.0, bullet.hitbox_size), Color.RED, false, 1.0)
+	# 子弹判定（红）—— 内核行
+	var sys := BulletManager.kernel_system()
+	if sys != null:
+		var positions := sys.get_positions()
+		var velocities := sys.get_velocities()
+		var type_indices := sys.get_type_indices()
+		var registry := sys.get_type_registry()
+		for i in sys.get_active_count():
+			var ti: int = type_indices[i]
+			if ti < 0:
+				continue
+			var bt: BulletType = registry[ti]
+			var rot: float = bt.rotation_for(velocities[i])
+			var center: Vector2 = positions[i] + bt.hitbox_offset.rotated(rot)
+			if bt.hitbox_size != Vector2.ZERO:
+				draw_set_transform(center, rot, Vector2.ONE)
+				draw_rect(Rect2(-bt.hitbox_size / 2.0, bt.hitbox_size), Color.RED, false, 1.0)
 				draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
+			else:
+				draw_arc(center, bt.hitbox_radius, 0, TAU, 12, Color.RED, 1.0)
 	# 敌人判定（绿）
 	for enemy in GameState.get_active_enemies():
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():

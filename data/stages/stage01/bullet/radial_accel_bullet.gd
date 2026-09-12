@@ -8,9 +8,9 @@ var _dir := Vector2.ZERO       ## 发射方向（首次 tick 记录并固定）
 
 
 func _tick(_ctx: StageContext) -> Variant:
-	if not is_instance_valid(target) or not target is Bullet:
+	if not is_instance_valid(target):
 		return false
-	var bullet: Bullet = target
+	var bullet = target
 	var dt := get_dt()
 	if _dir == Vector2.ZERO:
 		_dir = bullet.velocity.normalized()  # 初始速度方向 = 发射角度
@@ -27,7 +27,7 @@ func _tick(_ctx: StageContext) -> Variant:
 
 
 ## 原地重新发射成竖直向下匀速弹（复用原弹，保留速度大小），回收自己（行为协程结束）
-func _spawn_downward(bullet: Bullet, _ctx: StageContext) -> void:
+func _spawn_downward(bullet, _ctx: StageContext) -> void:
 	var b := BulletData.new().enemy()
 	b.tex("米弹").color(Color.FUCHSIA).blend(true)
 	b.velocity = Vector2(0, bullet.velocity.length())  # 保留速度大小，方向竖直向下

@@ -13,12 +13,12 @@ var spawn_speed: float = 0.0        ## 直线弹速度（0 = 沿用反弹瞬间�
 
 
 func _tick(_ctx: StageContext) -> Variant:
-	if not is_instance_valid(target) or not target is Bullet:
+	if not is_instance_valid(target):
 		return false
-	var bullet: Bullet = target
+	var bullet = target
 	var dt := get_dt()
 	if accel != 0.0:
-		var dir := bullet.velocity.normalized()
+		var dir: Vector2 = bullet.velocity.normalized()
 		if dir != Vector2.ZERO:
 			bullet.velocity += dir * accel * dt  # 沿飞行方向加速
 	bullet.global_position += bullet.velocity * dt
@@ -29,8 +29,8 @@ func _tick(_ctx: StageContext) -> Variant:
 
 
 ## 碰框：位置夹回框边，转向朝向 Boss + 旋转 bounce_angle，原地重新发射成直线弹
-func _bounce_and_split(p_ctx: StageContext, bullet: Bullet) -> bool:
-	var pos := bullet.global_position
+func _bounce_and_split(p_ctx: StageContext, bullet) -> bool:
+	var pos: Vector2 = bullet.global_position
 	var bounced := false
 
 	if pos.x <= GameConfig.FIELD_LEFT:
@@ -59,7 +59,7 @@ func _bounce_and_split(p_ctx: StageContext, bullet: Bullet) -> bool:
 
 
 ## 原地重新发射：把当前弹重配置成直线弹（复用原弹，不回收不新建）
-func _re_fire(p_ctx: StageContext, bullet: Bullet, at: Vector2, dir: Vector2, cur_speed: float) -> void:
+func _re_fire(p_ctx: StageContext, bullet, at: Vector2, dir: Vector2, cur_speed: float) -> void:
 	var b := BulletData.new()\
 		.tex("米弹")\
 		.speed(spawn_speed if spawn_speed > 0.0 else cur_speed)\

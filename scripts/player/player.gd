@@ -162,7 +162,6 @@ const BOMB_SPEED: float = 220.0
 const BOMB_DAMAGE: float = 50.0
 const BOMB_RADIUS: float = 45.0
 const BOMB_INVINCIBLE_TIME: float = 4.0
-const BOMB_BEHAVIOR = preload("res://scripts/bullet/bomb_behavior.gd")
 
 func _bomb() -> void:
 	if is_invincible:
@@ -185,7 +184,7 @@ func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
 	# 随机一个起始色相，后续按等间隔均匀增加，铺满整个色环
 	var hue := fmod(base_hue + float(i) / float(BOMB_SPAWN_COUNT), 1.0)
 	var color := Color.from_hsv(hue, 1.0, 1.0)
-	var data := BulletData.new().tex("bomb01_white").bomb().behavior(BOMB_BEHAVIOR).color(color).dir(dir.x * BOMB_SPEED, dir.y * BOMB_SPEED)
+	var data := BulletData.new().tex("bomb01_white").bomb().color(color).dir(dir.x * BOMB_SPEED, dir.y * BOMB_SPEED)
 	data.params = {"spawn_delay": float(i) * BOMB_SPAWN_INTERVAL}
 	_play_sfx(AssetRegistry.sounds["shoot"], -6.0)
 	BulletManager.shoot_bomb_bullet(data, global_position, dir)

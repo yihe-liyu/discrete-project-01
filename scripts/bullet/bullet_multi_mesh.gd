@@ -10,8 +10,13 @@ class_name BulletMultiMesh
 ## 是否启用 MultiMesh 批渲染
 @export var enabled: bool = true
 
-## 内核后端（Track A / S2）；注入后 _sync 改走内核快照路径。
+## 内核后端（W4a-2 起唯一数据源）。
 var backend: KernelBulletBackend
+
+## 宿主阵营常量（原 Bullet.FACTION_*；W4a-2 旧类删除后本地化）
+const _FACTION_PLAYER := 0
+const _FACTION_ENEMY := 1
+const _FACTION_BOMB := 2
 
 var _groups: Dictionary = {}  # key → {mmi, mm, mesh}
 
@@ -31,49 +36,10 @@ func _process(_delta):
 	_sync()
 
 
-## 数据源分派：有内核后端 → 内核快照；否则旧路径。
+## 数据源：内核 SoA 快照。
 func _sync():
 	if backend != null and backend.system != null:
 		_sync_kernel()
-	else:
-		_sync_nodes()
-
-
-## 旧路径：遍历 Bullet 节点。
-func _sync_nodes():
-	var bulbs := BulletManager.active_bullets
-	if bulbs.is_empty():
-		_hide_all()
-		return
-	var active_groups: Dictionary = {}
-	for bullet in bulbs:
-		if not is_instance_valid(bullet) or bullet.is_queued_for_deletion() or not bullet.visible or not bullet.is_ready:
-			continue
-		var tex = bullet.batch_texture()
-		if not tex:
-			continue
-		var key := _group_key(tex, bullet.faction, bullet.tint_mode)
-		if not active_groups.has(key):
-			active_groups[key] = {tex = tex, faction = bullet.faction, tint_mode = bullet.tint_mode, bullets = []}
-		active_groups[key].bullets.append(bullet)
-	for key in active_groups:
-		var g = active_groups[key]
-		var bullets: Array = g.bullets
-		var eg = _get_or_create_group(key, g.tex, g.faction, g.tint_mode, bullets.size())
-		var mm: MultiMesh = eg.mm
-		# 缓冲只增不减：超过预分配容量才 grow（几何增长，罕见），避免每帧 grow/shrink 重分配 GPU 缓冲
-		if mm.instance_count < bullets.size():
-			mm.instance_count = max(bullets.size() * 2, 2048)
-		mm.visible_instance_count = bullets.size()
-		eg.mmi.visible = true
-		for i in bullets.size():
-			var b = bullets[i]
-			var t = Transform2D(b.rotation, b.scale, 0.0, b.global_position)
-			mm.set_instance_transform_2d(i, t)
-			mm.set_instance_color(i, b.sprite.modulate)
-	for key in _groups:
-		if not active_groups.has(key):
-			_hide_group(key)
 
 
 ## 新路径（S2）：直接读内核 SoA 快照，不再遍历 Bullet 节点。
@@ -141,11 +107,11 @@ func _group_key(tex: Texture2D, faction: int, tint_mode: int) -> int:
 func _host_faction(kernel_faction: int) -> int:
 	match kernel_faction:
 		BulletType.Faction.ENEMY:
-			return Bullet.FACTION_ENEMY
+			return _FACTION_ENEMY
 		BulletType.Faction.PLAYER:
-			return Bullet.FACTION_PLAYER
+			return _FACTION_PLAYER
 		_:
-			return Bullet.FACTION_BOMB
+			return _FACTION_BOMB
 
 
 func _hide_all() -> void:
@@ -221,11 +187,11 @@ func _get_or_create_group(key: int, tex: Texture2D, faction: int, tint_mode: int
 	mmi.multimesh = mm
 	mmi.material = mat
 	match faction:
-		Bullet.FACTION_ENEMY:
+		_FACTION_ENEMY:
 			mmi.z_index = LayerConfig.ENEMY_BULLET
-		Bullet.FACTION_PLAYER:
+		_FACTION_PLAYER:
 			mmi.z_index = LayerConfig.PLAYER_BULLET
-		Bullet.FACTION_BOMB:
+		_FACTION_BOMB:
 			mmi.z_index = LayerConfig.BOMB
 	add_child(mmi)
 

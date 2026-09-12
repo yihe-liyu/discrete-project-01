@@ -146,11 +146,5 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	}
 
 	# 段在发射口生成（offset=0），drift 从 0 独立累积 → 根部永远在子机
-	var bullet = ctx.bullets.shoot_spread(b, 1, 0.0, Vector2.UP, source.global_position)
-	if bullet is Bullet:   # 旧池：直接配置节点；内核返回 int id，参数已走 b.params
-		# 贴图旋转 = 基础竖过来（-90°）+ 发射角度 → 贴图朝向 = 漂移方向
-		bullet.rotation = -PI / 2.0 + angle_rad
-		bullet.extra["anchor_node"] = source
-		bullet.extra["laser_offset"] = Vector2.ZERO
-		bullet.extra["drift_speed"] = LASER_DRIFT_SPEED
-		bullet.extra["drift_angle"] = angle_rad
+	# W4a-2：内核唯一后端（返回 int id）；段参数已走 b.params（见 kernel_port / marisa_laser）
+	ctx.bullets.shoot_spread(b, 1, 0.0, Vector2.UP, source.global_position)

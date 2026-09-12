@@ -103,7 +103,7 @@
 - [x] 自机判定点极小且始终可见（HitPointDisplay 常显）—— `scripts/player/hit_point_display.gd`
 - [x] 擦弹半径清晰（focus 时反馈），擦弹次数计入 HUD —— `player.gd graze_radius` + `game_ui.gd`
 - [x] 无敌期间的碰撞被正确忽略，死亡清弹（death clear）覆盖全场 —— `is_invincible`（`bullet_physics.gd` 检查）+ `scripts/autoload/bullet/death_clear.gd`
-- [x] 碰撞用空间哈希，不做全弹 O(n²) —— `scripts/bullet/spatial_hash.gd`（敌弹 / 敌人两张表，每帧重建）
+- [x] 碰撞用宽相网格，不做全弹 O(n²) —— 内核 uniform grid；旧 `SpatialHash` 已随旧池删除（W4a-2）
 
 ## S3. 自机操控与武器（移动 / Option / 射击 / 炸弹）
 状态：🚧 ｜ 适用红线：R2, R6, R10, R20
@@ -148,9 +148,9 @@
 
 ## S9. 性能（几千发子弹下的帧率余量）
 状态：🚧 ｜ 适用红线：R10, R19
-- [x] 子弹用对象池 + MultiMesh + 空间哈希，规避每弹节点开销 —— `BulletPool` + `bullet_multi_mesh.gd` + `spatial_hash.gd`
+- [x] 子弹用内核 SoA 池 + MultiMesh，规避每弹节点开销 —— `BulletSystem` + `bullet_multi_mesh.gd`；**旧 `BulletPool`/`Bullet` 节点/`SpatialHash` 已删（W4a-2）**
 - [~] 无每帧临时分配（贪心 alloc）；热路径避免 get_node("...") —— MultiMesh 同步每帧做分组/拼 key（旧代码自注有分配）；字符串 `get_node` 仅 5 处
-- [~] 碰撞/移动每帧 walk 用数组索引，不频繁排序 —— 已用 Array 遍历 + 哈希候选；非 SoA
+- [x] 碰撞/移动每帧 walk 用数组索引（内核 SoA），不频繁排序
 - [~] 大量对象时帧率稳定（目标：满载 60fps 有冗余）—— `test/perf_stress/*` 有压测场景，需实机确认
 
 ## S10. 可复现与回放（determinism / replay）
@@ -220,3 +220,4 @@
 > - W3a：`AssetRegistry` 去 autoload（→ `class_name` 静态表，调用点 0 改动）。autoload 8→7。详见 §12.9。
 > - W3b：`StageManager` autoload → `StageRuntime`（World 下场景节点）+ `ctx.stage` 注入。autoload 7→6。详见 §12.10。
 > - W4a-1：内核弹幕后端**转正为默认**（旧池保留回滚，F2 切换）；新增 `active_count()`。详见 §12.11。
+> - W4a-2：删除旧池（`BulletPool`/`Bullet`/`BulletPhysics`/`SpatialHash`/`bomb_behavior`/`bullet_fog`/`bullet.tscn`）+ `use_kernel`/F2；内核成为唯一后端。详见 §12.12。

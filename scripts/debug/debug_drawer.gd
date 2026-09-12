@@ -28,12 +28,12 @@ func _draw():
 	if not draw_enabled:
 		return
 	
-	# ── 画所有子弹判定 ──
+	# ── 画所有子弹判定（内核行）──
 	if bullet_manager:
-		for bullet in bullet_manager.active_bullets:
-			if not is_instance_valid(bullet) or bullet.is_queued_for_deletion() or not bullet.visible or not bullet.is_ready:
-				continue
-			_draw_bullet_hitbox(bullet)
+		var sys := bullet_manager.kernel_system()
+		if sys != null:
+			for i in sys.get_active_count():
+				_draw_kernel_bullet_row(sys, i)
 	
 	# ── 画所有敌人判定 ──
 	if game_state:
@@ -59,7 +59,7 @@ func _draw():
 		draw_string(
 			ThemeDB.fallback_font,
 			Vector2(64, 64),
-			"弹幕数: %d" % bullet_manager.active_bullets.size(),
+			"弹幕数: %d" % bullet_manager.active_count(),
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
 			32,
@@ -67,23 +67,25 @@ func _draw():
 		)
 
 
-## 单颗子弹判定（工作台命中框与 debug_drawer 共用此绘制逻辑的轻量版）
-func _draw_bullet_hitbox(bullet: Bullet) -> void:
-	var center: Vector2 = bullet.global_position + bullet.hitbox_offset.rotated(bullet.rotation)
-	match bullet.hitbox_shape:
-		BulletData.HitboxShape.CIRCLE:
-			draw_arc(center, bullet.hitbox_radius, 0, TAU, 12, Color.RED, 1.0)
-			draw_circle(center, 1.5, Color.RED)
-		BulletData.HitboxShape.RECTANGLE:
-			# draw_set_transform + draw_rect：一次调用，不用拼 4 条线 + 角点数组
-			draw_set_transform(center, bullet.rotation + deg_to_rad(bullet.hitbox_rotation), Vector2.ONE)
-			draw_rect(Rect2(-bullet.hitbox_size / 2.0, bullet.hitbox_size), Color.RED, false, 1.0)
-			draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
-			draw_circle(center, 1.5, Color.RED)
-	
+## 单颗内核子弹判定（轻量）
+func _draw_kernel_bullet_row(sys: BulletSystem, i: int) -> void:
+	var ti: int = sys.get_type_indices()[i]
+	if ti < 0:
+		return
+	var bt: BulletType = sys.get_type_registry()[ti]
+	var vel: Vector2 = sys.get_velocities()[i]
+	var rot: float = bt.rotation_for(vel)
+	var center: Vector2 = sys.get_positions()[i] + bt.hitbox_offset.rotated(rot)
+	if bt.hitbox_size != Vector2.ZERO:
+		draw_set_transform(center, rot, Vector2.ONE)
+		draw_rect(Rect2(-bt.hitbox_size / 2.0, bt.hitbox_size), Color.RED, false, 1.0)
+		draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
+	else:
+		draw_arc(center, bt.hitbox_radius, 0, TAU, 12, Color.RED, 1.0)
+	draw_circle(center, 1.5, Color.RED)
+
 	# 速度方向线（可选：每颗 3 图元，密集弹幕时开销大）
 	if draw_velocity_lines:
-		var vel: Vector2 = bullet.velocity
 		if vel.length_squared() > 0.01:
 			var dir := vel.normalized()
 			var line_end: Vector2 = center + dir * 30

@@ -351,7 +351,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | `HitEffectPool` | 67 | 6 / 10 | 特效节点池 | **改注入**（`FxLayer`，随轨道 A） | W2 ✅ |
 | `AssetRegistry` | 153 | 31 / 49 | 静态资源表 + 内容 key | **改 `class_name`（静态表）+ 数据资源**（R17/S13） | W3a ✅（.tres 迁移随 S13） |
 | `StageManager` | 169 | 14 / 35 | 关卡生命周期 + 生成敌人/Boss | **改注入/场景节点**（`StageRuntime` under World + `ctx.stage`） | W3b ✅ |
-| `BulletManager` | 165 | 22 / 46 | 弹幕门面 | **内核替换**（轨道 A Phase 1 + adapter） | W4a-1 ✅（转正默认；W4a-2 删旧池） |
+| `BulletManager` | 165 | 22 / 46 | 弹幕门面 | **内核替换**（轨道 A Phase 1 + adapter） | W4a ✅（内核唯一后端；去 autoload 归 W4c） |
 | `GameState` | 405 | **42 / 186** | 全局游戏数据（god object） | **拆分**（最高优先） | W4 |
 
 **目标 autoload 集合（≈4~5）**：`GameEvents / RNG / AudioManager / GameManager` + 一个**瘦身存档全局**（`GameState` → `SaveData/Profile`）。
@@ -516,6 +516,30 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 **转正暴露的回归（已修）**：默认翻 `true` 后 `_enable_kernel()` 在 autoload `_ready` 跑——**自机尚未生成**，`BehaviorContext` 缓存了 null 自机且不再刷新 → `non_mid_flee` / `homing` 的"接近自机"判定失效（中boss非符逃跑弹直线飞）。修：`BulletManager.refresh_kernel_player()`，由组合根在自机就绪后调（`GameScene._setup_player` / `workbench._setup_world` / `bench_base.build_world`）。回归测试 `test_composition_root:test_game_scene_refreshes_kernel_player`。
 
 **待办（W4a-2）**：试玩确认未映射内容无回归后，删旧池（`BulletPool`/`Bullet`/`BulletPhysics`/`DeathClear` 旧循环/`BulletMultiMesh._sync_nodes`）+ `use_kernel`/F2/`active_bullets`。
+
+---
+
+### 12.12 W4a-2 实施记录（2026-09-11，已完成）
+
+**目标**：删除旧弹幕子系统，内核成为**唯一**后端（不再有开关/旧池）。
+
+**删除**：
+
+- `scripts/autoload/bullet/bullet_pool.gd` / `bullet_physics.gd`、`scripts/bullet/bullet.gd` / `spatial_hash.gd` / `bomb_behavior.gd` / `bullet_fog.gd`、`scenes/bullet.tscn`。
+- `BulletManager` 的 `use_kernel` / `set_use_kernel` / F2 `kernel_toggle` / `active_bullets` / `use_multi_mesh` 与全部旧分支。
+
+**收窄**：
+
+- `BulletManager`：内核唯一；`active_count()` 直读内核；`_on_laser_graze()` / `_sweep_death_clear()` 注入给 `LaserEngine` / `DeathClear`。
+- `DeathClear`：不再持旧池，逐帧调注入的内核扫掠。
+- `BulletMultiMesh`：删 `_sync_nodes`，只读内核快照；`Bullet.FACTION_*` → 本地常量。
+- `LaserEngine`：`BulletPhysics` 依赖 → 注入 `on_graze` Callable（`KernelBulletPhysics.on_graze` 转公开）。
+- `player.gd`：删 `bomb_behavior` 预载（内核 `KernelBomb` 不读它）。
+- 内容脚本去 `Bullet` 类型标注（旧 `_tick` 变死代码但可编译）。
+
+**测试**：随旧代码删 9 个旧池套件；`test_kernel_swap` 重写为内核唯一；`test_laser` 改用注入 Callable。
+
+**验收**：`check_syntax` **190 脚本 / 0 失败**；全量 **54 套 / 299 测试 / 3181 断言全绿**。autoload 数不变（6；`BulletManager` 去 autoload 归 W4c）。
 
 ---
 

@@ -5,9 +5,9 @@ extends CoroutineScript
 var gravity: float = 200.0
 
 func _tick(_ctx: StageContext) -> Variant:
-	if not is_instance_valid(target) or not target is Bullet:
+	if not is_instance_valid(target):
 		return false
-	var bullet: Bullet = target
+	var bullet = target
 	var dt := get_dt()
 	bullet.velocity.y += gravity * dt
 	bullet.global_position += bullet.velocity * dt
