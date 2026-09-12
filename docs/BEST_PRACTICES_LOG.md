@@ -26,7 +26,8 @@
 - **做法（strangler）**：W3b-1 先抽 `StageRuntime` + 薄门面（调用点零改动，commit `c3b4758`）；W3b-2 迁调用点（`ctx.stage`）并删 autoload。
 - **新落点**：`scripts/stage/stage_runtime.gd`；`StageContext.stage`；`EnemyData.spawn`/`StageDirector` 走 `ctx.stage`；`game_scene.tscn`/`workbench.tscn` 的 `World` 下声明节点；组合台 `bench_base.ensure_stage_runtime()` 自备，`bookmark_panel.stage_runtime` 由 Workbench 注入。
 - **验收**：autoload **7→6**；全量 **63 套 / 337 测试 / 3341 断言全绿**。
-- **踩坑**：`workbench._load_stage()` 的"清 World 残留"循环把新放进 `World` 的 `StageRuntime` 一起 `queue_free` → `_stage_runtime` 变 freed，触发 `previously freed`。**把结构性服务节点放 World 下时，任何"清 World"循环都要排除它。**
+- **踩坑①**：`workbench._load_stage()` 的"清 World 残留"循环把新放进 `World` 的 `StageRuntime` 一起 `queue_free` → `_stage_runtime` 变 freed，触发 `previously freed`。**把结构性服务节点放 World 下时，任何"清 World"循环都要排除它。**
+- **踩坑②**：`add_enemy_to_scene` 里 `world if is_instance_valid(world) else get_tree().root` → `Node2D` vs `Window` 两分支不兼容，编辑器报 `INCOMPATIBLE_TERNARY`（**warning，headless 测试不拦**）。改显式 `if/else`。**教训：大改后要跑 `godot --headless --editor --quit` 并看输出——之前把 editor 输出丢 `/dev/null` 才漏掉它。**
 ### 2026-09-11 — W3a：AssetRegistry 去 autoload（class_name 静态表）
 
 - **目标**：autoload 8 → 7（轨道 B / §12 W3a）。
