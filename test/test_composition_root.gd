@@ -29,6 +29,47 @@ func test_game_scene_refreshes_kernel_player() -> void:
 		"内核行为管道应拿到场景自机（W4a-1 回归：非默认内核时 autoload._ready 早于自机）")
 
 
+func test_game_scene_injects_player_stage_context() -> void:
+	var scene: PackedScene = load("res://scenes/game_scene.tscn")
+	var inst: Node = scene.instantiate()
+	add_child_autofree(inst)
+	await get_tree().process_frame
+	var player: Player = inst.get_node("World/Player")
+	var rt: StageRuntime = inst.get_node("World/StageRuntime")
+	assert_not_null(player.ctx, "自机应拿到关卡 ctx")
+	assert_eq(player.ctx.stage, rt, "自机 ctx 应指向关卡 StageRuntime")
+	assert_eq(player.ctx.effects.miss_layer, rt.miss_layer, "ctx.effects 应拿到注入的 MissEffectManager")
+	assert_eq(player.ctx.refs, rt.refs, "ctx.refs 应指向关卡注册表")
+
+
+func test_player_miss_adds_miss_circle() -> void:
+	var scene: PackedScene = load("res://scenes/game_scene.tscn")
+	var inst: Node = scene.instantiate()
+	add_child_autofree(inst)
+	await get_tree().process_frame
+	var player: Player = inst.get_node("World/Player")
+	var layer: MissEffectManager = inst.get_node("MissEffectManager")
+	player.is_invincible = false
+	player.miss()
+	assert_gt(layer._circles.size(), 0, "miss 后应加入反色圈")
+
+
+func test_stageless_context_effects_fall_back_to_current_stage() -> void:
+	var rt := StageRuntime.new()
+	add_child_autofree(rt)
+	var miss := MissEffectManager.new()
+	rt.add_child(miss)
+	rt.miss_layer = miss
+	var fx := FxLayer.new()
+	rt.add_child(fx)
+	rt.fx_layer = fx
+	var runner := CoroutineRunner.new()
+	var ctx := StageContext.new(runner)
+	assert_eq(ctx.effects.miss_layer, miss, "无 stage 的 ctx 回退当前关卡的 Miss 层")
+	assert_eq(ctx.effects.fx_layer, fx, "无 stage 的 ctx 回退当前关卡的 FX 层")
+	runner.free()
+
+
 func test_game_scene_creates_and_injects_miss_layer() -> void:
 	var scene: PackedScene = load("res://scenes/game_scene.tscn")
 	var inst: Node = scene.instantiate()

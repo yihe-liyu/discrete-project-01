@@ -19,6 +19,10 @@ var world: Node2D
 ## 战场实体注册表（自机 / 敌机 / Boss 的单一真源；W4b-3）
 var refs := EntityRegistry.new()
 
+## "当前关卡"（R8 static var）：供无 stage 的 ctx（自机射击 / 子弹共享 ctx）
+## 回退解析 Miss / FX 层。
+static var current: StageRuntime
+
 ## 注入槽（组合根 / 工作台设置）
 var miss_layer: MissEffectManager
 var fx_layer: FxLayer
@@ -31,8 +35,14 @@ var _stage_script: CoroutineScript
 
 ## 入场即把本关卡的注册表绑到 GameState 过渡门面（先于任何实体 _ready）
 func _enter_tree() -> void:
+	StageRuntime.current = self
 	EntityRegistry.current = refs
 	GameState.bind_refs(refs)
+
+
+func _exit_tree() -> void:
+	if StageRuntime.current == self:
+		StageRuntime.current = null
 
 
 ## 当前关卡协程脚本（工作台/调试读取运行时间用）
@@ -162,6 +172,7 @@ func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: St
 	var runner := CoroutineRunner.new()
 	runner.run(func(): return true)  # 保活：让 ctx.runner 保持 is_running（ctx.active/clock 依赖）
 	var ctx := StageContext.new(runner)
+	ctx.stage = self   # 符卡练习 ctx 也要绑 StageRuntime：ctx.effects/refs 才能解析 Miss 层与自机
 	var single := BossData.new()
 	single.boss_name = boss_name
 	single.visual = boss_scene
