@@ -254,14 +254,14 @@ func _spawn() -> void:
 		data.param(k, params[k])
 	data.pos(_spawn_pos)
 	RNG.set_seed(_seed)
-	_stage_runtime.spawn_enemy_data(data, BulletManager.get_bullet_ctx())
+	_stage_runtime.spawn_enemy_data(data, BulletManager.current.get_bullet_ctx())
 	_update_stats()
 
 func _clear_all() -> void:
 	for e in _stage_runtime.refs.get_active_enemies():
 		if is_instance_valid(e):
 			e.queue_free()
-	BulletManager.clear_all()
+	BulletManager.current.clear_all()
 	_update_stats()
 
 
@@ -278,7 +278,7 @@ func _next_seed() -> void:
 func _update_stats() -> void:
 	if _stats_label:
 		_stats_label.text = "敌人：%d · 弹数：%d · 种子：%d" % [
-			_stage_runtime.refs.get_active_enemies().size(), BulletManager.active_count(), _seed]
+			_stage_runtime.refs.get_active_enemies().size(), BulletManager.current.active_count(), _seed]
 
 
 func _process(delta: float) -> void:

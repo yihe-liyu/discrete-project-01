@@ -10,6 +10,10 @@ func before_each():
 	_holder = Node.new()
 	add_child_autofree(_holder)
 	_refs = EntityRegistry.new()
+	# W4c：用例自建弹幕世界（擦弹结算走它）
+	var bm := BulletManager.new()
+	bm.name = "BulletManager"
+	add_child_autofree(bm)
 
 # ── 骨架 ──
 
@@ -205,7 +209,7 @@ func _make_engine() -> LaserEngine:
 	var engine := LaserEngine.new()
 	autofree(engine)
 	# W4a-2：LaserEngine 不再依赖 BulletPhysics；擦弹结算走注入 Callable（内核规则）
-	engine.setup(_holder, Callable(BulletManager, "_on_laser_graze"))
+	engine.setup(_holder, Callable(BulletManager.current, "_on_laser_graze"))
 	engine.refs = _refs
 	return engine
 
@@ -218,7 +222,7 @@ func _make_engine_player(x: float) -> Player:
 	player.global_position = Vector2(x, 300)
 	player.is_invincible = false
 	_refs.bind_player(player)
-	BulletManager.inject_world_refs(_refs)  # 擦弹结算走 autoload 内核物理：显式注入本用例注册表
+	BulletManager.current.inject_world_refs(_refs)  # 擦弹结算走 autoload 内核物理：显式注入本用例注册表
 	return player
 
 func test_engine_step_detects_hit_and_graze():

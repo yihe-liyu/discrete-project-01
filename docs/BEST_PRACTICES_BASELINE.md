@@ -186,7 +186,6 @@
 # 🔴 待改进（达标后清空）
 > 这里是"当前版本"尚未达标的项（工程红线与 STG 需求均可能命中）。每修一条删一条，最终清空。
 - [ ] R14：存档写 res://（应改 user://）—— 符卡簿/音乐/记录（见 OLD_AUDIT）
-- [ ] R9：`BulletManager` 去 autoload（W4c，引用面 ~22 文件）
 - [ ] R6：外部调 _私有（player._apply_player_data / boss._clear_phase / creation_station）
 - [ ] R4：_process 轮询输入（nav_page 及 3 份复制）
 - [ ] R2：get_node("..")/find_child 全树搜（stage01_decor / boss / stage_background）
@@ -204,7 +203,7 @@
 
 | 红线 | 实测 | 判断 |
 |---|---|---|
-| R9 autoload | **5 个**（W1 12→10，W2 10→8，W3a 8→7，W3b 7→6，W4b 6→5） | `GameState` 已收；`BulletManager`（W4c）待收 |
+| R9 autoload | **4 个**（W1 12→10，W2 10→8，W3a 8→7，W3b 7→6，W4b 6→5，W4c 5→4） | `GameEvents / GameManager / RNG / AudioManager`；已达目标 |
 | R18 单一职责 | `BulletManager` / workbench 4286 行 | `GameState` 已拆（W4b）；余 `BulletManager`/workbench |
 | R21 声明式建树 | workbench 178 处 `.new()` + 183 处 `add_child` | 最大表面积（开发工具，可后） |
 | R6 私有调用 | 12 处 `has_method("_")` | 改公开虚函数 |
@@ -227,3 +226,4 @@
 > - W4b-3b：`refs` 注入内核弹幕路径（`BulletManager` / 桥接碰撞与清弹 / `KernelBomb` / 桥接行为 / `LaserEngine` / `HitboxOverlay`）。`grep GameState` **41 → 35 文件**。详见 §12.15。
 > - W4b-2b：资源消费者直读 `Player.resources`（经 `refs.get_player_resources()`）。`grep GameState` **35 → 31 文件**。详见 §12.16。
 > - W4b-4：`GameState` → `SaveData`（纯 `static`，去 autoload）；资源归 `Player`、实体归 `EntityRegistry`。`grep GameState` **31 → 0**；autoload **6 → 5**。详见 §12.17。
+> - W4c：`BulletManager` 去 autoload（组合根创建 / 注入的弹幕世界 + `static current`）。autoload **5 → 4**。详见 §12.18。

@@ -19,6 +19,9 @@ var world: Node2D
 ## 战场实体注册表（自机 / 敌机 / Boss 的单一真源；W4b-3）
 var refs := EntityRegistry.new()
 
+## 弹幕世界（W4c：组合根注入；供关卡发弹 / 清弹）
+var bullets: BulletManager
+
 ## "当前关卡"（R8 static var）：供无 stage 的 ctx（自机射击 / 子弹共享 ctx）
 ## 回退解析 Miss / FX 层。
 static var current: StageRuntime
@@ -97,7 +100,8 @@ func stop_stage() -> void:
 		_stage_script.queue_free()
 		_stage_script = null
 	refs.clear()
-	BulletManager.clear_bullets()  # 清弹幕，激光自己淡出
+	if bullets:
+		bullets.clear_bullets()  # 清弹幕，激光自己淡出
 
 
 func _on_stage_finished() -> void:
@@ -164,7 +168,7 @@ func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -
 
 ## 返回类型同 BulletService.shoot_spread：旧池 = Bullet，内核路径 = int id（Track A / S3）。
 func spawn_bullet(data: BulletData, position: Vector2, direction: Vector2):
-	return BulletManager.shoot_enemy_bullet(data, position, direction)
+	return bullets.shoot_enemy_bullet(data, position, direction) if bullets else null
 
 
 ## 开一场"仅单个阶段"的战（符卡练习）：自建一个可运行的协程时钟作 ctx，

@@ -77,7 +77,7 @@ func _tick_flee(p_ctx: StageContext):
 				p_ctx.bullets.shoot_spread(red, num, 1 / TAU / 3, away, target.global_position)
 		
 		# 自己消失
-		BulletManager.return_bullet(target)
+		ctx.bullets.return_bullet(target)
 
 
 ## 内核端口（Track A / S4c-3）：TRAVEL→FLEE + 近 Boss 散圈。散圈逻辑留在内容侧。

@@ -7,9 +7,6 @@ extends Node2D
 var draw_enabled: bool = false
 var draw_velocity_lines: bool = false  # 速度线（每颗子弹 3 图元，默认关）
 
-# 缓存节点引用，避免每帧字符串路径查找
-@onready var bullet_manager: BulletManager = get_node_or_null("/root/BulletManager")
-
 func _ready():
 	set_process(false)  # 默认不开启 _process
 
@@ -28,8 +25,9 @@ func _draw():
 		return
 	
 	# ── 画所有子弹判定（内核行）──
-	if bullet_manager:
-		var sys := bullet_manager.kernel_system()
+	var bm := BulletManager.current
+	if bm:
+		var sys := bm.kernel_system()
 		if sys != null:
 			for i in sys.get_active_count():
 				_draw_kernel_bullet_row(sys, i)
@@ -55,11 +53,11 @@ func _draw():
 			draw_circle(player.global_position, 2.0, Color.CYAN)
 	
 	# 左上角显示弹幕计数
-	if bullet_manager:
+	if bm:
 		draw_string(
 			ThemeDB.fallback_font,
 			Vector2(64, 64),
-			"弹幕数: %d" % bullet_manager.active_count(),
+			"弹幕数: %d" % bm.active_count(),
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
 			32,

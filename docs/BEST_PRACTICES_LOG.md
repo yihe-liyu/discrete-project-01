@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-11 — W4c：BulletManager 去 autoload（组合根持有的弹幕世界）
+
+- **目标**：`BulletManager` 从 autoload 改为「组合根创建 / 持有的 `class_name` 场景服务」，autoload **5 → 4**。
+- **做法**：
+  - `BulletManager` 加 `class_name` + `static var current`（R8）；`project.godot` 去 autoload。
+  - 生产路径注入：`GameScene` / `Workbench` / `BenchBase` 创建并注入 `StageRuntime.bullets`；`ctx.bullets`（`BulletService`）持 `world`；`KernelBulletBackend` / `KernelBomb` 持 `world`（持续清弹 / 爆炸清弹）；`Player` 炸弹、`MarisaLaserFollow` 回收走 `ctx.bullets`。
+  - 跨切面（`SceneTransition`、工作台三台、`HitboxOverlay`、`DebugDrawer`）经 `BulletManager.current`；standalone 工作台用 `BenchBase.ensure_bullet_world()` 自建。
+  - 内容脚本 `data/**` 的 `re_fire` / `return_bullet` 走 `ctx.bullets`（`BulletService` 补 `re_fire` / `return_bullet` / `shoot_bomb`）。
+- **度量**：autoload **5 → 4**（`GameEvents / GameManager / RNG / AudioManager`）。
+- **对照旧项目**：旧 `BulletManager` 是 autoload 门面，实体 / 内容 / 工作台全走全局；现在生产走组合根注入，跨切面用 R8 static。
+- **验收**：`check_syntax` 191/0；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans **10**（自建世界被 autofree，比之前更干净）。
+- **备注**：文件仍在 `scripts/autoload/bullet_manager.gd`（名字沿用以减少路径 churn），但已非 autoload。
 ### 2026-09-11 — W4b-4：GameState → SaveData（去 autoload，验收收口）
 
 - **目标**：把 `GameState`（god object）瘦身为「存档 + 菜单/练习状态」，删掉 autoload；单局资源归 `Player`，运行时实体归 `EntityRegistry`。

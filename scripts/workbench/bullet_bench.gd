@@ -282,12 +282,12 @@ func _fire() -> void:
 	_shell.speed = _speed_spin.value
 	var data: BulletData = _shell.build(_cur_script)
 	data.params = _param_panel.collect()
-	BulletManager.shoot_enemy_bullet(data, _emitter_pos, _shell.get_dir())
+	BulletManager.current.shoot_enemy_bullet(data, _emitter_pos, _shell.get_dir())
 	_update_stats()
 
 
 func _clear_all() -> void:
-	BulletManager.clear_all()
+	BulletManager.current.clear_all()
 	_update_stats()
 
 
@@ -303,7 +303,7 @@ func _next_seed() -> void:
 
 func _update_stats() -> void:
 	if _stats_label:
-		_stats_label.text = "场上弹数：%d · 种子：%d" % [BulletManager.active_count(), _seed]
+		_stats_label.text = "场上弹数：%d · 种子：%d" % [BulletManager.current.active_count(), _seed]
 
 
 func _process(delta: float) -> void:
@@ -424,7 +424,7 @@ func _do_hot_reload() -> void:
 	_refresh_watch_mtimes()
 	_hot_dirty_since = -1.0
 	_param_panel.rebuild(_cur_script)  # 脚本参数变更同步
-	BulletManager.clear_all()
+	BulletManager.current.clear_all()
 	RNG.set_seed(_seed)
 	_fire()
 	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))

@@ -13,16 +13,24 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
+## W4c：弹幕世界（组合根创建并注入，不再是 autoload）
+var _bullets: BulletManager
 
 
 func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
+	# W4c：弹幕世界由组合根创建（服务节点）并注入；关卡运行时经它发弹
+	_bullets = BulletManager.new()
+	_bullets.name = "BulletManager"
+	add_child(_bullets)
+	_stage_runtime.bullets = _bullets
+
 	# 组合根装配：Miss 圈 / 特效层 / 关卡运行时（均在 game_scene.tscn 声明，R21），这里只注入。
 	_stage_runtime.world = _world
 	_stage_runtime.miss_layer = _miss_layer
 	_stage_runtime.fx_layer = _fx_layer
-	BulletManager.inject_fx_layer(_fx_layer)
+	_bullets.inject_fx_layer(_fx_layer)
 	_item_pool.refs = _stage_runtime.refs   # 道具经注册表取自机/资源（W4b-2b）
 
 	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
@@ -103,8 +111,8 @@ func _exit_tree():
 		GameEvents.boss_defeated.disconnect(_on_practice_cleared)
 
 	_stage_runtime.miss_layer = null  # 解除注入（节点随本场景释放）
-	BulletManager.clear_all()       # 内含 fx_layer.clear_pool()
-	BulletManager.inject_fx_layer(null)  # 解除特效层注入（防 autoload 持悬空引用）
+	_bullets.clear_all()       # 内含 fx_layer.clear_pool()
+	_bullets.inject_fx_layer(null)  # 解除特效层注入（防持悬空引用）
 	_stage_runtime.fx_layer = null
 	if SaveData.is_practice_mode:
 		SaveData.end_practice()
@@ -127,8 +135,8 @@ func _setup_player() -> void:
 		player._reinit_shoot()
 		# 自机 → 本次关卡世界的实体注册表（BulletManager 亦经注入读取）
 		_stage_runtime.refs.bind_player(player)
-	# 自机已就绪：把本关卡的实体注册表注入内核弹幕后端（autoload._ready 早于自机）
-	BulletManager.inject_world_refs(_stage_runtime.refs)
+	# 自机已就绪：把本关卡的实体注册表注入内核弹幕后端
+	_bullets.inject_world_refs(_stage_runtime.refs)
 	# HUD 单局资源（W4b-2b）
 	_game_ui.resources = _stage_runtime.refs.get_player_resources()
 

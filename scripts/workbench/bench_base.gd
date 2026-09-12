@@ -16,6 +16,18 @@ var _field: Control
 var _ghost: Player
 ## 关卡运行时（W3b-2：组合台自备，门面已移除）
 var _stage_runtime: StageRuntime
+## W4c：本台的弹幕世界（组合台自持；standalone 也能跑）
+var _bullets: BulletManager
+
+
+## 建本台的弹幕世界（幂等）：standalone 工作台无 autoload，需自建
+func ensure_bullet_world() -> BulletManager:
+	if _bullets != null:
+		return _bullets
+	_bullets = BulletManager.new()
+	_bullets.name = "BulletManager"
+	add_child(_bullets)
+	return _bullets
 
 
 ## 建组合台的关卡运行时（幂等）：生成目标 = BenchWorld。_ready 里调用。
@@ -35,6 +47,8 @@ func ensure_stage_runtime() -> StageRuntime:
 ## 场地 + 幽灵（鼠标跟随 = 自机狙目标）搭建；返回场地
 func build_world() -> Control:
 	ensure_stage_runtime()  # 保证本台有关卡运行时（子弹台不显式建：幽灵/注册表注入依赖它）
+	_bullets = ensure_bullet_world()
+	_stage_runtime.bullets = _bullets
 	RIG_COMMON.add_stage_bg(self)
 	# 场地：直接子节点绝对定位；(0,0) 起、832x928 → 局部坐标=游戏坐标
 	_field = Control.new()
@@ -54,7 +68,7 @@ func build_world() -> Control:
 	_field.add_child(_ghost)
 	# 幽灵（自机）→ 关卡实体注册表；注册表 → 内核弹幕后端
 	_stage_runtime.refs.bind_player(_ghost)
-	BulletManager.inject_world_refs(_stage_runtime.refs)
+	_bullets.inject_world_refs(_stage_runtime.refs)
 	return _field
 
 

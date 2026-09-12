@@ -36,7 +36,7 @@ func _tick(p_ctx: StageContext):
 		State.BACK:
 			if _dist <= 1.0:  # 位移过零 = 回到生成位置附近
 				_spawn_split(p_ctx)
-				BulletManager.return_bullet(bullet)
+				ctx.bullets.return_bullet(bullet)
 				return false
 	bullet.global_position += bullet.velocity * dt
 	return true

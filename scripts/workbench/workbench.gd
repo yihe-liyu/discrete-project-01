@@ -73,6 +73,8 @@ var _stage_data: StageData = STAGE1_COROUTINE
 var _ghost: Player
 var _background: Node
 var _hitbox_overlay: Node2D  # 实际是 HitboxOverlay（preload，避免类缓存依赖）
+## W4c：关卡的弹幕世界（组合根创建并注入）
+var _bullets: BulletManager
 
 # 面板拖拽
 # 详情表单高度拖拽
@@ -316,6 +318,10 @@ func _on_tab_selected(i: int) -> void:
 
 ## 幽灵玩家：实例化真实 player.tscn + 换 GhostPlayer 脚本（继承 Player，类型兼容）
 func _setup_world() -> void:
+	_bullets = BulletManager.new()
+	_bullets.name = "BulletManager"
+	add_child(_bullets)
+	_stage_runtime.bullets = _bullets
 	# World 节点在 .tscn（显式 PAUSABLE！否则继承 root 的 ALWAYS，暂停时敌人照常发弹）
 	# 命中框覆盖层：独立 CanvasLayer + 高 z（> 敌弹 10 / 特效 50），画在子弹之上
 	_hitbox_overlay = HITBOX_OVERLAY.new()
@@ -331,7 +337,7 @@ func _setup_world() -> void:
 	# 幽灵（自机）→ 关卡实体注册表
 	_stage_runtime.refs.bind_player(_ghost)
 	# 幽灵就绪：把本台的实体注册表注入内核弹幕后端
-	BulletManager.inject_world_refs(_stage_runtime.refs)
+	_bullets.inject_world_refs(_stage_runtime.refs)
 
 
 # ═══ 关卡加载 / 重跑 ═══
@@ -348,7 +354,7 @@ func _load_stage() -> void:
 	_apply_audio()
 	# 停止旧关卡 + 清空
 	_stage_runtime.stop_stage()
-	BulletManager.clear_all()
+	_bullets.clear_all()
 	AudioManager.stop_bgm()  # 重跑时 BGM 从头播（play_bgm 有同流防重保护，必须先停）
 	# 清 World 残留：退场中的 Boss（_exit_controlled 不 queue_free、已从
 	# active_enemies 移除）stop_stage 清不到 → 立即脱离树，避免卡在画面上
@@ -635,7 +641,7 @@ func _update_ui() -> void:
 		_timeline.queue_redraw()
 	var boss = _stage_runtime.refs.get_boss()
 	_status.set_status(
-		BulletManager.active_count(),
+		_bullets.active_count(),
 		_stage_runtime.refs.get_active_enemies().size(),
 		is_instance_valid(boss),
 		int(Engine.get_frames_per_second()))

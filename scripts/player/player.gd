@@ -206,7 +206,8 @@ func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
 	var data := BulletData.new().tex("bomb01_white").bomb().color(color).dir(dir.x * BOMB_SPEED, dir.y * BOMB_SPEED)
 	data.params = {"spawn_delay": float(i) * BOMB_SPAWN_INTERVAL}
 	_play_sfx(AssetRegistry.sounds["shoot"], -6.0)
-	BulletManager.shoot_bomb_bullet(data, global_position, dir)
+	if ctx:
+		ctx.bullets.shoot_bomb(data, global_position, dir)
 
 
 # ═══ 释放记忆（C 键） ═══

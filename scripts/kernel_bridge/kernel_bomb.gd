@@ -32,6 +32,8 @@ var _init_dir: Vector2 = Vector2.DOWN
 var velocity: Vector2 = Vector2.ZERO
 ## W4b-3b：实体注册表（自机 / 敌机 / Boss；KernelBulletBackend 注入）
 var refs: EntityRegistry
+## W4c：弹幕世界（KernelBulletBackend 注入）——持续清弹 / 爆炸清弹用
+var world: BulletManager
 
 
 func setup(data: BulletData, pos: Vector2, direction: Vector2) -> void:
@@ -90,7 +92,8 @@ func _physics_process(delta: float) -> void:
 		global_position = player.global_position + Vector2.RIGHT.rotated(_angle) * _radius
 		rotation = _angle
 	# 持续清弹：始终清掉自己周围半径内的敌弹（每帧，不节流）
-	BulletManager.clear_enemy_bullets_in_circle(global_position, clear_radius)
+	if world:
+		world.clear_enemy_bullets_in_circle(global_position, clear_radius)
 	if _phase == Phase.FLY:
 		var enemy := _find_nearest_enemy()
 		if enemy and global_position.distance_to(enemy.global_position) <= _hitbox_radius + enemy.hitbox_radius:
@@ -126,7 +129,8 @@ func _explode() -> void:
 	var pos := global_position
 	AudioManager.play_sfx(AssetRegistry.sounds["shoot"], -6.0)
 	_spawn_explosion_visual(pos)
-	BulletManager.start_death_clear(pos, EXPLODE_RADIUS, EXPLODE_DURATION, EXPLODE_START_RADIUS)
+	if world:
+		world.start_death_clear(pos, EXPLODE_RADIUS, EXPLODE_DURATION, EXPLODE_START_RADIUS)
 	for enemy in (refs.get_active_enemies() if refs else []):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue

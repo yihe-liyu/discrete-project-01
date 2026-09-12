@@ -30,7 +30,9 @@ var clock: ClockService:
 
 var bullets: BulletService:
 	get:
-		if _bullets == null: _bullets = BulletService.new()
+		if _bullets == null:
+			_bullets = BulletService.new()
+			_bullets.world = stage.bullets if stage and stage.bullets else BulletManager.current
 		return _bullets
 
 var player: PlayerService:

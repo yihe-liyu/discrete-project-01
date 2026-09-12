@@ -76,7 +76,8 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 			if sprite:
 				sprite.modulate.a = alpha  # MultiMesh 用 sprite.modulate 上色 → 淡出生效
 			if _fade_t <= 0.0:
-				BulletManager.return_bullet(target)  # 淡完回收
+				if ctx:
+					ctx.bullets.return_bullet(target)  # 淡完回收
 				return false  # 协程结束
 		return true
 	)

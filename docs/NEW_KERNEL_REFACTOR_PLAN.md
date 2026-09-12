@@ -397,7 +397,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 ### 12.5 验收（可量化）
 
-- autoload 数：**12 → ≤5**（**已达 5**：W1 后 10，W2 后 8，W3a 后 7，W3b 后 6，W4b 后 **5**：`GameEvents / GameManager / BulletManager / RNG / AudioManager`）。
+- autoload 数：**12 → ≤5**（**已达 4**：W1 后 10，W2 后 8，W3a 后 7，W3b 后 6，W4b 后 5，W4c 后 **4**：`GameEvents / GameManager / RNG / AudioManager`）。
 - `grep -rIl "\bGameState\b" scripts`：**42 → 0**（目标 ≤ 5，**已达成**）。
 - **内核文件里 `GameState` 出现次数 = 0**。
 - 每删/改一个 autoload：GUT 全绿 + 主流程冒烟（主菜单 → stage01 可玩）。
@@ -630,7 +630,20 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **验收**：`grep -rIl "\bGameState\b" scripts` **31 → 0**（全仓 0）；autoload **6 → 5**；`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 12。
 
-**W4c（后续）**：`BulletManager` 去 autoload（引用面 ~22 文件）——目标 autoload 4。
+### 12.18 W4c 实施记录（2026-09-11，已完成）
+
+**目标**：`BulletManager` 去 autoload（autoload 5 → 4），改由组合根创建 / 持有的弹幕世界。
+
+**落点**：
+
+- `BulletManager`：加 `class_name` + `static var current`（R8）；`project.godot` 去 autoload。
+- 生产注入：`GameScene` / `Workbench` / `BenchBase` 创建并注入 `StageRuntime.bullets`；`StageContext.bullets` 把 `world` 交给 `BulletService`；`KernelBulletBackend` / `KernelBomb` 持 `world`。
+- 消费点：`Player` 炸弹 / `MarisaLaserFollow` 回收 / 内容 `data/**` 的 `re_fire`·`return_bullet` 全部走 `ctx.bullets`（服务补 `re_fire` / `return_bullet` / `shoot_bomb`）。
+- 跨切面：`SceneTransition`、工作台三台、`HitboxOverlay`、`DebugDrawer` 经 `BulletManager.current`；standalone 工作台自建（`BenchBase.ensure_bullet_world`）。
+
+**验收**：autoload **5 → 4**；`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
+
+**后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
 ---
 

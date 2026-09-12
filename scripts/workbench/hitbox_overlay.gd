@@ -31,7 +31,8 @@ func _draw() -> void:
 	if not enabled:
 		return
 	# 子弹判定（红）—— 内核行
-	var sys := BulletManager.kernel_system()
+	var bm := BulletManager.current
+	var sys := bm.kernel_system() if bm else null
 	if sys != null:
 		var positions := sys.get_positions()
 		var velocities := sys.get_velocities()

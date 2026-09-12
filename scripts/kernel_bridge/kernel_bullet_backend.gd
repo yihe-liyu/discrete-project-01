@@ -26,6 +26,8 @@ const _MOVE_LASER := &"marisa_laser"
 var system: BulletSystem
 ## W4b-3b：实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
 var refs: EntityRegistry
+## W4c：弹幕世界（BulletManager 注入）——bomb 宿主节点反查用
+var world: BulletManager
 ## 未映射行为（有 coroutine_script 或 accel）的发射次数——S4 前用来看覆盖面。
 var unmapped_behavior_count: int = 0
 
@@ -69,6 +71,7 @@ func _exit_tree() -> void:
 func spawn_bomb(data: BulletData, pos: Vector2, direction: Vector2) -> Node:
 	var bomb: Node2D = KernelBombClass.new()
 	bomb.refs = refs
+	bomb.world = world
 	add_child(bomb)
 	_bombs.append(bomb)
 	bomb.setup(data, pos, direction)

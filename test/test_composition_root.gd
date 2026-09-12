@@ -24,7 +24,7 @@ func test_game_scene_refreshes_kernel_player() -> void:
 	add_child_autofree(inst)
 	await get_tree().process_frame
 	var player: Node2D = inst.get_node("World/Player")
-	var ctx = BulletManager._kernel.behavior_ctx
+	var ctx = BulletManager.current._kernel.behavior_ctx
 	assert_eq(ctx.get_player_position(), player.global_position,
 		"内核行为管道应拿到场景自机（W4a-1 回归：非默认内核时 autoload._ready 早于自机）")
 
@@ -90,6 +90,6 @@ func test_game_scene_creates_and_injects_fx_layer() -> void:
 	var fx: FxLayer = inst.get_node_or_null("World/FxLayer")
 	assert_not_null(fx, "GameScene 应在 World 下创建 FxLayer")
 	assert_eq(inst.get_node("World/StageRuntime").fx_layer, fx, "应注入 StageRuntime.fx_layer")
-	assert_eq(BulletManager.fx_layer, fx, "应注入 BulletManager.fx_layer")
+	assert_eq(BulletManager.current.fx_layer, fx, "应注入 BulletManager.current.fx_layer")
 	assert_eq(fx.get_script().resource_path,
 		"res://scripts/effect/fx_layer.gd", "应挂 FxLayer 脚本")

@@ -15,14 +15,14 @@ func test_hot_reload_debounce_fires_after_stability():
 	rig._watch_mtimes.clear()
 	rig._watch_mtimes[rig._cur_script_path] = FileAccess.get_modified_time(rig._cur_script_path) - 30
 	rig._hot_enabled = true
-	BulletManager.clear_all()
+	BulletManager.current.clear_all()
 	rig._process_hot_reload(0.5)
 	assert_true(rig._reload_status.text.contains("检测到修改"), "首检测提示")
 	rig._process_hot_reload(0.5)
 	rig._process_hot_reload(0.5)
 	assert_true(rig._reload_status.text.contains("已重载"),
 		"防抖后触发重载（状态：%s）" % rig._reload_status.text)
-	assert_true(BulletManager.active_count() >= 1, "重演发弹")
+	assert_true(BulletManager.current.active_count() >= 1, "重演发弹")
 	rig.queue_free()
 
 
@@ -57,13 +57,13 @@ func test_hot_reload_replays_and_keeps_old_on_failure():
 	rig._cur_script_path = "res://data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd"
 	rig._rebuild_watch()
 	assert_true(rig._watch_paths.size() >= 1, "监听集非空（%d）" % rig._watch_paths.size())
-	BulletManager.clear_all()
+	BulletManager.current.clear_all()
 	rig._do_hot_reload()
 	assert_not_null(rig._cur_script, "重载后拿到新脚本")
 	if rig._cur_script:
 		assert_eq(rig._cur_script.resource_path, rig._cur_script_path, "主脚本已替换为新编译版本")
-	assert_true(BulletManager.active_count() >= 1,
-		"重载后自动清场+重演（场上 %d 颗）" % BulletManager.active_count())
+	assert_true(BulletManager.current.active_count() >= 1,
+		"重载后自动清场+重演（场上 %d 颗）" % BulletManager.current.active_count())
 	assert_true(rig._reload_status.text.contains("已重载"), "状态显示成功")
 
 	# ② 失败路径：坏路径 → 保留旧脚本 + 红色失败状态

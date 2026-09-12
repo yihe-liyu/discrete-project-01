@@ -1,5 +1,10 @@
-# BulletManager.gd (Autoload) — 子弹/激光系统的门面（W4a-2：内核唯一后端）
+## 弹幕 / 激光世界（W4c：由组合根创建并注入，不再是 autoload）。
+## 单实例由组合根持有；跨切面（切场 / 工作台 / 调试）经 `current`（R8 static）。
+class_name BulletManager
 extends Node2D
+
+## 当前弹幕世界（组合根 `_ready` 登记；工具/切场回退用）
+static var current: BulletManager
 
 # ═══ 子模块 ───
 const LaserEngineClass = preload("res://scripts/laser/laser_engine.gd")
@@ -44,6 +49,7 @@ func inject_fx_layer(fx: FxLayer) -> void:
 
 
 func _ready():
+	BulletManager.current = self
 	_world_clock = CoroutineRunner.new()
 	_world_clock.name = "WorldClock"
 	add_child(_world_clock)
@@ -58,6 +64,11 @@ func _ready():
 	add_child(_multi_mesh)
 	_enable_kernel()
 	inject_fx_layer(fx_layer)
+
+
+func _exit_tree() -> void:
+	if BulletManager.current == self:
+		BulletManager.current = null
 
 
 func _physics_process(_delta: float) -> void:
@@ -204,6 +215,7 @@ func _enable_kernel() -> void:
 	var refs := world_refs if world_refs != null else EntityRegistry.current
 	if _kernel != null:
 		_kernel.refs = refs
+		_kernel.world = self
 	if _kernel_physics != null:
 		_kernel_physics.refs = refs
 	if _lasers != null:

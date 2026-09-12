@@ -66,7 +66,7 @@ func _re_fire(p_ctx: StageContext, bullet, at: Vector2, dir: Vector2, cur_speed:
 		.color(Color.GOLD)\
 		.blend(true)\
 		.enemy()
-	BulletManager.re_fire(bullet, b, dir, at)
+	ctx.bullets.re_fire(bullet, b, dir, at)
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["kira"], -8.0)
 
 

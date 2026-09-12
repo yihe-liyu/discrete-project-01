@@ -139,11 +139,11 @@ func _clear_view() -> void:
 		return
 	if _current_slot == 0:
 		_view.stop_stage()
-		BulletManager.clear_all()
+		BulletManager.current.clear_all()
 		AudioManager.stop_bgm()
 		_view.queue_free()
 	else:
-		BulletManager.clear_all()
+		BulletManager.current.clear_all()
 		var refs := EntityRegistry.current
 		for enemy in (refs.get_active_enemies() if refs else []):
 			if is_instance_valid(enemy):

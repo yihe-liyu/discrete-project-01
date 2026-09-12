@@ -29,7 +29,9 @@ func _setup_transition() -> void:
 
 
 func change_scene(path: String, current_scene_path: String, on_scene_left: Callable, _on_scene_entered: Callable) -> String:
-	BulletManager.pause_processing()
+	var bm := BulletManager.current
+	if bm:
+		bm.pause_processing()
 	_parent.get_tree().paused = true
 
 	if current_scene_path != "":
@@ -37,7 +39,8 @@ func change_scene(path: String, current_scene_path: String, on_scene_left: Calla
 
 	await _fade_out()
 
-	BulletManager.clear_all()
+	if is_instance_valid(bm):
+		bm.clear_all()
 	var refs := EntityRegistry.current
 	if refs:
 		refs.clear()
@@ -47,14 +50,17 @@ func change_scene(path: String, current_scene_path: String, on_scene_left: Calla
 		# 场景加载失败：回滚暂停状态，避免永久黑屏
 		push_error("SceneTransition: 场景切换失败 %s (%s)" % [path, error_string(err)])
 		_parent.get_tree().paused = false
-		BulletManager.resume_processing()
+		if is_instance_valid(bm):
+			bm.resume_processing()
 		return current_scene_path if current_scene_path != "" else path
 	await _parent.get_tree().process_frame
 
 	await _fade_in()
 
 	_parent.get_tree().paused = false
-	BulletManager.resume_processing()
+	var new_bm := BulletManager.current
+	if new_bm:
+		new_bm.resume_processing()
 
 	return path
 
