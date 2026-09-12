@@ -8,7 +8,7 @@ static var current: BulletManager
 
 # ═══ 子模块 ───
 const LaserEngineClass = preload("res://scripts/laser/laser_engine.gd")
-const DeathClearClass = preload("res://scripts/autoload/bullet/death_clear.gd")
+const DeathClearClass = preload("res://scripts/bullet/death_clear.gd")
 const BulletMultiMeshClass = preload("res://scripts/bullet/bullet_multi_mesh.gd")
 
 var _lasers: LaserEngine

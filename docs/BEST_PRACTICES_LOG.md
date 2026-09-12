@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-11 — K1b：目录归属收口（`scripts/autoload/` 只留真 autoload）
+
+- **目标**：把 `scripts/autoload/` 里 4 个**已非 autoload** 的文件搬回语义目录，令目录名实相符。
+- **做法**：
+  - `autoload/bullet_manager.gd` → `scripts/bullet/bullet_manager.gd`；`autoload/bullet/death_clear.gd` → `scripts/bullet/death_clear.gd`（与 `bullet_multi_mesh.gd` 同组）。
+  - `autoload/game/scene_transition.gd` → `scripts/scenes/scene_transition.gd`；`autoload/game/menu_nav.gd` → `scripts/scenes/menu_nav.gd`（与菜单页 / `game_scene.gd` 同组）。
+  - 删空的 `autoload/bullet/`、`autoload/game/`；`.gd.uid` 随 `git mv`（uid 不变）。
+  - 仅 3 处 `preload` 路径更新：`BulletManager` 的 `DeathClearClass`、`GameManager` 的 `TransClass`/`NavClass`。
+- **度量**：`scripts/autoload/` 文件 **8 → 4**（`audio_manager` / `game_events` / `game_manager` / `rng`，全为真 autoload）；旧路径引用 **0**。
+- **对照旧项目**：旧目录把「autoload」当杂物间（门面 + 子模块 + 场景过渡都塞）；现在目录名 = 真 autoload 白名单。
+- **备注**：W4c 的「文件仍在 `scripts/autoload/`」遗留（见上一条）在本波清除。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 2026-09-11 — K1：脚本命名收口（黑话文件去缩写 + class_name 对齐）
 
 - **目标**：清掉 `scripts/**` 里「文件名 ↔ `class_name` 对不上 / `cs_`·`ov_` 黑话缩写」的命名债；只改名字与路径字符串，不改行为。

@@ -8,8 +8,8 @@ signal scene_entered(scene_path: String)
 signal scene_left(scene_path: String)
 
 # ═══ 模块 ───
-const TransClass = preload("res://scripts/autoload/game/scene_transition.gd")
-const NavClass = preload("res://scripts/autoload/game/menu_nav.gd")
+const TransClass = preload("res://scripts/scenes/scene_transition.gd")
+const NavClass = preload("res://scripts/scenes/menu_nav.gd")
 
 var _transition: SceneTransition
 var _nav: MenuNav

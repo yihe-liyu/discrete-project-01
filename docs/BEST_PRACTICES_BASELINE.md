@@ -102,7 +102,7 @@
 状态：✔（机制闭环） ｜ 适用红线：R1, R2, R10
 - [x] 自机判定点极小且始终可见（HitPointDisplay 常显）—— `scripts/player/hit_point_display.gd`
 - [x] 擦弹半径清晰（focus 时反馈），擦弹次数计入 HUD —— `player.gd graze_radius` + `game_ui.gd`
-- [x] 无敌期间的碰撞被正确忽略，死亡清弹（death clear）覆盖全场 —— `is_invincible`（`bullet_physics.gd` 检查）+ `scripts/autoload/bullet/death_clear.gd`
+- [x] 无敌期间的碰撞被正确忽略，死亡清弹（death clear）覆盖全场 —— `is_invincible`（`bullet_physics.gd` 检查）+ `scripts/bullet/death_clear.gd`
 - [x] 碰撞用宽相网格，不做全弹 O(n²) —— 内核 uniform grid；旧 `SpatialHash` 已随旧池删除（W4a-2）
 
 ## S3. 自机操控与武器（移动 / Option / 射击 / 炸弹）
@@ -228,3 +228,4 @@
 > - W4b-4：`GameState` → `SaveData`（纯 `static`，去 autoload）；资源归 `Player`、实体归 `EntityRegistry`。`grep GameState` **31 → 0**；autoload **6 → 5**。详见 §12.17。
 > - W4c：`BulletManager` 去 autoload（组合根创建 / 注入的弹幕世界 + `static current`）。autoload **5 → 4**。详见 §12.18。
 > - K1（命名收口）：9 个黑话/缩写文件改名（`cs_`/`ov_` 等）、`RigBase` → `BenchBase`、3 个 `.tres` + preload/测试路径同步；语义不一致 **8 → 0**（acronym 大小写刻意不动）。详见 §12.19。
+> - K1b（目录收口）：`scripts/autoload/` **8 → 4 文件**（只留真 autoload）；`bullet_manager`/`death_clear` → `scripts/bullet/`，`scene_transition`/`menu_nav` → `scripts/scenes/`。详见 §12.20。
