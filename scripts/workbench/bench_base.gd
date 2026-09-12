@@ -34,6 +34,129 @@ func restore(_data: Dictionary) -> void:
 func preset_from_entry(_entry) -> void:
 	pass
 
+# ═══ 热更新管线（公共；子类只提供监听路径 + 重载后动作）═══
+## mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
+const HOT_POLL_INTERVAL := 0.5
+const HOT_DEBOUNCE := 0.8
+
+## 右下角浮动状态条（子类 _ready 建好）
+var _toast: Control
+var _watch_paths: Array[String] = []
+var _watch_mtimes: Dictionary = {}
+var _hot_enabled := true
+var _hot_poll := 0.0
+var _hot_dirty_since := -1.0
+
+
+## 子类覆写：要监听的脚本路径（主脚本 + 同目录全部 .gd，连坐重载）
+func _collect_watch_paths() -> Array[String]:
+	return []
+
+
+## 子类覆写：热重载后要替换的主脚本路径；无主脚本返回 ""
+func _main_watch_path() -> String:
+	return ""
+
+
+## 子类覆写：热重载成功后的动作（重建面板 / 重演）
+func _on_hot_reloaded(_main_new: Script) -> void:
+	pass
+
+
+func _on_hot_toggled(on: bool) -> void:
+	_hot_enabled = on
+	_toast.show_msg("热更新：开" if on else "热更新：关", Color(0.5, 0.95, 0.6) if on else Color(1, 1, 1, 0.6))
+
+
+## 主脚本 + 其同目录全部 .gd（A preload B 时只重载 B 无效 → 连坐）
+func _with_dir_scripts(paths: Array) -> Array[String]:
+	var out: Array[String] = []
+	var dirs := {}
+	for p in paths:
+		if p == "":
+			continue
+		if not out.has(p):
+			out.append(p)
+		dirs[p.get_base_dir()] = true
+	for d in dirs:
+		var da := DirAccess.open(d)
+		if da:
+			for f in da.get_files():
+				if f.ends_with(".gd"):
+					var full: String = d.path_join(f)
+					if not out.has(full):
+						out.append(full)
+	return out
+
+
+## 重建监听集（子类切脚本时调用）
+func _rebuild_watch() -> void:
+	_watch_paths = _collect_watch_paths()
+	_refresh_watch_mtimes()
+
+
+## 重载完成后刷新监听基线（避免同一改动反复触发）
+func _refresh_watch_mtimes() -> void:
+	for p in _watch_paths:
+		_watch_mtimes[p] = int(FileAccess.get_modified_time(p))
+
+
+func _process_hot_reload(delta: float) -> void:
+	if not _hot_enabled or _watch_paths.is_empty():
+		return
+	_hot_poll += delta
+	if _hot_poll < HOT_POLL_INTERVAL:
+		return
+	_hot_poll = 0.0
+	var changed := false
+	for p in _watch_paths:
+		var mt := int(FileAccess.get_modified_time(p))
+		if mt != int(_watch_mtimes.get(p, 0)):
+			changed = true
+			# 注意：检测期间【不】更新基线！更新会把防抖清零导致永不重载；重载完成后统一刷新
+	if changed:
+		if _hot_dirty_since < 0.0:
+			_hot_dirty_since = 0.0
+			_toast.show_msg("＊ 检测到修改…", Color(1, 1, 0.6))
+		_hot_dirty_since += HOT_POLL_INTERVAL
+		if _hot_dirty_since >= HOT_DEBOUNCE:
+			_hot_dirty_since = -1.0
+			_do_hot_reload()
+	else:
+		_hot_dirty_since = -1.0
+
+
+## 连坐重载 + 成功后回调子类；解析失败 → 旧版继续 + 红条
+func _do_hot_reload() -> void:
+	var main_path := _main_watch_path()
+	var main_new: Script = null
+	var failed := ""
+	for p in _watch_paths:
+		if p == main_path:
+			continue
+		if not FileAccess.file_exists(p):
+			failed = p
+			break
+		var s: Script = ResourceLoader.load(p, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
+		if s == null:
+			failed = p
+			break
+	if failed == "" and main_path != "":
+		if FileAccess.file_exists(main_path):
+			main_new = ResourceLoader.load(main_path, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
+			if main_new == null:
+				failed = main_path
+		else:
+			failed = main_path
+	if failed != "":
+		_toast.show_msg("⚠ 重载失败：%s（旧版继续）" % failed.get_file(), Color(1, 0.4, 0.4))
+		_refresh_watch_mtimes()
+		_hot_dirty_since = -1.0
+		return
+	_refresh_watch_mtimes()
+	_hot_dirty_since = -1.0
+	_on_hot_reloaded(main_new)
+
 
 ## 建本台的弹幕世界（幂等）：standalone 工作台无 autoload，需自建
 func ensure_bullet_world() -> BulletManager:

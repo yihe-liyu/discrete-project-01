@@ -9,8 +9,6 @@ const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 
 const FIXED_SEED := 20260801
-const HOT_POLL_INTERVAL := 0.5
-const HOT_DEBOUNCE := 0.8
 const VERSION_TAG := "v1.7-ui"
 
 var _shell: Variant
@@ -34,19 +32,12 @@ var _clear_btn: Button
 var _seed_btn: Button
 var _stats_label: Label
 var _reload_status: Label
-var _toast: Control
 var _diff_sel: OptionButton
 var _param_panel: VBoxContainer  # 共享参数面板（param_panel.gd）
 var _hot_chk: CheckBox
 
-# ── 热更新状态 ──
 var _cur_script: Script = null
 var _cur_script_path: String = ""
-var _watch_paths: Array[String] = []
-var _watch_mtimes: Dictionary = {}
-var _hot_enabled := true
-var _hot_poll := 0.0
-var _hot_dirty_since := -1.0
 
 
 func _ready() -> void:
@@ -308,93 +299,6 @@ func _set_current_script() -> void:
 func _on_diff_changed(idx: int) -> void:
 	SaveData.selected_difficulty = idx
 	_update_stats()
-
-
-func _rebuild_watch() -> void:
-	_watch_paths.clear()
-	_watch_mtimes.clear()
-	if _cur_script_path == "":
-		return
-	_watch_paths.append(_cur_script_path)
-	var da := DirAccess.open(_cur_script_path.get_base_dir())
-	if da:
-		for f in da.get_files():
-			if f.ends_with(".gd"):
-				var p := _cur_script_path.get_base_dir().path_join(f)
-				if not _watch_paths.has(p):
-					_watch_paths.append(p)
-	for p in _watch_paths:
-		_watch_mtimes[p] = FileAccess.get_modified_time(p)
-
-
-func _on_hot_toggled(on: bool) -> void:
-	_hot_enabled = on
-	_toast.show_msg("热更新：开" if on else "热更新：关", Color(0.5, 0.95, 0.6) if on else Color(1, 1, 1, 0.6))
-
-
-func _process_hot_reload(delta: float) -> void:
-	if not _hot_enabled or _cur_script_path == "":
-		return
-	_hot_poll += delta
-	if _hot_poll < HOT_POLL_INTERVAL:
-		return
-	_hot_poll = 0.0
-	var changed := false
-	for p in _watch_paths:
-		var mt := int(FileAccess.get_modified_time(p))
-		if mt != int(_watch_mtimes.get(p, 0)):
-			changed = true
-	if changed:
-		if _hot_dirty_since < 0.0:
-			_hot_dirty_since = 0.0
-			_toast.show_msg("＊ 检测到修改…", Color(1, 1, 0.6))
-		_hot_dirty_since += HOT_POLL_INTERVAL
-		if _hot_dirty_since >= HOT_DEBOUNCE:
-			_hot_dirty_since = -1.0
-			_do_hot_reload()
-	else:
-		_hot_dirty_since = -1.0
-
-
-func _refresh_watch_mtimes() -> void:
-	for p in _watch_paths:
-		_watch_mtimes[p] = int(FileAccess.get_modified_time(p))
-
-
-func _do_hot_reload() -> void:
-	var main_new: Script = null
-	var failed := ""
-	for p in _watch_paths:
-		if p == _cur_script_path:
-			continue
-		if not FileAccess.file_exists(p):
-			failed = p
-			break
-		var s: Script = ResourceLoader.load(p, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
-		if s == null:
-			failed = p
-			break
-	if failed == "" and FileAccess.file_exists(_cur_script_path):
-		main_new = ResourceLoader.load(_cur_script_path, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
-		if main_new == null:
-			failed = _cur_script_path
-	elif failed == "":
-		failed = _cur_script_path
-	if failed != "":
-		_toast.show_msg("⚠ 重载失败：%s（旧版继续）" % failed.get_file(), Color(1, 0.4, 0.4))
-		_refresh_watch_mtimes()
-		_hot_dirty_since = -1.0
-		return
-	_cur_script = main_new
-	_refresh_watch_mtimes()
-	_hot_dirty_since = -1.0
-	_param_panel.rebuild(_cur_script)  # 新脚本可能新增/改名参数 → 面板同步
-	_clear_all()
-	RNG.set_seed(_seed)
-	_spawn()
-	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))
-
-
 # ═══ 场地交互 ═══
 
 ## 左键(游戏坐标) → 出生点（rig_base 基类处理坐标换算）
@@ -407,3 +311,22 @@ func _draw_marker() -> void:
 	var p := from_game(_spawn_pos)
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.6, 0.2), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.6, 0.2), 2.0)
+
+
+# ═══ 热更新钩子（管线在 BenchBase）═══
+
+func _collect_watch_paths() -> Array[String]:
+	return _with_dir_scripts([_cur_script_path])
+
+
+func _main_watch_path() -> String:
+	return _cur_script_path
+
+
+func _on_hot_reloaded(main_new: Script) -> void:
+	_cur_script = main_new
+	_param_panel.rebuild(_cur_script)  # 新脚本可能新增/改名参数 → 面板同步
+	_clear_all()
+	RNG.set_seed(_seed)
+	_spawn()
+	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))

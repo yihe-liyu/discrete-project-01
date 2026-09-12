@@ -13,9 +13,6 @@ const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
 const VERSION_TAG := "v3.4-ui"
 
-## 热更新：mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
-const HOT_POLL_INTERVAL := 0.5
-const HOT_DEBOUNCE := 0.8
 
 var _shell: Variant      # BulletShell（preload 构造，规避新 class 全局缓存）
 var _catalog: Variant    # ContentCatalog
@@ -40,19 +37,12 @@ var _dir_angle_label: Label
 var _param_panel: VBoxContainer
 
 var _reload_status: Label
-var _toast: Control
 
 var _hot_chk: CheckBox
 var _diff_sel: OptionButton
 
-# ── 热更新状态 ──
 var _cur_script: Script = null          # 当前行为脚本（发射用它；热重载后替换）
 var _cur_script_path: String = ""
-var _watch_paths: Array[String] = []
-var _watch_mtimes: Dictionary = {}
-var _hot_enabled := true
-var _hot_poll := 0.0
-var _hot_dirty_since := -1.0
 
 
 func _ready() -> void:
@@ -334,102 +324,8 @@ func _set_current_script() -> void:
 		_cur_script_path = entry.path
 		_cur_script = load(_cur_script_path)
 	_rebuild_watch()
-
-
-## 监听集：主脚本 + 同目录全部 .gd（A preload B 时，只重载 B 无效 → 连坐）
-func _rebuild_watch() -> void:
-	_watch_paths.clear()
-	_watch_mtimes.clear()
-	if _cur_script_path == "":
-		return
-	_watch_paths.append(_cur_script_path)
-	var da := DirAccess.open(_cur_script_path.get_base_dir())
-	if da:
-		for f in da.get_files():
-			if f.ends_with(".gd"):
-				var p := _cur_script_path.get_base_dir().path_join(f)
-				if not _watch_paths.has(p):
-					_watch_paths.append(p)
-	for p in _watch_paths:
-		_watch_mtimes[p] = FileAccess.get_modified_time(p)
-
-
-## 重载完成后刷新监听基线（避免同一改动反复触发）
-func _refresh_watch_mtimes() -> void:
-	for p in _watch_paths:
-		_watch_mtimes[p] = int(FileAccess.get_modified_time(p))
-
-
-## 难度切换：diff_pick 运行时实时读取 → 立即生效
 func _on_diff_changed(idx: int) -> void:
 	SaveData.selected_difficulty = idx
-
-
-func _on_hot_toggled(on: bool) -> void:
-	_hot_enabled = on
-	_toast.show_msg("热更新：开" if on else "热更新：关", Color(0.5, 0.95, 0.6) if on else Color(1, 1, 1, 0.6))
-
-
-func _process_hot_reload(delta: float) -> void:
-	if not _hot_enabled or _cur_script_path == "":
-		return
-	_hot_poll += delta
-	if _hot_poll < HOT_POLL_INTERVAL:
-		return
-	_hot_poll = 0.0
-	var changed := false
-	for p in _watch_paths:
-		var mt := int(FileAccess.get_modified_time(p))
-		if mt != int(_watch_mtimes.get(p, 0)):
-			changed = true
-			# 注意：检测期间【不】更新基线！更新会把防抖清零导致永不重载；重载完成后统一刷新
-	if changed:
-		if _hot_dirty_since < 0.0:
-			_hot_dirty_since = 0.0
-			_toast.show_msg("＊ 检测到修改…", Color(1, 1, 0.6))
-		_hot_dirty_since += HOT_POLL_INTERVAL
-		if _hot_dirty_since >= HOT_DEBOUNCE:
-			_hot_dirty_since = -1.0
-			_do_hot_reload()
-	else:
-		_hot_dirty_since = -1.0
-
-
-## 连坐重载 + 重建演出；解析失败 → 旧版继续 + 红条
-func _do_hot_reload() -> void:
-	var main_new: Script = null
-	var failed := ""
-	for p in _watch_paths:
-		if p == _cur_script_path:
-			continue
-		if not FileAccess.file_exists(p):
-			failed = p
-			break
-		var s: Script = ResourceLoader.load(p, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
-		if s == null:
-			failed = p
-			break
-	if failed == "" and FileAccess.file_exists(_cur_script_path):
-		main_new = ResourceLoader.load(_cur_script_path, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
-		if main_new == null:
-			failed = _cur_script_path
-	elif failed == "":
-		failed = _cur_script_path
-	if failed != "":
-		_toast.show_msg("⚠ 重载失败：%s（旧版继续）" % failed.get_file(), Color(1, 0.4, 0.4))
-		_refresh_watch_mtimes()
-		_hot_dirty_since = -1.0
-		return
-	_cur_script = main_new
-	_refresh_watch_mtimes()
-	_hot_dirty_since = -1.0
-	_param_panel.rebuild(_cur_script)  # 脚本参数变更同步
-	BulletManager.current.clear_all()
-	RNG.set_seed(_seed)
-	_fire()
-	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))
-
-
 # ═══ 场地交互 ═══
 
 func _on_field_input(event: InputEvent) -> void:
@@ -476,3 +372,22 @@ func _on_field_draw() -> void:
 		var side := d.rotated(2.6) * 10.0
 		_field.draw_line(tip, tip + side, Color(0.35, 0.95, 0.45), 2.0)
 		_field.draw_line(tip, tip + _shell.dir.rotated(-2.6) * 10.0, Color(0.35, 0.95, 0.45), 2.0)
+
+
+# ═══ 热更新钩子（管线在 BenchBase）═══
+
+func _collect_watch_paths() -> Array[String]:
+	return _with_dir_scripts([_cur_script_path])
+
+
+func _main_watch_path() -> String:
+	return _cur_script_path
+
+
+func _on_hot_reloaded(main_new: Script) -> void:
+	_cur_script = main_new
+	_param_panel.rebuild(_cur_script)  # 脚本参数变更同步
+	BulletManager.current.clear_all()
+	RNG.set_seed(_seed)
+	_fire()
+	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))

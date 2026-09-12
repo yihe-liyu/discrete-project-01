@@ -190,7 +190,7 @@
 - [ ] R12：@export var x = preload(...)（enemy_data.gd:9）
 - [ ] R15：77 个中文文件名、assets/Textures 等 PascalCase 目录、diffculty 拼错
 - [ ] R16：40MB+ 二进制未配 Git LFS
-- [ ] R18/R19：workbench.gd / spell_practice_menu.gd 上帝对象 + 三台热更新逻辑复制
+- [ ] R18/R19：workbench.gd / spell_practice_menu.gd 上帝对象（**三台热更新逻辑复制已收口，K5**）
 
 > **S1–S13 重审说明（2026-09）**：原自评多为未勾，实际大量已落地——已按代码证据逐条重审。另两处过时项已核：
 > - **R14「存档写 res://」已不成立**：`save_manager.gd` 用 `user://save_data.cfg`。
@@ -201,7 +201,7 @@
 | 红线 | 实测 | 判断 |
 |---|---|---|
 | R9 autoload | **4 个**（W1 12→10，W2 10→8，W3a 8→7，W3b 7→6，W4b 6→5，W4c 5→4） | `GameEvents / GameManager / RNG / AudioManager`；已达目标 |
-| R18 单一职责 | `BulletManager` / workbench 4286 行 | `GameState` 已拆（W4b）；余 `BulletManager`/workbench |
+| R18/R19 单一职责/DRY | 三台热更新管线 **15 份复制 → 基类 1 份**（K5，净 -116 行） | 余 `workbench.gd` / `spell_practice_menu.gd` 上帝对象 |
 | R21 声明式建树 | workbench 178 处 `.new()` + 183 处 `add_child` | 最大表面积（开发工具，可后） |
 | R6 私有调用 | **0 处**（K2 已清：`has_method("_")` 12→0、生产对外私有调用 6 组→0） | ✅ 公开虚函数 + 类型化接口 |
 | 层序契约 | 30 处散写 `z_index` | 收敛到 `LayerConfig` |
@@ -229,3 +229,4 @@
 > - K2（R6 收口）：`BasePage` 生命周期改公开虚函数 + `MenuNav` 栈类型化；`BenchBase` 公开 `snapshot/restore/preset_from_entry`；`Player`/`Boss`/`LaserBeam` 私有入口公开化。`has_method("_")` **12 → 0**。详见 §12.21。
 > - K4（R2 收口）：Boss 指示器 UI 层 / 背景相机 / 炸弹爆图父节点均改组合根注入；`find_child` **2 → 0**、`$".."` **4 → 0**。详见 §12.22。
 > - K3（R4 收口）：菜单 / 暂停 / 自机离散键改 `_unhandled_input`，`NavPage` 统一导航（复制 3→1）；边沿轮询 **6 → 0**。详见 §12.23。
+> - K5（R18/R19 收口）：三台热更新管线收口到 `BenchBase`（15 份复制 → 基类 1 份 + 3 组 hook），workbench 净 **-116 行**。详见 §12.24。

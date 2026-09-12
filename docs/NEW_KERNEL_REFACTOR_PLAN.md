@@ -645,6 +645,15 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.24 K5 实施记录（2026-09-11，已完成）
+
+**目标**：三台热更新管线去重（R19），收口 workbench 表面积（R18）。
+
+**落点**：管线字段/常量 + `_on_hot_toggled`/`_rebuild_watch`/`_refresh_watch_mtimes`/`_process_hot_reload`/`_do_hot_reload` 全部上移 `BenchBase`；三台只实现 `_collect_watch_paths` / `_main_watch_path` / `_on_hot_reloaded`。
+
+**度量**：热更新方法定义 **15 → 基类 5 + 3 组 hook**；workbench 净 **-116 行**。
+
+**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 12.23 K3 实施记录（2026-09-11，已完成）
 
 **目标**：菜单 / 暂停 / 自机离散键改事件驱动，消除 `_process` 边沿轮询（R4）。

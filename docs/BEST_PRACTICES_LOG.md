@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-11 — K5：workbench 热更新管线收口（R18/R19）
+
+- **目标**：消除三台（弹幕/敌人/阶段）逐字复制的热更新管线（R19），缩小 workbench 上帝对象表面积（R18）。
+- **做法**：把整条管线（`HOT_POLL_INTERVAL`/`HOT_DEBOUNCE`、`_watch_paths`/`_watch_mtimes`/`_hot_enabled`/`_hot_poll`/`_hot_dirty_since`、`_on_hot_toggled`/`_rebuild_watch`/`_refresh_watch_mtimes`/`_process_hot_reload`/`_do_hot_reload`、`_toast` 字段）上移到 `BenchBase`；新增三个 hook：`_collect_watch_paths()`（监听路径 + `_with_dir_scripts` 连坐扩展）、`_main_watch_path()`（主脚本）、`_on_hot_reloaded(main_new)`（重载后动作）。
+- **度量**：热更新方法定义 **15 份 → 基类 5 + 三组轻量 hook**；workbench 净 **-116 行**（+172 / -288）。
+- **对照旧项目**：旧三台各抄一份 mtime 轮询/防抖/连坐重载；现在差异只在「监听谁、重载后干什么」，公共管线单一来源。
+- **踩坑**：`_do_hot_reload` 末尾的「已重载」toast 属函数体，收口时一开始漏搬 → `test_bullet_rig` 断言失败；补回后全绿（搬家要连函数尾部的副作用一起搬）。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 2026-09-11 — K3：R4 收口（输入事件驱动，去 _process 轮询）
 
 - **目标**：菜单 / 暂停 / 自机离散键从 `_process`·`_physics_process` 的 `Input.is_action_just_pressed` 轮询改为 `_unhandled_input`（工程红线 R4）。
