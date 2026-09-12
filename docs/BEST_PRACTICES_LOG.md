@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-11 — W4b-3a：运行时引用抽成 EntityRegistry（StageRuntime 持有 + GameState 过渡门面）
+
+- **目标**：把 `GameState` 的运行时引用（`player` / `active_enemies` / `get_boss`）搬出 god object，改为「组合根持有的 `EntityRegistry`」，为 W4b-4 瘦身 `GameState` 铺路。
+- **为什么**：R18（`GameState` 是 god object）+ R2/R9（依赖向下注入，不读全局）。`GameState` 只该管存档/持久化；战场实体（自机 / 敌机 / Boss）是**每关世界**的状态，应随 `StageRuntime` 存亡。
+- **对照旧项目**：旧 `GameState.active_enemies` 是全局数组，实体 `_ready` 自注册、`clear_enemies` 遍历 queue_free；现注册表由 `StageRuntime` 持有，`Enemy` 经注入的 `registry` 注册，`stop_stage` 调 `refs.clear()`。
+- **做法（strangler）**：新 `scripts/stage/entity_registry.gd`（`class_name EntityRegistry extends RefCounted`：`player` / `enemies` / `register_enemy` / `get_boss` / `clear`）；`StageRuntime.refs` 持有并在 `_enter_tree` `GameState.bind_refs`；`GameState.player` / `active_enemies` / `get_active_enemies` / `get_boss` / `clear_enemies` 改为**转发门面**。已迁直接消费者：`Enemy`（注入 registry）、`PlayerService` / `BossService`（经 `StageContext.refs`）、`MoveHoming`；组合根（`GameScene._setup_player` / `bench_base.build_world` / `workbench._setup_world`）注入自机。
+- **踩坑**：`EntityRegistry.player` 起初写成**无类型** Variant → 自机 free 后仍指向已释放实例，门面 getter 返回时报 `previously freed instance`（10 个用例失败）。改成内建 `Node2D` 类型后 Godot 自动置 null，getter 再加 `is_instance_valid` 兜底。教训：宿主实体引用**不要用无类型 Variant 保存**。
+- **度量**：`grep -rIl "\bGameState\b" scripts` **46 → 41 文件**（`enemy` / `player_service` / `boss_service` / `move_homing` / `ghost_player` 摘除），引用 180 → 172。
+- **验收**：`test/test_entity_registry.gd`（4 用例）；`check_syntax` 191 脚本 / 0 失败；全量 **56 套 / 307 测试 / 3203 断言全绿**；orphans 12。
+- **后续（W4b-3b）**：把 `refs` 注入 `BulletManager` / `KernelBulletBackend` / `KernelBulletPhysics` / `KernelBomb` / 桥接行为 / `LaserEngine`，去掉内核弹幕路径对门面的读取。
 ### 2026-09-11 — W4a-2 修复：魔理沙激光贴图不旋转
 
 - **现象**：内核唯一后端下，魔理沙非 focus 激光段的贴图不随漂移方向旋转。

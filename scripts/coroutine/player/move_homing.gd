@@ -88,7 +88,8 @@ func _apply_homing(turn_factor: float, dt: float):
 func _find_nearest_enemy() -> Node2D:
 	var nearest: Node2D = null
 	var nearest_dist := INF
-	for enemy: Node2D in GameState.active_enemies:
+	var enemies: Array = ctx.refs.get_active_enemies() if ctx and ctx.refs else []
+	for enemy: Node2D in enemies:
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
 		if enemy is Boss:

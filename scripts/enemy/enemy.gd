@@ -8,6 +8,9 @@ var enemy_data: EnemyData
 ## 运行时上下文（EnemyData.spawn 注入，用于走服务而非全局）
 var ctx: StageContext
 
+## 战场实体注册表（StageRuntime 注入；直接实例化时为空，跳过注册）
+var registry
+
 var _visual: Node2D          # 外观实例（可能不是 AnimatedSprite2D）
 var max_hp: int
 var hitbox_radius: float
@@ -24,13 +27,15 @@ func _ready():
 	if enemy_data: _apply_enemy_data(enemy_data)
 	_last_pos = global_position
 	
-	GameState.active_enemies.append(self)
+	if registry:
+		registry.register_enemy(self)
 	if not tree_exited.is_connected(_on_tree_exited):
 		tree_exited.connect(_on_tree_exited)
 
 
 func _on_tree_exited():
-	GameState.active_enemies.erase(self)
+	if registry:
+		registry.unregister_enemy(self)
 
 
 func _process(_delta: float) -> void:
@@ -85,7 +90,8 @@ func die():
 		ctx.audio.play_sfx(AssetRegistry.sounds["enemy_die"], -6.0)
 		if death_effect:
 			ctx.effects.play_hit_effect(death_effect, global_position)
-	GameState.active_enemies.erase(self)
+	if registry:
+		registry.unregister_enemy(self)
 	
 	# 掉落 item
 	_drop_item()

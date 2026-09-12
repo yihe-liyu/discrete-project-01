@@ -51,6 +51,9 @@ func build_world() -> Control:
 	_ghost.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
 	_ghost.z_index = 30
 	_field.add_child(_ghost)
+	# 幽灵（自机）→ 关卡实体注册表
+	if _stage_runtime:
+		_stage_runtime.refs.bind_player(_ghost)
 	# 幽灵就绪：刷新内核行为管道的自机引用（W4a-1 起内核为默认）
 	BulletManager.refresh_kernel_player()
 	return _field

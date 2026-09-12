@@ -35,7 +35,9 @@ var bullets: BulletService:
 
 var player: PlayerService:
 	get:
-		if _player == null: _player = PlayerService.new()
+		if _player == null:
+			_player = PlayerService.new()
+			_player.ctx = self
 		return _player
 
 var dialogue: DialogueService:
@@ -66,13 +68,19 @@ var effects: EffectService:
 
 var boss: BossService:
 	get:
-		if _boss == null: _boss = BossService.new()
+		if _boss == null:
+			_boss = BossService.new()
+			_boss.ctx = self
 		return _boss
 
 var diff: DifficultyService:
 	get:
 		if _diff == null: _diff = DifficultyService.new()
 		return _diff
+
+## 战场实体注册表（自机 / 敌机 / Boss）——由 StageRuntime 提供（W4b-3）
+var refs: EntityRegistry:
+	get: return stage.refs if stage else null
 
 ## 命名对象注册表（W2：per-ctx，随关卡生命周期；原 StageObjects autoload）
 var objects: StageObjects:

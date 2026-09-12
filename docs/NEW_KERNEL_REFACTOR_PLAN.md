@@ -560,6 +560,24 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（W4b-2b/3/4）**：其余消费者（`game_ui` / `item` / `boss` / 内核桥接 / 菜单）改直接持 `PlayerResources` → 注入 `player` / `active_enemies` → 瘦身 `GameState` 成存档全局。注意：W4b-2a 只覆盖有天然注入点的 `Player`；全量去耦合需按文件逐个消除 `GameState` 引用（共 ~45 生产文件）。
 
+### 12.14 W4b-3a 实施记录（2026-09-11，已完成）
+
+**目标**：把 `GameState` 的运行时引用（`player` / `active_enemies` / `get_boss`）抽成「组合根持有的 `EntityRegistry`」（R18 / R2 / R9），`GameState` 退为**过渡门面**（调用点零改动），为 W4b-4 瘦身存档全局铺路。
+
+**落点**：
+
+- 新增 `scripts/stage/entity_registry.gd`：`class_name EntityRegistry extends RefCounted` —— `player` / `enemies` / `bind_player` / `register_enemy` / `unregister_enemy` / `get_active_enemies` / `get_boss` / `clear`。
+- `StageRuntime`：`var refs := EntityRegistry.new()`；`_enter_tree()` 里 `GameState.bind_refs(refs)`（先于任何实体 `_ready`）；`add_enemy_to_scene()` 给实体注入 `registry`；`stop_stage()` 用 `refs.clear()`。
+- `GameState`：`_refs` + `bind_refs()`；`player` / `active_enemies` / `get_active_enemies()` / `get_boss()` / `clear_enemies()` 改为**转发门面**（删掉自身数组与 `BossScript` 常量）。
+- 直接消费者迁移：`Enemy`（注入 `registry` 自注册）、`PlayerService` / `BossService`（经 `StageContext.refs`，`ctx` 回填）、`MoveHoming`（`ctx.refs`）。
+- 组合根注入自机：`GameScene._setup_player` / `bench_base.build_world` / `workbench._setup_world`。
+
+**验收**：`test/test_entity_registry.gd`（4 用例）；`check_syntax` **191 脚本 / 0 失败**；全量 **56 套 / 307 测试 / 3203 断言全绿**；orphans 12。`grep -rIl "\bGameState\b" scripts` **46 → 41**（引用 180 → 172）。
+
+**踩坑（记录）**：`EntityRegistry.player` 初版写成无类型 Variant，自机 `free()` 后残留「已释放实例」，门面 getter 返回时报 `previously freed instance`（10 个用例红）。改内建 `Node2D` 类型 + getter `is_instance_valid` 兜底后修复。
+
+**W4b-3b（下一步）**：把 `refs` 注入 `BulletManager` / `KernelBulletBackend` / `KernelBulletPhysics` / `KernelBomb` / 桥接行为 / `LaserEngine`，拆掉内核弹幕路径对门面的读取。
+
 ---
 
 ## 13. Track A spike 记录：S0 内核 vendor（2026-09-11，已完成）

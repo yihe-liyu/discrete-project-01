@@ -2,7 +2,6 @@
 extends Node
 ## 全局游戏数据唯一真源
 
-const BossScript = preload("res://scripts/enemy/boss.gd")
 const REGISTRY_PATH := "res://data/registry/stage_registry.tres"
 
 # ══════════════════════════════════════════════
@@ -17,11 +16,26 @@ var selected_character: int = 0
 var current_stage_id: int = 1
 
 # ══════════════════════════════════════════════
-# 运行时引用
+# 运行时引用（W4b-3：真源迁到 EntityRegistry）
 # ══════════════════════════════════════════════
 
-var player: Player = null
-var active_enemies: Array = []
+## 战场实体注册表。组合根（StageRuntime）经 bind_refs 注入；未绑定时用空表兜底。
+var _refs: EntityRegistry = EntityRegistry.new()
+
+## 组合根在 StageRuntime 入场时绑定本次关卡世界的注册表。
+func bind_refs(p_refs: EntityRegistry) -> void:
+	_refs = p_refs
+
+## 过渡门面：转发到 EntityRegistry（迁移完成后删除）。
+var player: Player:
+	get:
+		var p = _refs.player
+		return p if is_instance_valid(p) else null
+	set(v): _refs.player = v
+
+var active_enemies: Array:
+	get: return _refs.enemies
+
 var stage_registry: StageRegistry
 
 # ══════════════════════════════════════════════
@@ -366,18 +380,12 @@ func _process(delta: float) -> void:
 # ══════════════════════════════════════════════
 
 func get_active_enemies() -> Array:
-	return active_enemies
+	return _refs.get_active_enemies()
 
 
 func get_boss():
-	for enemy in active_enemies:
-		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and enemy.get_script() == BossScript:
-			return enemy
-	return null
+	return _refs.get_boss()
 
 
 func clear_enemies():
-	for enemy in active_enemies:
-		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion():
-			enemy.queue_free()
-	active_enemies.clear()
+	_refs.clear()

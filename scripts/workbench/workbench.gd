@@ -327,6 +327,8 @@ func _setup_world() -> void:
 	_ghost.name = "Player"
 	_ghost.player_data = REIMU_DATA
 	_world.add_child(_ghost)
+	# 幽灵（自机）→ 关卡实体注册表
+	_stage_runtime.refs.bind_player(_ghost)
 	# 幽灵就绪：刷新内核行为管道的自机引用
 	BulletManager.refresh_kernel_player()
 

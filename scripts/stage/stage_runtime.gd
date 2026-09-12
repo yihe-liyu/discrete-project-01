@@ -16,6 +16,9 @@ signal all_enemies_defeated()
 ## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
 var world: Node2D
 
+## 战场实体注册表（自机 / 敌机 / Boss 的单一真源；W4b-3）
+var refs := EntityRegistry.new()
+
 ## 注入槽（组合根 / 工作台设置）
 var miss_layer: MissEffectManager
 var fx_layer: FxLayer
@@ -24,6 +27,11 @@ var current_background: StageBackground
 var current_stage: StageData
 var _stage_active: bool = false
 var _stage_script: CoroutineScript
+
+
+## 入场即把本关卡的注册表绑到 GameState 过渡门面（先于任何实体 _ready）
+func _enter_tree() -> void:
+	GameState.bind_refs(refs)
 
 
 ## 当前关卡协程脚本（工作台/调试读取运行时间用）
@@ -78,7 +86,7 @@ func stop_stage() -> void:
 		_stage_script.stop()
 		_stage_script.queue_free()
 		_stage_script = null
-	GameState.clear_enemies()
+	refs.clear()
 	BulletManager.clear_bullets()  # 清弹幕，激光自己淡出
 
 
@@ -171,9 +179,13 @@ func _inject_player_ctx(p_ctx: StageContext) -> void:
 	var player := world.get_node_or_null("Player") as Player
 	if player:
 		player.ctx = p_ctx
+		refs.bind_player(player)
 
 
 func add_enemy_to_scene(node: Node2D) -> void:
+	# 注入注册表：Enemy 在 _ready 自注册、Boss 在 start_boss 注册（都在 add_child 之后，故先给引用）
+	if "registry" in node:
+		node.registry = refs
 	var parent: Node = null
 	if is_instance_valid(world):
 		parent = world
