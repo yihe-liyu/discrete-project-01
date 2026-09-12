@@ -53,6 +53,11 @@ func _ready() -> void:
 	_ensure_system()
 
 
+## 当前自机的单局资源（经注册表取）；无自机 = null
+func _player_res() -> PlayerResources:
+	return refs.get_player_resources() if refs != null else null
+
+
 func _exit_tree() -> void:
 	for p in _port_probes:
 		if is_instance_valid(p):
@@ -129,9 +134,9 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	var tint: Color = data.tint
 	if data.faction == BulletData.Faction.PLAYER:
 		# 旧 Bullet.bind：自机弹在记忆 <50 时往红 lerp（spawn 时定一次）
-		var mem: float = GameState.memory_value
-		if mem < 50.0:
-			tint = tint.lerp(Color.RED, remap(mem, 0.0, 50.0, 1.0, 0.0) * 0.5)
+		var res := _player_res()
+		if res != null and res.memory_value < 50.0:
+			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
 	var id: int = system.spawn(type, pos, vel, tint, move, params)
 	_sync_host_tables(id, data)
 	return id

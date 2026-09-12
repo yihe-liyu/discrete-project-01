@@ -10,6 +10,8 @@ const NON_MID = preload("res://data/stages/stage01/phase/non_mid01/non_mid01_bul
 const MARISA_LASER = preload("res://scripts/coroutine/player/marisa_laser_follow.gd")
 
 var _backend: KernelBulletBackend
+var _refs: EntityRegistry
+var _stub_player: Player
 var _saved_enemies: Array = []
 var _saved_difficulty: int = 1
 var _saved_memory: float = 50.0
@@ -22,10 +24,17 @@ func before_each() -> void:
 	_saved_memory = GameState.memory_value
 	_backend = KernelBulletBackend.new()
 	add_child_autofree(_backend)
+	# 资源读取经 refs.player.resources：绑一个带资源的自机桩（resources 同一全局实例）
+	_refs = EntityRegistry.new()
+	_stub_player = Player.new()
+	_stub_player.resources = GameState.resources
+	_refs.bind_player(_stub_player)
+	_backend.refs = _refs
 	_backend.setup_behaviors(null, Callable())
 
 
 func after_each() -> void:
+	_stub_player.free()
 	GameState.active_enemies.clear()
 	GameState.active_enemies.append_array(_saved_enemies)
 	GameState.selected_difficulty = _saved_difficulty

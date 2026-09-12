@@ -5,6 +5,8 @@ enum Type { POWER, POINT, LIFE_FRAGMENT, BOMB_FRAGMENT, LIFE_FULL, BOMB_FULL }
 
 var item_type: Type = Type.POINT
 var value: int = 100
+## W4b-2b：实体注册表（ItemPool 注入）——取自机与单局资源
+var refs: EntityRegistry
 var _velocity: Vector2
 var _gravity: float = 240.0
 var _max_fall_speed: float = 180.0
@@ -54,8 +56,8 @@ func _physics_process(delta: float) -> void:
 	if _dead:
 		return
 	
-	var player := GameState.player
-	var to_player := player.global_position - global_position if player and is_instance_valid(player) else Vector2.ZERO
+	var player = refs.player if refs else null
+	var to_player: Vector2 = player.global_position - global_position if player and is_instance_valid(player) else Vector2.ZERO
 	
 	# 玩家过收点线 或 靠近自机 → 自动吸附（focus 时范围翻倍）
 	if player and is_instance_valid(player):
@@ -64,7 +66,7 @@ func _physics_process(delta: float) -> void:
 			_auto_collect = true
 	
 	if _auto_collect and player and is_instance_valid(player):
-		var dir := to_player.normalized()
+		var dir: Vector2 = to_player.normalized()
 		global_position += dir * _collect_speed * delta
 		# 近距离保险：飞过头也能吃到
 		if to_player.length() < 8.0:
@@ -99,19 +101,21 @@ func collect() -> void:
 	AudioManager.play_sfx(AssetRegistry.sounds["item"], -6.0)
 	visible = false
 	set_physics_process(false)
-	match item_type:
-		Type.POWER:
-			GameState.add_power(1)
-		Type.POINT:
-			GameState.add_max_point()
-		Type.LIFE_FRAGMENT:
-			GameState.collect_life_fragment()
-		Type.BOMB_FRAGMENT:
-			GameState.collect_bomb_fragment()
-		Type.LIFE_FULL:
-			GameState.collect_life_full()
-		Type.BOMB_FULL:
-			GameState.collect_bomb_full()
+	var res: PlayerResources = refs.get_player_resources() if refs else null
+	if res != null:
+		match item_type:
+			Type.POWER:
+				res.add_power(1)
+			Type.POINT:
+				res.add_max_point()
+			Type.LIFE_FRAGMENT:
+				res.collect_life_fragment()
+			Type.BOMB_FRAGMENT:
+				res.collect_bomb_fragment()
+			Type.LIFE_FULL:
+				res.collect_life_full()
+			Type.BOMB_FULL:
+				res.collect_bomb_full()
 	_recycle()
 
 func _recycle() -> void:

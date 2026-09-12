@@ -36,6 +36,13 @@ func get_active_enemies() -> Array:
 	return enemies
 
 
+## 当前自机的单局资源（无自机 = null）——消费者统一经此读，避免 unsafe 属性访问
+func get_player_resources() -> PlayerResources:
+	if not is_instance_valid(player):
+		return null
+	return player.get("resources")
+
+
 ## 当前场上的 Boss（无 → null）。按脚本类型识别，与旧全局查询判据一致。
 func get_boss():
 	for e in enemies:

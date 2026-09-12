@@ -218,6 +218,7 @@ func _make_engine_player(x: float) -> Player:
 	player.global_position = Vector2(x, 300)
 	player.is_invincible = false
 	_refs.bind_player(player)
+	BulletManager.inject_world_refs(_refs)  # 擦弹结算走 autoload 内核物理：显式注入本用例注册表
 	return player
 
 func test_engine_step_detects_hit_and_graze():

@@ -604,6 +604,20 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **踩坑（记录）**：内核/桥接里把「可能含已释放实例」的数组用 `for enemy: Node2D in ...` 迭代，或把 `refs.player` 直接赋给 `Player` 类型变量，会在赋值/迭代时抛 `Trying to assign invalid previously freed instance`。规则：**先 `is_instance_valid` 再赋类型化变量；迭代用无类型 `for enemy in ...`**。
 
+### 12.16 W4b-2b 实施记录（2026-09-11，已完成）
+
+**目标**：资源消费者从 `GameState` 转发改为直读 `Player.resources`（方案 A：Player 持有）。
+
+**落点**：
+
+- `EntityRegistry.get_player_resources()`：安全取「自机持有的 `PlayerResources`」，供消费者统一读取。
+- 内核桥接 `KernelBulletPhysics` / `KernelBulletBackend` 的 `_player_res()` 取它（记忆加成/擦弹/命中/变红）。
+- `cs_player` → `leader.get("resources")`；`item` → `ItemPool.refs` 注入；`game_ui.resources` 由 `GameScene` 注入；`boss` 增 `registry` 并用 `_refs()`；`stage_runtime` 取分数。
+
+**验收**：`check_syntax` **191/0**；全量 **56 套 / 311 测试 / 3212 断言全绿**；orphans 12。`grep GameState` **35 → 31 文件**（引用 159 → 122）。
+
+**下一步（W4b-4）**：`GameState` → `SaveData`（`class_name` + `static`，不改 autoload）持有持久化/练习/符卡簿/高分；`reset_*` 归 `PlayerResources`；`_apply_ui_theme/_apply_settings` 与 `enemy_killed→score` / `regen` 移出。
+
 ---
 
 ## 13. Track A spike 记录：S0 内核 vendor（2026-09-11，已完成）

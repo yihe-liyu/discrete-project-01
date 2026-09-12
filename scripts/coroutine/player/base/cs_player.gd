@@ -77,7 +77,8 @@ func _sync_options(leader: Node2D, _ctx: StageContext) -> void:
 	if setup.is_empty():
 		return
 	
-	var pw := GameState.power_raw
+	var res = leader.get("resources") if leader != null else null
+	var pw: int = res.power_raw if res != null else 0
 	var focused := Input.is_action_pressed("focus")
 	
 	var levels: Array = setup.get("counts", [])

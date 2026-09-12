@@ -107,7 +107,11 @@ func _on_stage_finished() -> void:
 	_stage_active = false
 	stage_cleared.emit()
 	all_enemies_defeated.emit()
-	GameState.save_high_score(current_stage.stage_id, GameState.current_score)
+	var score := 0
+	var res: PlayerResources = refs.get_player_resources()
+	if res != null:
+		score = res.current_score
+	GameState.save_high_score(current_stage.stage_id, score)
 
 
 ## 从 EnemyData 生成敌人（实例化/挂载协程/入场景）

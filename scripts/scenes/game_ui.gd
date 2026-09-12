@@ -2,6 +2,9 @@ extends CanvasLayer
 class_name GameUI
 ## 游戏 HUD —— Score / HiScore / Power / MaxPoint / Graze
 
+## W4b-2b：单局资源（组合根注入；过渡期与全局资源同一实例）
+var resources: PlayerResources
+
 ## 入场动画完成时发射，供 GameScene 等待
 signal entry_finished()
 
@@ -259,6 +262,8 @@ func _life_frame(value: float) -> int:
 
 
 func _update_fragments() -> void:
+	if resources == null:
+		return
 	var fw_life := _LIFE_TEX.get_width() / 6.0
 	var fw_spell := _SPELL_TEX.get_width() / 6.0
 	var life_h := _LIFE_TEX.get_height()
@@ -266,28 +271,28 @@ func _update_fragments() -> void:
 	
 	for i in 8:
 		# 残机：前 lives 个完整，下一个可能显示碎片，其余空
-		if i < GameState.lives:
+		if i < resources.lives:
 			_life_fragments[i].visible = true
 			var at := _life_fragments[i].texture as AtlasTexture
 			at.region = Rect2(5 * fw_life, 0, fw_life, life_h)  # 帧 5=完整
-		elif i == GameState.lives and GameState.life_fragments > 0:
+		elif i == resources.lives and resources.life_fragments > 0:
 			_life_fragments[i].visible = true
 			var at := _life_fragments[i].texture as AtlasTexture
-			at.region = Rect2(GameState.life_fragments * fw_life, 0, fw_life, life_h)
+			at.region = Rect2(resources.life_fragments * fw_life, 0, fw_life, life_h)
 		else:
 			_life_fragments[i].visible = true
 			var at := _life_fragments[i].texture as AtlasTexture
 			at.region = Rect2(0, 0, fw_life, life_h)  # 帧 0=空
 		
 		# Bomb
-		if i < GameState.bomb_count:
+		if i < resources.bomb_count:
 			_bomb_fragments[i].visible = true
 			var at := _bomb_fragments[i].texture as AtlasTexture
 			at.region = Rect2(5 * fw_spell, 0, fw_spell, spell_h)
-		elif i == GameState.bomb_count and GameState.bomb_fragments > 0:
+		elif i == resources.bomb_count and resources.bomb_fragments > 0:
 			_bomb_fragments[i].visible = true
 			var at := _bomb_fragments[i].texture as AtlasTexture
-			at.region = Rect2(GameState.bomb_fragments * fw_spell, 0, fw_spell, spell_h)
+			at.region = Rect2(resources.bomb_fragments * fw_spell, 0, fw_spell, spell_h)
 		else:
 			_bomb_fragments[i].visible = true
 			var at := _bomb_fragments[i].texture as AtlasTexture
@@ -342,18 +347,18 @@ func _process(_delta: float) -> void:
 		return
 
 	_hi_score_num.value = GameState.get_high_score(0)
-	_score_num.value    = GameState.current_score
-	_max_point_num.value= GameState.max_point
-	_graze_num.value    = GameState.graze_count
-	_memory_num.show_text("%d%%" % int(GameState.memory_value))
+	_score_num.value    = resources.current_score
+	_max_point_num.value= resources.max_point
+	_graze_num.value    = resources.graze_count
+	_memory_num.show_text("%d%%" % int(resources.memory_value))
 
-	if GameState.player and is_instance_valid(GameState.player):
-		_power_num.show_text(GameState.get_power_display() + "/4.00")
+	if resources != null:
+		_power_num.show_text(resources.get_power_display() + "/4.00")
 	
 	_update_fragments()
 	
 	# 同步 memory → shader
 	if _memory_rect and _memory_rect.material is ShaderMaterial:
-		_memory_rect.material.set_shader_parameter("memory", float(GameState.memory_value))
-		_shader_time += _delta * smoothstep(-100.0, 200.0, GameState.memory_value) * 10.0
+		_memory_rect.material.set_shader_parameter("memory", float(resources.memory_value))
+		_shader_time += _delta * smoothstep(-100.0, 200.0, resources.memory_value) * 10.0
 		_memory_rect.material.set_shader_parameter("shader_time", _shader_time)

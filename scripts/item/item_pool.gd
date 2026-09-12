@@ -5,6 +5,8 @@ const ITEM_SCENE = preload("res://scenes/item.tscn")
 const POOL_SIZE := 64
 
 var _pool: Array[Item] = []
+## W4b-2b：实体注册表（组合根为 World 注入）——透传给道具
+var refs: EntityRegistry
 
 
 func _ready() -> void:
@@ -33,6 +35,7 @@ func spawn(pos: Vector2, type: int) -> Item:
 		elif not item.is_inside_tree():
 			add_child(item)
 	
+	item.refs = refs
 	item.setup(type, pos)
 	item.visible = true
 	item.set_physics_process(true)

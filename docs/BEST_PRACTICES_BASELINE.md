@@ -186,7 +186,7 @@
 # 🔴 待改进（达标后清空）
 > 这里是"当前版本"尚未达标的项（工程红线与 STG 需求均可能命中）。每修一条删一条，最终清空。
 - [ ] R14：存档写 res://（应改 user://）—— 符卡簿/音乐/记录（见 OLD_AUDIT）
-- [ ] R9 + R18：GameState 上帝对象 + 159 处引用 / 35 文件 → 拆分（W4b 进行中）
+- [ ] R9 + R18：GameState 上帝对象 + 122 处引用 / 31 文件 → 拆分（W4b 进行中）
 - [ ] R6：外部调 _私有（player._apply_player_data / boss._clear_phase / creation_station）
 - [ ] R4：_process 轮询输入（nav_page 及 3 份复制）
 - [ ] R2：get_node("..")/find_child 全树搜（stage01_decor / boss / stage_background）
@@ -225,3 +225,4 @@
 > - W4b-2a：`Player` 增 `resources`（组合根注入同一实例）。全量 55/303/3191 绿。
 > - W4b-3a：运行时引用（自机 / 敌机 / Boss）抽成 `EntityRegistry`，`StageRuntime` 持有并绑定，`GameState` 退为过渡门面。`grep GameState` **46 → 41 文件**。详见 §12.14。
 > - W4b-3b：`refs` 注入内核弹幕路径（`BulletManager` / 桥接碰撞与清弹 / `KernelBomb` / 桥接行为 / `LaserEngine` / `HitboxOverlay`）。`grep GameState` **41 → 35 文件**。详见 §12.15。
+> - W4b-2b：资源消费者直读 `Player.resources`（经 `refs.get_player_resources()`）。`grep GameState` **35 → 31 文件**。详见 §12.16。

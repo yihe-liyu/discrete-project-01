@@ -30,6 +30,8 @@ var hitbox_radius: float:
 	get: return _hitbox_radius
 
 var _ctx: StageContext
+## 战场实体注册表（StageRuntime 注入；直接实例化时为 null）——自机 / 资源 / 敌机登记
+var registry
 var _current_phase: PhaseData
 var _pos_indicator: Sprite2D  # Boss 位置指示器（x 跟随 Boss，y 固定游戏框底）
 var _bonus: int = 0
@@ -50,6 +52,13 @@ func current_phase() -> PhaseData: return _current_phase
 ## 关卡上下文（含本次时钟 ctx.runner —— 练习/工作台清理用）。只读。
 var ctx: StageContext:
 	get: return _ctx
+
+
+## 战场实体注册表：优先注入的 `registry`，否则关卡 ctx 自带的（W4b-2b）
+func _refs():
+	if registry != null:
+		return registry
+	return _ctx.refs if _ctx else null
 
 
 ## Boss 残血（供命中音效等）：血量 < 当前阶段满血的 45%，且非无敌/非时符
@@ -110,8 +119,11 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 
 func start_boss() -> void:
 	set_process(true)
-	GameState.active_enemies.append(self)
-	tree_exited.connect(func(): GameState.active_enemies.erase(self))
+	if registry != null:
+		registry.register_enemy(self)
+		tree_exited.connect(func():
+			if registry != null:
+				registry.unregister_enemy(self))
 	tree_exited.connect(_free_pos_indicator)
 	GameEvents.boss_spawned.emit(self)
 	collision_layer = 4
@@ -148,7 +160,9 @@ func _free_pos_indicator() -> void:
 
 ## 指示器透明度随 |boss.x - 自机.x| 变化：越远越清晰
 func _update_indicator_alpha() -> void:
-	var player: Player = GameState.player
+	var r = _refs()
+	var raw = r.player if r else null
+	var player: Player = raw if is_instance_valid(raw) else null
 	if player == null or not is_instance_valid(player):
 		_pos_indicator.modulate.a = 1.0
 		return
@@ -275,7 +289,10 @@ func _clear_phase(captured: bool) -> void:
 	
 	GameEvents.phase_end.emit(captured, _bonus)
 	if captured and _bonus > 0:
-		GameState.add_score(_bonus)
+		var r = _refs()
+		var res: PlayerResources = r.get_player_resources() if r else null
+		if res != null:
+			res.add_score(_bonus)
 	
 	_drop_items()
 	if _ctx:
@@ -295,7 +312,8 @@ func _die() -> void:
 	_set_ring_visible(false)
 	if GameState.is_practice_mode and _pid and not _cleared:
 		pass  # 练习 attempt 已在进入阶段时记过（玩家 miss/超时退出也覆盖），这里不再重复记
-	GameState.active_enemies.erase(self)
+	if registry != null:
+		registry.unregister_enemy(self)
 	GameEvents.boss_defeated.emit(self)
 	if not _exit_controlled:
 		queue_free()

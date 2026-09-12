@@ -1,6 +1,6 @@
 ## KernelBulletPhysics（Track A / S3b）—— 把原项目 BulletPhysics 的规则移植到内核 SoA 池。
 ##
-## 边界：本文件是**宿主桥接层**（可引用 GameState / RNG / AudioManager 等宿主全局）；
+## 边界：本文件是**宿主桥接层**（可引用 RNG / AudioManager 等宿主全局）；
 ## 几何唯一实现归内核（query_circle / hit_test），本层只做"规则"（命中 / 擦弹 / 伤害 / 特效）。
 ## 覆盖：S3b 敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹）；S3c 自机弹 ↔ 敌人
 ## （damage 侧表 + 记忆加成 + 音效/特效）；S3d 死亡清弹扫掠（sweep_enemy_bullets）。
@@ -24,6 +24,11 @@ var refs: EntityRegistry
 
 func setup(p_backend: KernelBulletBackend) -> void:
 	backend = p_backend
+
+
+## 当前自机的单局资源（经注册表取）；无自机 = null
+func _player_res() -> PlayerResources:
+	return refs.get_player_resources() if refs != null else null
 
 
 ## 消弹特效（同色）：未注入特效层时静默。
@@ -59,8 +64,9 @@ func _enemy_bullets_vs_player() -> void:
 		elif not sys.is_grazed(id) and sys.hit_test(id, player.global_position, player.graze_radius):
 			sys.mark_grazed(id)
 			on_graze()
-			if GameState.memory_value >= 50.0:
-				var chance := remap(GameState.memory_value, 50.0, 100.0, 0.05, 0.30)
+			var res := _player_res()
+			if res != null and res.memory_value >= 50.0:
+				var chance := remap(res.memory_value, 50.0, 100.0, 0.05, 0.30)
 				if RNG.randf() < chance:
 					_play_clear(sys.get_position(id), sys.get_color(id))
 					sys.despawn(id)
@@ -89,7 +95,9 @@ func _player_bullets_vs_enemies() -> void:
 				continue
 			var ti: int = sys.get_type_indices()[i]
 			enemy.take_damage(backend.damage_for_index(ti) * bonus)
-			GameState.add_memory(GameState.MEMORY_HIT_BY_BULLET)
+			var res := _player_res()
+			if res != null:
+				res.add_memory(PlayerResources.MEMORY_HIT_BY_BULLET)
 			_play_hit_sfx(ti, enemy)
 			_spawn_hit_fx(sys, i, bt)
 			sys.despawn(i)
@@ -121,8 +129,9 @@ func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Ca
 
 ## 记忆 <50 时的伤害加成（与旧 BulletPhysics 同式）。
 func _memory_bonus() -> float:
-	if GameState.memory_value < 50.0:
-		return 1.0 + remap(GameState.memory_value, 0.0, 50.0, 0.15, 0.05)
+	var res := _player_res()
+	if res != null and res.memory_value < 50.0:
+		return 1.0 + remap(res.memory_value, 0.0, 50.0, 0.15, 0.05)
 	return 1.0
 
 
@@ -149,7 +158,9 @@ func _spawn_hit_fx(sys: BulletSystem, id: int, bt: BulletType) -> void:
 
 ## 擦弹结算：与旧 BulletPhysics.on_graze 1:1。
 func on_graze() -> void:
-	GameState.graze_count += 1
-	GameState.add_score(10)
-	GameState.add_memory(GameState.MEMORY_GRAZE)
+	var res := _player_res()
+	if res != null:
+		res.graze_count += 1
+		res.add_score(10)
+		res.add_memory(PlayerResources.MEMORY_GRAZE)
 	AudioManager.play_sfx(AssetRegistry.sounds["graze"], -2.0, 0.03)

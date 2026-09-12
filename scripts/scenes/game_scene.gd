@@ -8,6 +8,8 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 @onready var _fx_layer: FxLayer = %FxLayer
 @onready var _stage_runtime: StageRuntime = %StageRuntime
 @onready var _miss_layer: MissEffectManager = %MissEffectManager
+@onready var _game_ui: GameUI = $UI
+@onready var _item_pool = %ItemPool
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
@@ -21,6 +23,7 @@ func _ready():
 	_stage_runtime.miss_layer = _miss_layer
 	_stage_runtime.fx_layer = _fx_layer
 	BulletManager.inject_fx_layer(_fx_layer)
+	_item_pool.refs = _stage_runtime.refs   # 道具经注册表取自机/资源（W4b-2b）
 
 	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
 
@@ -126,6 +129,8 @@ func _setup_player() -> void:
 		_stage_runtime.refs.bind_player(player)
 	# 自机已就绪：把本关卡的实体注册表注入内核弹幕后端（autoload._ready 早于自机）
 	BulletManager.inject_world_refs(_stage_runtime.refs)
+	# HUD 单局资源（W4b-2b）
+	_game_ui.resources = _stage_runtime.refs.get_player_resources()
 
 
 func _on_player_death():

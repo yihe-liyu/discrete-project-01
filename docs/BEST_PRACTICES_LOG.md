@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-11 — W4b-2b：资源消费者直读 PlayerResources（经 refs.player）
+
+- **目标**：把单局资源读取从 `GameState` 转发推进到 `Player.resources`（方案 A：Player 持有，消费者经注册表/注入读），过渡期同一实例、行为等价。
+- **做法**：`EntityRegistry.get_player_resources()`（安全访问器）；内核桥接 `_player_res()` 取它；`cs_player` 用 `leader.get("resources")`；`item` 经 `ItemPool.refs` 注入；`game_ui.resources` 由 `GameScene` 注入；`boss` 增 `registry`（`add_enemy_to_scene` 注入）并用 `_refs()` 取资源/自机；`stage_runtime` 用 `refs.get_player_resources()` 取分数。
+- **对照旧项目**：旧资源散在 `GameState`，实体/桥接/UI 全走全局读写；现在统一经「自机持有的 `PlayerResources`」。
+- **度量**：`grep -rIl "\bGameState\b" scripts` **35 → 31 文件**（引用 159 → 122），清零：`item/item.gd` / `kernel_bridge/kernel_bullet_physics.gd` / `kernel_bridge/kernel_bullet_backend.gd` / `coroutine/player/base/cs_player.gd`。
+- **验收**：`check_syntax` 191/0；全量 **56 套 / 311 测试 / 3212 断言全绿**；orphans 12。
+- **踩坑**：`item.gd` 把 `var player := GameState.player` 改成无类型后，`var to_player := ...` / `var dir := ...` 推不出类型 → 必须显式标注 `Vector2`（Godot 「Cannot infer the type」是 Parse Error，会让依赖脚本编译失败）。
 ### 2026-09-11 — W4b-3b：refs 深注入内核弹幕路径（BulletManager / 桥接 / 激光 / 工作台）
 
 - **目标**：把「自机 / 敌机 / Boss」的读取从 `GameState` 门面推进到注入的 `EntityRegistry`，覆盖内核弹幕后端、碰撞/清弹、桥接行为、激光与工作台覆盖层。

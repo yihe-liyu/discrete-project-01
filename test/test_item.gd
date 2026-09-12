@@ -1,11 +1,23 @@
 extends GutTest
 ## 道具系统测试：掉落收集/类型效果/防重复
 
+var _refs: EntityRegistry
+var _stub_player: Player
+
 func before_each():
 	GameState.reset_all()
+	# W4b-2b：道具经注册表取自机资源（同一全局实例）
+	_refs = EntityRegistry.new()
+	_stub_player = Player.new()
+	_stub_player.resources = GameState.resources
+	_refs.bind_player(_stub_player)
+
+func after_each():
+	_stub_player.free()
 
 func _make_item() -> Item:
 	var item = load("res://scenes/item.tscn").instantiate()
+	item.refs = _refs
 	autofree(item)
 	add_child(item)
 	return item
@@ -59,6 +71,7 @@ func test_collect_once_only():
 
 func test_item_pool_reuse():
 	var pool: Node = load("res://scripts/item/item_pool.gd").new()
+	pool.refs = _refs
 	autofree(pool)
 	add_child(pool)
 	var it: Item = pool.spawn(Vector2(200, 200), Item.Type.POINT)
