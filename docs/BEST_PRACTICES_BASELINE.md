@@ -7,7 +7,7 @@
 > - 改动**状态** → 更新本行；记录**心得/为什么这样改/没抄旧版什么** → 追加到 BEST_PRACTICES_LOG.md。
 > - 目标：本文件随项目成熟 **只收敛、不膨胀**；TODO 小节最终清空。
 > - 旧项目改造前审计快照见 BEST_PRACTICES_BASELINE_OLD_AUDIT.md（留底，不随重建更新）。
-> - **同步说明（2026-09）**：红线库 / 帧序·层序·命名边界契约已与重建版 `BEST_PRACTICES_BASELINE.md` 对齐；S 小节状态沿用原项目自评，**尚未逐条重审**——重审并入 `NEW_KERNEL_REFACTOR_PLAN.md` 的**轨道 B**。
+> - **同步说明（2026-09-11，K0 重审完成）**：红线库 / 帧序·层序·命名边界契约已与重建版 `BEST_PRACTICES_BASELINE.md` 对齐；**S 小节与红线已按代码实测逐条重审**（数字见文末审计表）。
 
 ---
 
@@ -70,7 +70,7 @@
 | `ITEM 40` / `FX 50` / `DEBUG 60` | 道具 / 特效 / 调试叠层 |
 
 > 常量由 `LayerConfig` 单一来源给，实体/渲染批次在 **代码里** 设 `z_index`，不在 `.tscn` 里散写数字。
-> 原项目现状：**30 处散写 `z_index`**（见轨道 B / B5）。
+> 原项目现状（K0 实测）：26 处设 `z_index`，其中 **20 处已走 `LayerConfig.*`**，仅 5 处裸数字（`status_toast`/`hitbox_overlay`/`bench_base`/`dialogue_box`·`game_ui` 的相对层）。
 
 ---
 
@@ -82,7 +82,7 @@
 > - **机制层代码（`scripts/**`）引用内容 → 只能走三种落点**：数据资源 `@export` / 场景装配（`.tscn` 给 `@export` 赋值）/ 内容脚本（`data/**`），不得写死路径/key。
 > - **跨层字符串 key**（数据里存、代码表里查）：默认归标识符 → ASCII；除非其定义表本身已迁为内容资源。
 
-> 原项目现状：TODO 记录了 **77 个中文文件名 / PascalCase 目录（assets/Textures 等）/ `diffculty` 拼写**——需按本契约重审（见轨道 B / B1）。
+> 原项目现状（K0 实测）：`scripts/**` 中文 `.gd` 文件名 **0**（内容槽中文属合规）。余 **PascalCase 目录段**（`assets/Textures`/`assets/Music`/`assets/Sound`）+ `diffculty` 拼写 **5 处**（`game_ui.gd` 4 + `game_scene.tscn` 1）。
 
 ---
 
@@ -102,7 +102,7 @@
 状态：✔（机制闭环） ｜ 适用红线：R1, R2, R10
 - [x] 自机判定点极小且始终可见（HitPointDisplay 常显）—— `scripts/player/hit_point_display.gd`
 - [x] 擦弹半径清晰（focus 时反馈），擦弹次数计入 HUD —— `player.gd graze_radius` + `game_ui.gd`
-- [x] 无敌期间的碰撞被正确忽略，死亡清弹（death clear）覆盖全场 —— `is_invincible`（`bullet_physics.gd` 检查）+ `scripts/bullet/death_clear.gd`
+- [x] 无敌期间的碰撞被正确忽略，死亡清弹（death clear）覆盖全场 —— `is_invincible`（内核 `KernelBulletPhysics`）+ `scripts/bullet/death_clear.gd`
 - [x] 碰撞用宽相网格，不做全弹 O(n²) —— 内核 uniform grid；旧 `SpatialHash` 已随旧池删除（W4a-2）
 
 ## S3. 自机操控与武器（移动 / Option / 射击 / 炸弹）
@@ -110,14 +110,14 @@
 - [x] 射击方向/弹型按角色数据（reimu/marisa）驱动，可复用 —— `scripts/data/player_data.gd` + `coroutine/player/reimu_shoot.gd`/`marisa_shoot.gd`
 - [x] Option 子机行为独立、可复用 —— `reimu_option_visual.gd`/`marisa_option_visual.gd` + `option_follow.gd`
 - [~] 炸弹：无敌时长、清弹、特效、资源扣除符合预期 —— `cancel&bomb` + Bomb 弹 + `death_clear` 已在；资源扣除（`use_bomb`）待核
-- [~] 武器/行为脚本走注入（ctx），不摸全局 —— 走 `StageContext` + `CoroutineScript`，但仍有全局直读（`GameState`），待收口
+- [x] 武器/行为脚本走注入（ctx），不摸全局 —— `StageContext` + `CoroutineScript`；`grep GameState` **0**（W4b-4）
 
 ## S4. 弹幕可读性与公平（readability & fairness）
 状态：🚧 ｜ 适用红线：R2, R10, R17
 - [x] 弹型/颜色语义一致（敌弹颜色 vs 自机弹），背景/雾不吞弹 —— `BulletData.tint_mode`（MULTIPLY/BLEND）+ `bullet_batch` shader 分模式
-- [~] 弹幕有"预告/起手"（telegraph），不存在无解弹幕 —— `spawn_fog` + `scripts/bullet/bullet_fog.gd` 在；无解性仍靠人工试玩
+- [~] 弹幕有"预告/起手"（telegraph），不存在无解弹幕 —— `BulletData.spawn_fog` + `ScreenFogFX` + `bullet_fog_blend.gdshader`；无解性仍靠人工试玩
 - [~] 弹幕密度、速度、命中点可读，玩家能瞬间判断下一步 —— `background/*` + `screen_fog_fx.gd` 已有；需人工调校
-- [x] 每颗子弹命中判定精确（hitbox 形状/偏移，测到像素级）—— `BulletData.hitbox_shape/offset/rotation` + `bullet.gd`
+- [x] 每颗子弹命中判定精确（hitbox 形状/偏移，测到像素级）—— `BulletData.hitbox_shape/offset/rotation` + 内核 `hit_geometry.gd`
 
 ## S5. 敌人 / 阶段 / Boss / 符卡（phases & spell cards）
 状态：✔（机制闭环） ｜ 适用红线：R2, R17, R18, R20
@@ -128,9 +128,9 @@
 
 ## S6. 资源经济（Power / lives / bombs / score / graze / memory）
 状态：🚧 ｜ 适用红线：R8, R9, R18
-- [x] 掉落→收集→加成链路清晰（power/point/life/bomb 碎片集满合成）—— `enemy.gd _drop_item` + `scripts/item/{item,item_pool}.gd` + `PlayerResources`（经 GameState 转发）
+- [x] 掉落→收集→加成链路清晰（power/point/life/bomb 碎片集满合成）—— `enemy.gd _drop_item` + `scripts/item/{item,item_pool}.gd` + `PlayerResources`
 - [~] 分数来源（击破/Bonus/最大点/擦弹/记忆）可追溯，无黑箱 —— 击破/擦弹/最大点已入账；Bonus 待核
-- [x] 残机/炸弹上限、碎片合成规则集中在单一 owner（不用全局散改）—— `PlayerResources`（W4b-1 抽出；GameState 暂转发）
+- [x] 残机/炸弹上限、碎片合成规则集中在单一 owner（不用全局散改）—— `PlayerResources`（W4b-1 抽出，`Player` 持有）
 - [x] 各资源只通过显式入口修改（封装，防作弊/防割裂）—— `PlayerResources` 显式入口 + `changed` 信号
 
 ## S7. 难度曲线（Easy → Lunatic）
@@ -142,20 +142,20 @@
 ## S8. 反馈与演出（feedback / fx / sound / fog）
 状态：✔（机制闭环） ｜ 适用红线：R2, R7, R20
 - [x] 受击/消除/擦弹/Boss 阶段有即时视觉+音效反馈 —— `scripts/effect/*` + `AudioManager`
-- [x] 弹雾/背景与弹幕对比度足够，不吞弹、不刺眼 —— `bullet_fog.gd` + `screen_fog_fx.gd` + `background/*` + `decor_manager.gd`
+- [x] 弹雾/背景与弹幕对比度足够，不吞弹、不刺眼 —— `screen_fog_fx.gd` + `bullet_fog_blend.gdshader` + `background/*` + `decor_manager.gd`
 - [x] 特效走服务/对象池（hit_effect / miss_effect），不再频繁 instantiate —— `FxLayer` + `MissEffectManager`（均为组合根注入，非 autoload）
 - [x] 演出（入场/放 logo/BGM/对话）用 Timeline，可复现、可暂停 —— `coroutine/timeline/*` + `dialogue_runner.gd`
 
 ## S9. 性能（几千发子弹下的帧率余量）
 状态：🚧 ｜ 适用红线：R10, R19
 - [x] 子弹用内核 SoA 池 + MultiMesh，规避每弹节点开销 —— `BulletSystem` + `bullet_multi_mesh.gd`；**旧 `BulletPool`/`Bullet` 节点/`SpatialHash` 已删（W4a-2）**
-- [~] 无每帧临时分配（贪心 alloc）；热路径避免 get_node("...") —— MultiMesh 同步每帧做分组/拼 key（旧代码自注有分配）；字符串 `get_node` 仅 5 处
+- [~] 无每帧临时分配（贪心 alloc）；热路径避免 get_node("...") —— MultiMesh 同步每帧做分组/拼 key（旧代码自注有分配）；字符串 `get_node*` 19 处（多为场景内直接子级；`current_scene` 取 World 2 处）
 - [x] 碰撞/移动每帧 walk 用数组索引（内核 SoA），不频繁排序
 - [~] 大量对象时帧率稳定（目标：满载 60fps 有冗余）—— `test/perf_stress/*` 有压测场景，需实机确认
 
 ## S10. 可复现与回放（determinism / replay）
 状态：🚧 ｜ 适用红线：R10, R13, R17
-- [~] 唯一 RNG 走 RNG（种子可设），不用 randf()/randi() 全局 —— `RNG.randf` 21 处，但仍有 2 处裸 `randf()` + 5 处裸 `randi()`
+- [~] 唯一 RNG 走 RNG（种子可设），不用 randf()/randi() 全局 —— `RNG.*` **25 处**；gameplay 裸全局 **0**，仅 workbench 3 处 `randi()`（调试随机种子）
 - [x] 帧/时间步用固定物理过程（_physics_process）+ 世界时钟，与帧率无关 —— `_physics_process` + `ReplayRecorder` 明确铁律
 - [~] 回放记录输入序列可重放，且结果与首次一致 —— `replay_recorder.gd` 已有录制（输入位掩码 + seed），**播放器"后续接入"**
 - [~] 工作台"固定种子/快进/续跑"功能以此为基础 —— `workbench/bullet_bench.gd _seed/_speed_spin` 已有，续跑待核
@@ -171,7 +171,7 @@
 状态：✔（体系完整） ｜ 适用红线：R4, R6, R7, R20
 - [x] 菜单统一继承（NavPage/BasePage），推/跳转/退场动画一致 —— `scenes/nav_page.gd`（extends `BasePage`）+ 各页
 - [x] 暂停、重开、符卡/关卡练习、回放、手册、玩家数据等可达 —— `pause_menu/spell_practice_menu/stage_practice_menu/replay_menu/manual_menu/player_data_menu.gd`
-- [~] 菜单只发信号、由上层决定状态与场景，UI 不直接写全局 —— 多为 `BasePage` 信号，但仍有直接读 `GameState`，待收口
+- [x] 菜单只发信号、由上层决定状态与场景，UI 不直接写全局 —— `BasePage` 信号 + `SaveData`（纯 static）；`grep GameState` **0**
 - [~] 页面可独立运行（F6），用 @export/% 引用，不硬编码节点名 —— 需逐页 F6 核验
 
 ## S13. 素材与图集（atlas / 贴图规格）
@@ -179,37 +179,45 @@
 - [ ] 弹幕贴图统一进图集（一图一 MultiMesh）；布局数据走 Resource（R17）—— **原项目是逐张独立 PNG**（`assets/Textures/bullet/*.png`，中文文件名属内容槽 = 合规）+ `AssetRegistry.bullet_configs` 代码侧配置；未做图集
 - [ ] 格间留 ≥1px 余量（gutter）—— 未用图集，不适用
 - [ ] 拆图集阈值（单图 > 1024² 或形状数 > 80 → 拆）—— 未用图集，不适用
-- [~] 弹型朝向：`follow_dir` / `dir_offset` 语义统一 —— `bullet.gd` 有 `hitbox_rotation`；朝向语义需审计
+- [~] 弹型朝向：`follow_dir` / `dir_offset` 语义统一 —— `BulletData.hitbox_rotation` + 内核 `hit_geometry.gd`；朝向语义需审计
 
 ---
 
 # 🔴 待改进（达标后清空）
 > 这里是"当前版本"尚未达标的项（工程红线与 STG 需求均可能命中）。每修一条删一条，最终清空。
-- [ ] R14：存档写 res://（应改 user://）—— 符卡簿/音乐/记录（见 OLD_AUDIT）
-- [ ] R3：仅 2 处 @tool、_get_configuration_warnings 零实现
-- [ ] R12：@export var x = preload(...)（enemy_data.gd:9）
-- [ ] R15：77 个中文文件名、assets/Textures 等 PascalCase 目录、diffculty 拼错
-- [ ] R16：40MB+ 二进制未配 Git LFS
-- [ ] R18/R19：workbench.gd / spell_practice_menu.gd 上帝对象（**三台热更新逻辑复制已收口，K5**）
+- [ ] R3：`@tool` 仅 3 个、`_get_configuration_warnings` 零实现（场景期依赖未自文档）
+- [ ] R12：`@export var x = preload(...)`（`enemy_data.gd:9`）
+- [ ] R15：PascalCase 目录段（`assets/Textures`/`assets/Music`/`assets/Sound`）+ `diffculty` 拼写 5 处
+- [ ] R16：47MB 二进制未配 Git LFS（`.gitattributes` 仅 EOL 规范化）
+- [ ] R18/R19：`workbench.gd`(692) / `spell_practice_menu.gd`(592) 上帝对象 + 3 个超长 `_build_ui`（三台热更新复制已收口，K5）
+- [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
+- [ ] R2（残余）：`item_service.gd:16` / `player.gd:286` 用 `current_scene.get_node_or_null("World")` 取 World，可改注入
 
-> **S1–S13 重审说明（2026-09）**：原自评多为未勾，实际大量已落地——已按代码证据逐条重审。另两处过时项已核：
-> - **R14「存档写 res://」已不成立**：`save_manager.gd` 用 `user://save_data.cfg`。
-> - **R15 的「77 个中文文件名」多为 `assets/Textures/**` 内容槽**（新命名边界契约下合规）；真正待办是 **PascalCase 目录段（如 `assets/Textures`）+ `diffculty` 拼写**。
+> **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
+> - **R14「存档写 res://」已不成立**：`save_manager.gd` 用 `user://save_data.cfg`，**从 TODO 移除**。
+> - **R15 中文文件名**：`scripts/**` 中文 `.gd` **0**；真正待办是 **PascalCase 目录段 + `diffculty` 拼写**。
+> - **过时引用清理**：`bullet_physics.gd`/`bullet.gd`/`bullet_fog.gd`/`SpatialHash` 均已随 W4a-2 删除，S 小节证据已改指内核 / `ScreenFogFX`。
 
-## 外壳工程红线审计（2026-09 实测，轨道 B 的输入）
+## 外壳工程红线审计（2026-09-11，K0 实测）
 
 | 红线 | 实测 | 判断 |
 |---|---|---|
 | R9 autoload | **4 个**（W1 12→10，W2 10→8，W3a 8→7，W3b 7→6，W4b 6→5，W4c 5→4） | `GameEvents / GameManager / RNG / AudioManager`；已达目标 |
-| R18/R19 单一职责/DRY | 三台热更新管线 **15 份复制 → 基类 1 份**（K5，净 -116 行） | 余 `workbench.gd` / `spell_practice_menu.gd` 上帝对象 |
-| R21 声明式建树 | workbench 178 处 `.new()` + 183 处 `add_child` | 最大表面积（开发工具，可后） |
-| R6 私有调用 | **0 处**（K2 已清：`has_method("_")` 12→0、生产对外私有调用 6 组→0） | ✅ 公开虚函数 + 类型化接口 |
-| 层序契约 | 30 处散写 `z_index` | 收敛到 `LayerConfig` |
-| 帧序契约 | 无显式 `FrameOrder` | 引入 `FrameOrder` |
-| R14/R15/R2/R5 | res:// 写存档 0、中文 .gd 文件名 0、`get_node("..")` 0、`find_child` 0（K4 已清） | 比预期干净；R15 的目录/拼写问题见上方 TODO |
-| R4 输入 | 边沿轮询 **0**（菜单 / 暂停 / 自机离散键已事件驱动，K3）；`Input.is_action` 仅剩**连续状态**读取（移动 / focus / shoot / 回放录制 / 对话长按） | ✅ 符合「状态读取例外」 |
+| R18/R19 单一职责/DRY | 三台热更新管线 **基类 1 份 + 3 组 hook**（K5，净 -116 行）；`workbench.gd` 692 / `spell_practice_menu.gd` 592 行 | 余上帝对象 + 3 个超长 `_build_ui` |
+| R21 声明式建树 | `workbench.gd` 11 处 `.new()` + 15 处 `add_child` | 开发工具，可后 |
+| R6 私有调用 | **0**（K2：`has_method("_")` 12→0、生产对外私有调用 6 组→0） | ✅ 公开虚函数 + 类型化接口 |
+| R4 输入 | 边沿轮询 **0**（K3）；`Input.is_action` 仅连续状态（移动/focus/shoot/回放/对话长按） | ✅ 符合「状态读取例外」 |
+| R2 引用 | `find_child` **0**、`get_node("..")`/`$".."` **0**（K4）；余 `current_scene` 取 World 2 处 | 基本达标，余 2 处可注入 |
+| R5 字符串 get_node | **19 处**（含 `get_node_or_null`），多为场景内直接子级 | 非全树搜，接受 |
+| 层序契约 | 26 处设 `z_index`，**20 处走 `LayerConfig`**，裸数字 5 | 接近达标，余 5 处可收 |
+| 帧序契约 | 无显式 `FrameOrder`；内核走 `process_physics_priority`（-10/-5/-4/0） | 仍可引入 `FrameOrder` |
+| R14/R15 | res:// 写存档 **0**；中文 `.gd` 文件名 **0**；PascalCase 目录 + `diffculty` 5 处 | 目录/拼写见 TODO |
+| R16 | assets **47MB**（最大 11.2MB 字体），无 LFS | 待配 LFS |
+| R3 | `@tool` **3**、`_get_configuration_warnings` **0** | 待补 |
+| R12 | `@export=preload` **1**（`enemy_data.gd:9`） | 待改 |
+| R10/R13/R17/R20/R22 | 内核 SoA / `_physics_process` / 数据资源 / 独立子场景 / `##` 注释 | 无系统性违规 |
 
-> **轨道 B 进度（2026-09-11）**：**W1–W3b 已完成**（余 W4）。
+> **轨道 B 进度（2026-09-11）**：**W1–W4c + K1–K5 已完成**。
 > - W1：`LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化（组合根 `GameScene` 注入）。autoload 12→10。
 > - W2：`StageObjects` 去 autoload（→ `StageContext.objects`）、`HitEffectPool` → `FxLayer`（组合根注入，节点在 `game_scene.tscn` 声明）。autoload 10→8。
 > - R21 收口：`FxLayer` 与 `MissEffectManager` 均已改为 `game_scene.tscn` 声明式节点（后者为 W1 产物，在 W2 补正）。详见 §12.7 / §12.8。
@@ -230,3 +238,4 @@
 > - K4（R2 收口）：Boss 指示器 UI 层 / 背景相机 / 炸弹爆图父节点均改组合根注入；`find_child` **2 → 0**、`$".."` **4 → 0**。详见 §12.22。
 > - K3（R4 收口）：菜单 / 暂停 / 自机离散键改 `_unhandled_input`，`NavPage` 统一导航（复制 3→1）；边沿轮询 **6 → 0**。详见 §12.23。
 > - K5（R18/R19 收口）：三台热更新管线收口到 `BenchBase`（15 份复制 → 基类 1 份 + 3 组 hook），workbench 净 **-116 行**。详见 §12.24。
+> - K0（基线重审）：按代码实测刷新 S 小节 / 红线 / 层序 / 命名数字；清 `bullet_physics`/`bullet_fog`/`SpatialHash` 等过时引用与 R14 假 TODO；新增 R2 残余 / R21 待办。

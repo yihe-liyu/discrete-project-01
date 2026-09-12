@@ -645,6 +645,15 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.25 K0 实施记录（2026-09-11，已完成）
+
+**目标**：按代码实测重审基线（S 表 / 红线 / 层序 / 命名），清扫过时引用与假 TODO。
+
+**实测要点**：autoload 4；`GameState` 0；`find_child` 0；`has_method("_")` 0；`z_index` 26 处（20 走 `LayerConfig`，裸 5）；字符串 `get_node*` 19；gameplay 裸 RNG 0；`@tool` 3 / warnings 0；assets 47MB 无 LFS。
+
+**产出**：`BEST_PRACTICES_BASELINE.md` 的 S 表、契约现状、TODO、审计表整体刷新（无代码变更）。
+
+**验收**：纯文档；后续 S 线（S4 调校 / S9 性能 / S10 回放 / S13 图集）以此为当前基线。
 ### 12.24 K5 实施记录（2026-09-11，已完成）
 
 **目标**：三台热更新管线去重（R19），收口 workbench 表面积（R18）。

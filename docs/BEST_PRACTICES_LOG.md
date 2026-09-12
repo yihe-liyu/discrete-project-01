@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-11 — K0：基线再检查（按代码实测刷新）
+
+- **目标**：把 `BEST_PRACTICES_BASELINE.md` 刷成「当前真值」——清过时引用、补实测数字、删假 TODO。
+- **做法**：逐条实测（autoload 4、`grep GameState` 0、`find_child` 0、`has_method("_")` 0、`z_index` 26 处中 20 处走 `LayerConfig`、字符串 `get_node*` 19、gameplay 裸 RNG 0、`@tool` 3、assets 47MB…），据此更新：
+  - S 表：S3 注入项 / S6·S12 去 `GameState`；证据改指内核 `KernelBulletPhysics`/`hit_geometry.gd`/`ScreenFogFX`。
+  - TODO：删 R14（假：存档已 `user://`）；R3/R15/R16 改实测；新增 R2 残余与 R21。
+  - 契约现状：层序「30 处散写」→「26 处 / 20 走 `LayerConfig` / 裸数字 5」；命名「77 中文文件名」→「中文 `.gd` 0；PascalCase 目录 + `diffculty` 5」。
+  - 审计表整体重写（2026-09-11 实测），新增 R5/R16/R3/R12 行。
+- **度量**：基线过时引用/数字 **~19 条 → 0**。
+- **对照旧项目**：旧基线把「自评」当现状；现在每条都带可复现的实测数字。
+- **验收**：纯文档改动（无代码变更）；`BEST_PRACTICES_BASELINE.md` + 审计表已刷新。
 ### 2026-09-11 — K5：workbench 热更新管线收口（R18/R19）
 
 - **目标**：消除三台（弹幕/敌人/阶段）逐字复制的热更新管线（R19），缩小 workbench 上帝对象表面积（R18）。
