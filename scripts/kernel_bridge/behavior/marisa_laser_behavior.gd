@@ -33,3 +33,5 @@ func process(system: BulletSystem, bullet_id: int, ctx: BehaviorContext) -> void
 	if not fresh:
 		st[&"drift"] += params.get(&"drift_speed", 2000.0) * system.get_delta()
 	system.set_position(bullet_id, anchor + dir * st[&"drift"])
+	# 贴图朝向 = 漂移方向（渲染桥按 velocity 旋转；旧 marisa_laser_follow 同款 target.velocity = dir）
+	system.set_velocity(bullet_id, dir)

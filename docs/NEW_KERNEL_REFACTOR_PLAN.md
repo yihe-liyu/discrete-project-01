@@ -541,6 +541,8 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **验收**：`check_syntax` **190 脚本 / 0 失败**；全量 **54 套 / 299 测试 / 3181 断言全绿**。autoload 数不变（6；`BulletManager` 去 autoload 归 W4c）。
 
+**修复（本次）**：魔理沙激光段贴图不旋转——内核 `MarisaLaserBehavior` 只 `set_position` 没设 `velocity`，渲染桥按 `velocity` 算朝向 → 零速度返回 0。补 `set_velocity(bullet_id, dir)`（与旧 `marisa_laser_follow._tick` 的 `target.velocity = dir` 一致）。回归断言已加。
+
 ---
 
 ### 12.13 W4b-1 实施记录（2026-09-11，已完成）

@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-11 — W4a-2 修复：魔理沙激光贴图不旋转
+
+- **现象**：内核唯一后端下，魔理沙非 focus 激光段的贴图不随漂移方向旋转。
+- **根因**：内核 `MarisaLaserBehavior` 只 `system.set_position()`，**没设 `velocity`**；渲染桥 `_sync_kernel` 按 `BulletType.rotation_for(velocity)` 算贴图朝向，而 `rotation_for` 在 `velocity == ZERO` 时返回 `0.0` → 贴图永远轴对齐。旧 `marisa_laser_follow._tick` 有 `target.velocity = dir`，内核版漏了。
+- **修复**：`marisa_laser_behavior.gd` 补 `system.set_velocity(bullet_id, dir)`；回归断言 `test_marisa_laser_anchors_to_global_position`（velocity != 0 且 angle == -PI/2）。
+- **教训**：移植行为时，**凡是渲染/特效依赖的字段（velocity/rotation）都要一起设**——旧路径可能靠 `Bullet.bind` 顺带设了，内核 `set_position` 不会。
+- **验收**：全量 **55 套 / 303 测试 / 3193 断言全绿**。
+
 ### 2026-09-11 — W4b-2a：Player 注入 PlayerResources（资源引用清零）
 
 - **目标**：把 `PlayerResources` 注入 `Player`，让玩家逻辑直接持有资源真源（为后续消费者迁移铺路）。

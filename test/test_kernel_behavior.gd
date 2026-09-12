@@ -147,6 +147,9 @@ func test_marisa_laser_anchors_to_global_position() -> void:
 	var pos: Vector2 = _backend.system.get_position(0)
 	assert_almost_eq(pos.x, 180.0, 0.5, "x 应贴子机世界位（不是 玩家+子机 翻倍）")
 	assert_lt(pos.y, 420.0, "应向上漂移（第 2 帧起）")
+	# 回归：激光段必须带漂移速度——渲染桥按 velocity 算贴图朝向，零速度就不旋转
+	assert_ne(_backend.system.get_velocity(0), Vector2.ZERO, "激光段应设 velocity（否则贴图不旋转）")
+	assert_almost_eq(_backend.system.get_velocity(0).angle(), -PI / 2.0, 0.01, "angle=0 → 朝上（贴图竖直）")
 
 
 ## S4c-4：魔理沙激光段——端口映射 + 标 LASER kind；松手整批渐隐并清掉。
