@@ -39,14 +39,17 @@ func on_leave() -> void:
 	tw.tween_callback(queue_free)
 
 
-func _process(_delta: float) -> void:
-	if Input.is_action_just_pressed("ui_up"):
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_up"):
 		_prev()
-	elif Input.is_action_just_pressed("ui_down"):
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_down"):
 		_next()
-	elif Input.is_action_just_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel"):
 		sfx_back()
 		go_back()
+		get_viewport().set_input_as_handled()
 
 
 func _prev() -> void:

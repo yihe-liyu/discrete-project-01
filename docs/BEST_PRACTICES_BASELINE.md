@@ -92,10 +92,10 @@
 > **2026-09 按代码证据重审**（原自评多为未勾）—— 证据为文件 / 方法引用，校准原则：有硬证据才翻。
 
 ## S1. 输入与手感（game feel）
-状态：🚧（基本达成，余事件驱动收口） ｜ 适用红线：R4, R5, R11
+状态：✔（事件驱动已收口） ｜ 适用红线：R4, R5, R11
 - [x] 自机移动每帧响应、无输入缓冲 Bug（十字方向、斜向速度归一）—— `player.gd`（`move_input.normalized()` + `is_focused` 切速）
 - [x] focus/普速切换即时生效，Hitbox 实时显示 —— `player.gd is_focused` + `hit_point_display.gd`
-- [~] 蓄力键/炸弹/解放记忆为事件驱动（_unhandled_input），无轮询 —— `memory_release`/`cancel&bomb` 已接线（`player.gd:79-81`、`_memory_release`），但走 `_physics_process` 的 `is_action_just_pressed` 轮询；全库 `_unhandled_input` 仅 1 处
+- [x] 蓄力键/炸弹/解放记忆为事件驱动（_unhandled_input），无轮询 —— K3：`Player._unhandled_input` 处理 `memory_release`/`cancel&bomb`；菜单导航 / 暂停键亦统一事件驱动（`NavPage`/`GameManager`）
 - [x] 判定不额外延迟：受击/擦弹按帧精确判定 —— `player.gd miss()/graze` 在物理帧
 
 ## S2. 自机判定与擦弹（hitbox / graze）
@@ -186,7 +186,6 @@
 # 🔴 待改进（达标后清空）
 > 这里是"当前版本"尚未达标的项（工程红线与 STG 需求均可能命中）。每修一条删一条，最终清空。
 - [ ] R14：存档写 res://（应改 user://）—— 符卡簿/音乐/记录（见 OLD_AUDIT）
-- [ ] R4：_process 轮询输入（nav_page 及 3 份复制）
 - [ ] R3：仅 2 处 @tool、_get_configuration_warnings 零实现
 - [ ] R12：@export var x = preload(...)（enemy_data.gd:9）
 - [ ] R15：77 个中文文件名、assets/Textures 等 PascalCase 目录、diffculty 拼错
@@ -208,7 +207,7 @@
 | 层序契约 | 30 处散写 `z_index` | 收敛到 `LayerConfig` |
 | 帧序契约 | 无显式 `FrameOrder` | 引入 `FrameOrder` |
 | R14/R15/R2/R5 | res:// 写存档 0、中文 .gd 文件名 0、`get_node("..")` 0、`find_child` 0（K4 已清） | 比预期干净；R15 的目录/拼写问题见上方 TODO |
-| R4 输入 | 12 文件轮询 `Input.is_action` | 需按「移动例外」理解（重建版同做法），非硬违规 |
+| R4 输入 | 边沿轮询 **0**（菜单 / 暂停 / 自机离散键已事件驱动，K3）；`Input.is_action` 仅剩**连续状态**读取（移动 / focus / shoot / 回放录制 / 对话长按） | ✅ 符合「状态读取例外」 |
 
 > **轨道 B 进度（2026-09-11）**：**W1–W3b 已完成**（余 W4）。
 > - W1：`LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化（组合根 `GameScene` 注入）。autoload 12→10。
@@ -229,3 +228,4 @@
 > - K1b（目录收口）：`scripts/autoload/` **8 → 4 文件**（只留真 autoload）；`bullet_manager`/`death_clear` → `scripts/bullet/`，`scene_transition`/`menu_nav` → `scripts/scenes/`。详见 §12.20。
 > - K2（R6 收口）：`BasePage` 生命周期改公开虚函数 + `MenuNav` 栈类型化；`BenchBase` 公开 `snapshot/restore/preset_from_entry`；`Player`/`Boss`/`LaserBeam` 私有入口公开化。`has_method("_")` **12 → 0**。详见 §12.21。
 > - K4（R2 收口）：Boss 指示器 UI 层 / 背景相机 / 炸弹爆图父节点均改组合根注入；`find_child` **2 → 0**、`$".."` **4 → 0**。详见 §12.22。
+> - K3（R4 收口）：菜单 / 暂停 / 自机离散键改 `_unhandled_input`，`NavPage` 统一导航（复制 3→1）；边沿轮询 **6 → 0**。详见 §12.23。

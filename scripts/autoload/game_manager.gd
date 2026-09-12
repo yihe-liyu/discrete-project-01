@@ -32,14 +32,14 @@ func _ready():
 	_nav.setup(self)
 
 
-func _process(_delta):
-	if current_state == AppState.TRANSITIONING:
+func _unhandled_input(event: InputEvent) -> void:
+	if current_state != AppState.PLAYING:
 		return
 	if _nav.is_overlay_open():
 		return
-	if current_state == AppState.PLAYING:
-		if Input.is_action_just_pressed("ui_pause"):
-			_nav.push_overlay("res://scenes/ui/pause_menu.tscn")
+	if event.is_action_pressed("ui_pause"):
+		_nav.push_overlay("res://scenes/ui/pause_menu.tscn")
+		get_viewport().set_input_as_handled()
 
 
 # ═══ 状态 ═══

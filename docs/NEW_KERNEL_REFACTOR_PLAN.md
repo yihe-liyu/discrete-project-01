@@ -645,6 +645,18 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.23 K3 实施记录（2026-09-11，已完成）
+
+**目标**：菜单 / 暂停 / 自机离散键改事件驱动，消除 `_process` 边沿轮询（R4）。
+
+**落点**：
+
+- `NavPage` 统一 `_unhandled_input` + `_nav_directional`（可覆写）；`_nav_accept/_nav_cancel/_nav_move` 抽公共；三份复制收敛为 1。
+- `manual_menu` → `_unhandled_input`；`GameManager` 暂停键 → `_unhandled_input`；`Player` 炸弹/解放记忆 → `_unhandled_input`。
+
+**度量**：边沿轮询 **6 → 0**；菜单导航复制 **3 → 1**。
+
+**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 12.22 K4 实施记录（2026-09-11，已完成）
 
 **目标**：消除 `find_child()` 全树搜与 `get_node("..")`（R2），改用组合根注入。

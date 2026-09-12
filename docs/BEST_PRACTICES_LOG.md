@@ -18,6 +18,19 @@
 
 ## 记录
 
+### 2026-09-11 — K3：R4 收口（输入事件驱动，去 _process 轮询）
+
+- **目标**：菜单 / 暂停 / 自机离散键从 `_process`·`_physics_process` 的 `Input.is_action_just_pressed` 轮询改为 `_unhandled_input`（工程红线 R4）。
+- **做法**：
+  - `NavPage`：删 `_process`，新增 `_unhandled_input` + 可覆写 `_nav_directional`；确认/取消/移动抽成 `_nav_accept/_nav_cancel/_nav_move`（消 3 份复制，R19）。
+  - `difficulty_screen` / `music_room_menu`：删各自 `_process`，只覆写 `_nav_directional`（左右 / 上下）。
+  - `manual_menu`：`_process` → `_unhandled_input`。
+  - `GameManager`：`ui_pause` 从 `_process` → `_unhandled_input`（仅 PLAYING 且无覆盖层）。
+  - `Player`：`memory_release` / `cancel&bomb` 从 `_physics_process` 轮询 → `_unhandled_input`。
+- **保留**：连续状态读取不算轮询边沿——移动 `get_axis`、focus/shoot 状态、`ReplayRecorder` 每帧记录、`DialogueBox` 长按计时。
+- **度量**：`_process`/`_physics_process` 内边沿轮询 **6 → 0**；菜单导航逻辑复制 **3 → 1**。
+- **对照旧项目**：旧菜单各页在 `_process` 轮询边沿、底层页被覆盖后仍会响应；现在统一 `_unhandled_input` + `set_input_as_handled()`（顶层页消费即止）。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 2026-09-11 — K4：R2 收口（全树搜 → 组合根注入）
 
 - **目标**：清掉 `find_child()` 全树搜与 `get_node("..")` 字符串路径（工程红线 R2）。

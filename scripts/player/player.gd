@@ -67,6 +67,16 @@ func _on_enemy_killed(score: int, _position: Vector2) -> void:
 	if resources != null:
 		resources.add_score(score)
 
+
+## R4：离散动作（解放记忆 / 炸弹）走事件，不在物理帧轮询
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("memory_release"):
+		_memory_release()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("cancel&bomb"):
+		_bomb()
+		get_viewport().set_input_as_handled()
+
 # 应用机体数据
 func apply_player_data() -> void:
 	if player_data == null:
@@ -95,11 +105,6 @@ func _physics_process(delta):
 	input_vector.y = Input.get_axis("move_up", "move_down")
 	is_focused = Input.is_action_pressed("focus")
 	
-	if Input.is_action_just_pressed("memory_release"):
-		_memory_release()
-	if Input.is_action_just_pressed("cancel&bomb"):
-		_bomb()
-
 	update_hitbox_display()
 	update_animation()
 	update_move(delta)

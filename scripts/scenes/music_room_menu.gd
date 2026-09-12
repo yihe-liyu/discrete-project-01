@@ -231,33 +231,13 @@ func _select(index: int) -> void:
 	_update_display(index)
 
 
-# ═══ 输入处理（仅上下导航） ═══
+# ═══ 输入处理（仅上下导航，R4：事件驱动） ═══
 
-func _process(_delta: float) -> void:
-	if not _nav_enabled or _nav_items.is_empty():
-		return
-	
-	var now := Time.get_ticks_msec() / 1000.0
-	
-	if Input.is_action_just_pressed("ui_accept"):
-		if now - _last_accept_time >= accept_cooldown:
-			_last_accept_time = now
-			accept_current()
-		return
-	
-	if Input.is_action_just_pressed("ui_cancel"):
-		if now - _last_accept_time >= accept_cooldown:
-			_last_accept_time = now
-			sfx_back()
-			_on_cancel()
-		return
-	
-	if Input.is_action_just_pressed("ui_up"):
-		_last_nav_time = now
-		navigate(-1)
-	elif Input.is_action_just_pressed("ui_down"):
-		_last_nav_time = now
-		navigate(1)
+func _nav_directional(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_up"):
+		_nav_move(-1)
+	elif event.is_action_pressed("ui_down"):
+		_nav_move(1)
 
 
 # ═══ 工具 ═══

@@ -279,39 +279,56 @@ func _set_color(item: Control, color: Color, instant: bool = true) -> void:
 	tw.tween_property(item, "modulate", color, 0.12)
 
 
-# ═══ 输入处理 ═══
+# ═══ 输入处理（R4：事件驱动，不 _process 轮询）═══
 
-func _process(_delta: float) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if not _nav_enabled or _nav_items.is_empty():
 		return
+	if _nav_accept(event) or _nav_cancel(event):
+		return
+	_nav_directional(event)
 
+
+## 子类覆写：方向键 → 导航（默认四方向；难度/音乐页只取左右或上下）
+func _nav_directional(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_up") or event.is_action_pressed("ui_left"):
+		_nav_move(-1)
+	elif event.is_action_pressed("ui_down") or event.is_action_pressed("ui_right"):
+		_nav_move(1)
+
+
+## 确认键（含冷却）；已消费返回 true
+func _nav_accept(event: InputEvent) -> bool:
+	if not event.is_action_pressed("ui_accept"):
+		return false
 	var now := Time.get_ticks_msec() / 1000.0
+	if now - _last_accept_time >= accept_cooldown:
+		_last_accept_time = now
+		accept_current()
+	get_viewport().set_input_as_handled()
+	return true
 
-	if Input.is_action_just_pressed("ui_accept"):
-		if now - _last_accept_time >= accept_cooldown:
-			_last_accept_time = now
-			accept_current()
+
+## 取消键（含冷却）；已消费返回 true
+func _nav_cancel(event: InputEvent) -> bool:
+	if not event.is_action_pressed("ui_cancel"):
+		return false
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _last_accept_time >= accept_cooldown:
+		_last_accept_time = now
+		sfx_back()
+		_on_cancel()
+	get_viewport().set_input_as_handled()
+	return true
+
+
+## 方向导航（带冷却，防连按/回显）
+func _nav_move(delta: int) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _last_nav_time < nav_cooldown:
 		return
-
-	if Input.is_action_just_pressed("ui_cancel"):
-		if now - _last_accept_time >= accept_cooldown:
-			_last_accept_time = now
-			sfx_back()
-			_on_cancel()
-		return
-
-	if Input.is_action_just_pressed("ui_up"):
-		_last_nav_time = now
-		navigate(-1)
-	elif Input.is_action_just_pressed("ui_down"):
-		_last_nav_time = now
-		navigate(1)
-	elif Input.is_action_just_pressed("ui_left"):
-		_last_nav_time = now
-		navigate(-1)
-	elif Input.is_action_just_pressed("ui_right"):
-		_last_nav_time = now
-		navigate(1)
+	_last_nav_time = now
+	navigate(delta)
 
 
 # ═══ 子类覆写 ═══
