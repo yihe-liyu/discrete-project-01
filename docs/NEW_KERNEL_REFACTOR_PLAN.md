@@ -415,7 +415,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | `LayerConfig` | `scripts/autoload/layer_config.gd` → **`scripts/layer_config.gd`**，加 `class_name LayerConfig` 并去掉 autoload 项；25 处 `LayerConfig.XXX` 引用零改动（静态常量，行为等价） |
 | `MissEffectManager` | `scripts/autoload/miss_effect_manager.gd` → **`scripts/effect/miss_effect_manager.gd`**，加 `class_name MissEffectManager` 并去掉 autoload 项 |
 
-**组合根注入链**：`GameScene._ready()` 创建 `MissEffectManager` 子节点 → `StageManager.miss_layer` → `StageContext.effects` → `EffectService.miss_layer`（为空静默跳过，便于测试/无场景上下文）→ `MissEffectManager.add_circle()`。`GameScene._exit_tree()` 置空注入槽；`BulletManager.clear_all()` 删去对 UI 特效的全局直呼（弹幕门面不再知道 miss 圈存在）。
+**组合根注入链**：`MissEffectManager` 节点在 `game_scene.tscn` 的 `Main` 下**声明**（R21；W2 补正，原为 `GameScene._ready()` 里 `new()+add_child`）→ `GameScene._ready()` 注入 `StageManager.miss_layer` → `StageContext.effects` → `EffectService.miss_layer`（为空静默跳过，便于测试/无场景上下文）→ `MissEffectManager.add_circle()`。`GameScene._exit_tree()` 置空注入槽；`BulletManager.clear_all()` 删去对 UI 特效的全局直呼（弹幕门面不再知道 miss 圈存在）。
 
 **验收**：
 
@@ -448,6 +448,8 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 - 全量 GUT **62 套 / 333 测试 / 3327 断言全绿**。
 
 **踩坑**：同 W1——新增 `class_name` 必须重建 `.godot/global_script_class_cache.cfg`（本次用 `godot --headless --editor --quit`），否则 headless 报 `Could not find type "StageObjects" / "FxLayer"`，并连锁出 81 个假失败（`Scripts 61→59`）。不是代码错。
+
+**R21 补正**：`FxLayer` 与 `MissEffectManager` 均改为 `game_scene.tscn` 声明式节点（前者 W2 初版、后者 W1 产物在本次一并收口），`game_scene.gd` 只保留 `@onready` 引用 + 注入。
 
 **边界澄清**：`FxLayer` 仍是**宿主侧**节点（`class_name` + `game_scene.tscn` 声明、组合根注入），不是内核服务——`scripts/kernel/**` 不引用它；`scripts/kernel_bridge/**` 桥接层可以收到注入的 `fx`。把消弹特效下沉进内核属于 W4 收敛话题，本波不动内核。
 

@@ -5,19 +5,16 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 @onready var _sub_viewport: SubViewport = %SubViewport
 @onready var _fx_layer: FxLayer = %FxLayer
+@onready var _miss_layer: MissEffectManager = %MissEffectManager
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
-var _miss_layer: MissEffectManager
 
 
 func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
-	# 组合根装配：Miss 圈渲染节点（原 autoload）由本场景创建并注入 ctx 服务。
-	_miss_layer = MissEffectManager.new()
-	_miss_layer.name = "MissEffectManager"
-	add_child(_miss_layer)
+	# 组合根装配：Miss 圈渲染节点（原 autoload）。节点在 game_scene.tscn 声明（R21），这里只注入。
 	StageManager.miss_layer = _miss_layer
 
 	# 组合根装配：命中/消弹特效层（原 HitEffectPool autoload）。节点在 game_scene.tscn 的

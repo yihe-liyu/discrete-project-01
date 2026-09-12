@@ -30,7 +30,7 @@
   - `scripts/effect/fx_layer.gd`：`class_name FxLayer extends Node2D`；节点在 **`game_scene.tscn` 的 `World` 下声明**（R21 声明式建树，与 `ItemPool` 同规格），`game_scene.gd:_ready` 只做注入（`BulletManager.inject_fx_layer()` + `StageManager.fx_layer`）；`effect_service.gd:play_hit_effect` 走注入的 `fx_layer`。
   - 调用点（`bullet_physics.gd` / `death_clear.gd` / `kernel_bullet_physics.gd` / `bullet_manager.gd`）全部改为注入字段 + `fx == null` 静默守卫（单测/无场景安全）。
 - **验收**：`test_composition_root.gd` 增 `test_game_scene_creates_and_injects_fx_layer`；`test_stage_director.gd` 改纯逻辑；新增 `test_fx_layer.gd`（3 用例，池化语义）；全量 GUT **62 套 / 333 测试 / 3327 断言全绿**。
-- **踩坑（基线）**：初版 `FxLayer` 在 `game_scene.gd` 里 `FxLayer.new()+add_child` 命令式建树，违反 **R21**（`BEST_PRACTICES_BASELINE.md`）——已改为在 `game_scene.tscn` 的 `World` 下声明。教训：**改前先通读基线**，别只 grep 用到的那一行。
+- **踩坑（基线）**：初版 `FxLayer` 在 `game_scene.gd` 里 `FxLayer.new()+add_child` 命令式建树，违反 **R21**（`BEST_PRACTICES_BASELINE.md`）——已改为在 `game_scene.tscn` 的 `World` 下声明；同时把 W1 遗留的 `MissEffectManager`（同样 `new()+add_child`）一并改为 `Main` 下声明式节点。教训：**改前先通读基线**，别只 grep 用到的那一行。
 - **踩坑（缓存）**：新增 `class_name` 再次踩缓存——headless 直接报 `Could not find type "StageObjects" / "FxLayer"`，连锁 81 个假失败（`Scripts 61→59`）。跑 `godot --headless --editor --quit` 重建 `.godot/global_script_class_cache.cfg` 即恢复（W1 用 `--import`，本次 `--editor --quit` 同样有效）。
 - **边界**：`FxLayer` 是**宿主侧**节点，不是内核服务；`scripts/kernel/**` 零引用。`scripts/kernel_bridge/**` 桥接层允许持注入的 `fx`。
 ### 2026-09-11 — W1：LayerConfig 去 autoload / MissEffectManager 场景节点化

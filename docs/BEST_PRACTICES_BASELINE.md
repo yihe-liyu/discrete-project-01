@@ -216,4 +216,4 @@
 > **轨道 B 进度（2026-09-11）**：**W1、W2 已完成**。
 > - W1：`LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化（组合根 `GameScene` 注入）。autoload 12→10。
 > - W2：`StageObjects` 去 autoload（→ `StageContext.objects`）、`HitEffectPool` → `FxLayer`（组合根注入，节点在 `game_scene.tscn` 声明）。autoload 10→8。
-> - ⚠️ 遗留：`MissEffectManager` 仍为 `new()+add_child`（W1 产物），与 **R21** 不符；`FxLayer` 已改声明式。详见 `NEW_KERNEL_REFACTOR_PLAN.md` §12.7 / §12.8。
+> - R21 收口：`FxLayer` 与 `MissEffectManager` 均已改为 `game_scene.tscn` 声明式节点（后者为 W1 产物，在 W2 补正）。详见 `NEW_KERNEL_REFACTOR_PLAN.md` §12.7 / §12.8。

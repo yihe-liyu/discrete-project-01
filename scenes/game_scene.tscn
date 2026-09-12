@@ -14,6 +14,7 @@
 [ext_resource type="Shader" uid="uid://dbi40qjrrq0q4" path="res://gdshader/water_flow.gdshader" id="13_water"]
 [ext_resource type="Script" uid="uid://c2fb36xommdvt" path="res://scripts/item/item_pool.gd" id="14_pool"]
 [ext_resource type="Script" uid="uid://b06r5rh54kxjh" path="res://scripts/effect/fx_layer.gd" id="15_fx"]
+[ext_resource type="Script" uid="uid://cbi6gxu3r06q4" path="res://scripts/effect/miss_effect_manager.gd" id="16_miss"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
 atlas = ExtResource("6_mw25s")
@@ -220,3 +221,7 @@ script = ExtResource("7_kk2rg")
 [node name="BgmHint" parent="." unique_id=1015514766 instance=ExtResource("11_bgm_hint")]
 
 [node name="BossUI" parent="." unique_id=1480836394 instance=ExtResource("8_boss_ui")]
+
+[node name="MissEffectManager" type="CanvasLayer" parent="." unique_id=2025091103]
+unique_name_in_owner = true
+script = ExtResource("16_miss")
