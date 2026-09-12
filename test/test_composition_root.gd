@@ -18,6 +18,17 @@ func test_game_scene_binds_stage_runtime() -> void:
 	assert_not_null(rt.current_stage_script(), "关卡脚本应经 StageRuntime 真正加载")
 
 
+func test_game_scene_refreshes_kernel_player() -> void:
+	var scene: PackedScene = load("res://scenes/game_scene.tscn")
+	var inst: Node = scene.instantiate()
+	add_child_autofree(inst)
+	await get_tree().process_frame
+	var player: Node2D = inst.get_node("World/Player")
+	var ctx = BulletManager._kernel.behavior_ctx
+	assert_eq(ctx.get_player_position(), player.global_position,
+		"内核行为管道应拿到场景自机（W4a-1 回归：非默认内核时 autoload._ready 早于自机）")
+
+
 func test_game_scene_creates_and_injects_miss_layer() -> void:
 	var scene: PackedScene = load("res://scenes/game_scene.tscn")
 	var inst: Node = scene.instantiate()

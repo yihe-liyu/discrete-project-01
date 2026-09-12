@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-11 — W4a-1 修复：内核转正暴露"自机引用未刷新"（道中非符逃跑弹失效）
+
+- **现象**：内核转正为默认后，中boss非符的 `non_mid_flee` 逃跑弹不生效（弹丸直线飞、不转向）。
+- **根因**：`use_kernel = false` 时 `_enable_kernel()` 是**游戏内按 F2** 才跑，那时自机已存在；转正后它在 autoload `_ready` 跑——**自机尚未生成**（`GameState.player == null`），`BehaviorContext.setup(null, ...)` 把自机缓存成 null，之后再没刷新 → `ctx.get_player_position()` 恒 `Vector2.ZERO` → `non_mid_flee`/`homing` 的"接近自机"判定永不成立。
+- **修复**：新增公开 `BulletManager.refresh_kernel_player()`；组合根在自机就绪后调用——`GameScene._setup_player()`、`workbench._setup_world()`、`bench_base.build_world()`。
+- **回归测试**：`test_composition_root:test_game_scene_refreshes_kernel_player`（断言 `behavior_ctx.get_player_position()` == 场景自机位置）。
+- **教训**：strangler 的"翻默认"会把**原本只在手动开关时才满足的前置条件**（这里是"自机已存在"）暴露成 bug。翻默认后必须跑**真实场景**冒烟——单测（显式 `setup_behaviors(player)`）覆盖不到 autoload 早于场景的时序。
+
 ### 2026-09-11 — W4a-1：内核弹幕后端转正（默认 true，旧池回滚）
 
 - **目标**：把 Track A 装好的内核从"开关后备选"变成**默认**，完成 strangler 的"翻开关"步（W4a-1；W4a-2 才删旧池）。

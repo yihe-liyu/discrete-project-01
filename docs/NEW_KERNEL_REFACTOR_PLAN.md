@@ -511,7 +511,9 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 - 新增后端无关的 `BulletManager.active_count()`；统计/断言从旧池专属 `active_bullets` 迁过来（`bullet_bench` / `enemy_bench` / `phase_bench` / `workbench` / `debug_drawer`）。
 - 旧池专属测试显式 `set_use_kernel(false)`：`test_hit_sfx_rules`（旧 `BulletPhysics`）、`test_bullet_batch`（旧渲染分组）、`test_bounce_bullet`（旧 bounce 脚本）；`test_bullet_rig` / `test_creation_station` 改用 `active_count()`。
 
-**验收**：kernel 默认下全量 **63 套 / 337 测试 / 3341 断言全绿**。
+**验收**：kernel 默认下全量 **63 套 / 338 测试 / 3342 断言全绿**。
+
+**转正暴露的回归（已修）**：默认翻 `true` 后 `_enable_kernel()` 在 autoload `_ready` 跑——**自机尚未生成**，`BehaviorContext` 缓存了 null 自机且不再刷新 → `non_mid_flee` / `homing` 的"接近自机"判定失效（中boss非符逃跑弹直线飞）。修：`BulletManager.refresh_kernel_player()`，由组合根在自机就绪后调（`GameScene._setup_player` / `workbench._setup_world` / `bench_base.build_world`）。回归测试 `test_composition_root:test_game_scene_refreshes_kernel_player`。
 
 **待办（W4a-2）**：试玩确认未映射内容无回归后，删旧池（`BulletPool`/`Bullet`/`BulletPhysics`/`DeathClear` 旧循环/`BulletMultiMesh._sync_nodes`）+ `use_kernel`/F2/`active_bullets`。
 

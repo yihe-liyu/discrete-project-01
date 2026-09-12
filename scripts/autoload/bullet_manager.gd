@@ -288,6 +288,13 @@ func resume_processing() -> void:
 
 # ═══ Track A / S3a：内核后端装配与切换 ═══
 
+## 组合根在**自机就绪后**调用：刷新内核行为管道缓存的自机引用。
+## 必需——内核默认时 autoload `_ready` 早于自机生成，BehaviorContext 会缓存 null（回归：non_mid_flee/homing 拿不到自机）。
+func refresh_kernel_player() -> void:
+	if use_kernel and _kernel != null:
+		_enable_kernel()
+
+
 ## 当前内核弹池（未装配 = null）；供工具 / 测试读快照。
 func kernel_system() -> BulletSystem:
 	return _kernel.system if _kernel != null else null

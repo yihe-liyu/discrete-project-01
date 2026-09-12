@@ -122,6 +122,8 @@ func _setup_player() -> void:
 		player.player_data = data_map[GameState.selected_character]
 		player._apply_player_data()
 		player._reinit_shoot()
+	# 自机已就绪：刷新内核行为管道的自机引用（autoload._ready 早于自机）
+	BulletManager.refresh_kernel_player()
 
 
 func _on_player_death():
