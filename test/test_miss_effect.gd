@@ -63,10 +63,11 @@ func test_effect_service_without_layer_is_noop() -> void:
 
 func test_stage_context_reads_injected_layer() -> void:
 	var layer := _make_layer()
-	var prev: MissEffectManager = StageManager.miss_layer
-	StageManager.miss_layer = layer
+	var rt := StageRuntime.new()
+	autofree(rt)
+	rt.miss_layer = layer
 	var runner := RUNNER_SCRIPT.new()
 	autofree(runner)
 	var ctx := StageContext.new(runner)
-	assert_eq(ctx.effects.miss_layer, layer, "ctx.effects 应取到组合根注入的层")
-	StageManager.miss_layer = prev
+	ctx.stage = rt
+	assert_eq(ctx.effects.miss_layer, layer, "ctx.effects 应取到 stage 注入的层")

@@ -2,7 +2,7 @@
 ##
 ## 定位：工作台 = 预览/调试沙盒。脚本与关卡数据一律在 Godot 编辑器里写（.gd/.tres）。
 ##   v1：LifecycleNode 纯逻辑模型复刻实体公式（一致性靠"复刻"，会漂移）
-##   v2：F6 运行时直接加载真实关卡 —— StageManager + BulletManager + 真实协程
+##   v2：F6 运行时直接加载真实关卡 —— StageRuntime + BulletManager + 真实协程
 ##       幽灵玩家提供自机狙目标；一致性与游戏 100% 相同（跑的就是游戏代码）
 ##
 ## 能力：
@@ -127,9 +127,8 @@ func _ready() -> void:
 	_setup_phase_timer()
 	_sync_ui_layer_offset()  # 同步执行：首帧渲染即正确（见函数注释）
 	_setup_world()
-	# W3b-1：注入 world 并绑定关卡运行时（薄门面转发）
+	# W3b-2：注入 world，关卡运行时自持（无门面）
 	_stage_runtime.world = _world
-	StageManager.bind_runtime(_stage_runtime)
 	_load_stage()
 	_check_phase_uid_conflicts()
 
@@ -166,7 +165,7 @@ func _update_phase_timer() -> void:
 func _process(_delta: float) -> void:
 	# 快进到达检测（UI 是 ALWAYS，暂停中也检测）
 	if _ff_target >= 0.0:
-		var runner := StageManager.current_stage_script()
+		var runner := _stage_runtime.current_stage_script()
 		if runner == null or runner.game_time() >= _ff_target:
 			_stop_fast_forward()
 	_update_ui()
@@ -269,6 +268,7 @@ func _build_ui() -> void:
 
 	# ── 书签（数据自持，编辑后 data_changed 回主控制器持久化）──
 	_bookmarks = BookmarkPanel.new()
+	_bookmarks.stage_runtime = _stage_runtime
 	_bookmarks.jump_requested.connect(_jump_to)
 	_bookmarks.data_changed.connect(_on_bookmarks_changed)
 	_bookmarks.log_requested.connect(_log_line)
@@ -332,20 +332,26 @@ func _setup_world() -> void:
 # ═══ 关卡加载 / 重跑 ═══
 
 ## 加载关卡（start_from >= 0 = 从该时刻续跑，数据关卡专用）
+## 供创作台切页时停止本工作台承载的关卡
+func stop_stage() -> void:
+	_stage_runtime.stop_stage()
+
+
 func _load_stage() -> void:
 	# 统一复位运行状态（防残留：快进打断后 time_scale/静音错乱）
 	_stop_fast_forward()
 	_apply_audio()
 	# 停止旧关卡 + 清空
-	StageManager.stop_stage()
+	_stage_runtime.stop_stage()
 	BulletManager.clear_all()
 	AudioManager.stop_bgm()  # 重跑时 BGM 从头播（play_bgm 有同流防重保护，必须先停）
 	# 清 World 残留：退场中的 Boss（_exit_controlled 不 queue_free、已从
 	# active_enemies 移除）stop_stage 清不到 → 立即脱离树，避免卡在画面上
 	for child in _world.get_children():
-		if child != _ghost:
-			_world.remove_child(child)
-			child.queue_free()
+		if child == _ghost or child == _stage_runtime:
+			continue  # StageRuntime 是 World 下的常驻结构节点，不能清
+		_world.remove_child(child)
+		child.queue_free()
 	if _background and is_instance_valid(_background):
 		# 立即脱离树（不能只 queue_free 延迟删除）：
 		# 旧背景的协程/Tween 会和新背景抢同一个 Camera3D（相机数据错乱）
@@ -372,12 +378,12 @@ func _load_stage() -> void:
 	if _show_bg and _stage_data.background_scene:
 		_background = _stage_data.background_scene.instantiate()
 		if _background is StageBackground:
-			StageManager.current_background = _background
+			_stage_runtime.current_background = _background
 		# 显式 PAUSABLE：背景演出也随暂停冻结（否则继承 root 的 ALWAYS）
 		_background.process_mode = Node.PROCESS_MODE_PAUSABLE
 		_bg_viewport.add_child(_background)
 	# 真实加载（跑 stage01.gd 的 Timeline）
-	StageManager.load_stage(_stage_data)
+	_stage_runtime.load_stage(_stage_data)
 	# 时间轴 + 书签（协程关卡静态提取 tl.at() 时刻）
 	_timeline.set_window(60.0)
 	_apply_bookmarks_from_cache()
@@ -502,7 +508,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		KEY_LEFT, KEY_RIGHT:
 			var step := 5.0 if event.ctrl_pressed else 1.0
-			var runner := StageManager.current_stage_script()
+			var runner := _stage_runtime.current_stage_script()
 			var cur := runner.game_time() if runner else 0.0
 			_jump_to(maxf(cur + (step if k == KEY_RIGHT else -step), 0.0))
 			get_viewport().set_input_as_handled()
@@ -529,7 +535,7 @@ func _jump_to(t: float) -> void:
 	# 统一先停现有快进：重置 time_scale / BGM pitch / _ff_target
 	# （否则重跑分支或 t≈0 分支会残留 12 倍速 → 数据全乱）
 	_stop_fast_forward()
-	var runner := StageManager.current_stage_script()
+	var runner := _stage_runtime.current_stage_script()
 	var cur := runner.game_time() if runner else 0.0
 	if t < cur - 0.5:
 		# 目标在过去：无法倒带 → 重跑再快进
@@ -615,7 +621,7 @@ func _apply_audio() -> void:
 # ═══ UI 刷新 / 日志 ═══
 
 func _update_ui() -> void:
-	var runner := StageManager.current_stage_script()
+	var runner := _stage_runtime.current_stage_script()
 	var t := runner.game_time() if runner else 0.0
 	_status.set_time(t, _ff_target >= 0.0)
 	if absf(t - _prev_time) >= 0.05:

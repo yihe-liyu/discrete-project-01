@@ -6,6 +6,8 @@ const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
 const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
 
 var runner: CoroutineRunner
+## 关卡运行时（W3b-2：由 StageRuntime 创建 ctx 时回填；内容经此拿注入槽/工厂）
+var stage: StageRuntime
 var _decor_mgr: DecorManager
 
 # 服务懒加载（高频路径优化：每颗协程弹 new 一次 ctx，只创建用到的服务）
@@ -58,8 +60,8 @@ var audio: AudioService:
 var effects: EffectService:
 	get:
 		if _effects == null: _effects = EffectService.new()
-		_effects.miss_layer = StageManager.miss_layer  # 组合根注入；每取一次保持最新
-		_effects.fx_layer = StageManager.fx_layer      # W2：特效层同样由组合根注入
+		_effects.miss_layer = stage.miss_layer if stage else null  # 组合根注入；每取一次保持最新
+		_effects.fx_layer = stage.fx_layer if stage else null      # W2：特效层同样由组合根注入
 		return _effects
 
 var boss: BossService:
@@ -84,7 +86,7 @@ func _init(p_runner: CoroutineRunner) -> void:
 ## 装饰物管理器（树附着，懒加载）
 func get_decor() -> DecorManager:
 	if _decor_mgr: return _decor_mgr
-	var bg: StageBackground = StageManager.current_background
+	var bg: StageBackground = stage.current_background if stage else null
 	if not bg: return null
 	var mgr: DecorManager = bg.get_node_or_null("DecorManager") as DecorManager
 	if not mgr:

@@ -14,6 +14,22 @@ var _world_offset := Vector2.ZERO
 
 var _field: Control
 var _ghost: Player
+## 关卡运行时（W3b-2：组合台自备，门面已移除）
+var _stage_runtime: StageRuntime
+
+
+## 建组合台的关卡运行时（幂等）：生成目标 = BenchWorld。_ready 里调用。
+func ensure_stage_runtime() -> StageRuntime:
+	if _stage_runtime != null:
+		return _stage_runtime
+	var bench_world := Node2D.new()
+	bench_world.name = "BenchWorld"
+	add_child(bench_world)
+	_stage_runtime = StageRuntime.new()
+	_stage_runtime.name = "StageRuntime"
+	_stage_runtime.world = bench_world
+	add_child(_stage_runtime)
+	return _stage_runtime
 
 
 ## 场地 + 幽灵（鼠标跟随 = 自机狙目标）搭建；返回场地

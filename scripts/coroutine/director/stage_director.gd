@@ -2,7 +2,7 @@ class_name StageDirector
 extends RefCounted
 ## 场景导演 —— 内容层的"场景动词"入口。
 ## 持有 StageContext；提供 bgm / boss / 对话 / 事件路由 等跨子系统场景动词。
-## 内部才碰 StageManager / ctx.objects / GameEvents / 机制；内容只调动词。
+## 内部才碰 ctx.stage / ctx.objects / GameEvents / 机制；内容只调动词。
 ## 动词时序无关：可单独调用（符卡练习），也可被 Timeline 摆放。
 ##
 ## 事件路由：on(key, handler) 取代内容里的大 match _on_dialogue_event。
@@ -27,7 +27,10 @@ func bgm(key: String) -> StageDirector:
 ## 生成 Boss：spawn + 注册命名槽位 + 进场，返回 BossHandle（默认隐藏真名）。
 func boss(key: String, data: BossData, from: Vector2, to: Vector2,
 		hide: String = "？？？") -> BossHandle:
-	var b := StageManager.spawn_boss(data, from, ctx) as Boss
+	if ctx.stage == null:
+		push_warning("StageDirector.boss: ctx.stage 未装配（W3b-2 后由 StageRuntime 回填）")
+		return BossHandle.new(key, data, hide, ctx.objects)
+	var b := ctx.stage.spawn_boss(data, from, ctx) as Boss
 	ctx.objects.register(key, b, Boss)
 	var h := BossHandle.new(key, data, hide, ctx.objects)
 	if hide != "":
@@ -54,7 +57,7 @@ func spawn_wave(data: BulletData, count: int, spread: float, dir: Vector2, at_po
 
 ## 简单生成 Boss（快捷，供 Timeline 委托：不进场/不隐藏/不返句柄）
 func spawn_boss(data: BossData, pos: Vector2) -> Boss:
-	return StageManager.spawn_boss(data, pos, ctx) as Boss
+	return ctx.stage.spawn_boss(data, pos, ctx) as Boss if ctx.stage else null
 
 ## 监听对话事件（GameEvents.dialogue_event）→ 路由到 handler
 func on(event_name: String, handler: Callable) -> StageDirector:

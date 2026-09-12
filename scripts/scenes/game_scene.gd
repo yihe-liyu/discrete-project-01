@@ -16,23 +16,17 @@ var _background_instance: Node  # StageBackground 或测试 Node3D
 func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
-	# 组合根装配：Miss 圈渲染节点（原 autoload）。节点在 game_scene.tscn 声明（R21），这里只注入。
-	StageManager.miss_layer = _miss_layer
-
-	# 组合根装配：命中/消弹特效层（原 HitEffectPool autoload）。节点在 game_scene.tscn 的
-	# World 下**声明**（R21：声明式建树，不 new()+add_child）；这里只做注入。
-	StageManager.fx_layer = _fx_layer
-	BulletManager.inject_fx_layer(_fx_layer)
-
-	# 关卡运行时（World 下声明，R21）：组合根注入 world 并绑定到薄门面（W3b-1 strangler）
+	# 组合根装配：Miss 圈 / 特效层 / 关卡运行时（均在 game_scene.tscn 声明，R21），这里只注入。
 	_stage_runtime.world = _world
-	StageManager.bind_runtime(_stage_runtime)
+	_stage_runtime.miss_layer = _miss_layer
+	_stage_runtime.fx_layer = _fx_layer
+	BulletManager.inject_fx_layer(_fx_layer)
 
 	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
 
 	GameEvents.player_death.connect(_on_player_death)
 	GameManager.game_state_changed.connect(_on_game_state_changed)
-	StageManager.stage_cleared.connect(_on_stage_cleared)
+	_stage_runtime.stage_cleared.connect(_on_stage_cleared)
 
 	if GameState.is_practice_mode:
 		GameState.restarting = false
@@ -52,7 +46,7 @@ func _start_normal_game() -> void:
 		push_error("GameScene: 找不到关卡 stage_id=%d difficulty=%d" % [GameState.current_stage_id, GameState.selected_difficulty])
 		return
 	_load_background(data.background_scene)
-	StageManager.load_stage(data)
+	_stage_runtime.load_stage(data)
 
 
 func _start_practice_game() -> void:
@@ -63,7 +57,7 @@ func _start_practice_game() -> void:
 		push_error("GameScene: practice_phase 未设置")
 		return
 
-	var boss := StageManager.start_spell_card(
+	var boss := _stage_runtime.start_spell_card(
 		phase, GameState.practice_boss_scene, GameState.practice_name,
 		Vector2(GameConfig.FIELD_CENTER_X, 240)
 	)
@@ -90,7 +84,7 @@ func _load_background(scene: PackedScene) -> void:
 		_background_instance = null
 	_background_instance = scene.instantiate()
 	if _background_instance is StageBackground:
-		StageManager.current_background = _background_instance
+		_stage_runtime.current_background = _background_instance
 	_sub_viewport.add_child(_background_instance)
 
 
@@ -100,22 +94,22 @@ func _exit_tree():
 		GameEvents.player_death.disconnect(_on_player_death)
 	if GameManager.game_state_changed.is_connected(_on_game_state_changed):
 		GameManager.game_state_changed.disconnect(_on_game_state_changed)
-	if StageManager.stage_cleared.is_connected(_on_stage_cleared):
-		StageManager.stage_cleared.disconnect(_on_stage_cleared)
+	if _stage_runtime.stage_cleared.is_connected(_on_stage_cleared):
+		_stage_runtime.stage_cleared.disconnect(_on_stage_cleared)
 	if GameEvents.boss_defeated.is_connected(_on_practice_cleared):
 		GameEvents.boss_defeated.disconnect(_on_practice_cleared)
 
-	StageManager.miss_layer = null  # 解除注入（节点随本场景释放）
+	_stage_runtime.miss_layer = null  # 解除注入（节点随本场景释放）
 	BulletManager.clear_all()       # 内含 fx_layer.clear_pool()
 	BulletManager.inject_fx_layer(null)  # 解除特效层注入（防 autoload 持悬空引用）
-	StageManager.fx_layer = null
+	_stage_runtime.fx_layer = null
 	if GameState.is_practice_mode:
 		GameState.end_practice()
 	if _background_instance and is_instance_valid(_background_instance):
 		_background_instance.queue_free()
 		_background_instance = null
-	StageManager.stop_stage()
-	StageManager.unbind_runtime()
+	_stage_runtime.stop_stage()
+	_stage_runtime.current_background = null
 
 
 func _setup_player() -> void:

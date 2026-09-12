@@ -58,6 +58,7 @@ func _ready() -> void:
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()
 	build_world()  # 场地+幽灵（rig_base）
+	ensure_stage_runtime()  # W3b-2：自备关卡运行时（开演用）
 	_build_ui()
 	_toast = STATUS_TOAST.new()
 	add_child(_toast)
@@ -357,7 +358,7 @@ func _play() -> void:
 	_shoot_path = phase.shoot_script.resource_path if phase.shoot_script else ""
 	_rebuild_watch()
 	RNG.set_seed(_seed)
-	var boss := StageManager.start_spell_card(phase, _shell.boss_scene(), _name_label.text, _boss_pos)
+	var boss := _stage_runtime.start_spell_card(phase, _shell.boss_scene(), _name_label.text, _boss_pos)
 	_boss = boss
 	_update_stats()
 

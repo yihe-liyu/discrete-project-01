@@ -5,22 +5,6 @@ const SHELL := preload("res://scripts/workbench/phase_shell.gd")
 const RIG := preload("res://scripts/workbench/phase_bench.gd")
 
 
-# ═══ W3b-1：组合台是独立场景，需自备 StageRuntime 组合根（门面转发目标）═══
-var _rt_world: Node2D
-var _rt: StageRuntime
-
-func before_each():
-	_rt_world = Node2D.new()
-	add_child_autofree(_rt_world)
-	_rt = StageRuntime.new()
-	_rt.world = _rt_world
-	_rt_world.add_child(_rt)
-	StageManager.bind_runtime(_rt)
-
-
-func after_each():
-	StageManager.unbind_runtime()
-
 
 
 func test_phase_shell_copy_does_not_mutate_base():

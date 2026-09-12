@@ -1,6 +1,6 @@
 extends "res://scripts/workbench/bench_base.gd"
 ## 敌人组合台（M3a）—— 选行为（脚本）× 设外形（外观/HP/判定/掉落）× 出生点 × 幽灵玩家（鼠标跟随）
-## 跑真实 StageManager.spawn_enemy_data：敌人移动/发弹/行为脚本全部真实。
+## 跑真实 StageRuntime.spawn_enemy_data：敌人移动/发弹/行为脚本全部真实。
 
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/enemy_shell.gd")
@@ -58,6 +58,7 @@ func _ready() -> void:
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()
 	build_world()  # 场地+幽灵（rig_base）
+	ensure_stage_runtime()  # W3b-2：自备关卡运行时（生成敌人用）
 	_build_ui()
 	_toast = STATUS_TOAST.new()
 	add_child(_toast)
@@ -253,7 +254,7 @@ func _spawn() -> void:
 		data.param(k, params[k])
 	data.pos(_spawn_pos)
 	RNG.set_seed(_seed)
-	data.spawn(BulletManager.get_bullet_ctx())
+	_stage_runtime.spawn_enemy_data(data, BulletManager.get_bullet_ctx())
 	_update_stats()
 
 func _clear_all() -> void:

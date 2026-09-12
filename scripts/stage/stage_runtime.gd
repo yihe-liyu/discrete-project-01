@@ -1,5 +1,5 @@
 ## 关卡运行时 —— 关卡生命周期 + 生成敌人/Boss（World 下的场景节点）。
-## W3b-1：从 StageManager autoload 抽出的实现体；StageManager 暂留为薄门面转发（strangler）。
+## W3b-2：StageManager autoload 已删除；本节点是关卡生命周期的唯一实现（World 下声明）。
 ## 依赖由组合根注入 `world`（敌人生成 / 自机 ctx 注入的父节点），不再 get_tree().current_scene 全树找（R2）。
 ## 跨 autoload 直呼 GameState / BulletManager 待 W4 收口。
 class_name StageRuntime
@@ -16,6 +16,11 @@ signal all_enemies_defeated()
 ## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
 var world: Node2D
 
+## 注入槽（组合根 / 工作台设置）
+var miss_layer: MissEffectManager
+var fx_layer: FxLayer
+var current_background: StageBackground
+
 var current_stage: StageData
 var _stage_active: bool = false
 var _stage_script: CoroutineScript
@@ -27,7 +32,8 @@ func current_stage_script() -> CoroutineScript:
 
 
 ## 加载关卡；background = 背景场景实例（由门面/组合根传入，用于启动背景里的协程脚本）
-func load_stage(data: StageData, background: StageBackground = null) -> void:
+func load_stage(data: StageData) -> void:
+	var background := current_background
 	if _stage_active:
 		stop_stage()
 
@@ -50,6 +56,7 @@ func load_stage(data: StageData, background: StageBackground = null) -> void:
 	stage_script.finished.connect(_on_stage_finished)
 
 	var ctx := StageContext.new(stage_script)
+	ctx.stage = self
 	stage_script.start(ctx)
 	_inject_player_ctx(ctx)
 
@@ -57,7 +64,9 @@ func load_stage(data: StageData, background: StageBackground = null) -> void:
 	if background:
 		for child in background.get_children():
 			if child is CoroutineScript:
-				child.start(StageContext.new(child))
+				var bctx := StageContext.new(child)
+				bctx.stage = self
+				child.start(bctx)
 
 	stage_started.emit()
 

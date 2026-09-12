@@ -138,7 +138,7 @@ func camera_rush(direction: Vector3, duration: float, accel: float = 2.0):
 	# tween.tween_property(camera, "transform", Transform3D(camera.transform.basis, origin), 0.5)
 
 func _on_setup():
-	# 子 CoroutineScript 由 StageManager 统一 start()
+	# 子 CoroutineScript 由 StageRuntime 统一 start()
 	pass
 
 func _on_update(_delta: float, _t: float):

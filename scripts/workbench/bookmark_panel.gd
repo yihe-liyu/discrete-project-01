@@ -13,6 +13,9 @@ signal jump_requested(t: float)
 signal data_changed(auto: Array, manual: Array)
 signal log_requested(text: String)
 
+## 关卡运行时（Workbench 注入；读当前播放时刻）
+var stage_runtime: StageRuntime
+
 var _auto: Array = []
 var _manual: Array = []
 var _list: ItemList
@@ -108,7 +111,7 @@ func _on_menu_id(id: int) -> void:
 func open_add(t: float = -1.0) -> void:
 	var cur: float = t
 	if cur < 0.0:
-		var runner := StageManager.current_stage_script()
+		var runner: CoroutineScript = stage_runtime.current_stage_script() if is_instance_valid(stage_runtime) else null
 		cur = runner.game_time() if runner else 0.0
 	var vb := _dialog.open("◆ 添加书签")
 	# 时刻输入（默认当前/点击处，可自选）

@@ -138,7 +138,7 @@ func _clear_view() -> void:
 	if _view == null:
 		return
 	if _current_slot == 0:
-		StageManager.stop_stage()
+		_view.stop_stage()
 		BulletManager.clear_all()
 		AudioManager.stop_bgm()
 		_view.queue_free()

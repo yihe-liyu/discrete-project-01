@@ -8,7 +8,7 @@ const FRONT_LEFT: float = GameConfig.FIELD_LEFT
 const FRONT_RIGHT: float = GameConfig.FIELD_RIGHT
 const MIN_MARGIN: int = 8
 
-## 关卡上下文（StageManager/game_scene 注入，系统操作走服务）
+## 关卡上下文（StageRuntime/game_scene 注入，系统操作走服务）
 var ctx: StageContext
 
 const IDLE = "idle"

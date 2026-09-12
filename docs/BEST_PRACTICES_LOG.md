@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-11 — W3b：StageManager 去 autoload（StageRuntime 场景节点 + ctx.stage）
+
+- **目标**：autoload 7 → 6（轨道 B / §12 W3b）。
+- **为什么**：R9（autoload 只放真全局）+ R2（`add_enemy_to_scene` 全树找 `World`）+ R21（World 下声明式节点）。
+- **对照旧项目**：旧 `StageManager` 是 autoload，`add_enemy_to_scene` 里 `get_tree().current_scene.get_node_or_null("World")` 全树找父级——依赖"当前场景恰好有 World"的隐式约定。新 `StageRuntime` 由组合根注入 `world`，不再找。
+- **做法（strangler）**：W3b-1 先抽 `StageRuntime` + 薄门面（调用点零改动，commit `c3b4758`）；W3b-2 迁调用点（`ctx.stage`）并删 autoload。
+- **新落点**：`scripts/stage/stage_runtime.gd`；`StageContext.stage`；`EnemyData.spawn`/`StageDirector` 走 `ctx.stage`；`game_scene.tscn`/`workbench.tscn` 的 `World` 下声明节点；组合台 `bench_base.ensure_stage_runtime()` 自备，`bookmark_panel.stage_runtime` 由 Workbench 注入。
+- **验收**：autoload **7→6**；全量 **63 套 / 337 测试 / 3341 断言全绿**。
+- **踩坑**：`workbench._load_stage()` 的"清 World 残留"循环把新放进 `World` 的 `StageRuntime` 一起 `queue_free` → `_stage_runtime` 变 freed，触发 `previously freed`。**把结构性服务节点放 World 下时，任何"清 World"循环都要排除它。**
 ### 2026-09-11 — W3a：AssetRegistry 去 autoload（class_name 静态表）
 
 - **目标**：autoload 8 → 7（轨道 B / §12 W3a）。

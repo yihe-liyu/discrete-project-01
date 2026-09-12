@@ -350,7 +350,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | `StageObjects` | 42 | 3 / 8 | 关卡命名对象注册表（帧级作用域） | **改注入**（per-stage，`StageContext` 持有） | W2 ✅ |
 | `HitEffectPool` | 67 | 6 / 10 | 特效节点池 | **改注入**（`FxLayer`，随轨道 A） | W2 ✅ |
 | `AssetRegistry` | 153 | 31 / 49 | 静态资源表 + 内容 key | **改 `class_name`（静态表）+ 数据资源**（R17/S13） | W3a ✅（.tres 迁移随 S13） |
-| `StageManager` | 169 | 14 / 35 | 关卡生命周期 + 生成敌人/Boss | **改注入/场景节点**（`StageDirector` under World） | W3b |
+| `StageManager` | 169 | 14 / 35 | 关卡生命周期 + 生成敌人/Boss | **改注入/场景节点**（`StageRuntime` under World + `ctx.stage`） | W3b ✅ |
 | `BulletManager` | 165 | 22 / 46 | 弹幕门面 | **内核替换**（轨道 A Phase 1 + adapter） | W4 |
 | `GameState` | 405 | **42 / 186** | 全局游戏数据（god object） | **拆分**（最高优先） | W4 |
 
@@ -381,7 +381,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 - **AssetRegistry → 静态表 + 数据**：`bullet_configs` 是「代码侧内容配置」，应迁为数据（R17）——但先别一步到位；先把它从 autoload 变 `class_name`（`static const`），再逐项迁 .tres（与 S13 图集一起）。
 - **HitEffectPool → FxLayer**：它的 `Engine.get_main_loop().current_scene.get_node_or_null("World")` 是典型的**全树找父级**（违反 R2/R9）；改成由组合根注入的 `FxLayer`（重建版已有）。
 - **StageObjects → per-stage 注入**：它本来就是「帧级作用域」（load_stage 注册、stop 清空），不该是全局；改由 `StageContext`/`World` 持有，生命周期随关卡。
-- **StageManager → StageDirector**：它直接调 `GameState.reset_all/clear_enemies` 与 `BulletManager.clear_bullets`（跨 autoload 插手）；目标是把「关卡=World 的子节点」+ 注入服务（对应重建版 `game.gd load_stage` + 关卡脚本）。
+- **StageManager → StageRuntime**（W3b 已落地）：它直接调 `GameState.reset_all/clear_enemies` 与 `BulletManager.clear_bullets`（跨 autoload 插手）；现为「关卡=World 的子节点」+ `ctx.stage` 注入服务（对应重建版 `game.gd load_stage` + 关卡脚本）。跨 autoload 直呼待 W4。
 - **MissEffectManager → 场景节点**：它是个 CanvasLayer 渲染特效，引用只有 2/3，改由外壳场景挂载并注入最省事。
 - **GameManager → 组合根**：它已经在委派 `SceneTransition`/`MenuNav`；把它作为**唯一的壳入口**，在 `_ready` 里创建并注入内核/服务（对应重建版 `game.gd`）。
 - **AudioManager 的跨耦合**：它 `connect(GameManager.game_state_changed)`、读 `AssetRegistry.sounds` —— 改由组合根接线（或保留，但明确「音频只听事件」）。
@@ -392,12 +392,12 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 |---|---|---|---|
 | **W1** | `LayerConfig` → `class_name`；`MissEffectManager` → 场景节点 | 极低 | 引用 24 / 3，机械改 |
 | **W2** | `StageObjects` → per-stage 注入；`HitEffectPool` → `FxLayer` | 低-中 | 引用 8 / 10；后者随轨道 A —— **已完成（§12.8）** |
-| **W3** | `AssetRegistry` → `class_name` + 数据；`StageManager` → `StageDirector` | 中-高 | 引用 49 / 35；**拆成 W3a（AssetRegistry，已完成）/ W3b（StageManager，待决策）** |
+| **W3** | `AssetRegistry` → `class_name` + 数据；`StageManager` → `StageDirector` | 中-高 | 引用 49 / 35；**W3a/W3b 均已完成（§12.9 / §12.10）** |
 | **W4** | `GameState` 拆分；`BulletManager` 内核替换 | 最高 | 引用 186 / 46；与轨道 A Phase 1/5 合流 |
 
 ### 12.5 验收（可量化）
 
-- autoload 数：**12 → ≤5**（进度：W1 后 10，W2 后 8，W3a 后 **7**：`GameEvents / GameManager / BulletManager / GameState / StageManager / RNG / AudioManager`）。
+- autoload 数：**12 → ≤5**（进度：W1 后 10，W2 后 8，W3a 后 7，W3b 后 **6**：`GameEvents / GameManager / BulletManager / GameState / RNG / AudioManager`）。
 - `grep -rIl "\bGameState\b" scripts`：**42 → 仅存档相关**（目标 ≤ 5）。
 - **内核文件里 `GameState` 出现次数 = 0**。
 - 每删/改一个 autoload：GUT 全绿 + 主流程冒烟（主菜单 → stage01 可玩）。
@@ -474,7 +474,30 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **暂缓（不属本步）**：`bullet_configs` / `sounds` / `enemy_visuals` → `data/*.tres`（R17）与 S13 图集迁移一起做；现在只把 autoload 降成静态表。
 
-**W3b 未做（待决策）**：`StageManager` 的 `add_enemy_to_scene` 仍 `get_tree().current_scene.get_node_or_null("World")`（R2），且它跨 autoload 直呼 `GameState.reset_all/clear_enemies` + `BulletManager.clear_bullets`；改「World 下场景节点 + 注入」涉及 workbench 5 文件与内容 `EnemyData.spawn()`，见 §12.10。
+**W3b**：见 §12.10（已完成）——`StageRuntime` 场景节点 + `ctx.stage`，`add_enemy_to_scene` 的 World 查找已改注入。
+
+---
+
+### 12.10 W3b 实施记录（2026-09-11，已完成）
+
+**目标**：`StageManager` autoload → `StageRuntime` 场景节点 + `ctx.stage` 注入；autoload 7 → 6。
+
+**做法（strangler 两步）**：
+
+- **W3b-1**（`c3b4758`）：抽出 `scripts/stage/stage_runtime.gd`（`class_name StageRuntime extends Node`，World 下声明）；`StageManager` 暂留薄门面转发，调用点零改动；`world` 注入修掉 `add_enemy_to_scene` 的 `get_tree().current_scene.get_node_or_null("World")`（R2）。
+- **W3b-2**（本次）：删除 `StageManager` autoload；所有调用点迁到 `ctx.stage` / 直接引用。
+
+**落点**：
+
+- `StageRuntime`：持有 `world` / `miss_layer` / `fx_layer` / `current_background` 与生命周期/工厂；创建 ctx 时回填 `ctx.stage`。
+- `StageContext.stage`：内容经此拿服务；`ctx.effects` 读 `stage.miss_layer/fx_layer`，`ctx.get_decor()` 读 `stage.current_background`。
+- `EnemyData.spawn(ctx)` → `ctx.stage.spawn_enemy_data`；`StageDirector` → `ctx.stage.spawn_boss`。
+- 组合根：`game_scene.tscn` / `workbench.tscn` 的 `World` 下声明 `StageRuntime`；`_ready` 注入 `world`/槽位。
+- 组合台：`bench_base.gd:ensure_stage_runtime()` 自备（`enemy_bench`/`phase_bench`）；`bookmark_panel.stage_runtime` 由 Workbench 注入；`creation_station` 切页调 workbench 的公开 `stop_stage()`。
+
+**踩坑**：`workbench._load_stage()` 的"清 World 残留"循环把新放进 `World` 的 `StageRuntime` 一起 `queue_free` → `_stage_runtime` 变 freed。已排除 `StageRuntime`（与 `_ghost` 同级）。**教训：把结构性服务节点放 World 下时，任何"清 World"循环都要排除它。**
+
+**验收**：autoload **7 → 6**；`test_composition_root` 增 StageRuntime 声明/注入/真加载断言；全量 **63 套 / 337 测试 / 3341 断言全绿**。
 
 ---
 
