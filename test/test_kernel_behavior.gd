@@ -103,7 +103,29 @@ func test_homing_turns_toward_enemy() -> void:
 	assert_almost_eq(v.length(), 512.5, 1.0, "速度量级 ≈ lerp(min_speed, top_speed, dt/accel_time)")
 
 
-## S4c-4：魔理沙激光段——端口映射 laser_follow + 标 LASER kind；松手整批渐隐并清掉。
+## S4c-4：正确锚点——子机是玩家兄弟节点，须用 global_position（旧池语义）。
+func test_marisa_laser_anchors_to_global_position() -> void:
+	var player := Node2D.new()
+	player.global_position = Vector2(100, 500)
+	add_child_autofree(player)
+	_backend.setup_behaviors(player, Callable())
+	var opt := Node2D.new()
+	opt.global_position = Vector2(180, 420)
+	add_child_autofree(opt)
+	var d := BulletData.new().player()
+	d.texture = AssetRegistry.get_bullet_tex("marisa_opt1")
+	d.coroutine_script = MARISA_LASER
+	d.params = {"port_anchor_id": opt.get_instance_id(), "port_anchor_offset": Vector2.ZERO, "port_drift_speed": 2000.0, "port_drift_angle": 0.0}
+	_backend.shoot(d, opt.global_position, Vector2.UP)
+	for i in 2:   # 第 1 帧年龄 0 不推进
+		_backend.system._physics_process(1.0 / 60.0)
+		_backend.behavior.process()
+	var pos: Vector2 = _backend.system.get_position(0)
+	assert_almost_eq(pos.x, 180.0, 0.5, "x 应贴子机世界位（不是 玩家+子机 翻倍）")
+	assert_lt(pos.y, 420.0, "应向上漂移（第 2 帧起）")
+
+
+## S4c-4：魔理沙激光段——端口映射 + 标 LASER kind；松手整批渐隐并清掉。
 func test_marisa_laser_fades_and_clears() -> void:
 	var d := BulletData.new().player()
 	d.texture = AssetRegistry.get_bullet_tex("marisa_opt1")
@@ -113,10 +135,10 @@ func test_marisa_laser_fades_and_clears() -> void:
 	var anchor := Node2D.new()
 	anchor.global_position = Vector2(448, 600)
 	add_child_autofree(anchor)
-	d.params = {"anchor_id": anchor.get_instance_id(), "anchor_offset": Vector2.ZERO, "drift_speed": 2000.0, "drift_angle": 0.0}
+	d.params = {"port_anchor_id": anchor.get_instance_id(), "port_anchor_offset": Vector2.ZERO, "port_drift_speed": 2000.0, "port_drift_angle": 0.0}
 	_backend.shoot(d, Vector2(448, 600), Vector2.UP)
-	assert_eq(_backend.system.get_move_name(_backend.system.get_behavior_id(0)), &"laser_follow",
-		"marisa 激光端口应映射 laser_follow")
+	assert_eq(_backend.system.get_move_name(_backend.system.get_behavior_id(0)), &"marisa_laser",
+		"marisa 激光端口应映射 marisa_laser")
 	assert_eq(_backend.system.get_type(0).kind, BulletType.Kind.LASER, "应标 LASER kind")
 	# 测试环境 Input 未按射击 → 立即进入渐隐
 	for i in 20:

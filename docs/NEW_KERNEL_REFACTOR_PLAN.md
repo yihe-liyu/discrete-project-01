@@ -794,6 +794,18 @@ func kernel_port() -> Dictionary:
 - 验收：`test_kernel_behavior` +1；全量 **61 套 / 324 测试 / 3306 断言全绿**。
 - 已知：渐隐是**整批**（按 Kind），非逐弹 alpha——与重建版一致；逐弹 alpha 需内核 `set_color`，按 A 方案不做。
 
+### 21.15 S4c-4 修复：子机锚点必须用 `global_position`（2026-09-11，已完成）
+
+**试玩现象**：魔理沙激光不跟随子机，跑到屏幕另一侧。
+
+**根因**：`cs_player._sync_options` 把子机挂成**玩家的兄弟节点**（`leader.get_parent().add_child(opt)`），`opt.position` 相对 World；内核 `LaserFollowBehavior` 读 `node.position`（假设子机是玩家的子节点）→ `anchor = 玩家世界位 + 子机世界位`，**偏移翻倍**。
+
+**修法**：新增桥接 `MarisaLaserBehavior`（`global_position` 语义，与旧实现一致），内容端口改 `move=&"marisa_laser"`；内核 `LaserFollowBehavior` 保留但宿主不用。
+**顺带**：端口成员改名 `port_*`，避免与旧 lambda 的局部 `drift_speed / drift_angle` 冲突（编辑器 `SHADOWED_VARIABLE`）。
+
+**验收**：新增锚点断言（x 贴子机世界位，非翻倍）；全量 **61 套 / 325 测试 / 3308 断言全绿**。
+
+
 
 
 

@@ -139,10 +139,10 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 
 	# 内核端口读 b.params（见 marisa_laser_follow.kernel_port）；旧池路径无副作用
 	b.params = {
-		"anchor_id": source.get_instance_id(),
-		"anchor_offset": Vector2.ZERO,
-		"drift_speed": LASER_DRIFT_SPEED,
-		"drift_angle": angle_rad,
+		"port_anchor_id": source.get_instance_id(),
+		"port_anchor_offset": Vector2.ZERO,
+		"port_drift_speed": LASER_DRIFT_SPEED,
+		"port_drift_angle": angle_rad,
 	}
 
 	# 段在发射口生成（offset=0），drift 从 0 独立累积 → 根部永远在子机

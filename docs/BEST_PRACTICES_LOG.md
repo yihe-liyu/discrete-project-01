@@ -104,3 +104,12 @@
 - **为什么整批而不是逐弹 alpha**：内核 SoA 没有 `set_color`，逐弹 alpha 要改内核；整批 fade 是内核本就提供的 `set_render_fade`（重建版同款设计），守住 A 方案「内核零改动」。
 - **踩坑**：渐隐控制器起初在「淡完 → 松手仍成立」时又重启一轮「淡出→复位」，测试值停在中途；加 `_spawned` 门（只有生成过激光才启动渐隐）后正确。
 - **验收**：全量 GUT **61 套 / 324 测试 / 3306 断言全绿**。
+
+### 2026-09-11 — S4c-4 修复：子机锚点 `global_position`
+
+- **现象**：魔理沙激光不跟子机，跑到屏幕边。
+- **根因**：原项目子机是**玩家的兄弟节点**（`leader.get_parent().add_child(opt)`），`position` 相对 World；内核 `LaserFollowBehavior` 读 `node.position` 当作「玩家子节点偏移」→ `玩家 + 子机世界位` 翻倍。
+- **修法**：桥接 `MarisaLaserBehavior` 用 `global_position`（旧语义），端口 `move=&"marisa_laser"`。
+- **教训**：内核行为的**节点语义假设**（子节点 local）必须与宿主实际层级对齐，否则静默偏移——这类 bug 不报错，只画错。
+- **顺带**：端口成员 `port_*` 命名，避开旧 lambda 局部变量 shadow 警告。
+- **验收**：全量 GUT **61 套 / 325 测试 / 3308 断言全绿**。
