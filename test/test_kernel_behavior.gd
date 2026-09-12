@@ -6,14 +6,17 @@ const MOVE_HOMING = preload("res://scripts/coroutine/player/move_homing.gd")
 const NO_PORT = preload("res://test/fixtures/no_port_behavior.gd")
 const RADIAL_ACCEL = preload("res://data/stages/stage01/bullet/radial_accel_bullet.gd")
 const BOUNCE_BULLET = preload("res://data/stages/stage01/bullet/bounce_bullet.gd")
+const NON_MID = preload("res://data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd")
 
 var _backend: KernelBulletBackend
 var _saved_enemies: Array = []
+var _saved_difficulty: int = 1
 
 
 func before_each() -> void:
 	_saved_enemies = GameState.active_enemies.duplicate()
 	GameState.active_enemies.clear()   # 保证「无 Boss」分支确定
+	_saved_difficulty = GameState.selected_difficulty
 	_backend = KernelBulletBackend.new()
 	add_child_autofree(_backend)
 	_backend.setup_behaviors(null, Callable())
@@ -22,6 +25,7 @@ func before_each() -> void:
 func after_each() -> void:
 	GameState.active_enemies.clear()
 	GameState.active_enemies.append_array(_saved_enemies)
+	GameState.selected_difficulty = _saved_difficulty
 
 
 func _enemy(tex := "小玉") -> BulletData:
@@ -96,6 +100,39 @@ func test_homing_turns_toward_enemy() -> void:
 	var v: Vector2 = _backend.system.get_velocity(0)
 	assert_gt(v.x, 0.0, "应朝右侧敌人偏转")
 	assert_almost_eq(v.length(), 512.5, 1.0, "速度量级 ≈ lerp(min_speed, top_speed, dt/accel_time)")
+
+
+## S4c-3：TRAVEL → 靠近自机 → FLEE（沿远离方向）。
+func test_non_mid_flees_from_player() -> void:
+	var player := Node2D.new()
+	player.global_position = Vector2(100, 100)
+	add_child_autofree(player)
+	_backend.setup_behaviors(player, Callable())
+	var d := _enemy()
+	d.velocity = Vector2.RIGHT * 100.0
+	d.coroutine_script = NON_MID
+	_backend.shoot(d, Vector2(80, 100), Vector2.RIGHT)
+	assert_eq(_backend.system.get_move_name(_backend.system.get_behavior_id(0)), &"non_mid_flee",
+		"non_mid01_bullet 端口应映射 non_mid_flee")
+	for i in 3:
+		_backend.system._physics_process(1.0 / 60.0)
+		_backend.behavior.process()
+	assert_eq(_backend.system.get_behavior_phase(0), 1, "应进入 FLEE")
+	assert_lt(_backend.system.get_velocity(0).x, 0.0, "应朝远离自机（左）飞")
+
+
+## S4c-3：内容回调——近 Boss 散圈（入队后 flush）。
+func test_non_mid_burst_queues_ring() -> void:
+	GameState.selected_difficulty = 1   # Normal
+	var probe = NON_MID.new()
+	autofree(probe)
+	var port: Dictionary = probe.kernel_port()
+	var cb: Callable = port["params"][&"on_flee_burst"]
+	assert_true(cb.is_valid(), "端口应给散圈回调")
+	var ok: bool = cb.call(Vector2(400, 250), Vector2(400, 200), true, _backend._behavior_host)
+	assert_true(ok, "近 Boss 应散圈")
+	_backend._physics_process(0.0)   # flush 入队的散圈
+	assert_gt(_backend.system.get_active_count(), 0, "应生成散圈弹")
 
 
 ## S4c-2：bounce 端口映射 + 无 Boss 时碰左框 → 换成向下弹。

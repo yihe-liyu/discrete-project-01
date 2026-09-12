@@ -78,3 +78,48 @@ func _tick_flee(p_ctx: StageContext):
 		
 		# 自己消失
 		BulletManager.return_bullet(target)
+
+
+## 内核端口（Track A / S4c-3）：TRAVEL→FLEE + 近 Boss 散圈。散圈逻辑留在内容侧。
+func kernel_port() -> Dictionary:
+	return {
+		"move": &"non_mid_flee",
+		"params": {
+			&"player_proximity": PLAYER_PROXIMITY,
+			&"on_flee_burst": Callable(self, "_kernel_on_flee_burst"),
+		},
+	}
+
+
+## FLEE 阶段靠近 Boss → 散圈（true = 已散圈）。散圈只入队，由 host 循环后发射。
+func _kernel_on_flee_burst(pos: Vector2, boss_pos: Vector2, has_boss: bool, host) -> bool:
+	if not has_boss:
+		return false
+	if pos.distance_to(boss_pos) >= diff_pick([175, 150, 125, 100]):
+		return false
+	var normal := BulletData.new().tex("小玉").speed(RING_SPEED)\
+		.color(Color(0.349, 0.584, 0.798, 1.0)).blend(true).enemy()
+	var rand_dir := Vector2.DOWN.rotated(RNG.randf() * TAU)
+	_kernel_spread(normal, diff_pick([2, 4, 6, 8]), TAU, rand_dir, pos, host)
+	if GameState.selected_difficulty >= 2:
+		var away := (pos - boss_pos).normalized()
+		var num: int = diff_pick([0, 0, 1, 2])
+		var count: int = diff_pick([0, 0, 4, 8])
+		for i in count:
+			var red := BulletData.new().tex("棱弹").speed(RING_SPEED + i * 50)\
+				.color(Color.RED).blend(true).enemy()
+			_kernel_spread(red, num, 1 / TAU / 3, away, pos, host)
+	AudioManager.play_sfx(AssetRegistry.sounds["kira"], -8.0)
+	return true
+
+
+## 内核版 shoot_spread：只入队（内核行为循环中途禁止直接 spawn）。
+func _kernel_spread(data: BulletData, count: int, spread: float, base_dir: Vector2, at: Vector2, host) -> void:
+	if count <= 0:
+		return
+	if count == 1:
+		host.queue_spawn(data, at, base_dir)
+		return
+	var step := spread / (count - 1) if spread < TAU - 0.001 else spread / count
+	for i in count:
+		host.queue_spawn(data, at, base_dir.rotated(-spread / 2.0 + step * i))

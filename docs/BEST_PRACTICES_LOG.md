@@ -87,3 +87,11 @@
 - **边界**：Boss 取 `GameState.get_boss()`（宿主），落在桥接层；内核不碰。
 - **对照旧项目**：旧 `spawn_tex` / `spawn_color` 是**死变量**（`_re_fire` 硬编码米弹 / GOLD）——不抄「看起来能配其实没用」的参数。
 - **验收**：全量 GUT **61 套 / 321 测试 / 3296 断言全绿**。
+
+### 2026-09-11 — S4c-3：`non_mid01` 弹丸（逃跑 + 散圈）
+
+- **目标**：中boss非符的弹丸在内核路径下也能「靠近自机逃跑、靠近 Boss 散圈消失」。
+- **做法**：桥接 `NonMidFleeBehavior` 负责状态机 + 距离检测；**内容相关决策（难度 `diff_pick`、RNG、散圈形状）通过 `on_flee_burst(pos, boss_pos, has_boss, host)` 回调留在 `data/**`**。桥接把 `GameState.get_boss()` 的 `boss_pos / has_boss` 与延后队列 `host` 传给回调。
+- **难点**：散圈一次多发，且内核禁止行为循环中途 spawn → 内容 `_kernel_spread` 只 `host.queue_spawn`（内核版 shoot_spread）。
+- **边界**：`diff_pick` 原来挂在 `ctx.diff`，这里实测它其实只读全局 `GameState.selected_difficulty`——内容探测实例可直接用，不必假装有 ctx。
+- **验收**：全量 GUT **61 套 / 323 测试 / 3302 断言全绿**。

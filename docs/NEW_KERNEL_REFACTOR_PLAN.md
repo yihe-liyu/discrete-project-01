@@ -777,6 +777,15 @@ func kernel_port() -> Dictionary:
 - 验收：`test_kernel_behavior` +2；全量 **61 套 / 321 测试 / 3296 断言全绿**。
 - 已知：旧脚本的 `spawn_tex` / `spawn_color` 是**死变量**（`_re_fire` 硬编码米弹 / GOLD）——照旧不复刻。
 
+### 21.13 S4c-3 落地：`non_mid01_bullet`（中boss非符弹丸）（2026-09-11，已完成）
+
+- 桥接 `NonMidFleeBehavior`：TRAVEL → 自机进入 `player_proximity`（默认 150）→ FLEE（沿远离自机方向）；FLEE 期每 3 帧问内容 `on_flee_burst(pos, boss_pos, has_boss, host)`，返回 true → `request_despawn`。
+- **难度 / RNG / 散圈形状全留内容**：`non_mid01_bullet.kernel_port()` 提供 `on_flee_burst` 回调；`diff_pick`（= `arr[GameState.selected_difficulty]`）与 `RNG` 在内容侧，桥接只传 `boss_pos / has_boss / host`。
+- **散圈走延后队列**：内容 `_kernel_spread`（内核版 shoot_spread）只 `host.queue_spawn`，避免行为循环中途 spawn。
+- 测试：TRAVEL→FLEE 转向；内容回调近 Boss 入队散圈（flush 后 pool 非空）。
+- 验收：`test_kernel_behavior` +2；全量 **61 套 / 323 测试 / 3302 断言全绿**。
+
+
 
 
 
