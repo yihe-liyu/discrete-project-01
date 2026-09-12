@@ -213,4 +213,7 @@
 | R14/R15/R2/R5 | res:// 写存档 0、中文 .gd 文件名 0、`get_node("..")` 0、字符串 `get_node` 5 | 比预期干净；R15 的目录/拼写问题见上方 TODO |
 | R4 输入 | 12 文件轮询 `Input.is_action` | 需按「移动例外」理解（重建版同做法），非硬违规 |
 
-> **轨道 B 进度（2026-09-11）**：**W1 已完成** —— `LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化（组合根 `GameScene` 注入）。autoload 12→10。详见 `NEW_KERNEL_REFACTOR_PLAN.md` §12.7。
+> **轨道 B 进度（2026-09-11）**：**W1、W2 已完成**。
+> - W1：`LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化（组合根 `GameScene` 注入）。autoload 12→10。
+> - W2：`StageObjects` 去 autoload（→ `StageContext.objects`）、`HitEffectPool` → `FxLayer`（组合根注入，节点在 `game_scene.tscn` 声明）。autoload 10→8。
+> - ⚠️ 遗留：`MissEffectManager` 仍为 `new()+add_child`（W1 产物），与 **R21** 不符；`FxLayer` 已改声明式。详见 `NEW_KERNEL_REFACTOR_PLAN.md` §12.7 / §12.8。

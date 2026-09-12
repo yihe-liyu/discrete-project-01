@@ -437,7 +437,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | `StageObjects` | `scripts/autoload/stage_objects.gd`（autoload）→ **`scripts/coroutine/services/stage_objects.gd`**（`class_name StageObjects extends RefCounted`）；注册表由 `StageContext.objects` 持有（per-ctx，随关卡生命周期），`StageDirector` 注册/清理，并把同一注册表注入 `BossHandle`。删 autoload 项 |
 | `HitEffectPool` | `scripts/autoload/hit_effect_pool.gd`（autoload）→ **`scripts/effect/fx_layer.gd`**（`class_name FxLayer extends Node2D`，池化节点）。删 autoload 项 |
 
-**`FxLayer` 注入链**：`GameScene._ready()` 在 `%World` 下创建 `FxLayer` → `StageManager.fx_layer`（供 `StageContext.effects` → `EffectService.fx_layer`）+ `BulletManager.inject_fx_layer()`（转发给 `BulletPhysics.fx` / `DeathClear.fx` / `KernelBulletPhysics.fx`）。所有调用点带 `fx == null` 静默守卫（单测/无场景安全）。`GameScene._exit_tree()`：`BulletManager.clear_all()` 内含 `fx_layer.clear_pool()`，随后 `inject_fx_layer(null)` + `StageManager.fx_layer = null` 解除注入。**消灭了 `Engine.get_main_loop().current_scene.get_node_or_null("World")` 这种全树找父级（R2/R9）**。
+**`FxLayer` 注入链**：`FxLayer` 节点在 **`game_scene.tscn` 的 `World` 下声明**（R21：声明式建树，非 `new()+add_child`；与 `ItemPool` 同规格）→ `GameScene._ready()` 注入 `StageManager.fx_layer`（供 `StageContext.effects` → `EffectService.fx_layer`）+ `BulletManager.inject_fx_layer()`（转发给 `BulletPhysics.fx` / `DeathClear.fx` / `KernelBulletPhysics.fx`）。所有调用点带 `fx == null` 静默守卫（单测/无场景安全）。`GameScene._exit_tree()`：`BulletManager.clear_all()` 内含 `fx_layer.clear_pool()`，随后 `inject_fx_layer(null)` + `StageManager.fx_layer = null` 解除注入。**消灭了 `Engine.get_main_loop().current_scene.get_node_or_null("World")` 这种全树找父级（R2/R9）**。
 
 **验收**：
 
@@ -449,7 +449,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **踩坑**：同 W1——新增 `class_name` 必须重建 `.godot/global_script_class_cache.cfg`（本次用 `godot --headless --editor --quit`），否则 headless 报 `Could not find type "StageObjects" / "FxLayer"`，并连锁出 81 个假失败（`Scripts 61→59`）。不是代码错。
 
-**边界澄清**：`FxLayer` 仍是**宿主侧**节点（`class_name` + 组合根创建），不是内核服务——`scripts/kernel/**` 不引用它；`scripts/kernel_bridge/**` 桥接层可以收到注入的 `fx`。把消弹特效下沉进内核属于 W4 收敛话题，本波不动内核。
+**边界澄清**：`FxLayer` 仍是**宿主侧**节点（`class_name` + `game_scene.tscn` 声明、组合根注入），不是内核服务——`scripts/kernel/**` 不引用它；`scripts/kernel_bridge/**` 桥接层可以收到注入的 `fx`。把消弹特效下沉进内核属于 W4 收敛话题，本波不动内核。
 
 ---
 

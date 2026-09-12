@@ -4,12 +4,11 @@ class_name GameScene
 const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 @onready var _sub_viewport: SubViewport = %SubViewport
-@onready var _world: Node2D = %World
+@onready var _fx_layer: FxLayer = %FxLayer
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
 var _miss_layer: MissEffectManager
-var _fx_layer: FxLayer
 
 
 func _ready():
@@ -21,11 +20,8 @@ func _ready():
 	add_child(_miss_layer)
 	StageManager.miss_layer = _miss_layer
 
-	# 组合根装配：命中/消弹特效层（原 HitEffectPool autoload）由本场景创建并注入。
-	# 挂在 World 下：随场景释放；特效位置用 global_position，与父变换无关。
-	_fx_layer = FxLayer.new()
-	_fx_layer.name = "FxLayer"
-	_world.add_child(_fx_layer)
+	# 组合根装配：命中/消弹特效层（原 HitEffectPool autoload）。节点在 game_scene.tscn 的
+	# World 下**声明**（R21：声明式建树，不 new()+add_child）；这里只做注入。
 	StageManager.fx_layer = _fx_layer
 	BulletManager.inject_fx_layer(_fx_layer)
 

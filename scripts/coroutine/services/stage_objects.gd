@@ -1,9 +1,9 @@
-class_name StageObjects
-extends RefCounted
 ## 关卡内"命名对象"注册表：名字 ↔ 运行对象。
 ## 让流程/时间线/UI 用"名字"引用对象，而不是闭包捕获局部变量 / 全局扫描（StageManager.get_boss 那种）。
 ## 槽位可带类型（resolve_as 返回类型正确的对象，不用到处 as）。
 ## 帧级作用域：W2 起不再是 autoload —— 由 StageContext.objects 持有，生命周期随关卡（load_stage 注册、stop 清空）。
+class_name StageObjects
+extends RefCounted
 
 var _slots: Dictionary = {}   # String -> { node: Node, type: Script }
 
