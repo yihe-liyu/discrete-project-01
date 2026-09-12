@@ -4,6 +4,7 @@ extends GutTest
 const GRAVITY_BULLET = preload("res://data/stages/stage01/bullet/gravity_bullet.gd")
 const MOVE_HOMING = preload("res://scripts/coroutine/player/move_homing.gd")
 const NO_PORT = preload("res://test/fixtures/no_port_behavior.gd")
+const RADIAL_ACCEL = preload("res://data/stages/stage01/bullet/radial_accel_bullet.gd")
 
 var _backend: KernelBulletBackend
 
@@ -86,6 +87,35 @@ func test_homing_turns_toward_enemy() -> void:
 	var v: Vector2 = _backend.system.get_velocity(0)
 	assert_gt(v.x, 0.0, "应朝右侧敌人偏转")
 	assert_almost_eq(v.length(), 512.5, 1.0, "速度量级 ≈ lerp(min_speed, top_speed, dt/accel_time)")
+
+
+## S4c-1：radial_accel 沿初方向加速。
+func test_radial_accel_accelerates_along_initial_dir() -> void:
+	var d := _enemy()
+	d.velocity = Vector2.UP * 100.0
+	d.coroutine_script = RADIAL_ACCEL
+	_backend.shoot(d, Vector2(300, 400), Vector2.UP)
+	assert_eq(_backend.system.get_move_name(_backend.system.get_behavior_id(0)), &"radial_accel",
+		"radial_accel 端口应映射 radial_accel")
+	_backend.system._physics_process(1.0 / 60.0)
+	_backend.behavior.process()
+	var v: Vector2 = _backend.system.get_velocity(0)
+	assert_almost_eq(v.y, -102.5, 0.01, "沿初方向（-y）加速 150/60")
+
+
+## S4c-1：radial_accel 碰顶边 → 延后换成向下弹（旧弹回收、新弹 1 颗）。
+func test_radial_accel_re_fires_down_at_top() -> void:
+	var d := _enemy()
+	d.velocity = Vector2.UP * 100.0
+	d.coroutine_script = RADIAL_ACCEL
+	_backend.shoot(d, Vector2(300, GameConfig.FIELD_TOP - 5.0), Vector2.UP)
+	_backend.system._physics_process(1.0 / 60.0)
+	_backend.behavior.process()
+	_backend._physics_process(0.0)   # flush 延后 spawn
+	assert_eq(_backend.system.get_active_count(), 1, "旧弹回收 + 新弹生成")
+	var v: Vector2 = _backend.system.get_velocity(0)
+	assert_gt(v.y, 0.0, "换成向下弹")
+	assert_almost_eq(_backend.system.get_position(0).y, GameConfig.FIELD_TOP, 0.01, "落在顶边")
 
 
 ## S4b：无敌人时 homing 只按速度曲线推进，不转。

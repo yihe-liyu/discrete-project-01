@@ -33,3 +33,18 @@ func _spawn_downward(bullet: Bullet, _ctx: StageContext) -> void:
 	b.velocity = Vector2(0, bullet.velocity.length())  # 保留速度大小，方向竖直向下
 	_ctx.audio.play_sfx(AssetRegistry.sounds["kira"], -6)
 	BulletManager.re_fire(bullet, b, Vector2.DOWN, Vector2(bullet.global_position.x, GameConfig.FIELD_TOP))
+
+
+## 内核端口（Track A / S4c-1）：加速 + 顶边换向下弹。替换弹模板在内容侧构建。
+func kernel_port() -> Dictionary:
+	var down := BulletData.new()
+	down.tex("米弹").color(Color.FUCHSIA).blend(true).enemy()
+	return {
+		"move": &"radial_accel",
+		"params": {
+			&"accel_rate": accel_rate,
+			&"spawn_data": down,
+			&"sfx": "kira",
+			&"sfx_db": -6.0,
+		},
+	}

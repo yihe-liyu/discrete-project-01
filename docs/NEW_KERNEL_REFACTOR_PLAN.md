@@ -745,6 +745,15 @@ func kernel_port() -> Dictionary:
 - 验收：`test_kernel_behavior` +2（有敌偏转 / 无敌不偏，且速度按 `lerp` 爬升）；全量 **61 套 / 314 测试 / 3274 断言全绿**。
 - 语义备注：旧 `_apply_homing` 里的 `speed_mult/alignment` 随后被 `normalize()*current_speed` 覆盖——**死代码**，桥接未复刻。
 
+### 21.10 S4c-1 落地：`radial_accel_bullet`（顶边 re_fire 试点）（2026-09-11，已完成）
+
+- 新桥接 `KernelBehaviorHost`（延后动作队列）：内核契约禁止行为循环中途增删行，故行为 `request_despawn` + 入队，循环后由 `KernelBulletBackend._physics_process`（**-4**）`flush()`。
+- 新桥接 `RadialAccelBehavior`：沿初方向加速 + 碰 `FIELD_TOP` 换成向下弹（模板由内容提供）。
+- `radial_accel_bullet.gd.kernel_port()` → `radial_accel`；`spawn_data`（米弹 / 紫 / blend）+ sfx key 都在**内容侧**。
+- 优先级链补全：内核积分 **-10** → 行为 **-5** → 延后 flush **-4** → 宿主碰撞 **0**。
+- 验收：`test_kernel_behavior` +2；全量 **61 套 / 316 测试 / 3279 断言全绿**。
+
+
 
 
 

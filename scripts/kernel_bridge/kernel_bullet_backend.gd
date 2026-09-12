@@ -12,6 +12,8 @@ extends Node
 
 const WorldAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/world_accel_behavior.gd")
 const HomingBehaviorClass = preload("res://scripts/kernel_bridge/behavior/homing_behavior.gd")
+const RadialAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/radial_accel_behavior.gd")
+const KernelBehaviorHostClass = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
 const _MOVE_WORLD_ACCEL := &"world_accel"
 
 ## 内核弹池。默认本机新建；S3 交由 BulletManager 注入/接管。
@@ -29,6 +31,8 @@ var behavior: BehaviorProcessor
 var behavior_ctx: BehaviorContext
 ## 内容签名 → 端口（{move, params} / 预留 {program}）；按 Script×params 缓存，不每发 instantiate。
 var _port_by_sig: Dictionary = {}
+## S4c：桥接行为的延后动作队列（re_fire / 分裂不能在内核行为循环中途做）。
+var _behavior_host
 
 
 func _ready() -> void:
@@ -42,6 +46,12 @@ func _ensure_system() -> void:
 	system = BulletSystem.new()
 	system.name = "KernelBulletSystem"
 	add_child(system)
+
+
+## 行为循环结束后统一执行延后的 re_fire / 分裂（内核契约：循环中途禁止增删行）。
+func _physics_process(_delta: float) -> void:
+	if _behavior_host != null:
+		_behavior_host.flush()
 
 
 ## 发射一颗弹。语义对齐原项目 `Bullet.bind`：`direction` 定方向，`data.velocity` 只取速度大小。
@@ -154,6 +164,9 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	behavior_ctx.setup(player, behavior_ctx.get_world())   # 刷新自机
 	if behavior != null:
 		return
+	process_physics_priority = -4   # 延后动作 flush：行为(-5) 之后、宿主碰撞(0) 之前
+	_behavior_host = KernelBehaviorHostClass.new()
+	_behavior_host.setup(self)
 	behavior = BehaviorProcessor.new()
 	behavior.name = "KernelBehaviorProcessor"
 	behavior.process_physics_priority = -5
@@ -165,6 +178,9 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	behavior.register_behavior(&"avoid_player", AvoidPlayerBehavior.new())
 	behavior.register_behavior(_MOVE_WORLD_ACCEL, WorldAccelBehaviorClass.new())
 	behavior.register_behavior(&"homing", HomingBehaviorClass.new())
+	var radial = RadialAccelBehaviorClass.new()
+	radial.host = _behavior_host
+	behavior.register_behavior(&"radial_accel", radial)
 
 
 ## 取内容脚本的内核端口（duck-typed `kernel_port()`），按内容签名缓存。
