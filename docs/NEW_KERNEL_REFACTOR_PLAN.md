@@ -753,6 +753,23 @@ func kernel_port() -> Dictionary:
 - 优先级链补全：内核积分 **-10** → 行为 **-5** → 延后 flush **-4** → 宿主碰撞 **0**。
 - 验收：`test_kernel_behavior` +2；全量 **61 套 / 316 测试 / 3279 断言全绿**。
 
+### 21.11 S4c-1 修复：替换弹贴图丢失（2026-09-11，已完成）
+
+**试玩现象**：内核路径下 `radial_accel` 到顶边不换弹（看不到向下的弹），但端口/行为诊断打印都正常。
+
+**定位**：打印证明「映射 + 顶边换弹」都发生 → 问题在**入队之后**。补断言发现 **替换弹 `texture_for_index(ti) == null`**，再定位到 **`BulletData.duplicate()` 会丢 `texture`（Resource 字段）** → 渲染桥 `_sync_kernel` 对 `tex == null` 的弹直接 `continue` → **弹在物理上存在，但完全不画**。
+
+**修法**：
+
+- 内容 `kernel_port()` 用 **`spawn_factory: Callable`**（每次调用返回**新** `BulletData`）替代「共享模板 + `duplicate()`」。
+- `KernelBulletBackend` **保活**端口探测实例（`_port_probes`）——端口里的 Callable 绑在探测实例上，释放会让回调失效。
+- 行为改 `factory.call()`。
+
+**教训**：`Resource.duplicate()` 对 `texture` 这类 Resource 字段不可靠（本次实测丢）；跨「模板」复用一律走**工厂**，别 duplicate。**「弹在但看不见」的第一嫌疑 = 贴图 / 分组键**，先查 `texture_for_index`。
+
+**验收**：新增工厂测试（每次新对象 + 贴图不丢）+ 替换弹贴图断言；全量 **61 套 / 319 测试 / 3289 断言全绿**。
+
+
 
 
 

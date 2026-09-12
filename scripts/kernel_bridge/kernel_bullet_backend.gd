@@ -31,12 +31,21 @@ var behavior: BehaviorProcessor
 var behavior_ctx: BehaviorContext
 ## 内容签名 → 端口（{move, params} / 预留 {program}）；按 Script×params 缓存，不每发 instantiate。
 var _port_by_sig: Dictionary = {}
+## 端口探测实例：端口的 params 里可能带 Callable（工厂）→ 必须保活，否则回调失效。
+var _port_probes: Array[Node] = []
 ## S4c：桥接行为的延后动作队列（re_fire / 分裂不能在内核行为循环中途做）。
 var _behavior_host
 
 
 func _ready() -> void:
 	_ensure_system()
+
+
+func _exit_tree() -> void:
+	for p in _port_probes:
+		if is_instance_valid(p):
+			p.free()
+	_port_probes.clear()
 
 
 ## 懒建内核弹池（幂等）：不强依赖节点已在树中。
@@ -50,6 +59,11 @@ func _ensure_system() -> void:
 
 ## 行为循环结束后统一执行延后的 re_fire / 分裂（内核契约：循环中途禁止增删行）。
 func _physics_process(_delta: float) -> void:
+	flush_behavior_host()
+
+
+## 执行延后动作队列（幂等：队列空则 no-op）。BulletManager 也会调一次作兜底。
+func flush_behavior_host() -> void:
 	if _behavior_host != null:
 		_behavior_host.flush()
 
@@ -200,10 +214,10 @@ func _port_for(data: BulletData) -> Dictionary:
 			if raw is Dictionary:
 				port = raw
 		if probe is Node:
-			(probe as Node).free()
-	if OS.is_debug_build():
-		var src: String = data.coroutine_script.resource_path.get_file()
-		print("[KernelBulletBackend] 端口 %s -> %s" % [src, port.get("move", port.get("program", "(无)"))])
+			if port.is_empty():
+				(probe as Node).free()   # 无端口：探测完即弃
+			else:
+				_port_probes.append(probe)   # 端口可能带 Callable 工厂：保活
 	_port_by_sig[sig] = port
 	return port
 

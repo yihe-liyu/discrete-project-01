@@ -89,6 +89,20 @@ func test_homing_turns_toward_enemy() -> void:
 	assert_almost_eq(v.length(), 512.5, 1.0, "速度量级 ≈ lerp(min_speed, top_speed, dt/accel_time)")
 
 
+## 替换弹工厂：每次新对象 + 贴图不丢（duplicate 会丢 texture，故不用）。
+func test_radial_port_factory_makes_fresh_textured_bullet() -> void:
+	var probe = RADIAL_ACCEL.new()
+	autofree(probe)
+	var port: Dictionary = probe.kernel_port()
+	var f: Callable = port["params"][&"spawn_factory"]
+	assert_true(f.is_valid(), "端口应给工厂 Callable")
+	var a: BulletData = f.call()
+	var b: BulletData = f.call()
+	assert_not_null(a.texture, "工厂出的弹应有贴图")
+	assert_not_null(b.texture, "工厂出的弹应有贴图")
+	assert_not_same(a, b, "每次应是新对象")
+
+
 ## S4c-1：radial_accel 沿初方向加速。
 func test_radial_accel_accelerates_along_initial_dir() -> void:
 	var d := _enemy()
@@ -116,6 +130,9 @@ func test_radial_accel_re_fires_down_at_top() -> void:
 	var v: Vector2 = _backend.system.get_velocity(0)
 	assert_gt(v.y, 0.0, "换成向下弹")
 	assert_almost_eq(_backend.system.get_position(0).y, GameConfig.FIELD_TOP, 0.01, "落在顶边")
+	var ti: int = _backend.system.get_type_indices()[0]
+	assert_not_null(_backend.texture_for_index(ti), "替换弹必须有贴图（否则渲染桥会跳过）")
+	assert_eq(_backend.texture_for_index(ti), AssetRegistry.get_bullet_tex("米弹"), "应是米弹贴图")
 
 
 ## S4c-1（真帧）：让引擎物理帧自己跑，验证 system(-10)/behavior(-5)/backend(-4) 链路真的 flush。
