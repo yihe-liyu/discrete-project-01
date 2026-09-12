@@ -174,7 +174,11 @@ func _inject_player_ctx(p_ctx: StageContext) -> void:
 
 
 func add_enemy_to_scene(node: Node2D) -> void:
-	var parent: Node = world if is_instance_valid(world) else get_tree().root
+	var parent: Node = null
+	if is_instance_valid(world):
+		parent = world
+	else:
+		parent = get_tree().root
 	if parent:
 		parent.add_child(node)
 	else:
