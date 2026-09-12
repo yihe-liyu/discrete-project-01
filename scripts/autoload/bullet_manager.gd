@@ -29,6 +29,9 @@ var use_kernel: bool = false
 var _kernel: KernelBulletBackend
 var _kernel_physics: KernelBulletPhysics
 
+## W2：组合根注入的特效层（空则静默）。命中/消弹特效统一走它，取代原 HitEffectPool autoload。
+var fx_layer: FxLayer
+
 # 共享子弹上下文：所有子弹协程共用一个 ctx（服务全部无状态）
 # 省掉每弹 new StageContext + 服务对象（REFACTORING P-0 债务）
 var _world_clock: CoroutineRunner
@@ -39,6 +42,17 @@ var _bullet_ctx: StageContext
 ## 子弹协程共享 ctx（active() = 世界时钟恒 true；子弹靠 target 失效停止）
 func get_bullet_ctx() -> StageContext:
 	return _bullet_ctx
+
+
+## W2：组合根注入特效层，并转发给各碰撞/清弹子模块（空 = 静默，便于测试/无场景）。
+func inject_fx_layer(fx: FxLayer) -> void:
+	fx_layer = fx
+	if _physics:
+		_physics.fx = fx
+	if _death_clear:
+		_death_clear.fx = fx
+	if _kernel_physics:
+		_kernel_physics.fx = fx
 
 
 ## 试玩 A/B 热键：F2 在「旧 Bullet 节点池」与「内核 SoA 池」之间切换（默认旧池，零源码改动）。
@@ -84,6 +98,7 @@ func _ready():
 	
 	if use_kernel:
 		_enable_kernel()
+	inject_fx_layer(fx_layer)
 
 
 # ═══ 每帧 ═══
@@ -192,6 +207,12 @@ func clear_all_lasers() -> void:
 
 const _CLEAR_EFFECT = preload("res://scenes/effect/enemy_bullet_clear.tscn")
 
+
+## 消弹特效（同色）：未注入特效层时静默。
+func _play_clear(pos: Vector2, tint: Color) -> void:
+	if fx_layer:
+		fx_layer.play(_CLEAR_EFFECT, pos, Vector2.ZERO, tint)
+
 ## 清掉 center/radius 内的敌弹（不扩张、立即），逐弹播消散特效。返回清除数（内核路径暂返回 0）。
 func clear_enemy_bullets_in_circle(center: Vector2, radius: float) -> int:
 	if use_kernel and _kernel != null:
@@ -205,7 +226,7 @@ func clear_enemy_bullets_in_circle(center: Vector2, radius: float) -> int:
 		if not is_instance_valid(b) or b.is_queued_for_deletion() or b.faction != Bullet.FACTION_ENEMY or not b.is_ready:
 			continue
 		if b.global_position.distance_squared_to(center) <= r2:
-			HitEffectPool.play(_CLEAR_EFFECT, b.global_position, Vector2.ZERO, b.sprite.modulate)
+			_play_clear(b.global_position, b.sprite.modulate)
 			_pool.return_bullet(b)
 			cleared += 1
 	return cleared
@@ -235,7 +256,8 @@ func clear_all():
 		_kernel.clear_bombs()
 	_lasers.clear()
 	_death_clear.clear_all()
-	HitEffectPool.clear_all_pool()
+	if fx_layer:
+		fx_layer.clear_pool()
 	if _multi_mesh:
 		_multi_mesh.clear()
 
@@ -286,6 +308,7 @@ func _enable_kernel() -> void:
 		add_child(_kernel)
 		_kernel_physics = KernelBulletPhysics.new()   # S3b：宿主侧碰撞规则（敌弹↔自机）
 		_kernel_physics.setup(_kernel)
+		_kernel_physics.fx = fx_layer                 # W2：特效层（若已注入）
 		# 帧序：内核积分必须在宿主 _physics_process（priority 0）之前执行（§16.3；原项目暂无 FrameOrder）。
 		_kernel.system.process_physics_priority = -10
 		# 剔除范围 = 东方框；margin 对齐旧 is_offscreen 的 90px。

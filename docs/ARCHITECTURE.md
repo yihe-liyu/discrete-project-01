@@ -35,7 +35,7 @@
 |---|---|---|
 | 阶段身份（phase_index/第N张/boss_index） | **BossCatalog.resolve_identity** | `scripts/data/boss_catalog.gd` |
 | 记录（attempts/captures/成绩） | **RecordService** | `scripts/coroutine/services/record_service.gd` |
-| 运行对象引用（名字→对象） | **StageObjects** | `scripts/autoload/stage_objects.gd` |
+| 运行对象引用（名字→对象） | **StageObjects** | `scripts/coroutine/services/stage_objects.gd`（由 `StageContext.objects` 持有，非 autoload） |
 | 状态变化通知（显示名/HP/阶段） | **信号**（可观察属性） | 各节点 |
 | 参数（阶段/敌人调参） | **typed**（待修：现为 `params` 反射 = C4） | `phase_data.gd``enemy_data.gd` |
 

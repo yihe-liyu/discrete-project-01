@@ -1,6 +1,6 @@
 ## KernelBulletPhysics（Track A / S3b）—— 把原项目 BulletPhysics 的规则移植到内核 SoA 池。
 ##
-## 边界：本文件是**宿主桥接层**（可引用 GameState / RNG / AudioManager / HitEffectPool 等宿主全局）；
+## 边界：本文件是**宿主桥接层**（可引用 GameState / RNG / AudioManager 等宿主全局）；
 ## 几何唯一实现归内核（query_circle / hit_test），本层只做"规则"（命中 / 擦弹 / 伤害 / 特效）。
 ## 覆盖：S3b 敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹）；S3c 自机弹 ↔ 敌人
 ## （damage 侧表 + 记忆加成 + 音效/特效）；S3d 死亡清弹扫掠（sweep_enemy_bullets）。
@@ -16,10 +16,18 @@ const HIT_SFX_VOLUME := {
 }
 
 var backend: KernelBulletBackend
+## W2：组合根注入的特效层（空则静默）
+var fx: FxLayer
 
 
 func setup(p_backend: KernelBulletBackend) -> void:
 	backend = p_backend
+
+
+## 消弹特效（同色）：未注入特效层时静默。
+func _play_clear(pos: Vector2, tint: Color) -> void:
+	if fx:
+		fx.play(_CLEAR_EFFECT, pos, Vector2.ZERO, tint)
 
 
 ## 每帧碰撞派发（由 BulletManager._physics_process 在内核积分之后调用）。
@@ -51,7 +59,7 @@ func _enemy_bullets_vs_player() -> void:
 			if GameState.memory_value >= 50.0:
 				var chance := remap(GameState.memory_value, 50.0, 100.0, 0.05, 0.30)
 				if RNG.randf() < chance:
-					HitEffectPool.play(_CLEAR_EFFECT, sys.get_position(id), Vector2.ZERO, sys.get_color(id))
+					_play_clear(sys.get_position(id), sys.get_color(id))
 					sys.despawn(id)
 
 
@@ -104,7 +112,7 @@ func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Ca
 			continue
 		if on_clear.is_valid():
 			on_clear.call(pos)
-		HitEffectPool.play(_CLEAR_EFFECT, pos, Vector2.ZERO, sys.get_color(i))
+		_play_clear(pos, sys.get_color(i))
 		sys.despawn(i)
 
 
@@ -131,9 +139,9 @@ func _play_hit_sfx(ti: int, enemy) -> void:
 
 ## 命中特效：场景在 BulletType.hit_fx，颜色取该弹当前色（与旧 _spawn_effect 1:1）。
 func _spawn_hit_fx(sys: BulletSystem, id: int, bt: BulletType) -> void:
-	if bt.hit_fx == null:
+	if bt.hit_fx == null or fx == null:
 		return
-	HitEffectPool.play(bt.hit_fx, sys.get_position(id), sys.get_velocity(id), sys.get_color(id))
+	fx.play(bt.hit_fx, sys.get_position(id), sys.get_velocity(id), sys.get_color(id))
 
 
 ## 擦弹结算：与旧 BulletPhysics.on_graze 1:1。

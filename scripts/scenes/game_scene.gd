@@ -4,10 +4,12 @@ class_name GameScene
 const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 @onready var _sub_viewport: SubViewport = %SubViewport
+@onready var _world: Node2D = %World
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
 var _miss_layer: MissEffectManager
+var _fx_layer: FxLayer
 
 
 func _ready():
@@ -18,6 +20,14 @@ func _ready():
 	_miss_layer.name = "MissEffectManager"
 	add_child(_miss_layer)
 	StageManager.miss_layer = _miss_layer
+
+	# 组合根装配：命中/消弹特效层（原 HitEffectPool autoload）由本场景创建并注入。
+	# 挂在 World 下：随场景释放；特效位置用 global_position，与父变换无关。
+	_fx_layer = FxLayer.new()
+	_fx_layer.name = "FxLayer"
+	_world.add_child(_fx_layer)
+	StageManager.fx_layer = _fx_layer
+	BulletManager.inject_fx_layer(_fx_layer)
 
 	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
 
@@ -97,8 +107,9 @@ func _exit_tree():
 		GameEvents.boss_defeated.disconnect(_on_practice_cleared)
 
 	StageManager.miss_layer = null  # 解除注入（节点随本场景释放）
-	BulletManager.clear_all()
-	HitEffectPool.clear_all_pool()
+	BulletManager.clear_all()       # 内含 fx_layer.clear_pool()
+	BulletManager.inject_fx_layer(null)  # 解除特效层注入（防 autoload 持悬空引用）
+	StageManager.fx_layer = null
 	if GameState.is_practice_mode:
 		GameState.end_practice()
 	if _background_instance and is_instance_valid(_background_instance):

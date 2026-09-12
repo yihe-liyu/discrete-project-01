@@ -18,6 +18,20 @@
 
 ## 记录
 
+### 2026-09-11 — W2：StageObjects 去 autoload / HitEffectPool → FxLayer 注入
+
+- **目标**：再降两个"不是真全局"的 autoload，autoload 12 → 8（轨道 B / `NEW_KERNEL_REFACTOR_PLAN.md` §12 W2）。
+- **为什么**：R9（autoload 只放真全局）+ R2（依赖向下注入）+ 全树找父级禁令。
+- **对照旧项目**：
+  - 旧 `HitEffectPool` 作为 autoload，`play()` 里 `Engine.get_main_loop().current_scene.get_node_or_null("World")` **全树找父级**——违反 R2/R9，且依赖"当前场景恰好有个 `World` 子节点"的隐式约定。新 `FxLayer` 由组合根创建、挂 `World` 下、注入到需要它的地方，`play()` 不再找父级。
+  - 旧 `StageObjects` 作为 autoload 跨关存活——但它的语义本来就是"帧级作用域"（load_stage 注册、stop 清空）。改成 `StageContext.objects` 后生命周期与关卡对齐，不再有跨关残留。
+- **新落点**：
+  - `scripts/coroutine/services/stage_objects.gd`：`class_name StageObjects extends RefCounted`；`stage_context.gd:objects` 懒建；`stage_director.gd` 注册/清理；`boss_handle.gd` 持注册表（`_init` 第 4 参，默认 null → 兼容纯逻辑测试）。
+  - `scripts/effect/fx_layer.gd`：`class_name FxLayer extends Node2D`；`game_scene.gd:_ready` 在 `%World` 下创建，注入 `BulletManager.inject_fx_layer()` + `StageManager.fx_layer`；`effect_service.gd:play_hit_effect` 走注入的 `fx_layer`。
+  - 调用点（`bullet_physics.gd` / `death_clear.gd` / `kernel_bullet_physics.gd` / `bullet_manager.gd`）全部改为注入字段 + `fx == null` 静默守卫（单测/无场景安全）。
+- **验收**：`test_composition_root.gd` 增 `test_game_scene_creates_and_injects_fx_layer`；`test_stage_director.gd` 改纯逻辑；新增 `test_fx_layer.gd`（3 用例，池化语义）；全量 GUT **62 套 / 333 测试 / 3327 断言全绿**。
+- **踩坑**：新增 `class_name` 再次踩缓存——headless 直接报 `Could not find type "StageObjects" / "FxLayer"`，连锁 81 个假失败（`Scripts 61→59`）。跑 `godot --headless --editor --quit` 重建 `.godot/global_script_class_cache.cfg` 即恢复（W1 用 `--import`，本次 `--editor --quit` 同样有效）。
+- **边界**：`FxLayer` 是**宿主侧**节点，不是内核服务；`scripts/kernel/**` 零引用。`scripts/kernel_bridge/**` 桥接层允许持注入的 `fx`。
 ### 2026-09-11 — W1：LayerConfig 去 autoload / MissEffectManager 场景节点化
 
 - **目标**：把两个"不是真全局"的 autoload 降级，autoload 12 → 10（轨道 B / `NEW_KERNEL_REFACTOR_PLAN.md` §12 W1）。

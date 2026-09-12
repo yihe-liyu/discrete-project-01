@@ -347,8 +347,8 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | `GameManager` | 126 | 10 / 53 | 外壳状态机 + 场景切换 + 暂停 | **保留并升级为组合根** | — |
 | `LayerConfig` | 21 | 13 / 24 | 纯常量 | **改 `class_name`（去 autoload）** | W1 |
 | `MissEffectManager` | 96 | 2 / 3 | 全屏 miss 圆（CanvasLayer + shader） | **改场景节点**（外壳注入） | W1 |
-| `StageObjects` | 42 | 3 / 8 | 关卡命名对象注册表（帧级作用域） | **改注入**（per-stage，`StageContext` 持有） | W2 |
-| `HitEffectPool` | 67 | 6 / 10 | 特效节点池 | **改注入**（`FxLayer`，随轨道 A） | W2 |
+| `StageObjects` | 42 | 3 / 8 | 关卡命名对象注册表（帧级作用域） | **改注入**（per-stage，`StageContext` 持有） | W2 ✅ |
+| `HitEffectPool` | 67 | 6 / 10 | 特效节点池 | **改注入**（`FxLayer`，随轨道 A） | W2 ✅ |
 | `AssetRegistry` | 153 | 31 / 49 | 静态资源表 + 内容 key | **改 `class_name`（静态表）+ 数据资源**（R17/S13） | W3 |
 | `StageManager` | 169 | 14 / 35 | 关卡生命周期 + 生成敌人/Boss | **改注入/场景节点**（`StageDirector` under World） | W3 |
 | `BulletManager` | 165 | 22 / 46 | 弹幕门面 | **内核替换**（轨道 A Phase 1 + adapter） | W4 |
@@ -391,13 +391,13 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | 波次 | 内容 | 风险 | 说明 |
 |---|---|---|---|
 | **W1** | `LayerConfig` → `class_name`；`MissEffectManager` → 场景节点 | 极低 | 引用 24 / 3，机械改 |
-| **W2** | `StageObjects` → per-stage 注入；`HitEffectPool` → `FxLayer` | 低-中 | 引用 8 / 10；后者随轨道 A |
+| **W2** | `StageObjects` → per-stage 注入；`HitEffectPool` → `FxLayer` | 低-中 | 引用 8 / 10；后者随轨道 A —— **已完成（§12.8）** |
 | **W3** | `AssetRegistry` → `class_name` + 数据；`StageManager` → `StageDirector` | 中-高 | 引用 49 / 35；涉及内容与关卡流程 |
 | **W4** | `GameState` 拆分；`BulletManager` 内核替换 | 最高 | 引用 186 / 46；与轨道 A Phase 1/5 合流 |
 
 ### 12.5 验收（可量化）
 
-- autoload 数：**12 → ≤5**。
+- autoload 数：**12 → ≤5**（进度：W1 后 10，W2 后 **8**）。
 - `grep -rIl "\bGameState\b" scripts`：**42 → 仅存档相关**（目标 ≤ 5）。
 - **内核文件里 `GameState` 出现次数 = 0**。
 - 每删/改一个 autoload：GUT 全绿 + 主流程冒烟（主菜单 → stage01 可玩）。
@@ -429,6 +429,30 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 **顺带修（与本波无关，验证时暴露）**：`test/test_recent_mechanics.gd` 的练习记录用例非幂等——历史遗留的 `stage=99` 幽灵记录会让 `get_or_create` 命中旧值继续累加（实测 attempts=6/captures=3）造成假失败；已加起始清除，并清掉本地 `.tres` 幽灵项。
 
 ---
+
+### 12.8 W2 实施记录（2026-09-11，已完成）
+
+| 项 | 变更 |
+|---|---|
+| `StageObjects` | `scripts/autoload/stage_objects.gd`（autoload）→ **`scripts/coroutine/services/stage_objects.gd`**（`class_name StageObjects extends RefCounted`）；注册表由 `StageContext.objects` 持有（per-ctx，随关卡生命周期），`StageDirector` 注册/清理，并把同一注册表注入 `BossHandle`。删 autoload 项 |
+| `HitEffectPool` | `scripts/autoload/hit_effect_pool.gd`（autoload）→ **`scripts/effect/fx_layer.gd`**（`class_name FxLayer extends Node2D`，池化节点）。删 autoload 项 |
+
+**`FxLayer` 注入链**：`GameScene._ready()` 在 `%World` 下创建 `FxLayer` → `StageManager.fx_layer`（供 `StageContext.effects` → `EffectService.fx_layer`）+ `BulletManager.inject_fx_layer()`（转发给 `BulletPhysics.fx` / `DeathClear.fx` / `KernelBulletPhysics.fx`）。所有调用点带 `fx == null` 静默守卫（单测/无场景安全）。`GameScene._exit_tree()`：`BulletManager.clear_all()` 内含 `fx_layer.clear_pool()`，随后 `inject_fx_layer(null)` + `StageManager.fx_layer = null` 解除注入。**消灭了 `Engine.get_main_loop().current_scene.get_node_or_null("World")` 这种全树找父级（R2/R9）**。
+
+**验收**：
+
+- autoload 数 **12 → 8**（当前：`GameEvents / GameManager / BulletManager / GameState / StageManager / RNG / AudioManager / AssetRegistry`）。
+- `test/test_composition_root.gd` 增 `test_game_scene_creates_and_injects_fx_layer`：实例化 `game_scene.tscn`，断言 `World/FxLayer` 建出且注入 `StageManager.fx_layer` / `BulletManager.fx_layer`。
+- `test/test_stage_director.gd` 改为纯逻辑（`StageContext.new(null).objects` + 句柄持注册表），去掉 autoload 依赖。
+- `test/test_fx_layer.gd`（3 用例）：挂树/复用/清池语义。
+- 全量 GUT **62 套 / 333 测试 / 3327 断言全绿**。
+
+**踩坑**：同 W1——新增 `class_name` 必须重建 `.godot/global_script_class_cache.cfg`（本次用 `godot --headless --editor --quit`），否则 headless 报 `Could not find type "StageObjects" / "FxLayer"`，并连锁出 81 个假失败（`Scripts 61→59`）。不是代码错。
+
+**边界澄清**：`FxLayer` 仍是**宿主侧**节点（`class_name` + 组合根创建），不是内核服务——`scripts/kernel/**` 不引用它；`scripts/kernel_bridge/**` 桥接层可以收到注入的 `fx`。把消弹特效下沉进内核属于 W4 收敛话题，本波不动内核。
+
+---
+
 
 ## 13. Track A spike 记录：S0 内核 vendor（2026-09-11，已完成）
 

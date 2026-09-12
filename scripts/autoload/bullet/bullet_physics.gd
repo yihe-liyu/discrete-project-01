@@ -12,6 +12,8 @@ const HIT_SFX_VOLUME := {
 var _pool: BulletPool
 var _enemy_hash: SpatialHash = SpatialHash.new()  # 敌人登记（玩家弹查询）
 var _bullet_hash: SpatialHash = SpatialHash.new() # 敌弹登记（自机查询）
+## W2：组合根注入的特效层（空则静默，便于测试/无场景）
+var fx: FxLayer
 
 
 func setup(p_pool) -> void:
@@ -72,7 +74,7 @@ func _resolve_enemy_bullets_near_player() -> void:
 			if GameState.memory_value >= 50.0:
 				var chance := remap(GameState.memory_value, 50.0, 100.0, 0.05, 0.30)
 				if RNG.randf() < chance:
-					HitEffectPool.play(_CLEAR_EFFECT, bullet.global_position, Vector2.ZERO, bullet.sprite.modulate)
+					_play_clear(bullet.global_position, bullet.sprite.modulate)
 					_pool.return_bullet(bullet)
 
 
@@ -122,7 +124,7 @@ func _bomb_vs_enemy_bullets(bullet: Bullet) -> void:
 		if not enemy_bullet.is_ready:
 			continue
 		if _hit_target(bullet, enemy_bullet):
-			HitEffectPool.play(_CLEAR_EFFECT, enemy_bullet.global_position, Vector2.ZERO, enemy_bullet.sprite.modulate)
+			_play_clear(enemy_bullet.global_position, enemy_bullet.sprite.modulate)
 			_pool.return_bullet(enemy_bullet)
 
 
@@ -200,6 +202,12 @@ func on_graze() -> void:
 # ── 击中特效 ──
 
 func _spawn_effect(effect_scene: PackedScene, pos: Vector2, velocity: Vector2 = Vector2.ZERO, tint: Color = Color.WHITE) -> void:
-	if effect_scene == null:
-		return  # 无特效的子弹（测试构造/漏配置）跳过，防崩
-	HitEffectPool.play(effect_scene, pos, velocity, tint)
+	if effect_scene == null or fx == null:
+		return  # 无特效的子弹（测试构造/漏配置）/ 未注入特效层：跳过，防崩
+	fx.play(effect_scene, pos, velocity, tint)
+
+
+## 消弹特效（同色）：未注入特效层时静默。
+func _play_clear(pos: Vector2, tint: Color) -> void:
+	if fx:
+		fx.play(_CLEAR_EFFECT, pos, Vector2.ZERO, tint)

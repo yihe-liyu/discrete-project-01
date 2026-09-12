@@ -2,7 +2,7 @@ class_name StageDirector
 extends RefCounted
 ## 场景导演 —— 内容层的"场景动词"入口。
 ## 持有 StageContext；提供 bgm / boss / 对话 / 事件路由 等跨子系统场景动词。
-## 内部才碰 StageManager / StageObjects / GameEvents / 机制；内容只调动词。
+## 内部才碰 StageManager / ctx.objects / GameEvents / 机制；内容只调动词。
 ## 动词时序无关：可单独调用（符卡练习），也可被 Timeline 摆放。
 ##
 ## 事件路由：on(key, handler) 取代内容里的大 match _on_dialogue_event。
@@ -28,8 +28,8 @@ func bgm(key: String) -> StageDirector:
 func boss(key: String, data: BossData, from: Vector2, to: Vector2,
 		hide: String = "？？？") -> BossHandle:
 	var b := StageManager.spawn_boss(data, from, ctx) as Boss
-	StageObjects.register(key, b, Boss)
-	var h := BossHandle.new(key, data, hide)
+	ctx.objects.register(key, b, Boss)
+	var h := BossHandle.new(key, data, hide, ctx.objects)
 	if hide != "":
 		h.hide_name()
 	h.enter(to, from)
@@ -37,7 +37,7 @@ func boss(key: String, data: BossData, from: Vector2, to: Vector2,
 
 ## 对已存在的 Boss 拿句柄（事件路由里操控用，不重复生成；name 用于揭名）。
 func boss_ref(key: String, data: BossData) -> BossHandle:
-	return BossHandle.new(key, data, "")
+	return BossHandle.new(key, data, "", ctx.objects)
 
 ## 播对话（steps 版 DSL，台词内联）
 func dialogue(steps: Array) -> StageDirector:
@@ -75,4 +75,4 @@ func dispose() -> void:
 		GameEvents.dialogue_event.disconnect(_route)
 	_connected = false
 	_handlers.clear()
-	StageObjects.clear()
+	ctx.objects.clear()

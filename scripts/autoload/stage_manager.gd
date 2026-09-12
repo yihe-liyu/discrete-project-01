@@ -13,6 +13,8 @@ var current_stage: StageData
 var current_background: StageBackground
 ## Miss 圈渲染节点（组合根 GameScene 注入；生命周期随 GameScene）
 var miss_layer: MissEffectManager
+## 特效层（组合根 GameScene 注入；生命周期随 GameScene）W2
+var fx_layer: FxLayer
 ## 数据关卡续跑起点（工作台 E3：改参数后从该时刻前 3 秒续跑）
 ## load_stage 时设置给 stage_script.start 读取，启动后复位 -1（从头）
 ## 数据关卡单波调试（工作台）：只注册该索引的波次（-1 = 全部）

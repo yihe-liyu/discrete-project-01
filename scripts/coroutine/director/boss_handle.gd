@@ -2,7 +2,7 @@ class_name BossHandle
 extends RefCounted
 ## 关内 Boss 的命名句柄 —— 内容层的"Boss 场景动词"。
 ## 绑定一个命名槽位（StageObjects 的 key）+ 对应 BossData，内容用动词操控它，
-## 不直接碰 StageObjects / Boss 内部 / create_tween。
+## 不直接碰注册表 / Boss 内部 / create_tween。
 ## 动词时序无关：可单独调用（符卡练习），也可被 Timeline 摆放。
 ##
 ## 注意：name 会遮蔽 Node.name，故句柄侧用 key 而非 name 做槽位键。
@@ -10,15 +10,20 @@ extends RefCounted
 var _key: String
 var data: BossData
 var _hide_name: String = "？？？"
+## 命名槽位注册表（W2：由 StageDirector 注入其 ctx.objects；为空则 resolve 恒 null）
+var _objects: StageObjects
 
-func _init(p_key: String, p_data: BossData, p_hide: String = "？？？") -> void:
+func _init(p_key: String, p_data: BossData, p_hide: String = "？？？", p_objects: StageObjects = null) -> void:
 	_key = p_key
 	data = p_data
 	_hide_name = p_hide
+	_objects = p_objects
 
 ## 从命名槽位解析当前 Boss（未注册/已亡 → null）
 func resolve() -> Boss:
-	return StageObjects.resolve_as(_key, Boss)
+	if _objects == null:
+		return null
+	return _objects.resolve_as(_key, Boss)
 
 ## Boss 是否已在场上
 func exists() -> bool:

@@ -1,5 +1,5 @@
 extends GutTest
-## W1 组合根冒烟：GameScene 应创建 Miss 圈节点并注入 StageManager（不再是 autoload）。
+## W1/W2 组合根冒烟：GameScene 应创建 Miss 圈 / 特效层并注入（两者都不再是 autoload）。
 
 func test_game_scene_creates_and_injects_miss_layer() -> void:
 	var scene: PackedScene = load("res://scenes/game_scene.tscn")
@@ -11,3 +11,16 @@ func test_game_scene_creates_and_injects_miss_layer() -> void:
 	assert_eq(StageManager.miss_layer, layer, "应注入 StageManager.miss_layer")
 	assert_eq(layer.get_script().resource_path,
 		"res://scripts/effect/miss_effect_manager.gd", "应挂场景节点脚本")
+
+
+func test_game_scene_creates_and_injects_fx_layer() -> void:
+	var scene: PackedScene = load("res://scenes/game_scene.tscn")
+	var inst: Node = scene.instantiate()
+	add_child_autofree(inst)
+	await get_tree().process_frame
+	var fx: FxLayer = inst.get_node_or_null("World/FxLayer")
+	assert_not_null(fx, "GameScene 应在 World 下创建 FxLayer")
+	assert_eq(StageManager.fx_layer, fx, "应注入 StageManager.fx_layer")
+	assert_eq(BulletManager.fx_layer, fx, "应注入 BulletManager.fx_layer")
+	assert_eq(fx.get_script().resource_path,
+		"res://scripts/effect/fx_layer.gd", "应挂 FxLayer 脚本")

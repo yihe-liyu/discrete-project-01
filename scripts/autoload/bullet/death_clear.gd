@@ -10,12 +10,20 @@ var _laser_system: LaserEngine
 ## 内核后端扫掠（Track A）：(center, radius, on_clear) -> bool。
 ## 返回 true = 本帧圆内敌弹已由内核清完，跳过旧池循环；未注入 / 旧池路径返回 false。
 var _kernel_sweep: Callable = Callable()
+## W2：组合根注入的特效层（空则静默）
+var fx: FxLayer
 
 
 func setup(p_pool, p_laser_sys, p_kernel_sweep: Callable = Callable()) -> void:
 	_pool = p_pool
 	_laser_system = p_laser_sys
 	_kernel_sweep = p_kernel_sweep
+
+
+## 消弹特效（同色）：未注入特效层时静默。
+func _play_clear(pos: Vector2, tint: Color) -> void:
+	if fx:
+		fx.play(_CLEAR_EFFECT, pos, Vector2.ZERO, tint)
 
 
 func start(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
@@ -60,7 +68,7 @@ func process(delta: float) -> void:
 				if bullet.global_position.distance_squared_to(center) <= radius_sq:
 					if circle.on_clear.is_valid():
 						circle.on_clear.call(bullet.global_position)
-					HitEffectPool.play(_CLEAR_EFFECT, bullet.global_position, Vector2.ZERO, bullet.sprite.modulate)
+					_play_clear(bullet.global_position, bullet.sprite.modulate)
 					_pool.return_bullet(bullet)
 
 		# 生长型激光头部碰到消弹圈时：头部停止前进，尾部追上后消失

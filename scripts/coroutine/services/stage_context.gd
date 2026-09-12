@@ -19,6 +19,7 @@ var _audio: AudioService
 var _effects: EffectService
 var _boss: BossService
 var _diff: DifficultyService
+var _objects: StageObjects
 
 var clock: ClockService:
 	get:
@@ -58,6 +59,7 @@ var effects: EffectService:
 	get:
 		if _effects == null: _effects = EffectService.new()
 		_effects.miss_layer = StageManager.miss_layer  # 组合根注入；每取一次保持最新
+		_effects.fx_layer = StageManager.fx_layer      # W2：特效层同样由组合根注入
 		return _effects
 
 var boss: BossService:
@@ -69,6 +71,12 @@ var diff: DifficultyService:
 	get:
 		if _diff == null: _diff = DifficultyService.new()
 		return _diff
+
+## 命名对象注册表（W2：per-ctx，随关卡生命周期；原 StageObjects autoload）
+var objects: StageObjects:
+	get:
+		if _objects == null: _objects = StageObjects.new()
+		return _objects
 
 func _init(p_runner: CoroutineRunner) -> void:
 	runner = p_runner

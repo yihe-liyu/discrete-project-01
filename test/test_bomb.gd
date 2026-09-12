@@ -24,14 +24,7 @@ func after_each():
 	_pool.clear()
 	GameState.active_enemies.clear()
 	GameState.player = null
-	# 清掉碰撞产生的消弹特效实例（HitEffectPool 池化不自动释放，会成孤儿）
-	for key in HitEffectPool._pools:
-		for eff in HitEffectPool._pools[key]:
-			if is_instance_valid(eff):
-				if eff.get_parent():
-					eff.get_parent().remove_child(eff)
-				eff.free()
-	HitEffectPool._pools.clear()
+	# W2：BulletPhysics 未注入 fx（FxLayer）→ 命中/消弹特效静默，无孤儿实例需清理
 
 
 func _enemy_bullet_data() -> BulletData:

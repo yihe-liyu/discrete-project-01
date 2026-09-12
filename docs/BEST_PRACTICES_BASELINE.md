@@ -143,7 +143,7 @@
 状态：✔（机制闭环） ｜ 适用红线：R2, R7, R20
 - [x] 受击/消除/擦弹/Boss 阶段有即时视觉+音效反馈 —— `scripts/effect/*` + `AudioManager`
 - [x] 弹雾/背景与弹幕对比度足够，不吞弹、不刺眼 —— `bullet_fog.gd` + `screen_fog_fx.gd` + `background/*` + `decor_manager.gd`
-- [x] 特效走服务/对象池（hit_effect / miss_effect），不再频繁 instantiate —— `HitEffectPool` + `MissEffectManager`
+- [x] 特效走服务/对象池（hit_effect / miss_effect），不再频繁 instantiate —— `FxLayer` + `MissEffectManager`（均为组合根注入，非 autoload）
 - [x] 演出（入场/放 logo/BGM/对话）用 Timeline，可复现、可暂停 —— `coroutine/timeline/*` + `dialogue_runner.gd`
 
 ## S9. 性能（几千发子弹下的帧率余量）

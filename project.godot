@@ -25,9 +25,7 @@ GameState="*res://scripts/autoload/game_state.gd"
 StageManager="*res://scripts/autoload/stage_manager.gd"
 RNG="*res://scripts/autoload/rng.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
-HitEffectPool="*res://scripts/autoload/hit_effect_pool.gd"
 AssetRegistry="*res://scripts/autoload/asset_registry.gd"
-StageObjects="*res://scripts/autoload/stage_objects.gd"
 
 [display]
 
