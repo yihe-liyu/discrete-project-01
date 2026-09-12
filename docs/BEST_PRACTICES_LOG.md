@@ -95,3 +95,12 @@
 - **难点**：散圈一次多发，且内核禁止行为循环中途 spawn → 内容 `_kernel_spread` 只 `host.queue_spawn`（内核版 shoot_spread）。
 - **边界**：`diff_pick` 原来挂在 `ctx.diff`，这里实测它其实只读全局 `GameState.selected_difficulty`——内容探测实例可直接用，不必假装有 ctx。
 - **验收**：全量 GUT **61 套 / 323 测试 / 3302 断言全绿**。
+
+### 2026-09-11 — S4c-4：魔理沙激光（漂移 + 整批渐隐）
+
+- **目标**：内核路径下魔理沙非 focus 激光段能跟着子机漂移、松手整体淡出。
+- **漂移**：直接复用内核现成 `LaserFollowBehavior`；内容端口把 `cs_marisa` 的 `anchor_id / drift_speed / angle` 映射过去。
+- **渐隐**：新增桥接 `MarisaLaserFade`（= 重建版 `LaserShot` 的极简版）：按住满亮、松手整批 `set_render_fade(LASER, α)` 到 0 后清行；渲染桥 `_sync_kernel` 按 `bt.kind` 应用 fade。
+- **为什么整批而不是逐弹 alpha**：内核 SoA 没有 `set_color`，逐弹 alpha 要改内核；整批 fade 是内核本就提供的 `set_render_fade`（重建版同款设计），守住 A 方案「内核零改动」。
+- **踩坑**：渐隐控制器起初在「淡完 → 松手仍成立」时又重启一轮「淡出→复位」，测试值停在中途；加 `_spawned` 门（只有生成过激光才启动渐隐）后正确。
+- **验收**：全量 GUT **61 套 / 324 测试 / 3306 断言全绿**。

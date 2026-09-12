@@ -15,8 +15,10 @@ const HomingBehaviorClass = preload("res://scripts/kernel_bridge/behavior/homing
 const RadialAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/radial_accel_behavior.gd")
 const BounceBehaviorClass = preload("res://scripts/kernel_bridge/behavior/bounce_behavior.gd")
 const NonMidFleeBehaviorClass = preload("res://scripts/kernel_bridge/behavior/non_mid_flee_behavior.gd")
+const MarisaLaserFadeClass = preload("res://scripts/kernel_bridge/marisa_laser_fade.gd")
 const KernelBehaviorHostClass = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
 const _MOVE_WORLD_ACCEL := &"world_accel"
+const _MOVE_LASER := &"laser_follow"
 
 ## 内核弹池。默认本机新建；S3 交由 BulletManager 注入/接管。
 var system: BulletSystem
@@ -37,6 +39,8 @@ var _port_by_sig: Dictionary = {}
 var _port_probes: Array[Node] = []
 ## S4c：桥接行为的延后动作队列（re_fire / 分裂不能在内核行为循环中途做）。
 var _behavior_host
+## S4c-4：魔理沙激光整批渐隐控制器。
+var _laser_fade
 
 
 func _ready() -> void:
@@ -60,8 +64,10 @@ func _ensure_system() -> void:
 
 
 ## 行为循环结束后统一执行延后的 re_fire / 分裂（内核契约：循环中途禁止增删行）。
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	flush_behavior_host()
+	if _laser_fade != null:
+		_laser_fade.process(delta)
 
 
 ## 执行延后动作队列（幂等：队列空则 no-op）。BulletManager 也会调一次作兜底。
@@ -92,6 +98,10 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	elif data.accel != Vector2.ZERO:
 		move = _MOVE_WORLD_ACCEL
 		params = {&"world_accel": data.accel}
+	if move == _MOVE_LASER:
+		type.kind = BulletType.Kind.LASER   # 供渲染桥整批淡出
+		if _laser_fade != null:
+			_laser_fade.on_laser_spawned()
 	var id: int = system.spawn(type, pos, vel, data.tint, move, params)
 	_sync_host_tables(id, data)
 	return id
@@ -183,6 +193,8 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	process_physics_priority = -4   # 延后动作 flush：行为(-5) 之后、宿主碰撞(0) 之前
 	_behavior_host = KernelBehaviorHostClass.new()
 	_behavior_host.setup(self)
+	_laser_fade = MarisaLaserFadeClass.new()
+	_laser_fade.setup(self)
 	behavior = BehaviorProcessor.new()
 	behavior.name = "KernelBehaviorProcessor"
 	behavior.process_physics_priority = -5

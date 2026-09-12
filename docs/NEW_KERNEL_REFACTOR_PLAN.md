@@ -785,6 +785,16 @@ func kernel_port() -> Dictionary:
 - 测试：TRAVEL→FLEE 转向；内容回调近 Boss 入队散圈（flush 后 pool 非空）。
 - 验收：`test_kernel_behavior` +2；全量 **61 套 / 323 测试 / 3302 断言全绿**。
 
+### 21.14 S4c-4 落地：`marisa_laser_follow`（漂移 + 整批渐隐）（2026-09-11，已完成）
+
+- **漂移**：内核现成 `LaserFollowBehavior`；内容 `marisa_laser_follow.kernel_port()` → `move=&"laser_follow"`，params = `anchor_id / anchor_offset / drift_speed / angle`。`cs_marisa` 改为**发射前**把角度/锚点写进 `b.params`（旧池路径照旧配 `extra`）。
+- **渐隐**：新桥接 `MarisaLaserFade`（对应重建版 `LaserShot`）——按住射击 = `set_render_fade(LASER, 1)`；松手 / focus = 每帧递减到 0 → 清掉所有 `kind==LASER` 行。渲染桥 `_sync_kernel` 现按 `bt.kind` 乘 `get_render_fade`。
+- **Kind 标记**：`shoot()` 见 `move==&"laser_follow"` 时给该 `BulletType.kind = LASER`（激光段贴图唯一，共享弹型无副作用）。
+- 测试：端口映射 + LASER kind + 松手渐隐到 0 并清行。
+- 验收：`test_kernel_behavior` +1；全量 **61 套 / 324 测试 / 3306 断言全绿**。
+- 已知：渐隐是**整批**（按 Kind），非逐弹 alpha——与重建版一致；逐弹 alpha 需内核 `set_color`，按 A 方案不做。
+
+
 
 
 

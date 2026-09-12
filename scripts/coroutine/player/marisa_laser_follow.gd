@@ -14,6 +14,12 @@ var _drift: float = 0.0
 var _fading: bool = false
 var _fade_t: float = 0.0
 
+## 内核端口参数（由 BulletData.params 注入；旧池路径可不用）。
+var anchor_id: int = 0
+var anchor_offset: Vector2 = Vector2.ZERO
+var drift_speed: float = 2000.0
+var drift_angle: float = 0.0
+
 
 func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
@@ -74,3 +80,16 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		return true
 	)
 	super.start(ctx, target)
+
+
+## 内核端口（Track A / S4c-4）：漂移复用内核 laser_follow；整批渐隐由 MarisaLaserFade 管。
+func kernel_port() -> Dictionary:
+	return {
+		"move": &"laser_follow",
+		"params": {
+			&"anchor_id": anchor_id,
+			&"anchor_offset": anchor_offset,
+			&"drift_speed": drift_speed,
+			&"angle": drift_angle,
+		},
+	}

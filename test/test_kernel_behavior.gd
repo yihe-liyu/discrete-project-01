@@ -7,6 +7,7 @@ const NO_PORT = preload("res://test/fixtures/no_port_behavior.gd")
 const RADIAL_ACCEL = preload("res://data/stages/stage01/bullet/radial_accel_bullet.gd")
 const BOUNCE_BULLET = preload("res://data/stages/stage01/bullet/bounce_bullet.gd")
 const NON_MID = preload("res://data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd")
+const MARISA_LASER = preload("res://scripts/coroutine/player/marisa_laser_follow.gd")
 
 var _backend: KernelBulletBackend
 var _saved_enemies: Array = []
@@ -100,6 +101,30 @@ func test_homing_turns_toward_enemy() -> void:
 	var v: Vector2 = _backend.system.get_velocity(0)
 	assert_gt(v.x, 0.0, "应朝右侧敌人偏转")
 	assert_almost_eq(v.length(), 512.5, 1.0, "速度量级 ≈ lerp(min_speed, top_speed, dt/accel_time)")
+
+
+## S4c-4：魔理沙激光段——端口映射 laser_follow + 标 LASER kind；松手整批渐隐并清掉。
+func test_marisa_laser_fades_and_clears() -> void:
+	var d := BulletData.new().player()
+	d.texture = AssetRegistry.get_bullet_tex("marisa_opt1")
+	d.hitbox_shape = BulletData.HitboxShape.RECTANGLE
+	d.hitbox_size = Vector2(64, 32)
+	d.coroutine_script = MARISA_LASER
+	var anchor := Node2D.new()
+	anchor.global_position = Vector2(448, 600)
+	add_child_autofree(anchor)
+	d.params = {"anchor_id": anchor.get_instance_id(), "anchor_offset": Vector2.ZERO, "drift_speed": 2000.0, "drift_angle": 0.0}
+	_backend.shoot(d, Vector2(448, 600), Vector2.UP)
+	assert_eq(_backend.system.get_move_name(_backend.system.get_behavior_id(0)), &"laser_follow",
+		"marisa 激光端口应映射 laser_follow")
+	assert_eq(_backend.system.get_type(0).kind, BulletType.Kind.LASER, "应标 LASER kind")
+	# 测试环境 Input 未按射击 → 立即进入渐隐
+	for i in 20:
+		_backend.system._physics_process(1.0 / 60.0)
+		_backend.behavior.process()
+		_backend._physics_process(1.0 / 60.0)
+	assert_eq(_backend.system.get_render_fade(BulletType.Kind.LASER), 0.0, "松手应淡到 0")
+	assert_eq(_backend.system.get_active_count(), 0, "淡完应清掉激光段")
 
 
 ## S4c-3：TRAVEL → 靠近自机 → FLEE（沿远离方向）。

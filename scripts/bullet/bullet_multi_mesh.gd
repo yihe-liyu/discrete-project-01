@@ -118,7 +118,11 @@ func _sync_kernel():
 			var bt: BulletType = registry[type_indices[r]]
 			var rot: float = bt.rotation_for(velocities[r])
 			mm.set_instance_transform_2d(s, Transform2D(rot, Vector2.ONE, 0.0, positions[r]))
-			mm.set_instance_color(s, colors[r])
+			var c: Color = colors[r]
+			var fade: float = sys.get_render_fade(bt.kind)
+			if fade < 1.0:
+				c.a *= fade
+			mm.set_instance_color(s, c)
 	for key in _groups:
 		if not active_groups.has(key):
 			_hide_group(key)

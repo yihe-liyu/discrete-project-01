@@ -129,16 +129,25 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	b.hitbox_size = Vector2(SEG_W, SEG_H)
 	b.coroutine_script = LASER_FOLLOW
 
+	# 按火力 + 子机索引查发射角度（LASER_ANGLES 表）——旧池/内核共用
+	var opt_idx: int = _options.find(source)
+	if opt_idx < 0:
+		opt_idx = 0
+	var lv: int = clampi(_options.size() - 1, 0, LASER_ANGLES.size() - 1)
+	var angles: Array = LASER_ANGLES[lv]
+	var angle_rad: float = deg_to_rad(angles[opt_idx] if opt_idx < angles.size() else 0.0)
+
+	# 内核端口读 b.params（见 marisa_laser_follow.kernel_port）；旧池路径无副作用
+	b.params = {
+		"anchor_id": source.get_instance_id(),
+		"anchor_offset": Vector2.ZERO,
+		"drift_speed": LASER_DRIFT_SPEED,
+		"drift_angle": angle_rad,
+	}
+
 	# 段在发射口生成（offset=0），drift 从 0 独立累积 → 根部永远在子机
 	var bullet = ctx.bullets.shoot_spread(b, 1, 0.0, Vector2.UP, source.global_position)
-	if bullet is Bullet:   # 内核路径下返回 int id（激光段行为待 S4 移植）——本段配置仅旧池可用
-		# 按火力 + 子机索引查发射角度（LASER_ANGLES 表）
-		var opt_idx: int = _options.find(source)
-		if opt_idx < 0:
-			opt_idx = 0
-		var lv: int = clampi(_options.size() - 1, 0, LASER_ANGLES.size() - 1)
-		var angles: Array = LASER_ANGLES[lv]
-		var angle_rad: float = deg_to_rad(angles[opt_idx] if opt_idx < angles.size() else 0.0)
+	if bullet is Bullet:   # 旧池：直接配置节点；内核返回 int id，参数已走 b.params
 		# 贴图旋转 = 基础竖过来（-90°）+ 发射角度 → 贴图朝向 = 漂移方向
 		bullet.rotation = -PI / 2.0 + angle_rad
 		bullet.extra["anchor_node"] = source
