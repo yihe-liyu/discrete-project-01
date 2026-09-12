@@ -2,7 +2,7 @@
 extends BasePage
 
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	SaveData.is_stage_practice = true
 
 	var ov: ColorRect = $"Overlay"
@@ -15,7 +15,7 @@ func _on_enter() -> void:
 	tw.tween_property(tex, "modulate:a", 1.0, 0.5)
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	SaveData.is_stage_practice = false
 
 	var tw := create_tween().set_parallel(true)

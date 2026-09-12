@@ -28,7 +28,7 @@ func test_absolute_events_fire_during_boss_phase():
 	assert_eq(wait_fired.size(), 0, "未击破前 wait 事件不应触发")
 
 	# 击破阶段 → wait 激活
-	boss._clear_phase(true)
+	boss.clear_phase(true)
 	for i in 10:
 		tl.tick(0.6)
 	assert_eq(wait_fired.size(), 1, "击破后 wait 事件应触发")

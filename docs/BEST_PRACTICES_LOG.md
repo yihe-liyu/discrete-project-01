@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-11 — K2：R6 收口（私有调用 → 公开虚函数）
+
+- **目标**：清掉生产代码所有**对外**调 `_私有` 与 `has_method("_")`（工程红线 R6）。
+- **做法**：
+  - 菜单生命周期：`BasePage._on_enter/_on_leave/_on_activate/_on_deactivate` → 公开虚函数 `on_enter/on_leave/on_activate/on_deactivate`（17 个页面覆写同步）；`MenuNav` 页面栈类型化为 `Array[BasePage]`、`_load_page() -> BasePage`，直接调虚函数，删 9 处 `has_method`。
+  - 创作台工作区：`BenchBase` 声明公开虚函数 `snapshot/restore/preset_from_entry`，三台覆写；`CreationStation._bench_instances: Array[BenchBase]`，删 3 处 `has_method`。
+  - `Player._apply_player_data` → `apply_player_data`；`Player._reinit_shoot` → `reinit_shoot`。
+  - `Boss._clear_phase` → `clear_phase`。
+  - `LaserBeam._physics_process` 抽公开 `step()`（`_physics_process` 转调）+ `_reset` → `reset`；`LaserEngine` 手动驱动改调 `beam.step()/reset()`。
+- **度量**：`has_method("_")` **12 → 0**；生产代码对外 `x._m()` **6 组 → 0**（余 `BubblePanel` 静态工厂调同文件 `_parse_tags`，属同类内调用，非 R6）。
+- **对照旧项目**：旧 `MenuNav` 靠 `has_method("_on_enter")` 字符串鸭子类型；现在由 `BasePage` 公开虚函数 + 类型化栈在编译期兜底（漏覆写/拼错直接暴露）。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 2026-09-11 — K1b：目录归属收口（`scripts/autoload/` 只留真 autoload）
 
 - **目标**：把 `scripts/autoload/` 里 4 个**已非 autoload** 的文件搬回语义目录，令目录名实相符。

@@ -54,7 +54,7 @@ func _ready() -> void:
 	if not GameEvents.enemy_killed.is_connected(_on_enemy_killed):
 		GameEvents.enemy_killed.connect(_on_enemy_killed)
 
-	_apply_player_data()
+	apply_player_data()
 	_init_shoot_script()
 
 
@@ -68,7 +68,7 @@ func _on_enemy_killed(score: int, _position: Vector2) -> void:
 		resources.add_score(score)
 
 # 应用机体数据
-func _apply_player_data() -> void:
+func apply_player_data() -> void:
 	if player_data == null:
 		push_error("Player: 未设置 PlayerData 资源！")
 		return
@@ -114,7 +114,7 @@ func _init_shoot_script() -> void:
 	_shoot_script.start_shooting(shoot_ctx)
 
 ## 切换角色时重新初始化射击
-func _reinit_shoot() -> void:
+func reinit_shoot() -> void:
 	if _shoot_script:
 		_shoot_script.stop()
 		_shoot_script.queue_free()

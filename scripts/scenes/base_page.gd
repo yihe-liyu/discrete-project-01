@@ -3,13 +3,13 @@
 ## 所有可被 MenuNav 管理的页面都应继承此类
 ##
 ## 生命周期:
-##   push → _on_enter()     (首次进入)
-##   push another → _on_deactivate()  (被覆盖)
-##   pop another → _on_activate()     (重新激活)
-##   pop self   → _on_leave()         (退场)
+##   push → on_enter()     (首次进入)
+##   push another → on_deactivate()  (被覆盖)
+##   pop another → on_activate()     (重新激活)
+##   pop self   → on_leave()         (退场)
 ##
 ## 退场标准流程:
-##   _on_leave() → 播放退场动画 → finished.emit({}) 或 queue_free()
+##   on_leave() → 播放退场动画 → finished.emit({}) 或 queue_free()
 
 class_name BasePage
 extends Control
@@ -23,7 +23,7 @@ signal sfx_requested(kind: String)   # 音效意图：只喊，不碰音频；�
 const OVERLAY_FADE_IN: float = 0.2
 const OVERLAY_FADE_OUT: float = 0.15
 
-## 设为 true 则 _on_enter 时自动淡入暗色遮罩
+## 设为 true 则 on_enter 时自动淡入暗色遮罩
 @export var auto_overlay: bool = true
 
 var overlay_color: Color = Color(0, 0, 0, 0.5)
@@ -61,19 +61,19 @@ func _create_overlay() -> void:
 # ── 子类覆写 ──
 
 ## 首次进入（被 push 时调用一次）
-func _on_enter() -> void:
+func on_enter() -> void:
 	pass
 
 ## 被其他页面覆盖
-func _on_deactivate() -> void:
+func on_deactivate() -> void:
 	pass
 
 ## 覆盖的页面被移除，重新激活
-func _on_activate() -> void:
+func on_activate() -> void:
 	pass
 
 ## 被 pop 时调用 —— 应包含退场动画，动画结束后 queue_free()
-func _on_leave() -> void:
+func on_leave() -> void:
 	queue_free()
 
 
@@ -81,12 +81,12 @@ func _on_leave() -> void:
 
 ## 确认并返回结果（自动退场）
 func done(result: Dictionary = {}) -> void:
-	_on_leave()
+	on_leave()
 	finished.emit(result)
 
 ## X 返回（无结果，触发 back 信号）
 func go_back() -> void:
-	_on_leave()
+	on_leave()
 	back.emit()
 
 

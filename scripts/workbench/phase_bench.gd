@@ -291,7 +291,7 @@ func _resolve_slot(sel: OptionButton, role: String) -> Script:
 
 # ═══ 目录直达 / 工作区恢复 ═══
 
-func _preset_from_entry(entry) -> void:
+func preset_from_entry(entry) -> void:
 	var phases = _catalog.by_role("phase")
 	for i in phases.size():
 		if phases[i].path == entry.path:
@@ -301,7 +301,7 @@ func _preset_from_entry(entry) -> void:
 			return
 
 
-func _snapshot() -> Dictionary:
+func snapshot() -> Dictionary:
 	var phases = _catalog.by_role("phase")
 	var path := ""
 	if _phase_sel.selected >= 0 and _phase_sel.selected < phases.size():
@@ -313,7 +313,7 @@ func _snapshot() -> Dictionary:
 	}
 
 
-func _restore(d: Dictionary) -> void:
+func restore(d: Dictionary) -> void:
 	if d.has("seed"):
 		_seed = d.seed
 	if d.has("diff"):

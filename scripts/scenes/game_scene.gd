@@ -131,8 +131,8 @@ func _setup_player() -> void:
 	var player := %Player
 	if player and SaveData.selected_character < data_map.size():
 		player.player_data = data_map[SaveData.selected_character]
-		player._apply_player_data()
-		player._reinit_shoot()
+		player.apply_player_data()
+		player.reinit_shoot()
 		# 自机 → 本次关卡世界的实体注册表（BulletManager 亦经注入读取）
 		_stage_runtime.refs.bind_player(player)
 	# 自机已就绪：把本关卡的实体注册表注入内核弹幕后端

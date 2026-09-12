@@ -5,14 +5,14 @@ extends NavPage
 @export var title_text: String = "Game Over"
 
 
-func _on_enter() -> void:
-	super._on_enter()
+func on_enter() -> void:
+	super.on_enter()
 	_fade_overlay_in(0.3)
 	if title_label:
 		title_label.text = title_text
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	_nav_enabled = false
 	_stop_pulse()
 	_overlay_leave(_container)

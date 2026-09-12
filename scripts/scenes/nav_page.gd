@@ -44,12 +44,12 @@ var _last_accept_time: float = 0.0
 
 # ═══ 初始化 ═══
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	_setup_nav()
 	_play_entrance()
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	_nav_enabled = false
 	_stop_pulse()
 	queue_free()

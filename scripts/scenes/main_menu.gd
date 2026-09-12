@@ -13,7 +13,7 @@ var _logo_tween: Tween
 
 
 func _ready() -> void:
-	# 导航初始化（不走 NavPage._on_enter，因为 MainMenu 是场景根）
+	# 导航初始化（不走 NavPage.on_enter，因为 MainMenu 是场景根）
 	_setup_nav()
 	_nav_enabled = false  # 等 Logo 播完再启用
 

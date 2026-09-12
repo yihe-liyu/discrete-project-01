@@ -6,7 +6,7 @@ func _make_player() -> Player:
 	autofree(player)
 	player.player_data = load("res://data/player_data/reimu_data.tres")
 	add_child(player)
-	player._reinit_shoot()
+	player.reinit_shoot()
 	player.global_position = Vector2(448, 800)
 	player.is_invincible = false
 	return player

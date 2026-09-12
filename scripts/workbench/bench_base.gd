@@ -20,6 +20,21 @@ var _stage_runtime: StageRuntime
 var _bullets: BulletManager
 
 
+# ═══ 创作台工作区接口（子类覆写；CreationStation 统一调用，R6 公开虚函数）═══
+
+## 序列化当前工作区（存入 user:// 配置）
+func snapshot() -> Dictionary:
+	return {}
+
+## 恢复工作区
+func restore(_data: Dictionary) -> void:
+	pass
+
+## 从目录条目装配本台
+func preset_from_entry(_entry) -> void:
+	pass
+
+
 ## 建本台的弹幕世界（幂等）：standalone 工作台无 autoload，需自建
 func ensure_bullet_world() -> BulletManager:
 	if _bullets != null:

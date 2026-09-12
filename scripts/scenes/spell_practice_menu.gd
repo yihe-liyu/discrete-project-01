@@ -38,7 +38,7 @@ var _pulse_tween: Tween
 
 # ═══ 生命周期 ═══
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	modulate.a = 0.0
 	_char_label.text = "← %s →" % CHAR_NAMES[_char_index]
 	_build_data()
@@ -54,7 +54,7 @@ func _on_enter() -> void:
 	tw.tween_callback(func(): _input_ready = true)
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	_input_ready = false
 	_stop_pulse()
 
@@ -588,5 +588,5 @@ func _start_practice() -> void:
 	var boss_label: String = boss.boss_name if boss.boss_name != "" else card_name
 	SaveData.start_practice(phase, boss_scene, boss_label, rec.stage, rec.phase_index)
 	AudioManager.stop_bgm()
-	_on_leave()
+	on_leave()
 	GameManager.change_scene("res://scenes/game_scene.tscn")

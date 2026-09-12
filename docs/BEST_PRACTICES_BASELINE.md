@@ -186,7 +186,6 @@
 # 🔴 待改进（达标后清空）
 > 这里是"当前版本"尚未达标的项（工程红线与 STG 需求均可能命中）。每修一条删一条，最终清空。
 - [ ] R14：存档写 res://（应改 user://）—— 符卡簿/音乐/记录（见 OLD_AUDIT）
-- [ ] R6：外部调 _私有（player._apply_player_data / boss._clear_phase / creation_station）
 - [ ] R4：_process 轮询输入（nav_page 及 3 份复制）
 - [ ] R2：get_node("..")/find_child 全树搜（stage01_decor / boss / stage_background）
 - [ ] R3：仅 2 处 @tool、_get_configuration_warnings 零实现
@@ -206,7 +205,7 @@
 | R9 autoload | **4 个**（W1 12→10，W2 10→8，W3a 8→7，W3b 7→6，W4b 6→5，W4c 5→4） | `GameEvents / GameManager / RNG / AudioManager`；已达目标 |
 | R18 单一职责 | `BulletManager` / workbench 4286 行 | `GameState` 已拆（W4b）；余 `BulletManager`/workbench |
 | R21 声明式建树 | workbench 178 处 `.new()` + 183 处 `add_child` | 最大表面积（开发工具，可后） |
-| R6 私有调用 | 12 处 `has_method("_")` | 改公开虚函数 |
+| R6 私有调用 | **0 处**（K2 已清：`has_method("_")` 12→0、生产对外私有调用 6 组→0） | ✅ 公开虚函数 + 类型化接口 |
 | 层序契约 | 30 处散写 `z_index` | 收敛到 `LayerConfig` |
 | 帧序契约 | 无显式 `FrameOrder` | 引入 `FrameOrder` |
 | R14/R15/R2/R5 | res:// 写存档 0、中文 .gd 文件名 0、`get_node("..")` 0、字符串 `get_node` 5 | 比预期干净；R15 的目录/拼写问题见上方 TODO |
@@ -229,3 +228,4 @@
 > - W4c：`BulletManager` 去 autoload（组合根创建 / 注入的弹幕世界 + `static current`）。autoload **5 → 4**。详见 §12.18。
 > - K1（命名收口）：9 个黑话/缩写文件改名（`cs_`/`ov_` 等）、`RigBase` → `BenchBase`、3 个 `.tres` + preload/测试路径同步；语义不一致 **8 → 0**（acronym 大小写刻意不动）。详见 §12.19。
 > - K1b（目录收口）：`scripts/autoload/` **8 → 4 文件**（只留真 autoload）；`bullet_manager`/`death_clear` → `scripts/bullet/`，`scene_transition`/`menu_nav` → `scripts/scenes/`。详见 §12.20。
+> - K2（R6 收口）：`BasePage` 生命周期改公开虚函数 + `MenuNav` 栈类型化；`BenchBase` 公开 `snapshot/restore/preset_from_entry`；`Player`/`Boss`/`LaserBeam` 私有入口公开化。`has_method("_")` **12 → 0**。详见 §12.21。

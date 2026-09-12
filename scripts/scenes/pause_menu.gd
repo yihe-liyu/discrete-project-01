@@ -5,8 +5,8 @@ extends NavPage
 var game_over_mode: bool = false
 
 
-func _on_enter() -> void:
-	super._on_enter()  # NavPage 入场动画
+func on_enter() -> void:
+	super.on_enter()  # NavPage 入场动画
 
 	# 暗色遮罩淡入
 	_fade_overlay_in(0.3)
@@ -20,7 +20,7 @@ func _on_enter() -> void:
 	AudioManager.play_sfx(AssetRegistry.sounds["pause"])
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	_nav_enabled = false
 	_stop_pulse()
 	_overlay_leave(_container)

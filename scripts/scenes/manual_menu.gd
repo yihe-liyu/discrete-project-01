@@ -22,7 +22,7 @@ func _ready() -> void:
 	_title.modulate.a = 0.0
 
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	_fade_overlay_in(0.3)
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -30,7 +30,7 @@ func _on_enter() -> void:
 	tw.tween_property(_texture_rect, "modulate:a", 1.0, 0.3)
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_overlay, "modulate:a", 0.0, 0.3)

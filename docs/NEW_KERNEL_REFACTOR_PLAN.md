@@ -645,6 +645,19 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.21 K2 实施记录（2026-09-11，已完成）
+
+**目标**：生产代码消除对外调 `_私有` / `has_method("_")`（R6），改用公开虚函数与类型化接口。
+
+**落点**：
+
+- 菜单：`BasePage` 公开虚函数 `on_enter/on_leave/on_activate/on_deactivate`；`MenuNav` 页面栈 `Array[BasePage]`、`_load_page() -> BasePage`，9 处 `has_method` 删除。
+- 创作台：`BenchBase` 公开虚函数 `snapshot/restore/preset_from_entry`；`CreationStation` 类型化 `Array[BenchBase]`，3 处 `has_method` 删除。
+- `Player.apply_player_data` / `Player.reinit_shoot` / `Boss.clear_phase` / `LaserBeam.step`·`reset`（`LaserEngine` 改调公开接口）。
+
+**度量**：`has_method("_")` **12 → 0**；生产对外私有调用 **6 组 → 0**。
+
+**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 12.20 K1b 实施记录（2026-09-11，已完成）
 
 **目标**：`scripts/autoload/` 只留真 autoload；把 4 个已非 autoload 的文件搬到语义目录，只动路径字符串。

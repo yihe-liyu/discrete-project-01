@@ -79,9 +79,9 @@ func step(delta: float) -> void:
 	var missed: bool = false
 	for i in range(_active.size() - 1, -1, -1):
 		var beam := _active[i]
-		beam._physics_process(delta)
+		beam.step(delta)
 		if beam.phase == LaserBeam.Phase.DEAD:
-			beam._reset()
+			beam.reset()
 			_active.remove_at(i)
 			continue
 		# 玩家判定：命中（每帧最多一次 miss）/ 擦弹（冷却）
@@ -100,7 +100,7 @@ func step(delta: float) -> void:
 
 func clear() -> void:
 	for beam in _active:
-		beam._reset()
+		beam.reset()
 	_active.clear()
 
 

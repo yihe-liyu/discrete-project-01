@@ -243,7 +243,7 @@ func _process(delta: float) -> void:
 		_open_reduce_left = maxf(_open_reduce_left - delta, 0.0)
 
 	if _elapsed >= _current_phase.time_limit:
-		_clear_phase(_current_phase.is_timeout_only)
+		clear_phase(_current_phase.is_timeout_only)
 
 
 ## 小数伤害累积器（0.5×2 次 = 1 → 扣 1 血）
@@ -261,7 +261,7 @@ func take_damage(damage: float) -> void:
 	_dmg_acc -= full
 	_set_hp(_hp - full)
 	if _hp <= 0 and not _current_phase.is_timeout_only:
-		_clear_phase(true)
+		clear_phase(true)
 
 
 ## 玩家 miss（正篇）：只标记——东方规则：miss 后击破不算收取（尝试次数已在进入阶段时记过）
@@ -273,7 +273,7 @@ func _on_player_death() -> void:
 	_phase_missed = true
 
 
-func _clear_phase(captured: bool) -> void:
+func clear_phase(captured: bool) -> void:
 	if _cleared: return
 	_cleared = true
 	_invincible = true
@@ -352,7 +352,7 @@ func _drop_items() -> void:
 
 
 ## 阶段脚本参数注入（工作台编辑的 PhaseData.params → 脚本同名属性）
-## 注意：这里只有参数注入，掉落逻辑在 _drop_items（_clear_phase 击破时）——
+## 注意：这里只有参数注入，掉落逻辑在 _drop_items（clear_phase 击破时）——
 ## 曾经残留过一份掉落代码导致 start_phase 时误掉道具（已删，勿再贴回）
 func _apply_phase_params(script: Node, params: Dictionary) -> void:
 	ParamValidator.apply(script, params)   # C4：校验 + 只设合法键 + 打错键名/类型响亮报错

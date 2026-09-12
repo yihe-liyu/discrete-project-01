@@ -16,7 +16,7 @@ const DIFF_TEX_PATHS: Array[String] = [
 ]
 
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	_setup_nav()
 	if SaveData.selected_character < _nav_items.size():
 		_nav_index = SaveData.selected_character
@@ -59,7 +59,7 @@ func _fly_to_badge(tex: Texture2D) -> void:
 	_play_entrance()
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	_nav_enabled = false
 	_stop_pulse()
 	queue_free()

@@ -164,7 +164,7 @@ func _auto_fps() -> int:
 
 # ═══ 生命周期 ═══
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	_fade_overlay_in(0.5)
 	var tex: TextureRect = $"TitleTexture"
 	tex.modulate.a = 0.0
@@ -173,7 +173,7 @@ func _on_enter() -> void:
 	tw.tween_property(tex, "modulate:a", 1.0, 0.5)
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	if _pulse and _pulse.is_valid():
 		_pulse.kill()
 	var tw := create_tween().set_parallel(true)

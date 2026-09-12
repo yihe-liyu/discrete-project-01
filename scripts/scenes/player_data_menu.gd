@@ -255,7 +255,7 @@ func _input(event: InputEvent) -> void:
 
 # ═══ 生命周期 ═══
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	# 遮罩/标题淡入（BasePage），再走 NavPage 的选项收集 + 交错入场
 	var tex: TextureRect = $"TitleTexture"
 	tex.modulate.a = 0.0

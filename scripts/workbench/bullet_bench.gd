@@ -227,7 +227,7 @@ func _build_ui() -> void:
 # ═══ 目录直达 / 工作区恢复 ═══
 
 ## 目录双击直达：自动选脚本 + 重建参数 + 立即发射
-func _preset_from_entry(entry) -> void:
+func preset_from_entry(entry) -> void:
 	var list = _catalog.by_role("bullet")
 	for i in list.size():
 		if list[i].path == entry.path:
@@ -237,7 +237,7 @@ func _preset_from_entry(entry) -> void:
 			return
 
 
-func _snapshot() -> Dictionary:
+func snapshot() -> Dictionary:
 	return {
 		"script": _cur_script_path, "seed": _seed,
 		"diff": SaveData.selected_difficulty,
@@ -245,7 +245,7 @@ func _snapshot() -> Dictionary:
 	}
 
 
-func _restore(d: Dictionary) -> void:
+func restore(d: Dictionary) -> void:
 	if d.has("seed"):
 		_seed = d.seed
 	if d.has("diff"):

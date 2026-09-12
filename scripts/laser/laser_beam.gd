@@ -57,6 +57,11 @@ func spawn(p_skeleton: LaserSkeleton, p_color: Color) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	step(delta)
+
+
+## 手动推进一帧（LaserEngine 统一驱动；节点自身 _physics_process 亦转调）
+func step(delta: float) -> void:
 	if phase == Phase.DEAD:
 		return
 	var old_head := head_dist
@@ -134,7 +139,7 @@ func cut_head() -> void:
 
 
 ## 池回收：彻底复位
-func _reset() -> void:
+func reset() -> void:
 	phase = Phase.DEAD
 	skeleton = null
 	visible = false

@@ -14,7 +14,7 @@ const SLOTS := ["整关预览", "弹幕台", "敌人台", "阶段台"]
 var _slot_buttons: Array[Button] = []
 var _view: Control = null
 var _current_slot: int = -1
-var _bench_instances: Array = [null, null, null]
+var _bench_instances: Array[BenchBase] = [null, null, null]
 var _workspace_restores: Array = [{}, {}, {}]
 
 const CFG_PATH := "user://creation_station.cfg"
@@ -56,7 +56,7 @@ func _on_slot(i: int) -> void:
 	else:
 		var bench_i: int = i - 1
 		if _bench_instances[bench_i] == null:
-			_bench_instances[bench_i] = BENCHS[bench_i].instantiate()
+			_bench_instances[bench_i] = BENCHS[bench_i].instantiate() as BenchBase
 		_view = _bench_instances[bench_i]
 	_view.visible = true
 	_view.process_mode = Node.PROCESS_MODE_INHERIT  # 恢复运转（连发状态保留，只是不再后台跑）
@@ -73,10 +73,10 @@ func _on_slot(i: int) -> void:
 	# 工作区恢复
 	if i > 0:
 		var ri := i - 1
-		var bench = _view
+		var bench := _view as BenchBase
 		var saved: Dictionary = _workspace_restores[ri]
-		if not saved.is_empty() and bench.has_method("_restore"):
-			bench._restore(saved)
+		if not saved.is_empty():
+			bench.restore(saved)
 	_save_workspace()
 	for t in _slot_buttons.size():
 		_slot_buttons[t].button_pressed = t == i
@@ -95,9 +95,9 @@ func _route_preset(entry) -> void:
 		_:
 			return
 	_on_slot(slot)
-	var bench = _view
-	if bench and bench.has_method("_preset_from_entry"):
-		bench._preset_from_entry(entry)
+	var bench := _view as BenchBase
+	if bench:
+		bench.preset_from_entry(entry)
 
 
 # ═══ 工作区自动恢复（user:// 配置）═══
@@ -123,9 +123,9 @@ func _save_workspace() -> void:
 	var config_file := ConfigFile.new()
 	config_file.set_value("ws", "slot", _current_slot)
 	for i in 3:
-		var bench = _bench_instances[i]
-		if bench and bench.has_method("_snapshot"):
-			config_file.set_value("bench%d" % i, "data", bench._snapshot())
+		var bench: BenchBase = _bench_instances[i]
+		if bench:
+			config_file.set_value("bench%d" % i, "data", bench.snapshot())
 	config_file.save(CFG_PATH)
 
 

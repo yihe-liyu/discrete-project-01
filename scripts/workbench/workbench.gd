@@ -661,7 +661,7 @@ func _debug_force_clear() -> void:
 		_log_line("＊ 无 Boss（先跑到 Boss 阶段再按 Ctrl+G）")
 		return
 	var p_name: String = boss._current_phase.name if boss._current_phase else "?"
-	boss._clear_phase(true)
+	boss.clear_phase(true)
 	_log_line("！ 强制击破：%s（记录已解锁，阶段链继续）" % p_name)
 
 

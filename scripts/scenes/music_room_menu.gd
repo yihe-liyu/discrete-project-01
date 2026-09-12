@@ -45,12 +45,12 @@ func _ready() -> void:
 	# 标题初始透明
 	_title_texture.modulate.a = 0.0
 	
-	# 重建左栏列表（不设最终颜色，留待 _on_enter 的入场动画）
+	# 重建左栏列表（不设最终颜色，留待 on_enter 的入场动画）
 	_rebuild_list()
 
 
 ## 入场动画：遮罩 + 标题 + 列表依次淡入
-func _on_enter() -> void:
+func on_enter() -> void:
 	# 列表项初始隐藏
 	for item in _nav_items:
 		item.modulate.a = 0.0
@@ -90,7 +90,7 @@ func _rebuild_list() -> void:
 		else:
 			label.text = "NO.%02d  %s" % [record.music_id, record.title]
 		
-		# 初始透明（_on_enter 时渐显）
+		# 初始透明（on_enter 时渐显）
 		label.modulate.a = 0.0
 		
 		list_container.add_child(label)

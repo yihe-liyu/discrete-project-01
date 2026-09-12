@@ -20,7 +20,7 @@ var _center_x: float
 var _center_y: float
 
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	_setup_nav()
 	allow_wrap = false
 	_center_x = get_viewport().get_visible_rect().size.x / 2.0
@@ -57,7 +57,7 @@ func _on_enter() -> void:
 	_play_entrance()
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	_nav_enabled = false
 	_stop_pulse()
 	queue_free()

@@ -2,7 +2,7 @@
 extends BasePage
 
 
-func _on_enter() -> void:
+func on_enter() -> void:
 	# 黑底渐显 + 标题渐显
 	var ov: ColorRect = $"Overlay"
 	ov.modulate.a = 0.0
@@ -14,7 +14,7 @@ func _on_enter() -> void:
 	tw.tween_property(tex, "modulate:a", 1.0, 0.5)
 
 
-func _on_leave() -> void:
+func on_leave() -> void:
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property($"Overlay", "modulate:a", 0.0, 0.5)
