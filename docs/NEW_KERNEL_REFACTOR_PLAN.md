@@ -349,8 +349,8 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 | `MissEffectManager` | 96 | 2 / 3 | 全屏 miss 圆（CanvasLayer + shader） | **改场景节点**（外壳注入） | W1 |
 | `StageObjects` | 42 | 3 / 8 | 关卡命名对象注册表（帧级作用域） | **改注入**（per-stage，`StageContext` 持有） | W2 ✅ |
 | `HitEffectPool` | 67 | 6 / 10 | 特效节点池 | **改注入**（`FxLayer`，随轨道 A） | W2 ✅ |
-| `AssetRegistry` | 153 | 31 / 49 | 静态资源表 + 内容 key | **改 `class_name`（静态表）+ 数据资源**（R17/S13） | W3 |
-| `StageManager` | 169 | 14 / 35 | 关卡生命周期 + 生成敌人/Boss | **改注入/场景节点**（`StageDirector` under World） | W3 |
+| `AssetRegistry` | 153 | 31 / 49 | 静态资源表 + 内容 key | **改 `class_name`（静态表）+ 数据资源**（R17/S13） | W3a ✅（.tres 迁移随 S13） |
+| `StageManager` | 169 | 14 / 35 | 关卡生命周期 + 生成敌人/Boss | **改注入/场景节点**（`StageDirector` under World） | W3b |
 | `BulletManager` | 165 | 22 / 46 | 弹幕门面 | **内核替换**（轨道 A Phase 1 + adapter） | W4 |
 | `GameState` | 405 | **42 / 186** | 全局游戏数据（god object） | **拆分**（最高优先） | W4 |
 
@@ -392,12 +392,12 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 |---|---|---|---|
 | **W1** | `LayerConfig` → `class_name`；`MissEffectManager` → 场景节点 | 极低 | 引用 24 / 3，机械改 |
 | **W2** | `StageObjects` → per-stage 注入；`HitEffectPool` → `FxLayer` | 低-中 | 引用 8 / 10；后者随轨道 A —— **已完成（§12.8）** |
-| **W3** | `AssetRegistry` → `class_name` + 数据；`StageManager` → `StageDirector` | 中-高 | 引用 49 / 35；涉及内容与关卡流程 |
+| **W3** | `AssetRegistry` → `class_name` + 数据；`StageManager` → `StageDirector` | 中-高 | 引用 49 / 35；**拆成 W3a（AssetRegistry，已完成）/ W3b（StageManager，待决策）** |
 | **W4** | `GameState` 拆分；`BulletManager` 内核替换 | 最高 | 引用 186 / 46；与轨道 A Phase 1/5 合流 |
 
 ### 12.5 验收（可量化）
 
-- autoload 数：**12 → ≤5**（进度：W1 后 10，W2 后 **8**）。
+- autoload 数：**12 → ≤5**（进度：W1 后 10，W2 后 8，W3a 后 **7**：`GameEvents / GameManager / BulletManager / GameState / StageManager / RNG / AudioManager`）。
 - `grep -rIl "\bGameState\b" scripts`：**42 → 仅存档相关**（目标 ≤ 5）。
 - **内核文件里 `GameState` 出现次数 = 0**。
 - 每删/改一个 autoload：GUT 全绿 + 主流程冒烟（主菜单 → stage01 可玩）。
@@ -455,6 +455,28 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 ---
 
+
+### 12.9 W3a 实施记录（2026-09-11，已完成）
+
+| 项 | 变更 |
+|---|---|
+| `AssetRegistry` | `scripts/autoload/asset_registry.gd`（autoload）→ **`scripts/asset_registry.gd`**（`class_name AssetRegistry`，无 extends → RefCounted）；`_bgm_cache` 改 `static var`，`get_bgm / get_bgm_title / _unlock_music_by_key / get_bullet_tex` 改 `static func`。删 autoload 项 |
+| 调用点 | **0 改动**——`const` 静态表与 `static func` 都按 `AssetRegistry.xxx` 访问，语法与原 autoload 实例一致 |
+
+**为什么可以零改动**：原 `AssetRegistry` 的可变状态只有 `_bgm_cache`（懒加载缓存），`static var` 语义等价（进程内常驻）。`bullet_configs / sounds / enemy_visuals / BGM_PATHS / FOG_TEXTURE` 本来就是 `const`。
+
+**验收**：
+
+- autoload 数 **8 → 7**。
+- `test/test_asset_registry.gd`：`autoload/AssetRegistry` 已移除 + 静态表/方法可用。
+- `test/test_composition_root.gd` 增 `test_removed_autoloads_stay_removed`（统一守卫 W1/W2/W3a 去掉的 5 个 autoload）。
+- 全量 GUT **63 套 / 336 测试 / 3337 断言全绿**。
+
+**暂缓（不属本步）**：`bullet_configs` / `sounds` / `enemy_visuals` → `data/*.tres`（R17）与 S13 图集迁移一起做；现在只把 autoload 降成静态表。
+
+**W3b 未做（待决策）**：`StageManager` 的 `add_enemy_to_scene` 仍 `get_tree().current_scene.get_node_or_null("World")`（R2），且它跨 autoload 直呼 `GameState.reset_all/clear_enemies` + `BulletManager.clear_bullets`；改「World 下场景节点 + 注入」涉及 workbench 5 文件与内容 `EnemyData.spawn()`，见 §12.10。
+
+---
 
 ## 13. Track A spike 记录：S0 内核 vendor（2026-09-11，已完成）
 

@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-11 — W3a：AssetRegistry 去 autoload（class_name 静态表）
+
+- **目标**：autoload 8 → 7（轨道 B / §12 W3a）。
+- **为什么**：R9（autoload 只放真全局）+ R8（共享数据/功能用 `class_name`/`static`）。`AssetRegistry` 是一张**只读资源表**，没有节点身份、没有信号、没有生命周期——正是 R8 的适用对象。
+- **对照旧项目**：旧作为 autoload 实例，好处只是 `AssetRegistry.xxx` 访问，但代价是一个常驻 Node + 一次 autoload 注册。改 `class_name` 静态表后**访问语法完全一致**，调用点 0 改动。
+- **新落点**：`scripts/asset_registry.gd`（`class_name AssetRegistry`）；`_bgm_cache` 改 `static var`，4 个方法改 `static func`。
+- **验收**：`test/test_asset_registry.gd` + `test_composition_root.gd:test_removed_autoloads_stay_removed`；全量 **63 套 / 336 测试 / 3337 断言全绿**。
+- **暂缓**：`bullet_configs`→`data/atlas/*.tres`（R17）随 S13 图集做。
+
 ### 2026-09-11 — W2：StageObjects 去 autoload / HitEffectPool → FxLayer 注入
 
 - **目标**：再降两个"不是真全局"的 autoload，autoload 12 → 8（轨道 B / `NEW_KERNEL_REFACTOR_PLAN.md` §12 W2）。

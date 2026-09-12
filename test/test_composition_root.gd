@@ -1,6 +1,12 @@
 extends GutTest
 ## W1/W2 组合根冒烟：GameScene 应创建 Miss 圈 / 特效层并注入（两者都不再是 autoload）。
 
+func test_removed_autoloads_stay_removed() -> void:
+	# Track B 收敛守卫：这些都不是 autoload 了（W1/W2/W3a）
+	for name in ["LayerConfig", "MissEffectManager", "StageObjects", "HitEffectPool", "AssetRegistry"]:
+		assert_false(ProjectSettings.has_setting("autoload/" + name), "%s 不应再是 autoload" % name)
+
+
 func test_game_scene_creates_and_injects_miss_layer() -> void:
 	var scene: PackedScene = load("res://scenes/game_scene.tscn")
 	var inst: Node = scene.instantiate()

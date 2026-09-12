@@ -1,5 +1,7 @@
-extends Node
-## AssetRegistry — 全项目资源注册表，改一处全局生效
+## AssetRegistry — 全项目资源注册表，改一处全局生效。
+## W3a：不再是 autoload（R9）—— 改 `class_name` 静态表（R8）；调用方 `AssetRegistry.xxx` 语法不变。
+## 后续（与 S13 图集一起）：`bullet_configs` / `sounds` / `enemy_visuals` 逐项迁 `data/*.tres`（R17）。
+class_name AssetRegistry
 
 const enemy_visuals := {
 	"blue_little_fairy":  preload("res://data/enemy_visual/blue_little_fairy.tscn"),
@@ -95,10 +97,10 @@ const BGM_PATHS := {
 
 const MUSIC_REGISTRY_PATH := "res://data/registry/music_registry.tres"
 
-var _bgm_cache: Dictionary = {}
+static var _bgm_cache: Dictionary = {}
 
 ## 按需加载 BGM（带缓存，首次访问后复用）；播放视为听过 → 顺带解锁音乐室对应曲目
-func get_bgm(key: String) -> AudioStream:
+static func get_bgm(key: String) -> AudioStream:
 	if _bgm_cache.has(key):
 		return _bgm_cache[key]
 	var path: String = BGM_PATHS.get(key, "")
@@ -113,7 +115,7 @@ func get_bgm(key: String) -> AudioStream:
 
 ## BGM 曲名（BGM 提示 UI 用）：由 stream 的资源路径反查音乐室记录
 ## 游戏语义 key（stage1）与音乐室 key（music_2）指向同一文件 → 按路径关联取同一曲名
-func get_bgm_title(stream: AudioStream) -> String:
+static func get_bgm_title(stream: AudioStream) -> String:
 	if stream == null:
 		return ""
 	var path: String = stream.resource_path
@@ -130,7 +132,7 @@ func get_bgm_title(stream: AudioStream) -> String:
 
 ## 播放 BGM 视为听过 → 解锁音乐室对应曲目（幂等，仅首次解锁写盘）
 ## 按路径关联：游戏 key（stage1）与音乐室 key（music_2）指向同一文件时视为同一曲
-func _unlock_music_by_key(bgm_key: String) -> void:
+static func _unlock_music_by_key(bgm_key: String) -> void:
 	var registry: MusicRegistry = ResourceLoader.load(MUSIC_REGISTRY_PATH)
 	if not registry:
 		return
@@ -148,6 +150,6 @@ func _unlock_music_by_key(bgm_key: String) -> void:
 	if changed:
 		ResourceSaver.save(registry, MUSIC_REGISTRY_PATH)
 
-func get_bullet_tex(key: String) -> Texture2D:
+static func get_bullet_tex(key: String) -> Texture2D:
 	var cfg: Dictionary = bullet_configs.get(key, {})
 	return cfg.get("tex")

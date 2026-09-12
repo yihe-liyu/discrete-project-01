@@ -204,7 +204,7 @@
 
 | 红线 | 实测 | 判断 |
 |---|---|---|
-| R9 autoload | **10 个**（W1 起 12→10） | 最大面；多数应改注入，只留真全局（存档/音频/设置） |
+| R9 autoload | **7 个**（W1 12→10，W2 10→8，W3a 8→7） | 仍偏多；`StageManager`（W3b）/`BulletManager`与`GameState`（W4）待收 |
 | R18 单一职责 | `GameState` 405 行 / `BulletManager` / workbench 4286 行 | god object 需拆 |
 | R21 声明式建树 | workbench 178 处 `.new()` + 183 处 `add_child` | 最大表面积（开发工具，可后） |
 | R6 私有调用 | 12 处 `has_method("_")` | 改公开虚函数 |
@@ -216,4 +216,6 @@
 > **轨道 B 进度（2026-09-11）**：**W1、W2 已完成**。
 > - W1：`LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化（组合根 `GameScene` 注入）。autoload 12→10。
 > - W2：`StageObjects` 去 autoload（→ `StageContext.objects`）、`HitEffectPool` → `FxLayer`（组合根注入，节点在 `game_scene.tscn` 声明）。autoload 10→8。
-> - R21 收口：`FxLayer` 与 `MissEffectManager` 均已改为 `game_scene.tscn` 声明式节点（后者为 W1 产物，在 W2 补正）。详见 `NEW_KERNEL_REFACTOR_PLAN.md` §12.7 / §12.8。
+> - R21 收口：`FxLayer` 与 `MissEffectManager` 均已改为 `game_scene.tscn` 声明式节点（后者为 W1 产物，在 W2 补正）。详见 §12.7 / §12.8。
+> - W3a：`AssetRegistry` 去 autoload（→ `class_name` 静态表，调用点 0 改动）。autoload 8→7。详见 §12.9。
+> - W3b（待决策）：`StageManager` → World 下场景节点 + 注入；涉及 workbench 5 文件。详见 §12.10。
