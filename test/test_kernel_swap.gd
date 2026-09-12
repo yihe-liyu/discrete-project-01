@@ -1,6 +1,9 @@
 extends GutTest
 ## S3a：BulletManager.use_kernel 路由（弹幕走内核池 + 内核渲染数据源；**碰撞不在本步**）。
 
+const PLAYER_SCENE = preload("res://scenes/player.tscn")
+const REIMU_DATA = preload("res://data/player_data/reimu_data.tres")
+
 
 func after_each() -> void:
 	BulletManager.set_use_kernel(false)
@@ -55,6 +58,27 @@ func test_behavior_pipeline_wired() -> void:
 		"行为必须在积分之后（-10 < -5）")
 	assert_lt(b.process_physics_priority, BulletManager.process_physics_priority,
 		"行为必须在宿主碰撞之前（-5 < 0）")
+
+
+## S4d：bomb 持续清弹——每颗 bomb 周围半径内的敌弹被清（不是以自机为中心）。
+func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
+	BulletManager.set_use_kernel(true)
+	var player := PLAYER_SCENE.instantiate()
+	player.player_data = REIMU_DATA
+	add_child_autofree(player)
+	player.global_position = Vector2(448, 700)
+	var prev: Player = GameState.player
+	GameState.player = player
+	var ed := BulletData.new().enemy().tex("小玉")
+	ed.velocity = Vector2.UP * 10.0
+	BulletManager.shoot_enemy_bullet(ed, Vector2(448, 700), Vector2.UP)
+	assert_eq(BulletManager.kernel_system().get_active_count(), 1, "先有 1 颗敌弹")
+	var d := BulletData.new().tex("bomb01_white").bomb()
+	d.coroutine_script = preload("res://scripts/bullet/bomb_behavior.gd")
+	var bomb = BulletManager.shoot_bomb_bullet(d, Vector2(448, 700), Vector2.RIGHT)
+	bomb._physics_process(1.0 / 60.0)
+	assert_eq(BulletManager.kernel_system().get_active_count(), 0, "bomb 周围敌弹应被持续清")
+	GameState.player = prev
 
 
 ## S4d：bomb 走宿主节点（不进内核池）——out_grace 缘由见 docs §21.17。

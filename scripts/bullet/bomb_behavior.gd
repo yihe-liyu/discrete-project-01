@@ -17,6 +17,7 @@ var hold_time: float = 1.8                   ## 到达最大半径后继续旋�
 var homing_speed: float = 1500.0              ## 追踪/直线飞行速度
 var explode_damage: float = 150.0             ## 爆炸对敌人的伤害
 var spawn_delay: float = 0.0                 ## 相对第一颗的生成延迟（秒），用于让后生成的弹直接出现在当前圆半径上
+var clear_radius: float = 90.0               ## 持续清弹半径（围绕本弹自己）
 
 enum Phase { GROW, HOLD, FLY }
 
@@ -74,6 +75,9 @@ func _tick(_ctx: StageContext) -> Variant:
 		var center: Vector2 = player.global_position
 		bullet.global_position = center + Vector2.RIGHT.rotated(_angle) * _radius
 		bullet.rotation = _angle
+
+	# 持续清弹：始终清掉自己周围半径内的敌弹（每帧，不节流）
+	BulletManager.clear_enemy_bullets_in_circle(bullet.global_position, clear_radius)
 
 	# 追踪/直线阶段碰到敌人 → 爆炸消失（旋转阶段不爆炸）
 	if _phase == Phase.FLY:

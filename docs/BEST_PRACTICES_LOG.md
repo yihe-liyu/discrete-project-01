@@ -127,3 +127,10 @@
 - **踩坑**：`Node2D` **没有** `velocity` 属性（那是旧 `Bullet` 的自定义字段）——宿主节点要自己声明。
 - **`out_grace` 决定**：暂缓；将来作为弹幕 / 弹型**属性**接入（正好是 GDExtension 数据属性之一）。出生雾同理暂缓。
 - **验收**：全量 GUT **61 套 / 328 测试 / 3314 断言全绿**。
+
+### 2026-09-11 — S4d-3：bomb 弹丸持续清弹
+
+- **反馈**：bomb 原来只在爆炸时清；改成**每颗 bomb 弹丸自己周围持续清**。
+- **做法**：`BulletManager.clear_enemy_bullets_in_circle`（双后端：内核 `sweep_enemy_bullets` / 旧池逐弹 `return_bullet`）；`KernelBomb` / `bomb_behavior` 每帧围绕自己清，`clear_radius = 90`（可覆盖），不节流。
+- **为什么这个设计**：清弹中心是 bomb 自己 → bomb 在轨道/飞行中把路径上的敌弹一路清掉，比「以自机为中心的圈」更符合反馈，也让绕圈有实际意义。
+- **验收**：全量 GUT **61 套 / 329 测试 / 3316 断言全绿**。

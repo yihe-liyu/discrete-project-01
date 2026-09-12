@@ -831,6 +831,14 @@ func kernel_port() -> Dictionary:
 - **`out_grace`**：内核 cull 统一（`cull_rect + margin`），A 方案下无 per-type grace。stage01 + 玩家路径**当前不需要**（只有 stage03B 探测弹用，本轮范围外）；bomb 走宿主节点后也不需要。**决定**：暂缓，将来作为弹幕 / 弹型的**属性**接入（正好是 GDExtension 的数据属性之一）。
 - **出生雾**：`spawn_fog` 只是「弹出生时被雾遮一下」的视觉；内核路径现在立即显示。**决定**：暂缓（低级视觉差）。
 
+### 21.20 S4d-3：bomb 弹丸持续清弹（2026-09-11，已完成）
+
+- 试玩反馈：bomb 原来只在**爆炸那一下**清；期望**每颗 bomb 弹丸自己周围持续清**（不是以自机为中心的圈）。
+- 新增 `BulletManager.clear_enemy_bullets_in_circle(center, radius)`（双后端：内核 `sweep_enemy_bullets` / 旧池逐弹 `return_bullet` + 消散特效）。
+- `KernelBomb` / `bomb_behavior.gd` 每帧围绕自己调一次，`clear_radius` 默认 **90**（可 `params` 覆盖），**不节流**。
+- 验收：`test_kernel_swap` +1（bomb 周围敌弹被清）；全量 **61 套 / 329 测试 / 3316 断言全绿**。
+
+
 
 
 

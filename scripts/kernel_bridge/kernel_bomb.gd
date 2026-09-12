@@ -16,6 +16,7 @@ var hold_time: float = 1.8
 var homing_speed: float = 1500.0
 var explode_damage: float = 150.0
 var spawn_delay: float = 0.0
+var clear_radius: float = 90.0   ## 持续清弹半径（围绕本弹自己，每帧）
 
 enum Phase { GROW, HOLD, FLY }
 var _phase: int = Phase.GROW
@@ -44,6 +45,7 @@ func setup(data: BulletData, pos: Vector2, direction: Vector2) -> void:
 			homing_speed = data.params.get("homing_speed", homing_speed)
 			explode_damage = data.params.get("explode_damage", explode_damage)
 			spawn_delay = data.params.get("spawn_delay", spawn_delay)
+		clear_radius = data.params.get("clear_radius", clear_radius)
 		_sprite = Sprite2D.new()
 		_sprite.texture = data.texture
 		_sprite.modulate = data.tint
@@ -84,6 +86,8 @@ func _physics_process(delta: float) -> void:
 	else:
 		global_position = player.global_position + Vector2.RIGHT.rotated(_angle) * _radius
 		rotation = _angle
+	# 持续清弹：始终清掉自己周围半径内的敌弹（每帧，不节流）
+	BulletManager.clear_enemy_bullets_in_circle(global_position, clear_radius)
 	if _phase == Phase.FLY:
 		var enemy := _find_nearest_enemy()
 		if enemy and global_position.distance_to(enemy.global_position) <= _hitbox_radius + enemy.hitbox_radius:

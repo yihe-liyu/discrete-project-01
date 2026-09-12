@@ -188,6 +188,29 @@ func clear_all_lasers() -> void:
 	_lasers.clear()
 
 
+# ═══ 圆内清敌弹（炸弹持续清弹 / 圆清除；双后端）═══
+
+const _CLEAR_EFFECT = preload("res://scenes/effect/enemy_bullet_clear.tscn")
+
+## 清掉 center/radius 内的敌弹（不扩张、立即），逐弹播消散特效。返回清除数（内核路径暂返回 0）。
+func clear_enemy_bullets_in_circle(center: Vector2, radius: float) -> int:
+	if use_kernel and _kernel != null:
+		if _kernel_physics != null:
+			_kernel_physics.sweep_enemy_bullets(center, radius, Callable())
+		return 0
+	var cleared: int = 0
+	var r2: float = radius * radius
+	for i in range(_pool.active_bullets.size() - 1, -1, -1):
+		var b: Bullet = _pool.active_bullets[i]
+		if not is_instance_valid(b) or b.is_queued_for_deletion() or b.faction != Bullet.FACTION_ENEMY or not b.is_ready:
+			continue
+		if b.global_position.distance_squared_to(center) <= r2:
+			HitEffectPool.play(_CLEAR_EFFECT, b.global_position, Vector2.ZERO, b.sprite.modulate)
+			_pool.return_bullet(b)
+			cleared += 1
+	return cleared
+
+
 # ═══ 死亡清弹（委托给 death_clear）═══
 
 func start_death_clear(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
