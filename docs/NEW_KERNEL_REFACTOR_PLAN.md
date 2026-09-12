@@ -636,6 +636,98 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **S3 收敛后剩余（未接）**：`bomb`（X，依赖 S4）、`out_grace`（按弹型出界宽限）、行为（`bounce / gravity / radial`，S4）、自机弹记忆变红（桥接未复现）。
 
+## 21. Track A/S4 方案：行为桥与端口契约（2026-09-11，决策）
+
+> **范围**：把旧 `coroutine_script` / `BulletData.accel` 的运动行为接到内核 `Behavior`。本文先钉**契约**，再按 S4a–d 落地。**核心结论：只有一个扩展点（`Behavior` 注册表），没有“特殊途径”。**
+
+### 21.1 行为清单（实测，2026-09-11）
+
+| 宿主行为 | 用在哪 | 内核现状 | 处置 |
+|---|---|---|---|
+| `BulletData.accel`（世界匀加速） | 魔理沙 opt2、stage03B 分裂弹 | 无 | **S4a** `world_accel` |
+| `gravity_bullet`（竖直向下加速） | stage01 杂兵01/02/03 | 无（= 世界向下 accel） | **S4a** 端口 → `world_accel` |
+| `radial_accel_bullet`（沿初方向加速 + 碰顶边 re_fire） | stage01 enemy04 | `accel` 覆盖加速；re_fire 无 | S4c（加速已在） |
+| `bounce_bullet`（沿向加速 + 三面反弹 + 瞄准 Boss re_fire） | stage01 非符1 | 无 | **S4c** 桥接 |
+| `non_mid01_bullet`（近自机逃 + 近 Boss 散圈消失） | stage01 中boss非符 | `avoid_player` 覆盖逃跑 | **S4c** 散圈 |
+| `move_homing`（追杀最近敌人） | 灵梦 opt1 | `WorldQuery` 在、行为缺 | **S4b** `homing` |
+| `marisa_laser_follow`（锚定漂移 + 松手渐隐） | 魔理沙非focus激光 | `laser_follow` 覆盖漂移 | **S4c** 渐隐 |
+| `orbit_probe`（减速往返 + 分裂） | stage03B | 无 | **本轮不做**（2 文件 WIP） |
+| `bomb_behavior`（绕自机扩张 + 追踪 + 爆炸） | 炸弹 | 无 | **S4d** 桥接 |
+
+内核现成：`accel` / `curve`（宿主没人用）/ `laser_follow` / `avoid_player`。
+
+### 21.2 唯一扩展点 = `Behavior` 注册表
+
+一切行为——内核自带、桥接自定义、未来的 VM 步骤——都是 `Behavior` 子类，经同一入口注册：
+
+```gdscript
+func register_behavior(move_name: StringName, behavior: Behavior) -> void
+```
+
+**逃生口不是后门，它就是前门本身。** VM（`ScriptedBehavior`）只是注册表里的第 N 个租户，和手写 `Behavior` 平级。
+纪律三条（守住即“干净”）：
+
+1. 必须跑在 behavior pass（不绕帧序 / 协调器）；
+2. 只读写自己那一行（`_behavior_params` 只读 / `_behavior_state` 每弹）；
+3. 需要宿主全局 → 放 `scripts/kernel_bridge/behavior/`，内核保持零宿主引用。
+
+> 已有同形先例：`EnemyRoutine = MovePattern × ShootPattern`（数据驱动）+ 没覆盖就写新的 `MovePattern` 子类；`VisualShader` ↔ `Shader`；VFX Graph + Custom HLSL。
+
+### 21.3 端口契约（内容 → 内核）
+
+内容行为脚本**可选**实现（duck-typed，不改 `CoroutineScript` 基类）：
+
+```gdscript
+## 内容脚本声明其内核等价物。无此方法 = 未映射（按直线发射并计数）。
+func kernel_port() -> Dictionary:
+    return {
+        move = &"world_accel",
+        params = {&"world_accel": Vector2(0, gravity)},
+    }
+    # 未来 VM：return {program = [ {op=&"wait", t=0.3}, ... ]}
+```
+
+- **`move` 与 `program` 双形态**：VM 是纯加法，内容 API 不返工（§21.6）。
+- 无 `kernel_port()` / 无 `move` / 无 `program` → `unmapped_behavior_count += 1`，直线。
+- 映射按**内容签名**（`Script` × `params` hash）缓存，不每发 `instantiate`（沿用 S1 弹型缓存思路）。
+- `BulletData.accel != Vector2.ZERO` 且无 coroutine（宿主语义互斥）→ 直接 `move=&"world_accel"`。
+
+### 21.4 帧序与装配
+
+- 优先级（原项目无 `FrameOrder`，用绝对 `process_physics_priority`）：内核积分 **-10** → 行为 **-5** → 宿主碰撞 **0**。
+- 装配点：`KernelBulletBackend.setup_behaviors(player, enemy_provider)`，由 `BulletManager._enable_kernel()` 调；`WorldQuery` provider = `GameState.get_active_enemies`。
+- 已知限制：`BehaviorContext` 在 setup 时捕获 player 引用；若为空，涉及自机的行为（`avoid_player` / `laser_follow`）需在 S4b/c 再处理“动态取自机”。S4a 只用 `world_accel`，不受影响。
+
+### 21.5 行为归属线
+
+| 层 | 放什么 | 例子 |
+|---|---|---|
+| 内核 `scripts/kernel/behavior/` | 纯机制、零宿主依赖 | `accel` / `curve` / `laser_follow` / `avoid_player`（未来 `homing`） |
+| 桥接 `scripts/kernel_bridge/behavior/` | 需宿主 / 内容 API 的行为 | `world_accel`（S4a）、`bounce` / `bomb` / 散圈（S4c/d） |
+| 内容 `data/**` | 用 `kernel_port()` 把参数翻译成上述名字 | `gravity_bullet` → `world_accel` |
+
+**S4 期间新通用行为先进桥接层**，保持内核冻结（承接 S3 的 A 方案：内核零改动）；内核定型后再回迁重建版 → vendor（README 单一真相的口子）。
+
+### 21.6 Timeline 感与 VM（预留，不现在建）
+
+- 想要“像 Timeline 一样方便”：那属于 **L 方案**（数据驱动 behavior VM，见 `DECISION_DANMAKU_ARCHITECTURE.md` §4），**GDExtension 只是它的加速器**（§6.6 / §8），不是前提。
+- 便宜的中间步：**行为链**（一颗弹挂有序行为槽）能吃掉大半“流程感”，几乎不加机制。
+- **VM 触发条件**：行为种类/复杂度爆炸到“`Behavior` 子类写法开始重复”，或解释器成为热点。当前 ~8 个行为、多为 1–2 个公式参数 → **不建**（YAGNI）。
+- 逃生门已留：端口契约 §21.3 已容 `program`；VM 落地时是**纯加法**。
+- 别混三件事：演出 Timeline（计划内，允许）｜敌人发射模式 Timeline/协程（**否决**）｜弹幕运动流 VM（第三类，就是 L）。
+
+### 21.7 分步与验收
+
+| 步 | 内容 | 可见成果 |
+|---|---|---|
+| **S4a** | 行为管道 + `world_accel` + `BulletData.accel` + `gravity` 端口 | 杂兵重力 / 世界加速弹不再走直线 |
+| **S4b** | `homing`（用现成 `WorldQuery`） | 灵梦 opt1 会追敌 |
+| **S4c** | 桥接内容行为：`bounce` / 散圈 / 顶边 re_fire / marisa 渐隐 | 非符1 反弹、中boss非符散圈、激光会消失 |
+| **S4d** | `bomb` + `out_grace` + 出生雾 + 自机弹记忆变红 | X 键与收尾项 |
+
+每步独立可试玩（F2 切内核）、可回退、单独提交。
+
+
 
 
 
