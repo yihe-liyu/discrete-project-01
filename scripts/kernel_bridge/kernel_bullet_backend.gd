@@ -11,6 +11,7 @@ class_name KernelBulletBackend
 extends Node
 
 const WorldAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/world_accel_behavior.gd")
+const HomingBehaviorClass = preload("res://scripts/kernel_bridge/behavior/homing_behavior.gd")
 const _MOVE_WORLD_ACCEL := &"world_accel"
 
 ## 内核弹池。默认本机新建；S3 交由 BulletManager 注入/接管。
@@ -147,12 +148,10 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	_ensure_system()
 	if behavior_ctx == null:
 		behavior_ctx = BehaviorContext.new()
-		var wq := WorldQuery.new()
-		if enemy_provider.is_valid():
-			wq.setup(enemy_provider)
-		behavior_ctx.setup(player, wq)
-	else:
-		behavior_ctx.setup(player, behavior_ctx.get_world())   # 刷新自机
+		behavior_ctx.setup(player, WorldQuery.new())
+	if enemy_provider.is_valid():
+		behavior_ctx.get_world().setup(enemy_provider)   # 可重复注入（测试 / 换关）
+	behavior_ctx.setup(player, behavior_ctx.get_world())   # 刷新自机
 	if behavior != null:
 		return
 	behavior = BehaviorProcessor.new()
@@ -165,6 +164,7 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	behavior.register_behavior(&"laser_follow", LaserFollowBehavior.new())
 	behavior.register_behavior(&"avoid_player", AvoidPlayerBehavior.new())
 	behavior.register_behavior(_MOVE_WORLD_ACCEL, WorldAccelBehaviorClass.new())
+	behavior.register_behavior(&"homing", HomingBehaviorClass.new())
 
 
 ## 取内容脚本的内核端口（duck-typed `kernel_port()`），按内容签名缓存。

@@ -735,6 +735,17 @@ func kernel_port() -> Dictionary:
 - 内容端口：`gravity_bullet.gd.kernel_port()` → `world_accel`；`BulletData.accel` 直接 `world_accel`。
 - 验收：新 `test_kernel_behavior`（5） + `test_kernel_swap` 管道用例；全量 **61 套 / 312 测试 / 3269 断言全绿**。
 
+### 21.9 S4b 落地（2026-09-11，已完成）
+
+- 桥接 `scripts/kernel_bridge/behavior/homing_behavior.gd`：移植旧 `move_homing.gd`；每帧转向限制 + 速度爬升 + 持续时长，**只 set_velocity**。
+- 目标查询用现成 `WorldQuery.get_enemies()`；「跳时符 / 未开战 Boss」放桥接层（引用宿主 `Boss` / `PhaseData`，内核不碰）。
+- `move_homing.gd.kernel_port()` → `homing` + 6 参数。
+- `setup_behaviors()` 改为**可重复注入** `WorldQuery` provider（支持测试 / 换关）。
+- 测试夹具 `test/fixtures/no_port_behavior.gd`：把「未映射计数」用例与 S4 进度解耦。
+- 验收：`test_kernel_behavior` +2（有敌偏转 / 无敌不偏，且速度按 `lerp` 爬升）；全量 **61 套 / 314 测试 / 3274 断言全绿**。
+- 语义备注：旧 `_apply_homing` 里的 `speed_mult/alignment` 随后被 `normalize()*current_speed` 覆盖——**死代码**，桥接未复刻。
+
+
 
 
 

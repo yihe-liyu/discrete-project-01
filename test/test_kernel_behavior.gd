@@ -3,6 +3,7 @@ extends GutTest
 
 const GRAVITY_BULLET = preload("res://data/stages/stage01/bullet/gravity_bullet.gd")
 const MOVE_HOMING = preload("res://scripts/coroutine/player/move_homing.gd")
+const NO_PORT = preload("res://test/fixtures/no_port_behavior.gd")
 
 var _backend: KernelBulletBackend
 
@@ -58,14 +59,46 @@ func test_accel_field_without_coroutine_maps() -> void:
 		"BulletData.accel 应映射到 world_accel")
 
 
-## 无端口的行为：计数 + 直线（homing 留 S4b）。
+## 无端口的行为：计数 + 直线（夹具，不依赖内容进度）。
 func test_unmapped_behavior_counted_and_straight() -> void:
 	var d := _enemy()
 	d.velocity = Vector2.UP * 100.0
-	d.coroutine_script = MOVE_HOMING
+	d.coroutine_script = NO_PORT
 	_backend.shoot(d, Vector2.ZERO, Vector2.UP)
 	assert_eq(_backend.unmapped_behavior_count, 1, "无端口的行为应计数")
 	assert_eq(_backend.system.get_behavior_id(0), BulletSystem.BEHAVIOR_NONE, "未映射应无行为（直线）")
+
+
+## S4b：move_homing 端口 → homing；有敌人时朝它偏转。
+func test_homing_turns_toward_enemy() -> void:
+	var fake := Node2D.new()
+	fake.global_position = Vector2(500, 0)
+	add_child_autofree(fake)
+	_backend.setup_behaviors(null, func() -> Array: return [fake])
+	var d := BulletData.new().player().tex("reimu_main")
+	d.velocity = Vector2.UP * 500.0
+	d.coroutine_script = MOVE_HOMING
+	_backend.shoot(d, Vector2.ZERO, Vector2.UP)
+	assert_eq(_backend.system.get_move_name(_backend.system.get_behavior_id(0)), &"homing",
+		"move_homing 端口应映射 homing")
+	_backend.system._physics_process(1.0 / 60.0)
+	_backend.behavior.process()
+	var v: Vector2 = _backend.system.get_velocity(0)
+	assert_gt(v.x, 0.0, "应朝右侧敌人偏转")
+	assert_almost_eq(v.length(), 512.5, 1.0, "速度量级 ≈ lerp(min_speed, top_speed, dt/accel_time)")
+
+
+## S4b：无敌人时 homing 只按速度曲线推进，不转。
+func test_homing_without_enemy_keeps_direction() -> void:
+	var d := BulletData.new().player().tex("reimu_main")
+	d.velocity = Vector2.UP * 500.0
+	d.coroutine_script = MOVE_HOMING
+	_backend.shoot(d, Vector2.ZERO, Vector2.UP)
+	_backend.system._physics_process(1.0 / 60.0)
+	_backend.behavior.process()
+	var v: Vector2 = _backend.system.get_velocity(0)
+	assert_almost_eq(v.x, 0.0, 0.0001, "无敌人不应偏转")
+	assert_gt(v.length(), 500.0, "速度应随 elapsed 向 top_speed 爬升")
 
 
 ## 端口缓存：同一内容签名只探测一次（不每发 instantiate 探测）。

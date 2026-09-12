@@ -73,11 +73,11 @@ func test_accel_field_mapped_since_s4a() -> void:
 	assert_eq(b.system.get_move_name(b.system.get_behavior_id(0)), &"world_accel", "应挂 world_accel")
 
 
-## 仍无内核端口的行为（homing 留 S4b）应计数并走直线。
+## 无内核端口的行为应计数并走直线（测试夹具，独立于 S4 进度）。
 func test_unmapped_behavior_counted() -> void:
 	var b := _make_backend()
 	var d := _enemy_data()
-	d.coroutine_script = preload("res://scripts/coroutine/player/move_homing.gd")
+	d.coroutine_script = preload("res://test/fixtures/no_port_behavior.gd")
 	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
 	assert_eq(b.unmapped_behavior_count, 1, "无端口行为应计数（供 S4 覆盖率观察）")
 	assert_eq(b.system.get_behavior_id(0), BulletSystem.BEHAVIOR_NONE, "未映射应无行为（直线）")

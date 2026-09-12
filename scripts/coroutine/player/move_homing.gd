@@ -100,3 +100,18 @@ func _find_nearest_enemy() -> Node2D:
 			nearest_dist = dist
 			nearest = enemy
 	return nearest
+
+
+## 内核端口（Track A / S4b）：参数交给桥接 HomingBehavior（语义 1:1）。
+func kernel_port() -> Dictionary:
+	return {
+		"move": &"homing",
+		"params": {
+			&"homing_angle_per_sec": homing_angle_per_sec,
+			&"accel_time": accel_time,
+			&"min_speed": min_speed,
+			&"max_speed": max_speed,
+			&"homing_duration": homing_duration,
+			&"proximity_boost": proximity_boost,
+		},
+	}
