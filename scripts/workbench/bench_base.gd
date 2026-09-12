@@ -63,6 +63,7 @@ func ensure_stage_runtime() -> StageRuntime:
 func build_world() -> Control:
 	ensure_stage_runtime()  # 保证本台有关卡运行时（子弹台不显式建：幽灵/注册表注入依赖它）
 	_bullets = ensure_bullet_world()
+	_bullets.fx_parent = _stage_runtime.world
 	_stage_runtime.bullets = _bullets
 	RIG_COMMON.add_stage_bg(self)
 	# 场地：直接子节点绝对定位；(0,0) 起、832x928 → 局部坐标=游戏坐标

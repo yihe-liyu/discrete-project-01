@@ -321,6 +321,7 @@ func _setup_world() -> void:
 	_bullets = BulletManager.new()
 	_bullets.name = "BulletManager"
 	add_child(_bullets)
+	_bullets.fx_parent = _world
 	_stage_runtime.bullets = _bullets
 	# World 节点在 .tscn（显式 PAUSABLE！否则继承 root 的 ALWAYS，暂停时敌人照常发弹）
 	# 命中框覆盖层：独立 CanvasLayer + 高 z（> 敌弹 10 / 特效 50），画在子弹之上

@@ -645,6 +645,20 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.22 K4 实施记录（2026-09-11，已完成）
+
+**目标**：消除 `find_child()` 全树搜与 `get_node("..")`（R2），改用组合根注入。
+
+**落点**：
+
+- `Boss.ui_layer` + `StageRuntime.ui_layer`（`GameScene` 注入 HUD 层，`add_enemy_to_scene` 传递）；删 UI 全树搜。
+- `StageBackground._find_camera()` 只做父级查找，支持组合根预注入 `camera`；删 Camera3D 全树搜。
+- `BulletManager.fx_parent` / `KernelBomb.fx_parent`（爆图父节点注入）；删 `get_node("World")`。
+- `stage01_decor` 去 `$".."`，改 `get_parent() as StageBackground`。
+
+**度量**：`find_child` **2 → 0**；`$".."` **4 → 0**。
+
+**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 12.21 K2 实施记录（2026-09-11，已完成）
 
 **目标**：生产代码消除对外调 `_私有` / `has_method("_")`（R6），改用公开虚函数与类型化接口。

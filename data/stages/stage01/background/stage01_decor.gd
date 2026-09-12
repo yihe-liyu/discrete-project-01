@@ -2,10 +2,10 @@ extends CoroutineScript
 ## Stage01 背景演出 —— 时间线版（组件化：环境/太阳/蒙眼雾已抽成组件与基类 API）
 ## 环境预设 stage01_env.tres 管"初始状态"，tween_env_* 管"动态变化"，本脚本只做编排
 
-@onready var bg: StageBackground = $".."
-@onready var ground: BackgroundPlane = $"../Ground"
-@onready var sun: BackgroundSun = $"../Sun"
-@onready var fog: ScreenFogFX = $"../FogFX"
+@onready var bg: StageBackground = get_parent() as StageBackground
+@onready var ground: BackgroundPlane = bg.get_node("Ground") as BackgroundPlane
+@onready var sun: BackgroundSun = bg.get_node("Sun") as BackgroundSun
+@onready var fog: ScreenFogFX = bg.get_node("FogFX") as ScreenFogFX
 
 const OAK_LAYER = preload("res://data/stages/stage01/background/oak.tres")
 const ENV_PRESET = preload("res://data/stages/stage01/background/stage01_env.tres")

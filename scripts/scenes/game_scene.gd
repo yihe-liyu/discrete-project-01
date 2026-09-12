@@ -31,6 +31,8 @@ func _ready():
 	_stage_runtime.miss_layer = _miss_layer
 	_stage_runtime.fx_layer = _fx_layer
 	_bullets.inject_fx_layer(_fx_layer)
+	_bullets.fx_parent = _world            # 炸弹爆炸贴图挂 World（K4：不再全树找）
+	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层（K4）
 	_item_pool.refs = _stage_runtime.refs   # 道具经注册表取自机/资源（W4b-2b）
 
 	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
@@ -113,7 +115,9 @@ func _exit_tree():
 	_stage_runtime.miss_layer = null  # 解除注入（节点随本场景释放）
 	_bullets.clear_all()       # 内含 fx_layer.clear_pool()
 	_bullets.inject_fx_layer(null)  # 解除特效层注入（防持悬空引用）
+	_bullets.fx_parent = null
 	_stage_runtime.fx_layer = null
+	_stage_runtime.ui_layer = null
 	if SaveData.is_practice_mode:
 		SaveData.end_practice()
 	if _background_instance and is_instance_valid(_background_instance):

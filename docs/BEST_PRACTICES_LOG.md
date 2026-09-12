@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-11 — K4：R2 收口（全树搜 → 组合根注入）
+
+- **目标**：清掉 `find_child()` 全树搜与 `get_node("..")` 字符串路径（工程红线 R2）。
+- **做法**：
+  - Boss 位置指示器：`Boss.ui_layer` + `StageRuntime.ui_layer` 注入槽；`GameScene` 设 `_game_ui`，`add_enemy_to_scene` 注入；删 `current_scene.get_node_or_null("UI")` + `root.find_child("UI")`。
+  - 背景相机：`StageBackground._find_camera()` 只做父级 `Camera3D` 查找（父级是 SubViewport / BgViewport，真机两处都命中）；删 `current_scene.find_child("Camera3D")` 后备；`camera` 可组合根预注入，否则 `_own_camera()` 兜底。
+  - 炸弹爆炸贴图：`BulletManager.fx_parent`（组合根注入 World）+ `KernelBomb.fx_parent`（backend 取 `world.fx_parent`）；删 `scene.get_node("World")`。
+  - `stage01_decor`：`$".."`/`$"../X"` → `get_parent() as StageBackground` + `bg.get_node("X")`。
+- **度量**：`find_child` **2 → 0**；`$".."`/`get_node("..")` **4 → 0**。
+- **对照旧项目**：旧实现靠「全树搜名字」（Camera3D / UI / World），多实例 / 多视口下会撞名；现在依赖由组合根向下注入。
+- **没做**：`main_menu._container.get_node("Extra Start"/"Spell Practice")` 保持原样——它是**场景内直接子级**查找（非 `".."`、非 `find_child`），不属 R2；曾试 `@export var x: Control` + tscn `NodePath` 声明式装配，但 4.7 下该序列化未解析为节点，遂回退。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
 ### 2026-09-11 — K2：R6 收口（私有调用 → 公开虚函数）
 
 - **目标**：清掉生产代码所有**对外**调 `_私有` 与 `has_method("_")`（工程红线 R6）。

@@ -72,6 +72,7 @@ func spawn_bomb(data: BulletData, pos: Vector2, direction: Vector2) -> Node:
 	var bomb: Node2D = KernelBombClass.new()
 	bomb.refs = refs
 	bomb.world = world
+	bomb.fx_parent = world.fx_parent if world else null
 	add_child(bomb)
 	_bombs.append(bomb)
 	bomb.setup(data, pos, direction)

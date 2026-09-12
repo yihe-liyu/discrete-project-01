@@ -9,6 +9,7 @@ func test_boss_indicator_follows_boss():
 	autofree(ui)
 
 	var boss = load("res://scripts/enemy/boss.gd").new()
+	boss.ui_layer = ui
 	add_child(boss)
 	boss.start_boss()
 
@@ -55,6 +56,7 @@ func test_boss_indicator_alpha_fades_with_distance():
 	refs.bind_player(fake_player)
 
 	var boss = load("res://scripts/enemy/boss.gd").new()
+	boss.ui_layer = ui
 	add_child_autofree(boss)
 	boss.registry = refs
 	boss.start_boss()
@@ -91,6 +93,7 @@ func test_indicator_follows_after_die():
 	autofree(ui)
 
 	var boss = load("res://scripts/enemy/boss.gd").new()
+	boss.ui_layer = ui
 	add_child_autofree(boss)
 	boss.start_boss()
 	var indicator: Sprite2D = boss._pos_indicator

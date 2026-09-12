@@ -34,6 +34,8 @@ var velocity: Vector2 = Vector2.ZERO
 var refs: EntityRegistry
 ## W4c：弹幕世界（KernelBulletBackend 注入）——持续清弹 / 爆炸清弹用
 var world: BulletManager
+## K4：爆炸贴图父节点（KernelBulletBackend 注入 World；空则挂自身父级）
+var fx_parent: Node2D
 
 
 func setup(data: BulletData, pos: Vector2, direction: Vector2) -> void:
@@ -140,10 +142,7 @@ func _explode() -> void:
 
 
 func _spawn_explosion_visual(pos: Vector2) -> void:
-	var scene := get_tree().current_scene
-	var parent: Node = scene
-	if scene and scene.has_node("World"):
-		parent = scene.get_node("World")
+	var parent: Node = fx_parent
 	if parent == null:
 		parent = get_parent()
 	if parent == null:

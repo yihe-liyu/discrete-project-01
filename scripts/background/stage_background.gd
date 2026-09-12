@@ -8,7 +8,8 @@ var _elapsed: float = 0.0
 var _active: bool = false
 
 func _ready():
-	camera = _find_camera()
+	if camera == null:
+		camera = _find_camera()
 	world_environment = _find_world_environment()
 	# 关键：Environment 是场景 SubResource，多个实例共享同一资源！
 	# 重跑/多背景实例会互相污染（雾/环境光状态残留）→ duplicate 成实例私有
@@ -47,12 +48,7 @@ func _find_camera() -> Camera3D:
 		var cam_node := parent.get_node_or_null("Camera3D")
 		if cam_node is Camera3D:
 			return cam_node
-	# 后备：从场景根搜
-	var root := get_tree().current_scene
-	if root:
-		var cam := root.find_child("Camera3D", true, false) as Camera3D
-		if cam:
-			return cam
+	# 无父级相机 → 组合根可预注入 camera；否则 _ready 走 _own_camera() 兜底
 	return null
 
 func _find_world_environment() -> WorldEnvironment:

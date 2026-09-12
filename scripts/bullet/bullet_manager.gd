@@ -23,6 +23,9 @@ var _kernel_physics: KernelBulletPhysics
 ## W2：组合根注入的特效层（空则静默）
 var fx_layer: FxLayer
 
+## K4：组合根注入的视觉父节点（World）——炸弹爆炸贴图挂此（不再全树找 scene/World）
+var fx_parent: Node2D
+
 ## W4b-3b：组合根注入的实体注册表（自机 / 敌机 / Boss）；空则回退当前世界
 var world_refs: EntityRegistry
 

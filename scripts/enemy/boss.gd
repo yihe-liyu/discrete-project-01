@@ -32,6 +32,8 @@ var hitbox_radius: float:
 var _ctx: StageContext
 ## 战场实体注册表（StageRuntime 注入；直接实例化时为 null）——自机 / 资源 / 敌机登记
 var registry
+## K4：HUD 层（StageRuntime 注入；工作台/测试可为 null）——位置指示器挂此
+var ui_layer: CanvasLayer
 var _current_phase: PhaseData
 var _pos_indicator: Sprite2D  # Boss 位置指示器（x 跟随 Boss，y 固定游戏框底）
 var _bonus: int = 0
@@ -136,12 +138,9 @@ func start_boss() -> void:
 func _create_pos_indicator() -> void:
 	if _pos_indicator:
 		return
-	var scene := get_tree().current_scene
-	var ui: CanvasLayer = scene.get_node_or_null("UI") if scene else null
+	var ui: CanvasLayer = ui_layer
 	if ui == null:
-		ui = get_tree().root.find_child("UI", true, false) as CanvasLayer
-	if ui == null:
-		return  # 无 UI 层的场景（工作台等）不显示指示器
+		return  # 无 UI 层注入（工作台/测试）不显示指示器
 	var spr := Sprite2D.new()
 	spr.name = "PosIndicator"
 	spr.texture = POS_INDICATOR_TEX

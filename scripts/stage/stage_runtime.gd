@@ -29,6 +29,8 @@ static var current: StageRuntime
 ## 注入槽（组合根 / 工作台设置）
 var miss_layer: MissEffectManager
 var fx_layer: FxLayer
+## K4：Boss 位置指示器所属 HUD 层（组合根注入）
+var ui_layer: CanvasLayer
 var current_background: StageBackground
 
 var current_stage: StageData
@@ -205,6 +207,8 @@ func add_enemy_to_scene(node: Node2D) -> void:
 	# 注入注册表：Enemy 在 _ready 自注册、Boss 在 start_boss 注册（都在 add_child 之后，故先给引用）
 	if "registry" in node:
 		node.registry = refs
+	if "ui_layer" in node:
+		node.ui_layer = ui_layer
 	var parent: Node = null
 	if is_instance_valid(world):
 		parent = world
