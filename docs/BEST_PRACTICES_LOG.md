@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-13 — N2/N4 原生探针：✅ 脚本侧热路径快 ~60×（6000 弹 8.9ms → 0.15ms）
+
+- **做法**：在 `_gdext_spike/` 加原生 `DanmakuStore`（SoA 存储 + 积分 + 剔除 + `fill_multimesh` 写 MultiMesh），godot-cpp 绑定，同一 N 档位对比 GDScript `BulletSystem` + `BulletMultiMesh`。
+- **结果（ms/帧）**：6000 弹 —— GDScript 积分 0.78 / 渲染 7.40 / 合计 8.90；**原生 0.008 / 0.142 / 0.150** → **~59×**。8000 弹原生合计 **0.199**（vs 11.46）。
+- **结论**：对 6000+ 弹的目标，**GDExtension 是必需，不是奢侈**。N2(存储) + N4(渲染) 的收益被实测坐实；且最大头正是本地 GDScript 最丑的那块（每帧 Dictionary 分组）。
+- **边界**：探针是简化版（单 MultiMesh / 单色 / 无行为 / 无碰撞 / 无图集）；真实版还需 N3(行为 VM) + 图集 + 纹理句柄（M3 ③ 插座正好接上）。
+- **产物**：`_gdext_spike/src/danmaku_store.{h,cpp}` + `testproj/native_bench.gd`（工作区外）。
+
 ### 2026-09-13 — 量 Trigger：`tools/bench_danmaku.gd`（渲染同步才是最大头）
 
 - **动机**：N1 工具链通过后，上不上原生只剩"性能 Trigger"一票。此前只有"3000 弹 ≈ 2.5ms"的旧数字，且 `tools/bench_danmaku.gd` 根本不存在。
