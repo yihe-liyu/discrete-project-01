@@ -83,5 +83,5 @@ func _run(n: int, with_behavior: bool) -> void:
 	var ms_tot := ms_int + ms_beh + ms_brd + ms_ren
 	print("%d\t%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.0f%%" % [
 		n, "行为" if with_behavior else "直线", ms_int, ms_beh, ms_brd, ms_ren, ms_tot, ms_tot / BUDGET_60 * 100.0])
-	backend.queue_free()
-	mm.queue_free()
+	backend.free()   # 同步 _ready 里 queue_free 从不执行 → 会累积后端（曾经的数据噪音源）
+	mm.free()

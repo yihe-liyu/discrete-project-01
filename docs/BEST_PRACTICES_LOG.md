@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-13 — N2.2 探路：只搬「渲染填充」无效（1.14×），已回退 + 记录教训
+
+- **尝试**：原生 `DanmakuBatch.fill_group` 接进 `BulletMultiMesh._sync_kernel`（分组 / 旋转 / fade 仍留 GDScript）。
+- **同进程对照**（`tools/bench_render.gd`，6000 弹）：原生 **8.19ms** vs GDScript **9.31ms** = **1.14×** —— 远低于独立探针的 ~50×。
+- **根因**：开销在 **GDScript 的分组（Dictionary + 每弹 append）+ 每弹 `rotation_for` / `get_render_fade`**，**不在** `set_instance_*` 调用本身；只搬填充还多了 Array→Packed 转换。
+- **处置**：**回退** `BulletMultiMesh`，移除 `DanmakuBatch`；新增 `tools/bench_render.gd`（整段渲染对照）。
+- **教训**：**"最大单项"要说清楚是哪一段。** 独立探针里"渲染 ~50×"是「无分组、直接写缓冲」的理想值；接进真实路径后，分组才是大头。搬错了段 = 白干。
+- **顺带修**：`bench_danmaku.gd` 用 `queue_free()` —— 同步 `_ready` 里从不执行 → 后端累积，是之前数据噪音的来源；改 `free()`。
+- **验收**：`verify.sh` 全绿（322 测试 / 3247 断言）。
+
 ### 2026-09-13 — N2.1：原生 DanmakuStore 扩为真实弹数据 + 批量 API（~55× 保持）
 
 - **扩了什么**：per-bullet `type` / `faction` / `color`；**`spawn_batch`**（Packed 数组一次跨界）避免逐弹跨语言开销；`fill_multimesh(mm)` 按每弹色写入。

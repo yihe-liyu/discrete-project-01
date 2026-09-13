@@ -21,6 +21,12 @@
 
 - **N2.1 ✅（已完成）** 原生 `DanmakuStore`：per-bullet `type/faction/color` +
   `spawn_batch` + `fill_multimesh`。基准：6000 弹合计 **0.156ms**（GDScript 8.39ms，~54×）。
+- **N2.2 实测教训（2026-09-13，已回退）**：先试「只把逐实例填充搬原生」——
+  同进程对照（`tools/bench_render.gd`，6000 弹）：原生 **8.19ms** vs GDScript **9.31ms**，**仅 1.14×**。
+  根因：开销在 **GDScript 侧的分组（Dictionary + 每弹 append）+ 每弹 `rotation_for` / `get_render_fade`**，
+  不在 `set_instance_*` 调用本身；只搬填充还多了 Array→Packed 转换成本。
+  **结论**：N4-real 必须把**整段 `_sync_kernel`**（分组 + 旋转 + fade + 填充）搬原生 ——
+  原生需要 per-type `texture_handle / tint_mode / kind / follow_dir / dir_offset` + 宿主 MultiMesh 表。
 - **N2.2** 原生 `DanmakuSystem`：补齐桥接 / 渲染 / 物理用到的 `BulletSystem` 子集
   （spawn / despawn / get_active_count / get_positions / get_velocities / get_colors /
   get_type_indices / get_factions / query_circle / hit_test / cull_rect / get_delta）。
