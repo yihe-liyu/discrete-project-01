@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-11 — K8：Player 机体初始化去重（setup_character 幂等）
+
+- **目标**：`Player._ready` 与 `GameScene._setup_player` 各调一次 `apply_player_data()`（+`reinit_shoot`），选默认机体时白装两遍；收敛成幂等单入口。
+- **做法**：新增 `Player.setup_character(data)`（应用数值 + (重)装配射击；`data == player_data and _shoot_script != null` 时跳过）；`_ready` 改调 `setup_character(player_data)`；`GameScene._setup_player` 的 `player_data=; apply_player_data(); reinit_shoot()` 三行改为 `player.setup_character(选中)`。
+- **效果**：默认机体（灵梦）**零重复**；非默认机体仍有一次自举浪费（一次 apply + 一套脚本建/拆，无害）。`apply_player_data`+`reinit_shoot` 由「恒成对调用」收成一个公开入口（R19/R6）。
+- **为什么之前会两次**：Godot 子 `_ready` 先于父 `_ready`；`Player` 在 `game_scene.tscn` 声明，组合根只能在 `Player._ready` 之后覆盖运行时选中的机体。
+- **测试**：`test_player` 加 2 例——同机体 `setup_character` 不重建射击脚本 / 换机体重建且切换 `player_data`。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 308 测试 / 3207 断言全绿**；orphans 10。
 ### 2026-09-11 — K7：特效命名消歧（MissCircleLayer / FxPool）
 
 - **目标**：`MissEffectManager` 与 `FxLayer` 名字都带 Effect/Layer，容易被当成重复；按各自**机制**改名消歧。

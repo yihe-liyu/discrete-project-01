@@ -2,6 +2,10 @@
 extends Area2D
 class_name Player
 
+@onready var hitpoint_display: HitPointDisplay = $HitPointDisplay
+@onready var animation: AnimatedSprite2D = $AnimatedSprite2D
+@onready var muzzle: Marker2D = $Muzzle
+
 const FRONT_UP: float = GameConfig.FIELD_TOP
 const FRONT_DOWN: float = GameConfig.FIELD_BOTTOM
 const FRONT_LEFT: float = GameConfig.FIELD_LEFT
@@ -13,12 +17,13 @@ var ctx: StageContext
 ## 单局资源（W4b-4：Player 是 owner；消费者经 EntityRegistry 取同一实例）
 var resources: PlayerResources
 
-const IDLE = "idle"
-const LEFTING = "lefting"
-const LEFT = "left"
-const RIGHTING = "righting"
-const RIGHT = "right"
-var anim_state: String = IDLE
+
+const IDLE = &"idle"
+const LEFTING = &"lefting"
+const LEFT = &"left"
+const RIGHTING = &"righting"
+const RIGHT = &"right"
+var anim_state: StringName = IDLE
 
 var input_vector: Vector2 = Vector2.ZERO
 var is_focused: bool = false
@@ -27,9 +32,6 @@ var _invincible_timer: float = 0.0
 
 var hitbox_radius: float = 5.0
 var graze_radius: float = 40.0  # 擦弹判定半径
-
-@onready var hitpoint_display: HitPointDisplay = $HitPointDisplay
-@onready var muzzle: Marker2D = $Muzzle
 
 ## 玩家机体数据（速度、动画、武器等）
 @export var player_data: PlayerData
@@ -41,12 +43,10 @@ var focus_speed: int
 var normal_speed: int
 var current_speed: int
 
-@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
-
 func _ready() -> void:
 	z_index = LayerConfig.PLAYER
 	# 连接 animation_finished 信号，用于检测一次性动画播完
-	sprite.animation_finished.connect(_on_animation_finished)
+	animation.animation_finished.connect(_on_animation_finished)
 	# 单局资源（W4b-4：Player 是资源 owner）
 	if resources == null:
 		resources = PlayerResources.new()
@@ -54,8 +54,7 @@ func _ready() -> void:
 	if not GameEvents.enemy_killed.is_connected(_on_enemy_killed):
 		GameEvents.enemy_killed.connect(_on_enemy_killed)
 
-	apply_player_data()
-	_init_shoot_script()
+	setup_character(player_data)
 
 
 func _exit_tree() -> void:
@@ -77,6 +76,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		_bomb()
 		get_viewport().set_input_as_handled()
 
+## 注入/切换机体：应用数值 + (重)装配射击。同数据且已装配 → 跳过（幂等，避免组合根重复初始化）。
+func setup_character(data: PlayerData) -> void:
+	if data == player_data and _shoot_script != null:
+		return
+	player_data = data
+	apply_player_data()
+	reinit_shoot()
+
+
 # 应用机体数据
 func apply_player_data() -> void:
 	if player_data == null:
@@ -87,9 +95,9 @@ func apply_player_data() -> void:
 	normal_speed = player_data.normal_speed
 	current_speed = normal_speed
 
-	if sprite and player_data.animation:
-		sprite.sprite_frames = player_data.animation
-		sprite.play("idle")
+	if animation and player_data.animation:
+		animation.sprite_frames = player_data.animation
+		animation.play(IDLE)
 
 func _physics_process(delta):
 	# 记忆值自动恢复（原全局状态 _process，W4b-4 迁来）
@@ -168,7 +176,7 @@ func change_state(new_state: String) -> void:
 		return
 
 	anim_state = new_state
-	sprite.play(anim_state)
+	animation.play(anim_state)
 
 func _on_animation_finished() -> void:
 	# 一次性动画播完后，自动切换到对应的循环动画

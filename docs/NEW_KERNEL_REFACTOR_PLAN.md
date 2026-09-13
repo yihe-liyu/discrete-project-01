@@ -645,6 +645,15 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.28 K8 实施记录（2026-09-11，已完成）
+
+**目标**：消除 `Player` 机体数据的双重初始化（默认机体白装两遍）。
+
+**落点**：`Player.setup_character(data)` 幂等入口（应用数值 + (重)装配射击）；`_ready` 与 `GameScene._setup_player` 均改走它。
+
+**效果**：默认机体零重复；非默认机体一次无害自举；`apply_player_data`+`reinit_shoot` 收成单入口。
+
+**验收**：`check_syntax` 191/0；全量 **55 套 / 308 测试 / 3207 断言全绿**；orphans 10。
 ### 12.27 K7 实施记录（2026-09-11，已完成）
 
 **目标**：特效命名消歧（R18 可读性）——两个任务名字不再像重复。

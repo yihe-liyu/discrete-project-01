@@ -20,18 +20,17 @@ func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
 	# W4c/R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
-	_stage_runtime.bullets = _bullets
-
 	# 组合根装配：Miss 圈 / 特效层 / 关卡运行时（均在 game_scene.tscn 声明，R21），这里只注入。
+	_stage_runtime.bullets = _bullets
 	_stage_runtime.world = _world
 	_stage_runtime.miss_layer = _miss_layer
 	_stage_runtime.fx_pool = _fx_pool
+	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层（K4）
+	
 	_bullets.inject_fx_pool(_fx_pool)
 	_bullets.fx_parent = _world            # 炸弹爆炸贴图挂 World（K4：不再全树找）
-	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层（K4）
+	
 	_item_pool.refs = _stage_runtime.refs   # 道具经注册表取自机/资源（W4b-2b）
-
-	# ItemPool 已在 game_scene.tscn 里声明为 World 子节点（骨架），此处无需再创建。
 
 	GameEvents.player_death.connect(_on_player_death)
 	GameManager.game_state_changed.connect(_on_game_state_changed)
@@ -130,9 +129,7 @@ func _setup_player() -> void:
 	]
 	var player := %Player
 	if player and SaveData.selected_character < data_map.size():
-		player.player_data = data_map[SaveData.selected_character]
-		player.apply_player_data()
-		player.reinit_shoot()
+		player.setup_character(data_map[SaveData.selected_character])
 		# 自机 → 本次关卡世界的实体注册表（BulletManager 亦经注入读取）
 		_stage_runtime.refs.bind_player(player)
 	# 自机已就绪：把本关卡的实体注册表注入内核弹幕后端

@@ -241,3 +241,4 @@
 > - K0（基线重审）：按代码实测刷新 S 小节 / 红线 / 层序 / 命名数字；清 `bullet_physics`/`bullet_fog`/`SpatialHash` 等过时引用与 R14 假 TODO；新增 R2 残余 / R21 待办。
 > - K6（R21 收尾）：`BulletManager` 从代码 `new()` 改为 `game_scene.tscn` 的 `World` 下声明（`%BulletManager`）；`game_scene` 服务节点代码建 **1 → 0**。详见 §12.26。
 > - K7（命名消歧）：`FxLayer` → `FxPool`（精灵池）、`MissEffectManager` → `MissCircleLayer`（全屏 shader 圈），成员/tcn/测试同步。详见 §12.27。
+> - K8（初始化去重）：`Player.setup_character` 幂等入口收口「`_ready` 自举 + 组合根覆盖」的双重初始化。详见 §12.28。
