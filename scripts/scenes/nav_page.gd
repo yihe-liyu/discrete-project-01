@@ -138,14 +138,14 @@ func _play_entrance() -> void:
 		else:
 			col = normal_color
 
-		var delay := i * entrance_stagger
+		var delay: float = i * entrance_stagger
 		_entrance_tween.tween_property(item, "modulate", col, entrance_duration * 0.8).set_delay(delay)\
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		if item is Control:
 			_entrance_tween.tween_property(item, "scale", Vector2.ONE, entrance_duration).set_delay(delay)\
 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-	var total := (_nav_items.size() - 1) * entrance_stagger + entrance_duration
+	var total: float = (_nav_items.size() - 1) * entrance_stagger + entrance_duration
 	_entrance_tween.tween_callback(func():
 		_nav_enabled = true
 		_entrance_tween = null
@@ -184,8 +184,8 @@ func navigate(delta: int) -> void:
 
 	sfx_nav()
 
-	var steps := 0
-	var new_idx := _nav_index
+	var steps: int = 0
+	var new_idx: int = _nav_index
 	while steps < _nav_items.size():
 		new_idx += delta
 		if allow_wrap:
@@ -205,7 +205,7 @@ func _select(index: int) -> void:
 		return
 
 	# 旧项恢复颜色
-	var prev := _nav_index
+	var prev: int = _nav_index
 	if prev >= 0 and prev < _nav_items.size():
 		_stop_pulse()
 		_set_color(_nav_items[prev], _item_color(prev), false)
@@ -227,16 +227,16 @@ func accept_current() -> void:
 	sfx_confirm()
 
 	var item := _nav_items[_nav_index]
-	var idx := _nav_index
+	var idx: int = _nav_index
 	_nav_enabled = false
 
 	# 闪烁特效
-	var tw := item.create_tween()
-	tw.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.set_loops(3)
-	tw.tween_property(item, "modulate", Color(0.4, 0.4, 0.4), 0.08)
-	tw.tween_property(item, "modulate", highlight_color, 0.08)
-	await tw.finished
+	var tween := item.create_tween()
+	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.set_loops(3)
+	tween.tween_property(item, "modulate", Color(0.4, 0.4, 0.4), 0.08)
+	tween.tween_property(item, "modulate", highlight_color, 0.08)
+	await tween.finished
 
 	_nav_enabled = true
 	_on_item_selected(idx)
@@ -324,7 +324,7 @@ func _nav_cancel(event: InputEvent) -> bool:
 
 ## 方向导航（带冷却，防连按/回显）
 func _nav_move(delta: int) -> void:
-	var now := Time.get_ticks_msec() / 1000.0
+	var now: float = Time.get_ticks_msec() / 1000.0
 	if now - _last_nav_time < nav_cooldown:
 		return
 	_last_nav_time = now

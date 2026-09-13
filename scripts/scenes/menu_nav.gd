@@ -38,8 +38,8 @@ func setup(parent: Node) -> void:
 
 
 ## 注入子页面容器（由拥有它的场景调用，如 MainMenu 的 %PageHost）
-func set_page_host(h: Control) -> void:
-	_host = h
+func set_page_host(host: Control) -> void:
+	_host = host
 
 
 ## 是否已注入子页面容器

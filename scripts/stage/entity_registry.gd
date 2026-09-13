@@ -23,13 +23,13 @@ func bind_player(p: Node2D) -> void:
 	player = p
 
 
-func register_enemy(e) -> void:
-	if e != null and not enemies.has(e):
-		enemies.append(e)
+func register_enemy(enemy) -> void:
+	if enemy != null and not enemies.has(enemy):
+		enemies.append(enemy)
 
 
-func unregister_enemy(e) -> void:
-	enemies.erase(e)
+func unregister_enemy(enemy) -> void:
+	enemies.erase(enemy)
 
 
 func get_active_enemies() -> Array:
@@ -45,15 +45,15 @@ func get_player_resources() -> PlayerResources:
 
 ## 当前场上的 Boss（无 → null）。按脚本类型识别，与旧全局查询判据一致。
 func get_boss():
-	for e in enemies:
-		if is_instance_valid(e) and not e.is_queued_for_deletion() and e.get_script() == BossScript:
-			return e
+	for enemy in enemies:
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and enemy.get_script() == BossScript:
+			return enemy
 	return null
 
 
 ## 清场：释放所有敌机（自机不动——自机跨关卡存活）。
 func clear() -> void:
-	for e in enemies:
-		if is_instance_valid(e) and not e.is_queued_for_deletion():
-			e.queue_free()
+	for enemy in enemies:
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion():
+			enemy.queue_free()
 	enemies.clear()
