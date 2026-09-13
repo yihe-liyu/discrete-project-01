@@ -18,3 +18,6 @@ data/registry/spell_records.tres
 # Godot/编辑器临时 object store 工作目录
 .objstore_work*/
 .xdg_data/
+
+# 临时工作清单（做完一条删一条；不进库）
+TODO_TEMP.md
