@@ -115,7 +115,7 @@ static func get_high_score(stage_id: int) -> int:
 
 ## 重置一局：清练习标志 + 自机资源（资源真源在 Player；注册表由组合根显式传入，去全局）
 static func reset_all(entity_registry: EntityRegistry) -> void:
-	is_practice_mode = false
+	_clear_practice()
 	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
 	if entity_registry != null and res == null:
 		push_warning("SaveData.reset_all: 注册表存在但取不到自机资源（Player 未绑定？）——重置空跑")
@@ -146,7 +146,19 @@ static func start_practice(phase: PhaseData, boss_scene: PackedScene, p_name: St
 static func end_practice() -> void:
 	if restarting:
 		return
+	_clear_practice()
+
+
+## 清空练习载荷（阶段 / Boss 场景 / 名字 / 关卡 / 背景）——练习结束后不得留残余状态，
+## 否则下一局普通流程会看到残留 `practice_phase`（game_scene 告警「已设置但 is_practice_mode=false」）。
+static func _clear_practice() -> void:
 	is_practice_mode = false
+	practice_phase = null
+	practice_boss_scene = null
+	practice_name = ""
+	practice_stage_id = 1
+	practice_phase_index = 0
+	practice_background = null
 
 
 static func find_stage_background(stage_id: int) -> PackedScene:

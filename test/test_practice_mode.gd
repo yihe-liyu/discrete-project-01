@@ -24,3 +24,28 @@ func test_practice_mode_zeroes_lives_and_bombs():
 		assert_eq(res.bomb_count, 0, "练习 bomb 应为 0")
 		assert_eq(res.power_raw, 300, "练习火力应为满(300)")
 	SaveData.end_practice()
+
+
+## 回归：练习结束必须清空载荷——否则「先打练习，再进普通流程」会看到残留 practice_phase
+## （game_scene 告警「practice_phase 已设置但 is_practice_mode=false」并误判）。
+func test_end_practice_clears_payload():
+	SaveData.restarting = false
+	SaveData.start_practice(PhaseData.new(), null, "测试", 1, 0)
+	assert_true(SaveData.is_practice_mode, "start_practice 应置位练习模式")
+	SaveData.end_practice()
+	assert_false(SaveData.is_practice_mode, "end_practice 应复位练习模式")
+	assert_null(SaveData.practice_phase, "end_practice 应清空 practice_phase")
+	assert_null(SaveData.practice_boss_scene, "应清空 practice_boss_scene")
+	assert_eq(SaveData.practice_name, "", "应清空 practice_name")
+	assert_eq(SaveData.practice_stage_id, 1, "应复位 practice_stage_id")
+	assert_eq(SaveData.practice_phase_index, 0, "应复位 practice_phase_index")
+	assert_null(SaveData.practice_background, "应清空 practice_background")
+
+
+## 回归：reset_all（普通开局 / 重开）也应自愈清掉练习载荷。
+func test_reset_all_clears_practice_payload():
+	SaveData.restarting = false
+	SaveData.start_practice(PhaseData.new(), null, "测试", 1, 0)
+	SaveData.reset_all(null)
+	assert_false(SaveData.is_practice_mode, "reset_all 应复位练习模式")
+	assert_null(SaveData.practice_phase, "reset_all 应清空 practice_phase")

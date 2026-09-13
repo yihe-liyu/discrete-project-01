@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-13 — 修复：练习载荷未清空（先练习、再普通流程会告警 / 误判）
+
+- **现象**：先打一次练习，再进普通流程 → `game_scene.gd:48` 告警「practice_phase 已设置但 is_practice_mode=false —— 练习标志被提前清除，误走普通关卡」。
+- **根因**：`SaveData.end_practice()` 只把 `is_practice_mode` 置 false，`practice_phase / practice_boss_scene / practice_name / practice_stage_id / practice_phase_index / practice_background` 六个载荷原封不动；`reset_all()` 同样只清标志。下一局普通开局前就会看到残留，且任何按 `practice_*` 判断的路径都可能误判。
+- **修法**：新增 `SaveData._clear_practice()`（清 6 个载荷 + 模式标志），`end_practice()` 与 `reset_all()` 都调它；`end_practice` 仍尊重 `restarting`（重开练习要保留状态）。
+- **回归**：`test_practice_mode.test_end_practice_clears_payload` + `test_reset_all_clears_practice_payload`；**双向验证** —— 旧代码 1/3（`practice_phase` / `practice_background` 残留），新代码 3/3。
+- **教训**：**「模式标志」和「模式载荷」必须一起清。** 只复位布尔标志，留下的载荷就是下一次进入别的流程时的定时炸弹。静态 `var` 在 GUT 同进程内还会跨用例串味——`test_practice_mode` 原测试就靠 `end_practice()` 收尾。
+- **验收**：verify.sh 五步全绿（317 测试 / 3232 断言）。
+
 ### 2026-09-13 — 修复：ctx 门面误改（boss.clear_phase 访问 ctx.bullet_manager）
 
 - **现象**：试玩中 Boss 击破报 `Invalid access to property or key 'bullet_manager' on ... StageContext`（boss.gd:298，栈：take_damage → clear_phase）。
