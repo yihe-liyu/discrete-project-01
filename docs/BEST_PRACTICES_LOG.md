@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-13 — P0-3：删掉无调用者的 return_bullet / re_fire（A16）
+
+- **目标**：A15 类型化后暴露的「typed 但没人调」公开 API 收尾 —— `BulletManager.return_bullet` / `re_fire` 与 `BulletService.return_bullet` / `re_fire` 一起删。
+- **为什么**：内核行为走 `KernelBehaviorHost.request_despawn` / `queue_spawn`（延后队列 + `BulletSystem.despawn`），宿主侧「按 handle 回收 / 原地重发」这条 API 已无存在理由；留着只会让人以为别处在用（R19）。
+- **验收**：`check_syntax` 191/0；全量 GUT 57 套 / 310 / 3215 全绿；净 -23 行。
+- **注**：`docs/NEW_KERNEL_REFACTOR_PLAN.md` §5 的 adapter 清单仍列着这两个名字 —— 那是 Phase 1 的历史设计（当时旧池还在），按「方案/决策不动」原则不回写。
+
 ### 2026-09-13 — P0-2：删掉 5 处旧池协程残体 + 类型化 return_bullet/re_fire（A14 / A15）
 
 - **目标**：把卡住 A7/A8 的东西清掉 —— 5 处内容脚本仍留着「旧池 `Bullet` 节点」时代的协程体，把 `Node2D` 传给 `return_bullet` / `re_fire`。
