@@ -19,6 +19,16 @@ class CtxSpy:
 		calls.append([type, position])
 
 
+## 记录 death_clear 调用的弹幕服务桩（回归：门面是 ctx.bullets，不是 ctx.bullet_manager）
+class BulletSpy:
+	extends BulletService
+	var calls: Array = []
+
+	func death_clear(pos: Vector2, max_radius: float, duration: float,
+			start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
+		calls.append([pos, max_radius, duration])
+
+
 func before_each():
 	_boss = BOSS_CLASS.new()
 	autofree(_boss)
@@ -177,6 +187,23 @@ func test_no_drops_in_practice_mode():
 	SaveData.is_practice_mode = original
 
 	assert_eq(ctx.calls.size(), 0, "练习模式不应掉落")
+
+
+## 回归：clear_phase 必须走 ctx 门面 `ctx.bullets`（StageContext 没有 bullet_manager）。
+## 曾把门面名误改成 bullet_manager → 带 ctx 的击破清弹运行期报错，且 death_clear 根本没被调。
+func test_clear_phase_death_clear_via_bullets_facade() -> void:
+	_boss.start_phase(_make_phase(10, 10.0))
+	_skip_hp_tween()
+
+	var runner := CoroutineRunner.new()
+	autofree(runner)
+	var ctx := CtxSpy.new(runner)
+	var spy := BulletSpy.new()
+	ctx._bullet_service = spy
+	_boss._stage_context = ctx
+
+	_boss.clear_phase(false)
+	assert_eq(spy.calls.size(), 1, "clear_phase 应经 ctx.bullets.death_clear 清一次弹")
 
 ## ── 难度差分 ──
 

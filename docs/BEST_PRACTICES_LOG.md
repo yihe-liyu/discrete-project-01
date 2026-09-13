@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-13 — 修复：ctx 门面误改（boss.clear_phase 访问 ctx.bullet_manager）
+
+- **现象**：试玩中 Boss 击破报 `Invalid access to property or key 'bullet_manager' on ... StageContext`（boss.gd:298，栈：take_damage → clear_phase）。
+- **根因**：A2b 命名收敛把「BulletManager 实例字段」`world`/`bullets` → `bullet_manager`，却**误伤了 `ctx.*` 意图门面** —— StageContext 的门面是 `bullets`，没有 `bullet_manager`。test 没抓到是因为 test_boss_phase 里 `clear_phase` 从不带非 null ctx（`if _stage_context:` 直接跳过）。
+- **修法**：`_stage_context.bullets.death_clear(...)`（BulletService 门面；其 `death_clear` 本身 null-safe）。
+- **回归**：`test_boss_phase.test_clear_phase_death_clear_via_bullets_facade` 用 `BulletSpy` 记录 `death_clear`；**已双向验证** —— 旧代码 15/16（且打同一条错误），新代码 16/16。
+- **全仓排查**：`grep -rn '\.bullet_manager'` 其余 8 处接收者都是 StageRuntime / BulletManager / HitboxOverlay / KernelBomb，合法；仅 boss.gd:298 把 StageContext 当成了 BulletManager。
+- **教训**：「`ctx.*` 门面豁免改名」光写文档不够 —— **批量改名必须显式排除门面访问**；且 tests 对「非 null ctx + 门面调用」有覆盖洞（之前全靠 `ctx = null` 的早退分支蒙过）。
+- **验收**：verify.sh 五步全绿（315 测试 / 3222 断言）。
+
 ### 2026-09-13 — 修复：延后发射队列未快照 per-shot 状态（non_mid01 红弹速度梯度消失）
 
 - **现象**：`non_mid01_bullet.gd:45` 的 `_red_bullet_data.speed(RING_SPEED + i * 50)` 不生效 —— 红弹全按最后一档速度飞。

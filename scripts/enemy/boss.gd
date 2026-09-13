@@ -295,7 +295,7 @@ func clear_phase(captured: bool) -> void:
 
 	_drop_items()
 	if _stage_context:
-		_stage_context.bullet_manager.death_clear(global_position, 960, 0.75, 30)
+		_stage_context.bullets.death_clear(global_position, 960, 0.75, 30)
 	phase_cleared.emit(captured, _bonus)
 
 
