@@ -645,6 +645,15 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.34 K14 实施记录（2026-09-11，已完成）
+
+**目标**：给「动作型总闸」的静默空跑加出声（不搞全量 449 处）。
+
+**落点**：`SaveData.reset_all/reset_practice` 在 `refs != null and res == null` 时 `push_warning`。
+
+**判据**：P0 动作型空跑出声；P1 配置缺失出声；P2 getter/可选服务/帧检查不出声。
+
+**验收**：`check_syntax` 191/0；全量 **57 套 / 310 测试 / 3215 断言全绿**；orphans 10。
 ### 12.33 K13 实施记录（2026-09-11，已完成）
 
 **目标**：修复练习模式残机/bomb 未归零。

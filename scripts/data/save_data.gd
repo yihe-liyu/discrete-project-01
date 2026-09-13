@@ -118,6 +118,8 @@ static func reset_all() -> void:
 	is_practice_mode = false
 	var refs := EntityRegistry.current
 	var res: PlayerResources = refs.get_player_resources() if refs else null
+	if refs != null and res == null:
+		push_warning("SaveData.reset_all: 注册表存在但取不到自机资源（Player 未绑定？）——重置空跑")
 	if res != null:
 		res.reset_all()
 
@@ -125,6 +127,8 @@ static func reset_all() -> void:
 static func reset_practice() -> void:
 	var refs := EntityRegistry.current
 	var res: PlayerResources = refs.get_player_resources() if refs else null
+	if refs != null and res == null:
+		push_warning("SaveData.reset_practice: 注册表存在但取不到自机资源（Player 未绑定？）——重置空跑")
 	if res != null:
 		res.reset_practice()
 

@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-11 — K14：动作型总闸静默空跑守卫（reset_* 出声）
+
+- **背景**：全项目审计「无日志 guard return」——`scripts/` **449 处**，依赖类 **107**，P0-ish **18**；但绝大多数是合法控制流。真正值得出声的是**「动作型总闸在依赖缺失时空跑」**（K13 教训）。
+- **做法**：`SaveData.reset_all` / `reset_practice`：若 `refs != null` 但 `res == null` → `push_warning("…重置空跑")`。
+- **刻意不加**：全量 449 处；以及 3 处 P1 —— `asset_registry.get_bgm_title`（返回 `""` 合法）、`audio_manager.play_sfx`（无播放器合法）、`game_ui._update_fragments`（注入前被调正常，会误报）。
+- **判据（写进基线）**：P0 动作型空跑 → `push_error/push_warning`；P1 配置缺失可恢复 → `push_warning`；P2 getter 返回 null / 可选服务 / `is_instance_valid` → 不加。
+- **验收**：`check_syntax` **191/0**；全量 **57 套 / 310 测试 / 3215 断言全绿**；orphans 10；无告警刷屏。
 ### 2026-09-11 — K13：练习模式残机/bomb 未归零（reset_* 早于 bind_player）
 
 - **现象**：符卡练习里残机/bomb 不是 0（`PlayerResources.reset_practice` 本应设 `lives=0/bomb=0/power=300`）。

@@ -246,3 +246,4 @@
 > - K10（`resources` 惰性属性）：`Player.resources` 改为惰性属性（getter 自建 / setter 预注入），删 `_ready` 判空自建。详见 §12.30。
 > - K11（MenuNav 注入）：`MenuNav._find_or_create_host`（`current_scene` 名字搜 + 运行时建节点）删除，改由 `MainMenu` 注入 `%PageHost`。详见 §12.31。
 > - K13（练习资源修复）：`_ready` 先 `_setup_player()` 再 `reset_*`，修复练习残机/bomb 未归零。详见 §12.33。
+> - K14（静默空跑守卫）：`SaveData.reset_*` 在「注册表有、资源取不到」时 `push_warning`；确立 P0/P1/P2 日志判据（不全量加）。详见 §12.34。
