@@ -34,7 +34,10 @@
 - **N2.3** 批量行为桥：`get_behavior_inputs()` / `apply_behavior_outputs()`（Packed 数组），
   每帧**常数次**跨界；GDScript 行为循环照跑（成本仍在，等 N3）。
 - **N3** 行为 / VM 原生：`kernel_port()` → program；删 `_port_by_sig`。
-- **N4-real** 图集 + 纹理句柄（M3 ③ 插座）。
+- **N4-real ✅（2026-09-13，渲染同步部分）** 原生 `DanmakuRenderBridge`：
+  类型表（`tex_key_base` 含 Atlas region hash / `tint_mode` / `kind` / `follow_dir` / `dir_offset`）
+  + `group(count, SoA, fade)` + `fill` → **整段渲染同步 6.5×**（6000 弹 7.19→1.10ms）。
+  `BulletMultiMesh.use_native_sync` 开关 + GDScript 回退。余：图集资源本身（S13）按需再做。
 
 ## 开关与回退
 
