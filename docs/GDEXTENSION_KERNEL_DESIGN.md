@@ -25,7 +25,7 @@
 - 同屏目标 ≥ **6000 弹**；或
 - 行为热点成为**实打实卡顿**；或
 - 要借原生做**并行 / 大规模数据**。
-- **前置（2026-09-13 实测更新）**：`godot-cpp` **v10（master / Beta）用 `api_version=4.7` 即可定位 Godot 4.7**（README 示例写的就是 `api_version="4.7"`；v10 起版本号与 Godot 独立，可 target 4.3+）。**本机缺 `scons`** → `pip install scons` 即可（或走 CMake）；CI 需编 debug + release 两套库。**仅剩的实际风险 = v10 仍 Beta、无 stable 分支**。
+- **前置 ✅ 已实测通过（N1，2026-09-13）**：`godot-cpp` **v10（master / Beta）用 `api_version=4.7`** 编译 + **Godot 4.7.2 成功加载**（`Hello` 类注册 + 调用成功）。godot-cpp `supported_api_versions` 官方含 **4.7**。环境齐：SCons 4.11.1 / g++ 16.2.1 / Python 3.14.7。**唯一注意**：`.gdextension` 要编辑器导入一次。**剩余门 = 性能 Trigger（≥6000 弹 / 实打实卡顿）；v10 仍 Beta 是长期风险。**
 
 ---
 
@@ -241,7 +241,7 @@ for e in world.drain_events():                  # 帧末一次
 ## 10. 迁移路线（从现状出发，每步可停可退）
 
 - **N0 边界冻结**（已完成）：`scripts/kernel/` 0 宿主引用、vendor 流程、FrameOrder 契约。
-- **N1 工具链验证**：godot-cpp 4.7 branch？编一个 hello extension，跑通 CI。**这是唯一可能卡住的一步。**
+- **N1 工具链验证 ✅ 已实测通过（2026-09-13）**：godot-cpp **v10（master）** + `api_version=4.7` → `scons target=template_debug` 编译最小 extension → **Godot 4.7.2 成功加载并注册类**（`ClassDB.class_exists("Hello") = true`）。环境：SCons 4.11.1 / g++ 16.2.1 / Python 3.14.7。**注意**：`.gdextension` 需编辑器导入一次（写 `.godot/extension_list.cfg`）才会被加载。**工具链已不是门。**
 - **N2 原生 BulletStore spike**：SoA + 积分 + 宽相 + 实例缓冲；adapter 保持今天的 GDScript API 不变；用 `tools/bench_danmaku.gd` 同口径对比。**不上 EnTT**（单一 archetype，手写 struct 数组即可，决策备忘 §6.7）。
 - **N3 VM/行为迁原生**：`kernel_port()` → program；删 `_port_by_sig`（`signature_of` / `_type_by_sig` 已随 M2 删除）。
 - **N4 渲染原生**：把宿主纹理句柄表（`_texture_by_index` / `texture_for_index()` —— M3 ③ 的渲染插座）换成原生实例缓冲；删 `BulletMultiMesh` 的映射层。
@@ -262,7 +262,7 @@ for e in world.drain_events():                  # 帧末一次
 
 ## 12. 风险与开放问题
 
-1. **工具链（2026-09-13 实测更新）**：不再是「godot-cpp 4.7 支持未确认」—— v10 可用 `api_version=4.7` 定位 4.7；缺的 `scons` 可 `pip install`。**实际风险 = v10 仍 Beta（无 stable 分支）**；GDExtension 语义：target 早期版本可在后期 minor 跑，反之不行。
+1. **工具链 ✅ 已实测通过（N1，2026-09-13）**：v10 + `api_version=4.7` 编译成功，Godot 4.7.2 加载成功 —— 此风险**关闭**。剩余：v10 仍 Beta（无 stable 分支）；GDExtension 语义 target 早期版本可在后期 minor 跑、反之不行。
 2. **命名撞车**：原生类与 GDScript `class_name` 同一张全局表 → 原生类需前缀/命名空间，或删除同名 GDScript 类。
 3. **编辑器工作流**：原生自定义 Resource 要在 Inspector 显示与序列化，需 `ClassDB` 注册 + `_bind_methods`。
 4. **确定性跨平台**：float 舍入 / SIMD 可能分歧；并行化要固定归约顺序。

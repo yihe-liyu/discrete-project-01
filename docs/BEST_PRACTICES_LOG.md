@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-13 — N1 工具链 spike：✅ 通过（godot-cpp v10 api_version=4.7 → Godot 4.7.2 加载成功）
+
+- **目标**：验证 GDExtension 在这套环境能否跑通（设计文档 §10 N1，原文"唯一可能卡住的一步"）。
+- **环境**：SCons 4.11.1 / g++ 16.2.1 / Python 3.14.7 / **Godot 4.7.2.stable**。
+- **做法**：codeload 拉 **godot-cpp v10（master）**（git clone SSL 不稳，改用 tarball）→ `SConscript("godot-cpp/SConstruct", {"api_version": "4.7"})` → 最小 `Hello : RefCounted` + `register_types` → `scons target=template_debug` → 独立测试工程加载。
+- **结果**：**通过**。`ClassDB.class_exists("Hello") = true`；`greet() = "Hello from GDExtension (api 4.7)"`。godot-cpp `supported_api_versions` 官方含 **4.7**。
+- **踩坑**：`.gdextension` **必须经编辑器导入一次**（`godot --editor --quit` 写 `.godot/extension_list.cfg`）才会被加载；直接 `--headless --path` 跑项目不扫描新扩展 → 首次 `Hello exists: false`，导入后 `true`。
+- **结论**：**工具链不再是 GDExtension 的门**（§12 风险 1 关闭）；剩余门只有**性能 Trigger**（≥6000 弹 / 实打实卡顿）。原生 VM 仍是"到触发才上"，不是现在。
+- **产物**：spike 在 `_gdext_spike/`（工作区父目录、不进游戏 repo）：`src/` · `SConstruct` · `godot-cpp/` · `testproj/`。
+
 ### 2026-09-13 — D1：拆 SaveData（240 → 128 行；抽出 StageCatalog / PracticeSession / UiTheme）
 
 - **动机**：`SaveData` 240 行 / 6 职责（全局选择 · 关卡目录 · 存档 · 练习 session · 启动装配 · 会话复位），是 38 个文件引用的 god object。
