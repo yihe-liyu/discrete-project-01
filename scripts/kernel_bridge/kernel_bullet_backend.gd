@@ -5,7 +5,7 @@
 ##
 ## `coroutine_script` 走 duck-typed `kernel_port()` 端口映射到内核行为（可选覆盖）；
 ## `BulletData.accel` 走桥接 `world_accel`。未映射（无端口）仍按直线发射并计入 unmapped。
-## 渲染不在本类：纹理走**旁表**（`texture_for_index`），把它喂给原项目 BulletMultiMesh。
+## 渲染不在本类：纹理走**渲染插座**（纹理句柄表 `texture_for_index`，M3 ③），喂给原项目 BulletMultiMesh。
 class_name KernelBulletBackend
 extends Node
 
@@ -30,7 +30,7 @@ var bullet_manager: BulletManager
 ## 未映射行为（有 coroutine_script 或 accel）的发射次数——前用来看覆盖面。
 var unmapped_behavior_count: int = 0
 
-var _texture_by_index: Array[Texture2D] = []   # 内核弹型下标 → 贴图（渲染旁表；M3 前保留）
+var _texture_by_index: Array[Texture2D] = []   # 纹理句柄表（render socket）：弹型下标 → 贴图；M3 ③ 判定为设计 seam，N4 换原生实例缓冲
 
 ## 内核行为注册表 + 上下文（由 BulletManager 装配）。
 var behavior: BehaviorProcessor
@@ -156,7 +156,7 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return spawn_prepared(prepare_shot(data, pos, direction))
 
 
-## 内核弹型下标 → 贴图（渲染旁表；未映射/越界 = null）。
+## 纹理句柄 → 贴图（渲染插座；未映射/越界 = null）。
 func texture_for_index(index: int) -> Texture2D:
 	if index < 0 or index >= _texture_by_index.size():
 		return null

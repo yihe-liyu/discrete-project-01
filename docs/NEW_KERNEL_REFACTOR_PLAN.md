@@ -574,7 +574,7 @@ func kernel_port() -> Dictionary:
 | `scripts/kernel/` | 14 文件 / **1219** 行（零宿主引用；M1 后） | 保持零宿主引用 |
 | `scripts/kernel_bridge/` | 11 文件 / **906** 行（M2 后；M1 时 964 / 原 979） | ≤ **300** 行，且只放**宿主耦合**（Boss / SaveData / 选项节点 / bomb / fx） |
 | 弹型词汇 | ✅ **M2 已合一**：`BulletData.to_bullet_type()` 产出并缓存 `BulletType`（~~19 vs 13 字段~~） | 保持一个类型 |
-| 桥接侧表 | `_texture_by_index` / `_port_by_sig`（`_type_by_sig` / `_damage_by_index` / `_hit_sfx_by_index` 已删） | 无 `*_by_index`（余 `_texture_by_index`，随 M3）；`_port_by_sig` 随 VM/端口收口 |
+| 桥接侧表 | `_texture_by_index`（= 渲染插座，M3 ③ 保留）/ `_port_by_sig`（`_type_by_sig` / `_damage_by_index` / `_hit_sfx_by_index` 已删） | 类型/伤害/端口侧表 = 0；纹理句柄表由 N4 原生替换 |
 | 内容翻译 | 6 个脚本 `func kernel_port()` | 退为**可选覆盖**（VM 预留 `program` 除外） |
 
 > 判据一句话：**桥接只该放「宿主耦合的规则」，不该放「两个词汇之间的翻译」。** M2 后翻译层已删，桥接剩 906 行（多为宿主行为桥 + 侧表），继续朝 ≤300 行收。
@@ -608,7 +608,7 @@ S3 选 A 方案（§14.3）是为了**保住「内核零改动」这个可回退
 - **原项目**：删 `KernelBulletBackend._damage_by_index` / `_hit_sfx_by_index` 与 `damage_for_index()` / `hit_sfx_for_index()`；`KernelBulletPhysics` 改读 `bt.damage` / `bt.hit_sfx`。
 - **不动**：判定的**归属**（graze / 命中几何仍留宿主桥接 `KernelBulletPhysics`）—— 只搬**数据**，不搬**规则**。
 - ⚠️ **签名陷阱**：`damage` / `hit_sfx` 既然成了弹型字段，**必须进 `signature_of()`** —— 否则"同贴图同判定、只有伤害不同"的弹会共用缓存弹型 → 伤害串味。已加。
-- 验收：重建版 `tests/` **46 套 / 689 断言全绿** → tag `kernel-v2`（`4f49df1`）→ vendor（仅 `bullet_type.gd` +7 行）→ 原项目 `check_syntax` 191/0 + GUT **57 / 310 / 3215 全绿**。`grep '_by_index' scripts/kernel_bridge/` 只剩 `_texture_by_index`（M3）。
+- 验收：重建版 `tests/` **46 套 / 689 断言全绿** → tag `kernel-v2`（`4f49df1`）→ vendor（仅 `bullet_type.gd` +7 行）→ 原项目 `check_syntax` 191/0 + GUT **57 / 310 / 3215 全绿**。`grep '_by_index' scripts/kernel_bridge/` 只剩 `_texture_by_index`（= M3 ③ 判定的渲染插座）。
 - **量**：内核 1212 → **1219**；桥接 979 → **964**。
 - **没做**：`out_grace` 仍暂缓（bomb 走宿主节点，用不到）。
 
@@ -617,14 +617,15 @@ S3 选 A 方案（§14.3）是为了**保住「内核零改动」这个可回退
 - **删**：`type_for()` / `signature_of()` / `_type_by_sig` 全部移除；映射逻辑从桥接搬进 `BulletData._build_bullet_type()`。
 - **内容契约收紧**：弹型缓存在 **BulletData 实例**上 → 内容**必须复用实例**（禁止每发 `new`），否则内核弹型表每发长一个。已改 13 个内容文件（player 射击 / enemy01–04 / non01 / non_mid01 / bounce / radial / orbit / bullet_shell）。
 - **降级**：`kernel_port()` 本就是可选覆盖（无端口 → 直线；`accel` → `world_accel`）。
-- **量**：桥接 964 → **906** 行；`_texture_by_index`（M3）+ `_port_by_sig` 保留。
+- **量**：桥接 964 → **906** 行；`_texture_by_index`（M3 ③：渲染插座，保留）+ `_port_by_sig` 保留。
 - 验收：`grep -rn 'type_for\|signature_of' scripts/` = **0**；`verify.sh` 全绿（312 测试）；`check_naming` 0。
 - 试玩验证：待人工跑 stage01 / 魔理沙激光 / 非符1。
 
-#### M3 —— 渲染 / 纹理归属（**先决策，再动手**）
-- 现状：内核 `BulletType.texture_key`（图集语义）vs 宿主 `_texture_by_index`（独立 PNG + `BulletMultiMesh`）。内核当初**有意不带渲染**（hybrid，决策备忘 §10.4）。
-- 选项：① 保持 hybrid（纹理旁表留着，接受）② 内核带 `BulletRenderer` + 图集（原项目改用图集，S13）③ 内核只认"纹理句柄"抽象。
-- **不阻塞 M1/M2**，等前两步落地、试玩稳定后再定。
+#### M3 —— 渲染 / 纹理归属 ✅ **已拍板：③ 纹理句柄（2026-09-13）**
+- **决定**：走 ③ —— 承认宿主 `_texture_by_index` / `texture_for_index()` 就是**渲染插座（render socket）**：内核 `BulletType.type_index` = **纹理句柄**，宿主负责把句柄解析成贴图（独立 PNG / 未来 `AtlasTexture` 都支持）。**这不是债，是设计好的 seam**（与 `GDEXTENSION_KERNEL_DESIGN` §6 的终局一致）。
+- **否决**：① 会让 `_by_index = 0` 判据永不达标；② 提前把渲染塞回内核（触发条件未到，且破坏「内核 0 渲染」的克制）。
+- **零内核改动**：不回重建版 / 不 vendor / 不 tag。
+- 详见 `docs/M3_TEXTURE_OWNERSHIP_DECISION.md`。
 
 ### 16.4 流程：内核改动必须回重建版做
 
@@ -641,7 +642,7 @@ M1/M2 稳定后，按 README 既定约定执行终局：**宣布原项目为内�
 ### 16.5 「融合完成」判据（可度量，写进基线）
 
 - `scripts/kernel_bridge/` ≤ **300** 行，且只含：宿主碰撞/擦弹规则、需宿主的行为桥、bomb 宿主节点、fx/laser 适配 —— **不含类型映射与侧表**。
-- `grep -rn '_by_index' scripts/kernel_bridge/` = 0（纹理表按 M3 结论）。
+- `grep -rn '_by_index' scripts/kernel_bridge/` = **0**（类型 / 端口 / 伤害侧表）；**例外**：`_texture_by_index` 是 M3 ③ 判定保留的**渲染插座**，由 N4 换原生实例缓冲，不计入「侧表债务」。
 - `grep -rn 'func kernel_port'` = 0（或仅剩 VM 预留）。
 - `grep -rn 'BulletData' scripts/kernel_bridge/` 显著下降（理想 0：桥接不再认识"宿主弹型"这个概念）。
 - 内核仍 **0 宿主引用**（R2/R9 不破）。

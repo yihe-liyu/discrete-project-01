@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-13 — M3 拍板：③ 纹理句柄（渲染插座正式化）
+
+- **决定**：M3 走 ③。宿主 `_texture_by_index` / `texture_for_index()` 正式定为**渲染插座（render socket）**；内核 `BulletType.type_index` = **纹理句柄**。**这不是债，是设计好的 seam。**
+- **否决**：① 会让 §16.5 的 `_by_index = 0` 判据永不达标；② 提前把渲染塞回内核（触发条件未到，且破坏「内核 0 渲染」的克制）。
+- **零内核改动**：不回重建版、不 vendor、不 tag。
+- **落点**：plan §16.1 侧表行 / §16.3 M3 段 / §16.5 判据（`_by_index = 0` 收窄为「类型 / 端口 / 伤害侧表」；纹理句柄表按设计保留，N4 原生替换）；`KernelBulletBackend` 注释；基线融合 bullet；决策页 `docs/M3_TEXTURE_OWNERSHIP_DECISION.md`。
+- **验收**：check_syntax 191/0；GUT 全绿（纯注释 / 文档，无行为变更）。
+
 ### 2026-09-13 — Tier A 收尾：A1 导出阻塞 + A2 测试卫生 + A3–A5 文档失真
 
 - **A1（导出阻塞）**：内容侧 4 处 `ResourceSaver.save` 直接写 `res://`（`spell_book_manager.gd` / `asset_registry.gd` / `music_room_menu.gd:35,150`）→ 导出包只读必失败。改为「**res:// 出厂默认 + user:// 覆盖**」：`SpellBookManager` 加 `SPELL_BOOK_USER_PATH`；`AssetRegistry` 加 `MUSIC_REGISTRY_USER_PATH` + `load_music_registry()` / `save_music_registry()`（音乐档**以出厂目录为基准叠加 user 解锁**，新曲目不会被旧档吞掉）；`music_room_menu` 改走这两个 helper；顺带删 `audio_manager` 里从未使用的重复常量。

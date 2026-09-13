@@ -15,7 +15,7 @@
 | 现在的痛 | 根因 | 原生如何消失 |
 |---|---|---|
 | `kernel_bridge` 964 行 | `BulletData` ⇄ `BulletType` 两套词汇翻译 | 一套原生 `DanmakuType`，翻译层不存在 |
-| `_texture_by_index` / `_port_by_sig`（`signature_of` / `_type_by_sig` 已随 M2 删除） | GDScript 侧表 | 原生 `type_id` / `program_id` + 列式表 |
+| `_texture_by_index`（M3 ③：宿主渲染插座）/ `_port_by_sig`（`signature_of` / `_type_by_sig` 已随 M2 删除） | GDScript 侧表 / 插座 | 原生 `type_id` / `program_id` + 列式表；渲染由 N4 接管 |
 | 每弹 `Behavior.process()` + Variant 哈希 | GDScript 调度 | 原生 VM 直跑寄存器 |
 | `sys` / `tl` / `refs` 命名纠结 | 手写 GDScript 宿主 | 原生命名，契约不再管宿主内部 |
 | 工作台正则扫源码 | 没有程序模型 | 程序是数据，可列举 / 可校验 |
@@ -243,8 +243,8 @@ for e in world.drain_events():                  # 帧末一次
 - **N0 边界冻结**（已完成）：`scripts/kernel/` 0 宿主引用、vendor 流程、FrameOrder 契约。
 - **N1 工具链验证**：godot-cpp 4.7 branch？编一个 hello extension，跑通 CI。**这是唯一可能卡住的一步。**
 - **N2 原生 BulletStore spike**：SoA + 积分 + 宽相 + 实例缓冲；adapter 保持今天的 GDScript API 不变；用 `tools/bench_danmaku.gd` 同口径对比。**不上 EnTT**（单一 archetype，手写 struct 数组即可，决策备忘 §6.7）。
-- **N3 VM/行为迁原生**：`kernel_port()` → program；删 `signature_of` / `_type_by_sig` / `_port_by_sig` / `_texture_by_index`。
-- **N4 渲染原生**：删 `BulletMultiMesh` 的映射层。
+- **N3 VM/行为迁原生**：`kernel_port()` → program；删 `_port_by_sig`（`signature_of` / `_type_by_sig` 已随 M2 删除）。
+- **N4 渲染原生**：把宿主纹理句柄表（`_texture_by_index` / `texture_for_index()` —— M3 ③ 的渲染插座）换成原生实例缓冲；删 `BulletMultiMesh` 的映射层。
 - **N5 收口**：GDScript 只剩内容 / 外壳 / 宿主规则；`kernel_bridge` 目标 → 0。
 
 ---
