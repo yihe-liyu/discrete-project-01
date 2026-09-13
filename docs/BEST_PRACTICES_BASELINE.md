@@ -101,6 +101,30 @@
 
 ---
 
+## 标识符命名契约（同物同名 / 类型→名 / 节点→名）
+
+> 判据：**同一个东西，全项目一个名**。名字**从类型或节点派生**，不自造；缩写必须过白名单。
+
+| 对象 | 规则 |
+|---|---|
+| **私有字段**（`_x`，实现细节） | `_` + **类型名 snake**：`EntityRegistry` → `_entity_registry`；`KernelBulletBackend` → `_kernel_bullet_backend`；`LaserEngine` → `_laser_engine` |
+| **公开字段 / 属性**（对外 API、`ctx.*` 门面） | **允许角色名**（意图层，见 §3）：`ctx.bullets` / `ctx.player` / `ctx.audio` / `ctx.effects` / `ctx.stage` / `ctx.objects`、`BulletService.world`。判据：**出现在内容（`data/**`）或文档里吗** → 是则角色名，改名等于破坏 API |
+| **场景节点引用**（`@onready`） | 节点名 snake + `_`：`%FxPool` → `_fx_pool`。**节点名与变量名不符 = 有一方错**：变量错就改变量；节点名太弱（`UI`）或不具体就先改节点 |
+| **类型是内置基类**（`Node2D`/`Control`/`Sprite2D`…） | 节点名赢：`muzzle: Marker2D = $Muzzle` ✅ |
+| **同类型多实例** | `限定词_类型snake`（`stage_entity_registry`）—— 同作用域内必须可区分 |
+| **集合 / 映射** | 集合用复数（`enemies`）；映射用 `值_by_键`（`_type_by_sig` / `_damage_by_index`） |
+| **布尔** | `is_` / `has_` / `can_` / `should_` 前缀（`is_running` / `has_boss`）；禁无主语（`flag` / `active`） |
+| **回调 Callable** | 变量/形参 `on_x`（`on_overlap`）；信号处理**方法** `_on_x`（`_on_player_death`）—— 不互换 |
+| **preload 常量** | 场景 `*_SCENE`；脚本 `*_SCRIPT`；已有 `class_name` 的别再起别名 |
+| **函数** | 取值 `get_*`；判定 `is_*` / `has_*`；动作动词开头；事件处理 `_on_*` |
+
+> **缩写白名单（封闭）**：`ctx`（`StageContext`）+ 索引 `i`/`j`/`k`。其余一律不缩写 —— `refs` / `world` / `bullets` / `sys` / `sd` / `st` / `bm` / `bg` / `nav` / `tl` 都算违规。
+> **形参遮蔽成员** → 加 `p_` 前缀（`p_ctx` 遮蔽 `CoroutineScript.ctx`）；**真的不用** → 单 `_`（`_ctx`）；**禁止叠加** `_p_`。
+> **单字母 / 极短名**：只允许「单行表达式 / 热路径循环」作用域（`bullet_system` 的 `p`/`r`/`s`）；跨行、跨函数、字段一律全名。
+> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI）。违规清单见文末 🔴 待改进。
+
+---
+
 # STG 品质需求（主轴：做一款好玩的东方弹幕游戏）
 
 > 图例：`[x]` 已落地且有代码证据；`[~]` 部分落地 / 待核；`[ ]` 未做。
@@ -208,6 +232,7 @@
 - [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
 - [ ] R2（残余）：`item_service.gd:16` / `player.gd:286` 用 `current_scene.get_node_or_null("World")` 取 World，可改注入
 - [ ] 编排路线（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生（工作台仍正则扫源码）/ Step 6 `ctx.background` 注入服务 待做；Step 5 命令化时间线 + Step 7 命令编辑器 = 可选 / 产品决定，暂缓
+- [ ] 命名契约（`bash tools/check_naming.sh`，当前 **91 条**）：私有字段名 **67** / 同类型多个私有字段名 **13 组**（`EntityRegistry` = `_refs`·`_world_refs`、`BulletManager` = `_bullets`·`_world`…）/ `@onready` 变量名 ≠ 节点名 **8**（`%MissCircleLayer` → `_miss_layer`、`%BulletManager` → `_bullets`、`$UI` → `_game_ui`…）/ 节点名非 PascalCase **3**（`$roll`·`$roll2`·`$logo`）
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
 > - **R14「存档写 res://」已不成立**：`save_manager.gd` 用 `user://save_data.cfg`，**从 TODO 移除**。
