@@ -163,8 +163,14 @@ func _on_stage_cleared():
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 	elif not SaveData.is_practice_mode:
-		SaveData.current_stage_id += 1
-		GameManager.reload_current_scene()
+		var next_id: int = SaveData.current_stage_id + 1
+		if SaveData.find_stage_data(next_id) != null:
+			SaveData.current_stage_id = next_id
+			GameManager.reload_current_scene()
+		else:
+			# 没有下一关 = 通关：回标题并复位会话（否则 +1 会随 current_stage_id 泄漏到下一局）
+			SaveData.reset_session()
+			GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 
 func _on_practice_cleared(_boss: Node) -> void:

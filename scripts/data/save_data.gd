@@ -134,6 +134,7 @@ static func reset_practice(entity_registry: EntityRegistry) -> void:
 # ═══ 练习模式 ═══
 
 static func start_practice(phase: PhaseData, boss_scene: PackedScene, p_name: String, stage_id: int, phase_index: int = 0) -> void:
+	reset_session()
 	is_practice_mode = true
 	practice_phase = phase
 	practice_boss_scene = boss_scene
@@ -159,6 +160,15 @@ static func _clear_practice() -> void:
 	practice_stage_id = 1
 	practice_phase_index = 0
 	practice_background = null
+
+
+## 开一局前统一清空 per-run 会话状态（**唯一复位入口**）：练习载荷 + 关卡进度 + 重开 / 关卡练习标志。
+## 新游戏（`main_menu._start_game_flow`）与进练习（`start_practice`）都必须经过它。
+static func reset_session() -> void:
+	_clear_practice()
+	current_stage_id = 1
+	restarting = false
+	is_stage_practice = false
 
 
 static func find_stage_background(stage_id: int) -> PackedScene:

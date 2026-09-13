@@ -79,7 +79,7 @@ func _on_cancel() -> void:
 # ═══ 开始游戏流程（难度 → 角色） ═══
 
 func _start_game_flow() -> void:
-	SaveData.is_stage_practice = false
+	SaveData.reset_session()   # 新游戏：唯一复位入口（练习载荷 / 关卡进度 / 重开标记）
 	_deactivate_title()
 	_push_difficulty()
 

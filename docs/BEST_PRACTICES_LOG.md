@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-13 — 会话状态收口：SaveData.reset_session()（唯一复位入口）
+
+- **背景**：连续两条试玩 bug（练习载荷泄漏、门面误改）都属「跨局 / 跨场景状态没清干净」。做了一次全量 `static var` 审计（谁置位 / 谁复位）。
+- **审计结论**：多数平衡（`.current` 各自 `_ready`/`_enter_tree` 置位、`_exit_tree` 清；缓存进程级）；**漏一个**——`current_stage_id` 从不复位。
+- **`current_stage_id` 漏**：默认 1，`game_scene._on_stage_cleared` 通关时 `+= 1`，但 `main_menu._start_game_flow` 从不改回 1 → 清关后回标题、再开新游戏会从 stale 关卡号开始。且 `stage_registry` 只有 stage01（`find(2)` 为 null），`+= 1` 后会 `push_error` 卡死（stage01 有结局时触发）。
+- **修法（结构性）**：新增 **`SaveData.reset_session()`** —— 唯一复位入口，清 练习载荷 + `current_stage_id` + `restarting` + `is_stage_practice`。`main_menu._start_game_flow` 与 `SaveData.start_practice`（以及 `stage_practice_menu.on_enter`）都先经过它；`_on_stage_cleared` 改为**仅当下一关存在**才 +1，否则视作通关回标题并复位会话。
+- **契约**：基线新增「**会话状态契约（per-run static）**」——每个跨场景 static 列出 owner / 置位 / 复位，并规定必经 `reset_session`。
+- **回归**：新增 `test/test_session_state.gd`（复位清全部 / 进练习隐含复位 / 幂等）；双向验证 `start_practice` 那条——去掉复位 2/3，恢复 3/3。
+- **教训**：**「模式标志」与「模式载荷」要一起清，而且复位点要唯一。** 散落的「各自清一点」迟早漏；把它收成一个入口，测试才有地方钉。
+- **验收**：verify.sh 五步全绿（320 测试 / 3244 断言）。
+
 ### 2026-09-13 — 修复：练习载荷未清空（先练习、再普通流程会告警 / 误判）
 
 - **现象**：先打一次练习，再进普通流程 → `game_scene.gd:48` 告警「practice_phase 已设置但 is_practice_mode=false —— 练习标志被提前清除，误走普通关卡」。

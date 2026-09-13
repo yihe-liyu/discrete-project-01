@@ -125,6 +125,21 @@
 > **单字母 / 极短名**：只允许「单行表达式 / 热路径循环」作用域（`bullet_system` 的 `p`/`r`/`s`）；跨行、跨函数、字段一律全名。
 > **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI；`verify.sh` 第 2 步已启用 `--fail`）。**当前 0 条**（2026-09-13 收敛）；覆盖 ① 私有字段名 / ② 同类型多私名 / ③ `@onready` 节点名 / ④ 节点名 PascalCase 四类，**外加 ⑤ 形参·局部·循环变量遮蔽类成员**（2026-09-13 补，对应上条 `p_` 规则；静态扫描，不依赖 Godot reload）——**公开字段与局部缩写仍需人工守**（本表 + 白名单）；`scripts/kernel/**` 是 vendor 快照，不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
 
+### 会话状态契约（per-run static）
+
+> **每个跨场景存活的 per-run static 必须有唯一的置位点与唯一的复位点。** 复位统一走 `SaveData.reset_session()`（练习载荷 + `current_stage_id` + `restarting` + `is_stage_practice`）；**新游戏**（`main_menu._start_game_flow`）与**进练习**（`SaveData.start_practice`）都必须先经过它。
+
+| static | owner | 置位 | 复位 |
+|---|---|---|---|
+| `is_practice_mode` / `practice_*` | `SaveData` | `start_practice` | `reset_session`（经 `_clear_practice`） |
+| `current_stage_id` | `SaveData` | 默认 1；通关 +1（**仅当下一关存在**） | `reset_session` |
+| `restarting` | `SaveData` | `pause_menu` / `game_over_menu` | `reset_session` |
+| `is_stage_practice` | `SaveData` | `stage_practice_menu` | `reset_session` |
+| `BulletManager.current` / `StageRuntime.current` / `EntityRegistry.current` | 各自 | `_ready` / `_enter_tree` | `_exit_tree` |
+| `AssetRegistry._bgm_cache` / `BossCatalog._cache` | 各自 | 懒加载 | 进程级缓存，无需清 |
+
+> **反例（已修）**：只复位布尔标志、留下载荷（`end_practice` 曾只清 `is_practice_mode`）→ 下一局进入别的流程时带脏状态。**校验**：`test/test_session_state.gd`。
+
 ---
 
 # STG 品质需求（主轴：做一款好玩的东方弹幕游戏）

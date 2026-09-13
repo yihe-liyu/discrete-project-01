@@ -3,6 +3,7 @@ extends BasePage
 
 
 func on_enter() -> void:
+	SaveData.reset_session()
 	SaveData.is_stage_practice = true
 
 	var ov: ColorRect = $"Overlay"
