@@ -232,6 +232,7 @@
 - [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
 - [ ] R2（残余）：`item_service.gd:16` / `player.gd:286` 用 `current_scene.get_node_or_null("World")` 取 World，可改注入
 - [ ] 编排路线（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生（工作台仍正则扫源码）/ Step 6 `ctx.background` 注入服务 待做；Step 5 命令化时间线 + Step 7 命令编辑器 = 可选 / 产品决定，暂缓
+- [ ] **内核融合（M1–M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：`scripts/kernel_bridge/` **979 行 ≈ 内核 1212 行的 80%** + 两套弹型词汇（`BulletData` 19 字段 vs `BulletType` 13 字段）+ 5 张侧表 + 6 个 `kernel_port` → 目标 **≤300 行且只放宿主耦合规则**；判据见 §16.5
 - [ ] 命名契约（`bash tools/check_naming.sh`，当前 **91 条**）：私有字段名 **67** / 同类型多个私有字段名 **13 组**（`EntityRegistry` = `_refs`·`_world_refs`、`BulletManager` = `_bullets`·`_world`…）/ `@onready` 变量名 ≠ 节点名 **8**（`%MissCircleLayer` → `_miss_layer`、`%BulletManager` → `_bullets`、`$UI` → `_game_ui`…）/ 节点名非 PascalCase **3**（`$roll`·`$roll2`·`$logo`）
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。

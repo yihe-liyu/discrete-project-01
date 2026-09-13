@@ -559,3 +559,75 @@ func kernel_port() -> Dictionary:
 - 便宜的中间步：**行为链**（一颗弹挂有序行为槽）能吃掉大半「流程感」。
 - **VM 触发条件**：行为种类/复杂度爆炸到「`Behavior` 子类写法开始重复」，或解释器成为热点。当前 ~8 个行为、多为 1–2 个公式参数 → **不建**（YAGNI）。
 - 别混三件事：演出 Timeline（计划内，允许）｜敌人发射模式 Timeline/协程（**否决**）｜弹幕运动流 VM（第三类，就是 L）。
+
+---
+
+## 16. 内核融合路线（M1–M3，2026-09-13 决策）
+
+> **决定**：Strangler 过渡态到此为止，进入**融合**。目标不是"改个名让桥接听起来顺耳"，而是让**内核成为项目自己的架构**。
+> **终局**（沿用 `scripts/kernel/README.md` 的约定）：**原项目成为内核唯一之家、重建版归档**。
+
+### 16.1 现状度量（2026-09-13 实测）
+
+| 指标 | 现在 | 融合目标 |
+|---|---|---|
+| `scripts/kernel/` | 14 文件 / **1212** 行（零宿主引用） | 保持零宿主引用 |
+| `scripts/kernel_bridge/` | 11 文件 / **979** 行 ≈ 内核 **80%** | ≤ **300** 行，且只放**宿主耦合**（Boss / SaveData / 选项节点 / bomb / fx） |
+| 弹型词汇 | `BulletData`(19 字段) vs `BulletType`(13 字段) | **一个**类型 |
+| 桥接侧表 | `_type_by_sig` / `_texture_by_index` / `_damage_by_index` / `_hit_sfx_by_index` / `_port_by_sig` | 无 `*_by_index`；签名缓存随词汇合一消失 |
+| 内容翻译 | 6 个脚本 `func kernel_port()` | 退为**可选覆盖**（VM 预留 `program` 除外） |
+
+> 判据一句话：**桥接只该放「宿主耦合的规则」，不该放「两个词汇之间的翻译」。** 现在两者都放，所以有 979 行。
+
+### 16.2 为什么现在能做（当初为什么不能）
+
+S3 选 A 方案（§14.3）是为了**保住「内核零改动」这个可回退前提** —— 彼时要让原项目玩法 1:1 不变，改内核会牵动重建版。现在 Track A/B 都已收口、`use_kernel` 与旧池都删了、GUT 57 套兜底：**「可回退」的收益已经兑现**，继续冻结内核的代价（979 行适配 + 两套词汇）超过收益。
+
+### 16.3 路线（每步独立提交、可试玩、可回滚）
+
+#### M1 —— 内核认数据：`damage` / `hit_sfx` / `out_grace` 进 `BulletType`
+- **删** `KernelBulletBackend._damage_by_index` / `_hit_sfx_by_index` 与 `damage_for_index()` / `hit_sfx_for_index()`；宿主专有字段改由弹型自带。
+- `out_grace` 变弹型属性 —— **正好是 §15.5 当初留的口子**（"将来作为弹型属性接入"）。
+- **不动**：判定的**归属**（graze / 命中几何仍留宿主桥接 `KernelBulletPhysics`）—— 只搬**数据**，不搬**规则**。
+- 验收：`test_kernel_physics` / `test_kernel_behavior` / `test_kernel_swap` 全绿 + 试玩 stage01（TTK / 命中音效 / 出界回收一致）；`grep '_by_index' scripts/kernel_bridge/` 只剩纹理表。
+- 回滚点：M1 前一个 commit。
+
+#### M2 —— 词汇合一：`BulletData` ⇄ `BulletType`
+- 方向二选一（**待拍板**）：
+  - **(a) `BulletData extends BulletType`**：内容层构造链（`.enemy().tex().speed()`）全保留，宿主专有字段留子类；桥接从"映射"降为"登记"。
+  - **(b) `BulletData` 退化成构造助手**，最终产出 `BulletType`：更彻底，但内容层 6 个 port + `bullets.shoot_*` 签名要动。
+- **删**：`type_for()` / `signature_of()` / `_type_by_sig`（内容直接给弹型，不再需要"按内容签名缓存"）。
+- **降级**：`kernel_port()` 从"翻译表"变成"可选覆盖"（默认走数据；只有内容要声明内核行为时才实现）。
+- 验收：全量 GUT + 试玩 stage01 / 魔理沙激光 / 非符1；`grep -rn 'type_for\|signature_of' scripts/` = 0。
+- 回滚点：M1 完成后的 commit。
+
+#### M3 —— 渲染 / 纹理归属（**先决策，再动手**）
+- 现状：内核 `BulletType.texture_key`（图集语义）vs 宿主 `_texture_by_index`（独立 PNG + `BulletMultiMesh`）。内核当初**有意不带渲染**（hybrid，决策备忘 §10.4）。
+- 选项：① 保持 hybrid（纹理旁表留着，接受）② 内核带 `BulletRenderer` + 图集（原项目改用图集，S13）③ 内核只认"纹理句柄"抽象。
+- **不阻塞 M1/M2**，等前两步落地、试玩稳定后再定。
+
+### 16.4 流程：内核改动必须回重建版做
+
+`scripts/kernel/README.md` 写明：**重建版是内核开发环境、本目录是 vendor 快照**。所以：
+
+1. 在 `1-st-touhou-star-rebuild` 改内核 + 跑它的 `tests/`（46 套）
+2. 打 tag `kernel-v2`
+3. vendor 回原项目 `scripts/kernel/`（保持"删 `BulletRenderer` 注入"那条唯一 vendor 改动）
+4. 原项目适配层跟着改 + 全量 GUT + 试玩
+
+**禁止**只在 `scripts/kernel/` 副本上改内核（第 4 步会覆盖，单一真相会烂）。
+M1/M2 稳定后，按 README 既定约定执行终局：**宣布原项目为内核唯一之家、重建版归档**。
+
+### 16.5 「融合完成」判据（可度量，写进基线）
+
+- `scripts/kernel_bridge/` ≤ **300** 行，且只含：宿主碰撞/擦弹规则、需宿主的行为桥、bomb 宿主节点、fx/laser 适配 —— **不含类型映射与侧表**。
+- `grep -rn '_by_index' scripts/kernel_bridge/` = 0（纹理表按 M3 结论）。
+- `grep -rn 'func kernel_port'` = 0（或仅剩 VM 预留）。
+- `grep -rn 'BulletData' scripts/kernel_bridge/` 显著下降（理想 0：桥接不再认识"宿主弹型"这个概念）。
+- 内核仍 **0 宿主引用**（R2/R9 不破）。
+
+### 16.6 不做
+
+- **L2 壳合一（把内容搬进重建版）**：≈ big-bang，决策备忘已否决。融合走「M1+M2 让词汇合一」，不是「搬项目」。
+- 在 `scripts/kernel/` 副本上直接改内核（见 16.4）。
+
