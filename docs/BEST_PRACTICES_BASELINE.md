@@ -6,7 +6,7 @@
 > - 每个需求下：**状态** 打勾 ✔/🚧/✘，并列出**适用的工程红线 ID**（不重复原文，避免膨胀）。
 > - 改动**状态** → 更新本行；记录**心得/为什么这样改/没抄旧版什么** → 追加到 BEST_PRACTICES_LOG.md。
 > - 目标：本文件随项目成熟 **只收敛、不膨胀**；TODO 小节最终清空。
-> - 旧项目改造前审计快照见 BEST_PRACTICES_BASELINE_OLD_AUDIT.md（留底，不随重建更新）。
+> - 旧项目改造前审计快照见 `docs/archive/BEST_PRACTICES_BASELINE_OLD_AUDIT.md`（留底，不随重建更新）。
 > - **同步说明（2026-09-11，K0 重审完成）**：红线库 / 帧序·层序·命名边界契约已与重建版 `BEST_PRACTICES_BASELINE.md` 对齐；**S 小节与红线已按代码实测逐条重审**（数字见文末审计表）。
 
 ---
@@ -192,6 +192,7 @@
 - [ ] R18/R19：`workbench.gd`(692) / `spell_practice_menu.gd`(592) 上帝对象 + 3 个超长 `_build_ui`（三台热更新复制已收口，K5）
 - [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
 - [ ] R2（残余）：`item_service.gd:16` / `player.gd:286` 用 `current_scene.get_node_or_null("World")` 取 World，可改注入
+- [ ] 编排路线（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生（工作台仍正则扫源码）/ Step 6 `ctx.background` 注入服务 待做；Step 5 命令化时间线 + Step 7 命令编辑器 = 可选 / 产品决定，暂缓
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
 > - **R14「存档写 res://」已不成立**：`save_manager.gd` 用 `user://save_data.cfg`，**从 TODO 移除**。
@@ -217,33 +218,4 @@
 | R12 | `@export=preload` **1**（`enemy_data.gd:9`） | 待改 |
 | R10/R13/R17/R20/R22 | 内核 SoA / `_physics_process` / 数据资源 / 独立子场景 / `##` 注释 | 无系统性违规 |
 
-> **轨道 B 进度（2026-09-11）**：**W1–W4c + K0–K11 已完成**。
-> - W1：`LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化（组合根 `GameScene` 注入）。autoload 12→10。
-> - W2：`StageObjects` 去 autoload（→ `StageContext.objects`）、`HitEffectPool` → `FxLayer`（组合根注入，节点在 `game_scene.tscn` 声明）。autoload 10→8。
-> - R21 收口：`FxLayer` 与 `MissEffectManager` 均已改为 `game_scene.tscn` 声明式节点（后者为 W1 产物，在 W2 补正）。详见 §12.7 / §12.8。
-> - W3a：`AssetRegistry` 去 autoload（→ `class_name` 静态表，调用点 0 改动）。autoload 8→7。详见 §12.9。
-> - W3b：`StageManager` autoload → `StageRuntime`（World 下场景节点）+ `ctx.stage` 注入。autoload 7→6。详见 §12.10。
-> - W4a-1：内核弹幕后端**转正为默认**（旧池保留回滚，F2 切换）；新增 `active_count()`。详见 §12.11。
-> - W4a-2：删除旧池（`BulletPool`/`Bullet`/`BulletPhysics`/`SpatialHash`/`bomb_behavior`/`bullet_fog`/`bullet.tscn`）+ `use_kernel`/F2；内核成为唯一后端。详见 §12.12。
-> - W4b-1：`GameState` 单局资源抽成 `PlayerResources`（单一 owner），GameState 转发（调用点零改动）。详见 §12.13。
-> - W4b-2a：`Player` 增 `resources`（组合根注入同一实例）。全量 55/303/3191 绿。
-> - W4b-3a：运行时引用（自机 / 敌机 / Boss）抽成 `EntityRegistry`，`StageRuntime` 持有并绑定，`GameState` 退为过渡门面。`grep GameState` **46 → 41 文件**。详见 §12.14。
-> - W4b-3b：`refs` 注入内核弹幕路径（`BulletManager` / 桥接碰撞与清弹 / `KernelBomb` / 桥接行为 / `LaserEngine` / `HitboxOverlay`）。`grep GameState` **41 → 35 文件**。详见 §12.15。
-> - W4b-2b：资源消费者直读 `Player.resources`（经 `refs.get_player_resources()`）。`grep GameState` **35 → 31 文件**。详见 §12.16。
-> - W4b-4：`GameState` → `SaveData`（纯 `static`，去 autoload）；资源归 `Player`、实体归 `EntityRegistry`。`grep GameState` **31 → 0**；autoload **6 → 5**。详见 §12.17。
-> - W4c：`BulletManager` 去 autoload（组合根创建 / 注入的弹幕世界 + `static current`）。autoload **5 → 4**。详见 §12.18。
-> - K1（命名收口）：9 个黑话/缩写文件改名（`cs_`/`ov_` 等）、`RigBase` → `BenchBase`、3 个 `.tres` + preload/测试路径同步；语义不一致 **8 → 0**（acronym 大小写刻意不动）。详见 §12.19。
-> - K1b（目录收口）：`scripts/autoload/` **8 → 4 文件**（只留真 autoload）；`bullet_manager`/`death_clear` → `scripts/bullet/`，`scene_transition`/`menu_nav` → `scripts/scenes/`。详见 §12.20。
-> - K2（R6 收口）：`BasePage` 生命周期改公开虚函数 + `MenuNav` 栈类型化；`BenchBase` 公开 `snapshot/restore/preset_from_entry`；`Player`/`Boss`/`LaserBeam` 私有入口公开化。`has_method("_")` **12 → 0**。详见 §12.21。
-> - K4（R2 收口）：Boss 指示器 UI 层 / 背景相机 / 炸弹爆图父节点均改组合根注入；`find_child` **2 → 0**、`$".."` **4 → 0**。详见 §12.22。
-> - K3（R4 收口）：菜单 / 暂停 / 自机离散键改 `_unhandled_input`，`NavPage` 统一导航（复制 3→1）；边沿轮询 **6 → 0**。详见 §12.23。
-> - K5（R18/R19 收口）：三台热更新管线收口到 `BenchBase`（15 份复制 → 基类 1 份 + 3 组 hook），workbench 净 **-116 行**。详见 §12.24。
-> - K0（基线重审）：按代码实测刷新 S 小节 / 红线 / 层序 / 命名数字；清 `bullet_physics`/`bullet_fog`/`SpatialHash` 等过时引用与 R14 假 TODO；新增 R2 残余 / R21 待办。
-> - K6（R21 收尾）：`BulletManager` 从代码 `new()` 改为 `game_scene.tscn` 的 `World` 下声明（`%BulletManager`）；`game_scene` 服务节点代码建 **1 → 0**。详见 §12.26。
-> - K7（命名消歧）：`FxLayer` → `FxPool`（精灵池）、`MissEffectManager` → `MissCircleLayer`（全屏 shader 圈），成员/tcn/测试同步。详见 §12.27。
-> - K8（初始化去重）：`Player.setup_character` 幂等入口收口「`_ready` 自举 + 组合根覆盖」的双重初始化。详见 §12.28。
-> - K9（读取收口）：`PlayerShootScript` 的 `leader.get("resources")` → `leader.resources`（类型化）；`.get("resources")` 旁路归零。详见 §12.29。
-> - K10（`resources` 惰性属性）：`Player.resources` 改为惰性属性（getter 自建 / setter 预注入），删 `_ready` 判空自建。详见 §12.30。
-> - K11（MenuNav 注入）：`MenuNav._find_or_create_host`（`current_scene` 名字搜 + 运行时建节点）删除，改由 `MainMenu` 注入 `%PageHost`。详见 §12.31。
-> - K13（练习资源修复）：`_ready` 先 `_setup_player()` 再 `reset_*`，修复练习残机/bomb 未归零。详见 §12.33。
-> - K14（静默空跑守卫）：`SaveData.reset_*` 在「注册表有、资源取不到」时 `push_warning`；确立 P0/P1/P2 日志判据（不全量加）。详见 §12.34。
+> **轨道 B（外壳红线对齐）已完成**：autoload **12 → 4**（`GameEvents / GameManager / RNG / AudioManager`）；`grep GameState` **0**；R6 / R4 / R2 收口见上表。逐波记录（W1–W4c / K1–K14）见 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**、方案与决策见 `NEW_KERNEL_REFACTOR_PLAN.md`。

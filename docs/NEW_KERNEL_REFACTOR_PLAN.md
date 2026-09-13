@@ -3,6 +3,7 @@
 > 定位：把原项目「节点弹池 + 12 autoload + 协程行为 + 独立 LaserEngine」的弹幕链路，**逐步**迁到重建版内核的架构（SoA 核心 + 组合根注入 + 数据资源 + 显式帧序/层序 + 无头测试），同时保持游戏可玩、可回退。
 > 前置阅读：`1-st-touhou-star-rebuild/docs/DECISION_DANMAKU_ARCHITECTURE.md`（含「为何不建议 big-bang」与两个方向的对比）。
 > 方法论：**Strangler（绞杀者）** —— 新内核先自包含接入，旧调用点经 adapter 原样可用；再逐子系统替换；最后删旧实现。
+> 状态（2026-09-13）：**Track A / Track B 均已完成**——内核是唯一弹幕后端（`use_kernel` 已转正、旧池已删），autoload **12 → 4**。逐波实施记录已移入 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**；本文只保留**方案 / 契约 / 决策**。§1 是迁移前的现状审计快照。
 
 ---
 
@@ -408,634 +409,102 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 - 迁移期**双写**（`GameState` vs `PlayerResources`）要有兜底与对账测试。
 - autoload 之间的横向耦合（`AudioManager → GameManager`、`StageManager → GameState/BulletManager`）要把「谁调谁」改成**组合根接线**，否则拆完还是隐式全局。
 
-### 12.7 W1 实施记录（2026-09-11，已完成）
+### 12.7 实施记录（W1–W4c / K1–K14）
 
-| 项 | 变更 |
+> 逐波「做了什么 / 为什么 / 踩坑 / 验收」见 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**（唯一历史记录）。此处只留索引。
+
+| 波次 | 一句话 |
 |---|---|
-| `LayerConfig` | `scripts/autoload/layer_config.gd` → **`scripts/layer_config.gd`**，加 `class_name LayerConfig` 并去掉 autoload 项；25 处 `LayerConfig.XXX` 引用零改动（静态常量，行为等价） |
-| `MissEffectManager` | `scripts/autoload/miss_effect_manager.gd` → **`scripts/effect/miss_effect_manager.gd`**，加 `class_name MissEffectManager` 并去掉 autoload 项 |
+| W1 | `LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化；autoload 12→10 |
+| W2 | `StageObjects` → `StageContext.objects`；`HitEffectPool` → `FxLayer`（组合根注入）；10→8 |
+| W3a | `AssetRegistry` 去 autoload（→ `class_name` 静态表，调用点 0 改动）；8→7 |
+| W3b | `StageManager` → `StageRuntime` 场景节点 + `ctx.stage`；7→6 |
+| W4a-1/2 | 内核弹幕后端**转正为默认**；随后删旧池（`BulletPool`/`Bullet`/`BulletPhysics`/`SpatialHash`/`bullet_fog`）——内核唯一后端 |
+| W4b-1..4 | `GameState` 资源抽 `PlayerResources`、实体抽 `EntityRegistry`、资源消费者直读 `Player.resources`、`GameState` → `SaveData`（纯 static）；`grep GameState` 42→0 |
+| W4c | `BulletManager` 去 autoload（组合根创建 / 注入 + `static current`）；autoload → **4** |
+| K1/K1b | 脚本命名 / 目录归属收口（`scripts/autoload/` 只留 4 个真 autoload） |
+| K2/K3/K4 | R6（私有调用→公开虚函数）/ R4（输入事件驱动）/ R2（全树搜→注入）收口 |
+| K5 | 三台热更新管线收口 `BenchBase`（workbench 净 -116 行） |
+| K6/K7 | `BulletManager` 声明式化（R21 收尾）；`FxLayer`→`FxPool`、`MissEffectManager`→`MissCircleLayer` 命名消歧 |
+| K8–K11 | `Player.setup_character` 幂等 / `resources` 类型化 + 惰性属性 / `MenuNav` 容器注入 |
+| K12–K14 | 符卡练习诊断守卫；练习资源未归零修复；`reset_*` 静默空跑守卫（确立 P0/P1/P2 日志判据） |
 
-**组合根注入链**：`MissEffectManager` 节点在 `game_scene.tscn` 的 `Main` 下**声明**（R21；W2 补正，原为 `GameScene._ready()` 里 `new()+add_child`）→ `GameScene._ready()` 注入 `StageManager.miss_layer` → `StageContext.effects` → `EffectService.miss_layer`（为空静默跳过，便于测试/无场景上下文）→ `MissEffectManager.add_circle()`。`GameScene._exit_tree()` 置空注入槽；`BulletManager.clear_all()` 删去对 UI 特效的全局直呼（弹幕门面不再知道 miss 圈存在）。
-
-**验收**：
-
-- autoload 数 **12 → 10**。
-- `test/test_miss_effect.gd`（8 用例，含 `ProjectSettings.has_setting("autoload/MissEffectManager")` = false 断言）。
-- `test/test_composition_root.gd`：实例化 `game_scene.tscn`，断言建出 `MissEffectManager` 子节点且已注入 `StageManager.miss_layer`。
-- 全量 GUT **279/279 全绿**（3199 断言）。
-
-**踩坑**：新增 `class_name` 后要让 Godot 重建 `.godot/global_script_class_cache.cfg`（跑一次 `godot --headless --import`），否则 headless 直接报 `Identifier "LayerConfig" not declared`——不是代码错。
-
-**顺带修（与本波无关，验证时暴露）**：`test/test_recent_mechanics.gd` 的练习记录用例非幂等——历史遗留的 `stage=99` 幽灵记录会让 `get_or_create` 命中旧值继续累加（实测 attempts=6/captures=3）造成假失败；已加起始清除，并清掉本地 `.tres` 幽灵项。
+**结果**：autoload **12 → 4**（`GameEvents / GameManager / RNG / AudioManager`）；`grep GameState` **0**。
 
 ---
 
-### 12.8 W2 实施记录（2026-09-11，已完成）
+## 13. Track A 实施记录（S0–S4d）
 
-| 项 | 变更 |
+> 逐波记录见 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**（S0–S4d 条目）。此处只留索引与仍生效的决策。
+
+| 步 | 成果 |
 |---|---|
-| `StageObjects` | `scripts/autoload/stage_objects.gd`（autoload）→ **`scripts/coroutine/services/stage_objects.gd`**（`class_name StageObjects extends RefCounted`）；注册表由 `StageContext.objects` 持有（per-ctx，随关卡生命周期），`StageDirector` 注册/清理，并把同一注册表注入 `BossHandle`。删 autoload 项 |
-| `HitEffectPool` | `scripts/autoload/hit_effect_pool.gd`（autoload）→ **`scripts/effect/fx_layer.gd`**（`class_name FxLayer extends Node2D`，池化节点）。删 autoload 项 |
+| S0 | 内核 vendor 进 `scripts/kernel/`（14 `.gd` / 1,221 行），唯一改动 = 删 `BulletRenderer` 注入；`test_kernel_vendor` |
+| S1 | `KernelBulletBackend`：`BulletData → BulletType` + 内容签名缓存 + 纹理旁表 |
+| S2 | `BulletMultiMesh` 双数据源（内核 SoA / 旧节点） |
+| S3a | `use_kernel` 开关：路由 spawn/积分/渲染/剔除/暂停（不含碰撞） |
+| S3b | `KernelBulletPhysics`：敌弹↔自机（命中 + 擦弹双阈值 + 记忆随机清弹） |
+| S3c | 自机弹↔敌人（`damage`/`hit_sfx` 宿主侧表；**A 方案成立**） |
+| S3d | 死亡清弹接内核（`DeathClear` 抽 `Callable` 注入，旧循环一行未改） |
+| S4a–d | 行为桥：`world_accel` / `homing` / `radial_accel` / `bounce` / `non_mid_flee` / `marisa_laser` / bomb 宿主节点 / 记忆变红 |
 
-**`FxLayer` 注入链**：`FxLayer` 节点在 **`game_scene.tscn` 的 `World` 下声明**（R21：声明式建树，非 `new()+add_child`；与 `ItemPool` 同规格）→ `GameScene._ready()` 注入 `StageManager.fx_layer`（供 `StageContext.effects` → `EffectService.fx_layer`）+ `BulletManager.inject_fx_layer()`（转发给 `BulletPhysics.fx` / `DeathClear.fx` / `KernelBulletPhysics.fx`）。所有调用点带 `fx == null` 静默守卫（单测/无场景安全）。`GameScene._exit_tree()`：`BulletManager.clear_all()` 内含 `fx_layer.clear_pool()`，随后 `inject_fx_layer(null)` + `StageManager.fx_layer = null` 解除注入。**消灭了 `Engine.get_main_loop().current_scene.get_node_or_null("World")` 这种全树找父级（R2/R9）**。
-
-**验收**：
-
-- autoload 数 **12 → 8**（当前：`GameEvents / GameManager / BulletManager / GameState / StageManager / RNG / AudioManager / AssetRegistry`）。
-- `test/test_composition_root.gd` 增 `test_game_scene_creates_and_injects_fx_layer`：实例化 `game_scene.tscn`，断言 `World/FxLayer` 建出且注入 `StageManager.fx_layer` / `BulletManager.fx_layer`。
-- `test/test_stage_director.gd` 改为纯逻辑（`StageContext.new(null).objects` + 句柄持注册表），去掉 autoload 依赖。
-- `test/test_fx_layer.gd`（3 用例）：挂树/复用/清池语义。
-- 全量 GUT **62 套 / 333 测试 / 3327 断言全绿**。
-
-**踩坑**：同 W1——新增 `class_name` 必须重建 `.godot/global_script_class_cache.cfg`（本次用 `godot --headless --editor --quit`），否则 headless 报 `Could not find type "StageObjects" / "FxLayer"`，并连锁出 81 个假失败（`Scripts 61→59`）。不是代码错。
-
-**R21 补正**：`FxLayer` 与 `MissEffectManager` 均改为 `game_scene.tscn` 声明式节点（前者 W2 初版、后者 W1 产物在本次一并收口），`game_scene.gd` 只保留 `@onready` 引用 + 注入。
-
-**边界澄清**：`FxLayer` 仍是**宿主侧**节点（`class_name` + `game_scene.tscn` 声明、组合根注入），不是内核服务——`scripts/kernel/**` 不引用它；`scripts/kernel_bridge/**` 桥接层可以收到注入的 `fx`。把消弹特效下沉进内核属于 W4 收敛话题，本波不动内核。
+> **当前状态**：`use_kernel` 默认 **true**（W4a-1 转正）、旧池已删（W4a-2）——内核是唯一后端；逐波验收数字见 LOG。
 
 ---
 
+## 14. 决策：S3 碰撞 / 伤害模型（A 方案 · 宿主侧规则移植）
 
-### 12.9 W3a 实施记录（2026-09-11，已完成）
+> 原 S3 计划 = 「加 `use_kernel` + 委托后端」。读全 `BulletPhysics` / 内核 `CollisionResolver` / `BulletType` 后确认：S3 不是换发射入口，而是换掉**整个弹幕运行时**。动手前必须在 A / B 分叉里选。
 
-| 项 | 变更 |
-|---|---|
-| `AssetRegistry` | `scripts/autoload/asset_registry.gd`（autoload）→ **`scripts/asset_registry.gd`**（`class_name AssetRegistry`，无 extends → RefCounted）；`_bgm_cache` 改 `static var`，`get_bgm / get_bgm_title / _unlock_music_by_key / get_bullet_tex` 改 `static func`。删 autoload 项 |
-| 调用点 | **0 改动**——`const` 静态表与 `static func` 都按 `AssetRegistry.xxx` 访问，语法与原 autoload 实例一致 |
-
-**为什么可以零改动**：原 `AssetRegistry` 的可变状态只有 `_bgm_cache`（懒加载缓存），`static var` 语义等价（进程内常驻）。`bullet_configs / sounds / enemy_visuals / BGM_PATHS / FOG_TEXTURE` 本来就是 `const`。
-
-**验收**：
-
-- autoload 数 **8 → 7**。
-- `test/test_asset_registry.gd`：`autoload/AssetRegistry` 已移除 + 静态表/方法可用。
-- `test/test_composition_root.gd` 增 `test_removed_autoloads_stay_removed`（统一守卫 W1/W2/W3a 去掉的 5 个 autoload）。
-- 全量 GUT **63 套 / 336 测试 / 3337 断言全绿**。
-
-**暂缓（不属本步）**：`bullet_configs` / `sounds` / `enemy_visuals` → `data/*.tres`（R17）与 S13 图集迁移一起做；现在只把 autoload 降成静态表。
-
-**W3b**：见 §12.10（已完成）——`StageRuntime` 场景节点 + `ctx.stage`，`add_enemy_to_scene` 的 World 查找已改注入。
-
----
-
-### 12.10 W3b 实施记录（2026-09-11，已完成）
-
-**目标**：`StageManager` autoload → `StageRuntime` 场景节点 + `ctx.stage` 注入；autoload 7 → 6。
-
-**做法（strangler 两步）**：
-
-- **W3b-1**（`c3b4758`）：抽出 `scripts/stage/stage_runtime.gd`（`class_name StageRuntime extends Node`，World 下声明）；`StageManager` 暂留薄门面转发，调用点零改动；`world` 注入修掉 `add_enemy_to_scene` 的 `get_tree().current_scene.get_node_or_null("World")`（R2）。
-- **W3b-2**（本次）：删除 `StageManager` autoload；所有调用点迁到 `ctx.stage` / 直接引用。
-
-**落点**：
-
-- `StageRuntime`：持有 `world` / `miss_layer` / `fx_layer` / `current_background` 与生命周期/工厂；创建 ctx 时回填 `ctx.stage`。
-- `StageContext.stage`：内容经此拿服务；`ctx.effects` 读 `stage.miss_layer/fx_layer`，`ctx.get_decor()` 读 `stage.current_background`。
-- `EnemyData.spawn(ctx)` → `ctx.stage.spawn_enemy_data`；`StageDirector` → `ctx.stage.spawn_boss`。
-- 组合根：`game_scene.tscn` / `workbench.tscn` 的 `World` 下声明 `StageRuntime`；`_ready` 注入 `world`/槽位。
-- 组合台：`bench_base.gd:ensure_stage_runtime()` 自备（`enemy_bench`/`phase_bench`）；`bookmark_panel.stage_runtime` 由 Workbench 注入；`creation_station` 切页调 workbench 的公开 `stop_stage()`。
-
-**踩坑**：`workbench._load_stage()` 的"清 World 残留"循环把新放进 `World` 的 `StageRuntime` 一起 `queue_free` → `_stage_runtime` 变 freed。已排除 `StageRuntime`（与 `_ghost` 同级）。**教训：把结构性服务节点放 World 下时，任何"清 World"循环都要排除它。**
-
-**验收**：autoload **7 → 6**；`test_composition_root` 增 StageRuntime 声明/注入/真加载断言；全量 **63 套 / 337 测试 / 3341 断言全绿**。
-
----
-
-### 12.11 W4a-1 实施记录（2026-09-11，已完成）
-
-**目标**：把内核从"开关后的备选"**转正为默认弹幕后端**，旧池保留为回滚（strangler 的"翻开关"步）。autoload 数不变。
-
-**变更**：
-
-- `BulletManager.use_kernel` 默认 `false → true`；F2 语义从"切到内核"变为"切回旧池回滚"。
-- 新增后端无关的 `BulletManager.active_count()`；统计/断言从旧池专属 `active_bullets` 迁过来（`bullet_bench` / `enemy_bench` / `phase_bench` / `workbench` / `debug_drawer`）。
-- 旧池专属测试显式 `set_use_kernel(false)`：`test_hit_sfx_rules`（旧 `BulletPhysics`）、`test_bullet_batch`（旧渲染分组）、`test_bounce_bullet`（旧 bounce 脚本）；`test_bullet_rig` / `test_creation_station` 改用 `active_count()`。
-
-**验收**：kernel 默认下全量 **63 套 / 338 测试 / 3342 断言全绿**。
-
-**转正暴露的回归（已修）**：默认翻 `true` 后 `_enable_kernel()` 在 autoload `_ready` 跑——**自机尚未生成**，`BehaviorContext` 缓存了 null 自机且不再刷新 → `non_mid_flee` / `homing` 的"接近自机"判定失效（中boss非符逃跑弹直线飞）。修：`BulletManager.refresh_kernel_player()`，由组合根在自机就绪后调（`GameScene._setup_player` / `workbench._setup_world` / `bench_base.build_world`）。回归测试 `test_composition_root:test_game_scene_refreshes_kernel_player`。
-
-**待办（W4a-2）**：试玩确认未映射内容无回归后，删旧池（`BulletPool`/`Bullet`/`BulletPhysics`/`DeathClear` 旧循环/`BulletMultiMesh._sync_nodes`）+ `use_kernel`/F2/`active_bullets`。
-
----
-
-### 12.12 W4a-2 实施记录（2026-09-11，已完成）
-
-**目标**：删除旧弹幕子系统，内核成为**唯一**后端（不再有开关/旧池）。
-
-**删除**：
-
-- `scripts/autoload/bullet/bullet_pool.gd` / `bullet_physics.gd`、`scripts/bullet/bullet.gd` / `spatial_hash.gd` / `bomb_behavior.gd` / `bullet_fog.gd`、`scenes/bullet.tscn`。
-- `BulletManager` 的 `use_kernel` / `set_use_kernel` / F2 `kernel_toggle` / `active_bullets` / `use_multi_mesh` 与全部旧分支。
-
-**收窄**：
-
-- `BulletManager`：内核唯一；`active_count()` 直读内核；`_on_laser_graze()` / `_sweep_death_clear()` 注入给 `LaserEngine` / `DeathClear`。
-- `DeathClear`：不再持旧池，逐帧调注入的内核扫掠。
-- `BulletMultiMesh`：删 `_sync_nodes`，只读内核快照；`Bullet.FACTION_*` → 本地常量。
-- `LaserEngine`：`BulletPhysics` 依赖 → 注入 `on_graze` Callable（`KernelBulletPhysics.on_graze` 转公开）。
-- `player.gd`：删 `bomb_behavior` 预载（内核 `KernelBomb` 不读它）。
-- 内容脚本去 `Bullet` 类型标注（旧 `_tick` 变死代码但可编译）。
-
-**测试**：随旧代码删 9 个旧池套件；`test_kernel_swap` 重写为内核唯一；`test_laser` 改用注入 Callable。
-
-**验收**：`check_syntax` **190 脚本 / 0 失败**；全量 **54 套 / 299 测试 / 3181 断言全绿**。autoload 数不变（6；`BulletManager` 去 autoload 归 W4c）。
-
-**修复（本次）**：魔理沙激光段贴图不旋转——内核 `MarisaLaserBehavior` 只 `set_position` 没设 `velocity`，渲染桥按 `velocity` 算朝向 → 零速度返回 0。补 `set_velocity(bullet_id, dir)`（与旧 `marisa_laser_follow._tick` 的 `target.velocity = dir` 一致）。回归断言已加。
-
----
-
-### 12.13 W4b-1 实施记录（2026-09-11，已完成）
-
-**目标**：把 `GameState` 的单局资源状态抽成单一 owner `PlayerResources`（R18），**调用点零改动**（GameState 转发属性/方法），行为不变。
-
-**落点**：
-
-- 新增 `scripts/player/player_resources.gd`（`class_name PlayerResources extends RefCounted` + `changed`）：火力 / 分数 / 擦弹 / 残机 / 雷 / 碎片 / 记忆 + 显式入口 + `reset_*` + `regen`。
-- `GameState`：`var resources := PlayerResources.new()`；`current_score / lives / life_fragments / bomb_count / bomb_fragments / power_raw / max_point / graze_count / memory_value` 改**转发属性**；`add_*` / `collect_*` / `lose_life` / `use_bomb` / `reset_*` / `_process` 委托；`MEMORY_*` 常量单一来源 `PlayerResources`。
-
-**验收**：`test/test_player_resources.gd`（4 用例）；全量 **55 套 / 303 测试 / 3191 断言全绿**。
-
-**W4b-2a（本次）**：`Player` 增 `resources`（`_ready` 取同一实例）；`player.gd` 的资源引用清零（`use_bomb`/`memory_value`/`reduce_memory`/`add_memory`/`lose_life`）。全量 55/303/3191 绿。
-
-**后续（W4b-2b/3/4）**：其余消费者（`game_ui` / `item` / `boss` / 内核桥接 / 菜单）改直接持 `PlayerResources` → 注入 `player` / `active_enemies` → 瘦身 `GameState` 成存档全局。注意：W4b-2a 只覆盖有天然注入点的 `Player`；全量去耦合需按文件逐个消除 `GameState` 引用（共 ~45 生产文件）。
-
-### 12.14 W4b-3a 实施记录（2026-09-11，已完成）
-
-**目标**：把 `GameState` 的运行时引用（`player` / `active_enemies` / `get_boss`）抽成「组合根持有的 `EntityRegistry`」（R18 / R2 / R9），`GameState` 退为**过渡门面**（调用点零改动），为 W4b-4 瘦身存档全局铺路。
-
-**落点**：
-
-- 新增 `scripts/stage/entity_registry.gd`：`class_name EntityRegistry extends RefCounted` —— `player` / `enemies` / `bind_player` / `register_enemy` / `unregister_enemy` / `get_active_enemies` / `get_boss` / `clear`。
-- `StageRuntime`：`var refs := EntityRegistry.new()`；`_enter_tree()` 里 `GameState.bind_refs(refs)`（先于任何实体 `_ready`）；`add_enemy_to_scene()` 给实体注入 `registry`；`stop_stage()` 用 `refs.clear()`。
-- `GameState`：`_refs` + `bind_refs()`；`player` / `active_enemies` / `get_active_enemies()` / `get_boss()` / `clear_enemies()` 改为**转发门面**（删掉自身数组与 `BossScript` 常量）。
-- 直接消费者迁移：`Enemy`（注入 `registry` 自注册）、`PlayerService` / `BossService`（经 `StageContext.refs`，`ctx` 回填）、`MoveHoming`（`ctx.refs`）。
-- 组合根注入自机：`GameScene._setup_player` / `bench_base.build_world` / `workbench._setup_world`。
-
-**验收**：`test/test_entity_registry.gd`（4 用例）；`check_syntax` **191 脚本 / 0 失败**；全量 **56 套 / 307 测试 / 3203 断言全绿**；orphans 12。`grep -rIl "\bGameState\b" scripts` **46 → 41**（引用 180 → 172）。
-
-**踩坑（记录）**：`EntityRegistry.player` 初版写成无类型 Variant，自机 `free()` 后残留「已释放实例」，门面 getter 返回时报 `previously freed instance`（10 个用例红）。改内建 `Node2D` 类型 + getter `is_instance_valid` 兜底后修复。
-
-**试玩修复**：
-
-- 自机不能射击 / 子机消失——`Player._init_shoot_script` 的 `StageContext` 无 `stage`，`ctx.refs` 解析不到自机。加 `EntityRegistry.current`（当前世界 static 回退，R8）+ `StageContext.refs` 回退。
-- 被击中不出反色圈——`start_spell_card` 自建 ctx 未设 `stage`（练习模式 `player.ctx = boss.ctx` 拿不到 `miss_layer`）；补 `ctx.stage = self`，并加 `StageRuntime.current` 回退供无 stage 的共享 ctx 解析 `ctx.effects`。
-
-验收 **56 套 / 311 测试 / 3212 断言全绿**。
-
-**W4b-3b（已完成）**：见下。
-
----
-
-### 12.15 W4b-3b 实施记录（2026-09-11，已完成）
-
-**目标**：把运行时实体读取从 `GameState` 门面推进到注入的 `EntityRegistry`，覆盖内核弹幕后端、桥接碰撞/清弹、桥接行为、激光与工作台覆盖层。
-
-**落点**：
-
-- `BulletManager.inject_world_refs(refs)`：存 `world_refs` 并传播给 `KernelBulletBackend` / `KernelBulletPhysics` / `LaserEngine`，再 `_enable_kernel()`；`_enable_kernel` 用 `world_refs`（回退 `EntityRegistry.current`）取自机与 `enemy_provider`。
-- `KernelBulletBackend.refs` → `spawn_bomb` 注入 `KernelBomb.refs`。
-- `KernelBulletPhysics.refs` / `LaserEngine.refs` / `KernelBomb.refs`：自机与敌机全部走注册表。
-- `KernelBehaviorHost.get_boss()`（读 `backend.refs`）；`bounce` / `non_mid_flee` 改用 `host.get_boss()`。
-- `HitboxOverlay.refs`（工作台注入）；`bench_base.build_world` 先 `ensure_stage_runtime()`。
-- 组合根：`GameScene._setup_player` / `bench_base.build_world` / `workbench._setup_world` 调 `inject_world_refs`。
-
-**验收**：`check_syntax` **191/0**；全量 **56 套 / 311 测试 / 3212 断言全绿**；orphans 12。`grep -rIl "\bGameState\b" scripts` **41 → 35**（引用 172 → 159）；清零文件：`autoload/bullet_manager.gd` / `laser/laser_engine.gd` / `kernel_bridge/kernel_bomb.gd` / `kernel_bridge/behavior/bounce_behavior.gd` / `kernel_bridge/behavior/non_mid_flee_behavior.gd` / `workbench/hitbox_overlay.gd`。
-
-**踩坑（记录）**：内核/桥接里把「可能含已释放实例」的数组用 `for enemy: Node2D in ...` 迭代，或把 `refs.player` 直接赋给 `Player` 类型变量，会在赋值/迭代时抛 `Trying to assign invalid previously freed instance`。规则：**先 `is_instance_valid` 再赋类型化变量；迭代用无类型 `for enemy in ...`**。
-
-### 12.16 W4b-2b 实施记录（2026-09-11，已完成）
-
-**目标**：资源消费者从 `GameState` 转发改为直读 `Player.resources`（方案 A：Player 持有）。
-
-**落点**：
-
-- `EntityRegistry.get_player_resources()`：安全取「自机持有的 `PlayerResources`」，供消费者统一读取。
-- 内核桥接 `KernelBulletPhysics` / `KernelBulletBackend` 的 `_player_res()` 取它（记忆加成/擦弹/命中/变红）。
-- `cs_player` → `leader.get("resources")`；`item` → `ItemPool.refs` 注入；`game_ui.resources` 由 `GameScene` 注入；`boss` 增 `registry` 并用 `_refs()`；`stage_runtime` 取分数。
-
-**验收**：`check_syntax` **191/0**；全量 **56 套 / 311 测试 / 3212 断言全绿**；orphans 12。`grep GameState` **35 → 31 文件**（引用 159 → 122）。
-
-### 12.17 W4b-4 实施记录（2026-09-11，已完成，验收达成）
-
-**目标**：`GameState`（god object）瘦身为「存档 + 菜单/练习状态」并删除 autoload；单局资源归 `Player`，运行时实体归 `EntityRegistry`。
-
-**落点**：
-
-- 新增 `scripts/data/save_data.gd`：`class_name SaveData extends RefCounted`（纯 `static`）——持久化选择 / 关卡注册表 / 符卡簿 / 高分 / 练习配置；`boot()`（主题 / 存档 / 设置 / 注册表）；`reset_all` / `reset_practice` 经 `EntityRegistry.current` 重置自机资源。
-- `Player`：`resources` 自持（`PlayerResources.new()`）；`enemy_killed → score` 与 `memory regen` 迁入。
-- `GameManager._ready` 调 `SaveData.boot()`。
-- 机械改名 31 个 `scripts/**` + 1 个 `data/**` + 测试；工作台/调试/场景切换的实体查询改走 `EntityRegistry.current` / `_stage_runtime.refs`。
-- 删除 `scripts/autoload/game_state.gd`；`project.godot` 去 `GameState` autoload。
-
-**验收**：`grep -rIl "\bGameState\b" scripts` **31 → 0**（全仓 0）；autoload **6 → 5**；`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 12。
-
-### 12.18 W4c 实施记录（2026-09-11，已完成）
-
-**目标**：`BulletManager` 去 autoload（autoload 5 → 4），改由组合根创建 / 持有的弹幕世界。
-
-**落点**：
-
-- `BulletManager`：加 `class_name` + `static var current`（R8）；`project.godot` 去 autoload。
-- 生产注入：`GameScene` / `Workbench` / `BenchBase` 创建并注入 `StageRuntime.bullets`；`StageContext.bullets` 把 `world` 交给 `BulletService`；`KernelBulletBackend` / `KernelBomb` 持 `world`。
-- 消费点：`Player` 炸弹 / `MarisaLaserFollow` 回收 / 内容 `data/**` 的 `re_fire`·`return_bullet` 全部走 `ctx.bullets`（服务补 `re_fire` / `return_bullet` / `shoot_bomb`）。
-- 跨切面：`SceneTransition`、工作台三台、`HitboxOverlay`、`DebugDrawer` 经 `BulletManager.current`；standalone 工作台自建（`BenchBase.ensure_bullet_world`）。
-
-**验收**：autoload **5 → 4**；`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
-
-**后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
-
-### 12.34 K14 实施记录（2026-09-11，已完成）
-
-**目标**：给「动作型总闸」的静默空跑加出声（不搞全量 449 处）。
-
-**落点**：`SaveData.reset_all/reset_practice` 在 `refs != null and res == null` 时 `push_warning`。
-
-**判据**：P0 动作型空跑出声；P1 配置缺失出声；P2 getter/可选服务/帧检查不出声。
-
-**验收**：`check_syntax` 191/0；全量 **57 套 / 310 测试 / 3215 断言全绿**；orphans 10。
-### 12.33 K13 实施记录（2026-09-11，已完成）
-
-**目标**：修复练习模式残机/bomb 未归零。
-
-**根因**：`_ready` 里 `SaveData.reset_*` 早于 `_setup_player()`，注册表尚未绑定自机 → `get_player_resources()` 返回 null → 空跑。
-
-**修复**：先 `_setup_player()` 再 `reset_practice()`/`reset_all()`；新增 `test_practice_mode.gd` 回归。
-
-**验收**：`check_syntax` 191/0；全量 **57 套 / 310 测试 / 3215 断言全绿**；orphans 10。
-### 12.32 K12 实施记录（2026-09-11，诊断）
-
-**目标**：定位「符卡练习未启动」。给 `_start_practice` 的静默 return 与 `game_scene` 的 else 支加 `push_warning`。
-
-**结论**：`is_practice_mode=true` 时必定执行 `_start_practice_game`（GUT 实测）；待复现确认标志是否被提前清除。
-
-**验收**：`check_syntax` 191/0；全量 **56 套 / 309 测试 / 3211 断言全绿**；orphans 10。
-### 12.31 K11 实施记录（2026-09-11，已完成）
-
-**目标**：`MenuNav` 子页面容器由场景搜索改为组合根注入（R2/R21）。
-
-**落点**：`MenuNav` 增 `set_page_host()/has_page_host()`，`push()` 用注入 host 并删 `_find_or_create_host`；`GameManager` 转发；`MainMenu` 注入 `%PageHost`（tscn 标唯一名）并在 `_exit_tree` 解除；新增 `test_menu_nav.gd`。
-
-**度量**：`MenuNav` 的 `current_scene` 搜索 **1 → 0**。
-
-**验收**：`check_syntax` 191/0；全量 **56 套 / 309 测试 / 3211 断言全绿**；orphans 10。
-### 12.30 K10 实施记录（2026-09-11，已完成）
-
-**目标**：把 `Player` 的「owner 自建 + 允许预注入」从 `_ready` 的判空分支改为类型化惰性属性。
-
-**落点**：`resources` → 惰性属性（后备 `_resources`，getter 自建 / setter 预注入）；删 `_ready` 自建与两处恒真 null 守卫。
-
-**验收**：`check_syntax` 191/0；全量 **55 套 / 308 测试 / 3207 断言全绿**；orphans 10。
-### 12.29 K9 实施记录（2026-09-11，已完成）
-
-**目标**：`PlayerResources` 读取全部收口到类型化/总闸，消除字符串旁路（R5）。
-
-**落点**：`PlayerShootScript._sync_options` 参数 `Node2D` → `Player`，`leader.get("resources")` → `leader.resources`。
-
-**度量**：`scripts/**` 的 `.get("resources")` 旁路 **1 → 0**（仅存 `EntityRegistry.get_player_resources()` 总闸）。
-
-**验收**：`check_syntax` 191/0；全量 **55 套 / 308 测试 / 3207 断言全绿**；orphans 10。
-### 12.28 K8 实施记录（2026-09-11，已完成）
-
-**目标**：消除 `Player` 机体数据的双重初始化（默认机体白装两遍）。
-
-**落点**：`Player.setup_character(data)` 幂等入口（应用数值 + (重)装配射击）；`_ready` 与 `GameScene._setup_player` 均改走它。
-
-**效果**：默认机体零重复；非默认机体一次无害自举；`apply_player_data`+`reinit_shoot` 收成单入口。
-
-**验收**：`check_syntax` 191/0；全量 **55 套 / 308 测试 / 3207 断言全绿**；orphans 10。
-### 12.27 K7 实施记录（2026-09-11，已完成）
-
-**目标**：特效命名消歧（R18 可读性）——两个任务名字不再像重复。
-
-**落点**：`FxLayer` → `FxPool`（`scripts/effect/fx_pool.gd`，精灵池）；`MissEffectManager` → `MissCircleLayer`（`scripts/effect/miss_circle_layer.gd`，全屏 shader 圈）。成员 `fx_layer`→`fx_pool`、`inject_fx_layer`→`inject_fx_pool`；`game_scene.tscn` 节点名 + 测试文件同步；两文件头补分工说明。
-
-**度量**：易混命名 **2 → 0**；旧名残留 **0**。
-
-**验收**：`check_syntax` 191/0；全量 **55 套 / 306 测试 / 3203 断言全绿**；orphans 10。
-### 12.26 K6 实施记录（2026-09-11，已完成）
-
-**目标**：`BulletManager` 从代码 `new()` 改为 `game_scene.tscn` 声明（R21 收尾）。
-
-**落点**：`game_scene.tscn` 的 `World` 下声明 `BulletManager` + `unique_name_in_owner`；`game_scene.gd` 改 `@onready ... = %BulletManager`、删 3 行创建；`test_composition_root` 加 3 条断言。
-
-**行为**：子 `_ready` 先跑，`EntityRegistry.current` 已由 `StageRuntime._enter_tree` 设好；父 `_ready` 再注入精确 refs，等价。
-
-**度量**：`game_scene` 服务节点代码建 **1 → 0**。
-
-**验收**：`check_syntax` 191/0；全量 **55 套 / 306 测试 / 3203 断言全绿**；orphans 10。
-### 12.25 K0 实施记录（2026-09-11，已完成）
-
-**目标**：按代码实测重审基线（S 表 / 红线 / 层序 / 命名），清扫过时引用与假 TODO。
-
-**实测要点**：autoload 4；`GameState` 0；`find_child` 0；`has_method("_")` 0；`z_index` 26 处（20 走 `LayerConfig`，裸 5）；字符串 `get_node*` 19；gameplay 裸 RNG 0；`@tool` 3 / warnings 0；assets 47MB 无 LFS。
-
-**产出**：`BEST_PRACTICES_BASELINE.md` 的 S 表、契约现状、TODO、审计表整体刷新（无代码变更）。
-
-**验收**：纯文档；后续 S 线（S4 调校 / S9 性能 / S10 回放 / S13 图集）以此为当前基线。
-### 12.24 K5 实施记录（2026-09-11，已完成）
-
-**目标**：三台热更新管线去重（R19），收口 workbench 表面积（R18）。
-
-**落点**：管线字段/常量 + `_on_hot_toggled`/`_rebuild_watch`/`_refresh_watch_mtimes`/`_process_hot_reload`/`_do_hot_reload` 全部上移 `BenchBase`；三台只实现 `_collect_watch_paths` / `_main_watch_path` / `_on_hot_reloaded`。
-
-**度量**：热更新方法定义 **15 → 基类 5 + 3 组 hook**；workbench 净 **-116 行**。
-
-**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
-### 12.23 K3 实施记录（2026-09-11，已完成）
-
-**目标**：菜单 / 暂停 / 自机离散键改事件驱动，消除 `_process` 边沿轮询（R4）。
-
-**落点**：
-
-- `NavPage` 统一 `_unhandled_input` + `_nav_directional`（可覆写）；`_nav_accept/_nav_cancel/_nav_move` 抽公共；三份复制收敛为 1。
-- `manual_menu` → `_unhandled_input`；`GameManager` 暂停键 → `_unhandled_input`；`Player` 炸弹/解放记忆 → `_unhandled_input`。
-
-**度量**：边沿轮询 **6 → 0**；菜单导航复制 **3 → 1**。
-
-**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
-### 12.22 K4 实施记录（2026-09-11，已完成）
-
-**目标**：消除 `find_child()` 全树搜与 `get_node("..")`（R2），改用组合根注入。
-
-**落点**：
-
-- `Boss.ui_layer` + `StageRuntime.ui_layer`（`GameScene` 注入 HUD 层，`add_enemy_to_scene` 传递）；删 UI 全树搜。
-- `StageBackground._find_camera()` 只做父级查找，支持组合根预注入 `camera`；删 Camera3D 全树搜。
-- `BulletManager.fx_parent` / `KernelBomb.fx_parent`（爆图父节点注入）；删 `get_node("World")`。
-- `stage01_decor` 去 `$".."`，改 `get_parent() as StageBackground`。
-
-**度量**：`find_child` **2 → 0**；`$".."` **4 → 0**。
-
-**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
-### 12.21 K2 实施记录（2026-09-11，已完成）
-
-**目标**：生产代码消除对外调 `_私有` / `has_method("_")`（R6），改用公开虚函数与类型化接口。
-
-**落点**：
-
-- 菜单：`BasePage` 公开虚函数 `on_enter/on_leave/on_activate/on_deactivate`；`MenuNav` 页面栈 `Array[BasePage]`、`_load_page() -> BasePage`，9 处 `has_method` 删除。
-- 创作台：`BenchBase` 公开虚函数 `snapshot/restore/preset_from_entry`；`CreationStation` 类型化 `Array[BenchBase]`，3 处 `has_method` 删除。
-- `Player.apply_player_data` / `Player.reinit_shoot` / `Boss.clear_phase` / `LaserBeam.step`·`reset`（`LaserEngine` 改调公开接口）。
-
-**度量**：`has_method("_")` **12 → 0**；生产对外私有调用 **6 组 → 0**。
-
-**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
-### 12.20 K1b 实施记录（2026-09-11，已完成）
-
-**目标**：`scripts/autoload/` 只留真 autoload；把 4 个已非 autoload 的文件搬到语义目录，只动路径字符串。
-
-**落点**：
-
-- `autoload/bullet_manager.gd` → `scripts/bullet/bullet_manager.gd`；`autoload/bullet/death_clear.gd` → `scripts/bullet/death_clear.gd`。
-- `autoload/game/scene_transition.gd` → `scripts/scenes/scene_transition.gd`；`autoload/game/menu_nav.gd` → `scripts/scenes/menu_nav.gd`。
-- 删空目录；更新 `BulletManager` / `GameManager` 的 3 处 `preload`。
-
-**度量**：`scripts/autoload/` **8 → 4 文件**，全为 autoload；旧路径引用 **0**。
-
-**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
-### 12.19 K1 实施记录（2026-09-11，已完成）
-
-**目标**：清掉脚本层「文件名 ↔ `class_name` 不一致 / `cs_`·`ov_` 黑话缩写」，只动名字与路径字符串，行为不变。
-
-**落点**：
-
-- 文件改名 9 个：`avoid_player.gd` → `avoid_player_behavior.gd`；`cs_player.gd` → `player_shoot_script.gd`；`cs_reimu.gd`/`cs_marisa.gd` → `reimu_shoot.gd`/`marisa_shoot.gd`；`ov_reimu.gd`/`ov_marisa.gd` → `reimu_option_visual.gd`/`marisa_option_visual.gd`；`env_preset.gd` → `background_env_preset.gd`；`dialog.gd`/`ui_common.gd` → `dialog_host.gd`/`workbench_ui.gd`（`.gd.uid` 同步 `git mv`）。
-- `class_name` 对齐：`RigBase` → `BenchBase`（唯一外部 0 引用）。
-- 引用同步：3 个 `.tres` 的 `ext_resource path`、2 处 `preload`、2 处测试 `load`、注释若干。
-
-**度量**：语义不一致 **8 → 0**；余 4 处为 acronym 大小写（`GameUI`/`ScreenFogFX`/`YYJudeVisual`/`UISeparator`），刻意不动。
-
-**验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3200 断言全绿**；orphans 10。
----
-
-## 13. Track A spike 记录：S0 内核 vendor（2026-09-11，已完成）
-
-> 分支 `kernel/s0-vendor`（从 `main` @ tag `pre-kernel-adapter` 起）；内核来源 = 重建版 tag `kernel-v1`（commit `238507a`）。
-
-**做了什么**
-
-- 复制内核核心进 `scripts/kernel/`（14 个 `.gd`，1,221 行）：`bullet_system.gd` + `behavior/` + `collision/` + `bullet_type.gd` / `effect_type.gd`。
-- **不带**渲染与图集：`bullet_renderer.gd` / `bullet_shapes.gd` / `atlas_layout.gd` / `layer_config.gd`——渲染继续用原项目 `BulletMultiMesh`（它本就按纹理分组、且支持独立 PNG 与图集区域；见重建版决策备忘 §10.4 的 hybrid 结论）。
-- **唯一 vendoring 改动**：`bullet_system.gd` 删掉 `BulletRenderer` 注入（`_ready` / `setup_renderers`）——内核本体不引用宿主渲染器类型（R2/R9）。
-- 新增 `scripts/kernel/README.md`：写清**来源 / 单一真相 / 边界规则**（禁止 import 原项目 autoload 与实体层；唯一允许 `LayerConfig`）。
-- 新增 `test/test_kernel_vendor.gd`（2 用例）：证明内核**独立**可 `new` / `spawn` / `query_circle` / `hit_test` / `despawn`。
-
-**验收**：全量 GUT **56 套 / 281 测试 / 3208 断言全绿**（原 279 + S0 的 2）；`--import` 无撞名 / 解析错误。
-
-**结论**：决策备忘 §10.2「内核不认识原项目全局」成立——搬进来除那 4 行渲染注入外，零改动即可编译运行。**下一拼图 S1** = `KernelBulletBackend`（`BulletData → BulletType` 映射 + 纹理旁表）。
-
-**回退点**：原项目 tag `pre-kernel-adapter`；重建版 tag `kernel-v1`。
-
----
-
-## 14. Track A spike 记录：S1 适配层（2026-09-11，已完成）
-
-> 分支 `kernel/s0-vendor`（S0/S1 同分支，尚未并 `main`）。
-
-**做了什么**
-
-- 新增 `scripts/kernel_bridge/kernel_bullet_backend.gd`（`KernelBulletBackend`）——**宿主侧桥接**（内核不认识 `BulletData`）：
-  - `shoot(data: BulletData, pos, direction)` → 内核 `BulletSystem.spawn(...)`；语义对齐 `Bullet.bind`：**direction 定方向，`data.velocity` 只取长度**。
-  - `BulletData → BulletType` 映射：faction / tint_mode / hitbox / hit_fx。**圆判定时把内核 `hitbox_size` 归零**（原项目默认 size(8,8) 但 shape=CIRCLE，不归零每颗圆弹会变矩形）。
-  - **按内容签名缓存** `signature_of()`：原项目两种用法并存——`enemy01` 复用同一实例改速度、`cs_reimu`/`non01_shoot` 每发 `BulletData.new()`；按实例缓存会让内核弹型表**每发长一个**。
-  - **纹理旁表** `texture_for_index(ti)`：内核 `BulletType` 不含 `Texture2D`，S2 渲染靠它取「哪张图」。
-  - S1 只做直线；`coroutine_script` / `accel` 未映射时按直线发射并计入 `unmapped_behavior_count`（S4 接线前用来观察覆盖面）。
-- 新增 `test/test_kernel_backend.gd`（6 用例 / 14 断言）：内容签名复用 / 速度语义 / 纹理旁表 / 阵营映射 / 圆矩形判定 / 未映射计数。
-
-**验收**：全量 GUT **57 套 / 287 测试 / 3222 断言全绿**。
-
-**未接线**：`BulletManager` 尚未委托后端——S1 仍是纯增量（原路径一行未改）。
-
----
-
-## 15. Track A spike 记录：S2 渲染读内核快照（2026-09-11，已完成）
-
-> 分支 `kernel/s2-swap`（自 `main` @ merge S0/S1）。**仍未接线**：`BulletManager` 照旧走旧池，所以 S2 现在是一条**备用渲染路径**。
-
-**做了什么**
-
-- `scripts/bullet/bullet_multi_mesh.gd` 改为**双数据源**（Strangler）：
-  - `set_backend(KernelBulletBackend)` 注入后 → `_sync_kernel()` 读内核 SoA 快照（position / velocity / color / faction / type_index / type_registry + `backend.texture_for_index()`）。
-  - 未注入 → `_sync_nodes()` 旧路径（遍历 `BulletManager.active_bullets`）**逐字保留**，可随时回退。
-  - 抽出 `_group_key()` **两路共用**（纹理 RID + region + 阵营 + tint_mode），批次数才可比对；抽出 `_hide_all()` / `_hide_group()`。
-- **阵营枚举必须显式映射**：内核 `Faction{ENEMY=0, PLAYER=1, NONE=2}` vs 宿主 `Bullet.FACTION_PLAYER=0 / ENEMY=1 / BOMB=2` **顺序不同**；`_host_faction()` 负责转换，否则敌弹/自机弹的 z 会互换。
-- 朝向/颜色对齐旧路径语义：`bt.rotation_for(velocity)` + `colors[i]` + `scale = ONE`。
-- 新增 `test/test_kernel_render.gd`（5 用例 / 7 断言）。
-
-**验收**：全量 GUT **58 套 / 292 测试 / 3229 断言全绿**。
-
-**坑**：headless（dummy 渲染器）下 `MultiMesh.get_instance_transform_2d()` **读回恒为 0**——逐实例几何不能在 CI 里断言；S2 的断言因此落在批次数 / `visible_instance_count` / `z_index` / 材质 / 网格尺寸，**画面一致性留给 S3 之后的手动试玩**。
-
-**下一拼图 S3**：`BulletManager` 加 `use_kernel` 开关，`shoot_enemy_bullet` 委托后端；需手动试玩 stage01 验证表现一致。
-
----
-
-## 16. S3 前置决策：碰撞 / 伤害模型（2026-09-11，**待定**）
-
-> 原计划 S3 = "加 `use_kernel` + 委托后端"。读全 `BulletPhysics` / 内核 `CollisionResolver` / `BulletType` 后确认：**S3 不是"换发射入口"，而是"换掉整个弹幕运行时"**——只换发射会让弹幕变成"只飞不判定"或"数值差 10–50 倍"。下面是动手前必须先定的分叉。
-
-### 16.1 硬阻塞：内核 `BulletType` **没有 `damage`**
+### 14.1 硬阻塞：内核 `BulletType` 没有 `damage`
 
 | | 原项目 | 重建内核 |
 |---|---|---|
 | 伤害载体 | `BulletData.damage`（默认 **10.0**，Bomb **50.0**） | **无此字段** |
-| 结算 | `enemy.take_damage(bullet.damage * bonus)`（记忆 <50 时 `bonus = 1.15~1.05`），`Enemy` 内部**小数累积** | `Enemy._on_bullet_overlap` → `take_damage(1.0)` |
+| 结算 | `enemy.take_damage(bullet.damage * bonus)`（记忆 <50 时 `bonus = 1.15~1.05`） | `take_damage(1.0)` |
 | 量级 | Boss HP 1000 → 约 100 发 | 同 Boss 需 1000 发 |
 
-→ 直接把原项目弹幕灌进内核，**Boss TTK 差 ~10×，杂兵（HP 3 / 24）差更多**。这是玩法崩坏，不是表现细节。
+→ 直接把原项目弹幕灌进内核，Boss TTK 差 **~10×**、杂兵（HP 3 / 24）差更多——这是玩法崩坏，不是表现细节。
 
-### 16.2 其他必须一起搬的规则（全在 `BulletPhysics`，内核没有对等物）
+### 14.2 必须一起搬的规则（内核没有对等物）
 
-| 规则 | 原项目 | 内核现状 |
-|---|---|---|
-| 敌弹 vs 自机 **命中 + 擦弹双阈值** | `_resolve_enemy_bullets_near_player`（`graze_radius` 查询 + `_hit_target` 精判 + `_grazes_player`） | `CollisionResolver` **明确声明不含 graze**（"擦弹属玩家机制"） |
-| 擦弹的**随机清弹**（记忆≥50 时 5%~30%） | 同上 | 无 |
-| `bomb` 弹 vs 敌弹 / 敌人（同一弹对同一敌人只伤一次） | `_bomb_vs_enemy_bullets` / `_bomb_vs_enemies` | 无对等物（内核是 `cancel_bullets` 一次性圆） |
-| 命中音效规则（专属 key；默认仅 Boss <30% 播） | `_player_vs_enemies` | 无 |
-| 命中特效（`bullet.hit_effect`，颜色取弹当前色） | `_spawn_effect` | `BulletType.hit_fx` 有场景，但不带颜色/tint 逻辑 |
-| `out_grace`（出界宽限；探测弹往返） | `BulletManager._physics_process` | 内核只有 `cull_rect + cull_margin`（固定余量，非按型） |
-| 死亡清弹（Miss/Bomb 扩散圈） | `DeathClear` 遍历 `_pool` | `cancel_bullets` 一次性圆，需外部驱动 |
+敌弹↔自机命中 + 擦弹双阈值、擦弹随机清弹、`bomb` 弹 vs 敌弹/敌人、命中音效规则、命中特效（颜色取弹当前色）、`out_grace`（出界宽限）、死亡清弹扩散圈。除积分/渲染外，全部落在宿主桥接。
 
-### 16.3 另一个坑：帧序
-
-原项目碰撞在 `BulletManager._physics_process`（autoload，priority 0）；内核 `BulletSystem` 是它的子节点（同为 0，**父先子后**）→ 碰撞会读到**上一帧**位置。必须显式设 `BulletSystem.process_physics_priority = FrameOrder.INTEGRATE(-10)`，并另起一个 `FrameOrder.COLLISION(10)` 的驱动节点。
-
-### 16.4 分叉（选一个）
+### 14.3 选 A（宿主侧规则移植）
 
 | 选项 | 做法 | 优点 | 代价 |
 |---|---|---|---|
-| **A（推荐）宿主侧规则移植** | 新建 `KernelBulletPhysics`（宿主桥接）把 `BulletPhysics` 规则**逐条**移植到内核 API；宿主专有字段（`damage` / `out_grace` / `can_be_canceled` / `hit_sfx` / `hitbox_shape` / `hitbox_rotation`）走 `KernelBulletBackend` 的**侧表** | 内核**零改动**；语义 1:1；Strangler 可回退 | 桥接 ~200 行；规则仍散在宿主 |
-| **B 内核补 `damage` + 用内核协调器** | 给 `BulletType` 加 `damage`；宿主改用 `CollisionCoordinator` / `CollisionResolver`（玩家/敌人注册） | 长期干净、双宿主一致 | 改**重建版内核**（`kernel-v2`）+ 重新 vendor；重建版 `Enemy/Boss` 的 damage 用法要跟着改；graze/bomb 仍要宿主补 |
+| **A（采用）宿主侧规则移植** | 新建 `KernelBulletPhysics` 逐条移植旧规则；宿主专有字段（`damage`/`out_grace`/`can_be_canceled`/`hit_sfx`/`hitbox_shape`）走 `KernelBulletBackend` 侧表 | **内核零改动**；语义 1:1；Strangler 可回退 | 桥接 ~200 行；规则仍散在宿主 |
+| B 内核补 `damage` + 用内核协调器 | 给 `BulletType` 加 `damage`；改用 `CollisionCoordinator` | 长期干净、双宿主一致 | 改重建版内核 + 重新 vendor；graze/bomb 仍要宿主补 |
 
-**建议 A**：路 B 的定位是"原项目为干"——A 保持原项目玩法语义不变、内核零改动，风险最小；B 属于"内核定型后"的整理（对应决策备忘"内核稳定再宣布唯一之家"）。
+**理由**：路 B 的定位是「原项目为干」——A 保持原项目玩法语义不变、内核零改动，风险最小；B 属于「内核定型后」的整理。S3b / S3c 已验证 A 成立（`damage` 走侧表 1:1 保住）。
 
-### 16.5 建议把 S3 拆成三步（每步独立回归）
+### 14.4 帧序（硬约束）
 
-| 步 | 内容 | 可验证 |
+内核 `BulletSystem.process_physics_priority = -10`（先积分）→ 桥接行为 **-5** → 延后 flush **-4** → 宿主碰撞 **0**。否则碰撞读到**上一帧**位置。
+
+---
+
+## 15. 决策：S4 行为桥与端口契约
+
+> **核心结论：只有一个扩展点（`Behavior` 注册表），没有「特殊途径」。**
+
+### 15.1 行为清单与落点（实测）
+
+| 宿主行为 | 用在哪 | 处置 |
 |---|---|---|
-| **S3a** | `use_kernel` + spawn / 积分 / 渲染 / `cull_rect` / pause 路由（**明确不含碰撞**） | headless 回归 + **视觉试玩**（弹幕会飞、会画，但穿过玩家） |
-| **S3b** | 敌弹 ↔ 自机：命中 + 擦弹双阈值 + 擦弹随机清弹（核心生存规则） | headless + 试玩（能中弹、能擦弹） |
-| **S3c** | 自机弹 ↔ 敌人（damage 侧表 + 记忆加成 + 音效/特效）+ bomb + 死亡清弹 + out_grace | headless + 完整试玩 |
+| `BulletData.accel` / `gravity_bullet` | 魔理沙 opt2 / stage01 杂兵 | `world_accel`（桥接） |
+| `radial_accel_bullet`（沿向加速 + 顶边 re_fire） | stage01 enemy04 | `radial_accel`（桥接 + 延后队列） |
+| `bounce_bullet`（三面反弹 + 瞄准 Boss re_fire） | stage01 非符1 | `bounce`（桥接） |
+| `non_mid01_bullet`（近自机逃 + 近 Boss 散圈） | stage01 中boss非符 | `non_mid_flee`（桥接，散圈回调留内容） |
+| `move_homing`（追杀最近敌人） | 灵梦 opt1 | `homing`（桥接，用内核 `WorldQuery`） |
+| `marisa_laser_follow`（锚定漂移 + 松手渐隐） | 魔理沙非 focus 激光 | `marisa_laser`（桥接 `global_position` 语义）+ 整批 fade |
+| `bomb_behavior`（绕自机扩张 + 追踪 + 爆炸） | 炸弹 | **宿主节点 `KernelBomb`**（不进内核池） |
+| `orbit_probe`（减速往返 + 分裂） | stage03B | 本轮不做 |
 
-> **开关不能用 F1**：`debug_toggle` 已被 `scripts/debug/debug_drawer.gd` 与 `scripts/scenes/main_menu.gd` 占用。**最终决定**：`use_kernel` 默认 `false`（Strangler：主流程零改动），试玩时用 `set_use_kernel(true)` 切换。
+内核现成：`accel` / `curve` / `laser_follow` / `avoid_player`。
 
----
-
-## 17. Track A spike 记录：S3a 内核路由（2026-09-11，已完成）
-
-> 分支 `kernel/s2-swap`。**范围**：让 `BulletManager` 能把弹幕整个切到内核池（spawn / 积分 / 渲染 / 剔除 / 暂停 / 清空），**不含碰撞**（见 §16.5）。默认 `use_kernel = false`（Strangler：主流程零改动）。
-
-**做了什么**
-
-- `scripts/autoload/bullet_manager.gd`：
-  - 新增 `use_kernel` / `_kernel: KernelBulletBackend` / `kernel_system()` / `set_use_kernel(v)` / `_enable_kernel()`。
-  - `shoot_bullet` / `shoot_player_bullet` / `shoot_enemy_bullet` / `shoot_bomb_bullet` 四入口按开关分流。
-  - `set_use_kernel(true)` 先清旧池再装配；`set_use_kernel(false)` 清内核池并把渲染数据源复位。
-  - `_enable_kernel()`：`process_physics_priority = -10`（§16.3 帧序）、`cull_rect = 东方框`、`cull_margin = 90`（对齐旧 `is_offscreen`）、`_multi_mesh.set_backend(_kernel)`（S2 路径）。
-  - `_physics_process` 的旧碰撞 / 出屏回收整块收进 `if not use_kernel:`；`clear_all / clear_bullets / pause_processing / resume_processing` 同步路由。
-- 新增 `test/test_kernel_swap.gd`（4 用例 / 8 断言）：路由到内核池 / `cull_rect` 对齐 / 切回旧路清空内核池 / 帧序优先。
-
-**验收**：全量 GUT **59 套 / 296 测试 / 3237 断言全绿**。
-
-**切到内核会怎样（不骗你）**：弹幕会**飞、会画**（内核积分 + S2 渲染快照），但**不判定**（碰撞未接），且**行为不全**（`bounce / gravity / radial` 仍是每弹协程，内核不跑 → 这些弹变直线；可用后端 `unmapped_behavior_count` 观察）。所以 S3a 的试玩验证的是"轨迹 / 朝向 / 颜色 / 层次对不对"。
-
-**下一拼图 S3b**：敌弹 ↔ 自机（命中 + 擦弹双阈值 + 擦弹随机清弹），新建 `KernelBulletPhysics` 宿主桥接。
-
----
-
-## 18. Track A spike 记录：S3b 敌弹 ↔ 自机（2026-09-11，已完成）
-
-> 分支 `kernel/s2-swap`。**范围**：把旧 `BulletPhysics._resolve_enemy_bullets_near_player` 1:1 移植到内核几何上（命中 + 擦弹双阈值 + 记忆随机清弹）。
-
-**做了什么**
-
-- 新增 `scripts/kernel_bridge/kernel_bullet_physics.gd`（`KernelBulletPhysics`，宿主桥接）：
-  - `process()` 由 `BulletManager._physics_process`（priority 0）在**内核积分之后**调用（内核 `BulletSystem` = priority -10，先跑）。
-  - `_enemy_bullets_vs_player()`：`CollisionResolver.overlap_ids(.., player.graze_radius, ENEMY)` 取候选 → **倒序**逐弹 `hit_test(id, pos, hitbox_radius)` 精判 → `player.miss()` + `despawn`；否则 `hit_test(id, pos, graze_radius)` → `mark_grazed` + 擦弹结算（`graze_count / add_score(10) / add_memory` + 音效）。
-  - 记忆 ≥50 时按旧公式 `remap(50, 100, 0.05, 0.30)` 随机清弹（`RNG.randf()`，S10 可复现）。
-- `BulletManager` 增 `_kernel_physics`，在 `_enable_kernel()` 里装配；`_physics_process` 的 `else` 分支调 `process()`。
-- 新增 `test/test_kernel_physics.gd`（4 用例 / 7 断言）：命中→回收+无敌 / 擦弹→计数且不回收 / 擦弹不重复计 / 无敌时穿过。
-
-**验收**：全量 GUT **60 套 / 300 测试 / 3244 断言全绿**。
-
-**几何语义对齐（关键）**：内核 `hit_test(id, center, radius)` 内部按 `radius + 弹半径` 判圆（矩形/偏移走 `HitGeometry` 统一实现），与旧 `_check_circle / _check_rect` 同义；**擦弹就是"更大 radius 的同一次判定"**。
-
-**下一拼图 S3c**：自机弹 ↔ 敌人（`damage` 侧表 + 记忆加成 + 音效/特效）+ bomb + 死亡清弹 + `out_grace`。
-
----
-
-## 19. Track A spike 记录：S3c 自机弹 ↔ 敌人（2026-09-11，已完成）
-
-> 分支 `kernel/s2-swap`。**范围**：把旧 `BulletPhysics._player_vs_enemies` 的规则移植到内核几何上；**damage 走宿主侧表**（内核 `BulletType` 无此字段，见 §16.1）。**A 方案至此验证成立**。
-
-**做了什么**
-
-- `KernelBulletBackend` 新增宿主专有侧表：`_damage_by_index`（伤害）/ `_hit_sfx_by_index`（命中音效 key），随 `_sync_host_tables()` 与纹理旁表一起增长；访问器 `damage_for_index(ti)` / `hit_sfx_for_index(ti)`。**内核零改动**。
-- `KernelBulletPhysics` 新增 `_player_bullets_vs_enemies()`：
-  - 倒序遍历内核行，只处理 `Faction.PLAYER`；对 `GameState.get_active_enemies()` 逐个 `hit_test(i, enemy.pos, enemy.hitbox_radius)`。
-  - 命中 → `enemy.take_damage(damage * bonus)` + `add_memory(MEMORY_HIT_BY_BULLET)` + 音效规则 + 命中特效 + `despawn`。
-  - 与旧实现一致：Boss 时符 / 未开战（`current_phase() == null or is_timeout_only`）时弹穿过；`bonus = 1 + remap(memory, 0, 50, 0.15, 0.05)`（记忆 <50 时）。
-  - 命中音效 1:1：专属 key 任何敌人命中都播（音量表 `HIT_SFX_VOLUME`）；默认仅 Boss 残血播；未知 key 回退 `normal_damage` 并告警。
-- 新增测试：`FakeEnemy`（轻量假敌人）+ damage 侧表用例；`test_kernel_physics` 现 5 用例 / 9 断言。
-
-**验收**：全量 GUT **60 套 / 301 测试 / 3246 断言全绿**。
-
-**A 方案成立的关键证据**：`damage` 不引入内核也能 1:1 保住（侧表 + 宿主规则）→ §16.1 的 "Boss TTK 差 ~10×" 风险被规避，内核仍零改动。
-
-**本步仍未接（明确列出，别以为是全的）**：
-
-- `bomb`（X 键）：原项目是 `bomb_bullet` + `BOMB_BEHAVIOR` 协程自爆——依赖 S4 行为移植。
-- **死亡清弹**（Miss / Boss 击破 / Bomb 扩散圈）：`DeathClear` 仍遍历旧 `_pool`；内核池需另接。 **→ S3d 已接，见 §20。**
-- `out_grace`：内核按 `cull_margin=90` 统一剔除，未按弹型宽限（bomb 的 9999 宽限会失效）。
-- **行为**（`bounce / gravity / radial` 等）：内核不跑 `coroutine_script` → 目前按直线飞（S4）。
-- **自机弹记忆变红**：旧 `Bullet.bind` 在 `memory<50` 时把 `sprite.modulate` 往红 lerp，桥接尚未复现。
-
-**试玩入口**：`BulletManager.set_use_kernel(true)`（默认 `false`；游戏内按 **F2** 热切）。**完整可玩性还差 S4（行为）+ 上面 3 项**——当前切过去能看到/打到，但 Bomb、反弹弹会不对。
-
-## 20. Track A spike 记录：S3d 死亡清弹（2026-09-11，已完成）
-
-> 分支 `kernel/s2-swap`。**范围**：把旧 `DeathClear` 的展开清弹圈接到内核池。**这是试玩唯一发现的行为缺失**（Boss 阶段击破 / Miss 时弹幕不清）。
-
-**问题**：`DeathClear.process()` 直接遍历 `_pool.active_bullets`（旧 `Bullet` 节点数组）。内核路径下旧池恒空 → 清弹圈空转，弹留在屏幕上。
-
-**做了什么**
-
-- **不重写清弹圈**：`DeathClear` 仍是“展开半径 + 切生长激光头”的唯一实现；只把“清圆内敌弹”抽成注入回调 `_kernel_sweep: Callable`（签名 `(center, radius, on_clear) -> bool`，true = 已由内核清完，跳过旧循环）。旧池逐弹循环**原样保留**在 `if not handled:` 分支。
-- `KernelBulletPhysics.sweep_enemy_bullets()`：倒序遍历内核行，只清 `Faction.ENEMY` 且在半径内的弹；逐弹 `on_clear`（掉道具）→ `HitEffectPool.play(_CLEAR_EFFECT, pos, ZERO, sys.get_color(i))` → `despawn(i)`。与旧循环 1:1（颜色取内核当前色；**含出生雾中的弹**）。**内核零改动**——直接复用现成 `despawn`。
-- `BulletManager._kernel_sweep_death_clear()`：`use_kernel` 为真 → 交内核扫掠并返回 true，否则返回 false 交回旧循环；回调在 `_ready` 注入 `DeathClear.setup()`。
-
-**为什么不用内核现成的 `cancel_bullets()`**：读实现后两点不合——(1) 它是一次性全清，而死亡清弹是**逐帧扩张半径**；(2) 它的消散特效发成内核“纯特效行”（`_type_index < 0`），而当前渲染桥只认弹型行，特效行不会画。故走宿主侧逐弹扫掠、复用 `HitEffectPool`。
-
-**为什么分派落在 BulletManager**：双后端分派的唯一归属地（S3a 起的约定）；`DeathClear` 保持后端无关，旧池路径零风险（原循环一行未改）。
-
-**顺手修正的一处认知**：旧 `Bullet.bind()` 末尾**无条件** `is_ready = true`（`bullet.gd:135`），所以出生雾中的弹也会被死亡清弹清掉——内核扫掠据此**不做** `fx_phase` 过滤，与旧行为一致。
-
-**验收**：`test_kernel_physics` +2（圆内/圆外、自机弹免疫）、`test_kernel_swap` +2（内核集成、旧池回归）；全量 GUT **60 套 / 305 测试 / 3254 断言全绿**。
-
-**S3 收敛后剩余（未接）**：`bomb`（X，依赖 S4）、`out_grace`（按弹型出界宽限）、行为（`bounce / gravity / radial`，S4）、自机弹记忆变红（桥接未复现）。
-
-## 21. Track A/S4 方案：行为桥与端口契约（2026-09-11，决策）
-
-> **范围**：把旧 `coroutine_script` / `BulletData.accel` 的运动行为接到内核 `Behavior`。本文先钉**契约**，再按 S4a–d 落地。**核心结论：只有一个扩展点（`Behavior` 注册表），没有“特殊途径”。**
-
-### 21.1 行为清单（实测，2026-09-11）
-
-| 宿主行为 | 用在哪 | 内核现状 | 处置 |
-|---|---|---|---|
-| `BulletData.accel`（世界匀加速） | 魔理沙 opt2、stage03B 分裂弹 | 无 | **S4a** `world_accel` |
-| `gravity_bullet`（竖直向下加速） | stage01 杂兵01/02/03 | 无（= 世界向下 accel） | **S4a** 端口 → `world_accel` |
-| `radial_accel_bullet`（沿初方向加速 + 碰顶边 re_fire） | stage01 enemy04 | `accel` 覆盖加速；re_fire 无 | S4c（加速已在） |
-| `bounce_bullet`（沿向加速 + 三面反弹 + 瞄准 Boss re_fire） | stage01 非符1 | 无 | **S4c** 桥接 |
-| `non_mid01_bullet`（近自机逃 + 近 Boss 散圈消失） | stage01 中boss非符 | `avoid_player` 覆盖逃跑 | **S4c** 散圈 |
-| `move_homing`（追杀最近敌人） | 灵梦 opt1 | `WorldQuery` 在、行为缺 | **S4b** `homing` |
-| `marisa_laser_follow`（锚定漂移 + 松手渐隐） | 魔理沙非focus激光 | `laser_follow` 覆盖漂移 | **S4c** 渐隐 |
-| `orbit_probe`（减速往返 + 分裂） | stage03B | 无 | **本轮不做**（2 文件 WIP） |
-| `bomb_behavior`（绕自机扩张 + 追踪 + 爆炸） | 炸弹 | 无 | **S4d** 桥接 |
-
-内核现成：`accel` / `curve`（宿主没人用）/ `laser_follow` / `avoid_player`。
-
-### 21.2 唯一扩展点 = `Behavior` 注册表
+### 15.2 唯一扩展点 = `Behavior` 注册表
 
 一切行为——内核自带、桥接自定义、未来的 VM 步骤——都是 `Behavior` 子类，经同一入口注册：
 
@@ -1043,16 +512,13 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 func register_behavior(move_name: StringName, behavior: Behavior) -> void
 ```
 
-**逃生口不是后门，它就是前门本身。** VM（`ScriptedBehavior`）只是注册表里的第 N 个租户，和手写 `Behavior` 平级。
-纪律三条（守住即“干净”）：
+**逃生口不是后门，它就是前门本身。** VM（`ScriptedBehavior`）只是注册表里的第 N 个租户，和手写 `Behavior` 平级。纪律三条：
 
 1. 必须跑在 behavior pass（不绕帧序 / 协调器）；
 2. 只读写自己那一行（`_behavior_params` 只读 / `_behavior_state` 每弹）；
 3. 需要宿主全局 → 放 `scripts/kernel_bridge/behavior/`，内核保持零宿主引用。
 
-> 已有同形先例：`EnemyRoutine = MovePattern × ShootPattern`（数据驱动）+ 没覆盖就写新的 `MovePattern` 子类；`VisualShader` ↔ `Shader`；VFX Graph + Custom HLSL。
-
-### 21.3 端口契约（内容 → 内核）
+### 15.3 端口契约（内容 → 内核）
 
 内容行为脚本**可选**实现（duck-typed，不改 `CoroutineScript` 基类）：
 
@@ -1066,169 +532,30 @@ func kernel_port() -> Dictionary:
     # 未来 VM：return {program = [ {op=&"wait", t=0.3}, ... ]}
 ```
 
-- **`move` 与 `program` 双形态**：VM 是纯加法，内容 API 不返工（§21.6）。
+- **`move` 与 `program` 双形态**：VM 是纯加法，内容 API 不返工。
 - 无 `kernel_port()` / 无 `move` / 无 `program` → `unmapped_behavior_count += 1`，直线。
-- 映射按**内容签名**（`Script` × `params` hash）缓存，不每发 `instantiate`（沿用 S1 弹型缓存思路）。
+- 映射按**内容签名**（`Script` × `params` hash）缓存，不每发 `instantiate`。
 - `BulletData.accel != Vector2.ZERO` 且无 coroutine（宿主语义互斥）→ 直接 `move=&"world_accel"`。
+- 替换弹提供 **`spawn_factory: Callable`**（每次返回新 `BulletData`），**不要** `duplicate()`——`Resource.duplicate()` 会丢 `texture` 字段（S4c-1 实测）。
 
-### 21.4 帧序与装配
-
-- 优先级（原项目无 `FrameOrder`，用绝对 `process_physics_priority`）：内核积分 **-10** → 行为 **-5** → 宿主碰撞 **0**。
-- 装配点：`KernelBulletBackend.setup_behaviors(player, enemy_provider)`，由 `BulletManager._enable_kernel()` 调；`WorldQuery` provider = `GameState.get_active_enemies`。
-- 已知限制：`BehaviorContext` 在 setup 时捕获 player 引用；若为空，涉及自机的行为（`avoid_player` / `laser_follow`）需在 S4b/c 再处理“动态取自机”。S4a 只用 `world_accel`，不受影响。
-
-### 21.5 行为归属线
+### 15.4 行为归属线
 
 | 层 | 放什么 | 例子 |
 |---|---|---|
-| 内核 `scripts/kernel/behavior/` | 纯机制、零宿主依赖 | `accel` / `curve` / `laser_follow` / `avoid_player`（未来 `homing`） |
-| 桥接 `scripts/kernel_bridge/behavior/` | 需宿主 / 内容 API 的行为 | `world_accel`（S4a）、`bounce` / `bomb` / 散圈（S4c/d） |
+| 内核 `scripts/kernel/behavior/` | 纯机制、零宿主依赖 | `accel` / `curve` / `laser_follow` / `avoid_player` |
+| 桥接 `scripts/kernel_bridge/behavior/` | 需宿主 / 内容 API 的行为 | `world_accel` / `homing` / `bounce` / `non_mid_flee` / `marisa_laser` |
 | 内容 `data/**` | 用 `kernel_port()` 把参数翻译成上述名字 | `gravity_bullet` → `world_accel` |
 
-**S4 期间新通用行为先进桥接层**，保持内核冻结（承接 S3 的 A 方案：内核零改动）；内核定型后再回迁重建版 → vendor（README 单一真相的口子）。
+**S4 期间新通用行为先进桥接层**，保持内核冻结；内核定型后再回迁重建版 → vendor。
 
-### 21.6 Timeline 感与 VM（预留，不现在建）
+### 15.5 仍生效的两个决策
 
-- 想要“像 Timeline 一样方便”：那属于 **L 方案**（数据驱动 behavior VM，见 `DECISION_DANMAKU_ARCHITECTURE.md` §4），**GDExtension 只是它的加速器**（§6.6 / §8），不是前提。
-- 便宜的中间步：**行为链**（一颗弹挂有序行为槽）能吃掉大半“流程感”，几乎不加机制。
-- **VM 触发条件**：行为种类/复杂度爆炸到“`Behavior` 子类写法开始重复”，或解释器成为热点。当前 ~8 个行为、多为 1–2 个公式参数 → **不建**（YAGNI）。
-- 逃生门已留：端口契约 §21.3 已容 `program`；VM 落地时是**纯加法**。
+- **`bomb` 走宿主节点（不进内核池）**：bomb 需要 `out_grace`（越界不被剔除），而 A 方案下内核 cull 统一、无 per-type grace；bomb 只 8 颗、生命周期短、宿主动作多 → 宿主 `Node2D` 最干净。
+- **`out_grace` 与出生雾暂缓**：stage01 + 玩家路径当前不需要；将来作为弹型**属性**接入（正好是 GDExtension 的数据属性之一）。
+
+### 15.6 Timeline 感与 VM（预留，不现在建）
+
+- 「像 Timeline 一样方便」属于 **L 方案**（数据驱动 behavior VM），**GDExtension 只是它的加速器**，不是前提。
+- 便宜的中间步：**行为链**（一颗弹挂有序行为槽）能吃掉大半「流程感」。
+- **VM 触发条件**：行为种类/复杂度爆炸到「`Behavior` 子类写法开始重复」，或解释器成为热点。当前 ~8 个行为、多为 1–2 个公式参数 → **不建**（YAGNI）。
 - 别混三件事：演出 Timeline（计划内，允许）｜敌人发射模式 Timeline/协程（**否决**）｜弹幕运动流 VM（第三类，就是 L）。
-
-### 21.7 分步与验收
-
-| 步 | 内容 | 可见成果 |
-|---|---|---|
-| **S4a** | 行为管道 + `world_accel` + `BulletData.accel` + `gravity` 端口 | 杂兵重力 / 世界加速弹不再走直线 |
-| **S4b** | `homing`（用现成 `WorldQuery`） | 灵梦 opt1 会追敌 |
-| **S4c** | 桥接内容行为：`bounce` / 散圈 / 顶边 re_fire / marisa 渐隐 | 非符1 反弹、中boss非符散圈、激光会消失 |
-| **S4d** | `bomb` + `out_grace` + 出生雾 + 自机弹记忆变红 | X 键与收尾项 |
-
-每步独立可试玩（F2 切内核）、可回退、单独提交。
-
-### 21.8 S4a 落地（2026-09-11，已完成）
-
-- 桥接 `scripts/kernel_bridge/behavior/world_accel_behavior.gd`：世界方向匀加速，只改 velocity（位置由系统积分）。
-- `KernelBulletBackend`：`setup_behaviors()`（注册 `accel`/`curve`/`laser_follow`/`avoid_player`/`world_accel`，优先级 **-5**）、`_port_for()`（duck-typed `kernel_port()`，按 `Script×params` 缓存）、`shoot()` 端口解析（`move` 归一，无端口计未映射）。
-- `BulletManager._enable_kernel()`：幂等装配行为管道，并刷新自机引用（`is_instance_valid` 守卫，防 freed player 传参会崩）。
-- 内容端口：`gravity_bullet.gd.kernel_port()` → `world_accel`；`BulletData.accel` 直接 `world_accel`。
-- 验收：新 `test_kernel_behavior`（5） + `test_kernel_swap` 管道用例；全量 **61 套 / 312 测试 / 3269 断言全绿**。
-
-### 21.9 S4b 落地（2026-09-11，已完成）
-
-- 桥接 `scripts/kernel_bridge/behavior/homing_behavior.gd`：移植旧 `move_homing.gd`；每帧转向限制 + 速度爬升 + 持续时长，**只 set_velocity**。
-- 目标查询用现成 `WorldQuery.get_enemies()`；「跳时符 / 未开战 Boss」放桥接层（引用宿主 `Boss` / `PhaseData`，内核不碰）。
-- `move_homing.gd.kernel_port()` → `homing` + 6 参数。
-- `setup_behaviors()` 改为**可重复注入** `WorldQuery` provider（支持测试 / 换关）。
-- 测试夹具 `test/fixtures/no_port_behavior.gd`：把「未映射计数」用例与 S4 进度解耦。
-- 验收：`test_kernel_behavior` +2（有敌偏转 / 无敌不偏，且速度按 `lerp` 爬升）；全量 **61 套 / 314 测试 / 3274 断言全绿**。
-- 语义备注：旧 `_apply_homing` 里的 `speed_mult/alignment` 随后被 `normalize()*current_speed` 覆盖——**死代码**，桥接未复刻。
-
-### 21.10 S4c-1 落地：`radial_accel_bullet`（顶边 re_fire 试点）（2026-09-11，已完成）
-
-- 新桥接 `KernelBehaviorHost`（延后动作队列）：内核契约禁止行为循环中途增删行，故行为 `request_despawn` + 入队，循环后由 `KernelBulletBackend._physics_process`（**-4**）`flush()`。
-- 新桥接 `RadialAccelBehavior`：沿初方向加速 + 碰 `FIELD_TOP` 换成向下弹（模板由内容提供）。
-- `radial_accel_bullet.gd.kernel_port()` → `radial_accel`；`spawn_data`（米弹 / 紫 / blend）+ sfx key 都在**内容侧**。
-- 优先级链补全：内核积分 **-10** → 行为 **-5** → 延后 flush **-4** → 宿主碰撞 **0**。
-- 验收：`test_kernel_behavior` +2；全量 **61 套 / 316 测试 / 3279 断言全绿**。
-
-### 21.11 S4c-1 修复：替换弹贴图丢失（2026-09-11，已完成）
-
-**试玩现象**：内核路径下 `radial_accel` 到顶边不换弹（看不到向下的弹），但端口/行为诊断打印都正常。
-
-**定位**：打印证明「映射 + 顶边换弹」都发生 → 问题在**入队之后**。补断言发现 **替换弹 `texture_for_index(ti) == null`**，再定位到 **`BulletData.duplicate()` 会丢 `texture`（Resource 字段）** → 渲染桥 `_sync_kernel` 对 `tex == null` 的弹直接 `continue` → **弹在物理上存在，但完全不画**。
-
-**修法**：
-
-- 内容 `kernel_port()` 用 **`spawn_factory: Callable`**（每次调用返回**新** `BulletData`）替代「共享模板 + `duplicate()`」。
-- `KernelBulletBackend` **保活**端口探测实例（`_port_probes`）——端口里的 Callable 绑在探测实例上，释放会让回调失效。
-- 行为改 `factory.call()`。
-
-**教训**：`Resource.duplicate()` 对 `texture` 这类 Resource 字段不可靠（本次实测丢）；跨「模板」复用一律走**工厂**，别 duplicate。**「弹在但看不见」的第一嫌疑 = 贴图 / 分组键**，先查 `texture_for_index`。
-
-**验收**：新增工厂测试（每次新对象 + 贴图不丢）+ 替换弹贴图断言；全量 **61 套 / 319 测试 / 3289 断言全绿**。
-
-### 21.12 S4c-2 落地：`bounce_bullet`（非符1 反弹弹）（2026-09-11，已完成）
-
-- 桥接 `BounceBehavior`：沿飞行方向加速；碰**左/右/上**框（下墙穿出）→ 位置夹回框边 → 朝 `GameState.get_boss()`（无 Boss 退化向下）转 `bounce_angle` → 工厂造替换弹 + `kira` 音效 + `request_despawn`。
-- `bounce_bullet.gd.kernel_port()` → `bounce`；`spawn_factory` = 米弹 / GOLD / blend（与旧 `_re_fire` 1:1）；`spawn_speed` 可覆盖。
-- 测试：无 Boss 碰左框 → 向下弹；沿飞行方向加速（未碰框不换弹）。
-- 验收：`test_kernel_behavior` +2；全量 **61 套 / 321 测试 / 3296 断言全绿**。
-- 已知：旧脚本的 `spawn_tex` / `spawn_color` 是**死变量**（`_re_fire` 硬编码米弹 / GOLD）——照旧不复刻。
-
-### 21.13 S4c-3 落地：`non_mid01_bullet`（中boss非符弹丸）（2026-09-11，已完成）
-
-- 桥接 `NonMidFleeBehavior`：TRAVEL → 自机进入 `player_proximity`（默认 150）→ FLEE（沿远离自机方向）；FLEE 期每 3 帧问内容 `on_flee_burst(pos, boss_pos, has_boss, host)`，返回 true → `request_despawn`。
-- **难度 / RNG / 散圈形状全留内容**：`non_mid01_bullet.kernel_port()` 提供 `on_flee_burst` 回调；`diff_pick`（= `arr[GameState.selected_difficulty]`）与 `RNG` 在内容侧，桥接只传 `boss_pos / has_boss / host`。
-- **散圈走延后队列**：内容 `_kernel_spread`（内核版 shoot_spread）只 `host.queue_spawn`，避免行为循环中途 spawn。
-- 测试：TRAVEL→FLEE 转向；内容回调近 Boss 入队散圈（flush 后 pool 非空）。
-- 验收：`test_kernel_behavior` +2；全量 **61 套 / 323 测试 / 3302 断言全绿**。
-
-### 21.14 S4c-4 落地：`marisa_laser_follow`（漂移 + 整批渐隐）（2026-09-11，已完成）
-
-- **漂移**：内核现成 `LaserFollowBehavior`；内容 `marisa_laser_follow.kernel_port()` → `move=&"laser_follow"`，params = `anchor_id / anchor_offset / drift_speed / angle`。`cs_marisa` 改为**发射前**把角度/锚点写进 `b.params`（旧池路径照旧配 `extra`）。
-- **渐隐**：新桥接 `MarisaLaserFade`（对应重建版 `LaserShot`）——按住射击 = `set_render_fade(LASER, 1)`；松手 / focus = 每帧递减到 0 → 清掉所有 `kind==LASER` 行。渲染桥 `_sync_kernel` 现按 `bt.kind` 乘 `get_render_fade`。
-- **Kind 标记**：`shoot()` 见 `move==&"laser_follow"` 时给该 `BulletType.kind = LASER`（激光段贴图唯一，共享弹型无副作用）。
-- 测试：端口映射 + LASER kind + 松手渐隐到 0 并清行。
-- 验收：`test_kernel_behavior` +1；全量 **61 套 / 324 测试 / 3306 断言全绿**。
-- 已知：渐隐是**整批**（按 Kind），非逐弹 alpha——与重建版一致；逐弹 alpha 需内核 `set_color`，按 A 方案不做。
-
-### 21.15 S4c-4 修复：子机锚点必须用 `global_position`（2026-09-11，已完成）
-
-**试玩现象**：魔理沙激光不跟随子机，跑到屏幕另一侧。
-
-**根因**：`cs_player._sync_options` 把子机挂成**玩家的兄弟节点**（`leader.get_parent().add_child(opt)`），`opt.position` 相对 World；内核 `LaserFollowBehavior` 读 `node.position`（假设子机是玩家的子节点）→ `anchor = 玩家世界位 + 子机世界位`，**偏移翻倍**。
-
-**修法**：新增桥接 `MarisaLaserBehavior`（`global_position` 语义，与旧实现一致），内容端口改 `move=&"marisa_laser"`；内核 `LaserFollowBehavior` 保留但宿主不用。
-**顺带**：端口成员改名 `port_*`，避免与旧 lambda 的局部 `drift_speed / drift_angle` 冲突（编辑器 `SHADOWED_VARIABLE`）。
-
-**验收**：新增锚点断言（x 贴子机世界位，非翻倍）；全量 **61 套 / 325 测试 / 3308 断言全绿**。
-
-### 21.16 S4d-1 落地：自机弹记忆变红（2026-09-11，已完成）
-
-- `KernelBulletBackend.shoot`：PLAYER 弹在 `GameState.memory_value < 50` 时把 tint 往 `Color.RED` lerp `remap(mem,0,50,1,0)*0.5`（旧 `Bullet.bind` 同式，**spawn 时定一次**）。
-- 验收：`test_kernel_behavior` +2（mem=0 偏红 / mem=100 原色）；全量 **61 套 / 327 测试 / 3310 断言全绿**。
-
-### 21.17 S4d 剩余：bomb 架构决策（2026-09-11，待定）
-
-`bomb_behavior` 需要：绕自机扩张 → 追踪 → 爆炸（清弹 + 伤害 + 视觉）；且 `BulletData.bomb().out_grace = 9999`（防轨道越界被内核 cull 剔除）。内核 cull 是按 `cull_rect + margin` **统一**判定，A 方案（内核零改动）下**没有 per-type out_grace**。两条路：
-
-- **A 内核行为 + cull 守卫**：bomb 留在内核池；桥接临时放大 `cull_margin`。统一 SoA，但 `cull_margin` 是全局 hack，计数 / 清理易漏。
-- **B 宿主节点 bomb（推荐）**：bridge `KernelBomb` Node2D 自带 Sprite 渲染、不走内核池；天然无 cull / out_grace / kind 问题，清弹 / 伤害 / 视觉都是宿主动作。代价：bomb 不在 SoA（8 个实例无所谓），行为逻辑在桥接重复一份。
-
-→ 待用户选。
-
-### 21.18 S4d-2 落地：bomb 宿主节点（B 方案）（2026-09-11，已完成）
-
-- 新桥接 `KernelBomb`（Node2D + 自带 Sprite）：1:1 移植 `bomb_behavior.gd`（绕自机扩张 → 持有 → 追踪 → 爆炸）。爆炸 = 清弹（`start_death_clear`）+ 范围伤害 + 视觉。
-- `BulletManager.shoot_bomb_bullet` 内核分支改 `_kernel.spawn_bomb()`；`clear_all` / `clear_bullets` 调 `_kernel.clear_bombs()`。
-- **为什么不在内核池**：bomb 需要 `out_grace`（轨道越界不被内核 cull 剔），而 A 方案下内核 cull 统一、无 per-type grace；bomb 只有 8 颗、生命周期短、宿主动作多 → 宿主节点最干净。
-- 验收：`test_kernel_swap` +1（bomb 返回宿主节点且不进内核池 / 读 params）；全量 **61 套 / 328 测试 / 3314 断言全绿**。
-
-### 21.19 `out_grace`（出生保护）与出生雾：暂缓，留给 GDExtension（2026-09-11，决定）
-
-- **`out_grace`**：内核 cull 统一（`cull_rect + margin`），A 方案下无 per-type grace。stage01 + 玩家路径**当前不需要**（只有 stage03B 探测弹用，本轮范围外）；bomb 走宿主节点后也不需要。**决定**：暂缓，将来作为弹幕 / 弹型的**属性**接入（正好是 GDExtension 的数据属性之一）。
-- **出生雾**：`spawn_fog` 只是「弹出生时被雾遮一下」的视觉；内核路径现在立即显示。**决定**：暂缓（低级视觉差）。
-
-### 21.20 S4d-3：bomb 弹丸持续清弹（2026-09-11，已完成）
-
-- 试玩反馈：bomb 原来只在**爆炸那一下**清；期望**每颗 bomb 弹丸自己周围持续清**（不是以自机为中心的圈）。
-- 新增 `BulletManager.clear_enemy_bullets_in_circle(center, radius)`（双后端：内核 `sweep_enemy_bullets` / 旧池逐弹 `return_bullet` + 消散特效）。
-- `KernelBomb` / `bomb_behavior.gd` 每帧围绕自己调一次，`clear_radius` 默认 **90**（可 `params` 覆盖），**不节流**。
-- 验收：`test_kernel_swap` +1（bomb 周围敌弹被清）；全量 **61 套 / 329 测试 / 3316 断言全绿**。
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

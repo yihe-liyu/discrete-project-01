@@ -325,6 +325,64 @@
 - **踩坑**：新增 `class_name` 后必须让 Godot 重建 `.godot/global_script_class_cache.cfg`（跑一次 `godot --headless --import`），否则 headless 报 `Identifier "LayerConfig" not declared`——不是代码错，是缓存没刷新。
 - **顺带修**：`test_recent_mechanics.gd` 练习记录用例非幂等——历史遗留 `stage=99` 幽灵记录会让 `get_or_create` 命中旧值（实测 attempts=6/captures=3）继续累加造成假失败；已加起始清除并清掉本地 `.tres` 幽灵项。
 
+### 2026-09-11 — S0：内核 vendor（`scripts/kernel/` 自包含接入）
+
+- **目标**：把重建版内核（tag `kernel-v1` / commit `238507a`）整块搬进 `scripts/kernel/`，验证「内核不认识宿主全局」。
+- **为什么**：Strangler 第一步——新内核先自包含进来、**不碰任何调用点**；内核要纯净（零宿主引用）才谈得上复用与无头测试。
+- **对照旧项目**：旧弹幕 = `BulletPool` 节点池 + `BulletPhysics` + `SpatialHash`；内核 = SoA `BulletSystem` + MultiMesh + uniform grid。
+- **新落点**：`scripts/kernel/`（14 `.gd` / 1,221 行：`bullet_system.gd` + `behavior/` + `collision/` + `bullet_type.gd`/`effect_type.gd`）+ `scripts/kernel/README.md`（来源 / 单一真相 / 边界规则）。
+  - **唯一 vendoring 改动**：`bullet_system.gd` 删掉 `BulletRenderer` 注入——内核本体不引宿主渲染器类型（R2/R9）。
+  - **不带渲染与图集**：继续用原项目 `BulletMultiMesh`（本就按纹理分组、支持独立 PNG 与图集区域）——对应重建版决策备忘 §10.4 的 hybrid 结论。
+- **验收**：新增 `test_kernel_vendor.gd`（2 用例）证明内核独立可 `new` / `spawn` / `query_circle` / `hit_test` / `despawn`；全量 GUT **56 套 / 281 测试 / 3208 断言全绿**；`--import` 无撞名 / 解析错误。
+- **边界**：`scripts/kernel/**` 唯一允许引用宿主的是 `LayerConfig`；其余零宿主引用。**回退点**：原项目 tag `pre-kernel-adapter`。
+
+### 2026-09-11 — S1：适配层 `KernelBulletBackend`（宿主 `BulletData` → 内核 `BulletType`）
+
+- **目标**：给内核加一个宿主侧桥，把内容 `BulletData` 翻译成内核 `BulletType` + 侧表；S1 只做直线。
+- **为什么**：内核不认识 `BulletData`（宿主内容类型）——映射留在桥接层，内核保持零内容依赖。
+- **新落点**：`scripts/kernel_bridge/kernel_bullet_backend.gd`。四条语义对齐：
+  - **方向 vs 速度**：`direction` 定方向，`data.velocity` 只取长度（对齐旧 `Bullet.bind`）。
+  - **圆判定归零**：`shape == CIRCLE` 时把内核 `hitbox_size` 归零，否则每颗圆弹会按默认 `size(8,8)` 变矩形。
+  - **按内容签名缓存弹型**：原项目两种用法并存（`enemy01` 复用实例改速度 / `cs_reimu` 每发 `BulletData.new()`）——按实例缓存会让内核弹型表**每发长一个**，故按 `signature_of()` 内容签名缓存。
+  - **纹理旁表** `texture_for_index()`：内核 `BulletType` 不含 `Texture2D`，S2 渲染靠它取「哪张图」。
+- **未映射计数**：`coroutine_script` / `accel` 未映射时按直线发射并计入 `unmapped_behavior_count`（S4 接线前的覆盖面探针）。
+- **验收**：新增 `test_kernel_backend.gd`（6 用例 / 14 断言：签名复用 / 速度语义 / 纹理旁表 / 阵营映射 / 圆矩判定 / 未映射计数）；全量 GUT **57 套 / 287 测试 / 3222 断言全绿**。**仍纯增量**——`BulletManager` 一行未改。
+
+### 2026-09-11 — S2：渲染读内核快照（`BulletMultiMesh` 双数据源）
+
+- **目标**：`BulletMultiMesh` 支持「注入后端就画内核 SoA，否则走旧节点」——不换发射入口先换渲染，独立验证轨迹 / 朝向 / 颜色 / 层次。
+- **为什么**：把「画得对不对」与「发得对不对」解耦，是 Strangler 能逐块回退的前提。
+- **新落点**：`scripts/bullet/bullet_multi_mesh.gd` 加 `set_backend()` → `_sync_kernel()`（position / velocity / color / faction / type_index / type_registry + `backend.texture_for_index()`）；未注入时 `_sync_nodes()` **逐字保留**；`_group_key()`（纹理 RID + region + 阵营 + tint_mode）两路共用，批次数才可比对。
+- **踩坑（阵营顺序）**：内核 `Faction{ENEMY=0, PLAYER=1, NONE=2}` 与原项目 `Bullet.FACTION_PLAYER=0 / ENEMY=1 / BOMB=2` **顺序不同**——`_host_faction()` 必须显式映射，否则敌弹 / 自机弹的 z 层互换。
+- **踩坑（headless）**：dummy 渲染器下 `MultiMesh.get_instance_transform_2d()` **读回恒为 0**——逐实例几何不能在 CI 断言；S2 断言只落批次数 / `visible_instance_count` / `z_index` / 材质 / 网格尺寸，画面一致性留给手动试玩。
+- **验收**：新增 `test_kernel_render.gd`（5 用例 / 7 断言）；全量 GUT **58 套 / 292 测试 / 3229 断言全绿**。
+
+### 2026-09-11 — S3a：内核路由（`use_kernel` 开关，明确不含碰撞）
+
+- **目标**：让 `BulletManager` 把弹幕整个切到内核池（spawn / 积分 / 渲染 / 剔除 / 暂停 / 清空），**不含碰撞**。
+- **为什么**：读全旧 `BulletPhysics` / 内核 `CollisionResolver` 后确认 S3 不是「换发射入口」而是「换整个弹幕运行时」——只换发射会让弹幕变成「只飞不判定」或数值差 10–50 倍；先只切「飞和画」，才有一条可独立回归的线。
+- **新落点**：`scripts/bullet/bullet_manager.gd`：`use_kernel` / `_kernel` / `kernel_system()` / `set_use_kernel()` / `_enable_kernel()`；四个发射入口按开关分流；`_physics_process` 的旧碰撞 / 出屏回收整块收进 `if not use_kernel:`。
+- **帧序是硬约束**：内核 `BulletSystem.process_physics_priority = -10`（先积分），宿主碰撞节点留在 0——否则碰撞读到**上一帧**位置。
+- **开关决定**：`use_kernel` 默认 `false`（Strangler：主流程零改动）；不用 F1（`debug_toggle` 已被 `debug_drawer.gd` / `main_menu.gd` 占用），试玩用 `set_use_kernel(true)`（F2 热切）。
+- **验收**：新增 `test_kernel_swap.gd`（4 用例 / 8 断言：路由到内核池 / `cull_rect` 对齐 / 切回清空内核池 / 帧序优先）；全量 GUT **59 套 / 296 测试 / 3237 断言全绿**。
+- **诚实的局限**：切过去弹幕会飞会画但**不判定**，且 `bounce / gravity / radial` 等行为变直线——S3a 只验证轨迹 / 朝向 / 颜色 / 层次。
+
+### 2026-09-11 — S3b：敌弹 ↔ 自机（命中 + 擦弹双阈值）
+
+- **目标**：把旧 `BulletPhysics._resolve_enemy_bullets_near_player` 1:1 移植到内核几何上。
+- **新落点**：新增 `scripts/kernel_bridge/kernel_bullet_physics.gd`（`KernelBulletPhysics`）；`BulletManager._physics_process` 在**内核积分之后**调 `process()`。候选查询用内核 `CollisionResolver.overlap_ids(.., graze_radius, ENEMY)` → **倒序**逐弹 `hit_test` 精判 → 命中 `player.miss()` + `despawn`，否则按 `graze_radius` 再判 → 擦弹结算（`graze_count` / `add_score(10)` / `add_memory` + 音效）；记忆 ≥50 时按旧公式 `remap(50,100,0.05,0.30)` 随机清弹。
+- **关键认知**：内核 `hit_test(id, center, radius)` 内部按 `radius + 弹半径` 判圆（矩形 / 偏移走 `HitGeometry` 统一实现）——**擦弹就是「更大 radius 的同一次判定」**，不需要第二套几何。
+- **验收**：新增 `test_kernel_physics.gd`（4 用例 / 7 断言：命中→回收+无敌 / 擦弹→计数不回收 / 擦弹不重复计 / 无敌穿过）；全量 GUT **60 套 / 300 测试 / 3244 断言全绿**。
+
+### 2026-09-11 — S3c：自机弹 ↔ 敌人（`damage` 走宿主侧表）
+
+- **目标**：移植旧 `BulletPhysics._player_vs_enemies` 的规则；**damage 不引入内核**。
+- **为什么**：内核 `BulletType` 没有 `damage` 字段，原项目默认 10.0（Bomb 50.0）——直接把原弹幕灌进内核，Boss TTK 会差 ~10×（玩法崩坏）。选择 **A 方案：宿主侧规则移植**，把 `damage` / `hit_sfx` 放桥接侧表。
+- **新落点**：`KernelBulletBackend` 增 `_damage_by_index` / `_hit_sfx_by_index`（随 `_sync_host_tables()` 与纹理旁表一起增长）+ `damage_for_index()` / `hit_sfx_for_index()`；`KernelBulletPhysics._player_bullets_vs_enemies()`（倒序、只处理 `Faction.PLAYER`、逐个 `hit_test`、记忆 bonus `1 + remap(memory,0,50,0.15,0.05)`、命中音效 1:1、时符 / 未开战穿过）。**内核零改动**。
+- **验收**：新增 `FakeEnemy` 轻量夹具 + damage 侧表用例（`test_kernel_physics` 5 用例 / 9 断言）；全量 GUT **60 套 / 301 测试 / 3246 断言全绿**。
+- **A 方案成立的证据**：`damage` 不进内核也能 1:1 保住（侧表 + 宿主规则），内核仍零改动——后续 S4 全部沿此路线。
+- **本步仍未接**：`bomb`（依赖 S4）、`out_grace`、行为（`bounce/gravity/radial`）、自机弹记忆变红（后由 S3d / S4 逐项补）。
+
 ### 2026-09-11 — S3d：死亡清弹接内核（后端分派收回 BulletManager）
 
 - **目标**：修试玩唯一发现的行为缺失——内核路径下 Boss 击破 / Miss 的展开清弹圈不清弹。
@@ -374,7 +432,7 @@
 ### 2026-09-11 — S4c-2：`bounce` 反弹弹
 
 - **目标**：非符1 的反弹弹在内核路径下也能碰框换向。
-- **做法**：桥接 `BounceBehavior` 1:1 移植（沿飞行方向加速 + 左/右/上碰框夹回 + 朝 Boss 转 `bounce_angle` + 换直线弹 + 音效）。替换弹走 §21.11 的 `spawn_factory`。
+- **做法**：桥接 `BounceBehavior` 1:1 移植（沿飞行方向加速 + 左/右/上碰框夹回 + 朝 Boss 转 `bounce_angle` + 换直线弹 + 音效）。替换弹走 S4c-1 的 `spawn_factory`（见上条）。
 - **边界**：Boss 取 `GameState.get_boss()`（宿主），落在桥接层；内核不碰。
 - **对照旧项目**：旧 `spawn_tex` / `spawn_color` 是**死变量**（`_re_fire` 硬编码米弹 / GOLD）——不抄「看起来能配其实没用」的参数。
 - **验收**：全量 GUT **61 套 / 321 测试 / 3296 断言全绿**。
