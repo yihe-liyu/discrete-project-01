@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-13 — N4-real 人类试玩验收 ✅：原生渲染视觉完全正确
+
+- **背景**：N4-real 后 `use_native_sync` 默认开 —— **只要扩展构建了，游戏就走原生渲染**。`verify.sh` 只能证「不崩、批次数对」；headless 读不到 MultiMesh 变换，**视觉是唯一自动化盲区**。
+- **验收方式**：**真人试玩**（非自动化）—— 这是这条风险的唯一出口。
+- **结果**：弹**朝向** / **激光淡出** / **图集弹** 全部正确；无串图、无错向。**N4-real 渲染路径风险关闭。**
+- **教训**：跨语言替换渲染，**自动化能测「结构」（分组键、批次数、活跃数），测不了「长相」** —— 「画错不报错」类 bug 只有人眼能兜。凡替换真实绘制路径，**必须留一次人工验收**。
+
 ### 2026-09-13 — N4-real：原生整段渲染同步 ✅ ~6.5×（6000 弹 7.19ms → 1.10ms）
 
 - **做法**：原生 `DanmakuRenderBridge` —— 类型表（`tex_key_base/tint_mode/kind/follow_dir/dir_offset`）+ `group(count, SoA, fade) -> {keys,starts,rows,rots,alphas}` + `fill(mm,...)`。**分组 + 每弹旋转/fade + 填充全在原生**；GDScript 只按组（O(groups)）取/建 MultiMesh。

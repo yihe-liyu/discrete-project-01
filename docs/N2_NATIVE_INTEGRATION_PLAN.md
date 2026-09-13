@@ -38,6 +38,7 @@
   类型表（`tex_key_base` 含 Atlas region hash / `tint_mode` / `kind` / `follow_dir` / `dir_offset`）
   + `group(count, SoA, fade)` + `fill` → **整段渲染同步 6.5×**（6000 弹 7.19→1.10ms）。
   `BulletMultiMesh.use_native_sync` 开关 + GDScript 回退。余：图集资源本身（S13）按需再做。
+- **人类试玩验收 ✅（2026-09-13）**：开关开、扩展构建下真人试玩 —— 弹朝向 / 激光淡出 / 图集弹**全部正确**（无串图、无错向）。**N4-real 渲染路径关闭**（自动化盲区已由人眼兜底）。
 
 ## 开关与回退
 
