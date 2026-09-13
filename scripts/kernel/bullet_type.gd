@@ -44,7 +44,7 @@ enum TintMode { MULTIPLY, BLEND }
 @export var frame_count: int = 1
 
 @export_group("Hit effect（可选：命中的那一方播）")
-## 击中特效场景（自机弹用）：命中时在命中点播一次（FxLayer 池化节点，支持帧动画）。
+## 击中特效场景（自机弹用）：命中时在命中点播一次（FxPool 池化节点，支持帧动画）。
 ## 颜色由命中方传"该弹当前的颜色"（含记忆调制），场景只决定形状/动画。
 @export var hit_fx: PackedScene
 

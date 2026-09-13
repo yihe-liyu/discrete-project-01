@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-11 — K7：特效命名消歧（MissCircleLayer / FxPool）
+
+- **目标**：`MissEffectManager` 与 `FxLayer` 名字都带 Effect/Layer，容易被当成重复；按各自**机制**改名消歧。
+- **做法**：
+  - `FxLayer` → **`FxPool`**（`scripts/effect/fx_pool.gd`）：它是**精灵特效节点池**（世界坐标，池化 `HitEffect`），不只命中——也放消弹/擦弹/敌人死亡。
+  - `MissEffectManager` → **`MissCircleLayer`**（`scripts/effect/miss_circle_layer.gd`）：它是**全屏反色圈**（`CanvasLayer` + `miss_circle.gdshader`，屏幕空间），不是通用 miss 管理器。
+  - 成员同步：`fx_layer` → `fx_pool`（含 `inject_fx_layer` → `inject_fx_pool`）；`game_scene.tscn` 节点名同步；测试文件改名。
+  - 两个文件头各补一句「与对方的分工」。
+- **度量**：易混命名 **2 → 0**；旧名在 `scripts`/`scenes`/`test`/`data` 残留 **0**。
+- **对照旧项目**：旧 `HitEffectPool` / `MissEffectManager` 两个 autoload 名字都像「所有特效」，实际一个局部精灵池、一个全屏 shader 圈；现在**名字即机制**。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3203 断言全绿**；orphans 10。
 ### 2026-09-11 — K6：BulletManager 声明式化（R21 收尾）
 
 - **目标**：`game_scene.tscn` 里最后一个在代码中 `new()` 的服务节点（`BulletManager`）改为场景声明，与 `FxLayer`/`StageRuntime`/`ItemPool`/`MissEffectManager` 一致。

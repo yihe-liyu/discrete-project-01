@@ -3,13 +3,13 @@ class_name HitEffect
 # 命中特效基类 — 支持对象池回收
 #
 # 用法（池化）：
-#   FxLayer.play(scene, pos, vel, tint)
+#   FxPool.play(scene, pos, vel, tint)
 #   effect.activate(pos, vel, tint)
 #   # 播完后自动 invisible + _on_finish()
 
 var velocity: Vector2 = Vector2.ZERO
 var _age: float = 0.0
-var _on_finish: Callable  # 回收回调，池化时由 FxLayer 注入
+var _on_finish: Callable  # 回收回调，池化时由 FxPool 注入
 
 
 func activate(p_pos: Vector2, p_vel: Vector2, p_tint: Color, p_on_finish: Callable = Callable()) -> void:

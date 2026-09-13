@@ -5,9 +5,9 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 @onready var _sub_viewport: SubViewport = %SubViewport
 @onready var _world: Node2D = %World
-@onready var _fx_layer: FxLayer = %FxLayer
+@onready var _fx_pool: FxPool = %FxPool
 @onready var _stage_runtime: StageRuntime = %StageRuntime
-@onready var _miss_layer: MissEffectManager = %MissEffectManager
+@onready var _miss_layer: MissCircleLayer = %MissCircleLayer
 @onready var _game_ui: GameUI = $UI
 @onready var _item_pool = %ItemPool
 @onready var _bullets: BulletManager = %BulletManager   # W4c/R21：弹幕世界（game_scene.tscn 声明）
@@ -25,8 +25,8 @@ func _ready():
 	# 组合根装配：Miss 圈 / 特效层 / 关卡运行时（均在 game_scene.tscn 声明，R21），这里只注入。
 	_stage_runtime.world = _world
 	_stage_runtime.miss_layer = _miss_layer
-	_stage_runtime.fx_layer = _fx_layer
-	_bullets.inject_fx_layer(_fx_layer)
+	_stage_runtime.fx_pool = _fx_pool
+	_bullets.inject_fx_pool(_fx_pool)
 	_bullets.fx_parent = _world            # 炸弹爆炸贴图挂 World（K4：不再全树找）
 	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层（K4）
 	_item_pool.refs = _stage_runtime.refs   # 道具经注册表取自机/资源（W4b-2b）
@@ -109,10 +109,10 @@ func _exit_tree():
 		GameEvents.boss_defeated.disconnect(_on_practice_cleared)
 
 	_stage_runtime.miss_layer = null  # 解除注入（节点随本场景释放）
-	_bullets.clear_all()       # 内含 fx_layer.clear_pool()
-	_bullets.inject_fx_layer(null)  # 解除特效层注入（防持悬空引用）
+	_bullets.clear_all()       # 内含 fx_pool.clear_pool()
+	_bullets.inject_fx_pool(null)  # 解除特效层注入（防持悬空引用）
 	_bullets.fx_parent = null
-	_stage_runtime.fx_layer = null
+	_stage_runtime.fx_pool = null
 	_stage_runtime.ui_layer = null
 	if SaveData.is_practice_mode:
 		SaveData.end_practice()

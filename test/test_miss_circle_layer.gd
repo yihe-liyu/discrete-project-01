@@ -5,8 +5,8 @@ extends GutTest
 const RUNNER_SCRIPT = preload("res://scripts/coroutine/base/coroutine_runner.gd")
 
 
-func _make_layer() -> MissEffectManager:
-	var layer := MissEffectManager.new()
+func _make_layer() -> MissCircleLayer:
+	var layer := MissCircleLayer.new()
 	autofree(layer)
 	add_child(layer)
 	layer.set_process(false)  # 测试手动驱动 _process，避免树里自动跑
@@ -14,8 +14,8 @@ func _make_layer() -> MissEffectManager:
 
 
 func test_no_longer_autoload() -> void:
-	assert_false(ProjectSettings.has_setting("autoload/MissEffectManager"),
-		"MissEffectManager 应已从 autoload 移除（改为场景节点）")
+	assert_false(ProjectSettings.has_setting("autoload/MissCircleLayer"),
+		"MissCircleLayer 应已从 autoload 移除（改为场景节点）")
 	assert_false(ProjectSettings.has_setting("autoload/LayerConfig"),
 		"LayerConfig 应已从 autoload 移除（改为 class_name 静态常量）")
 
@@ -30,7 +30,7 @@ func test_add_circle_appends_and_caps() -> void:
 	var layer := _make_layer()
 	for i in 9:
 		layer.add_circle(Vector2(i, i), 0.8, 100.0)
-	assert_eq(layer._circles.size(), MissEffectManager.MAX_CIRCLES, "超过上限应被丢弃")
+	assert_eq(layer._circles.size(), MissCircleLayer.MAX_CIRCLES, "超过上限应被丢弃")
 
 
 func test_clear_all_empties() -> void:

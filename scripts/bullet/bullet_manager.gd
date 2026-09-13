@@ -21,7 +21,7 @@ var _kernel: KernelBulletBackend
 var _kernel_physics: KernelBulletPhysics
 
 ## W2：组合根注入的特效层（空则静默）
-var fx_layer: FxLayer
+var fx_pool: FxPool
 
 ## K4：组合根注入的视觉父节点（World）——炸弹爆炸贴图挂此（不再全树找 scene/World）
 var fx_parent: Node2D
@@ -45,8 +45,8 @@ func get_bullet_ctx() -> StageContext:
 
 
 ## W2：组合根注入特效层，转发给内核碰撞/清弹模块
-func inject_fx_layer(fx: FxLayer) -> void:
-	fx_layer = fx
+func inject_fx_pool(fx: FxPool) -> void:
+	fx_pool = fx
 	if _kernel_physics:
 		_kernel_physics.fx = fx
 
@@ -66,7 +66,7 @@ func _ready():
 	_multi_mesh.enabled = true
 	add_child(_multi_mesh)
 	_enable_kernel()
-	inject_fx_layer(fx_layer)
+	inject_fx_pool(fx_pool)
 
 
 func _exit_tree() -> void:
@@ -162,8 +162,8 @@ func clear_all():
 		_kernel.clear_bombs()
 	_lasers.clear()
 	_death_clear.clear_all()
-	if fx_layer:
-		fx_layer.clear_pool()
+	if fx_pool:
+		fx_pool.clear_pool()
 	if _multi_mesh:
 		_multi_mesh.clear()
 
@@ -209,7 +209,7 @@ func _enable_kernel() -> void:
 		add_child(_kernel)
 		_kernel_physics = KernelBulletPhysics.new()
 		_kernel_physics.setup(_kernel)
-		_kernel_physics.fx = fx_layer
+		_kernel_physics.fx = fx_pool
 		_kernel.system.process_physics_priority = -10
 		_kernel.system.cull_rect = Rect2(
 			GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,

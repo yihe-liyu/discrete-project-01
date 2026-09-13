@@ -17,7 +17,7 @@ const HIT_SFX_VOLUME := {
 
 var backend: KernelBulletBackend
 ## W2：组合根注入的特效层（空则静默）
-var fx: FxLayer
+var fx: FxPool
 ## W4b-3b：实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
 var refs: EntityRegistry
 

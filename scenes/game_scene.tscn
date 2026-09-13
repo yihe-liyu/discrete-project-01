@@ -13,8 +13,8 @@
 [ext_resource type="Script" uid="uid://dhos0505bof7l" path="res://scripts/components/rect_outline.gd" id="12_rect_outline"]
 [ext_resource type="Shader" uid="uid://dbi40qjrrq0q4" path="res://gdshader/water_flow.gdshader" id="13_water"]
 [ext_resource type="Script" uid="uid://c2fb36xommdvt" path="res://scripts/item/item_pool.gd" id="14_pool"]
-[ext_resource type="Script" uid="uid://b06r5rh54kxjh" path="res://scripts/effect/fx_layer.gd" id="15_fx"]
-[ext_resource type="Script" uid="uid://cbi6gxu3r06q4" path="res://scripts/effect/miss_effect_manager.gd" id="16_miss"]
+[ext_resource type="Script" uid="uid://b06r5rh54kxjh" path="res://scripts/effect/fx_pool.gd" id="15_fx"]
+[ext_resource type="Script" uid="uid://cbi6gxu3r06q4" path="res://scripts/effect/miss_circle_layer.gd" id="16_miss"]
 [ext_resource type="Script" uid="uid://bplx0vte3g86s" path="res://scripts/stage/stage_runtime.gd" id="17_stage"]
 [ext_resource type="Script" uid="uid://r1cevfo2ay7l" path="res://scripts/bullet/bullet_manager.gd" id="18_bullets"]
 
@@ -127,7 +127,7 @@ player_data = ExtResource("6_b5spy")
 unique_name_in_owner = true
 script = ExtResource("14_pool")
 
-[node name="FxLayer" type="Node2D" parent="World" unique_id=2025091102]
+[node name="FxPool" type="Node2D" parent="World" unique_id=2025091102]
 unique_name_in_owner = true
 script = ExtResource("15_fx")
 
@@ -232,6 +232,6 @@ script = ExtResource("7_kk2rg")
 
 [node name="BossUI" parent="." unique_id=1480836394 instance=ExtResource("8_boss_ui")]
 
-[node name="MissEffectManager" type="CanvasLayer" parent="." unique_id=2025091103]
+[node name="MissCircleLayer" type="CanvasLayer" parent="." unique_id=2025091103]
 unique_name_in_owner = true
 script = ExtResource("16_miss")

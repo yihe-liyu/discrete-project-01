@@ -66,7 +66,7 @@ var effects: EffectService:
 		if _effects == null: _effects = EffectService.new()
 		var st: StageRuntime = stage if stage else StageRuntime.current  # 无 stage 的共享 ctx 回退当前关卡
 		_effects.miss_layer = st.miss_layer if st else null  # 组合根注入；每取一次保持最新
-		_effects.fx_layer = st.fx_layer if st else null      # W2：特效层同样由组合根注入
+		_effects.fx_pool = st.fx_pool if st else null      # W2：特效层同样由组合根注入
 		return _effects
 
 var boss: BossService:

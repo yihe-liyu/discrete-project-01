@@ -27,8 +27,8 @@ var bullets: BulletManager
 static var current: StageRuntime
 
 ## 注入槽（组合根 / 工作台设置）
-var miss_layer: MissEffectManager
-var fx_layer: FxLayer
+var miss_layer: MissCircleLayer
+var fx_pool: FxPool
 ## K4：Boss 位置指示器所属 HUD 层（组合根注入）
 var ui_layer: CanvasLayer
 var current_background: StageBackground

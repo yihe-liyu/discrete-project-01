@@ -645,6 +645,15 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.27 K7 实施记录（2026-09-11，已完成）
+
+**目标**：特效命名消歧（R18 可读性）——两个任务名字不再像重复。
+
+**落点**：`FxLayer` → `FxPool`（`scripts/effect/fx_pool.gd`，精灵池）；`MissEffectManager` → `MissCircleLayer`（`scripts/effect/miss_circle_layer.gd`，全屏 shader 圈）。成员 `fx_layer`→`fx_pool`、`inject_fx_layer`→`inject_fx_pool`；`game_scene.tscn` 节点名 + 测试文件同步；两文件头补分工说明。
+
+**度量**：易混命名 **2 → 0**；旧名残留 **0**。
+
+**验收**：`check_syntax` 191/0；全量 **55 套 / 306 测试 / 3203 断言全绿**；orphans 10。
 ### 12.26 K6 实施记录（2026-09-11，已完成）
 
 **目标**：`BulletManager` 从代码 `new()` 改为 `game_scene.tscn` 声明（R21 收尾）。

@@ -143,7 +143,7 @@
 状态：✔（机制闭环） ｜ 适用红线：R2, R7, R20
 - [x] 受击/消除/擦弹/Boss 阶段有即时视觉+音效反馈 —— `scripts/effect/*` + `AudioManager`
 - [x] 弹雾/背景与弹幕对比度足够，不吞弹、不刺眼 —— `screen_fog_fx.gd` + `bullet_fog_blend.gdshader` + `background/*` + `decor_manager.gd`
-- [x] 特效走服务/对象池（hit_effect / miss_effect），不再频繁 instantiate —— `FxLayer` + `MissEffectManager`（均为组合根注入，非 autoload）
+- [x] 特效走服务/对象池（hit_effect / miss_effect），不再频繁 instantiate —— `FxPool`（精灵特效池，世界坐标/节点池）+ `MissCircleLayer`（全屏反色圈，屏幕空间 shader）；均组合根注入，非 autoload
 - [x] 演出（入场/放 logo/BGM/对话）用 Timeline，可复现、可暂停 —— `coroutine/timeline/*` + `dialogue_runner.gd`
 
 ## S9. 性能（几千发子弹下的帧率余量）
@@ -240,3 +240,4 @@
 > - K5（R18/R19 收口）：三台热更新管线收口到 `BenchBase`（15 份复制 → 基类 1 份 + 3 组 hook），workbench 净 **-116 行**。详见 §12.24。
 > - K0（基线重审）：按代码实测刷新 S 小节 / 红线 / 层序 / 命名数字；清 `bullet_physics`/`bullet_fog`/`SpatialHash` 等过时引用与 R14 假 TODO；新增 R2 残余 / R21 待办。
 > - K6（R21 收尾）：`BulletManager` 从代码 `new()` 改为 `game_scene.tscn` 的 `World` 下声明（`%BulletManager`）；`game_scene` 服务节点代码建 **1 → 0**。详见 §12.26。
+> - K7（命名消歧）：`FxLayer` → `FxPool`（精灵池）、`MissEffectManager` → `MissCircleLayer`（全屏 shader 圈），成员/tcn/测试同步。详见 §12.27。

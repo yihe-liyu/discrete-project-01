@@ -1,7 +1,8 @@
-class_name MissEffectManager
+## Miss 全屏反色圈（屏幕空间 shader）：一个 ColorRect + `miss_circle.gdshader`，最多 8 圈同时。
+## 与 FxPool 分工：本层是「全屏 shader 合成」（屏幕空间）；局部精灵特效池在 FxPool（世界坐标、节点池）。
+## 不再是 autoload：由组合根（GameScene）声明并注入 EffectService。
+class_name MissCircleLayer
 extends CanvasLayer
-## Miss 时全屏圆形特效（Shader 实现），最多 8 圈同时显示
-## 不再是 autoload：由组合根（GameScene）实例化并注入 EffectService。
 
 const MAX_CIRCLES := 8
 
