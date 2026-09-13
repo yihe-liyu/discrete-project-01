@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-11 — K6：BulletManager 声明式化（R21 收尾）
+
+- **目标**：`game_scene.tscn` 里最后一个在代码中 `new()` 的服务节点（`BulletManager`）改为场景声明，与 `FxLayer`/`StageRuntime`/`ItemPool`/`MissEffectManager` 一致。
+- **做法**：
+  - `game_scene.tscn`：`World` 下新增 `BulletManager`（`Node2D`）+ `unique_name_in_owner`；新增脚本 `ext_resource`。
+  - `game_scene.gd`：`var _bullets` → `@onready var _bullets: BulletManager = %BulletManager`；删 `BulletManager.new()` / `name` / `add_child` 三行（注入逻辑不动）。
+  - `test_composition_root.gd`：断言 `World/BulletManager` 存在、`rt.bullets` 与 `BulletManager.current` 均指向它。
+- **行为核对**：子节点 `_ready` 先于父 `GameScene._ready`；`BulletManager._ready` 里 `_enable_kernel()` 回退的 `EntityRegistry.current` 已由 `StageRuntime._enter_tree` 设好 → 不空；父 `_ready` 再 `inject_world_refs` 覆盖为精确引用。行为等价。
+- **度量**：`game_scene` 的服务节点 **1 个代码建 → 0**（全部 tscn 声明）。
+- **没做**：`BulletManager` 内部子模块（`WorldClock`/`LaserEngine`/`MultiMesh`/`KernelBulletBackend`）仍代码创建——非独立子场景；workbench/BenchBase 的 `ensure_bullet_world` 自建逻辑另议。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 306 测试 / 3203 断言全绿**；orphans 10。
 ### 2026-09-11 — K0：基线再检查（按代码实测刷新）
 
 - **目标**：把 `BEST_PRACTICES_BASELINE.md` 刷成「当前真值」——清过时引用、补实测数字、删假 TODO。

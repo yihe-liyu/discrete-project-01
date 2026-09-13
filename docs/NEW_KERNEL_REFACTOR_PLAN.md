@@ -645,6 +645,17 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.26 K6 实施记录（2026-09-11，已完成）
+
+**目标**：`BulletManager` 从代码 `new()` 改为 `game_scene.tscn` 声明（R21 收尾）。
+
+**落点**：`game_scene.tscn` 的 `World` 下声明 `BulletManager` + `unique_name_in_owner`；`game_scene.gd` 改 `@onready ... = %BulletManager`、删 3 行创建；`test_composition_root` 加 3 条断言。
+
+**行为**：子 `_ready` 先跑，`EntityRegistry.current` 已由 `StageRuntime._enter_tree` 设好；父 `_ready` 再注入精确 refs，等价。
+
+**度量**：`game_scene` 服务节点代码建 **1 → 0**。
+
+**验收**：`check_syntax` 191/0；全量 **55 套 / 306 测试 / 3203 断言全绿**；orphans 10。
 ### 12.25 K0 实施记录（2026-09-11，已完成）
 
 **目标**：按代码实测重审基线（S 表 / 红线 / 层序 / 命名），清扫过时引用与假 TODO。

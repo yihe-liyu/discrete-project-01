@@ -10,20 +10,16 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 @onready var _miss_layer: MissEffectManager = %MissEffectManager
 @onready var _game_ui: GameUI = $UI
 @onready var _item_pool = %ItemPool
+@onready var _bullets: BulletManager = %BulletManager   # W4c/R21：弹幕世界（game_scene.tscn 声明）
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
-## W4c：弹幕世界（组合根创建并注入，不再是 autoload）
-var _bullets: BulletManager
 
 
 func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
-	# W4c：弹幕世界由组合根创建（服务节点）并注入；关卡运行时经它发弹
-	_bullets = BulletManager.new()
-	_bullets.name = "BulletManager"
-	add_child(_bullets)
+	# W4c/R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
 	_stage_runtime.bullets = _bullets
 
 	# 组合根装配：Miss 圈 / 特效层 / 关卡运行时（均在 game_scene.tscn 声明，R21），这里只注入。

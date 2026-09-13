@@ -16,6 +16,10 @@ func test_game_scene_binds_stage_runtime() -> void:
 	assert_not_null(rt, "应在 World 下声明 StageRuntime（R21）")
 	assert_eq(rt.world, inst.get_node("World"), "应注入 world（不再全树找 World）")
 	assert_not_null(rt.current_stage_script(), "关卡脚本应经 StageRuntime 真正加载")
+	var bm: BulletManager = inst.get_node_or_null("World/BulletManager")
+	assert_not_null(bm, "应在 World 下声明 BulletManager（R21）")
+	assert_eq(rt.bullets, bm, "StageRuntime 应拿到场景里的弹幕世界")
+	assert_eq(BulletManager.current, bm, "BulletManager.current 应指向场景节点")
 
 
 func test_game_scene_refreshes_kernel_player() -> void:

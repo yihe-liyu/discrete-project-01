@@ -16,6 +16,7 @@
 [ext_resource type="Script" uid="uid://b06r5rh54kxjh" path="res://scripts/effect/fx_layer.gd" id="15_fx"]
 [ext_resource type="Script" uid="uid://cbi6gxu3r06q4" path="res://scripts/effect/miss_effect_manager.gd" id="16_miss"]
 [ext_resource type="Script" uid="uid://bplx0vte3g86s" path="res://scripts/stage/stage_runtime.gd" id="17_stage"]
+[ext_resource type="Script" uid="uid://r1cevfo2ay7l" path="res://scripts/bullet/bullet_manager.gd" id="18_bullets"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
 atlas = ExtResource("6_mw25s")
@@ -133,6 +134,10 @@ script = ExtResource("15_fx")
 [node name="StageRuntime" type="Node" parent="World" unique_id=2025091104]
 unique_name_in_owner = true
 script = ExtResource("17_stage")
+
+[node name="BulletManager" type="Node2D" parent="World" unique_id=2025091105]
+unique_name_in_owner = true
+script = ExtResource("18_bullets")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=476199]
 limit_left = 0

@@ -204,7 +204,7 @@
 |---|---|---|
 | R9 autoload | **4 个**（W1 12→10，W2 10→8，W3a 8→7，W3b 7→6，W4b 6→5，W4c 5→4） | `GameEvents / GameManager / RNG / AudioManager`；已达目标 |
 | R18/R19 单一职责/DRY | 三台热更新管线 **基类 1 份 + 3 组 hook**（K5，净 -116 行）；`workbench.gd` 692 / `spell_practice_menu.gd` 592 行 | 余上帝对象 + 3 个超长 `_build_ui` |
-| R21 声明式建树 | `workbench.gd` 11 处 `.new()` + 15 处 `add_child` | 开发工具，可后 |
+| R21 声明式建树 | `game_scene` 服务节点全部 tscn 声明（K6：`BulletManager` 收尾）；余 `workbench.gd` 11 处 `.new()` + 15 处 `add_child` | `game_scene` ✅；workbench 开发工具，可后 |
 | R6 私有调用 | **0**（K2：`has_method("_")` 12→0、生产对外私有调用 6 组→0） | ✅ 公开虚函数 + 类型化接口 |
 | R4 输入 | 边沿轮询 **0**（K3）；`Input.is_action` 仅连续状态（移动/focus/shoot/回放/对话长按） | ✅ 符合「状态读取例外」 |
 | R2 引用 | `find_child` **0**、`get_node("..")`/`$".."` **0**（K4）；余 `current_scene` 取 World 2 处 | 基本达标，余 2 处可注入 |
@@ -239,3 +239,4 @@
 > - K3（R4 收口）：菜单 / 暂停 / 自机离散键改 `_unhandled_input`，`NavPage` 统一导航（复制 3→1）；边沿轮询 **6 → 0**。详见 §12.23。
 > - K5（R18/R19 收口）：三台热更新管线收口到 `BenchBase`（15 份复制 → 基类 1 份 + 3 组 hook），workbench 净 **-116 行**。详见 §12.24。
 > - K0（基线重审）：按代码实测刷新 S 小节 / 红线 / 层序 / 命名数字；清 `bullet_physics`/`bullet_fog`/`SpatialHash` 等过时引用与 R14 假 TODO；新增 R2 残余 / R21 待办。
+> - K6（R21 收尾）：`BulletManager` 从代码 `new()` 改为 `game_scene.tscn` 的 `World` 下声明（`%BulletManager`）；`game_scene` 服务节点代码建 **1 → 0**。详见 §12.26。
