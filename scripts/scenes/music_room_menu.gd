@@ -1,7 +1,6 @@
 # MusicRoomMenu.gd — 音乐室（左右分栏：列表 + 评语）
 extends NavPage
 
-const MUSIC_REGISTRY_PATH := "res://data/registry/music_registry.tres"
 const GOLD_COLOR := Color(1.0, 0.85, 0.2)
 const LOCKED_TEXT := "？？？？？？？？？"
 
@@ -27,13 +26,8 @@ func _ready() -> void:
 	# 进入音乐室时停掉外部 BGM
 	AudioManager.stop_bgm()
 
-	# 加载音乐注册表
-	if ResourceLoader.exists(MUSIC_REGISTRY_PATH):
-		_music_registry = ResourceLoader.load(MUSIC_REGISTRY_PATH)
-	else:
-		_music_registry = MusicRegistry.new()
-		ResourceSaver.save(_music_registry, MUSIC_REGISTRY_PATH)
-
+	# 加载音乐注册表（出厂 res:// + user:// 解锁覆盖，R14）
+	_music_registry = AssetRegistry.load_music_registry()
 	_music_records = _music_registry.records
 
 	# 创建预览播放器
@@ -147,7 +141,7 @@ func _play_preview(record: MusicRecord) -> void:
 	# 解锁（在音乐室试听也算听过）
 	if not record.unlocked:
 		record.unlocked = true
-		ResourceSaver.save(_music_registry, MUSIC_REGISTRY_PATH)
+		AssetRegistry.save_music_registry(_music_registry)
 		_rebuild_list()
 		# 保持选中项
 		if _nav_index >= 0 and _nav_index < _nav_items.size():

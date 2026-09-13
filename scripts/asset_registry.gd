@@ -101,7 +101,34 @@ const BGM_PATHS := {
 	"stageEX_boss":"res://assets/Music/THq01_18.以空为核，抽丝剥茧.mp3",
 }
 
-const MUSIC_REGISTRY_PATH := "res://data/registry/music_registry.tres"
+const MUSIC_REGISTRY_PATH := "res://data/registry/music_registry.tres"   # 出厂默认（只读）
+## 运行期解锁档（R14：导出包 res:// 只读，运行期写入一律 user://）
+const MUSIC_REGISTRY_USER_PATH := "user://music_registry.tres"
+
+
+## 加载音乐注册表：以出厂目录为基准，叠加 user:// 的解锁状态
+## （新增曲目不会因旧解锁档而消失）。无 user:// 档时 = 出厂目录。
+static func load_music_registry() -> MusicRegistry:
+	var registry: MusicRegistry = null
+	if ResourceLoader.exists(MUSIC_REGISTRY_PATH):
+		registry = ResourceLoader.load(MUSIC_REGISTRY_PATH)
+	if registry == null:
+		registry = MusicRegistry.new()
+	if not FileAccess.file_exists(MUSIC_REGISTRY_USER_PATH):
+		return registry
+	var override: MusicRegistry = ResourceLoader.load(MUSIC_REGISTRY_USER_PATH)
+	if override == null:
+		return registry
+	for r in registry.records:
+		var o: MusicRecord = override.get_by_id(r.music_id)
+		if o != null:
+			r.unlocked = o.unlocked
+	return registry
+
+
+## 保存解锁状态到 user://（R14）
+static func save_music_registry(registry: MusicRegistry) -> void:
+	ResourceSaver.save(registry, MUSIC_REGISTRY_USER_PATH)
 
 static var _bgm_cache: Dictionary = {}
 
@@ -127,7 +154,7 @@ static func get_bgm_title(stream: AudioStream) -> String:
 	var path: String = stream.resource_path
 	if path.is_empty():
 		return ""
-	var registry: MusicRegistry = ResourceLoader.load(MUSIC_REGISTRY_PATH)
+	var registry: MusicRegistry = load_music_registry()
 	if registry == null:
 		return ""
 	for r in registry.records:
@@ -139,7 +166,7 @@ static func get_bgm_title(stream: AudioStream) -> String:
 ## 播放 BGM 视为听过 → 解锁音乐室对应曲目（幂等，仅首次解锁写盘）
 ## 按路径关联：游戏 key（stage1）与音乐室 key（music_2）指向同一文件时视为同一曲
 static func _unlock_music_by_key(bgm_key: String) -> void:
-	var registry: MusicRegistry = ResourceLoader.load(MUSIC_REGISTRY_PATH)
+	var registry: MusicRegistry = load_music_registry()
 	if not registry:
 		return
 	var path: String = BGM_PATHS.get(bgm_key, "")
@@ -154,7 +181,7 @@ static func _unlock_music_by_key(bgm_key: String) -> void:
 			r.unlocked = true
 			changed = true
 	if changed:
-		ResourceSaver.save(registry, MUSIC_REGISTRY_PATH)
+		save_music_registry(registry)
 
 static func get_bullet_tex(key: String) -> Texture2D:
 	var cfg: Dictionary = bullet_configs.get(key, {})

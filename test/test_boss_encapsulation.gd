@@ -4,6 +4,7 @@ extends GutTest
 
 func test_hp_readonly_and_signal():
 	var b := Boss.new()
+	autofree(b)
 	var pb := PhaseData.new()
 	pb.hp = 1000
 	b._phase_data = pb                       # 白盒设阶段（_set_hp 取满血用）
@@ -17,6 +18,7 @@ func test_hp_readonly_and_signal():
 
 func test_hp_zero_via_set_hp():
 	var b := Boss.new()
+	autofree(b)
 	var pb := PhaseData.new()
 	pb.hp = 500
 	b._phase_data = pb
@@ -27,6 +29,7 @@ func test_hp_zero_via_set_hp():
 
 func test_boss_data_readonly():
 	var b := Boss.new()
+	autofree(b)
 	var d := BossData.new()
 	d.boss_name = "测试"
 	b._boss_data = d

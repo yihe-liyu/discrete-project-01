@@ -5,7 +5,9 @@ const ParamValidator = preload("res://scripts/data/param_validator.gd")
 const MoveHoming = preload("res://scripts/coroutine/player/move_homing.gd")
 
 func _make() -> Node:
-	return MoveHoming.new()
+	var n := MoveHoming.new()
+	autofree(n)   # 测试自建的 Node 由 GUT 收尾，避免孤儿
+	return n
 
 
 func test_valid_params_no_error():

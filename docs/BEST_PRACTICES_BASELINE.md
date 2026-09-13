@@ -205,7 +205,7 @@
 ## S9. 性能（几千发子弹下的帧率余量）
 状态：🚧 ｜ 适用红线：R10, R19
 - [x] 子弹用内核 SoA 池 + MultiMesh，规避每弹节点开销 —— `BulletSystem` + `bullet_multi_mesh.gd`；**旧 `BulletPool`/`Bullet` 节点/`SpatialHash` 已删（W4a-2）**
-- [~] 无每帧临时分配（贪心 alloc）；热路径避免 get_node("...") —— MultiMesh 同步每帧做分组/拼 key（旧代码自注有分配）；字符串 `get_node*` 19 处（多为场景内直接子级；`current_scene` 取 World 2 处）
+- [~] 无每帧临时分配（贪心 alloc）；热路径避免 get_node("...") —— MultiMesh 同步每帧做分组/拼 key（旧代码自注有分配）；字符串 `get_node`/`get_node_or_null` 调用点 **29 处**（生产 14 / 测试 15；A3 更正）
 - [x] 碰撞/移动每帧 walk 用数组索引（内核 SoA），不频繁排序
 - [~] 大量对象时帧率稳定（目标：满载 60fps 有冗余）—— `test/perf_stress/*` 有压测场景，需实机确认
 
@@ -252,7 +252,7 @@
 - [ ] **内核融合（M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：M1（`damage`/`hit_sfx` 进弹型）+ **M2（词汇合一：`BulletData.to_bullet_type()`，删 `type_for`/`signature_of`/`_type_by_sig`）已完成**；余 `scripts/kernel_bridge/` **906 行** + `_texture_by_index`（渲染/纹理归属 = M3）+ `_port_by_sig` + 6 个 `kernel_port` → 目标 **≤300 行且只放宿主耦合规则**；判据见 §16.5
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
-> - **R14「存档写 res://」已不成立**：`save_manager.gd` 用 `user://save_data.cfg`，**从 TODO 移除**。
+> - **R14（2026-09-13 A1 更正）**：`save_manager.gd` 走 `user://save_data.cfg`；但**内容侧**符卡簿 / 音乐解锁曾直接 `ResourceSaver.save` 到 `res://`（4 处，导出包只读必失败）→ 已迁「res:// 出厂默认 + user:// 覆盖」，并加 `test_persistence_paths` 守卫。
 > - **R15 中文文件名**：`scripts/**` 中文 `.gd` **0**；真正待办是 **PascalCase 目录段 + `diffculty` 拼写**。
 > - **过时引用清理**：`bullet_physics.gd`/`bullet.gd`/`bullet_fog.gd`/`SpatialHash` 均已随 W4a-2 删除，S 小节证据已改指内核 / `ScreenFogFX`。
 
@@ -266,10 +266,10 @@
 | R6 私有调用 | **0**（K2：`has_method("_")` 12→0、生产对外私有调用 6 组→0） | ✅ 公开虚函数 + 类型化接口 |
 | R4 输入 | 边沿轮询 **0**（K3）；`Input.is_action` 仅连续状态（移动/focus/shoot/回放/对话长按） | ✅ 符合「状态读取例外」 |
 | R2 引用 | `find_child` **0**、`get_node("..")`/`$".."` **0**（K4）；`MenuNav` 容器改注入（K11）；余 `current_scene` 取 World 2 处 | 基本达标，余 2 处可注入 |
-| R5 字符串 get_node | **19 处**（含 `get_node_or_null`），多为场景内直接子级 | 非全树搜，接受 |
+| R5 字符串 get_node | **29 个调用点**（生产 14 / 测试 15，含 `get_node_or_null`；A3 更正：原「19」是生产侧文本出现数、漏了测试） | 非全树搜，接受 |
 | 层序契约 | 26 处设 `z_index`，**20 处走 `LayerConfig`**，裸数字 5 | 接近达标，余 5 处可收 |
 | 帧序契约 | 无显式 `FrameOrder`；内核走 `process_physics_priority`（-10/-5/-4/0） | 仍可引入 `FrameOrder` |
-| R14/R15 | res:// 写存档 **0**；中文 `.gd` 文件名 **0**；PascalCase 目录 + `diffculty` 5 处 | 目录/拼写见 TODO |
+| R14/R15 | res:// 运行期写档 **0**（A1：符卡簿 / 音乐解锁改 user:// 覆盖，`test_persistence_paths` 守卫）；中文 `.gd` 文件名 **0**；PascalCase 目录 + `diffculty` 5 处 | 目录/拼写见 TODO |
 | R16 | assets **47MB**（最大 11.2MB 字体），无 LFS | 待配 LFS |
 | R3 | `@tool` **3**、`_get_configuration_warnings` **0** | 待补 |
 | R12 | `@export=preload` **1**（`enemy_data.gd:9`） | 待改 |

@@ -256,10 +256,10 @@ extends CoroutineScript
 ## 八、挂到游戏
 
 1. MainMenu → Start → 选难度 → 选角色 → `GameManager.change_scene("game_scene")`
-2. `GameScene._ready()` → `_resolve_stage_data()` → `StageManager.load_stage(data)`
+2. `GameScene._ready()` → `_resolve_stage_data()` → `StageRuntime.load_stage(data)`
    （`data/registry/stage_registry.tres`：Stage 1 → `stage01.tres` 协程版）
 3. 练习模式：从符卡记录（`spell_records.tres` 解锁后内联存的 phase_data + boss_scene）构建单 phase Boss，
-   走 `GameState.start_practice()` → `_start_practice_game()`
+   走 `SaveData.start_practice()` → `_start_practice_game()`
 
 ---
 

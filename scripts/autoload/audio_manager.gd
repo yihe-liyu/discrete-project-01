@@ -60,8 +60,6 @@ func _init_players() -> void:
 
 # ═══ BGM ═══
 
-const MUSIC_REGISTRY_PATH := "res://data/registry/music_registry.tres"
-
 ## 实际切换了 BGM（用于 BGM 提示等 UI 跟随）
 signal bgm_started(stream: AudioStream)
 

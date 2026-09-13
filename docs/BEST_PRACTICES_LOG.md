@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-13 — Tier A 收尾：A1 导出阻塞 + A2 测试卫生 + A3–A5 文档失真
+
+- **A1（导出阻塞）**：内容侧 4 处 `ResourceSaver.save` 直接写 `res://`（`spell_book_manager.gd` / `asset_registry.gd` / `music_room_menu.gd:35,150`）→ 导出包只读必失败。改为「**res:// 出厂默认 + user:// 覆盖**」：`SpellBookManager` 加 `SPELL_BOOK_USER_PATH`；`AssetRegistry` 加 `MUSIC_REGISTRY_USER_PATH` + `load_music_registry()` / `save_music_registry()`（音乐档**以出厂目录为基准叠加 user 解锁**，新曲目不会被旧档吞掉）；`music_room_menu` 改走这两个 helper；顺带删 `audio_manager` 里从未使用的重复常量。
+- **A1 守卫**：新增 `test/test_persistence_paths.gd` —— 扫 `res://scripts` + `res://data`，断言没有任何 `ResourceSaver.save` 行含 `res://`（`tools/` 是编辑器工具，豁免）。
+- **A2（测试卫生）**：`test_boss_encapsulation` 3 + `test_param_validator` 7 个孤儿 Node 未释放 → 加 `autofree`。**orphans 10 → 0**。
+- **A3/A4/A5（文档失真）**：基线 R5 `get_node` 计数更正为 **29 个调用点**（生产 14 / 测试 15，原记 19 漏了测试）；基线 R14 更正——`SaveManager` 走 user:// 不代表内容侧不写 res://（A1 那 4 处就是漏报）；`CONTENT_GUIDE` §八的 `StageManager` / `GameState` → `StageRuntime` / `SaveData`。
+- **教训**：**"某处达标"不等于"整类达标"** —— R14 只查了 `SaveManager` 就写「0 处」，把内容侧 4 处漏了。审计要按"类"扫，不是按"记得的那个文件"扫。
+- **验收**：verify.sh 五步全绿（322 测试 / 3247 断言，orphans 0）。
+- **附带**：M3 决策页 `docs/M3_TEXTURE_OWNERSHIP_DECISION.md`（推荐 ③ 纹理句柄，待拍板）。
+
 ### 2026-09-13 — 会话状态收口：SaveData.reset_session()（唯一复位入口）
 
 - **背景**：连续两条试玩 bug（练习载荷泄漏、门面误改）都属「跨局 / 跨场景状态没清干净」。做了一次全量 `static var` 审计（谁置位 / 谁复位）。
