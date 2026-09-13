@@ -1,4 +1,0 @@
-[gd_scene format=3]
-[ext_resource type="Script" path="res://test/perf_stress/verify_laser.gd" id="1"]
-[node name="Verify" type="Node"]
-script = ExtResource("1")

@@ -18,6 +18,22 @@
 
 ## 记录
 
+### 2026-09-13 — P0-2：删掉 5 处旧池协程残体 + 类型化 return_bullet/re_fire（A14 / A15）
+
+- **目标**：把卡住 A7/A8 的东西清掉 —— 5 处内容脚本仍留着「旧池 `Bullet` 节点」时代的协程体，把 `Node2D` 传给 `return_bullet` / `re_fire`。
+- **做了什么**：
+  - `data/stages/stage01/bullet/bounce_bullet.gd`：删 `_tick` / `_bounce_and_split` / `_re_fire` + 死变量 `spawn_tex` / `spawn_color`，只留 `kernel_port` + 工厂。
+  - `data/stages/stage01/bullet/radial_accel_bullet.gd`：删 `_tick` / `_spawn_downward` / `_dir`。
+  - `data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd`：删 `_tick` / `_tick_travel` / `_tick_flee` / `State` / `_state` / `_flee_dir` / `_skip` / 死常量 `RING_COUNT`。
+  - `data/stages/stage03B/phase/spell03/orbit_probe.gd`：删 `_tick` / `_spawn_split` / `State` / `_state` / `_dir0` / `_dist` —— 它**没有**内核端口（§15.1「本轮不做」），现在只剩参数 + 明确的「未映射即直线」说明。
+  - `scripts/coroutine/player/marisa_laser_follow.gd`：删 `start()` 覆写 / `FADE_TIME` / `_drift` / `_fading` / `_fade_t`（漂移与渐隐在内核桥接里）。
+  - 删 `test/perf_stress/verify_laser.gd` + `.gd.uid` + `.tscn`：它 `start_fast()` 的正是被删的旧 `start()` 体，留着就是「验证一个已经不存在的行为」。
+  - **A15**：残体删完后，给 `BulletManager` / `BulletService` 的 `return_bullet` / `re_fire` 参数补 `int`，并删掉 `typeof(bullet) == TYPE_INT` 的后端残渣。
+- **为什么**：R19（不留死代码）+ R5（类型化）+「没有第二后端就别演双后端」。死代码的代价不是占行数，而是**掩盖真相** —— 这次就是类型化把 5 处幽灵调用点照了出来。
+- **验收**：`check_syntax` **191/0**；全量 GUT **57 套 / 310 测试 / 3215 断言全绿**。
+- **踩坑（显示名）**：改头部注释时顺手改了 `non_mid01_bullet` 的首行注释 → `test_content_catalog`「超长名截断带省略号」挂一次。`ContentCatalog._short_name` 的规则是：**取首行注释**，有「：」取冒号后按 18 字符截断，无则整行按 24 字符截断 —— 这类脚本改文档头**必须保留首行**（其余 4 个文件同样按原首行恢复）。
+- **顺带发现**：删完 5 处调用点后，`return_bullet` / `re_fire` **已无任何调用者**（内核行为走 `KernelBehaviorHost` 的 `request_despawn` / `queue_spawn`）→ 记为待办 A16（删除，或明确标为公开 API）。
+
 ### 2026-09-13 — P0-1：清理"说谎的 API"（A1 / A2 / A4 / A5 / A9 / A10 / A13）
 
 - **目标**：去掉一批「名字或返回值与语义不符」的公共 API（代码体检 P0 组的一部分）。

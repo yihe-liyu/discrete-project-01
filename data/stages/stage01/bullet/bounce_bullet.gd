@@ -2,72 +2,13 @@ extends CoroutineScript
 ## 非符1 专用反弹弹：碰到游戏框（左/右/上，下墙穿出）时，
 ## 转向朝向 Boss 并旋转 bounce_angle，然后消除自己，原地生成一颗直线弹
 ## 带加速度 accel（沿飞行方向加速；0 = 匀速）
-## auto_stop = true
+##
+## **内核端口载体**：行为实现已移到桥接 `scripts/kernel_bridge/behavior/bounce_behavior.gd`；
+## W4a-2 删旧池后，弹的协程体不再由本项目启动，本文件只把参数翻译成内核端口。
 
 var bounce_angle: float = 0.0  ## 反弹附加角（弧度），发射时决定并固定
 var accel: float = 0.0         ## 加速度（px/s²），沿当前飞行方向（0 = 匀速）
-
-var spawn_tex: String = "棱弹"      ## 直线弹贴图 key
-var spawn_color: Color = Color.AQUA  ## 直线弹颜色
-var spawn_speed: float = 0.0        ## 直线弹速度（0 = 沿用反弹瞬间速度）
-
-
-func _tick(_ctx: StageContext) -> Variant:
-	if not is_instance_valid(target):
-		return false
-	var bullet = target
-	var dt := get_dt()
-	if accel != 0.0:
-		var dir: Vector2 = bullet.velocity.normalized()
-		if dir != Vector2.ZERO:
-			bullet.velocity += dir * accel * dt  # 沿飞行方向加速
-	bullet.global_position += bullet.velocity * dt
-	if _bounce_and_split(_ctx, bullet):
-		return false  # 已重新发射：消除自己，协程结束
-	bullet.rotation = bullet.velocity.angle()
-	return true
-
-
-## 碰框：位置夹回框边，转向朝向 Boss + 旋转 bounce_angle，原地重新发射成直线弹
-func _bounce_and_split(p_ctx: StageContext, bullet) -> bool:
-	var pos: Vector2 = bullet.global_position
-	var bounced := false
-
-	if pos.x <= GameConfig.FIELD_LEFT:
-		pos.x = GameConfig.FIELD_LEFT
-		bounced = true
-	elif pos.x >= GameConfig.FIELD_RIGHT:
-		pos.x = GameConfig.FIELD_RIGHT
-		bounced = true
-
-	if pos.y <= GameConfig.FIELD_TOP:
-		pos.y = GameConfig.FIELD_TOP
-		bounced = true
-	# 下墙不反弹（穿出）
-
-	if not bounced:
-		bullet.global_position = pos
-		return false
-
-	var boss: Boss = p_ctx.boss.current()
-	var aim := Vector2.DOWN  # 无 Boss 时退化为竖直向下
-	if is_instance_valid(boss):
-		aim = (boss.global_position - pos).normalized()
-	var dir := aim.rotated(bounce_angle)
-	_re_fire(p_ctx, bullet, pos, dir, bullet.velocity.length())
-	return true
-
-
-## 原地重新发射：把当前弹重配置成直线弹（复用原弹，不回收不新建）
-func _re_fire(p_ctx: StageContext, bullet, at: Vector2, dir: Vector2, cur_speed: float) -> void:
-	var b := BulletData.new()\
-		.tex("米弹")\
-		.speed(spawn_speed if spawn_speed > 0.0 else cur_speed)\
-		.color(Color.GOLD)\
-		.blend(true)\
-		.enemy()
-	ctx.bullets.re_fire(bullet, b, dir, at)
-	p_ctx.audio.play_sfx(AssetRegistry.sounds["kira"], -8.0)
+var spawn_speed: float = 0.0   ## 替换弹速度（0 = 沿用反弹瞬间速度）
 
 
 ## 内核端口（Track A / S4c-2）：加速 + 碰框换向（朝 Boss）。替换弹用工厂。
@@ -85,7 +26,7 @@ func kernel_port() -> Dictionary:
 	}
 
 
-## 替换弹工厂（与旧 _re_fire 1:1：米弹 / GOLD / blend）。
+## 替换弹工厂（每次返回新 BulletData：米弹 / GOLD / blend）。
 func _kernel_make_replacement() -> BulletData:
 	var b := BulletData.new()
 	b.tex("米弹").color(Color.GOLD).blend(true).enemy()

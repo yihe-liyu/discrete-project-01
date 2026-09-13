@@ -137,7 +137,7 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	var angles: Array = LASER_ANGLES[lv]
 	var angle_rad: float = deg_to_rad(angles[opt_idx] if opt_idx < angles.size() else 0.0)
 
-	# 内核端口读 b.params（见 marisa_laser_follow.kernel_port）；旧池路径无副作用
+	# 内核端口读 b.params（见 marisa_laser_follow.kernel_port）
 	b.params = {
 		"port_anchor_id": source.get_instance_id(),
 		"port_anchor_offset": Vector2.ZERO,

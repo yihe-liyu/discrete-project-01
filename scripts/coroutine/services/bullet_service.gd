@@ -71,15 +71,15 @@ func shoot_bomb(data: BulletData, pos: Vector2, direction: Vector2):
 
 
 ## 回收一颗弹（内核行 id）
-func return_bullet(id) -> void:
+func return_bullet(id: int) -> void:
 	if world:
 		world.return_bullet(id)
 
 
 ## 原地重发：回收旧行 + 按新配置重发
-func re_fire(bullet, data: BulletData, dir: Vector2, at: Vector2) -> void:
+func re_fire(id: int, data: BulletData, dir: Vector2, at: Vector2) -> void:
 	if world:
-		world.re_fire(bullet, data, dir, at)
+		world.re_fire(id, data, dir, at)
 
 
 func _bezier_curve(p0: Vector2, p1: Vector2, p2: Vector2) -> Curve2D:

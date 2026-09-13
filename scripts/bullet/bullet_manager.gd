@@ -95,16 +95,14 @@ func shoot_bomb_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> No
 	return _kernel.spawn_bomb(data, pos, direction)
 
 
-## 回收一颗弹（内容是内核行 id）
-func return_bullet(bullet) -> void:
-	if typeof(bullet) == TYPE_INT:
-		_kernel.system.despawn(bullet)
+## 回收一颗弹（内核行 id）
+func return_bullet(id: int) -> void:
+	_kernel.system.despawn(id)
 
 
 ## 原地重新发射：回收旧行 + 按新配置重发
-func re_fire(bullet, data: BulletData, dir: Vector2, at: Vector2) -> void:
-	if typeof(bullet) == TYPE_INT:
-		_kernel.system.despawn(bullet)
+func re_fire(id: int, data: BulletData, dir: Vector2, at: Vector2) -> void:
+	_kernel.system.despawn(id)
 	_kernel.shoot(data, at, dir)
 
 
