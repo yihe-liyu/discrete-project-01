@@ -249,7 +249,7 @@
 - [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
 - [ ] R2（残余）：`item_service.gd:16` / `player.gd:286` 用 `current_scene.get_node_or_null("World")` 取 World，可改注入
 - [ ] 编排路线（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生（工作台仍正则扫源码）/ Step 6 `ctx.background` 注入服务 待做；Step 5 命令化时间线 + Step 7 命令编辑器 = 可选 / 产品决定，暂缓
-- [ ] **内核融合（M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：M1（`damage`/`hit_sfx` 进弹型）+ **M2（词汇合一）已完成**；**M3（渲染/纹理归属）已拍板 ③ 纹理句柄** —— `_texture_by_index` 是**保留的渲染插座**（非债），由 N4 原生替换；余 `scripts/kernel_bridge/` **906 行** + `_port_by_sig` + 6 个 `kernel_port` → 目标 **≤300 行且只放宿主耦合规则**；判据见 §16.5
+- [ ] **内核融合（M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：M1（`damage`/`hit_sfx` 进弹型）+ **M2（词汇合一）已完成**；**M3（渲染/纹理归属）已拍板 ③ 纹理句柄** —— `_texture_by_index` 是**保留的渲染插座**（非债），由 N4 原生替换；余 `scripts/kernel_bridge/` **924 行**（适配器 236 + 宿主耦合 688；**行数不是目标**）+ `_port_by_sig` + 6 个 `kernel_port`（VM 前身）→ 判据改为**结构性**（0 类型映射 / 0 内容签名侧表），见 §16.5
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
 > - **R14（2026-09-13 A1 更正）**：`save_manager.gd` 走 `user://save_data.cfg`；但**内容侧**符卡簿 / 音乐解锁曾直接 `ResourceSaver.save` 到 `res://`（4 处，导出包只读必失败）→ 已迁「res:// 出厂默认 + user:// 覆盖」，并加 `test_persistence_paths` 守卫。
