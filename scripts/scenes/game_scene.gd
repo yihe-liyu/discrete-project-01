@@ -72,6 +72,7 @@ func _start_practice_game() -> void:
 		Vector2(GameConfig.FIELD_CENTER_X, 240)
 	)
 	if not boss:
+		push_warning("GameScene: start_spell_card 返回 null —— 练习 Boss 未生成")
 		return
 	var player := %Player
 	if player:
