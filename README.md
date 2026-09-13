@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-184%20tests%20/%2032%20scripts-green)]()
+[![Tests](https://img.shields.io/badge/GUT-310%20tests%20/%2057%20scripts-green)]()
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -49,20 +49,24 @@
 | 文档 | 内容 | 适合 |
 |------|------|------|
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | 架构契约 —— 分层 / 系统地图 / 所有权 / 边界铁律 / 债清单 / 命名禁令 | 开发者（首选） |
-| **[docs/STAGE_FLOW_PLAN.md](docs/STAGE_FLOW_PLAN.md)** | 改进路线 —— 对象自治 / 身份归位 / 记录服务 / 命令化 七步 | 维护者 |
+| **[docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md)** | 项目基线 —— STG 品质需求 S1–S13 × 工程红线 R1–R22 + 帧序/层序/命名契约 + 实测审计 | 维护者 |
+| **[docs/BEST_PRACTICES_LOG.md](docs/BEST_PRACTICES_LOG.md)** | 最佳实践日志 —— 每个改动的「为什么 / 踩坑 / 验收」（唯一历史记录） | 维护者 |
+| **[docs/NEW_KERNEL_REFACTOR_PLAN.md](docs/NEW_KERNEL_REFACTOR_PLAN.md)** | 内核迁移方案与决策 —— 路 B / Strangler / 行为端口契约 | 维护者 |
 | **[CONTENT_GUIDE.md](CONTENT_GUIDE.md)** | 内容制作流程 —— 怎么加关卡/敌人/Boss/符卡 | 关卡设计师 |
-| **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对话系统 | 编剧 |
-| **[docs/SPELL_SYSTEM_TARGET.md](docs/SPELL_SYSTEM_TARGET.md)** | 符卡系统目标 | 维护者 |
-| **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划 | 维护者 |
-| **[docs/archive/SPEC.md](docs/archive/SPEC.md)** | 系统规格书（**已归档**，原"代码现状"，精华已并入 ARCHITECTURE §8） | 已归档 |
+| **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 | 编剧 |
+| **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（剧本归档） | 编剧 |
+| **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（待实施） | 维护者 |
 | **[docs/omake.txt](docs/omake.txt)** | 附言、Extra Story、全角色设定 | 玩家/读者 |
+| **[docs/archive/](docs/archive/)** | 已归档：SPEC / ROADMAP / REFACTORING / STAGE_FLOW / SPELL_SYSTEM / CREATION_STATION / 旧审计 | 历史 |
 
 ### 我在做什么？看哪份？
 
 | 你的问题 | 打开哪份 |
 |---------|---------|
 | 「这项目怎么组织 / 谁归谁管 / 怎么改对」 | docs/ARCHITECTURE.md |
-| 「接下来要修什么架构问题」 | docs/STAGE_FLOW_PLAN.md |
+| 「项目现在什么状态 / 还差什么」 | docs/BEST_PRACTICES_BASELINE.md |
+| 「为什么当初这么改 / 踩过什么坑」 | docs/BEST_PRACTICES_LOG.md |
+| 「内核迁移到哪了 / 有哪些决策」 | docs/NEW_KERNEL_REFACTOR_PLAN.md |
 | 「怎么加一个新敌人 / 符卡」 | CONTENT_GUIDE.md |
 | 「某面角色说什么台词」 | docs/DIALOGUE.md |
 | 「怎么跑 / 怎么测 / 快捷键」 | README.md（本页） |
@@ -78,7 +82,7 @@
 ### 跑测试（重构/改动后的安全带）
 
 ```bash
-# 一键运行全部测试（184 个用例 / 32 个脚本，GUT 框架）
+# 一键运行全部测试（310 个用例 / 57 个脚本，GUT 框架）
 ./test/run_tests.sh
 ```
 
@@ -104,11 +108,11 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 # F6 运行 scenes/workbench.tscn —— 跑真实关卡看弹幕效果
 ```
 
-- 真实运行时沙盒：跑的就是游戏代码（StageManager/BulletManager/协程），非模拟
+- 真实运行时沙盒：跑的就是游戏代码（`StageRuntime` / `BulletManager` / 协程），非模拟
 - **写代码在 Godot 编辑器**：关卡编排 = stage01.gd（Timeline API）；Boss 弹幕 = PhaseData.tres 显式引用脚本
 - **调参工具**：固定种子（可复现）· 命中框 · 逐帧（F）· 12x 快进跳转 · 书签（静态提取 + 人工打点）
 - 幽灵玩家提供自机狙目标；静音/背景开关/事件日志/实时状态；改完脚本重启工作台生效
-- 创作流程见 [CONTENT_GUIDE.md](CONTENT_GUIDE.md)；架构决策见 ARCHITECTURE_ROADMAP.md「内容工作台演进」专节
+- 创作流程见 [CONTENT_GUIDE.md](CONTENT_GUIDE.md)；架构决策见 [docs/archive/ARCHITECTURE_ROADMAP.md](docs/archive/ARCHITECTURE_ROADMAP.md)「内容工作台演进」专节（已归档）
 
 ---
 
@@ -130,10 +134,10 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 ## 🏗️ 技术栈
 
 - **引擎**: Godot 4.7
-- **测试**: GUT 9.7.1（`test/` 目录，184 个用例 / 32 个脚本覆盖核心系统）
-- **协程框架**: CoroutineScript + Timeline（游戏逻辑） / await（UI 过渡，见 SPEC §10）
+- **测试**: GUT 9.7.1（`test/` 目录，310 个用例 / 57 个脚本覆盖核心系统）
+- **协程框架**: CoroutineScript + Timeline（游戏逻辑） / await（UI 过渡，见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)）
 - **服务层**: StageContext（clock/bullets/player/dialogue/items/audio/effects）
-- **弹幕**: BulletPool (4000) + MultiMesh
+- **弹幕**: 内核 SoA `BulletSystem` + MultiMesh（uniform grid 宽相碰撞；旧 `BulletPool` 已删）
 - **激光**: 生长/直线/固定路径 三种模式
 - **UI**: NavPage + MenuNav 页面栈（场景化 Overlay/PageHost）
 - **数据**: .tres Resource 文件（EnemyData 构造链模板 / SpellRecordBook / MusicRegistry）
@@ -142,17 +146,22 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 
 ---
 
-## 🧭 架构速览（2026-07 重构后）
+## 🧭 架构速览（2026-09 内核迁移后）
 
 ```
-输入(project.godot) → Autoload 系统 → StageContext 服务 → 实体
-        ↑                  ↓                 ↓
-       UI  ←── 事件(GameEvents) ←── 数据(GameState) ←── 物理
+project.godot(输入)
+      │
+      ▼
+组合根 GameScene ──声明式装配 + 向下注入──▶ StageRuntime / BulletManager(内核 SoA) / FxPool / MissCircleLayer
+      │                                          │
+      │                                          └──▶ 实体（Player / Enemy / Boss）经 StageContext 服务 ctx.*
+      ▼
+UI / 菜单 ◀── 信号 GameEvents    ◀── 存档 SaveData（纯 static）
 ```
 
-- 依赖单向：数据类不持有场景，实体通过服务访问系统
-- 信号生命周期：场景 `_exit_tree` 统一断开 autoload 连接
-- 协程约定：游戏逻辑用 CoroutineRunner（可暂停/可复现），UI 用 await
+- 依赖单向：父级/组合根向下注入（R2）；数据类不持有场景，实体经 `ctx.*` 服务访问系统
+- autoload 只剩 4 个真全局：`GameEvents / GameManager / RNG / AudioManager`；场景 `_exit_tree` 统一断开信号
+- 协程约定：游戏逻辑用 CoroutineScript + Timeline（可暂停/可复现），UI 用 await
 - 测试保护：核心数学（碰撞/掉落/符卡判定/时间线/RNG）有回归测试
 
 ---

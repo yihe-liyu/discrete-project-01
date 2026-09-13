@@ -256,7 +256,7 @@ extends CoroutineScript
 - **对话（DSL 台词内联，2026-08 重构）**：`DialogueSteps` 流程 DSL，**台词直接写在代码里**（与弹幕编排同构）：
   `enter/say/line/move/flip/dim/portrait/bubble/event/wait` → `ctx.play_dialogue_steps(steps)`。
   `line()` 延续上一说话者、`say(profile, text)` 换人；`d.event(key)` 是行间事件，时机精确。
-  参考：`data/stages/stage01/stage_script/stage01.gd` 战前对话、`docs/DIALOGUE_REFACTOR_PLAN.md`、剧本归档 `docs/DIALOGUE.md`
+  参考：`data/stages/stage01/stage_script/stage01.gd` 战前对话、`docs/DIALOGUE_SYSTEM.md`、剧本归档 `docs/DIALOGUE.md`
 
 ---
 

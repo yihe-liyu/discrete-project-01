@@ -2,7 +2,7 @@
 
 > 本文是项目的**架构单一真源**：告诉你“这是什么、分几层、每层放什么、每个系统归谁管、改/加东西该去哪”。
 > 用途：让架构“看得见、可照做、防止回头路”。改/加任何东西前，先对一下本文。
-> 子系统详细见 `docs/DIALOGUE.md`、`docs/SPELL_SYSTEM_TARGET.md`、`docs/BACKGROUND_VISUAL_PLAN.md`、`docs/STAGE_FLOW_PLAN.md`。
+> 子系统详细见 `docs/DIALOGUE_SYSTEM.md`（对话系统）+ `docs/DIALOGUE.md`（剧本）、`docs/BACKGROUND_VISUAL_PLAN.md`；架构改进路线（对象自治/身份归位/命令化）见已归档的 `docs/archive/STAGE_FLOW_PLAN.md`。
 
 ---
 
@@ -151,9 +151,9 @@
 ## 7. 索引 / 该读哪些
 
 - **总纲（本文）**：分层/系统地图/所有权/边界/债/操作指南。
-- **路线**：`docs/STAGE_FLOW_PLAN.md`（(b) 规划：对象自治/身份归位/命令化 + 七步）。
-- **对话**：`docs/DIALOGUE.md``DIALOGUE_REFACTOR_PLAN.md`。
-- **符卡**：`docs/SPELL_SYSTEM_TARGET.md`。
+- **路线**：`docs/archive/STAGE_FLOW_PLAN.md`（(b) 规划：对象自治/身份归位/命令化 + 七步；Step 1 / 3 / 4 已完成）。
+- **对话**：`docs/DIALOGUE_SYSTEM.md`（当前系统）+ `docs/DIALOGUE.md`（剧本归档）。
+- **符卡**：`docs/archive/SPELL_SYSTEM_TARGET.md`（目标蓝图，核心已由 `boss_catalog.gd` 落地）。
 - **背景**：`docs/BACKGROUND_VISUAL_PLAN.md`。
 
 ## 8. 命名约定 · 禁令 · 现状（并入自 SPEC §14/§15/§17）

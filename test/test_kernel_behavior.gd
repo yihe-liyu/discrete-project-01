@@ -1,5 +1,5 @@
 extends GutTest
-## S4a：行为管道 + world_accel + 内容端口契约（见 docs/NEW_KERNEL_REFACTOR_PLAN.md §21）。
+## S4a：行为管道 + world_accel + 内容端口契约（见 docs/NEW_KERNEL_REFACTOR_PLAN.md §15）。
 
 const GRAVITY_BULLET = preload("res://data/stages/stage01/bullet/gravity_bullet.gd")
 const MOVE_HOMING = preload("res://scripts/coroutine/player/move_homing.gd")
