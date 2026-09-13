@@ -86,13 +86,19 @@ const BGM_PATHS := {
 	"music_7":  "res://assets/Music/THq01_07.就在那里的不思议宇宙.mp3",
 	"music_10": "res://assets/Music/THq01_10.寂寥记忆界.mp3",
 	"music_12": "res://assets/Music/THq01_12.不尽记忆的天空.mp3",
+	"music_16": "res://assets/Music/THq01_16.忘不了，与生俱来的未来.mp3",
 	"music_17": "res://assets/Music/THq01_17.朝夕之阳，在远在洋.mp3",
 	"music_18": "res://assets/Music/THq01_18.以空为核，抽丝剥茧.mp3",
 	# 游戏内场景 BGM（语义 key，可指向音乐室曲目）
-	"menu":     "res://assets/Music/THq01_01.无缘故之回.mp3",
-	"stage1":   "res://assets/Music/THq01_02.夜间漫步.mp3",
-	"stage1B":  "res://assets/Music/THq01_07.就在那里的不思议宇宙.mp3",
-	"stage5":   "res://assets/Music/THq01_12.不尽记忆的天空.mp3",
+	"menu":        "res://assets/Music/THq01_01.无缘故之回.mp3",
+	"stage1":      "res://assets/Music/THq01_02.夜间漫步.mp3",
+	"stage1_boss": "res://assets/Music/THq01_03.洞窟蝙蝠.mp3",
+	"stage3B":     "res://assets/Music/THq01_07.就在那里的不思议宇宙.mp3",
+	"stage4":      "res://assets/Music/THq01_10.寂寥记忆界.mp3",
+	"stage5":      "res://assets/Music/THq01_12.不尽记忆的天空.mp3",
+	"stage6B_boss":"res://assets/Music/THq01_16.忘不了，与生俱来的未来.mp3",
+	"stageEX":     "res://assets/Music/THq01_17.朝夕之阳，在远在洋.mp3",
+	"stageEX_boss":"res://assets/Music/THq01_18.以空为核，抽丝剥茧.mp3",
 }
 
 const MUSIC_REGISTRY_PATH := "res://data/registry/music_registry.tres"

@@ -79,6 +79,17 @@ comment = "不尽记忆的天空
 bgm_key = "music_12"
 unlocked = true
 
+[sub_resource type="Resource" id="Resource_p7x6n"]
+script = ExtResource("1")
+music_id = 16
+title = "忘不了，与生俱来的未来"
+comment = "忘不了，与生俱来的未来
+片律的主题曲
+"
+bgm_key = "music_16"
+unlocked = true
+metadata/_custom_type_script = "uid://be08pe8s61ass"
+
 [sub_resource type="Resource" id="Resource_mnbxo"]
 script = ExtResource("1")
 music_id = 17
@@ -106,4 +117,4 @@ metadata/_custom_type_script = "uid://be08pe8s61ass"
 
 [resource]
 script = ExtResource("2")
-records = Array[ExtResource("1")]([SubResource("MusicRecord_01"), SubResource("MusicRecord_02"), SubResource("Resource_n7uf7"), SubResource("MusicRecord_03"), SubResource("Resource_lemic"), SubResource("MusicRecord_04"), SubResource("Resource_mnbxo"), SubResource("Resource_immyd")])
+records = Array[ExtResource("1")]([SubResource("MusicRecord_01"), SubResource("MusicRecord_02"), SubResource("Resource_n7uf7"), SubResource("MusicRecord_03"), SubResource("Resource_lemic"), SubResource("MusicRecord_04"), SubResource("Resource_p7x6n"), SubResource("Resource_mnbxo"), SubResource("Resource_immyd")])
