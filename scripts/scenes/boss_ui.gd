@@ -51,7 +51,7 @@ func _on_boss_spawned(boss: Node) -> void:
 	if _boss_ref and is_instance_valid(_boss_ref):
 		_boss_ref.display_name_changed.connect(_on_display_name_changed)
 		_on_display_name_changed(_boss_ref.get_boss_name())
-	
+
 	if not _timer_label:
 		_timer_label = Label.new()
 		_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -59,11 +59,11 @@ func _on_boss_spawned(boss: Node) -> void:
 		$Control.add_child(_timer_label)
 	_timer_label.position = Vector2($Control.size.x / 2.0 - 16, 16)
 	_timer_label.visible = false
-	
+
 	for d in _dots: d.queue_free()
 	_dots.clear()
 	_phase_idx = 0
-	
+
 	for i in range(boss_data.phases_for_difficulty(SaveData.selected_difficulty).size() - 1, -1, -1):
 		var phase: PhaseData = boss_data.phases_for_difficulty(SaveData.selected_difficulty)[i]
 		var dot := ColorRect.new()
@@ -71,7 +71,7 @@ func _on_boss_spawned(boss: Node) -> void:
 		dot.color = GRAY if phase.uid == 0 else GREEN
 		_history.add_child(dot)
 		_dots.append(dot)
-	
+
 	visible = true
 
 func _on_display_name_changed(display_name: String) -> void:
@@ -97,7 +97,7 @@ func _on_phase_start(phase: PhaseData) -> void:
 		_play_spell_announce(phase.name)
 	else:
 		_clear_announce()
-	
+
 	var vis_idx := _dots.size() - 1 - _phase_idx
 	if vis_idx >= 0 and vis_idx < _dots.size():
 		_dots[vis_idx].color = PURPLE
@@ -135,11 +135,11 @@ func _add_info_labels() -> void:
 		return
 	var parent := _announce_label
 	var label_h := parent.get_minimum_size().y
-	
+
 	_bonus_label = _make_sub_label(HORIZONTAL_ALIGNMENT_LEFT, Color(1, 0.9, 0.3))
 	_bonus_label.position = Vector2(0, label_h)
 	parent.add_child(_bonus_label)
-	
+
 	_capture_label = _make_sub_label(HORIZONTAL_ALIGNMENT_RIGHT, Color(0.5, 0.8, 0.5))
 	_capture_label.position = Vector2(parent.get_minimum_size().x * 0.6, label_h)
 	parent.add_child(_capture_label)

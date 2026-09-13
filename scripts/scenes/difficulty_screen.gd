@@ -146,7 +146,7 @@ func _appear_to(item: Control, gray: float, brightness: float, start_pulse_after
 		if old_tw and old_tw.is_valid():
 			old_tw.kill()
 		_item_tweens.erase(item)
-		
+
 		# 从当前实际值开始过渡
 		var start_gray: float = mat.get_shader_parameter("grayscale")
 		var start_bright: float = mat.get_shader_parameter("brightness")

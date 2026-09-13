@@ -125,7 +125,7 @@ func tick(delta: float) -> bool:
 	if _paused:
 		return true
 	_elapsed += delta
-	
+
 	for ev in _events:
 		if ev.fired and ev.repeat_every < 0:
 			continue
@@ -146,11 +146,11 @@ func tick(delta: float) -> bool:
 					ev.repeat_every = -1.0
 			else:
 				ev.fired = true
-	
+
 	if _loop_start >= 0 and _elapsed >= _loop_start and _all_onetime_fired():
 		_reset_onetime()
 		_elapsed = _loop_start
-	
+
 	if _loop_start >= 0:
 		return true
 	for ev in _events:

@@ -13,10 +13,10 @@ var _timer: float = 0.0
 
 func _tick(_ctx: StageContext):
 	if not target: return true
-	
+
 	_timer += get_dt()
-	
+
 	# sin: 两端导数最小（慢），中心导数最大（快）= 自然加减速
 	target.global_position.x = _center + sin(_timer * TAU / _period) * _amplitude
-	
+
 	return true  # 每帧都跑

@@ -85,7 +85,7 @@ func _parse_tags(text: String) -> void:
 func shake(parent: Control) -> void:
 	if _shake_dur <= 0.0:
 		return
-	
+
 	var orig := position
 	var tw := parent.create_tween()
 	tw.set_loops()

@@ -24,7 +24,7 @@ func _ready() -> void:
 		var plane_mesh := PlaneMesh.new()
 		plane_mesh.size = plane_size
 		plane_mesh.orientation = PlaneMesh.FACE_Y
-		
+
 		var mat := ShaderMaterial.new()
 		mat.shader = preload("res://gdshader/background_plane.gdshader")
 		mat.set_shader_parameter("tiling", tiling)
@@ -32,7 +32,7 @@ func _ready() -> void:
 		if base_texture:
 			mat.set_shader_parameter("base_texture", base_texture)
 		mat.set_shader_parameter("uv_offset", Vector2.ZERO)
-		
+
 		plane_mesh.material = mat
 		self.mesh = plane_mesh
 	else:

@@ -18,7 +18,7 @@ func _ready() -> void:
 	_rect = ColorRect.new()
 	_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
+
 	_view_size = get_viewport().get_visible_rect().size
 	_mat = ShaderMaterial.new()
 	_mat.shader = preload("res://gdshader/miss_circle.gdshader")
@@ -28,7 +28,7 @@ func _ready() -> void:
 		_mat.set_shader_parameter("%s_pos" % pf, Vector2(-1, -1))
 		_mat.set_shader_parameter("%s_radpx" % pf, 0.0)
 		_mat.set_shader_parameter("%s_alpha" % pf, 0.0)
-	
+
 	_rect.material = _mat
 	add_child(_rect)
 
@@ -70,7 +70,7 @@ func clear_all() -> void:
 func _update_shader() -> void:
 	var view_size: Vector2 = _view_size
 	var canvas: Transform2D = get_viewport().get_canvas_transform()
-	
+
 	for i in MAX_CIRCLES:
 		var pf: String = _prefixes[i]
 		if i < _circles.size():
@@ -89,7 +89,7 @@ func _update_shader() -> void:
 			if c.fade_out > 0.0 and c.age > c.duration:
 				var fade_t := clampf((c.age - c.duration) / c.fade_out, 0.0, 1.0)
 				alpha = 1.0 - fade_t
-			
+
 			_mat.set_shader_parameter("%s_pos" % pf, uv_pos)
 			_mat.set_shader_parameter("%s_radpx" % pf, radius_px)
 			_mat.set_shader_parameter("%s_alpha" % pf, alpha)

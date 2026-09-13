@@ -20,7 +20,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	if p_target:
 		target = p_target
-	
+
 	# 重跑重置：全新环境 + 相机复位（防 tween 残留/越重跑越暗）
 	bg.apply_env_preset(ENV_PRESET)
 	bg.reset_camera()
@@ -28,7 +28,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	fog.setup(sun)
 	ctx.decor.add_layer(OAK_LAYER)
 	ctx.decor.batch_spawn("橡树", 160, Vector2(-90, 90), Vector2(-220, -50), ground)
-	
+
 	var tl := start_timeline()
 
 	# ① 雾散光来 (0→6s, tween 12s)
@@ -48,7 +48,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		var t := bg.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 		t.tween_method(_camera_accel, 1.0, 7.0, 32).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	)
-	
+
 	tl.at(25.0).do(func():
 		bg.tween_env_fog(Color(0.733, 0.572, 0.402, 1.0), 0.02, 20.0)
 	)
@@ -59,11 +59,11 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		var z: float = RNG.randf_range(-220, -180)
 		ctx.decor.spawn("橡树", Vector3(x, 8.0, z), Vector2.ZERO, ground)
 	)
-	
+
 	tl.at(50.0).do(func():
 		bg.tween_env_fog(Color(0.331, 0.58, 0.77, 1.0), 0.01, 35.0)
 	)
-	
+
 	tl.at(60.0).do(func():
 		var t := bg.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 		t.tween_method(_camera_accel, 7.0, 4.0, 25.0).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)

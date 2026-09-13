@@ -20,8 +20,11 @@ var _processing_paused: bool = false
 var _kernel: KernelBulletBackend
 var _kernel_physics: KernelBulletPhysics
 
-## W2：组合根注入的特效层（空则静默）
-var fx_pool: FxPool
+## W2：组合根注入的特效层（空则静默）。**只读** —— 唯一写入口是 `inject_fx_pool()`。
+var _fx_pool: FxPool
+var fx_pool: FxPool:
+	get:
+		return _fx_pool
 
 ## K4：组合根注入的视觉父节点（World）——炸弹爆炸贴图挂此（不再全树找 scene/World）
 var fx_parent: Node2D
@@ -44,9 +47,9 @@ func get_bullet_ctx() -> StageContext:
 	return _bullet_ctx
 
 
-## W2：组合根注入特效层，转发给内核碰撞/清弹模块
+## W2：组合根注入特效层（唯一写入口），转发给内核碰撞/清弹模块
 func inject_fx_pool(fx: FxPool) -> void:
-	fx_pool = fx
+	_fx_pool = fx
 	if _kernel_physics:
 		_kernel_physics.fx = fx
 
@@ -66,7 +69,6 @@ func _ready():
 	_multi_mesh.enabled = true
 	add_child(_multi_mesh)
 	_enable_kernel()
-	inject_fx_pool(fx_pool)
 
 
 func _exit_tree() -> void:

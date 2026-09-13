@@ -130,7 +130,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 			if not ctx.boss.exists():
 				_spawn_mid_enemy(1, i, true)
 		)
-		
+
 	for i in 18:
 		tl.at(63.0 + i * 0.7).do(func():
 			_spawn_mid_enemy(0, i, false, 1)
@@ -139,7 +139,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		tl.at(63.3 + i * 0.7).do(func():
 			_spawn_mid_enemy(1, i, false, 1)
 		)
-	
+
 	tl.at(60.0).do(func():
 		EnemyData.new().blue_big_fairy() \
 			.with_script(ENEMY04) \
@@ -166,7 +166,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 			.hp(600) \
 			.spawn(ctx)
 	)
-	
+
 	for i in 18:
 		tl.at(80.0 + i * 0.3).do(func():
 			_spawn_mid_enemy(0, i, false, 1)
@@ -175,7 +175,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		tl.at(80.0 + i * 0.3).do(func():
 			_spawn_mid_enemy(1, i, false, 1)
 		)
-	
+
 	# 战前对话（独立构建脚本 data/dialogue/stage01/intro.gd）
 	tl.at(93).do(func():
 		_dir.dialogue(STAGE01_INTRO.build().steps)

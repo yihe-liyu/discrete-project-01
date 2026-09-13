@@ -97,23 +97,23 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	z_index = LayerConfig.BOSS
 	if not GameEvents.player_missed.is_connected(_on_player_death):
 		GameEvents.player_missed.connect(_on_player_death)
-	
+
 	if SaveData.is_practice_mode:
 		_stage_id = SaveData.practice_stage_id
 	else:
 		_stage_id = SaveData.current_stage_id
-	
+
 	var ring := HPRingClass.new()
 	ring.setup(self)
 	add_child(ring)
-	
+
 	_hitbox_radius = data.hitbox_radius
 	var shape := CircleShape2D.new()
 	shape.radius = _hitbox_radius
 	var col := CollisionShape2D.new()
 	col.shape = shape
 	add_child(col)
-	
+
 	collision_layer = 0
 	collision_mask = 0
 
@@ -186,17 +186,17 @@ func start_phase(data: PhaseData) -> void:
 	# 开局减伤参数暂存，计时从"无敌解除"（涨血完，玩家能打伤）开始
 	_open_reduce_ratio = data.open_reduce_ratio
 	_open_reduce_left = 0.0
-	
+
 	# 显示血条
 	_set_ring_visible(true)
-	
+
 	_pid = BossCatalog.resolve_identity(_stage_id, data, SaveData.practice_phase_index if SaveData.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
 	if _pid:
 		RecordService.record_phase_start(_pid)   # 记录服务：解锁/记尝试（Boss 不再摸 SaveData.record_*）
-	
+
 	if data.name != "":
 		GameEvents.phase_start.emit(data)
-	
+
 	# HP 从 0 涨到满
 	var twn := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	twn.tween_method(_set_hp, 0, data.hp, 1.0)
@@ -208,7 +208,7 @@ func start_phase(data: PhaseData) -> void:
 			_invincible = false
 			# 玩家能打伤时才开始减伤计时（完整 open_reduce_time 秒）
 			_open_reduce_left = data.open_reduce_time if _open_reduce_ratio > 0.0 else 0.0
-		
+
 		if data.move_script:
 			_move = data.move_script.new()
 			add_child(_move)
@@ -229,13 +229,13 @@ func _process(delta: float) -> void:
 		_update_indicator_alpha()
 	if not _current_phase: return
 	_elapsed += delta
-	
+
 	if _bonus > 0:
 		# maxf 防御：time_limit 非法为 0 时优雅降级（正常配置由 validate 拦截）
 		var t := maxf(_current_phase.time_limit, 0.001)
 		var tick := maxi(1, int(float(_current_phase.bonus) / t * delta))
 		_bonus = maxi(0, _bonus - tick)
-	
+
 	GameEvents.phase_bonus_tick.emit(_bonus)
 
 	if _open_reduce_left > 0.0:
@@ -278,21 +278,21 @@ func clear_phase(captured: bool) -> void:
 	_invincible = true
 	if _move: _move.stop(); _move.queue_free(); _move = null
 	if _shoot: _shoot.stop(); _shoot.queue_free(); _shoot = null
-	
+
 	if _pid:
 		# 阶段已开始（_pid 已生成）才记录；Ctrl+G 在阶段开始前触发时只跳阶段不落盘
 		if SaveData.is_practice_mode:
 			RecordService.record_phase_capture(_pid, false, 0, 0.0)  # 练习收取
 		elif captured and not _phase_missed:
 			RecordService.record_phase_capture(_pid, true, _bonus, _elapsed)  # 干净收取
-	
+
 	GameEvents.phase_end.emit(captured, _bonus)
 	if captured and _bonus > 0:
 		var r = _refs()
 		var res: PlayerResources = r.get_player_resources() if r else null
 		if res != null:
 			res.add_score(_bonus)
-	
+
 	_drop_items()
 	if _ctx:
 		_ctx.bullets.death_clear(global_position, 960, 0.75, 30)

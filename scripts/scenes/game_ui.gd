@@ -39,15 +39,15 @@ var _entry_queue: Array[Node] = []
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS  # 暂停时水面动画不冻
 	var tex := preload("res://assets/Textures/ascii/ascii.png")
-	
+
 	# Title Logo → 先入队但单独处理
 	var title := $"Title"
 	_entry_queue.push_front(title)
-	
+
 	# 难度 UI → 入队，单独处理入场动画
 	var diff := $"diffculty"
 	_entry_queue.append(diff)
-	
+
 	# 文字标签先入队（先出现）
 	_entry_queue.append($HighScore)
 	_entry_queue.append($Score)
@@ -57,7 +57,7 @@ func _ready() -> void:
 	_entry_queue.append($Point)
 	_entry_queue.append($Graze)
 	_entry_queue.append($MemoryValue)
-	
+
 	_hi_score_num = _make_number_sprite("HiScoreNumber",  $HighScore.position + Vector2(102, 0), tex, 10)
 	_add_separator(Vector2(GameConfig.FIELD_RIGHT, 124), 450.0, Color(0.685, 0.685, 0.685, 0.5))
 	_score_num    = _make_number_sprite("ScoreNumber",    $Score.position     + Vector2(102, 0), tex, 10)
@@ -70,14 +70,14 @@ func _ready() -> void:
 	_add_separator(Vector2(GameConfig.FIELD_RIGHT, 452), 450.0, Color(0.689, 0.933, 1.0, 0.502))
 	_graze_num    = _make_number_sprite("GrazeNumber",    $Graze.position     + Vector2(102, 0), tex)
 	_add_separator(Vector2(GameConfig.FIELD_RIGHT, 508), 450.0, Color(0.685, 0.685, 0.685, 0.5))
-	
+
 	_memory_rect = $Memory/OutlineRect
 	_entry_queue.append(_memory_rect)
 	_memory_num = _make_number_sprite_on("MemoryNumber", $Memory, Vector2(980, 608), tex, 6)
-	
+
 	# 设置难度标签贴图
 	_update_difficulty_texture()
-	
+
 	# 碎片图标
 	_fragment_init()
 
@@ -95,7 +95,7 @@ func _ready() -> void:
 	_memory_num.minus_index   = 12
 	_memory_num.char_count    = 14
 	_memory_num.z_index       = LayerConfig.UI_TOP
-	
+
 	# 依次播放入场动画
 	_play_entry_animation()
 
@@ -105,11 +105,11 @@ func _play_entry_animation() -> void:
 	for i in _entry_queue.size():
 		var node := _entry_queue[i]
 		_reset_entry_node(node)
-		
+
 		var tw := create_tween()
 		tw.tween_interval(i * ENTRY_INTERVAL)
 		tw.tween_callback(_play_entry_tween.bind(node))
-	
+
 	# 所有入场动画完成后通知 GameScene
 	var total := _entry_queue.size() * ENTRY_INTERVAL + 1.5
 	var done := create_tween()
@@ -149,38 +149,38 @@ func _reset_entry_node(node: Node) -> void:
 func _play_entry_tween(node: Node) -> void:
 	if not is_instance_valid(node):
 		return
-	
+
 	if node.name == "Title":
 		var t := create_tween().set_parallel(true)
 		t.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		t.tween_property(node.material, "shader_parameter/progress", 1.0, 1.5)
 		t.tween_property(node.material, "shader_parameter/alpha_mult", 1.0, 0.8)
-	
+
 	elif node.name == "diffculty":
 		node.modulate.a = 1.0
 		var pop := create_tween().set_parallel(true)
 		pop.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		pop.tween_property(node, "scale", Vector2(3, 3), 0.4)
 		pop.tween_callback(_play_diff_move.bind(node)).set_delay(0.5)
-	
+
 	elif node is UISeparator:
 		var t := create_tween().set_parallel(true)
 		t.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		t.tween_property(node, "progress", 1.0, ENTRY_DURATION)
 		t.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
-	
+
 	elif node.name in ["MemoryValue", "MemoryNumber"]:
 		var t := create_tween()
 		t.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
-	
+
 	elif node == _memory_rect:
 		var t := create_tween()
 		t.tween_property(node.material, "shader_parameter/alpha_mult", 1.0, ENTRY_DURATION * 0.7)
-	
+
 	elif node.has_meta("is_fragment"):
 		var t := create_tween()
 		t.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
-	
+
 	else:
 		# 普通标签：左滑 + 渐显
 		var t := create_tween().set_parallel(true)
@@ -210,10 +210,10 @@ func _make_number_sprite_on(p_name: String, parent: Node, pos: Vector2, tex: Tex
 func _fragment_init() -> void:
 	var life_tex := preload("res://assets/Textures/front/life.png")
 	var spell_tex := preload("res://assets/Textures/front/spell.png")
-	
+
 	_life_fragments.resize(8)
 	_bomb_fragments.resize(8)
-	
+
 	# 残机碎片：在 Player 标签右侧
 	for i in 8:
 		var s := Sprite2D.new()
@@ -225,7 +225,7 @@ func _fragment_init() -> void:
 		add_child(s)
 		_life_fragments[i] = s
 		_entry_queue.append(s)
-	
+
 	# Spell 碎片：在 Bomb 标签右侧
 	for i in 8:
 		var s := Sprite2D.new()
@@ -268,7 +268,7 @@ func _update_fragments() -> void:
 	var fw_spell := _SPELL_TEX.get_width() / 6.0
 	var life_h := _LIFE_TEX.get_height()
 	var spell_h := _SPELL_TEX.get_height()
-	
+
 	for i in 8:
 		# 残机：前 lives 个完整，下一个可能显示碎片，其余空
 		if i < resources.lives:
@@ -283,7 +283,7 @@ func _update_fragments() -> void:
 			_life_fragments[i].visible = true
 			var at := _life_fragments[i].texture as AtlasTexture
 			at.region = Rect2(0, 0, fw_life, life_h)  # 帧 0=空
-		
+
 		# Bomb
 		if i < resources.bomb_count:
 			_bomb_fragments[i].visible = true
@@ -351,9 +351,9 @@ func _process(_delta: float) -> void:
 
 	if resources != null:
 		_power_num.show_text(resources.get_power_display() + "/4.00")
-	
+
 	_update_fragments()
-	
+
 	# 同步 memory → shader
 	if _memory_rect and _memory_rect.material is ShaderMaterial:
 		_memory_rect.material.set_shader_parameter("memory", float(resources.memory_value))

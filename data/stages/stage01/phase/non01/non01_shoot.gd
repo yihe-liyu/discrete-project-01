@@ -23,9 +23,9 @@ var _base_dir: Vector2
 func _tick(p_ctx: StageContext):
 	if not target:
 		return p_ctx.clock.wait(_burst_interval)
-	
+
 	var dt := get_dt()
-	
+
 	if _shots_left > 0:
 		# 波内：按短间隔连续开花
 		_shot_t += dt
@@ -38,7 +38,7 @@ func _tick(p_ctx: StageContext):
 		_burst_t += dt
 		if _burst_t >= _burst_interval:
 			_fire_burst(p_ctx)
-	
+
 	return true
 
 
@@ -62,7 +62,7 @@ func _fire_ring(p_ctx: StageContext) -> void:
 	var speed: float = 25.0 + _ring_index * 25
 	var bounce_angle: float = diff_pick(_bounce_step) * (_ring_index - diff_pick(_burst_count) / 2) * _wave_sign
 	_ring_index += 1
-	
+
 	var bullet := BulletData.new()\
 		.tex("棱弹")\
 		.speed(speed)\
@@ -71,5 +71,5 @@ func _fire_ring(p_ctx: StageContext) -> void:
 		.enemy()\
 		.behavior(preload("res://data/stages/stage01/bullet/bounce_bullet.gd"))
 	bullet.params = {"bounce_angle": bounce_angle, "accel": _bullet_accel - _ring_index * 3}
-	
+
 	p_ctx.bullets.shoot_spread(bullet, count, TAU, _base_dir, target.global_position)

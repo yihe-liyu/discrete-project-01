@@ -12,7 +12,7 @@ func _init() -> void:
 func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	if p_target: target = p_target
-	
+
 	_dir = Vector2.UP.rotated(RNG.randf_range(-PI / 3, PI / 3))
 	super.start(ctx, target)
 

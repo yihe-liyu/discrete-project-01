@@ -22,17 +22,17 @@ func _setup() -> void:
 	# 材质、缩放、朝向、alpha 每帧重置，避免复用旧状态
 	if _tween and _tween.is_valid():
 		_tween.kill()
-	
+
 	# 防御：add_child 同栈 activate 时 _ready 未跑，@onready sprite 可能为 null
 	if sprite == null:
 		return
-	
+
 	sprite.scale = Vector2.ONE
 	rotation = RNG.randf_range(0.0, TAU)
-	
+
 	var mat := sprite.material as ShaderMaterial
 	mat.set_shader_parameter("fog_tint:a", 0.75)
-	
+
 	_tween = create_tween()
 	_tween.set_parallel(true)
 	_tween.set_trans(Tween.TRANS_CUBIC)

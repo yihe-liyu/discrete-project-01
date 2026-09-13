@@ -44,12 +44,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ═══ 状态 ═══
 
-## 受控状态入口（供内部模块/场景使用，会发信号并做去重）
+## 受控状态入口（内部模块/场景都走这里；会发信号并做去重）
 func set_state(new_state: AppState) -> void:
-	_set_state(new_state)
-
-
-func _set_state(new_state: AppState):
 	var old: int = current_state
 	if old == new_state:
 		return
@@ -66,7 +62,7 @@ func change_scene(path: String, target_state: AppState = AppState.PLAYING):
 	if current_state == AppState.TRANSITIONING:
 		return
 
-	_set_state(AppState.TRANSITIONING)
+	set_state(AppState.TRANSITIONING)
 
 	_nav.clear_pages()
 	_nav.clear_overlays()
@@ -75,7 +71,7 @@ func change_scene(path: String, target_state: AppState = AppState.PLAYING):
 	previous_scene_path = current_scene_path
 	current_scene_path = new_path
 
-	_set_state(target_state)
+	set_state(target_state)
 	scene_entered.emit(current_scene_path)
 
 

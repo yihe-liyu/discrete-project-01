@@ -26,7 +26,7 @@ func _ready():
 	z_as_relative = false
 	if enemy_data: _apply_enemy_data(enemy_data)
 	_last_pos = global_position
-	
+
 	if registry:
 		registry.register_enemy(self)
 	if not tree_exited.is_connected(_on_tree_exited):
@@ -49,14 +49,14 @@ func _apply_enemy_data(data: EnemyData):
 	score_value = data.score_value
 	death_effect = data.death_effect
 	hp = max_hp
-	
+
 	# 外观：直接实例化 visual_scene
 	if data.visual_scene:
 		_visual = data.visual_scene.instantiate()
 		add_child(_visual)
 	if data.hitbox_radius > 0:
 		hitbox_radius = data.hitbox_radius
-	
+
 	# 碰撞形状
 	var cs := $CollisionShape2D if has_node("CollisionShape2D") else CollisionShape2D.new()
 	if not cs.get_parent():
@@ -92,10 +92,10 @@ func die():
 			ctx.effects.play_hit_effect(death_effect, global_position)
 	if registry:
 		registry.unregister_enemy(self)
-	
+
 	# 掉落 item
 	_drop_item()
-	
+
 	GameEvents.enemy_killed.emit(score_value, global_position)
 	queue_free()
 
@@ -105,7 +105,7 @@ func _drop_item() -> void:
 	var pool := _find_item_pool()
 	if not pool:
 		return
-	
+
 	_spawn_items(pool, Item.Type.POWER, enemy_data.item_power)
 	_spawn_items(pool, Item.Type.POINT, enemy_data.item_point)
 	_spawn_items(pool, Item.Type.LIFE_FRAGMENT, enemy_data.item_life)

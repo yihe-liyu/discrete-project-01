@@ -22,14 +22,14 @@ enum Mode { CIRCLE, RECTANGLE }
 func _draw() -> void:
 	if not Engine.is_editor_hint():
 		return
-	
+
 	# 绘制纹理
 	if show_texture:
 		var tex_size := show_texture.get_size() * texture_scale
 		draw_texture_rect(show_texture, Rect2(-tex_size / 2.0, tex_size), false, Color.WHITE)
-	
+
 	var center := hitbox_offset
-	
+
 	match mode:
 		Mode.CIRCLE:
 			draw_circle(center, hitbox_radius, Color(1, 0, 0, 0.25), true)
@@ -39,7 +39,7 @@ func _draw() -> void:
 			if r > 8:
 				draw_line(center, center + Vector2(0, -r), Color(1, 1, 0, 0.7), 1, true)
 				draw_string(ThemeDB.fallback_font, center + Vector2(4, -r - 4), "r=%.1f" % r, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 1, 0))
-		
+
 		Mode.RECTANGLE:
 			var half := hitbox_size / 2.0
 			var rect := Rect2(center - half, hitbox_size)
@@ -51,13 +51,13 @@ func _draw() -> void:
 			# 尺寸标注
 			if hitbox_size.length() > 16:
 				draw_string(ThemeDB.fallback_font, center + Vector2(half.x + 4, -half.y + 14), "%.0f×%.0f" % [hitbox_size.x, hitbox_size.y], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0, 1, 1))
-	
+
 	# 基准十字
 	var ref := 80.0
 	draw_line(Vector2(-ref, 0), Vector2(ref, 0), Color(0.5, 0.5, 0.5, 0.25), 0.5)
 	draw_line(Vector2(0, -ref), Vector2(0, ref), Color(0.5, 0.5, 0.5, 0.25), 0.5)
 	draw_circle(Vector2.ZERO, 2.0, Color(0.5, 0.5, 0.5, 0.5))
-	
+
 	# 偏移线
 	if hitbox_offset != Vector2.ZERO:
 		draw_line(Vector2.ZERO, center, Color(1, 1, 0, 0.4), 1, true)

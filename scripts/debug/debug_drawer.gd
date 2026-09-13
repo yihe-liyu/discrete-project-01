@@ -23,7 +23,7 @@ func _process(_delta):
 func _draw():
 	if not draw_enabled:
 		return
-	
+
 	# ── 画所有子弹判定（内核行）──
 	var bm := BulletManager.current
 	if bm:
@@ -31,7 +31,7 @@ func _draw():
 		if sys != null:
 			for i in sys.get_active_count():
 				_draw_kernel_bullet_row(sys, i)
-	
+
 	# ── 画所有敌人判定 ──
 	var refs := EntityRegistry.current
 	if refs:
@@ -41,7 +41,7 @@ func _draw():
 			var radius: float = enemy.get("hitbox_radius") if "hitbox_radius" in enemy else 8.0
 			draw_arc(enemy.global_position, radius, 0, TAU, 12, Color.GREEN, 1.5)
 			draw_circle(enemy.global_position, 2.0, Color.GREEN)
-	
+
 	# ── 画玩家判定 ──
 	if refs:
 		var player = refs.player
@@ -51,7 +51,7 @@ func _draw():
 			draw_arc(player.global_position, gr, 0, TAU, 24, Color(0.3, 0.6, 1.0, 0.6), 1.0)
 			draw_arc(player.global_position, r, 0, TAU, 12, Color.CYAN, 2.0)
 			draw_circle(player.global_position, 2.0, Color.CYAN)
-	
+
 	# 左上角显示弹幕计数
 	if bm:
 		draw_string(

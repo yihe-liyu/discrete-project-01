@@ -38,24 +38,24 @@ func on_enter() -> void:
 		if diff_tex:
 			_fly_to_badge(diff_tex)
 			return
-	
+
 	_play_entrance()
 
 
 ## 从难度页面中央位置飞到 DifficultyBadge 节点
 func _fly_to_badge(tex: Texture2D) -> void:
 	badge.texture = tex
-	
+
 	# 起始位置：难度页面中央，scale 放大到选项大小
 	badge.global_position = Vector2(640, 480)
-	
+
 	# 飞到目标位置，同时 scale 缩
 	var tw := create_tween()
 	tw.set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(badge, "global_position", Vector2(640 - tex.get_size().x / 4, 800), FLY_DURATION)
 	tw.tween_property(badge, "scale", Vector2.ONE / 2, FLY_DURATION)
-	
+
 	_play_entrance()
 
 

@@ -26,10 +26,10 @@ func _ready():
 	_stage_runtime.miss_layer = _miss_layer
 	_stage_runtime.fx_pool = _fx_pool
 	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层（K4）
-	
+
 	_bullets.inject_fx_pool(_fx_pool)
 	_bullets.fx_parent = _world            # 炸弹爆炸贴图挂 World（K4：不再全树找）
-	
+
 	_item_pool.refs = _stage_runtime.refs   # 道具经注册表取自机/资源（W4b-2b）
 
 	GameEvents.player_death.connect(_on_player_death)

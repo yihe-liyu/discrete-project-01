@@ -111,11 +111,11 @@ func _physics_process(delta):
 		_invincible_timer -= delta
 		if _invincible_timer <= 0.0:
 			is_invincible = false
-	
+
 	input_vector.x = Input.get_axis("move_left", "move_right")
 	input_vector.y = Input.get_axis("move_up", "move_down")
 	is_focused = Input.is_action_pressed("focus")
-	
+
 	update_hitbox_display()
 	update_animation()
 	update_move(delta)
@@ -234,22 +234,22 @@ const MEM_RELEASE_DURATION := 0.75
 func _memory_release() -> void:
 	if is_invincible or resources.memory_value < 50.0:
 		return
-	
+
 	resources.reduce_memory(50.0)
 	var pos := global_position
-	
+
 	# 视觉特效：反色圈（走服务）
 	_miss_circle(pos, MEM_RELEASE_DURATION, MEM_RELEASE_RANGE, 30, 0.0, 0.25)
 	_play_sfx(AssetRegistry.sounds["kira"], -6.0)
-	
+
 	# 消弹 + 每颗弹原地掉道具（碎片有上限）
 	var limits := {life = 0, bomb = 0}
 	var on_clear := func(bullet_pos: Vector2):
 		_spawn_one_item(bullet_pos, limits)
-	
+
 	# 场上已有道具全部飞向玩家
 	_force_collect_all_items()
-	
+
 	_death_clear(pos, MEM_RELEASE_RANGE, MEM_RELEASE_DURATION, 30, on_clear)
 
 
@@ -265,14 +265,14 @@ func _force_collect_all_items() -> void:
 func _spawn_one_item(at: Vector2, limits: Dictionary) -> void:
 	const MAX_LIFE := 2
 	const MAX_BOMB := 2
-	
+
 	var pool := _find_item_pool()
 	if not pool:
 		return
-	
+
 	var r := RNG.randf()
 	var item_type: int
-	
+
 	# 碎片有上限，超限降级为跳过
 	if r < 0.05 and limits.life < MAX_LIFE:
 		item_type = Item.Type.LIFE_FRAGMENT
@@ -307,7 +307,7 @@ func _find_item_pool() -> Node:
 func miss() -> void:
 	if is_invincible:
 		return
-	
+
 	_play_sfx(AssetRegistry.sounds["player_die"], -6.0)
 	var pos: Vector2 = global_position
 	_miss_circle(pos, 2.5, 1280)
@@ -316,15 +316,15 @@ func miss() -> void:
 	_miss_circle(pos + Vector2(0, 100), 2.5, 1280)
 	_miss_circle(pos + Vector2(0, -100), 2.5, 1280)
 	_miss_circle(pos, 1.0, 1280, 0.0, 1.5)
-	
+
 	_death_clear(pos, 2048, 3.0)
-	
+
 	# Miss 后记忆值增加 25%
 	resources.add_memory(PlayerResources.MEMORY_MISS)
-	
+
 	# 每次 miss 都通知（boss 判定 miss 后不收；player_death 只在残机 0 发，不能复用）
 	GameEvents.player_missed.emit()
-	
+
 	# 残机扣除
 	if resources.lose_life():
 		# 无敌：倒计时 3 秒，_physics_process 自动倒数（不 await，不挂起调用链）

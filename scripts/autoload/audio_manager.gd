@@ -48,7 +48,7 @@ func _init_players() -> void:
 		_bgm_player.bus = _find_bus("BGM")
 		_bgm_player.process_mode = PROCESS_MODE_ALWAYS
 		add_child(_bgm_player)
-	
+
 	if _sfx_players.is_empty():
 		var sfx_bus := _find_bus("SFX")
 		for i in range(SFX_POOL_SIZE):
@@ -78,7 +78,7 @@ func _play_bgm_at(stream: AudioStream, from: float) -> void:
 		_init_players()
 	if _bgm_player.playing and _bgm_player.stream == stream:
 		return
-	
+
 	_bgm_player.stop()
 	_bgm_player.stream = stream
 	_bgm_player.volume_db = _to_db(bgm_volume * master_volume)
@@ -114,12 +114,12 @@ func _bgm_sync_volume() -> void:
 func play_sfx(stream: AudioStream, volume_db: float = 0.0, min_interval: float = 0.0) -> void:
 	if _sfx_players.is_empty():
 		_init_players()
-	
+
 	# 同帧不重复
 	if stream in _played_this_frame:
 		return
 	_played_this_frame.append(stream)
-	
+
 	# 最小间隔节流（跨帧限频）：命中/擦弹这类高频音效避免持续占满池
 	if min_interval > 0.0:
 		var now := Time.get_ticks_msec() / 1000.0
@@ -127,11 +127,11 @@ func play_sfx(stream: AudioStream, volume_db: float = 0.0, min_interval: float =
 		if now - last < min_interval:
 			return
 		_last_played_at[stream] = now
-	
+
 	var player := _pick_sfx_player()
 	if not player:
 		return
-	
+
 	player.set_meta("protected", stream in _protected_streams)
 	player.stream = stream
 	player.volume_db = clampf(volume_db + _to_db(sfx_volume), -80.0, 24.0)
@@ -156,7 +156,7 @@ func _pick_sfx_player() -> AudioStreamPlayer:
 	for p in _sfx_players:
 		if not p.playing:
 			return p
-	
+
 	# 2) 全忙 → 先踢不受保护的（最早开始播放的那个）
 	var oldest_free: AudioStreamPlayer = null
 	var oldest_tick := -INF
@@ -170,7 +170,7 @@ func _pick_sfx_player() -> AudioStreamPlayer:
 	if oldest_free:
 		oldest_free.stop()
 		return oldest_free
-	
+
 	# 3) 全被保护（罕见：16 路全被保护音效占用）→ 踢最老
 	var oldest := _sfx_players[0]
 	oldest_tick = oldest.get_playback_position()

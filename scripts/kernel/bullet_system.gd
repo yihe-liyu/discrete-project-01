@@ -330,7 +330,7 @@ func _physics_process(delta: float) -> void:
 	# 本帧位置全部会变（积分 + 行为 set_position）→ 碰撞查询前重建网格
 	_grid_active = false
 	_grid_dirty = true
-	
+
 	# 空 cull_rect 会把任何点判为界外（弹"只闪不动"的根因），所以先查 has_area()
 	var should_cull: bool = cull_rect.has_area()
 	# 倒序遍历：despawn 是 swap-with-last，前向遍历会漏判被换进来的弹（密度微顿挫）。

@@ -26,25 +26,25 @@ func _ready() -> void:
 	super._ready()  # BasePage._create_overlay() 需要先执行
 	# 进入音乐室时停掉外部 BGM
 	AudioManager.stop_bgm()
-	
+
 	# 加载音乐注册表
 	if ResourceLoader.exists(MUSIC_REGISTRY_PATH):
 		_music_registry = ResourceLoader.load(MUSIC_REGISTRY_PATH)
 	else:
 		_music_registry = MusicRegistry.new()
 		ResourceSaver.save(_music_registry, MUSIC_REGISTRY_PATH)
-	
+
 	_music_records = _music_registry.records
-	
+
 	# 创建预览播放器
 	_preview_player = AudioStreamPlayer.new()
 	_preview_player.bus = _find_bus("BGM")
 	add_child(_preview_player)
 	_preview_player.finished.connect(_on_preview_finished)
-	
+
 	# 标题初始透明
 	_title_texture.modulate.a = 0.0
-	
+
 	# 重建左栏列表（不设最终颜色，留待 on_enter 的入场动画）
 	_rebuild_list()
 
@@ -56,15 +56,15 @@ func on_enter() -> void:
 		item.modulate.a = 0.0
 		if item is Control:
 			item.scale = Vector2(0.95, 0.95)
-	
+
 	# 遮罩淡入
 	_fade_overlay_in(0.5)
-	
+
 	# 标题淡入
 	var tw := create_tween()
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_title_texture, "modulate:a", 1.0, 0.5)
-	
+
 	# 列表交错入场
 	_play_entrance()
 
@@ -76,43 +76,43 @@ func _rebuild_list() -> void:
 		child.queue_free()
 	_list_labels.clear()
 	_nav_items.clear()
-	
+
 	for i in _music_records.size():
 		var record := _music_records[i]
 		var label := Label.new()
 		label.add_theme_font_size_override("font_size", 32)
 		label.name = "Track_%d" % record.music_id
-		
+
 		# 设定文字内容
 		if not record.unlocked:
 			label.set_meta("locked", true)
 			label.text = "NO.%02d  %s" % [record.music_id, LOCKED_TEXT]
 		else:
 			label.text = "NO.%02d  %s" % [record.music_id, record.title]
-		
+
 		# 初始透明（on_enter 时渐显）
 		label.modulate.a = 0.0
-		
+
 		list_container.add_child(label)
 		_list_labels.append(label)
 		_nav_items.append(label)
-	
+
 	if not _nav_items.is_empty():
 		_nav_index = _find_first_unlocked()
 		if _nav_index < 0:
 			_nav_index = 0
-	
+
 	_update_display(_nav_index)
 
 
 func _on_item_selected(index: int) -> void:
 	if index < 0 or index >= _music_records.size():
 		return
-	
+
 	var record := _music_records[index]
 	if not record.unlocked:
 		return
-	
+
 	if _playing_id == record.music_id:
 		# 正在播放 → 停止
 		_stop_preview()
@@ -132,18 +132,18 @@ func _on_cancel() -> void:
 
 func _play_preview(record: MusicRecord) -> void:
 	_stop_preview()
-	
+
 	# 确保外部 BGM 也停掉
 	AudioManager.stop_bgm()
-	
+
 	var stream: AudioStream = AssetRegistry.get_bgm(record.bgm_key)
 	if not stream:
 		return
-	
+
 	_preview_player.stream = stream
 	_preview_player.play()
 	_playing_id = record.music_id
-	
+
 	# 解锁（在音乐室试听也算听过）
 	if not record.unlocked:
 		record.unlocked = true
@@ -152,7 +152,7 @@ func _play_preview(record: MusicRecord) -> void:
 		# 保持选中项
 		if _nav_index >= 0 and _nav_index < _nav_items.size():
 			_select(_nav_index)
-	
+
 	_update_list_colors()
 	_update_display(_nav_index)
 
@@ -178,11 +178,11 @@ func _update_display(_index: int) -> void:
 	_comment_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# 确保 Label 填满父容器宽度
 	_comment_text.size_flags_horizontal = Control.SIZE_FILL
-	
+
 	if _playing_id < 0:
 		_comment_text.text = ""
 		return
-	
+
 	var record := _music_registry.get_by_id(_playing_id)
 	if record and record.unlocked:
 		_comment_text.text = record.comment
@@ -203,7 +203,7 @@ func _update_list_colors() -> void:
 				label.text = "NO.%02d  %s  ♪" % [record.music_id, record.title]
 			else:
 				label.text = "NO.%02d  %s" % [record.music_id, record.title]
-			
+
 			if _playing_id == record.music_id:
 				label.modulate = GOLD_COLOR
 			elif i == _nav_index:
@@ -216,16 +216,16 @@ func _update_list_colors() -> void:
 func _select(index: int) -> void:
 	if index < 0 or index >= _nav_items.size():
 		return
-	
+
 	# 旧项停止脉冲
 	var prev := _nav_index
 	if prev >= 0 and prev < _nav_items.size():
 		_stop_pulse()
-	
+
 	# 新项
 	_nav_index = index
 	_start_pulse(_nav_items[index])
-	
+
 	# 颜色全部交给 _update_list_colors 统一处理
 	_update_list_colors()
 	_update_display(index)

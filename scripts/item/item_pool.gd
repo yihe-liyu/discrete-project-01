@@ -34,7 +34,7 @@ func spawn(pos: Vector2, type: int) -> Item:
 			add_child(item)
 		elif not item.is_inside_tree():
 			add_child(item)
-	
+
 	item.refs = refs
 	item.setup(type, pos)
 	item.visible = true

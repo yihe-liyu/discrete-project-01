@@ -37,7 +37,7 @@ func _draw() -> void:
 		return
 	var fade_len := draw_len * fade_ratio
 	var mid_len := draw_len - fade_len * 2.0
-	
+
 	if mid_len <= 0:
 		# 全渐变模式：两端渐变直接相接
 		var half := line_length * 0.5
@@ -52,18 +52,18 @@ func _draw() -> void:
 		# 不支持单端渐变纹理的 fallback：用多个线段模拟
 		# 改用多线段绘制渐变
 		_draw_gradient_line(0, half, false)
-		
+
 		# 右半：从中间实色渐变到右透明
 		_draw_gradient_line(half, line_length, true)
-		
+
 		return
-	
+
 	# 左渐变段：透明 → 实色
 	_draw_gradient_line(0, fade_len, false)
-	
+
 	# 中间实色段
 	draw_line(Vector2(fade_len, 0), Vector2(fade_len + mid_len, 0), line_color, line_width, false)
-	
+
 	# 右渐变段：实色 → 透明
 	_draw_gradient_line(fade_len + mid_len, line_length, true)
 
@@ -74,14 +74,14 @@ func _draw() -> void:
 func _draw_gradient_line(from_x: float, to_x: float, fade_out: bool) -> void:
 	var steps := maxi(int((to_x - from_x) / 2.0), 4)
 	var seg_len := (to_x - from_x) / float(steps)
-	
+
 	for i in range(steps):
 		var t := float(i) / float(steps - 1) if steps > 1 else 0.0
 		var alpha: float = t if not fade_out else (1.0 - t)
-		
+
 		# 使用 ease 让渐变更自然
 		alpha = _ease_quad(alpha)
-		
+
 		var c := Color(line_color.r, line_color.g, line_color.b, line_color.a * alpha)
 		var x1 := from_x + seg_len * float(i)
 		var x2 := x1 + seg_len

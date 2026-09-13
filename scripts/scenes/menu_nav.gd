@@ -143,13 +143,13 @@ func push_overlay(page_path: String) -> BasePage:
 	var page: BasePage = _load_page(page_path)
 	_overlay_stack.append(page)
 	page.process_mode = Node.PROCESS_MODE_ALWAYS
-	
+
 	var wrapper: CanvasLayer = CanvasLayer.new()
 	wrapper.layer = 64
 	wrapper.process_mode = Node.PROCESS_MODE_ALWAYS
 	wrapper.add_child(page)
 	page.set_anchors_preset(Control.PRESET_FULL_RECT)
-	
+
 	var tree: SceneTree = _parent.get_tree()
 	tree.root.add_child(wrapper)
 	_connect_signals(page)
@@ -166,13 +166,13 @@ func push_overlay(page_path: String) -> BasePage:
 func add_overlay_instance(page: BasePage) -> void:
 	_overlay_stack.append(page)
 	page.process_mode = Node.PROCESS_MODE_ALWAYS
-	
+
 	var wrapper: CanvasLayer = CanvasLayer.new()
 	wrapper.layer = 64
 	wrapper.process_mode = Node.PROCESS_MODE_ALWAYS
 	wrapper.add_child(page)
 	page.set_anchors_preset(Control.PRESET_FULL_RECT)
-	
+
 	_parent.get_tree().root.add_child(wrapper)
 	_connect_signals(page)
 	_parent.set_state.call_deferred(GameManager.AppState.PAUSED)

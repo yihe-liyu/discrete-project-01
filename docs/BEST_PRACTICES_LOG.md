@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-13 — P0-4：fx_pool 单写入口（setter）/ set_state 去双名 / 行尾空白清零（A3 / A12 / A11）
+
+- **A3**：`BulletManager.fx_pool` 从「public var + `inject_fx_pool()`」双写入口改为**只读属性 + 私有后备**（`_fx_pool` + `var fx_pool: FxPool: get: return _fx_pool`），唯一写入口 = `inject_fx_pool()`；顺带删掉 `_ready` 里那句冗余自注入（`_enable_kernel()` 已把 fx_pool 灌给 `_kernel_physics.fx`）。
+  - **为什么是 setter 而不是删 setter**：setter 不只赋值，还要**转发给子模块**（`_kernel_physics.fx`）——删了它，调用方就得知道内部结构；只读属性则让「外部硬写」直接编译不过。
+- **A12**：`GameManager.set_state` / `_set_state` 双名合一 —— 删私有壳，函数体搬进 `set_state`，内部 2 处调用改走它。
+- **A11**：清掉 `scripts/**` 全部行尾空白（**183 行 / 31 文件**）。**同时更正上一条记录的错误**：`_spawn_fx` / `_render_fade` 本来就是 `Dictionary = {}`（有显式类型、无尾随空格）—— 原判断是我自己 `sed` 过滤掉了 `{}` 造成的误读。
+- **为什么**：R5（接口类型化）+ R6（对外接口说实话）+ R19（同一件事只有一个入口）。「同一依赖两种注入风格」会让组合根越写越像约定、而不是机制。
+- **验收**：`check_syntax` 191/0；全量 GUT **57 套 / 310 / 3215 全绿**（行尾空白纯机械改动，零行为变化）。
+- **已知遗留**：`StageRuntime` 的注入槽（`bullets` / `world` / `miss_layer` / `fx_pool` / `ui_layer`）仍是**裸 public var**（`game_scene.gd` 直接赋值），与 `BulletManager` 的 setter 风格不统一 → 记为 A17（统一前得先定「槽用只读属性还是 inject 方法」）。
+
 ### 2026-09-13 — P0-3：删掉无调用者的 return_bullet / re_fire（A16）
 
 - **目标**：A15 类型化后暴露的「typed 但没人调」公开 API 收尾 —— `BulletManager.return_bullet` / `re_fire` 与 `BulletService.return_bullet` / `re_fire` 一起删。

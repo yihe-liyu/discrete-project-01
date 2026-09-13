@@ -35,7 +35,7 @@ func setup(type: Type, pos: Vector2) -> void:
 	global_position = pos
 	_velocity = Vector2(0, -180)  # 上抛初速
 	_auto_collect = false
-	
+
 	match type:
 		Type.POWER:
 			_sprite.texture = preload("res://assets/Textures/item/power.png")
@@ -55,16 +55,16 @@ func setup(type: Type, pos: Vector2) -> void:
 func _physics_process(delta: float) -> void:
 	if _dead:
 		return
-	
+
 	var player = refs.player if refs else null
 	var to_player: Vector2 = player.global_position - global_position if player and is_instance_valid(player) else Vector2.ZERO
-	
+
 	# 玩家过收点线 或 靠近自机 → 自动吸附（focus 时范围翻倍）
 	if player and is_instance_valid(player):
 		var prox := _proximity_range * 1.5 if player.is_focused else _proximity_range
 		if player.global_position.y < _auto_collect_line or to_player.length() < prox:
 			_auto_collect = true
-	
+
 	if _auto_collect and player and is_instance_valid(player):
 		var dir: Vector2 = to_player.normalized()
 		global_position += dir * _collect_speed * delta
@@ -76,7 +76,7 @@ func _physics_process(delta: float) -> void:
 		# 重力 + 终端速度
 		_velocity.y = min(_velocity.y + _gravity * delta, _max_fall_speed)
 		global_position += _velocity * delta
-	
+
 	# 出屏回收
 	if global_position.y > GameConfig.VIEW_HEIGHT:
 		_dead = true

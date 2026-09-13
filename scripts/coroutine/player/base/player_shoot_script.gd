@@ -76,27 +76,27 @@ func _sync_options(leader: Player, _ctx: StageContext) -> void:
 	var setup := _option_setup()
 	if setup.is_empty():
 		return
-	
+
 	# R5：直接读 leader（Player）的 resources —— 不再用 leader.get("resources") 字符串访问
 	var res: PlayerResources = leader.resources
 	var pw: int = res.power_raw if res != null else 0
 	var focused := Input.is_action_pressed("focus")
-	
+
 	var levels: Array = setup.get("counts", [])
 	var offsets_focus: Array = setup.get("offsets_focus", [])
 	var offsets_spread: Array = setup.get("offsets_spread", [])
 	var visual_script: Script = setup.get("visual_script")
-	
+
 	# 确定当前 power 等级
 	var idx := 0
 	for i in range(levels.size() - 1, -1, -1):
 		if pw >= setup.get("power_thresholds", [0])[i]:
 			idx = i
 			break
-	
+
 	var wanted: int = levels[idx] if idx < levels.size() else 0
 	var offsets: Array = (offsets_focus[idx] if focused else offsets_spread[idx]) if idx < offsets_focus.size() else []
-	
+
 	while _options.size() < wanted:
 		var opt := Node2D.new()
 		opt.global_position = leader.global_position
