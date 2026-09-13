@@ -10,7 +10,7 @@ extends RefCounted
 static func record_phase_start(pid: PhaseIdentity) -> void:
 	if not pid:
 		return
-	if SaveData.is_practice_mode:
+	if PracticeSession.is_practice_mode:
 		SaveData.spell_book_mgr.record_practice(pid, false)
 	else:
 		SaveData.spell_book_mgr.unlock_spell(pid)
@@ -21,7 +21,7 @@ static func record_phase_start(pid: PhaseIdentity) -> void:
 static func record_phase_capture(pid: PhaseIdentity, captured: bool, bonus: int, elapsed: float) -> void:
 	if not pid:
 		return
-	if SaveData.is_practice_mode:
+	if PracticeSession.is_practice_mode:
 		SaveData.spell_book_mgr.record_practice_capture(pid)
 	elif captured:
 		SaveData.spell_book_mgr.record_capture(pid, bonus, elapsed)

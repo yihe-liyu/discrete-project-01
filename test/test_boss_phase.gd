@@ -181,10 +181,10 @@ func test_no_drops_in_practice_mode():
 	var ctx := CtxSpy.new(runner)
 	_boss._stage_context = ctx
 
-	var original := SaveData.is_practice_mode
-	SaveData.is_practice_mode = true
+	var original := PracticeSession.is_practice_mode
+	PracticeSession.is_practice_mode = true
 	_boss._drop_items()
-	SaveData.is_practice_mode = original
+	PracticeSession.is_practice_mode = original
 
 	assert_eq(ctx.calls.size(), 0, "练习模式不应掉落")
 
@@ -264,7 +264,7 @@ func test_same_boss_continued_phases_are_separate_records():
 	# 备份/还原 spell_book 记录，避免污染持久存档（不泄露 —— 与 test_recent_mechanics 同法）。
 	var book_backup: Array = SaveData.spell_book.records.duplicate(true)
 	SaveData.current_stage_id = 1
-	SaveData.is_practice_mode = false
+	PracticeSession.is_practice_mode = false
 	var non_mid: PhaseData = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
 	var non01: PhaseData = preload("res://data/stages/stage01/phase/non01/non01.tres")
 

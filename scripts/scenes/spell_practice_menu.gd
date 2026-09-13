@@ -591,7 +591,7 @@ func _start_practice() -> void:
 	print("练习: %s 难度: %s" % [card_name, diff_name(diff)])
 	var boss_scene: PackedScene = boss.visual
 	var boss_label: String = boss.boss_name if boss.boss_name != "" else card_name
-	SaveData.start_practice(phase, boss_scene, boss_label, rec.stage, rec.phase_index)
+	PracticeSession.start(phase, boss_scene, boss_label, rec.stage, rec.phase_index)
 	AudioManager.stop_bgm()
 	on_leave()
 	GameManager.change_scene("res://scenes/game_scene.tscn")

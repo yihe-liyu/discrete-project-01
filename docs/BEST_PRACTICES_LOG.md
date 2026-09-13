@@ -18,6 +18,19 @@
 
 ## 记录
 
+### 2026-09-13 — D1：拆 SaveData（240 → 128 行；抽出 StageCatalog / PracticeSession / UiTheme）
+
+- **动机**：`SaveData` 240 行 / 6 职责（全局选择 · 关卡目录 · 存档 · 练习 session · 启动装配 · 会话复位），是 38 个文件引用的 god object。
+- **拆出**：
+  - `StageCatalog`（58 行）：`stage_registry` 加载 + `find` / `scan` / `all` / `background`。
+  - `PracticeSession`（43 行）：`is_practice_mode` + 练习载荷（phase / boss_scene / boss_name / stage_id / phase_index / background）+ `start` / `finish` / `clear`。
+  - `UiTheme`（24 行）：`apply_ui_theme` → `UiTheme.apply()`（主题不是存档）。
+- **保留在 SaveData**：全局选择（难度 / 角色 / 关卡进度）、会话标志（`is_stage_practice` / `restarting`）、存档 / 符卡簿 / 高分、`reset_session` 编排、`apply_settings`。
+- **语义保持（关键）**：`reset_all`（每次 load_stage）**只清练习载荷、不碰 `is_stage_practice`** —— 否则 stage 练习中途 `load_stage` 会误清玩法标志；只有 `reset_session` 清 `is_stage_practice`。`PracticeSession.start` 仍先经 `SaveData.reset_session()`。
+- **调用点**：脚本化替换 9 个文件（含 4 个测试）；`grep 'SaveData.practice_*' scripts/ data/ test/` = **0**。
+- **踩坑（老坑）**：新增 3 个 `class_name` → 必须先 `godot --headless --editor --quit` 重建 `.godot/global_script_class_cache.cfg`，否则 `check_syntax` 报 `Identifier not found`。
+- **验收**：check_syntax **194/0**；GUT **322 测试 / 3247 断言**全绿。
+
 ### 2026-09-13 — 更正：godot-cpp 的 4.7 前置（实测 GitHub）
 
 - **原判断**（§0.2 / §12）：`godot-cpp` 有无匹配 Godot 4.7 的 branch「未确认」+ 本机缺 `scons`。

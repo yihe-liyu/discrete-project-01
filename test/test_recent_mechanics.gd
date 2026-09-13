@@ -116,8 +116,8 @@ func test_practice_miss_records_failure():
 	if stale:
 		book.records.erase(stale)
 	book.get_or_create(99, 7, 0, 0, 1, 303, 1, 2)
-	SaveData.is_practice_mode = true
-	SaveData.start_practice(phase, null, "卡摩瑞", 99, 7)
+	PracticeSession.is_practice_mode = true
+	PracticeSession.start(phase, null, "卡摩瑞", 99, 7)
 	var boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss)
 	boss._stage_id = 99  # 裸 new() 无 setup，直设（spawn_boss 会走 setup 自动取 practice_stage_id）
@@ -138,5 +138,5 @@ func test_practice_miss_records_failure():
 	var r2 := book.get_record(99, 7, 0, 0, 1)
 	assert_eq(r2.practice_attempts, 2, "miss 后再 +1（共 2 次）")
 	assert_eq(r2.practice_captures, 1, "miss 不加收取")
-	SaveData.is_practice_mode = false
+	PracticeSession.is_practice_mode = false
 	SaveData.spell_book.records = book_backup  # 还原，防污染持久记录

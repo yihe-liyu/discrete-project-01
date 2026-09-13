@@ -38,13 +38,13 @@ func _ready():
 	GameManager.game_state_changed.connect(_on_game_state_changed)
 	_stage_runtime.stage_cleared.connect(_on_stage_cleared)
 
-	if SaveData.is_practice_mode:
+	if PracticeSession.is_practice_mode:
 		SaveData.restarting = false
 		_setup_player()          # 先绑定自机（reset_* 经注册表取同一 PlayerResources）
 		SaveData.reset_practice(_stage_runtime.entity_registry)
 		_start_practice_game()
 	else:
-		if SaveData.practice_phase != null:
+		if PracticeSession.phase != null:
 			push_warning("GameScene: practice_phase 已设置但 is_practice_mode=false —— 练习标志被提前清除，误走普通关卡")
 		SaveData.restarting = false
 		_setup_player()          # 先绑定自机（reset_* 经注册表取同一 PlayerResources）
@@ -62,15 +62,15 @@ func _start_normal_game() -> void:
 
 
 func _start_practice_game() -> void:
-	_load_background(SaveData.practice_background)
+	_load_background(PracticeSession.background)
 
-	var phase: PhaseData = SaveData.practice_phase
+	var phase: PhaseData = PracticeSession.phase
 	if not phase:
 		push_error("GameScene: practice_phase 未设置")
 		return
 
 	var boss := _stage_runtime.start_spell_card(
-		phase, SaveData.practice_boss_scene, SaveData.practice_name,
+		phase, PracticeSession.boss_scene, PracticeSession.boss_name,
 		Vector2(GameConfig.FIELD_CENTER_X, 240)
 	)
 	if not boss:
@@ -84,8 +84,8 @@ func _start_practice_game() -> void:
 
 
 func _resolve_stage_data() -> StageData:
-	if SaveData.stage_registry:
-		return SaveData.stage_registry.find(SaveData.current_stage_id)
+	if StageCatalog.registry:
+		return StageCatalog.registry.find(SaveData.current_stage_id)
 	push_error("GameScene: stage_registry 未设置")
 	return null
 
@@ -118,8 +118,8 @@ func _exit_tree():
 	_bullet_manager.fx_parent = null
 	_stage_runtime.fx_pool = null
 	_stage_runtime.ui_layer = null
-	if SaveData.is_practice_mode:
-		SaveData.end_practice()
+	if PracticeSession.is_practice_mode:
+		PracticeSession.finish()
 	if _background_instance and is_instance_valid(_background_instance):
 		_background_instance.queue_free()
 		_background_instance = null
@@ -162,9 +162,9 @@ func _on_stage_cleared():
 	if SaveData.is_stage_practice:
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
-	elif not SaveData.is_practice_mode:
+	elif not PracticeSession.is_practice_mode:
 		var next_id: int = SaveData.current_stage_id + 1
-		if SaveData.find_stage_data(next_id) != null:
+		if StageCatalog.find(next_id) != null:
 			SaveData.current_stage_id = next_id
 			GameManager.reload_current_scene()
 		else:
@@ -180,7 +180,7 @@ func _on_practice_cleared(_boss: Node) -> void:
 			runner.stop()
 			runner.queue_free()
 	GameEvents.boss_defeated.disconnect(_on_practice_cleared)
-	SaveData.end_practice()
+	PracticeSession.finish()
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 

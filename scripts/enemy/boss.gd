@@ -98,8 +98,8 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	if not GameEvents.player_missed.is_connected(_on_player_death):
 		GameEvents.player_missed.connect(_on_player_death)
 
-	if SaveData.is_practice_mode:
-		_stage_id = SaveData.practice_stage_id
+	if PracticeSession.is_practice_mode:
+		_stage_id = PracticeSession.stage_id
 	else:
 		_stage_id = SaveData.current_stage_id
 
@@ -190,7 +190,7 @@ func start_phase(data: PhaseData) -> void:
 	# 显示血条
 	_set_ring_visible(true)
 
-	_phase_identity = BossCatalog.resolve_identity(_stage_id, data, SaveData.practice_phase_index if SaveData.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
+	_phase_identity = BossCatalog.resolve_identity(_stage_id, data, PracticeSession.phase_index if PracticeSession.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
 	if _phase_identity:
 		RecordService.record_phase_start(_phase_identity)   # 记录服务：解锁/记尝试（Boss 不再摸 SaveData.record_*）
 
@@ -265,7 +265,7 @@ func take_damage(damage: float) -> void:
 
 ## 玩家 miss（正篇）：只标记——东方规则：miss 后击破不算收取（尝试次数已在进入阶段时记过）
 func _on_player_death() -> void:
-	if SaveData.is_practice_mode:
+	if PracticeSession.is_practice_mode:
 		return  # 练习 miss 走 _die 逻辑
 	if not _phase_data or _cleared or _phase_missed:
 		return
@@ -281,7 +281,7 @@ func clear_phase(captured: bool) -> void:
 
 	if _phase_identity:
 		# 阶段已开始（_phase_identity 已生成）才记录；Ctrl+G 在阶段开始前触发时只跳阶段不落盘
-		if SaveData.is_practice_mode:
+		if PracticeSession.is_practice_mode:
 			RecordService.record_phase_capture(_phase_identity, false, 0, 0.0)  # 练习收取
 		elif captured and not _phase_missed:
 			RecordService.record_phase_capture(_phase_identity, true, _bonus, _elapsed)  # 干净收取
@@ -309,7 +309,7 @@ func _die() -> void:
 	# （阶段逻辑由 _process 开头的 `if not _phase_data: return` 自然跳过）
 	_phase_data = null
 	_set_ring_visible(false)
-	if SaveData.is_practice_mode and _phase_identity and not _cleared:
+	if PracticeSession.is_practice_mode and _phase_identity and not _cleared:
 		pass  # 练习 attempt 已在进入阶段时记过（玩家 miss/超时退出也覆盖），这里不再重复记
 	if registry != null:
 		registry.unregister_enemy(self)
@@ -332,7 +332,7 @@ func _set_ring_visible(v: bool) -> void:
 
 func _drop_items() -> void:
 	if not _phase_data: return
-	if SaveData.is_practice_mode: return
+	if PracticeSession.is_practice_mode: return
 	var pos := global_position
 	var phase := _phase_data
 	var scatter := 50.0

@@ -160,7 +160,7 @@ func _update_capture_text() -> void:
 	var book: SpellRecordBook = SaveData.spell_book
 	var rec: SpellRecord = book.get_record(pid.stage_id, pid.phase_index, pid.boss_index, pid.character, pid.difficulty)
 	if rec:
-		if SaveData.is_practice_mode:
+		if PracticeSession.is_practice_mode:
 			_capture_label.text = "%02d/%02d" % [rec.practice_captures, rec.practice_attempts]
 		else:
 			_capture_label.text = "%02d/%02d" % [rec.captures, rec.attempts]
