@@ -560,10 +560,15 @@ func _get_highlighted_item() -> Control:
 # ═══ 开始练习 ═══
 
 func _start_practice() -> void:
-	if _phase_index >= _phases.size(): return
-	if _diff_entries.is_empty() or _diff_index >= _diff_entries.size(): return
+	if _phase_index >= _phases.size():
+		push_warning("SpellPractice: 未选中阶段（_phases=%d）——练习未开始" % _phases.size())
+		return
+	if _diff_entries.is_empty() or _diff_index >= _diff_entries.size():
+		push_warning("SpellPractice: 难度表为空或索引越界（entries=%d index=%d）——练习未开始" % [_diff_entries.size(), _diff_index])
+		return
 	var entry: Dictionary = _diff_entries[_diff_index]
 	if entry.locked:
+		push_warning("SpellPractice: 难度 %d 未解锁——练习未开始" % int(entry.get("diff", -1)))
 		return  # 锁定难度不可开始
 	var diff: int = entry.diff
 	var info: Dictionary = _phases[_phase_index]

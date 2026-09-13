@@ -42,6 +42,8 @@ func _ready():
 		_setup_player()
 		_start_practice_game()
 	else:
+		if SaveData.practice_phase != null:
+			push_warning("GameScene: practice_phase 已设置但 is_practice_mode=false —— 练习标志被提前清除，误走普通关卡")
 		SaveData.restarting = false
 		SaveData.reset_all()
 		_setup_player()
@@ -127,7 +129,7 @@ func _setup_player() -> void:
 		preload("res://data/player_data/reimu_data.tres"),
 		preload("res://data/player_data/marisa_data.tres"),
 	]
-	var player := %Player
+	var player: Player = %Player
 	if player and SaveData.selected_character < data_map.size():
 		player.setup_character(data_map[SaveData.selected_character])
 		# 自机 → 本次关卡世界的实体注册表（BulletManager 亦经注入读取）

@@ -645,6 +645,13 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.32 K12 实施记录（2026-09-11，诊断）
+
+**目标**：定位「符卡练习未启动」。给 `_start_practice` 的静默 return 与 `game_scene` 的 else 支加 `push_warning`。
+
+**结论**：`is_practice_mode=true` 时必定执行 `_start_practice_game`（GUT 实测）；待复现确认标志是否被提前清除。
+
+**验收**：`check_syntax` 191/0；全量 **56 套 / 309 测试 / 3211 断言全绿**；orphans 10。
 ### 12.31 K11 实施记录（2026-09-11，已完成）
 
 **目标**：`MenuNav` 子页面容器由场景搜索改为组合根注入（R2/R21）。

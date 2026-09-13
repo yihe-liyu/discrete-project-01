@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-11 — K12：符卡练习未启动诊断守卫（纯诊断，不改行为）
+
+- **背景**：符卡练习里 `game_scene._ready` 未走 `_start_practice_game`；已知 `练习: ...` 打印出现（`start_practice` 已执行），故怀疑 `is_practice_mode` 在 `_ready` 前被清。
+- **改动**：
+  - `spell_practice_menu._start_practice`：3 处静默 `return` 加 `push_warning`（未选阶段 / 难度表空 / 难度未解锁）。
+  - `game_scene._ready` 的 `else` 支：若 `practice_phase != null` 却走普通关卡 → `push_warning`（抓「练习标志被提前清除」）。
+- **诊断结论（待复现确认）**：`is_practice_mode=true` 时 `_start_practice_game` 必执行（临时 GUT 实测：Boss 生成、标志保持）。
+- **验收**：`check_syntax` **191/0**；全量 **56 套 / 309 测试 / 3211 断言全绿**；orphans 10。
 ### 2026-09-11 — K11：MenuNav 子页面容器改为注入（去 current_scene 名字搜）
 
 - **目标**：`MenuNav._find_or_create_host` 靠 `current_scene` 子节点名字字符串 `"PageHost"` 找容器（R2/R5），并会命令式建节点挂到场景（R21），类型也不安全（`Node`→`Control`、`_parent` 兜底）。
