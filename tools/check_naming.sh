@@ -5,6 +5,7 @@
 #     ② 同一类型不应有多个私有字段名（同物不同名）
 #     ③ @onready 节点引用名 = 节点名 snake（节点名本身是内置类名时跳过）
 #     ④ 节点名 PascalCase（R15）
+#     ⑤ 形参 / 局部变量 / 循环变量遮蔽类成员（GDScript SHADOWED_VARIABLE / CONFUSABLE_LOCAL_USAGE）
 # 用法: bash tools/check_naming.sh [--fail]   （默认只报告；--fail 时有违规 exit 1）
 set -e
 cd "$(dirname "$0")/.."
@@ -76,6 +77,55 @@ for root in ROOTS:
                 if node not in BUILTIN_NODE and name.lstrip("_") != snake(node):
                     node_bad.append((p, i, name, node, snake(node)))
 
+# ⑤ 形参 / 局部变量 / 循环变量遮蔽类成员（运行时 SHADOWED_VARIABLE / CONFUSABLE_LOCAL_USAGE）
+#    契约（基线「标识符命名契约」）：形参遮蔽成员 → 加 `p_`；真的不用 → 单 `_`；禁止叠加 `_p_`。
+MEMBER = re.compile(r"^(?:@\w+\s+)*(?:static\s+)?(?:var|const)\s+(\w+)")
+FUNC = re.compile(r"^func\s+\w+\s*\(")
+LOCAL = re.compile(r"^\s+var\s+(\w+)")
+FORLOOP = re.compile(r"^\s+for\s+(\w+)\s+in\b")
+shadow_bad = []
+for root in ROOTS:
+    for p in files(root):
+        lines = open(p, encoding="utf-8").read().splitlines()
+        members = {}
+        for i, ln in enumerate(lines):
+            m = MEMBER.match(ln)
+            if m:
+                members[m.group(1)] = i + 1
+        i = 0
+        while i < len(lines):
+            ln = lines[i]
+            if FUNC.match(ln):
+                sig, j, depth = ln, i, ln.count("(") - ln.count(")")
+                while depth > 0 and j + 1 < len(lines):
+                    j += 1
+                    sig += " " + lines[j]
+                    depth += lines[j].count("(") - lines[j].count(")")
+                inner = sig[sig.index("(") + 1:sig.rindex(")")]
+                params = []
+                for part in inner.split(","):
+                    pm = re.match(r"\s*([A-Za-z_]\w*)", part)
+                    if pm:
+                        params.append(pm.group(1))
+                for prm in params:
+                    if prm in members:
+                        shadow_bad.append((p, i + 1, "形参", prm, members[prm]))
+                k = j + 1
+                while k < len(lines):
+                    bl = lines[k]
+                    if FUNC.match(bl):
+                        break
+                    lm = LOCAL.match(bl)
+                    if lm and lm.group(1) in members:
+                        shadow_bad.append((p, k + 1, "局部", lm.group(1), members[lm.group(1)]))
+                    fm = FORLOOP.match(bl)
+                    if fm and fm.group(1) in members:
+                        shadow_bad.append((p, k + 1, "循环", fm.group(1), members[fm.group(1)]))
+                    k += 1
+                i = k
+            else:
+                i += 1
+
 def _typed_ok(n, t):
     e = "_" + snake(t)
     return n == e or (n.endswith(e) and len(n) > len(e))
@@ -94,8 +144,11 @@ for p, i, n, nd, e in sorted(node_bad):
 print(f"\n[④ 节点名非 PascalCase(R15)]（{len(set(node_case))}）")
 for p, i, s in sorted(set(node_case)):
     print(f"  {p}:{i}  节点名 '{s}'")
+print(f"\n[⑤ 形参/局部/循环变量遮蔽类成员]（{len(shadow_bad)}）")
+for p, i, kind, n, ml in sorted(shadow_bad):
+    print(f"  {p}:{i}  {kind} {n} 遮蔽成员（声明于 {ml}）")
 print(f"\n[信息] 公开字段/属性（角色名，允许）：{public_cnt}")
-tot = len(priv_bad) + len(multi) + len(node_bad) + len(set(node_case))
-print(f"==> 应改：{tot} 条（私有字段 {len(priv_bad)} / 多名称类型 {len(multi)} / 节点引用 {len(node_bad)} / 节点名 {len(set(node_case))}）")
+tot = len(priv_bad) + len(multi) + len(node_bad) + len(set(node_case)) + len(shadow_bad)
+print(f"==> 应改：{tot} 条（私有字段 {len(priv_bad)} / 多名称类型 {len(multi)} / 节点引用 {len(node_bad)} / 节点名 {len(set(node_case))} / 遮蔽成员 {len(shadow_bad)}）")
 sys.exit(1 if (should_fail and tot) else 0)
 PY

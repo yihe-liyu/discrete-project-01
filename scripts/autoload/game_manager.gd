@@ -84,9 +84,9 @@ var world_bullets: BulletManager
 var entity_registry: EntityRegistry
 
 
-func register_world(bullets: BulletManager, entity_registry: EntityRegistry) -> void:
+func register_world(bullets: BulletManager, p_entity_registry: EntityRegistry) -> void:
 	world_bullets = bullets
-	entity_registry = entity_registry
+	entity_registry = p_entity_registry
 
 
 func unregister_world(bullets: BulletManager) -> void:

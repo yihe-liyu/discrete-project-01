@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-13 — 修复：形参遮蔽成员（4 处，其中一个是静默 no-op）
+
+- **现象**：编辑器脚本 reload 报 4 条 `SHADOWED_VARIABLE` / `CONFUSABLE_LOCAL_USAGE`：`bullet_manager.gd:181/218`、`game_manager.gd:87`、`boss_ui.gd:92`。
+- **不是纯警告**：`game_manager.gd:89` 的 `entity_registry = entity_registry` 两侧都解析为**形参** → 自赋值 no-op，`GameManager.entity_registry` 永远是 `null`，`_clear_world()` 从不 `entity_registry.clear()`（切场不清实体）。警告背后是真 bug。
+- **修法**（按基线「形参遮蔽成员 → `p_`」）：`inject_entity_registry(p_entity_registry)` / `register_world(..., p_entity_registry)`；`bullet_manager.gd:218` 的 `var entity_registry := entity_registry` 删局部改读属性；`boss_ui._on_boss_defeated(_defeated_boss)`（真不用 → 单 `_` 前缀且不撞成员）。
+- **为什么 lint 没抓到**：`check_syntax` 只认 `SCRIPT ERROR`、`verify` 的启动段只 grep `ERROR`——**W 级警告不在门禁里**；而 headless `load()` 走编译缓存，连警告都不打印。只有编辑器 reload 路径才吐。
+- **补门禁**：`tools/check_naming.sh` 新增 **⑤ 形参/局部/循环变量遮蔽类成员**（静态扫描，不依赖 Godot reload）；`tools/verify.sh` 升为 5 步，第 2 步跑 `check_naming.sh --fail`，CI 沿用 `verify.sh` 故自动生效。正向 0、负向探针 `--fail` = 1，均实测。
+- **回归测试**：`test_composition_root.test_game_scene_binds_stage_runtime` 增断言 `GameManager.entity_registry == rt.entity_registry`——旧代码必失败（断言数 3216→3217）。
+- **教训**：编辑器 reload 的 W 级输出要有人看；`x = x` 这种「看起来在赋值」的自赋值只能靠 warning 暴露，且常被当噪音忽略。**可 lint 的规则不要只写进文档。**
+- **验收**：`verify.sh` 五步全绿（312 测试 / 3217 断言）；`check_naming` 0（含新 ⑤）。
+
 ### 2026-09-13 — M2：词汇合一（BulletData → BulletType，删 type_for/signature_of/_type_by_sig）
 
 - **决定**：走方向 (b) —— `BulletData` 退化成**构造助手**，`to_bullet_type()` 产出并缓存 `BulletType`。

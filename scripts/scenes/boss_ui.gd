@@ -89,7 +89,7 @@ func _process(_delta: float) -> void:
 	var rem := maxf(phase.time_limit - _boss.get_elapsed(), 0.0)
 	_timer_label.text = "%02d" % int(ceil(rem))
 
-func _on_boss_defeated(_boss: Node) -> void:
+func _on_boss_defeated(_defeated_boss: Node) -> void:
 	visible = false
 
 func _on_phase_start(phase: PhaseData) -> void:

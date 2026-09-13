@@ -123,7 +123,7 @@
 > **适用范围**：私有字段、公开状态字段、局部变量都适用；仅 `ctx.*` 门面豁免（2026-09-13 拍板）。**状态字段已收敛**（`refs`→`entity_registry`、`world`/`bullets`→`bullet_manager`）；**局部极短名已清**（`sd`→`stage_data`、`st`→`stage`/`behavior_state`、`bm`→`bullet_manager`/`bookmarks`、`bg`→`background`/`stage_background`、`tl`→`timeline`）；工作台自身本地名按决定不动。`tl` 改名连带 `bookmark_extractor` 正则 → `timeline\.at(`。
 > **形参遮蔽成员** → 加 `p_` 前缀（`p_ctx` 遮蔽 `CoroutineScript.ctx`）；**真的不用** → 单 `_`（`_ctx`）；**禁止叠加** `_p_`。
 > **单字母 / 极短名**：只允许「单行表达式 / 热路径循环」作用域（`bullet_system` 的 `p`/`r`/`s`）；跨行、跨函数、字段一律全名。
-> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI）。**当前 0 条**（2026-09-13 收敛）；它只覆盖私有字段 / `@onready` / 节点名三类——**公开字段与局部缩写需人工守**（本表 + 白名单）；`scripts/kernel/**` 是 vendor 快照，不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
+> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI；`verify.sh` 第 2 步已启用 `--fail`）。**当前 0 条**（2026-09-13 收敛）；覆盖 ① 私有字段名 / ② 同类型多私名 / ③ `@onready` 节点名 / ④ 节点名 PascalCase 四类，**外加 ⑤ 形参·局部·循环变量遮蔽类成员**（2026-09-13 补，对应上条 `p_` 规则；静态扫描，不依赖 Godot reload）——**公开字段与局部缩写仍需人工守**（本表 + 白名单）；`scripts/kernel/**` 是 vendor 快照，不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
 
 ---
 

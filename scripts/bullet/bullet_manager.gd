@@ -178,8 +178,8 @@ func resume_processing() -> void:
 # ═══ 内核后端装配 ═══
 
 ## 注入本次关卡的实体注册表（自机 / 敌机 / Boss）；组合根装配后调用（唯一写入口）
-func inject_entity_registry(entity_registry: EntityRegistry) -> void:
-	_entity_registry = entity_registry
+func inject_entity_registry(p_entity_registry: EntityRegistry) -> void:
+	_entity_registry = p_entity_registry
 	_enable_kernel()
 
 
@@ -215,7 +215,7 @@ func _enable_kernel() -> void:
 			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 		_kernel_bullet_backend.system.cull_margin = 90.0
 		_kernel_bullet_backend.system.set_seed(RNG.get_seed())   # 内核 RNG 从宿主 seed 派生
-	var entity_registry := entity_registry   # 只认注入，不回退 EntityRegistry.current
+	# 只认注入，不回退 EntityRegistry.current
 	if _kernel_bullet_backend != null:
 		_kernel_bullet_backend.entity_registry = entity_registry
 		_kernel_bullet_backend.bullet_manager = self

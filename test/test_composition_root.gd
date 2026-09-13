@@ -20,6 +20,8 @@ func test_game_scene_binds_stage_runtime() -> void:
 	assert_not_null(bullet_manager, "应在 World 下声明 BulletManager（R21）")
 	assert_eq(rt.bullet_manager, bullet_manager, "StageRuntime 应拿到场景里的弹幕世界")
 	assert_eq(BulletManager.current, bullet_manager, "BulletManager.current 应指向场景节点")
+	assert_eq(GameManager.entity_registry, rt.entity_registry,
+		"GameScene 应把实体注册表登记到 GameManager（回归：register_world 形参曾自赋值 no-op）")
 
 
 func test_game_scene_refreshes_kernel_player() -> void:
