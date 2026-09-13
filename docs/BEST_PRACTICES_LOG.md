@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-13 — 修复：延后发射队列未快照 per-shot 状态（non_mid01 红弹速度梯度消失）
+
+- **现象**：`non_mid01_bullet.gd:45` 的 `_red_bullet_data.speed(RING_SPEED + i * 50)` 不生效 —— 红弹全按最后一档速度飞。
+- **根因**：内核行为循环中途禁止 spawn，故走 `KernelBehaviorHost.queue_spawn` 延后到 flush。旧 `queue_spawn` 存的是 `{data = data}` **活引用**；M2 起内容复用同一 `BulletData` 实例（正是 M2 要求的写法），于是同一帧多次入队全指向同一实例，flush 时才读 `data.velocity` → 被最后一次写入覆盖。`radial_accel_behavior.gd:43` / `bounce_behavior.gd:61` 的 `b.velocity = …` 同样中招（工厂返回缓存实例）。
+- **修法（在队列，不在内容）**：`KernelBulletBackend` 拆出 `prepare_shot()`（解析类型 / 速度 / 行为 / 染色 / 贴图，不写池）与 `spawn_prepared()`（写池）；`queue_spawn` 改为**入队瞬间** `prepare_shot` 快照，`flush` 只 `spawn_prepared`。`shoot()` = 两者立即串接，签名不变；`_sync_host_tables` 改收 `texture`。
+- **为什么改队列**：`queue_spawn` 原注释要求「传副本」，但 M2 的全部意义就是别每发造新 `BulletData`（否则弹型表膨胀）。把不变量放回队列：内容尽管复用实例、每发改速度，延后机制自己保证正确。
+- **回归测试**：`test_queue_spawn_snapshots_per_shot_speed`（通用：同一模板两次不同速度入队，flush 后各保留）+ `test_non_mid_red_ring_keeps_speed_gradient`（内容：Hard 下速度集合 = 400/450/500/550）。
+- **教训**：**延后 / 异步机制一旦存引用，就必须在入队瞬间快照「所有 per-shot 字段」**，否则「复用实例」这个性能优化会变成静默串味。断言数 3217 → 3220。
+- **验收**：`verify.sh` 五步全绿（313 测试 / 3220 断言）。
+
 ### 2026-09-13 — 修复：形参遮蔽成员（4 处，其中一个是静默 no-op）
 
 - **现象**：编辑器脚本 reload 报 4 条 `SHADOWED_VARIABLE` / `CONFUSABLE_LOCAL_USAGE`：`bullet_manager.gd:181/218`、`game_manager.gd:87`、`boss_ui.gd:92`。

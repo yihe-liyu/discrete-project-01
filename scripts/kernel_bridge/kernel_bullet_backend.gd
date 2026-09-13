@@ -105,10 +105,12 @@ func flush_behavior_host() -> void:
 		_behavior_host.flush()
 
 
-## 发射一颗弹。语义对齐原项目 `Bullet.bind`：`direction` 定方向，`data.velocity` 只取速度大小。
-func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
+## 解析一次发射所需的 **per-shot 状态**（类型 / 速度 / 行为 / 染色），不写内核池。
+## 延后队列在**入队瞬间**调它做快照：内容复用同一 BulletData 模板改速度再入队（M2 正常写法），
+## 若拖到 flush 才读实例，所有入队项会被最后一次写入覆盖（non_mid01 红弹速度梯度消失即此因）。
+func prepare_shot(data: BulletData, pos: Vector2, direction: Vector2) -> Dictionary:
 	if data == null:
-		return -1
+		return {}
 	_ensure_system()
 	var type := data.to_bullet_type()
 	var speed: float = data.velocity.length()
@@ -137,9 +139,21 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 		var res := _player_res()
 		if res != null and res.memory_value < 50.0:
 			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
-	var id: int = system.spawn(type, pos, vel, tint, move, params)
-	_sync_host_tables(id, data)
+	return {type = type, pos = pos, vel = vel, tint = tint, move = move, params = params, texture = data.texture}
+
+
+## 把 prepare_shot 的快照写入内核池（延后队列 flush 用；也可直接调）。
+func spawn_prepared(spec: Dictionary) -> int:
+	if spec.is_empty():
+		return -1
+	var id: int = system.spawn(spec.type, spec.pos, spec.vel, spec.tint, spec.move, spec.params)
+	_sync_host_tables(id, spec.texture)
 	return id
+
+
+## 发射一颗弹（立即）。语义对齐原项目 `Bullet.bind`：`direction` 定方向，`data.velocity` 只取速度大小。
+func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
+	return spawn_prepared(prepare_shot(data, pos, direction))
 
 
 ## 内核弹型下标 → 贴图（渲染旁表；未映射/越界 = null）。
@@ -214,9 +228,9 @@ func _port_for(data: BulletData) -> Dictionary:
 	return port
 
 
-func _sync_host_tables(id: int, data: BulletData) -> void:
+func _sync_host_tables(id: int, texture: Texture2D) -> void:
 	var indices: PackedInt32Array = system.get_type_indices()
 	var ti: int = indices[id]
 	if _texture_by_index.size() <= ti:
 		_texture_by_index.resize(ti + 1)
-	_texture_by_index[ti] = data.texture
+	_texture_by_index[ti] = texture

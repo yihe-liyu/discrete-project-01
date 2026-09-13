@@ -217,6 +217,42 @@ func test_non_mid_burst_queues_ring() -> void:
 	assert_gt(_kernel_bullet_backend.system.get_active_count(), 0, "应生成散圈弹")
 
 
+## 延后队列在入队瞬间快照 per-shot 速度：复用同一模板改速度再入队，flush 后各自独立
+## （回归 non_mid01 红弹 `RING_SPEED + i * 50` 被最后一次覆盖 → 速度梯度消失）。
+func test_queue_spawn_snapshots_per_shot_speed() -> void:
+	var host = _kernel_bullet_backend._behavior_host
+	var tmpl := _enemy()
+	tmpl.velocity = Vector2.UP * 100.0
+	host.queue_spawn(tmpl, Vector2(200, 400), Vector2.UP)
+	tmpl.velocity = Vector2.UP * 300.0
+	host.queue_spawn(tmpl, Vector2(300, 400), Vector2.UP)
+	_kernel_bullet_backend._physics_process(0.0)   # flush
+	var speeds: Array[float] = []
+	for id in _kernel_bullet_backend.system.get_active_count():
+		speeds.append(_kernel_bullet_backend.system.get_velocity(id).length())
+	speeds.sort()
+	assert_eq(speeds.size(), 2, "两次入队应各生成一颗")
+	assert_almost_eq(speeds[0], 100.0, 0.01, "第一颗应按入队时的速度 100")
+	assert_almost_eq(speeds[1], 300.0, 0.01, "第二颗应按入队时的速度 300（不被覆盖）")
+
+
+## 内容侧回归：Hard 下 non_mid01 红弹 `RING_SPEED + i * 50` 应逐发生效（400/450/500/550），
+## 而不是被同一模板实例的最后一次写入覆盖成单一速度。
+func test_non_mid_red_ring_keeps_speed_gradient() -> void:
+	SaveData.selected_difficulty = 2   # Hard：红弹分支开启，count = 4
+	var probe = NON_MID.new()
+	autofree(probe)
+	var cb: Callable = probe.kernel_port()["params"][&"on_flee_burst"]
+	cb.call(Vector2(400, 250), Vector2(400, 200), true, _kernel_bullet_backend._behavior_host)
+	_kernel_bullet_backend._physics_process(0.0)   # flush
+	var speeds := {}
+	for id in _kernel_bullet_backend.system.get_active_count():
+		speeds[int(round(_kernel_bullet_backend.system.get_velocity(id).length()))] = true
+	var distinct: Array = speeds.keys()
+	distinct.sort()
+	assert_eq(distinct, [400, 450, 500, 550], "红弹应保留 4 档递增速度（普通弹 400 + 红弹 400/450/500/550）")
+
+
 ## bounce 端口映射 + 无 Boss 时碰左框 → 换成向下弹。
 func test_bounce_refires_down_without_boss() -> void:
 	var d := _enemy()
