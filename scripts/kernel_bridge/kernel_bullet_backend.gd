@@ -23,6 +23,8 @@ const _MOVE_LASER := &"marisa_laser"
 
 ## 内核弹池。默认本机新建；交由 BulletManager 注入/接管。
 var system: BulletSystem
+## N2.2：积分循环走原生（KernelNativeSystem）。扩展未加载时自动退回 GDScript 内核。
+var use_native: bool = true
 ## 实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
 var entity_registry: EntityRegistry
 ## 弹幕世界（BulletManager 注入）——bomb 宿主节点反查用
@@ -87,7 +89,14 @@ func clear_bombs() -> void:
 func _ensure_system() -> void:
 	if system != null:
 		return
-	system = BulletSystem.new()
+	if use_native:
+		var native := KernelNativeSystem.new()
+		if native.is_native_ready():
+			system = native
+		else:
+			native.free()   # 无扩展：探测实例不成树，必须显式释放（否则孤儿节点泄漏）
+	if system == null:
+		system = BulletSystem.new()
 	system.name = "KernelBulletSystem"
 	add_child(system)
 

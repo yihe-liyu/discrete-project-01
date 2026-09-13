@@ -1,6 +1,6 @@
 # N2-real 接入计划：原生弹幕系统替换 BulletSystem
 
-> **状态**：进行中。N2.1 已完成（原生数据模型 + 批量 API + ~55× 实测）。
+> **状态**：进行中。N2.1 完成（原生数据模型 + 批量 API + ~55×）；**N2.2 积分段完成**（原生 integrate 5.9×，桥接子类实现，不碰 vendor 内核）。
 > **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §10（N0–N5）；`gdextension/`。
 
 ## 目标
@@ -27,10 +27,16 @@
   不在 `set_instance_*` 调用本身；只搬填充还多了 Array→Packed 转换成本。
   **结论**：N4-real 必须把**整段 `_sync_kernel`**（分组 + 旋转 + fade + 填充）搬原生 ——
   原生需要 per-type `texture_handle / tint_mode / kind / follow_dir / dir_offset` + 宿主 MultiMesh 表。
-- **N2.2** 原生 `DanmakuSystem`：补齐桥接 / 渲染 / 物理用到的 `BulletSystem` 子集
-  （spawn / despawn / get_active_count / get_positions / get_velocities / get_colors /
-  get_type_indices / get_factions / query_circle / hit_test / cull_rect / get_delta）。
-  `KernelBulletBackend` 加 `use_native` + 回退。
+- **N2.2（积分段）✅（2026-09-13）** 原生无状态 `DanmakuStore.integrate_batch`（积分 / 寿命 /
+  出生相位 / 剔除 → 返回新数组 + `dead`），由桥接子类
+  `scripts/kernel_bridge/kernel_native_system.gd`（**继承 vendored `BulletSystem`，只覆写 `_physics_process`**）
+  同序重放 despawn。**不碰 vendor 内核 → 不触发 re-vendor**；行为 / 碰撞 / 渲染看到的仍是 `BulletSystem`。
+  `KernelBulletBackend.use_native` 开关 + 无扩展自动回退。**实测 6000 弹 0.699 → 0.118ms/帧（5.9×）**；
+  parity `test_native_integrate` 2/2（含 `native_frames` 覆盖断言）。
+- **边界铁律（N2.2 实测）**：原生逐次 `get_position(i)` **110ns** vs GDScript `Packed[i]` **13ns**；
+  批量 `get_positions()` 快照 15ns。→ **搬存储必须配套批量快照 / 写回**，逐次转发反而更慢。
+- **N2.2（存储段，未做）** spawn / despawn / 宽相仍 GDScript。churn 6000 发 **8.2ms/波**（原生 ~1.1ms，含复位）
+  → 有空间，但必须按上面的批量约定设计。
 - **N2.3** 批量行为桥：`get_behavior_inputs()` / `apply_behavior_outputs()`（Packed 数组），
   每帧**常数次**跨界；GDScript 行为循环照跑（成本仍在，等 N3）。
 - **N3** 行为 / VM 原生：`kernel_port()` → program；删 `_port_by_sig`。

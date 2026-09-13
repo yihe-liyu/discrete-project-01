@@ -9,6 +9,8 @@
 #include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include <godot_cpp/variant/packed_color_array.hpp>
+#include <godot_cpp/variant/packed_float32_array.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
 #include <vector>
 
 namespace godot {
@@ -42,6 +44,11 @@ public:
 	int get_faction(int p_id) const;
 	Color get_color(int p_id) const;
 	void fill_multimesh(const Ref<MultiMesh> &p_mm) const;
+
+	// N2.2：无状态「积分加速器」——对宿主传入的 SoA 数组跑完整积分/寿命/出生相位/剔除循环，
+	// 返回新数组 + 本帧应回收的行 id（**不做 swap**：回收由 GDScript 侧按既有契约重放，
+	// 保证颜色/行为等 GDScript 专有字段的行身份一致）。数组按值 CoW 进出，无跨帧状态。
+	Dictionary integrate_batch(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedFloat32Array &p_life_left, const PackedFloat32Array &p_fx_phase, const PackedFloat32Array &p_timers, double p_delta, const Vector2 &p_cull_pos, const Vector2 &p_cull_size, float p_margin) const;
 
 	DanmakuStore();
 	~DanmakuStore();

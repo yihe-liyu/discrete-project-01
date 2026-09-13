@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-13 — N2.2（积分段）✅ 原生 integrate_batch 5.9×；边界实测 110ns/次 → 必须批量
+
+- **目标**：把内核积分循环搬原生（积分 / 寿命 / 出生相位 / 剔除），桥接以下 API 不变。
+- **先量边界（决策依据，`tools/bench_boundary.gd`）**：GDScript `Packed[i]` **13ns** vs 原生 `get_position(i)` 逐次 **110ns**（8×），而 `get_positions()` 批量快照 **15ns**。→ **逐次跨界必亏；搬存储必须配套批量快照/写回**（原计划的 N2.3 不能等）。
+- **落点（不碰 vendor 内核）**：`scripts/kernel_bridge/kernel_native_system.gd` **继承** vendored `BulletSystem`，只覆写 `_physics_process`；原生 `DanmakuStore.integrate_batch` **无状态**、数组按值进出、只回 `dead` 列表，子类**同序重放 despawn**（与内核 swap-with-last 逐位一致）。→ 内核 0 改动、不触发 re-vendor；行为 / 碰撞 / 渲染看到的仍是 `BulletSystem`。
+- **实测**（`tools/bench_native_system.gd`，6000 弹，同进程类路径）：GDScript **0.699ms** → 原生 **0.118ms** = **5.9×（−0.58ms/帧）**；原生裸调用 0.117。
+- **踩坑 1（字典键）**：GDScript 读 `res.life_lefts` / `res.fx_phases`，原生给的是 `life_left` / `fx_phase` → 读到 null。**bench 抓出**（类路径反而 1.88ms）。
+- **踩坑 2（空断言，重要）**：我加了尺寸守卫 `res.positions.size() != _active_count`，但原生按 SoA 约定返回**容量大小**（8192）≠ 活跃数（6000）→ **每帧静默退回 `super()`**，原生从未运行；parity 测试于是「两边都走 GDScript」而**空过**。修法 + 加**覆盖计数器 `native_frames`**，断言 >100 才证明真跑过。
+- **教训**：**SoA 的 `size()` ≠ 活跃数**（N4-real 已踩过，这次是我自己的 guard 踩）。**「新旧一致」的测试若两边都走了旧路，就是自欺**——替换类改动必须加覆盖证据。
+- **未做（N2.2 存储段）**：spawn/despawn/宽相仍 GDScript。churn 实测（`tools/bench_churn.gd`）：6000 发 **8.2ms/波** GDScript vs 原生 ~1.1（含复位）→ 原生存储仍有空间。
+- **验收**：`test_native_integrate` 2/2（11 断言，逐位 parity）；`verify.sh` 全绿。
+
 ### 2026-09-13 — N4-real 人类试玩验收 ✅：原生渲染视觉完全正确
 
 - **背景**：N4-real 后 `use_native_sync` 默认开 —— **只要扩展构建了，游戏就走原生渲染**。`verify.sh` 只能证「不崩、批次数对」；headless 读不到 MultiMesh 变换，**视觉是唯一自动化盲区**。

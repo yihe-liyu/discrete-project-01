@@ -16,6 +16,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_faction", "id"), &DanmakuStore::get_faction);
 	ClassDB::bind_method(D_METHOD("get_color", "id"), &DanmakuStore::get_color);
 	ClassDB::bind_method(D_METHOD("fill_multimesh", "mm"), &DanmakuStore::fill_multimesh);
+	ClassDB::bind_method(D_METHOD("integrate_batch", "count", "positions", "velocities", "life_left", "fx_phase", "timers", "delta", "cull_pos", "cull_size", "margin"), &DanmakuStore::integrate_batch);
 }
 
 void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
@@ -120,6 +121,56 @@ void DanmakuStore::fill_multimesh(const Ref<MultiMesh> &p_mm) const {
 		p_mm->set_instance_transform_2d(i, Transform2D(0.0f, Vector2(_x[i], _y[i])));
 		p_mm->set_instance_color(i, _color[i]);
 	}
+}
+
+// N2.2：积分加速器。语义必须与 scripts/kernel/bullet_system.gd 的 _physics_process 1:1。
+// 与 GDScript 版的唯一区别：这里**不**在循环里 swap 回收，只记录 dead；调用方按同序重放 despawn。
+Dictionary DanmakuStore::integrate_batch(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedFloat32Array &p_life_left, const PackedFloat32Array &p_fx_phase, const PackedFloat32Array &p_timers, double p_delta, const Vector2 &p_cull_pos, const Vector2 &p_cull_size, float p_margin) const {
+	const int n = MIN(p_count, MIN(p_positions.size(), p_velocities.size()));
+	PackedVector2Array positions = p_positions;   // CoW 共享；下面首次写入时才整块拷贝
+	PackedVector2Array velocities = p_velocities;
+	PackedFloat32Array life = p_life_left;
+	PackedFloat32Array fx = p_fx_phase;
+	PackedFloat32Array timers = p_timers;
+	PackedInt32Array dead;
+	const float dt = (float)p_delta;
+	const bool cull = p_cull_size.x > 0.0f && p_cull_size.y > 0.0f;
+	const float x0 = p_cull_pos.x - p_margin;
+	const float y0 = p_cull_pos.y - p_margin;
+	const float x1 = p_cull_pos.x + p_cull_size.x + p_margin;
+	const float y1 = p_cull_pos.y + p_cull_size.y + p_margin;
+	for (int i = n - 1; i >= 0; --i) {
+		if (life[i] >= 0.0f) {
+			life[i] -= dt;
+			if (life[i] <= 0.0f) {
+				dead.push_back(i);
+				continue;
+			}
+		}
+		if (fx[i] > 0.0f) {
+			fx[i] -= dt;
+			if (fx[i] > 0.0f) {
+				continue;
+			}
+			fx[i] = 0.0f;
+		}
+		const Vector2 p = positions[i] + velocities[i] * dt;
+		positions[i] = p;
+		if (timers[i] > 0.0f) {
+			timers[i] -= dt;
+		}
+		if (cull && (p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1)) {
+			dead.push_back(i);
+		}
+	}
+	Dictionary out;
+	out["positions"] = positions;
+	out["velocities"] = velocities;
+	out["life_left"] = life;
+	out["fx_phase"] = fx;
+	out["timers"] = timers;
+	out["dead"] = dead;
+	return out;
 }
 
 DanmakuStore::DanmakuStore() {}
