@@ -25,7 +25,7 @@
 - 同屏目标 ≥ **6000 弹**；或
 - 行为热点成为**实打实卡顿**；或
 - 要借原生做**并行 / 大规模数据**。
-- **前置**：`godot-cpp` 有匹配 Godot 4.7 的 branch（本机 `scons` 缺）；CI 能编 debug+release 两套库。
+- **前置（2026-09-13 实测更新）**：`godot-cpp` **v10（master / Beta）用 `api_version=4.7` 即可定位 Godot 4.7**（README 示例写的就是 `api_version="4.7"`；v10 起版本号与 Godot 独立，可 target 4.3+）。**本机缺 `scons`** → `pip install scons` 即可（或走 CMake）；CI 需编 debug + release 两套库。**仅剩的实际风险 = v10 仍 Beta、无 stable 分支**。
 
 ---
 
@@ -262,7 +262,7 @@ for e in world.drain_events():                  # 帧末一次
 
 ## 12. 风险与开放问题
 
-1. **工具链**：godot-cpp 4.7 支持未确认；缺 `scons`；GDExtension 锁次版本。
+1. **工具链（2026-09-13 实测更新）**：不再是「godot-cpp 4.7 支持未确认」—— v10 可用 `api_version=4.7` 定位 4.7；缺的 `scons` 可 `pip install`。**实际风险 = v10 仍 Beta（无 stable 分支）**；GDExtension 语义：target 早期版本可在后期 minor 跑，反之不行。
 2. **命名撞车**：原生类与 GDScript `class_name` 同一张全局表 → 原生类需前缀/命名空间，或删除同名 GDScript 类。
 3. **编辑器工作流**：原生自定义 Resource 要在 Inspector 显示与序列化，需 `ClassDB` 注册 + `_bind_methods`。
 4. **确定性跨平台**：float 舍入 / SIMD 可能分歧；并行化要固定归约顺序。

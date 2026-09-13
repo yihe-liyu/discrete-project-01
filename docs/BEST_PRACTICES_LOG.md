@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-13 — 更正：godot-cpp 的 4.7 前置（实测 GitHub）
+
+- **原判断**（§0.2 / §12）：`godot-cpp` 有无匹配 Godot 4.7 的 branch「未确认」+ 本机缺 `scons`。
+- **实测（fetch godot-cpp README / releases）**：godot-cpp **v10（master，Beta）**起版本号与 Godot 独立，README 明确 `api_version` 可选，示例即 `api_version="4.7"`，并写「v10 可 target Godot 4.3+（含 4.6）」。稳定分支/tag 仍停在 `godot-4.5-stable`，最新 release 是 `10.0.0-rc2`（2026-08-25）。
+- **结论**：**「支持未确认」不成立** —— v10 可定位 4.7；唯一实际风险变成 **v10 仍 Beta、无 stable 分支**。本机缺的 `scons` 可 `pip install scons`。
+- **验收**：纯文档更正；未动代码。
+
 ### 2026-09-13 — 桥接收口审计：924 行构成 + 更正「≤300」不可达目标
 
 - **背景**：计划 §16.5 的「融合完成」判据写着 `scripts/kernel_bridge/` **≤ 300 行**。动手"收桥接"前先实测。
