@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-13 — M0：修 vendor 漂移 + 立 vendor 脚本（融合前置）
+
+- **发现**：`scripts/kernel/` 副本与上游（重建版 tag `kernel-v1`）漂移 **4 处**，**全是本地改了、上游没同步**：K1 的 `avoid_player.gd → avoid_player_behavior.gd`（文件名）、K7 的 `FxLayer → FxPool`（注释）、A10 的 `bullet_data → bullet_type`（形参）、A11 的行尾空白。README 担心的「单一真相会烂」**已经在发生** —— 下次 vendor 会把它们覆盖回去，文件名还会变成"两个文件"。
+- **M0a**：前 3 处同步回重建版上游并跑其 `tests/`（46 套）全绿；第 4 处不写回上游，交给 vendor 规范化。
+- **M0b**：新增 `tools/vendor_kernel.sh` —— 复制上游 + 两处规范化（删 `BulletRenderer` 注入 / 去行尾空白）+ 「内核 0 宿主引用」守卫（去注释后正则；`LayerConfig` 是唯一豁免，不在名单里）+ `--check` 报漂移。`.uid` 属项目本地（`uid://` 指向本工程），不参与 vendor，只清孤儿。
+- **坑**：重建版改名后 `behavior_processor_test` 挂 `Could not find script for class "AvoidPlayerBehavior"` —— 全局类缓存 `.godot/global_script_class_cache.cfg` 还指着旧路径；`godot --headless --editor --quit` 重建后全绿（K1 同款教训，已写进 `scripts/kernel/README.md`）。
+- **验收**：`bash tools/vendor_kernel.sh --check` → 漂移 0 + 守卫 ✅；重建版 46 套全绿；原项目本轮只加脚本与文档，GUT/语法不受影响。
+
 ### 2026-09-13 — 决策：内核融合（M1–M3）—— 结束 Strangler，转向「一套架构」
 
 - **决定**：不再维持「内核冻结 + 宿主侧适配」。进入**融合**；终局按 `scripts/kernel/README.md` 的既定约定 —— **原项目成为内核唯一之家、重建版归档**。

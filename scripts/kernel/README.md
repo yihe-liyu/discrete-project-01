@@ -1,6 +1,8 @@
 # scripts/kernel — 弹幕内核（vendored 子系统）
 
-> **来源**：从重建版项目 vendored（重建版 tag `kernel-v1` / commit `238507a`）。
+> **来源**：从重建版项目 vendored（起点 tag `kernel-v1` / commit `238507a`；现跟随重建版 `main`）。
+> **同步方式**：`bash tools/vendor_kernel.sh [--check]`（M0b）—— 复制上游 + 两处规范化 + 「内核 0 宿主引用」守卫。
+> **禁止手改本目录**：改动会被下次 vendor 覆盖（K1/K7/A10 三次本地改名都因此漂移过，见 M0）；改内核请在**重建版**改。
 > **单一真相**：当前约定 = 重建版是内核**开发环境**（bench + 46 套测试），本目录是 vendor 快照；内核定型后再宣布原项目为唯一之家、重建版归档。
 > **本目录是"内核边界"**：只放可脱离宿主运行的弹幕机制，不放任何原项目实体 / UI / 内容。
 
@@ -27,7 +29,13 @@
 
 ## Vendor 改动（相对重建版 upstream）
 
+vendor = 复制上游 + **两处规范化**（由 `tools/vendor_kernel.sh` 执行）：
+
 1. `bullet_system.gd`：**删除 `BulletRenderer` 注入**（`_ready` / `setup_renderers`）——内核本体不引用宿主渲染器类型；渲染由 adapter 负责。
+2. **去行尾空白**：跟随宿主风格（原项目 A11 已全仓清理）。
+
+> `.uid` 属**项目本地**（Godot 生成、`uid://` 指向本工程）→ 不参与 vendor；脚本只清理孤儿 `.uid`。
+> **改了 `class_name` 或文件名**之后，原项目要跑一次 `godot --headless --editor --quit` 重建全局类缓存（K1 教训；M0a 的 `avoid_player` 改名正是踩了这个）。
 
 ## 不带（有意）
 

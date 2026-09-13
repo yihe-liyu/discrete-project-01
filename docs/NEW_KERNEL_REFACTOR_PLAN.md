@@ -587,19 +587,21 @@ S3 选 A 方案（§14.3）是为了**保住「内核零改动」这个可回退
 
 #### M0 —— 先修 vendor 漂移（**前置**，2026-09-13 实测发现）
 
-现状：`scripts/kernel/` 副本已与上游漂移 **3 处**（上游 = 重建版 tag `kernel-v1` = `238507a`）：
+实测 `scripts/kernel/` 副本与上游漂移 **4 处**（上游 = 重建版 tag `kernel-v1` = `238507a`）：
 
 | 漂移 | 上游 | vendor 副本 | 性质 |
 |---|---|---|---|
 | 文件名 | `scripts/behavior/avoid_player.gd` | `behavior/avoid_player_behavior.gd` | K1 改名**只改了副本**、没回上游 |
 | 注释 | `FxLayer` | `FxPool` | K7 改名**只改了副本** |
 | 形参名 | `bullet_data` | `bullet_type` | A10 改名**只改了副本** |
+| 行尾空白 | `bullet_system.gd:333` 有制表符 | 已清 | A11 **只清了副本** |
 
-→ 下次 vendor（M1 之后）会**把这些改动覆盖回去**（文件名甚至会出现"两个文件"）。
+→ 下次 vendor 会**把这些改动覆盖回去**（文件名甚至会出现"两个文件"）。
 
-- **M0a**：把上述 3 处同步回重建版（上游），使上游 == 副本 **除了**那条已记录的 vendor 改动（删 `BulletRenderer` 注入）。
-- **M0b**：写 `tools/vendor_kernel.sh`：从重建版复制 → 应用唯一 vendor 改动 → 跑 `grep` 宿主引用守卫（内核必须 0 宿主引用）→ 报 diff。**让 vendor 可复现**，不再手抄。
-- 验收：`bash tools/vendor_kernel.sh --check` 报 0 漂移。
+- **M0a（已完成）**：前 3 处**同步回重建版上游**（改名 + 注释 + 形参；重建版 `tests/` 46 套全绿）。第 4 处不写回上游，改由 vendor **规范化**处理。
+- **M0b（已完成）**：`tools/vendor_kernel.sh` —— 复制上游 + **两处规范化**（删 `BulletRenderer` 注入 / 去行尾空白）+ 「内核 0 宿主引用」守卫 + `--check` 报漂移。`.uid` 属项目本地，不参与 vendor（只清孤儿）。
+- **踩坑**：改名后重建版爆 `Could not find script for class "AvoidPlayerBehavior"` —— `.godot/global_script_class_cache.cfg` 还指着旧路径，跑一次 `godot --headless --editor --quit` 即恢复（K1 同款）。**原项目侧同理**。
+- 验收：`bash tools/vendor_kernel.sh --check` → 漂移 0 + 守卫 ✅。
 
 #### M1 —— 内核认数据：`damage` / `hit_sfx` / `out_grace` 进 `BulletType`
 - **删** `KernelBulletBackend._damage_by_index` / `_hit_sfx_by_index` 与 `damage_for_index()` / `hit_sfx_for_index()`；宿主专有字段改由弹型自带。
