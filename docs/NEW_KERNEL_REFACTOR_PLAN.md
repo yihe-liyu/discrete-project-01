@@ -585,6 +585,22 @@ S3 选 A 方案（§14.3）是为了**保住「内核零改动」这个可回退
 
 ### 16.3 路线（每步独立提交、可试玩、可回滚）
 
+#### M0 —— 先修 vendor 漂移（**前置**，2026-09-13 实测发现）
+
+现状：`scripts/kernel/` 副本已与上游漂移 **3 处**（上游 = 重建版 tag `kernel-v1` = `238507a`）：
+
+| 漂移 | 上游 | vendor 副本 | 性质 |
+|---|---|---|---|
+| 文件名 | `scripts/behavior/avoid_player.gd` | `behavior/avoid_player_behavior.gd` | K1 改名**只改了副本**、没回上游 |
+| 注释 | `FxLayer` | `FxPool` | K7 改名**只改了副本** |
+| 形参名 | `bullet_data` | `bullet_type` | A10 改名**只改了副本** |
+
+→ 下次 vendor（M1 之后）会**把这些改动覆盖回去**（文件名甚至会出现"两个文件"）。
+
+- **M0a**：把上述 3 处同步回重建版（上游），使上游 == 副本 **除了**那条已记录的 vendor 改动（删 `BulletRenderer` 注入）。
+- **M0b**：写 `tools/vendor_kernel.sh`：从重建版复制 → 应用唯一 vendor 改动 → 跑 `grep` 宿主引用守卫（内核必须 0 宿主引用）→ 报 diff。**让 vendor 可复现**，不再手抄。
+- 验收：`bash tools/vendor_kernel.sh --check` 报 0 漂移。
+
 #### M1 —— 内核认数据：`damage` / `hit_sfx` / `out_grace` 进 `BulletType`
 - **删** `KernelBulletBackend._damage_by_index` / `_hit_sfx_by_index` 与 `damage_for_index()` / `hit_sfx_for_index()`；宿主专有字段改由弹型自带。
 - `out_grace` 变弹型属性 —— **正好是 §15.5 当初留的口子**（"将来作为弹型属性接入"）。

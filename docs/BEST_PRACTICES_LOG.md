@@ -30,6 +30,7 @@
 - **流程（硬约束）**：内核改动**必须回重建版做**（那是它的开发环境）→ 跑重建版 `tests/` → 打 tag `kernel-v2` → vendor 回来。**禁止**只改 `scripts/kernel/` 副本（README 明写它只是 vendor 快照，会被覆盖）。
 - **融合完成判据**（§16.5，可 lint）：桥接 ≤300 行且无类型映射/侧表、`_by_index` = 0、`kernel_port` = 0、桥接里 `BulletData` 显著下降、内核仍 **0 宿主引用**。
 - **不做**：L2 壳合一（把内容搬进重建版）≈ big-bang，决策备忘已否决。
+- **前置发现（M0）**：实测 `scripts/kernel/` 副本已与上游漂移 **3 处**，而且**全是本地改了、上游没同步** —— K1 的 `avoid_player.gd → avoid_player_behavior.gd`（文件名）、K7 的 `FxLayer → FxPool`（注释）、A10 的 `bullet_data → bullet_type`（形参）。下次 vendor 会**覆盖回去**（文件名甚至出现两个文件）→ 先做 M0（同步 + 写可复现的 `tools/vendor_kernel.sh`）。
 - **对命名的连带影响**：N17（`KernelBulletBackend → KernelBulletBridge`）**暂缓** —— 类名该叫什么取决于融合后它缩成什么样；等 M1/M2 落地再定，避免 42 处白改。
 
 ### 2026-09-13 — P0-7：标识符命名契约 + 命名 lint（N15 / N16）
