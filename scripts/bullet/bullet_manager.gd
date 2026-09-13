@@ -29,8 +29,11 @@ var fx_pool: FxPool:
 ## K4：组合根注入的视觉父节点（World）——炸弹爆炸贴图挂此（不再全树找 scene/World）
 var fx_parent: Node2D
 
-## W4b-3b：组合根注入的实体注册表（自机 / 敌机 / Boss）；空则回退当前世界
-var world_refs: EntityRegistry
+## W4b-3b：组合根注入的实体注册表（自机 / 敌机 / Boss）；空则回退当前世界。**只读** —— 唯一写入口是 `inject_world_refs()`。
+var _world_refs: EntityRegistry
+var world_refs: EntityRegistry:
+	get:
+		return _world_refs
 
 # 共享子弹上下文
 var _world_clock: CoroutineRunner
@@ -169,9 +172,9 @@ func resume_processing() -> void:
 
 # ═══ 内核后端装配 ═══
 
-## 注入本次关卡的实体注册表（自机 / 敌机 / Boss）；组合根装配后调用
+## 注入本次关卡的实体注册表（自机 / 敌机 / Boss）；组合根装配后调用（唯一写入口）
 func inject_world_refs(refs: EntityRegistry) -> void:
-	world_refs = refs
+	_world_refs = refs
 	_enable_kernel()
 
 

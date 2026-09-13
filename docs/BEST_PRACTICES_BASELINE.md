@@ -86,6 +86,21 @@
 
 ---
 
+## 注入契约（组合根 → 场景节点）
+
+> 场景内依赖**只能代码注入**：Godot 4.7 下 `.tscn` → `@export` 节点引用不会解析成节点（K4 实测后回退），所以「声明式接线」对节点依赖不可用 —— R21 只覆盖**建树**，不覆盖接线。
+> 按「**写入是否需要副作用**」二选一：
+
+| 写入 | 落点 | 例子 |
+|---|---|---|
+| **需要副作用**（转发子模块 / 重建装配 / 校验 / 统一断开） | **只读属性 + `inject_*()` / `setup_*()` 方法**；方法即唯一写入口 | `BulletManager.inject_fx_pool()` / `inject_world_refs()`；`BehaviorProcessor.setup()` / `LaserEngine.setup()` |
+| **纯赋值**（组合根把已建好的节点挂上，无副作用） | 允许**裸 public var**，但必须 `##` 注明「组合根注入」 | `StageRuntime.world` / `bullets` / `miss_layer` / `fx_pool` / `ui_layer`；`BulletManager.fx_parent` |
+
+> `ctx.*` 服务（`RefCounted`）由 `StageContext` 懒建 + 回填，不自行摸全局。
+> 有意例外：`StageContext.effects` getter 每次访问把 `StageRuntime` 的 Miss / FX 层回填给服务，供「无 stage 的共享 ctx」回退。
+
+---
+
 # STG 品质需求（主轴：做一款好玩的东方弹幕游戏）
 
 > 图例：`[x]` 已落地且有代码证据；`[~]` 部分落地 / 待核；`[ ]` 未做。
