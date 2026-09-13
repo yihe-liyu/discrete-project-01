@@ -194,7 +194,7 @@ func _on_animation_finished() -> void:
 const BOMB_SPAWN_COUNT: int = 8
 const BOMB_SPAWN_INTERVAL: float = 0.1
 const BOMB_SPEED: float = 220.0
-const BOMB_DAMAGE: float = 50.0
+const BOMB_DAMAGE: float = 100.0
 const BOMB_RADIUS: float = 45.0
 const BOMB_INVINCIBLE_TIME: float = 4.0
 
@@ -208,10 +208,10 @@ func _bomb() -> void:
 	is_invincible = true
 	_invincible_timer = BOMB_INVINCIBLE_TIME
 	var base_hue := RNG.randf()
-	var tw := create_tween()
+	var tween := create_tween()
 	for i in BOMB_SPAWN_COUNT:
-		tw.tween_callback(_spawn_bomb_bullet.bind(i, base_hue))
-		tw.tween_interval(BOMB_SPAWN_INTERVAL)
+		tween.tween_callback(_spawn_bomb_bullet.bind(i, base_hue))
+		tween.tween_interval(BOMB_SPAWN_INTERVAL)
 
 
 func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
