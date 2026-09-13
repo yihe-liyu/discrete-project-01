@@ -7,6 +7,7 @@ extends NavPage
 
 @onready var _logo: TextureRect = $"logo"
 @onready var _particles: GPUParticles2D = $"GPUParticles2D"
+@onready var _page_host: Control = %PageHost   # 子页面容器（注入给 MenuNav）
 
 
 var _logo_tween: Tween
@@ -30,20 +31,21 @@ func _ready() -> void:
 		item.modulate.a = 0.0
 
 	GameManager.current_scene_path = "res://scenes/ui/main_menu.tscn"
+	GameManager.set_page_host(_page_host)   # R2：把子页面容器注入 MenuNav
 	AudioManager.play_bgm(AssetRegistry.get_bgm("menu"), 1.0)
 
 	# Logo 入场动画
 	_logo.material.set_shader_parameter("progress", 0.0)
 	_logo.material.set_shader_parameter("alpha_mult", 1.0)
 
-	# 从容淡入 ~1.0s
-	entrance_stagger = 0.05
-	entrance_duration = 0.5
-
 	_logo_tween = create_tween()
 	_logo_tween.tween_property(_logo.material, "shader_parameter/progress", 1.0, 3.0)\
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_logo_tween.tween_callback(_play_entrance)  # 选项在 Logo 播完后入场
+
+
+func _exit_tree() -> void:
+	GameManager.set_page_host(null)  # 解除注入（防 MenuNav 持悬空 host）
 
 
 func _on_item_selected(index: int) -> void:
@@ -127,12 +129,12 @@ func _deactivate_title() -> void:
 	refresh_colors()
 
 	# 与 MenuNav 黑场同步渐隐（0.12s）
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_container, "modulate:a", 0.0, 0.12)
-	tw.tween_property(_logo.material, "shader_parameter/alpha_mult", 0.0, 0.12)
-	tw.tween_property(_particles, "modulate:a", 0.5, 0.12)
-	tw.tween_callback(_container.hide).set_delay(0.12)
-	tw.tween_callback(_logo.hide).set_delay(0.12)
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(_container, "modulate:a", 0.0, 0.12)
+	tween.tween_property(_logo.material, "shader_parameter/alpha_mult", 0.0, 0.12)
+	tween.tween_property(_particles, "modulate:a", 0.5, 0.12)
+	tween.tween_callback(_container.hide).set_delay(0.12)
+	tween.tween_callback(_logo.hide).set_delay(0.12)
 
 
 func _activate_title() -> void:

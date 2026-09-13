@@ -207,7 +207,7 @@
 | R21 声明式建树 | `game_scene` 服务节点全部 tscn 声明（K6：`BulletManager` 收尾）；余 `workbench.gd` 11 处 `.new()` + 15 处 `add_child` | `game_scene` ✅；workbench 开发工具，可后 |
 | R6 私有调用 | **0**（K2：`has_method("_")` 12→0、生产对外私有调用 6 组→0） | ✅ 公开虚函数 + 类型化接口 |
 | R4 输入 | 边沿轮询 **0**（K3）；`Input.is_action` 仅连续状态（移动/focus/shoot/回放/对话长按） | ✅ 符合「状态读取例外」 |
-| R2 引用 | `find_child` **0**、`get_node("..")`/`$".."` **0**（K4）；余 `current_scene` 取 World 2 处 | 基本达标，余 2 处可注入 |
+| R2 引用 | `find_child` **0**、`get_node("..")`/`$".."` **0**（K4）；`MenuNav` 容器改注入（K11）；余 `current_scene` 取 World 2 处 | 基本达标，余 2 处可注入 |
 | R5 字符串 get_node | **19 处**（含 `get_node_or_null`），多为场景内直接子级 | 非全树搜，接受 |
 | 层序契约 | 26 处设 `z_index`，**20 处走 `LayerConfig`**，裸数字 5 | 接近达标，余 5 处可收 |
 | 帧序契约 | 无显式 `FrameOrder`；内核走 `process_physics_priority`（-10/-5/-4/0） | 仍可引入 `FrameOrder` |
@@ -217,7 +217,7 @@
 | R12 | `@export=preload` **1**（`enemy_data.gd:9`） | 待改 |
 | R10/R13/R17/R20/R22 | 内核 SoA / `_physics_process` / 数据资源 / 独立子场景 / `##` 注释 | 无系统性违规 |
 
-> **轨道 B 进度（2026-09-11）**：**W1–W4c + K1–K5 已完成**。
+> **轨道 B 进度（2026-09-11）**：**W1–W4c + K0–K11 已完成**。
 > - W1：`LayerConfig` 去 autoload（纯常量 → `class_name`）、`MissEffectManager` 场景节点化（组合根 `GameScene` 注入）。autoload 12→10。
 > - W2：`StageObjects` 去 autoload（→ `StageContext.objects`）、`HitEffectPool` → `FxLayer`（组合根注入，节点在 `game_scene.tscn` 声明）。autoload 10→8。
 > - R21 收口：`FxLayer` 与 `MissEffectManager` 均已改为 `game_scene.tscn` 声明式节点（后者为 W1 产物，在 W2 补正）。详见 §12.7 / §12.8。
@@ -244,3 +244,4 @@
 > - K8（初始化去重）：`Player.setup_character` 幂等入口收口「`_ready` 自举 + 组合根覆盖」的双重初始化。详见 §12.28。
 > - K9（读取收口）：`PlayerShootScript` 的 `leader.get("resources")` → `leader.resources`（类型化）；`.get("resources")` 旁路归零。详见 §12.29。
 > - K10（`resources` 惰性属性）：`Player.resources` 改为惰性属性（getter 自建 / setter 预注入），删 `_ready` 判空自建。详见 §12.30。
+> - K11（MenuNav 注入）：`MenuNav._find_or_create_host`（`current_scene` 名字搜 + 运行时建节点）删除，改由 `MainMenu` 注入 `%PageHost`。详见 §12.31。

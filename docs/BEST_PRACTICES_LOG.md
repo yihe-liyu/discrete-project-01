@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-11 — K11：MenuNav 子页面容器改为注入（去 current_scene 名字搜）
+
+- **目标**：`MenuNav._find_or_create_host` 靠 `current_scene` 子节点名字字符串 `"PageHost"` 找容器（R2/R5），并会命令式建节点挂到场景（R21），类型也不安全（`Node`→`Control`、`_parent` 兜底）。
+- **做法**：
+  - `MenuNav` 新增 `_host` + `set_page_host()/has_page_host()`；`push()` 用注入的 host，未注入 → `push_error` 拒绝；**删掉 `_find_or_create_host`**（连带 `_parent` 类型错误的兜底）。
+  - `GameManager.set_page_host()` 转发；`MainMenu._ready` 注入 `%PageHost`，`_exit_tree` 解除。
+  - `main_menu.tscn` 的 `PageHost` 标 `unique_name_in_owner`。
+  - 新增 `test_menu_nav.gd`：无 host 时 `has_page_host()` false；注入后 push 成功且页面挂在 host 下。
+- **度量**：`MenuNav` 里 `current_scene` + 名字遍历 + 运行时建节点 **1 处 → 0**。
+- **验收**：`check_syntax` **191/0**；全量 **56 套 / 309 测试 / 3211 断言全绿**；orphans 10。
 ### 2026-09-11 — K10：Player.resources 惰性属性化（去 _ready 判空自建）
 
 - **目标**：`Player._ready` 里 `if resources == null: resources = PlayerResources.new()` 是「owner 自建 + 允许预注入」的防御分支，但生产从不预注入 → 条件恒真，读起来像有注入却在 `_ready` 才建。

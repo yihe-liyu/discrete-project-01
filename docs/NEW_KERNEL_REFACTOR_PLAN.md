@@ -645,6 +645,15 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.31 K11 实施记录（2026-09-11，已完成）
+
+**目标**：`MenuNav` 子页面容器由场景搜索改为组合根注入（R2/R21）。
+
+**落点**：`MenuNav` 增 `set_page_host()/has_page_host()`，`push()` 用注入 host 并删 `_find_or_create_host`；`GameManager` 转发；`MainMenu` 注入 `%PageHost`（tscn 标唯一名）并在 `_exit_tree` 解除；新增 `test_menu_nav.gd`。
+
+**度量**：`MenuNav` 的 `current_scene` 搜索 **1 → 0**。
+
+**验收**：`check_syntax` 191/0；全量 **56 套 / 309 测试 / 3211 断言全绿**；orphans 10。
 ### 12.30 K10 实施记录（2026-09-11，已完成）
 
 **目标**：把 `Player` 的「owner 自建 + 允许预注入」从 `_ready` 的判空分支改为类型化惰性属性。

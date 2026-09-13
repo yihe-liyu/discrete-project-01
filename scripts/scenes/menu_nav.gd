@@ -26,6 +26,7 @@ signal page_changed(current: Node, previous: Node)
 # ═══ 内部状态 ═══
 
 var _parent: Node                     # GameManager
+var _host: Control                    # 子页面容器（MainMenu 注入 %PageHost；R2：不再场景搜索）
 var _page_stack: Array[BasePage] = []  # 普通页面栈
 var _overlay_stack: Array[BasePage] = []  # 覆盖层栈
 
@@ -36,10 +37,24 @@ func setup(parent: Node) -> void:
 	_parent = parent
 
 
+## 注入子页面容器（由拥有它的场景调用，如 MainMenu 的 %PageHost）
+func set_page_host(h: Control) -> void:
+	_host = h
+
+
+## 是否已注入子页面容器
+func has_page_host() -> bool:
+	return is_instance_valid(_host)
+
+
 # ═══ 页面栈 ═══
 
-## 推入一个子页面
+## 推入一个子页面（须先由 MainMenu 注入 PageHost）
 func push(page_path: String) -> BasePage:
+	if not has_page_host():
+		push_error("MenuNav: 未注入 PageHost（应由 MainMenu 注册）——拒绝 push 子页面")
+		return null
+
 	# 隐藏当前栈顶
 	if not _page_stack.is_empty():
 		var prev: BasePage = _page_stack[-1]
@@ -49,8 +64,7 @@ func push(page_path: String) -> BasePage:
 	# 加载 & 添加新页面
 	var page: BasePage = _load_page(page_path)
 	_page_stack.append(page)
-	var host: Control = _find_or_create_host()
-	host.add_child(page)
+	_host.add_child(page)
 	_connect_signals(page)
 	page.visible = true
 
@@ -215,25 +229,6 @@ func get_overlay_top() -> BasePage:
 
 func _load_page(path: String) -> BasePage:
 	return load(path).instantiate() as BasePage
-
-
-func _find_or_create_host() -> Control:
-	var scene: Node = _parent.get_tree().current_scene
-	if not scene:
-		return _parent  # fallback
-
-	# 优先用场景预设的 PageHost
-	for child in scene.get_children():
-		if child.name == "PageHost":
-			return child
-
-	# 没有就创建一个
-	var host: Control = Control.new()
-	host.name = "PageHost"
-	host.set_anchors_preset(Control.PRESET_FULL_RECT)
-	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	scene.add_child(host)
-	return host
 
 
 func _connect_signals(page: BasePage) -> void:

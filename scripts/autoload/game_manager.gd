@@ -86,6 +86,11 @@ func reload_current_scene():
 
 # ═══ 子页面（MainMenu 内 push/pop） ═══
 
+## 注入子页面容器（MainMenu 的 %PageHost）；R2：MenuNav 不再自行场景搜索
+func set_page_host(host: Control) -> void:
+	_nav.set_page_host(host)
+
+
 ## 推入子页面（难度选择、角色选择等），返回页面节点
 func push_page(path: String) -> Node:
 	return _nav.push(path)
