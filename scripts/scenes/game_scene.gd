@@ -38,15 +38,15 @@ func _ready():
 
 	if SaveData.is_practice_mode:
 		SaveData.restarting = false
+		_setup_player()          # 先绑定自机（reset_* 经注册表取同一 PlayerResources）
 		SaveData.reset_practice()
-		_setup_player()
 		_start_practice_game()
 	else:
 		if SaveData.practice_phase != null:
 			push_warning("GameScene: practice_phase 已设置但 is_practice_mode=false —— 练习标志被提前清除，误走普通关卡")
 		SaveData.restarting = false
+		_setup_player()          # 先绑定自机（reset_* 经注册表取同一 PlayerResources）
 		SaveData.reset_all()
-		_setup_player()
 		_start_normal_game()
 
 

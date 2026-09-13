@@ -645,6 +645,15 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.33 K13 实施记录（2026-09-11，已完成）
+
+**目标**：修复练习模式残机/bomb 未归零。
+
+**根因**：`_ready` 里 `SaveData.reset_*` 早于 `_setup_player()`，注册表尚未绑定自机 → `get_player_resources()` 返回 null → 空跑。
+
+**修复**：先 `_setup_player()` 再 `reset_practice()`/`reset_all()`；新增 `test_practice_mode.gd` 回归。
+
+**验收**：`check_syntax` 191/0；全量 **57 套 / 310 测试 / 3215 断言全绿**；orphans 10。
 ### 12.32 K12 实施记录（2026-09-11，诊断）
 
 **目标**：定位「符卡练习未启动」。给 `_start_practice` 的静默 return 与 `game_scene` 的 else 支加 `push_warning`。

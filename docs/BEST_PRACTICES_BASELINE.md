@@ -245,3 +245,4 @@
 > - K9（读取收口）：`PlayerShootScript` 的 `leader.get("resources")` → `leader.resources`（类型化）；`.get("resources")` 旁路归零。详见 §12.29。
 > - K10（`resources` 惰性属性）：`Player.resources` 改为惰性属性（getter 自建 / setter 预注入），删 `_ready` 判空自建。详见 §12.30。
 > - K11（MenuNav 注入）：`MenuNav._find_or_create_host`（`current_scene` 名字搜 + 运行时建节点）删除，改由 `MainMenu` 注入 `%PageHost`。详见 §12.31。
+> - K13（练习资源修复）：`_ready` 先 `_setup_player()` 再 `reset_*`，修复练习残机/bomb 未归零。详见 §12.33。

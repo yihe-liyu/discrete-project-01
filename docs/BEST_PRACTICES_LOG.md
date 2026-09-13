@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-11 — K13：练习模式残机/bomb 未归零（reset_* 早于 bind_player）
+
+- **现象**：符卡练习里残机/bomb 不是 0（`PlayerResources.reset_practice` 本应设 `lives=0/bomb=0/power=300`）。
+- **根因**：`GameScene._ready` 顺序是 `SaveData.reset_practice()` → `_setup_player()`；而 `reset_*` 经 `EntityRegistry.current.get_player_resources()` 取自机资源，此时 `refs.player` 尚未 `bind_player` → 返回 null → **空跑**。
+- **为什么普通关卡没暴露**：新 `game_scene` 每次新建 `Player`（`PlayerResources` 默认 2/3），`reset_all` 空跑也看不出；练习的「0/0」是显式覆盖才暴露。
+- **修复**：两个分支都改为**先 `_setup_player()`（绑定自机）再 `reset_*`**。
+- **回归测试**：`test_practice_mode.gd` —— `start_practice` 后实例化 `game_scene`，断言 `lives=0 / bomb_count=0 / power_raw=300`。
+- **教训**：静态 `reset_*` 经注册表间接取资源，调用顺序必须晚于注入；K10 惰性 `resources` 后更凸显「先绑定后重置」。
+- **验收**：`check_syntax` **191/0**；全量 **57 套 / 310 测试 / 3215 断言全绿**；orphans 10。
 ### 2026-09-11 — K12：符卡练习未启动诊断守卫（纯诊断，不改行为）
 
 - **背景**：符卡练习里 `game_scene._ready` 未走 `_start_practice_game`；已知 `练习: ...` 打印出现（`start_practice` 已执行），故怀疑 `is_practice_mode` 在 `_ready` 前被清。
