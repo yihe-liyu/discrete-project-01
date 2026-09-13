@@ -2,7 +2,7 @@
 extends Area2D
 class_name Player
 
-@onready var hitpoint_display: HitPointDisplay = $HitPointDisplay
+@onready var _hit_point_display: HitPointDisplay = $HitPointDisplay
 @onready var animation: AnimatedSprite2D = $AnimatedSprite2D
 @onready var muzzle: Marker2D = $Muzzle
 
@@ -14,16 +14,16 @@ const MIN_MARGIN: int = 8
 
 ## 关卡上下文（StageRuntime/game_scene 注入，系统操作走服务）
 var ctx: StageContext
-## 单局资源（W4b-4：Player 是 owner；消费者经 EntityRegistry 取同一实例）。
+## 单局资源（Player 是 owner；消费者经 EntityRegistry 取同一实例）。
 ## 惰性创建：任何读取都保证非 null（无需 _ready 判空自建），也允许入树前预注入。
-var _resources: PlayerResources
+var _player_resources: PlayerResources
 var resources: PlayerResources:
 	get:
-		if _resources == null:
-			_resources = PlayerResources.new()
-		return _resources
+		if _player_resources == null:
+			_player_resources = PlayerResources.new()
+		return _player_resources
 	set(v):
-		_resources = v
+		_player_resources = v
 
 
 const IDLE = &"idle"
@@ -43,7 +43,7 @@ var graze_radius: float = 40.0  # 擦弹判定半径
 
 ## 玩家机体数据（速度、动画、武器等）
 @export var player_data: PlayerData
-var _shoot_script: PlayerShootScript
+var _player_shoot_script: PlayerShootScript
 var _cached_item_pool: Node = null
 
 # 移动速度（像素/秒）
@@ -55,7 +55,7 @@ func _ready() -> void:
 	z_index = LayerConfig.PLAYER
 	# 连接 animation_finished 信号，用于检测一次性动画播完
 	animation.animation_finished.connect(_on_animation_finished)
-	# 击破入账（原全局状态处理，W4b-4 迁来）
+	# 击破入账（原全局状态处理，迁来）
 	if not GameEvents.enemy_killed.is_connected(_on_enemy_killed):
 		GameEvents.enemy_killed.connect(_on_enemy_killed)
 
@@ -82,7 +82,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## 注入/切换机体：应用数值 + (重)装配射击。同数据且已装配 → 跳过（幂等，避免组合根重复初始化）。
 func setup_character(data: PlayerData) -> void:
-	if data == player_data and _shoot_script != null:
+	if data == player_data and _player_shoot_script != null:
 		return
 	player_data = data
 	apply_player_data()
@@ -104,7 +104,7 @@ func apply_player_data() -> void:
 		animation.play(IDLE)
 
 func _physics_process(delta):
-	# 记忆值自动恢复（原全局状态 _process，W4b-4 迁来）
+	# 记忆值自动恢复（原全局状态 _process，迁来）
 	resources.regen(delta)
 	# 无敌倒计时（替代 await，不挂起调用链）
 	if is_invincible:
@@ -123,25 +123,34 @@ func _physics_process(delta):
 func _init_shoot_script() -> void:
 	if not player_data or not player_data.shoot_script:
 		return
-	_shoot_script = player_data.shoot_script.new()
-	assert(_shoot_script is PlayerShootScript, "Player: shoot_script must be a PlayerShootScript")
-	add_child(_shoot_script)
-	var shoot_ctx := StageContext.new(_shoot_script)
-	_shoot_script.start_shooting(shoot_ctx)
+	_player_shoot_script = player_data.shoot_script.new()
+	assert(_player_shoot_script is PlayerShootScript, "Player: shoot_script must be a PlayerShootScript")
+	add_child(_player_shoot_script)
+	var shoot_ctx := StageContext.new(_player_shoot_script)
+	shoot_ctx.stage = ctx.stage if ctx else null   # 无 stage 的射击 ctx 显式绑定关卡
+	_player_shoot_script.start_shooting(shoot_ctx)
 
 ## 切换角色时重新初始化射击
 func reinit_shoot() -> void:
-	if _shoot_script:
-		_shoot_script.stop()
-		_shoot_script.queue_free()
-		_shoot_script = null
+	if _player_shoot_script:
+		_player_shoot_script.stop()
+		_player_shoot_script.queue_free()
+		_player_shoot_script = null
 	_init_shoot_script()
+
+
+## 绑定关卡上下文（组合根注入）：把 stage 一并转发给射击 ctx。
+## StageContext 不再回退全局；自机射击 ctx 与关卡 ctx 共用同一 StageRuntime。
+func bind_ctx(p_ctx: StageContext) -> void:
+	ctx = p_ctx
+	if _player_shoot_script != null and _player_shoot_script.ctx != null:
+		_player_shoot_script.ctx.stage = p_ctx.stage if p_ctx != null else null
 
 func update_hitbox_display() -> void:
 	if is_focused:
-		hitpoint_display.show_hitpoint()
+		_hit_point_display.show_hitpoint()
 	else:
-		hitpoint_display.hide_hitpoint()
+		_hit_point_display.hide_hitpoint()
 
 func update_move(delta: float) -> void:
 	var move_input: Vector2 = input_vector

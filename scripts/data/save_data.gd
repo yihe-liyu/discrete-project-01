@@ -1,4 +1,4 @@
-## 存档 + 菜单/练习状态（W4b-4：从旧的全局状态瘦身而来，纯 `static`，不再是 autoload）。
+## 存档 + 菜单/练习状态（从旧的全局状态瘦身而来，纯 `static`，不再是 autoload）。
 ## 只保留「持久化 / 跨场景选择 / 练习配置 / 符卡簿 / 高分」；
 ## 单局资源归 `Player.resources`（经 `EntityRegistry`），运行时实体归 `EntityRegistry`，
 ## 启动装配（主题 / 存档 / 设置 / 关卡注册表）经 `boot()` 由 `GameManager` 调一次。
@@ -113,21 +113,19 @@ static func get_high_score(stage_id: int) -> int:
 
 # ═══ 关卡生命周期 ═══
 
-## 重置一局：清练习标志 + 自机资源（资源真源在 Player，经当前注册表）
-static func reset_all() -> void:
+## 重置一局：清练习标志 + 自机资源（资源真源在 Player；注册表由组合根显式传入，去全局）
+static func reset_all(entity_registry: EntityRegistry) -> void:
 	is_practice_mode = false
-	var refs := EntityRegistry.current
-	var res: PlayerResources = refs.get_player_resources() if refs else null
-	if refs != null and res == null:
+	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
+	if entity_registry != null and res == null:
 		push_warning("SaveData.reset_all: 注册表存在但取不到自机资源（Player 未绑定？）——重置空跑")
 	if res != null:
 		res.reset_all()
 
 
-static func reset_practice() -> void:
-	var refs := EntityRegistry.current
-	var res: PlayerResources = refs.get_player_resources() if refs else null
-	if refs != null and res == null:
+static func reset_practice(entity_registry: EntityRegistry) -> void:
+	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
+	if entity_registry != null and res == null:
 		push_warning("SaveData.reset_practice: 注册表存在但取不到自机资源（Player 未绑定？）——重置空跑")
 	if res != null:
 		res.reset_practice()
@@ -152,8 +150,8 @@ static func end_practice() -> void:
 
 
 static func find_stage_background(stage_id: int) -> PackedScene:
-	var sd := find_stage_data(stage_id)
-	return sd.background_scene if sd else null
+	var stage_data := find_stage_data(stage_id)
+	return stage_data.background_scene if stage_data else null
 
 
 # ═══ 关卡数据查找 ═══
@@ -172,9 +170,9 @@ static func scan_stage_dir(stage_id: int) -> StageData:
 	var file_name := dir.get_next()
 	while file_name != "":
 		if file_name.ends_with(".tres"):
-			var sd: StageData = ResourceLoader.load("res://data/stages/" + file_name)
-			if sd and sd.stage_id == stage_id:
-				return sd
+			var stage_data: StageData = ResourceLoader.load("res://data/stages/" + file_name)
+			if stage_data and stage_data.stage_id == stage_id:
+				return stage_data
 		file_name = dir.get_next()
 	return null
 
@@ -191,9 +189,9 @@ static func get_all_stages() -> Array[StageData]:
 	var file_name := dir.get_next()
 	while file_name != "":
 		if file_name.ends_with(".tres"):
-			var sd: StageData = ResourceLoader.load("res://data/stages/" + file_name)
-			if sd:
-				result.append(sd)
+			var stage_data: StageData = ResourceLoader.load("res://data/stages/" + file_name)
+			if stage_data:
+				result.append(stage_data)
 		file_name = dir.get_next()
 	return result
 

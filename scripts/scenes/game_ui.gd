@@ -2,7 +2,7 @@ extends CanvasLayer
 class_name GameUI
 ## 游戏 HUD —— Score / HiScore / Power / MaxPoint / Graze
 
-## W4b-2b：单局资源（组合根注入；过渡期与全局资源同一实例）
+## 单局资源（组合根注入；过渡期与全局资源同一实例）
 var resources: PlayerResources
 
 ## 入场动画完成时发射，供 GameScene 等待

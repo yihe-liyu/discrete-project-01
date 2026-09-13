@@ -127,13 +127,13 @@ func test_drop_items_matches_config():
 	phase.item_bomb = 4
 	phase.item_life_full = 1
 	phase.item_bomb_full = 2
-	_boss._current_phase = phase
+	_boss._phase_data = phase
 	_boss.global_position = Vector2(448, 240)
 
 	var runner := CoroutineRunner.new()
 	autofree(runner)
 	var ctx := CtxSpy.new(runner)
-	_boss._ctx = ctx
+	_boss._stage_context = ctx
 
 	_boss._drop_items()
 	var calls: Array = ctx.calls
@@ -165,11 +165,11 @@ func test_drop_items_matches_config():
 func test_no_drops_in_practice_mode():
 	var phase := _make_phase()
 	phase.item_power = 2
-	_boss._current_phase = phase
+	_boss._phase_data = phase
 	var runner := CoroutineRunner.new()
 	autofree(runner)
 	var ctx := CtxSpy.new(runner)
-	_boss._ctx = ctx
+	_boss._stage_context = ctx
 
 	var original := SaveData.is_practice_mode
 	SaveData.is_practice_mode = true

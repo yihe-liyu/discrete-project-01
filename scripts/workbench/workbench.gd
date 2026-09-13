@@ -21,7 +21,7 @@
 ## 快捷键：Space 播放/暂停 · R 重跑 · F 逐帧 · 1~7 速度档 · ←/→ 跳 ±1s（Ctrl ±5s）
 ##          B 打书签 · Ctrl+S 保存 · Home 回开头（弹窗/输入框聚焦时不拦截）
 ##
-## 结构（2026-08 组件化重构；2026-08 收窄为纯预览沙盒）：
+## 结构（组件化；纯预览沙盒）：
 ##   workbench.gd        —— 主控制器：装配 + 关卡生命周期 + 状态路由
 ##   playback_bar.gd     —— 播放控制行（信号 → 主控制器）
 ##   status_bar.gd       —— 实时状态显示（主控制器每帧喂数据）
@@ -62,19 +62,19 @@ const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
 var _phase_timer_label: Label
 
 # ═══ 组件（代码挂载到 .tscn 槽位）═══
-var _playback: PlaybackBar
-var _status: StatusBar
-var _log_view: EventLog
-var _bookmarks: BookmarkPanel
-var _catalog: VBoxContainer  # 内容目录（M1，CatalogPanel；preload 构造规避类缓存）
+var _playback_bar: PlaybackBar
+var _status_bar: StatusBar
+var _event_log: EventLog
+var _bookmark_panel: BookmarkPanel
+var _catalog: VBoxContainer  # 内容目录（CatalogPanel；preload 构造规避类缓存）
 
 # 关卡状态
 var _stage_data: StageData = STAGE1_COROUTINE
-var _ghost: Player
+var _player: Player
 var _background: Node
 var _hitbox_overlay: Node2D  # 实际是 HitboxOverlay（preload，避免类缓存依赖）
-## W4c：关卡的弹幕世界（组合根创建并注入）
-var _bullets: BulletManager
+## 关卡的弹幕世界（组合根创建并注入）
+var _bullet_manager: BulletManager
 
 # 面板拖拽
 # 详情表单高度拖拽
@@ -129,7 +129,7 @@ func _ready() -> void:
 	_setup_phase_timer()
 	_sync_ui_layer_offset()  # 同步执行：首帧渲染即正确（见函数注释）
 	_setup_world()
-	# W3b-2：注入 world，关卡运行时自持（无门面）
+	# 注入 world，关卡运行时自持（无门面）
 	_stage_runtime.world = _world
 	_load_stage()
 	_check_phase_uid_conflicts()
@@ -151,7 +151,7 @@ func _setup_phase_timer() -> void:
 func _update_phase_timer() -> void:
 	if _phase_timer_label == null:
 		return
-	var boss: Boss = _stage_runtime.refs.get_boss()
+	var boss: Boss = _stage_runtime.entity_registry.get_boss()
 	if boss == null or not is_instance_valid(boss):
 		_phase_timer_label.visible = false
 		return
@@ -250,37 +250,37 @@ func _build_ui() -> void:
 	_stage_grid.add_child(_diff_sel)
 
 	# ── 播放控制（纯视图，信号驱动）──
-	_playback = PlaybackBar.new()
-	_playback.play_toggled.connect(_toggle_play)
-	_playback.restart_requested.connect(_restart)
-	_playback.mute_toggled.connect(_on_mute_toggled)
-	_playback.bg_toggled.connect(_on_bg_toggled)
-	_playback.hitbox_toggled.connect(func(on: bool):
+	_playback_bar = PlaybackBar.new()
+	_playback_bar.play_toggled.connect(_toggle_play)
+	_playback_bar.restart_requested.connect(_restart)
+	_playback_bar.mute_toggled.connect(_on_mute_toggled)
+	_playback_bar.bg_toggled.connect(_on_bg_toggled)
+	_playback_bar.hitbox_toggled.connect(func(on: bool):
 		if _hitbox_overlay:
 			_hitbox_overlay.enabled = on
 	)
-	_playback.speed_selected.connect(_on_speed_selected)
-	_playback.seed_toggled.connect(_on_seed_toggled)
-	%PlaybackSlot.add_child(_playback)
+	_playback_bar.speed_selected.connect(_on_speed_selected)
+	_playback_bar.seed_toggled.connect(_on_seed_toggled)
+	%PlaybackSlot.add_child(_playback_bar)
 
 	# ── 状态显示 ──
-	_status = StatusBar.new()
-	%StatusSlot.add_child(_status)
+	_status_bar = StatusBar.new()
+	%StatusSlot.add_child(_status_bar)
 
 
 	# ── 书签（数据自持，编辑后 data_changed 回主控制器持久化）──
-	_bookmarks = BookmarkPanel.new()
-	_bookmarks.stage_runtime = _stage_runtime
-	_bookmarks.jump_requested.connect(_jump_to)
-	_bookmarks.data_changed.connect(_on_bookmarks_changed)
-	_bookmarks.log_requested.connect(_log_line)
-	%BookmarkSlot.add_child(_bookmarks)
+	_bookmark_panel = BookmarkPanel.new()
+	_bookmark_panel.stage_runtime = _stage_runtime
+	_bookmark_panel.jump_requested.connect(_jump_to)
+	_bookmark_panel.data_changed.connect(_on_bookmarks_changed)
+	_bookmark_panel.log_requested.connect(_log_line)
+	%BookmarkSlot.add_child(_bookmark_panel)
 
 	# ── 日志（自连 GameEvents）──
-	_log_view = EventLog.new()
-	%LogSlot.add_child(_log_view)
+	_event_log = EventLog.new()
+	%LogSlot.add_child(_event_log)
 
-	# ── 目录（M1：扫描+分类展示；M2 起接组合台）──
+	# ── 目录（扫描+分类展示；起接组合台）──
 	_catalog = CATALOG_PANEL.new()
 	%Pages.add_child(_catalog)
 	_catalog.visible = false
@@ -299,7 +299,7 @@ func _build_ui() -> void:
 
 	# ── 时间轴（.tscn 节点）──
 	_timeline.jump_to.connect(_jump_to)
-	_timeline.right_clicked.connect(_bookmarks.open_add)
+	_timeline.right_clicked.connect(_bookmark_panel.open_add)
 
 
 
@@ -318,27 +318,29 @@ func _on_tab_selected(i: int) -> void:
 
 ## 幽灵玩家：实例化真实 player.tscn + 换 GhostPlayer 脚本（继承 Player，类型兼容）
 func _setup_world() -> void:
-	_bullets = BulletManager.new()
-	_bullets.name = "BulletManager"
-	add_child(_bullets)
-	_bullets.fx_parent = _world
-	_stage_runtime.bullets = _bullets
+	_bullet_manager = BulletManager.new()
+	_bullet_manager.name = "BulletManager"
+	add_child(_bullet_manager)
+	_bullet_manager.fx_parent = _world
+	_stage_runtime.bullet_manager = _bullet_manager
+	_bullet_manager.inject_stage_runtime(_stage_runtime)   # 共享子弹 ctx 显式绑本台 stage
 	# World 节点在 .tscn（显式 PAUSABLE！否则继承 root 的 ALWAYS，暂停时敌人照常发弹）
 	# 命中框覆盖层：独立 CanvasLayer + 高 z（> 敌弹 10 / 特效 50），画在子弹之上
 	_hitbox_overlay = HITBOX_OVERLAY.new()
 	_hitbox_overlay.name = "HitboxOverlay"
 	_hitbox_overlay.z_index = 60
-	_hitbox_overlay.refs = _stage_runtime.refs
+	_hitbox_overlay.entity_registry = _stage_runtime.entity_registry
+	_hitbox_overlay.bullet_manager = _bullet_manager
 	$HitboxLayer.add_child(_hitbox_overlay)
-	_ghost = PLAYER_SCENE.instantiate()
-	_ghost.set_script(GHOST_SCRIPT)
-	_ghost.name = "Player"
-	_ghost.player_data = REIMU_DATA
-	_world.add_child(_ghost)
+	_player = PLAYER_SCENE.instantiate()
+	_player.set_script(GHOST_SCRIPT)
+	_player.name = "Player"
+	_player.player_data = REIMU_DATA
+	_world.add_child(_player)
 	# 幽灵（自机）→ 关卡实体注册表
-	_stage_runtime.refs.bind_player(_ghost)
+	_stage_runtime.entity_registry.bind_player(_player)
 	# 幽灵就绪：把本台的实体注册表注入内核弹幕后端
-	_bullets.inject_world_refs(_stage_runtime.refs)
+	_bullet_manager.inject_entity_registry(_stage_runtime.entity_registry)
 
 
 # ═══ 关卡加载 / 重跑 ═══
@@ -355,12 +357,12 @@ func _load_stage() -> void:
 	_apply_audio()
 	# 停止旧关卡 + 清空
 	_stage_runtime.stop_stage()
-	_bullets.clear_all()
+	_bullet_manager.clear_all()
 	AudioManager.stop_bgm()  # 重跑时 BGM 从头播（play_bgm 有同流防重保护，必须先停）
 	# 清 World 残留：退场中的 Boss（_exit_controlled 不 queue_free、已从
 	# active_enemies 移除）stop_stage 清不到 → 立即脱离树，避免卡在画面上
 	for child in _world.get_children():
-		if child == _ghost or child == _stage_runtime:
+		if child == _player or child == _stage_runtime:
 			continue  # StageRuntime 是 World 下的常驻结构节点，不能清
 		_world.remove_child(child)
 		child.queue_free()
@@ -374,7 +376,7 @@ func _load_stage() -> void:
 		_background.queue_free()
 		_background = null
 	SaveData.restarting = false
-	SaveData.reset_all()
+	SaveData.reset_all(_stage_runtime.entity_registry)
 	if _diff_sel:
 		SaveData.selected_difficulty = _diff_sel.selected
 	# 固定种子：重跑弹幕序列可复现（调参看效果必备）；关闭则随机化
@@ -383,8 +385,8 @@ func _load_stage() -> void:
 	else:
 		RNG.randomize_seed()
 	# 幽灵复位（重头走路径）
-	if _ghost:
-		_ghost.reset()
+	if _player:
+		_player.reset()
 	# 背景：必须先设 current_background（load_stage 会启动背景里的协程脚本）
 	# 挂 3D 专用 SubViewport（与真游戏同规格）→ 纵横比/相机/构图一致
 	if _show_bg and _stage_data.background_scene:
@@ -396,7 +398,7 @@ func _load_stage() -> void:
 		_bg_viewport.add_child(_background)
 	# 真实加载（跑 stage01.gd 的 Timeline）
 	_stage_runtime.load_stage(_stage_data)
-	# 时间轴 + 书签（协程关卡静态提取 tl.at() 时刻）
+	# 时间轴 + 书签（协程关卡静态提取 timeline.at() 时刻）
 	_timeline.set_window(60.0)
 	_apply_bookmarks_from_cache()
 	_prev_time = -1.0
@@ -405,15 +407,15 @@ func _load_stage() -> void:
 
 # ═══ 书签缓存 + 静默收集 ═══
 
-## 书签（协程关卡）：静态提取 tl.at() 时刻 + 人工打点合并
+## 书签（协程关卡）：静态提取 timeline.at() 时刻 + 人工打点合并
 func _apply_bookmarks_from_cache() -> void:
 	_auto_bookmarks = _static_extract()
-	_bookmarks.set_bookmarks(_auto_bookmarks, _manual_bookmarks)
+	_bookmark_panel.set_bookmarks(_auto_bookmarks, _manual_bookmarks)
 	_refresh_timeline_bookmarks()
 	_log_line("＊ 书签（静态提取 %d 个）" % _auto_bookmarks.size())
 
 
-## 静态提取书签：扫描 tl.at() 时刻
+## 静态提取书签：扫描 timeline.at() 时刻
 func _static_extract() -> Array:
 	var bm: Array = BOOKMARK_EXTRACTOR.extract_from_script(_stage_data.create_script)
 	var auto: Array = []
@@ -459,7 +461,7 @@ func _pause() -> void:
 		_stop_fast_forward()
 	get_tree().paused = true
 	_paused = true
-	_playback.set_playing(false)
+	_playback_bar.set_playing(false)
 	_apply_audio()
 	_log_line("＊ 暂停")
 
@@ -467,7 +469,7 @@ func _pause() -> void:
 func _resume() -> void:
 	get_tree().paused = false
 	_paused = false
-	_playback.set_playing(true)
+	_playback_bar.set_playing(true)
 	_apply_audio()
 	_log_line("▶ 继续")
 
@@ -491,7 +493,7 @@ func _frame_step() -> void:
 	get_tree().paused = true
 	_paused = true
 	Engine.time_scale = SPEEDS[_speed_idx]
-	_playback.set_playing(false)
+	_playback_bar.set_playing(false)
 	_apply_audio()
 	_stepping = false
 
@@ -525,13 +527,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_jump_to(maxf(cur + (step if k == KEY_RIGHT else -step), 0.0))
 			get_viewport().set_input_as_handled()
 		KEY_B:
-			_bookmarks.open_add()
+			_bookmark_panel.open_add()
 			get_viewport().set_input_as_handled()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7:
 			var idx: int = k - KEY_1
 			if idx >= 0 and idx < SPEEDS.size():
 				_on_speed_selected(idx)
-				_playback.set_speed(idx)
+				_playback_bar.set_speed(idx)
 				get_viewport().set_input_as_handled()
 		KEY_HOME:
 			_restart()
@@ -635,33 +637,33 @@ func _apply_audio() -> void:
 func _update_ui() -> void:
 	var runner := _stage_runtime.current_stage_script()
 	var t := runner.game_time() if runner else 0.0
-	_status.set_time(t, _ff_target >= 0.0)
+	_status_bar.set_time(t, _ff_target >= 0.0)
 	if absf(t - _prev_time) >= 0.05:
 		_prev_time = t
 		_timeline.time = t
 		_timeline.queue_redraw()
-	var boss = _stage_runtime.refs.get_boss()
-	_status.set_status(
-		_bullets.active_count(),
-		_stage_runtime.refs.get_active_enemies().size(),
+	var boss = _stage_runtime.entity_registry.get_boss()
+	_status_bar.set_status(
+		_bullet_manager.active_count(),
+		_stage_runtime.entity_registry.get_active_enemies().size(),
 		is_instance_valid(boss),
 		int(Engine.get_frames_per_second()))
 
 
 func _log_line(text: String) -> void:
-	if _log_view:
-		_log_view.log_line(text)
+	if _event_log:
+		_event_log.log_line(text)
 
 
 ## Ctrl+G：强制击破当前 Boss 阶段（调试解锁 + 跳阶段）
 ## 配置入记录后：Boss.start_phase 时解锁自动带上战斗配置（无需注册表/CardDef）
 ## 工作台跑关卡到 Boss → 按 Ctrl+G 击破当前阶段 → 解锁记录 + 阶段链推进到下一张
 func _debug_force_clear() -> void:
-	var boss = _stage_runtime.refs.get_boss()
+	var boss = _stage_runtime.entity_registry.get_boss()
 	if not boss:
 		_log_line("＊ 无 Boss（先跑到 Boss 阶段再按 Ctrl+G）")
 		return
-	var p_name: String = boss._current_phase.name if boss._current_phase else "?"
+	var p_name: String = boss._phase_data.name if boss._phase_data else "?"
 	boss.clear_phase(true)
 	_log_line("！ 强制击破：%s（记录已解锁，阶段链继续）" % p_name)
 

@@ -23,12 +23,12 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		target = p_target
 	_elapsed = 0.0
 
-	var tl := start_timeline()
+	var timeline := start_timeline()
 	var base_speed: float = target.velocity.length() if target else 500.0
 	var top_speed: float = max_speed if max_speed > 0.0 else base_speed
 
 	# 每帧：加速 + 转向目标方向 + 推进
-	tl.every(0).do(func():
+	timeline.every(0).do(func():
 		if not ctx.active() or not is_instance_valid(target):
 			return false
 
@@ -88,7 +88,7 @@ func _apply_homing(turn_factor: float, dt: float):
 func _find_nearest_enemy() -> Node2D:
 	var nearest: Node2D = null
 	var nearest_dist := INF
-	var enemies: Array = ctx.refs.get_active_enemies() if ctx and ctx.refs else []
+	var enemies: Array = ctx.entity_registry.get_active_enemies() if ctx and ctx.entity_registry else []
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
@@ -103,7 +103,7 @@ func _find_nearest_enemy() -> Node2D:
 	return nearest
 
 
-## 内核端口（Track A / S4b）：参数交给桥接 HomingBehavior（语义 1:1）。
+## 内核端口：参数交给桥接 HomingBehavior（语义 1:1）。
 func kernel_port() -> Dictionary:
 	return {
 		"move": &"homing",

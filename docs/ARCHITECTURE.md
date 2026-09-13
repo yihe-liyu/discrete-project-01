@@ -49,7 +49,7 @@
 | **对话** | 纯逻辑步骤 + 渲染 | `ctx.play_dialogue_steps(steps)`“d.event(...)” | `scripts/coroutine/services/dialogue/*` |
 | **记录** | 持久化符卡簿 | `RecordService.record_phase_*` | `scripts/data/spell_*.gd` |
 | **背景** | 环境/装饰/相机/太阳/雾 | `StageBackground`(相机/太阳/雾命令，待接 ctx.background) | `scripts/background/*` |
-| **时间线/关卡** | 编排“何时做什么” | `tl.at()“{do,cmd,spawn_boss,...}` | `scripts/coroutine/timeline/*“stage_manager.gd` |
+| **时间线/关卡** | 编排“何时做什么” | `timeline.at()“{do,cmd,spawn_boss,...}` | `scripts/coroutine/timeline/*“stage_manager.gd` |
 | **工作台** | 预览/调试/书签 | `workbench` | `scripts/workbench/*` |
 
 ---
@@ -65,7 +65,7 @@
 | **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
 | **场景动词**（宏观，跨子系统，一意图） | `dir.verb()` | `dir.boss("boss_mid", data, from, to)` `dir.on(event, handler)` `dir.dialogue(steps)` | `StageDirector` `BossHandle` |
 | **名词构建词** | `Data.builder()` | `EnemyData.new().with_script().pos().param().spawn(ctx)` | 各 `*Data` |
-| **时序粘合剂** | `tl.at()/wait()/every()` | `tl.at(35).do(func(): dir.boss(...))` | `Timeline` |
+| **时序粘合剂** | `timeline.at()/wait()/every()` | `timeline.at(35).do(func(): dir.boss(...))` | `Timeline` |
 | **原语** | 协程 / 事件 | `CoroutineScript` `TimelineEvent` | `coroutine/*` |
 
 ### 关键惯例
@@ -74,7 +74,7 @@
 - **内容只碰动词**：内容文件不再 import `StageRuntime/GameState/StageObjects/BulletManager/AudioManager`，不再 `create_tween`。一旦不得不在内容里写 `.do(func(): <机制>)`，说明还缺一个动词（判据）。
 - **一知识一 owner**：`dir.boss` 内部才 `spawn_boss + register + hide_name + tween`；`BossHandle.retreat` 内部才 `set_exit_controlled + die + tween`。内容只看到"进 Boss / 揭名 / 退场"。
 - **响亮**：动词缺 Boss/阶段越界等 → `push_warning`/`push_error`，绝不静默。
-- **Timeline 动词委托给导演（已统一）**：`tl.play_bgm/spawn_wave/spawn_enemy/spawn_boss/dialogue_steps` 都是 `do(func(): _get_director().xxx())` 的薄委托，**单一 owner = `StageDirector`**；Timeline 只管时序（`at/wait/every/do`）+ `start_phase`（时符等待机制，保留）。关卡用 `start_timeline(_dir)` 把导演传给 Timeline。
+- **Timeline 动词委托给导演（已统一）**：`timeline.play_bgm/spawn_wave/spawn_enemy/spawn_boss/dialogue_steps` 都是 `do(func(): _get_director().xxx())` 的薄委托，**单一 owner = `StageDirector`**；Timeline 只管时序（`at/wait/every/do`）+ `start_phase`（时符等待机制，保留）。关卡用 `start_timeline(_dir)` 把导演传给 Timeline。
 
 ### 已落地（D Part 1）
 
@@ -151,6 +151,8 @@
 ## 7. 索引 / 该读哪些
 
 - **总纲（本文）**：分层/系统地图/所有权/边界/债/操作指南。
+- **内核（现状/迁移）**：`docs/NEW_KERNEL_REFACTOR_PLAN.md`（Strangler→融合 M1–M3）。
+- **终局形态（提案，未排期）**：`docs/GDEXTENSION_KERNEL_DESIGN.md`（GDExtension 弹幕内核 + Danmaku VM；触发条件见其 §0.2）。
 - **路线**：`docs/archive/STAGE_FLOW_PLAN.md`（(b) 规划：对象自治/身份归位/命令化 + 七步；Step 1 / 3 / 4 已完成）。
 - **对话**：`docs/DIALOGUE_SYSTEM.md`（当前系统）+ `docs/DIALOGUE.md`（剧本归档）。
 - **符卡**：`docs/archive/SPELL_SYSTEM_TARGET.md`（目标蓝图，核心已由 `boss_catalog.gd` 落地）。

@@ -5,8 +5,8 @@ enum Type { POWER, POINT, LIFE_FRAGMENT, BOMB_FRAGMENT, LIFE_FULL, BOMB_FULL }
 
 var item_type: Type = Type.POINT
 var value: int = 100
-## W4b-2b：实体注册表（ItemPool 注入）——取自机与单局资源
-var refs: EntityRegistry
+## 实体注册表（ItemPool 注入）——取自机与单局资源
+var entity_registry: EntityRegistry
 var _velocity: Vector2
 var _gravity: float = 240.0
 var _max_fall_speed: float = 180.0
@@ -56,7 +56,7 @@ func _physics_process(delta: float) -> void:
 	if _dead:
 		return
 
-	var player = refs.player if refs else null
+	var player = entity_registry.player if entity_registry else null
 	var to_player: Vector2 = player.global_position - global_position if player and is_instance_valid(player) else Vector2.ZERO
 
 	# 玩家过收点线 或 靠近自机 → 自动吸附（focus 时范围翻倍）
@@ -101,7 +101,7 @@ func collect() -> void:
 	AudioManager.play_sfx(AssetRegistry.sounds["item"], -6.0)
 	visible = false
 	set_physics_process(false)
-	var res: PlayerResources = refs.get_player_resources() if refs else null
+	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
 	if res != null:
 		match item_type:
 			Type.POWER:

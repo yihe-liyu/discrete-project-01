@@ -1,20 +1,20 @@
 extends GutTest
-## 内核路由（W4a-2 起内核唯一后端）：内核池 + 渲染数据源 + 行为装配 + bomb 宿主节点。
+## 内核路由（内核唯一后端）：内核池 + 渲染数据源 + 行为装配 + bomb 宿主节点。
 
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
 const REIMU_DATA = preload("res://data/player_data/reimu_data.tres")
 
 
 func before_each() -> void:
-	# W4c：不再有 autoload，用例自建弹幕世界
-	var bm := BulletManager.new()
-	bm.name = "BulletManager"
-	add_child_autofree(bm)
+	# 不再有 autoload，用例自建弹幕世界
+	var bullet_manager := BulletManager.new()
+	bullet_manager.name = "BulletManager"
+	add_child_autofree(bullet_manager)
 
 
 func after_each() -> void:
 	BulletManager.current.clear_all()
-	BulletManager.current.inject_world_refs(null)
+	BulletManager.current.inject_entity_registry(null)
 
 
 func _enemy_data() -> BulletData:
@@ -27,6 +27,15 @@ func test_spawn_writes_kernel_pool() -> void:
 	assert_not_null(BulletManager.current.kernel_system(), "内核弹池应已装配")
 	BulletManager.current.shoot_bullet(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "应写进内核池")
+
+
+func test_kernel_rng_follows_host_seed() -> void:
+	# 宿主 RNG 是唯一随机真源；set_seed 广播后内核 RNG 同步同 seed。
+	var saved: int = RNG.get_seed()
+	RNG.set_seed(424242)
+	assert_eq(BulletManager.current.kernel_system()._random.seed, 424242,
+		"内核 RNG 应跟随 RNG.set_seed")
+	RNG.set_seed(saved)
 
 
 func test_kernel_cull_rect_set_to_field() -> void:
@@ -42,7 +51,7 @@ func test_kernel_priority_precedes_manager() -> void:
 
 
 func test_behavior_pipeline_wired() -> void:
-	var b: BehaviorProcessor = BulletManager.current._kernel.behavior
+	var b: BehaviorProcessor = BulletManager.current._kernel_bullet_backend.behavior
 	assert_not_null(b, "应装配 BehaviorProcessor")
 	assert_gt(b.process_physics_priority, BulletManager.current.kernel_system().process_physics_priority,
 		"行为必须在积分之后（-10 < -5）")
@@ -55,9 +64,9 @@ func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	player.player_data = REIMU_DATA
 	add_child_autofree(player)
 	player.global_position = Vector2(448, 700)
-	var refs := EntityRegistry.new()
-	refs.bind_player(player)
-	BulletManager.current.inject_world_refs(refs)
+	var entity_registry := EntityRegistry.new()
+	entity_registry.bind_player(player)
+	BulletManager.current.inject_entity_registry(entity_registry)
 	var ed := BulletData.new().enemy().tex("小玉")
 	ed.velocity = Vector2.UP * 10.0
 	BulletManager.current.shoot_bullet(ed, Vector2(448, 700), Vector2.UP)

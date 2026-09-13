@@ -37,7 +37,7 @@ const CLOUD_NOISE_PATH := "res://assets/Textures/background/stage01/cloud_noise.
 var _rect: ColorRect
 var _mat: ShaderMaterial
 var sun: Node3D
-var _bg: StageBackground
+var _stage_background: StageBackground
 
 
 func setup(p_sun: Node3D = null) -> void:
@@ -74,12 +74,12 @@ func _process(_delta: float) -> void:
 func _update_sun_pos() -> void:
 	if not _mat:
 		return
-	var bg := _get_bg()
-	if not bg or not bg.camera:
+	var background := _get_bg()
+	if not background or not background.camera:
 		return
 	if sun and is_instance_valid(sun):
-		var sp: Vector2 = bg.camera.unproject_position(sun.global_position)
-		var vp: Vector2 = bg.get_viewport().get_visible_rect().size
+		var sp: Vector2 = background.camera.unproject_position(sun.global_position)
+		var vp: Vector2 = background.get_viewport().get_visible_rect().size
 		if vp.x > 0 and vp.y > 0:
 			_mat.set_shader_parameter("sun_pos", sp / vp)
 
@@ -104,10 +104,10 @@ func _apply_params() -> void:
 
 
 func _get_bg() -> StageBackground:
-	if _bg and is_instance_valid(_bg):
-		return _bg
-	_bg = get_parent() as StageBackground
-	return _bg
+	if _stage_background and is_instance_valid(_stage_background):
+		return _stage_background
+	_stage_background = get_parent() as StageBackground
+	return _stage_background
 
 
 ## 云斑纹理（主线程入口，测试用）：生成 + 上传

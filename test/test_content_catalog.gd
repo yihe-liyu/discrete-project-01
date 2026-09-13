@@ -1,5 +1,5 @@
 extends GutTest
-## ContentCatalog 目录扫描器测试（创作台 M1）
+## ContentCatalog 目录扫描器测试（创作台）
 ## 注：headless 下 class_name 全局缓存未刷新 → 用 preload 常量（项目惯例）
 
 const CAT = preload("res://scripts/data/content_catalog.gd")

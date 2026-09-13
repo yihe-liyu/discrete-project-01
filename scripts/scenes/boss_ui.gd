@@ -8,7 +8,7 @@ const RED := Color(1.0, 0.0, 0.0, 1.0)
 const PURPLE := Color(0.858, 0.5, 1.0, 1.0)
 const DOT_SIZE := 16.0
 
-@onready var _name_label: Label = $Control/BossName
+@onready var _boss_name: Label = $Control/BossName
 @onready var _history: HBoxContainer = $Control/History
 
 var _dots: Array[ColorRect] = []
@@ -16,7 +16,7 @@ var _phase_idx: int = 0
 var _announce_label: AnnounceLabel
 var _bonus_label: Label
 var _capture_label: Label
-var _boss_ref: Boss
+var _boss: Boss
 var _timer_label: Label
 
 func _ready() -> void:
@@ -38,19 +38,19 @@ func _exit_tree() -> void:
 	]:
 		if conn[0].is_connected(conn[1]):
 			conn[0].disconnect(conn[1])
-	if _boss_ref and is_instance_valid(_boss_ref) and _boss_ref.display_name_changed.is_connected(_on_display_name_changed):
-		_boss_ref.display_name_changed.disconnect(_on_display_name_changed)
+	if _boss and is_instance_valid(_boss) and _boss.display_name_changed.is_connected(_on_display_name_changed):
+		_boss.display_name_changed.disconnect(_on_display_name_changed)
 
 func _on_boss_spawned(boss: Node) -> void:
 	# 断开上一只 Boss 的显示名连接（换 Boss / spawn 新 Boss 时）
-	if _boss_ref and is_instance_valid(_boss_ref) and _boss_ref.display_name_changed.is_connected(_on_display_name_changed):
-		_boss_ref.display_name_changed.disconnect(_on_display_name_changed)
-	_boss_ref = boss as Boss
+	if _boss and is_instance_valid(_boss) and _boss.display_name_changed.is_connected(_on_display_name_changed):
+		_boss.display_name_changed.disconnect(_on_display_name_changed)
+	_boss = boss as Boss
 	var boss_data: BossData = boss.boss_data
 	# 订阅显示名变化——改名即时同步，不再每帧轮询 get_boss_name()
-	if _boss_ref and is_instance_valid(_boss_ref):
-		_boss_ref.display_name_changed.connect(_on_display_name_changed)
-		_on_display_name_changed(_boss_ref.get_boss_name())
+	if _boss and is_instance_valid(_boss):
+		_boss.display_name_changed.connect(_on_display_name_changed)
+		_on_display_name_changed(_boss.get_boss_name())
 
 	if not _timer_label:
 		_timer_label = Label.new()
@@ -75,18 +75,18 @@ func _on_boss_spawned(boss: Node) -> void:
 	visible = true
 
 func _on_display_name_changed(display_name: String) -> void:
-	_name_label.text = display_name if display_name != "" else "???"
+	_boss_name.text = display_name if display_name != "" else "???"
 
 func _process(_delta: float) -> void:
-	if not _boss_ref or not is_instance_valid(_boss_ref) or not visible:
+	if not _boss or not is_instance_valid(_boss) or not visible:
 		return
-	var phase := _boss_ref.current_phase()
+	var phase := _boss.current_phase()
 	# 间隙期（换阶段之间）不显示
-	if not phase or phase.time_limit <= 0 or _boss_ref.is_in_gap():
+	if not phase or phase.time_limit <= 0 or _boss.is_in_gap():
 		_timer_label.visible = false
 		return
 	_timer_label.visible = true
-	var rem := maxf(phase.time_limit - _boss_ref.get_elapsed(), 0.0)
+	var rem := maxf(phase.time_limit - _boss.get_elapsed(), 0.0)
 	_timer_label.text = "%02d" % int(ceil(rem))
 
 func _on_boss_defeated(_boss: Node) -> void:
@@ -154,8 +154,8 @@ func _make_sub_label(align: HorizontalAlignment, color: Color) -> Label:
 	return label
 
 func _update_capture_text() -> void:
-	if not _capture_label or not _boss_ref: return
-	var pid := _boss_ref.get_phase_id()
+	if not _capture_label or not _boss: return
+	var pid := _boss.get_phase_id()
 	if not pid: return
 	var book: SpellRecordBook = SaveData.spell_book
 	var rec: SpellRecord = book.get_record(pid.stage_id, pid.phase_index, pid.boss_index, pid.character, pid.difficulty)

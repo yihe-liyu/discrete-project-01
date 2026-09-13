@@ -19,7 +19,7 @@ extends RefCounted
 
 var steps: Array[DialogueStep] = []
 
-var _current_speaker: CharacterProfile  ## line() 默认说话者（延续机制）
+var _character_profile: CharacterProfile  ## line() 默认说话者（延续机制）
 
 
 func _add(step: DialogueStep) -> DialogueSteps:
@@ -29,13 +29,13 @@ func _add(step: DialogueStep) -> DialogueSteps:
 
 ## 显示一句台词（延续上一说话者；首句或换人用 say() 或 opts.speaker）
 func line(text: String, opts: Dictionary = {}) -> DialogueSteps:
-	var speaker: CharacterProfile = opts.get("speaker", _current_speaker)
+	var speaker: CharacterProfile = opts.get("speaker", _character_profile)
 	assert(speaker != null, "DialogueSteps.line: 需要说话者——首句请用 say(profile, text) 或传 opts.speaker")
 	var line_data := _build_line(speaker, text, opts)
 	var s := DialogueStep.new()
 	s.type = DialogueStep.Type.LINE
 	s.line_data = line_data
-	_current_speaker = speaker
+	_character_profile = speaker
 	return _add(s)
 
 
@@ -69,7 +69,7 @@ func screen(specs: Array, opts: Dictionary = {}) -> DialogueSteps:
 		if b.emotion.is_empty(): b.emotion = "通常"
 		line_data.bubbles.append(b)
 		if b.speaker and not b.text.is_empty():
-			_current_speaker = b.speaker
+			_character_profile = b.speaker
 			has_spoke = true
 	assert(has_spoke, "DialogueSteps.screen: 每屏至少需一个真正开口的角色（text 非空）；纯沉默转场请用 wait()")
 	var s := DialogueStep.new()
@@ -101,7 +101,7 @@ func enter(profile: CharacterProfile, pos: Vector2, opts: Dictionary = {}) -> Di
 	s.light = opts.get("dim", 1.0)
 	s.emotion = opts.get("emotion", "通常")
 	# 新角色进场后通常是他说下一句 → 更新延续者
-	_current_speaker = profile
+	_character_profile = profile
 	return _add(s)
 
 

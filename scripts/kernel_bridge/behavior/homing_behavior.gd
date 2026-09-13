@@ -1,4 +1,4 @@
-## HomingBehavior（Track A / S4b）—— 自机弹追杀最近敌人（移植旧 move_homing.gd）。
+## HomingBehavior—— 自机弹追杀最近敌人（移植旧 move_homing.gd）。
 ##
 ## 边界：桥接层（引用宿主 Boss / PhaseData 做"时符 / 未开战跳过"）；内核零改动。
 ## 语义 1:1：每帧 转向限制 + 速度爬升 + 持续时长；**只 set_velocity**，位置由系统积分。
@@ -14,23 +14,23 @@ func process(system: BulletSystem, bullet_id: int, ctx: BehaviorContext) -> void
 	var delta: float = system.get_delta()
 	if delta <= 0.0:
 		return
-	var st: Variant = system.get_behavior_state(bullet_id)
-	if not (st is Dictionary):
+	var behavior_state: Variant = system.get_behavior_state(bullet_id)
+	if not (behavior_state is Dictionary):
 		var base_speed: float = system.get_velocity(bullet_id).length()
 		var max_speed: float = params.get(&"max_speed", 0.0)
-		st = {
+		behavior_state = {
 			&"elapsed": 0.0,
 			&"base_speed": base_speed,
 			&"top_speed": max_speed if max_speed > 0.0 else base_speed,
 		}
-		system.set_behavior_state(bullet_id, st)
-	st[&"elapsed"] += delta
+		system.set_behavior_state(bullet_id, behavior_state)
+	behavior_state[&"elapsed"] += delta
 	var accel_time: float = params.get(&"accel_time", 0.0)
-	var turn_factor: float = 1.0 if accel_time <= 0.0 else clampf(st[&"elapsed"] / accel_time, 0.0, 1.0)
-	var current_speed: float = lerpf(params.get(&"min_speed", 500.0), st[&"top_speed"], turn_factor)
+	var turn_factor: float = 1.0 if accel_time <= 0.0 else clampf(behavior_state[&"elapsed"] / accel_time, 0.0, 1.0)
+	var current_speed: float = lerpf(params.get(&"min_speed", 500.0), behavior_state[&"top_speed"], turn_factor)
 	var current_dir: Vector2 = system.get_velocity(bullet_id).normalized()
 	var homing_duration: float = params.get(&"homing_duration", 0.0)
-	if current_dir != Vector2.ZERO and (homing_duration <= 0.0 or st[&"elapsed"] <= homing_duration):
+	if current_dir != Vector2.ZERO and (homing_duration <= 0.0 or behavior_state[&"elapsed"] <= homing_duration):
 		var target: Node2D = _nearest_enemy(ctx, system.get_position(bullet_id))
 		if target != null:
 			var from: Vector2 = system.get_position(bullet_id)

@@ -1,5 +1,5 @@
 extends GutTest
-## ParamValidator —— 参数注入校验（C4：打错键名/类型不匹配响亮报错，int/float、合法数字串放行）
+## ParamValidator —— 参数注入校验（打错键名/类型不匹配响亮报错，int/float、合法数字串放行）
 
 const ParamValidator = preload("res://scripts/data/param_validator.gd")
 const MoveHoming = preload("res://scripts/coroutine/player/move_homing.gd")

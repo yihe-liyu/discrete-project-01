@@ -6,7 +6,7 @@ func test_hp_readonly_and_signal():
 	var b := Boss.new()
 	var pb := PhaseData.new()
 	pb.hp = 1000
-	b._current_phase = pb                       # 白盒设阶段（_set_hp 取满血用）
+	b._phase_data = pb                       # 白盒设阶段（_set_hp 取满血用）
 	var got: Array = []
 	b.hp_changed.connect(func(h: int, m: int): got.append([h, m]))
 	b._set_hp(250)                             # 唯一改写入口（内部）
@@ -19,7 +19,7 @@ func test_hp_zero_via_set_hp():
 	var b := Boss.new()
 	var pb := PhaseData.new()
 	pb.hp = 500
-	b._current_phase = pb
+	b._phase_data = pb
 	b._set_hp(0)
 	assert_eq(b.hp, 0, "重置血量走 _set_hp")
 	b._set_hp(999999)

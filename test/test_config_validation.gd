@@ -34,10 +34,10 @@ func test_phase_no_scripts_ok():
 	assert_eq(pd.validate(), [], "无脚本的合法数值阶段应无错误")
 
 func test_stage_data_validation():
-	var sd := StageData.new()
-	sd.stage_id = 1
-	sd.create_script = load("res://scripts/coroutine/timeline/timeline.gd")
-	assert_eq(sd.validate(), [], "合法 StageData 应无错误")
+	var stage_data := StageData.new()
+	stage_data.stage_id = 1
+	stage_data.create_script = load("res://scripts/coroutine/timeline/timeline.gd")
+	assert_eq(stage_data.validate(), [], "合法 StageData 应无错误")
 	var bad := StageData.new()
 	bad.stage_id = 0
 	bad.create_script = null

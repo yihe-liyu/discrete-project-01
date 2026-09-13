@@ -52,13 +52,13 @@ func test_boss_indicator_alpha_fades_with_distance():
 	fake_player.global_position = Vector2(448, 800)
 	# 注意：不 add_child（Player._ready 依赖场景子节点，裸 new 进树会报错）；
 	# 未进树时 global_position == position，足够测 alpha
-	var refs := EntityRegistry.new()
-	refs.bind_player(fake_player)
+	var entity_registry := EntityRegistry.new()
+	entity_registry.bind_player(fake_player)
 
 	var boss = load("res://scripts/enemy/boss.gd").new()
 	boss.ui_layer = ui
 	add_child_autofree(boss)
-	boss.registry = refs
+	boss.registry = entity_registry
 	boss.start_boss()
 	var indicator: Sprite2D = boss._pos_indicator
 	assert_not_null(indicator, "start_boss 后应创建指示器")

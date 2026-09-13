@@ -2,18 +2,18 @@ extends GutTest
 ## Laser 2.0 骨架 + 状态机 + 判定测试（第 1 步：测试地基）
 
 var _holder: Node
-var _refs: EntityRegistry
+var _entity_registry: EntityRegistry
 
 ## 激光池 beams 挂在 holder 上，随测试结束 autofree 释放
 ## （LaserEngine.setup 每测试建 64 条 beam，直接挂测试脚本会累计成 unfreed children）
 func before_each():
 	_holder = Node.new()
 	add_child_autofree(_holder)
-	_refs = EntityRegistry.new()
-	# W4c：用例自建弹幕世界（擦弹结算走它）
-	var bm := BulletManager.new()
-	bm.name = "BulletManager"
-	add_child_autofree(bm)
+	_entity_registry = EntityRegistry.new()
+	# 用例自建弹幕世界（擦弹结算走它）
+	var bullet_manager := BulletManager.new()
+	bullet_manager.name = "BulletManager"
+	add_child_autofree(bullet_manager)
 
 # ── 骨架 ──
 
@@ -208,9 +208,9 @@ func test_cut_head_ignored_on_fixed():
 func _make_engine() -> LaserEngine:
 	var engine := LaserEngine.new()
 	autofree(engine)
-	# W4a-2：LaserEngine 不再依赖 BulletPhysics；擦弹结算走注入 Callable（内核规则）
+	# LaserEngine 不再依赖 BulletPhysics；擦弹结算走注入 Callable（内核规则）
 	engine.setup(_holder, Callable(BulletManager.current, "_on_laser_graze"))
-	engine.refs = _refs
+	engine.entity_registry = _entity_registry
 	return engine
 
 func _make_engine_player(x: float) -> Player:
@@ -221,8 +221,8 @@ func _make_engine_player(x: float) -> Player:
 	player.reinit_shoot()
 	player.global_position = Vector2(x, 300)
 	player.is_invincible = false
-	_refs.bind_player(player)
-	BulletManager.current.inject_world_refs(_refs)  # 擦弹结算走 autoload 内核物理：显式注入本用例注册表
+	_entity_registry.bind_player(player)
+	BulletManager.current.inject_entity_registry(_entity_registry)  # 擦弹结算走 autoload 内核物理：显式注入本用例注册表
 	return player
 
 func test_engine_step_detects_hit_and_graze():
@@ -238,9 +238,9 @@ func test_engine_graze():
 	var player := _make_engine_player(30.0)  # 擦弹范围（22+graze 40）
 	var beam: LaserBeam = engine.spawn_line(Vector2(0, 0), Vector2(0, 600), Color.RED, {"grow": false})
 	assert_eq(beam.phase, LaserBeam.Phase.SUSTAIN, "opts 生效：瞬间全开")
-	var g0 := _refs.get_player_resources().graze_count
+	var g0 := _entity_registry.get_player_resources().graze_count
 	engine.step(0.016)
-	assert_gt(_refs.get_player_resources().graze_count, g0, "擦弹应计数")
+	assert_gt(_entity_registry.get_player_resources().graze_count, g0, "擦弹应计数")
 
 # ── 第 3 步：MultiMesh 渲染 ──
 

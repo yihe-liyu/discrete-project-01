@@ -1,6 +1,6 @@
 class_name ContentCatalog
 extends RefCounted
-## 内容目录 —— 从 res://data/ 自动派生的索引（创作台 M1）
+## 内容目录 —— 从 res://data/ 自动派生的索引（创作台）
 ##
 ## 铁律：索引永不手写清单；按「目录/命名约定 + ## @role 注解」从文件自动生成。
 ## 角色判定优先级：@role 注解 > 路径/命名约定；两者打架 → warning（响亮，不静默）。

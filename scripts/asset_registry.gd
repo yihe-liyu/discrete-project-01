@@ -1,6 +1,6 @@
 ## AssetRegistry — 全项目资源注册表，改一处全局生效。
-## W3a：不再是 autoload（R9）—— 改 `class_name` 静态表（R8）；调用方 `AssetRegistry.xxx` 语法不变。
-## 后续（与 S13 图集一起）：`bullet_configs` / `sounds` / `enemy_visuals` 逐项迁 `data/*.tres`（R17）。
+## 不再是 autoload（R9）—— 改 `class_name` 静态表（R8）；调用方 `AssetRegistry.xxx` 语法不变。
+## 续（与图集一起）：`bullet_configs` / `sounds` / `enemy_visuals` 逐项迁 `data/*.tres`（R17）。
 class_name AssetRegistry
 
 const enemy_visuals := {

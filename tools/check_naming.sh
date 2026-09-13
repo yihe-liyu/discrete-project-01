@@ -16,7 +16,8 @@ ROOTS = ["scripts", "data", "test"]
 
 def files(root):
     for dp, _dn, fn in os.walk(root):
-        if ".godot" in dp:
+        # scripts/kernel 是 vendor 快照（改在重建版），不适用宿主命名契约
+        if ".godot" in dp or (os.sep + "kernel") in (dp + os.sep):
             continue
         for n in fn:
             if n.endswith(".gd"):
@@ -58,8 +59,11 @@ for root in ROOTS:
                 if typ in cls:
                     if name.startswith("_"):
                         priv_names[typ].add(name)
-                        if name != "_" + snake(typ):
-                            priv_bad.append((p, i, name, typ, "_" + snake(typ)))
+                        expect = "_" + snake(typ)
+                        # 契约允许「限定词_类型snake」：_move_coroutine_runner
+                        ok = name == expect or (name.endswith(expect) and len(name) > len(expect))
+                        if not ok:
+                            priv_bad.append((p, i, name, typ, expect))
                     else:
                         public_cnt += 1
             m = NODE.search(line)
@@ -72,7 +76,10 @@ for root in ROOTS:
                 if node not in BUILTIN_NODE and name.lstrip("_") != snake(node):
                     node_bad.append((p, i, name, node, snake(node)))
 
-multi = sorted((t, sorted(ns)) for t, ns in priv_names.items() if len(ns) > 1)
+def _typed_ok(n, t):
+    e = "_" + snake(t)
+    return n == e or (n.endswith(e) and len(n) > len(e))
+multi = sorted((t, sorted(ns)) for t, ns in priv_names.items() if len(ns) > 1 and not all(_typed_ok(n, t) for n in ns))
 
 print(f"check_naming: 扫描 {scanned} 个脚本，{len(cls)} 个自定义类型")
 print(f"\n[① 私有字段名 ≠ _+类型名 snake]（{len(priv_bad)}）")

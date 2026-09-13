@@ -7,8 +7,8 @@
 ## 0. 快速上手（加一个弹幕波次 / 一张符卡）
 
 1. 在 Godot 编辑器里打开 `data/stages/stage01/stage_script/stage01.gd`（Timeline 编排）
-2. 加 `tl.at(时刻).do(func(): EnemyData.new().with_script(...).pos(...).spawn(ctx))`
-   或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `tl.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
+2. 加 `timeline.at(时刻).do(func(): EnemyData.new().with_script(...).pos(...).spawn(ctx))`
+   或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. F6 运行工作台 → 命中框/固定种子/逐帧看效果；改完代码**重启工作台**生效
 4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完同样重启工作台看
 
@@ -48,15 +48,15 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	_dir = StageDirector.new(ctx)          # 导演：场景动词 + 事件路由
 	var tl := start_timeline(_dir)         # 传导演：Timeline 便捷动词委托给它（单一 owner）
-	tl.at(0.0).play_bgm("stage1")          # 按 key（走 _dir.bgm；_dir 是唯一实现）
-	tl.at(1.0).do(func(): EnemyData.new().with_script(ENEMY01)...
+	timeline.at(0.0).play_bgm("stage1")          # 按 key（走 _dir.bgm；_dir 是唯一实现）
+	timeline.at(1.0).do(func(): EnemyData.new().with_script(ENEMY01)...
 		.pos(Vector2(...)).red_little_fairy().param("target_y", 200).spawn(ctx))
 	# Boss 进场：spawn + register + 隐藏名 + tween —— 全在 _dir.boss 里
-	tl.at(35.0).do(func():
+	timeline.at(35.0).do(func():
 		_mid = _dir.boss("boss_mid", CAMORUI_MID, Vector2(-50, 500), Vector2(FIELD_CENTER_X, 250))
 	)
 	# 时轴驱动的阶段（保留 start_phase 的 wait 偏移继承）
-	tl.at(38.0).start_phase(func(): return _mid.resolve(), CAMORUI_MID.phases[0])  # 非符1
+	timeline.at(38.0).start_phase(func(): return _mid.resolve(), CAMORUI_MID.phases[0])  # 非符1
 	# 战前对话事件路由（取代 _on_dialogue_event 大 match）：只调动词
 	_dir.on("boss_enter",   func(): _final = _dir.boss("boss_final", CAMORUI, Vector2(1000, 500), Vector2(FIELD_CENTER_X, 250)))
 	_dir.on("display_name", func(): _final.reveal("卡摩瑞"))
@@ -67,9 +67,9 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 Timeline 链式 API：`at(t)` 绝对时刻 · `wait(n)` 相对上一 blocking 结束 · `do(cb)` 任意逻辑 ·
 `start_phase(boss_getter, PhaseData)` 起阶段（保留时符等待：击破后激活后续 wait） · `every(times)` 重复。
 **场景动词（bgm/spawn_*/dialogue）由 `StageDirector` 承担**，Timeline 只是薄委托：
-`tl.play_bgm/spawn_boss/spawn_enemy/spawn_wave/dialogue_steps` = `do(func(): _dir.xxx())`，**不用重复实现**。
+`timeline.play_bgm/spawn_boss/spawn_enemy/spawn_wave/dialogue_steps` = `do(func(): _dir.xxx())`，**不用重复实现**。
 
-> ⚠️ start_phase 链注意：`wait()` 后接 `start_phase()` 必须直接链（`tl.wait(1.0).start_phase(...)`），
+> ⚠️ start_phase 链注意：`wait()` 后接 `start_phase()` 必须直接链（`timeline.wait(1.0).start_phase(...)`），
 > 中间插 `do(pass)` 会破坏 wait 偏移继承（阶段会立即触发）。
 
 ---
@@ -148,7 +148,7 @@ data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见
 ```
 
 **加新阶段 = 建目录 + 写 .gd + 建 .tres，`.tres` 里用 `move_script=ExtResource(...)` 指脚本**，
-再在关卡脚本 `tl.start_phase(getter, that_tres)`（时轴驱动）或 `handle.phase(index)`（事件驱动）引用。脚本文件即复用单元，跨阶段复用用 `params` 覆盖。
+再在关卡脚本 `timeline.start_phase(getter, that_tres)`（时轴驱动）或 `handle.phase(index)`（事件驱动）引用。脚本文件即复用单元，跨阶段复用用 `params` 覆盖。
 
 ---
 
@@ -171,6 +171,22 @@ return ctx.clock.wait(2.0)  # 等待 2 秒后再次调用
 return true                  # 下物理帧立即再次调用
 return false                 # 结束协程
 ```
+
+### 弹型实例复用（M2 起）
+
+发射弹时**复用 `BulletData` 实例**，不要每发 `BulletData.new()`：内核弹型（`BulletType`）缓存在 `BulletData` **实例**上，每发 new 会让内核弹型表每发长一个。
+
+```gdscript
+var _bullet_data: BulletData   # 成员：建一次
+
+func _fire(ctx):
+	if _bullet_data == null:
+		_bullet_data = BulletData.new().tex("小玉").speed(300).enemy()
+	_bullet_data.velocity = Vector2(0, 300 + i * 50)   # 速度 / params 每发写（不属弹型）
+	ctx.bullets.shoot_spread(_bullet_data, count, TAU, dir, pos)
+```
+
+> 类型级字段（贴图 / 阵营 / 判定 / 伤害 / 命中特效）在**首次发射时快照**；运行期改型需 `invalidate_bullet_type()`。
 
 ### 脚本文件地图
 
@@ -196,7 +212,7 @@ func _ready() -> void:
 
 func _init_enemy() -> void:
 	var parent := get_parent()
-	# 移动 tween + 发弹（ctx.bullets.shoot_spread / ctx.clock.wait / tl.at ...）
+	# 移动 tween + 发弹（ctx.bullets.shoot_spread / ctx.clock.wait / timeline.at ...）
 ```
 
 ### 目录注解（创作台自动索引，2026-08+）
@@ -225,7 +241,7 @@ extends CoroutineScript
 | 命中框 | 播放区开关：红=敌弹判定、绿=敌人、青=自机、蓝=擦弹 |
 | 逐帧 | 暂停中按 F：精确走 1/60s |
 | 跳转 | 点时间轴/书签/←→ = 12x 快进到目标（真实关卡无任意 seek） |
-| 书签 | 时间轴右键/快捷键 B 打点；协程关卡静态提取 tl.at() 时刻 + 人工打点 |
+| 书签 | 时间轴右键/快捷键 B 打点；协程关卡静态提取 timeline.at() 时刻 + 人工打点 |
 | 幽灵玩家 | 自机狙目标（不攻击，看弹幕用） |
 
 快捷键：`Space` 暂停/继续 · `R` 重跑 · `F` 逐帧 · `1~7` 速度 · `←/→` ±1s（Ctrl ±5s）·

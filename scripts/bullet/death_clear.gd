@@ -1,16 +1,16 @@
 # DeathClear — 死亡清弹圈（子弹清除 + 激光淡出）
-## W4a-2：内核唯一后端——逐帧扩张的圆交给注入的内核扫掠清除敌弹（不再持有旧池）。
+## 内核唯一后端——逐帧扩张的圆交给注入的内核扫掠清除敌弹（不再持有旧池）。
 class_name DeathClear
 extends RefCounted
 
 var _death_clears: Array[Dictionary] = []
-var _laser_system: LaserEngine
+var _laser_engine: LaserEngine
 ## 内核扫掠：(center, radius, on_clear) -> void；由 BulletManager 注入。
 var _sweep: Callable = Callable()
 
 
 func setup(p_laser_sys, p_sweep: Callable) -> void:
-	_laser_system = p_laser_sys
+	_laser_engine = p_laser_sys
 	_sweep = p_sweep
 
 
@@ -48,7 +48,7 @@ func process(delta: float) -> void:
 			_sweep.call(center, radius, circle.on_clear)
 
 		# 生长型激光头部碰到消弹圈时：头部停止前进，尾部追上后消失
-		for beam in _laser_system.get_active():
+		for beam in _laser_engine.get_active():
 			if beam.phase != LaserBeam.Phase.GROW:
 				continue
 			var head_pos: Vector2 = beam.skeleton.sample_at(beam.head_dist)

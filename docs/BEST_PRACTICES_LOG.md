@@ -18,6 +18,75 @@
 
 ## 记录
 
+### 2026-09-13 — M2：词汇合一（BulletData → BulletType，删 type_for/signature_of/_type_by_sig）
+
+- **决定**：走方向 (b) —— `BulletData` 退化成**构造助手**，`to_bullet_type()` 产出并缓存 `BulletType`。
+- **删**：`type_for()` / `signature_of()` / `_type_by_sig` 全删；字段映射从桥接搬进 `BulletData._build_bullet_type()`（宿主→内核仍是单向）。桥接 964 → **906** 行。
+- **契约收紧（最重要）**：内核弹型缓存在 **BulletData 实例**上 → 内容**必须复用实例**。旧代码靠"内容签名缓存"兜底，所以 `enemy01` 同一实例换贴图、`reimu_shoot` 每发 new 都能跑；现在不行了。改了 13 个内容文件：
+  - 每发 new → 成员缓存（`_main_bullet_data` / `_plain_bullet_data` / …）；类型级字段建一次，速度 / params 每发写。
+  - `enemy01/02/03` 原用**同一个** BulletData 交替当"普通弹 / 强化弹"（还改 `coroutine_script`）→ 拆成**两个实例**。
+  - `radial_accel` / `bounce` 的 `spawn_factory` 原每次返回新对象 → 改为返回缓存实例。
+  - `marisa_shoot` 激光段**逐帧换贴图** → 按帧缓存 `Array[BulletData]`。
+  - `BulletShell`（工作台）按配置 key 缓存，配置变才换实例。
+- **踩坑**：test 锁着旧契约「工厂每次应是新对象」→ 改为「复用同一缓存实例」。
+- **命名合同步**：新增私有字段按 `_<限定词>_<类型snake>` → `_main_bullet_data` 等（`check_naming` 仍 0）。
+- **验收**：`grep type_for\|signature_of scripts/` = 0；`verify.sh` 全绿（312 测试 / 3216 断言）；`check_naming` 0。
+- **文档**：`CONTENT_GUIDE` 增「弹型实例复用」规则；plan §16.1 度量与 M2 段标记完成；基线融合 bullet 更新为「余 M3」。
+- **没做**：`_texture_by_index`（M3）+ `_port_by_sig`（端口收口）仍在；桥接仍认识 `BulletData`（理想 0 属后续）。
+
+### 2026-09-13 — 减法批次 A2c：局部极短名收敛（N19）+ ctx 门面拍板保留
+
+- **拍板**：`ctx.*` 意图门面**不动**（契约 §3 的动词域）；N19 的局部极短名**要清**，但工作台自身本地名不动。
+- **改名（非工作台）**：`sd`→`stage_data`；`st`→`stage`（关卡号）/ `behavior_state`（内核行为状态）；`bm`→`bullet_manager` / `bookmarks` / `manager`；`bg`→`background` / `stage_background`；`tl`→`timeline`。
+- **隐藏契约**：`tl` 是书签提取器 `bookmark_extractor.gd` 正则 `tl\.at(` 的被扫描对象 —— 内容改名必须**连带把正则改为 `timeline\.at(`**，否则书签静默失效。这是唯一必须碰工作台的一处（2 行正则），其余工作台本地名未动。
+- **踩坑**：正则替换 `\btl\b` 漏掉了转义字符串里的 `\ttl.at(`（`tl` 前一个字符是 `t`，无词边界）→ `test_bookmark_extractor` 的 fixture 源码没改到，测试失败。**字符串字面量里的标识符要单独处理。**
+- **验收**：`check_naming` 0 条；`check_syntax` 191/0；GUT 311 测试 / 3216 断言全绿。
+- **写给未来**：用户指出终局是用 GDExtension 实现系统内核 + 弹幕机制 VM —— 届时现在这些宿主侧的改名/适配成本会大幅消失。
+
+### 2026-09-13 — 减法批次 A2b：公开状态字段也不豁免缩写（拍板）
+
+- **决定**：命名契约的缩写白名单**对公开字段同样生效**，不再走「公开字段允许角色名」的旧豁免。
+- **改名**：`refs`（所有 EntityRegistry 字段/属性）→ `entity_registry`；`BulletService.world` / `KernelBomb.world` / `KernelBulletBackend.world` → `bullet_manager`；`StageRuntime.bullets` → `bullet_manager`；`BulletManager.world_refs` → `entity_registry`；`inject_world_refs()` → `inject_entity_registry()`（连带 `HitboxOverlay` / `DebugDrawer` 的 `bullets` 字段）。
+- **唯一豁免**：`ctx.*` 意图门面（`ctx.bullets` / `ctx.player` / `ctx.audio`…）—— 契约 §3 定义的动词域，不是随手缩写，本批**故意不动**。
+- **踩坑**：`.bullets` 的调用点改名后，忘了改声明方（`HitboxOverlay.bullets`）→ 运行期 `Invalid assignment ... on HitboxOverlay`。**全局 replacement 后必须复查"声明方 vs 调用方"配对。**
+- **验收**：`check_syntax` 191/0；GUT 311 测试 / 3216 断言全绿。
+- **剩余**：局部极短名 `sd`/`st`/`bm`/`bg`/`tl`（TODO N19）——其中 `tl` 与书签提取器正则 `tl\.at(` 有隐藏契约，改名要连带。
+
+### 2026-09-13 — 减法批次 A2：命名收敛（check_naming 91 → 0）
+
+- **动机**：读代码时同一个东西要在脑内查映射表 —— `_refs`/`_world_refs`、`_bullets`/`_kernel`、`p_ctx`/`_ctx`、`hitpoint_display`、`$UI`/`_game_ui`。这是「不明晰」的物理来源。
+- **做法**：按基线《标识符命名契约》机械改（一次性脚本 + 占位符，避免 A→B 再被 B→C 连锁替换）：
+  - 私有字段 → `_<类型snake>`；同类型多实例用 `_<限定词>_<类型snake>`（`_move_coroutine_runner` / `_final_boss_data`）。
+  - `@onready` → `_`+节点名 snake；节点名太弱（`UI`）则改节点为 `GameUI`；非 PascalCase 节点 `logo`/`roll`/`roll2` → `Logo`/`Roll`/`Roll2`。
+  - 参数 `sys` → `system`（宿主侧）。
+- **修正 linter**（否则契约自相矛盾）：`tools/check_naming.sh` 现在 ① 排除 `scripts/kernel/**`（vendor 快照）；② 接受「限定词_类型snake」；③ 同类型多名称组仅在存在非类型名时报错。
+- **踩坑（必须记）**：脚本化重命名**不能只改声明文件** —— `_tl` 被协程子类 `enemy04.gd` 与 `perf_stress/verify_fix.gd` 直接读；`_current_phase`/`_ctx`/`_shoot_script`/`_runner` 被测试白盒访问；`$UI` 的 tscn 子节点 `parent="UI/..."` 漏了一处 → `Memory/OutlineRect` 找不到。**改名 = 改声明 + 全仓 grep 外部私有访问 + tscn NodePath。**
+- **验收**：`check_naming` **0 条**（原 91）；`check_syntax` 191/0；`verify.sh` 全绿（311 测试 / 3216 断言）；`main_menu` + `red_YY_jade` 场景 headless 启动零错误。
+- **没做（有意）**：公开角色名（`ctx.refs` / `BulletService.world`）按契约保留；内核内部命名（`behavior_processor._system` 等）随重建版走，不在宿主改。
+
+### 2026-09-13 — 减法批次 A1：清考古注释（188 行 / 77 文件）
+
+- **动机**：指标全绿，但读感不干净 —— 代码里写满 `W4a-2 / K4 / S4c-1 / §21.17 / Track A / Strangler` 这类改动史标签，读起来像考古报告，不像「它本来就是这样」。
+- **做法**：一次性 Python 脚本，只动 `#` 注释（跳过字符串与 `code span`），删历史 tag / 日期 / § 引用并清残留标点；`scripts/kernel/**`（vendor 快照）**不动**，否则 `vendor_kernel.sh --check` 会报漂移。再人工修 10 处残留（`bullet_multi_mesh` 头注释、`game_scene` 的 `/R21`、`kernel_bullet_backend` 的 `见 docs`、若干测试断言消息里的 tag）。
+- **量化**：188 行注释 / 77 文件；非内核脚本历史 tag 归零；`bullet_multi_mesh` 头注释不再描述已删除的第二条数据路径（关闭 TODO N18）。
+- **原则**：**注释只描述「现在是什么、为什么」，「改了什么」归本 LOG。** 代码文件不该承担 changelog。
+- **验收**：`check_syntax` 191/0；GUT 全绿；未改任何代码行（纯注释）。
+
+### 2026-09-13 — P2：三个 `static var current` 生产侧收口 + 内核 RNG 跟随宿主 seed
+
+- **目标**：让 `BulletManager` / `StageRuntime` / `EntityRegistry` 的 `.current` 静态不再被**游戏运行时**读取，把「当前世界」从隐式全局改为组合根显式登记 / 注入。
+- **为什么**：R8 允许 `static var` 替代部分单例，但运行时跨模块读全局会隐藏依赖，并制造「双世界静默抢登记」（C4）；R2 的正确形态是组合根注入（`ctx.stage`）。
+- **落点**：
+  - `StageContext`：`bullets` / `effects` / `refs` 三个 getter 去掉 `.current` 回退，只认绑定的 `stage`；无 stage 的 ctx（自机射击 / 共享子弹 ctx）改由宿主显式绑 stage。
+  - `SaveData.reset_all/reset_practice(refs)`：注册表由组合根显式传入（`PlayerResources` 仍是唯一 owner）。
+  - `SceneTransition.change_scene()`：改收 `on_pause_world` / `on_clear_world` / `on_resume_world` 回调；`GameManager` 新增 `register_world/unregister_world` 显式登记 `world_bullets/world_refs`，不再读 `.current`。
+  - `StageRuntime._enter_tree`：**首个赢**（`is_instance_valid` 判定，不无条件覆盖）；`_exit_tree` 对称清 `EntityRegistry.current`。
+  - **C5**：`RNG` 增 `seed_changed` 信号，成为**唯一随机真源**；`BulletManager` 监听并把 seed 同步给内核 `BulletSystem`（内核自带 RNG = 同 seed 的派生镜像，宿主侧无人调用它）。
+- **工作台 / 调试**：benches 改用自己的 `_bullets`；`creation_station` 从 `_view` 取 `_bullets/_stage_runtime`；`hitbox_overlay` / `debug_drawer` 改注入 `bullets/refs`。`.current` 只剩「写 + 工具/测试」用途（注释已标明）。
+- **新接口**：`Player.bind_ctx()`、`BulletManager.inject_stage_runtime()`、`GameManager.register_world/unregister_world()`、`RNG.seed_changed`。
+- **验收**：`check_syntax` 191/0；GUT **全绿**（新增 `test_kernel_rng_follows_host_seed`）；`vendor_kernel.sh --check` 漂移 0；`game_scene` + 5 个 workbench 场景 headless 启动零错误；`check_naming` 仍 91（无新增）。
+- **没做 / 有意保留**：`static var current` 未物理删除 —— 测试（`test_kernel_swap` / `test_creation_station` / `test_laser` …）与工作台仍以它为便捷入口；生产路径已清零。彻底删除需先让这些用例显式持有实例，属后续纯清理。
+
 ### 2026-09-13 — M1：内核认数据（damage / hit_sfx 进 BulletType，tag kernel-v2）
 
 - **做了什么**：内核 `BulletType` 增 `Host payload` 组：`damage: float` / `hit_sfx: StringName`（**只存不解释**，规则仍归宿主）→ 原项目删掉 `_damage_by_index` / `_hit_sfx_by_index` 两张侧表与 `damage_for_index()` / `hit_sfx_for_index()`，`KernelBulletPhysics` 改读 `bt.damage` / `bt.hit_sfx`。

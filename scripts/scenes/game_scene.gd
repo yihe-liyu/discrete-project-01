@@ -7,10 +7,10 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 @onready var _world: Node2D = %World
 @onready var _fx_pool: FxPool = %FxPool
 @onready var _stage_runtime: StageRuntime = %StageRuntime
-@onready var _miss_layer: MissCircleLayer = %MissCircleLayer
-@onready var _game_ui: GameUI = $UI
+@onready var _miss_circle_layer: MissCircleLayer = %MissCircleLayer
+@onready var _game_ui: GameUI = $GameUI
 @onready var _item_pool = %ItemPool
-@onready var _bullets: BulletManager = %BulletManager   # W4c/R21：弹幕世界（game_scene.tscn 声明）
+@onready var _bullet_manager: BulletManager = %BulletManager   # R21：弹幕世界（game_scene.tscn 声明）
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
@@ -19,18 +19,20 @@ var _background_instance: Node  # StageBackground 或测试 Node3D
 func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
-	# W4c/R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
+	# R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
 	# 组合根装配：Miss 圈 / 特效层 / 关卡运行时（均在 game_scene.tscn 声明，R21），这里只注入。
-	_stage_runtime.bullets = _bullets
+	_stage_runtime.bullet_manager = _bullet_manager
 	_stage_runtime.world = _world
-	_stage_runtime.miss_layer = _miss_layer
+	_stage_runtime.miss_layer = _miss_circle_layer
 	_stage_runtime.fx_pool = _fx_pool
-	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层（K4）
+	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层
 
-	_bullets.inject_fx_pool(_fx_pool)
-	_bullets.fx_parent = _world            # 炸弹爆炸贴图挂 World（K4：不再全树找）
+	_bullet_manager.inject_fx_pool(_fx_pool)
+	_bullet_manager.fx_parent = _world            # 炸弹爆炸贴图挂 World（不再全树找）
+	_bullet_manager.inject_stage_runtime(_stage_runtime)   # 共享子弹 ctx 显式绑 stage（去全局回退）
+	GameManager.register_world(_bullet_manager, _stage_runtime.entity_registry)   # 切场由壳显式操作，不读 .current
 
-	_item_pool.refs = _stage_runtime.refs   # 道具经注册表取自机/资源（W4b-2b）
+	_item_pool.entity_registry = _stage_runtime.entity_registry   # 道具经注册表取自机/资源
 
 	GameEvents.player_death.connect(_on_player_death)
 	GameManager.game_state_changed.connect(_on_game_state_changed)
@@ -39,14 +41,14 @@ func _ready():
 	if SaveData.is_practice_mode:
 		SaveData.restarting = false
 		_setup_player()          # 先绑定自机（reset_* 经注册表取同一 PlayerResources）
-		SaveData.reset_practice()
+		SaveData.reset_practice(_stage_runtime.entity_registry)
 		_start_practice_game()
 	else:
 		if SaveData.practice_phase != null:
 			push_warning("GameScene: practice_phase 已设置但 is_practice_mode=false —— 练习标志被提前清除，误走普通关卡")
 		SaveData.restarting = false
 		_setup_player()          # 先绑定自机（reset_* 经注册表取同一 PlayerResources）
-		SaveData.reset_all()
+		SaveData.reset_all(_stage_runtime.entity_registry)
 		_start_normal_game()
 
 
@@ -76,7 +78,7 @@ func _start_practice_game() -> void:
 		return
 	var player := %Player
 	if player:
-		player.ctx = boss.ctx
+		player.bind_ctx(boss.ctx)
 	boss.phase_cleared.connect(func(_c: bool, _b: int): boss.die())
 	GameEvents.boss_defeated.connect(_on_practice_cleared)
 
@@ -111,9 +113,9 @@ func _exit_tree():
 		GameEvents.boss_defeated.disconnect(_on_practice_cleared)
 
 	_stage_runtime.miss_layer = null  # 解除注入（节点随本场景释放）
-	_bullets.clear_all()       # 内含 fx_pool.clear_pool()
-	_bullets.inject_fx_pool(null)  # 解除特效层注入（防持悬空引用）
-	_bullets.fx_parent = null
+	_bullet_manager.clear_all()       # 内含 fx_pool.clear_pool()
+	_bullet_manager.inject_fx_pool(null)  # 解除特效层注入（防持悬空引用）
+	_bullet_manager.fx_parent = null
 	_stage_runtime.fx_pool = null
 	_stage_runtime.ui_layer = null
 	if SaveData.is_practice_mode:
@@ -123,6 +125,7 @@ func _exit_tree():
 		_background_instance = null
 	_stage_runtime.stop_stage()
 	_stage_runtime.current_background = null
+	GameManager.unregister_world(_bullet_manager)   # 世界随场景注销
 
 
 func _setup_player() -> void:
@@ -134,11 +137,11 @@ func _setup_player() -> void:
 	if player and SaveData.selected_character < data_map.size():
 		player.setup_character(data_map[SaveData.selected_character])
 		# 自机 → 本次关卡世界的实体注册表（BulletManager 亦经注入读取）
-		_stage_runtime.refs.bind_player(player)
+		_stage_runtime.entity_registry.bind_player(player)
 	# 自机已就绪：把本关卡的实体注册表注入内核弹幕后端
-	_bullets.inject_world_refs(_stage_runtime.refs)
-	# HUD 单局资源（W4b-2b）
-	_game_ui.resources = _stage_runtime.refs.get_player_resources()
+	_bullet_manager.inject_entity_registry(_stage_runtime.entity_registry)
+	# HUD 单局资源
+	_game_ui.resources = _stage_runtime.entity_registry.get_player_resources()
 
 
 func _on_player_death():

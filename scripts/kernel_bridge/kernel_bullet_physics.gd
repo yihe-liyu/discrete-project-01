@@ -1,9 +1,9 @@
-## KernelBulletPhysics（Track A / S3b）—— 把原项目 BulletPhysics 的规则移植到内核 SoA 池。
+## KernelBulletPhysics—— 把原项目 BulletPhysics 的规则移植到内核 SoA 池。
 ##
 ## 边界：本文件是**宿主桥接层**（可引用 RNG / AudioManager 等宿主全局）；
 ## 几何唯一实现归内核（query_circle / hit_test），本层只做"规则"（命中 / 擦弹 / 伤害 / 特效）。
-## 覆盖：S3b 敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹）；S3c 自机弹 ↔ 敌人
-## （damage 侧表 + 记忆加成 + 音效/特效）；S3d 死亡清弹扫掠（sweep_enemy_bullets）。
+## 覆盖：敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹）；自机弹 ↔ 敌人
+## （damage 侧表 + 记忆加成 + 音效/特效）；死亡清弹扫掠（sweep_enemy_bullets）。
 ## 待补：bomb（X）+ 出界宽限（out_grace）。
 class_name KernelBulletPhysics
 extends RefCounted
@@ -16,10 +16,10 @@ const HIT_SFX_VOLUME := {
 }
 
 var backend: KernelBulletBackend
-## W2：组合根注入的特效层（空则静默）
+## 组合根注入的特效层（空则静默）
 var fx: FxPool
-## W4b-3b：实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
-var refs: EntityRegistry
+## 实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
+var entity_registry: EntityRegistry
 
 
 func setup(p_backend: KernelBulletBackend) -> void:
@@ -28,7 +28,7 @@ func setup(p_backend: KernelBulletBackend) -> void:
 
 ## 当前自机的单局资源（经注册表取）；无自机 = null
 func _player_res() -> PlayerResources:
-	return refs.get_player_resources() if refs != null else null
+	return entity_registry.get_player_resources() if entity_registry != null else null
 
 
 ## 消弹特效（同色）：未注入特效层时静默。
@@ -47,40 +47,40 @@ func process() -> void:
 
 ## 敌弹 ↔ 自机：命中 → miss + 回收；否则擦弹（每弹只计一次）+ 记忆随机清弹。
 func _enemy_bullets_vs_player() -> void:
-	var p = refs.player if refs else null
+	var p = entity_registry.player if entity_registry else null
 	var player: Player = p if is_instance_valid(p) else null
 	if not is_instance_valid(player) or player.is_invincible:
 		return
-	var sys := backend.system
+	var system := backend.system
 	# 查询半径 = 擦弹半径（覆盖命中 + 擦弹两阈值；query 内部已按弹半径外扩）
 	var ids: PackedInt32Array = CollisionResolver.overlap_ids(
-		sys, player.global_position, player.graze_radius, BulletType.Faction.ENEMY)
+		system, player.global_position, player.graze_radius, BulletType.Faction.ENEMY)
 	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收
 	for k in range(ids.size() - 1, -1, -1):
 		var id: int = ids[k]
-		if sys.hit_test(id, player.global_position, player.hitbox_radius):
+		if system.hit_test(id, player.global_position, player.hitbox_radius):
 			player.miss()
-			sys.despawn(id)
-		elif not sys.is_grazed(id) and sys.hit_test(id, player.global_position, player.graze_radius):
-			sys.mark_grazed(id)
+			system.despawn(id)
+		elif not system.is_grazed(id) and system.hit_test(id, player.global_position, player.graze_radius):
+			system.mark_grazed(id)
 			on_graze()
 			var res := _player_res()
 			if res != null and res.memory_value >= 50.0:
 				var chance := remap(res.memory_value, 50.0, 100.0, 0.05, 0.30)
 				if RNG.randf() < chance:
-					_play_clear(sys.get_position(id), sys.get_color(id))
-					sys.despawn(id)
+					_play_clear(system.get_position(id), system.get_color(id))
+					system.despawn(id)
 
 
-## 自机弹 ↔ 敌人：与旧 BulletPhysics._player_vs_enemies 1:1（伤害读 BulletType.damage；M1 起内核自带）。
+## 自机弹 ↔ 敌人：与旧 BulletPhysics._player_vs_enemies 1:1（伤害读 BulletType.damage；起内核自带）。
 func _player_bullets_vs_enemies() -> void:
-	var sys := backend.system
-	var enemies: Array = refs.get_active_enemies() if refs else []
+	var system := backend.system
+	var enemies: Array = entity_registry.get_active_enemies() if entity_registry else []
 	if enemies.is_empty():
 		return
 	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收
-	for i in range(sys.get_active_count() - 1, -1, -1):
-		var bt: BulletType = sys.get_type(i)
+	for i in range(system.get_active_count() - 1, -1, -1):
+		var bt: BulletType = system.get_type(i)
 		if bt == null or bt.faction != BulletType.Faction.PLAYER:
 			continue
 		var bonus: float = _memory_bonus()
@@ -91,39 +91,39 @@ func _player_bullets_vs_enemies() -> void:
 				var phase: PhaseData = (enemy as Boss).current_phase()
 				if not phase or phase.is_timeout_only:
 					continue   # 时符 / 未开战：弹穿过
-			if not sys.hit_test(i, enemy.global_position, enemy.hitbox_radius):
+			if not system.hit_test(i, enemy.global_position, enemy.hitbox_radius):
 				continue
 			enemy.take_damage(bt.damage * bonus)
 			var res := _player_res()
 			if res != null:
 				res.add_memory(PlayerResources.MEMORY_HIT_BY_BULLET)
 			_play_hit_sfx(bt.hit_sfx, enemy)
-			_spawn_hit_fx(sys, i, bt)
-			sys.despawn(i)
+			_spawn_hit_fx(system, i, bt)
+			system.despawn(i)
 			break
 
 
 ## 死亡清弹圈的一帧扫掠：清 center/radius 内的敌弹，逐弹播消散特效 + on_clear。
 ## 与旧 DeathClear 的逐弹循环 1:1（颜色取内核该弹当前色；不做出生雾过滤——旧池 is_ready
 ## 在 bind() 末尾无条件置真，雾中弹同样参与消弹）。
-## 供 BulletManager 以 DeathClear 的每帧回调形式驱动（Track A / S3d）。
+## 供 BulletManager 以 DeathClear 的每帧回调形式驱动。
 func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Callable()) -> void:
-	var sys := backend.system
-	if sys == null:
+	var system := backend.system
+	if system == null:
 		return
 	var r2: float = radius * radius
 	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收
-	for i in range(sys.get_active_count() - 1, -1, -1):
-		var bt: BulletType = sys.get_type(i)
+	for i in range(system.get_active_count() - 1, -1, -1):
+		var bt: BulletType = system.get_type(i)
 		if bt == null or bt.faction != BulletType.Faction.ENEMY:
 			continue
-		var pos: Vector2 = sys.get_position(i)
+		var pos: Vector2 = system.get_position(i)
 		if pos.distance_squared_to(center) > r2:
 			continue
 		if on_clear.is_valid():
 			on_clear.call(pos)
-		_play_clear(pos, sys.get_color(i))
-		sys.despawn(i)
+		_play_clear(pos, system.get_color(i))
+		system.despawn(i)
 
 
 ## 记忆 <50 时的伤害加成（与旧 BulletPhysics 同式）。
@@ -149,10 +149,10 @@ func _play_hit_sfx(sfx_key: StringName, enemy) -> void:
 
 
 ## 命中特效：场景在 BulletType.hit_fx，颜色取该弹当前色（与旧 _spawn_effect 1:1）。
-func _spawn_hit_fx(sys: BulletSystem, id: int, bt: BulletType) -> void:
+func _spawn_hit_fx(system: BulletSystem, id: int, bt: BulletType) -> void:
 	if bt.hit_fx == null or fx == null:
 		return
-	fx.play(bt.hit_fx, sys.get_position(id), sys.get_velocity(id), sys.get_color(id))
+	fx.play(bt.hit_fx, system.get_position(id), system.get_velocity(id), system.get_color(id))
 
 
 ## 擦弹结算：与旧 BulletPhysics.on_graze 1:1。

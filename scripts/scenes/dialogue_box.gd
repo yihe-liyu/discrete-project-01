@@ -25,7 +25,7 @@ const MOD_TWEEN_DEFAULT := 0.25  ## 明暗渐变时长
 
 @onready var _root: Control = $Control
 
-var _runner: DialogueRunner
+var _dialogue_runner: DialogueRunner
 var _portrait_map: Dictionary = {}  # char_name → {node, profile}
 var _cancel_held: float = 0.0
 var _input_ready: bool = false
@@ -42,15 +42,15 @@ func play_steps(steps: Array) -> void:
 	process_mode = PROCESS_MODE_ALWAYS  # 暂停时也跑
 	_is_closing = false
 	visible = true
-	_runner = DialogueRunner.new()
-	_runner.line_shown.connect(_on_line_shown)
-	_runner.state_changed.connect(_on_state_changed)
-	_runner.event_fired.connect(_on_event_fired)
-	_runner.finished.connect(_on_finished)
+	_dialogue_runner = DialogueRunner.new()
+	_dialogue_runner.line_shown.connect(_on_line_shown)
+	_dialogue_runner.state_changed.connect(_on_state_changed)
+	_dialogue_runner.event_fired.connect(_on_event_fired)
+	_dialogue_runner.finished.connect(_on_finished)
 	# 淡入完成后启动步骤（演出立绘在淡入后才开始出现，与旧行为一致）
 	var tw := create_tween()
 	tw.tween_property(_root, "modulate:a", 1.0, 0.3)
-	tw.tween_callback(func(): _runner.start(steps))
+	tw.tween_callback(func(): _dialogue_runner.start(steps))
 
 	if not GameManager.game_state_changed.is_connected(_on_game_state):
 		GameManager.game_state_changed.connect(_on_game_state)
@@ -61,14 +61,14 @@ func _exit_tree() -> void:
 
 
 func _process(delta: float) -> void:
-	if _is_closing or not _runner:
+	if _is_closing or not _dialogue_runner:
 		return
 	# 暂停（暂停菜单）时冻结对话计时，恢复后从暂停处继续；
-	# 保留 PROCESS_MODE_ALWAYS 让淡出动画照常，仅停掉 _runner.tick
+	# 保留 PROCESS_MODE_ALWAYS 让淡出动画照常，仅停掉 _dialogue_runner.tick
 	if GameManager.current_state == GameManager.AppState.PAUSED:
 		return
 	# 步骤计时（WAIT / auto_advance）
-	_runner.tick(delta)
+	_dialogue_runner.tick(delta)
 	if not _input_ready:
 		return
 	# 长按取消 → 关闭对话
@@ -81,7 +81,7 @@ func _process(delta: float) -> void:
 		_cancel_held = 0.0
 
 func _input(event: InputEvent) -> void:
-	if _is_closing or not _input_ready or not _runner:
+	if _is_closing or not _input_ready or not _dialogue_runner:
 		return
 	# 暂停时不处理输入
 	if GameManager.current_state == GameManager.AppState.PAUSED:
@@ -96,7 +96,7 @@ func _input(event: InputEvent) -> void:
 
 	elif event.is_action_released("ui_cancel"):
 		# 短按取消 = 跳过本句
-		var line := _runner.current_line()
+		var line := _dialogue_runner.current_line()
 		if _cancel_held < cancel_hold_threshold and line and line.skippable:
 			get_viewport().set_input_as_handled()
 			_advance()
@@ -104,8 +104,8 @@ func _input(event: InputEvent) -> void:
 # ═══ 推进 ═══
 
 func _advance() -> void:
-	if _runner:
-		_runner.advance()
+	if _dialogue_runner:
+		_dialogue_runner.advance()
 
 # ═══ Runner 回调 ═══
 

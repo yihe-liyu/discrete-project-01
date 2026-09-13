@@ -1,6 +1,6 @@
 extends GutTest
 ## BossHandle（场景动词句柄）纯逻辑测试：无树，校验"缺槽/容错/不崩"语义。
-## W2：注册表不再走 StageObjects autoload —— 由 StageContext.objects 持有并注入句柄。
+## 注册表不再走 StageObjects autoload —— 由 StageContext.objects 持有并注入句柄。
 
 func test_missing_slot_resolves_null():
 	var h := BossHandle.new("boss_missing", null, "？？？")

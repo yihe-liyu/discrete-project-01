@@ -1,5 +1,5 @@
 extends GutTest
-## S2：BulletMultiMesh 的**内核快照**渲染路径（不再遍历 Bullet 节点；分组键与旧路径共用）。
+## BulletMultiMesh 的**内核快照**渲染路径（不再遍历 Bullet 节点；分组键与旧路径共用）。
 ## 注：headless（dummy 渲染器）下 MultiMesh 实例变换读回恒为 0，故断言落在 CPU 侧可读的
 ##     批次数 / visible_instance_count / z_index / 材质 / 网格尺寸；逐实例几何写入由内核快照路径保证。
 

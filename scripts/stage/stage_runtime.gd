@@ -1,7 +1,7 @@
 ## 关卡运行时 —— 关卡生命周期 + 生成敌人/Boss（World 下的场景节点）。
-## W3b-2：StageManager autoload 已删除；本节点是关卡生命周期的唯一实现（World 下声明）。
+## StageManager autoload 已删除；本节点是关卡生命周期的唯一实现（World 下声明）。
 ## 依赖由组合根注入 `world`（敌人生成 / 自机 ctx 注入的父节点），不再 get_tree().current_scene 全树找（R2）。
-## W4b-4：运行时引用归 EntityRegistry / SaveData，运行时字段已清空。
+## 运行时引用归 EntityRegistry / SaveData，运行时字段已清空。
 class_name StageRuntime
 extends Node
 
@@ -16,48 +16,53 @@ signal all_enemies_defeated()
 ## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
 var world: Node2D
 
-## 战场实体注册表（自机 / 敌机 / Boss 的单一真源；W4b-3）
-var refs := EntityRegistry.new()
+## 战场实体注册表（自机 / 敌机 / Boss 的单一真源）
+var entity_registry := EntityRegistry.new()
 
-## 弹幕世界（W4c：组合根注入；供关卡发弹 / 清弹）
-var bullets: BulletManager
+## 弹幕世界（组合根注入；供关卡发弹 / 清弹）
+var bullet_manager: BulletManager
 
-## "当前关卡"（R8 static var）：供无 stage 的 ctx（自机射击 / 子弹共享 ctx）
-## 回退解析 Miss / FX 层。
+## 当前世界的登记（R8 static var）：仅登记 / 注销自身。
+## 生产路径已不读它——无 stage 的 ctx 由宿主显式绑 stage（P2 收口）。
 static var current: StageRuntime
 
 ## 注入槽（组合根 / 工作台设置）
 var miss_layer: MissCircleLayer
 var fx_pool: FxPool
-## K4：Boss 位置指示器所属 HUD 层（组合根注入）
+## Boss 位置指示器所属 HUD 层（组合根注入）
 var ui_layer: CanvasLayer
 var current_background: StageBackground
 
 var current_stage: StageData
-var _stage_active: bool = false
-var _stage_script: CoroutineScript
+var _is_stage_active: bool = false
+var _coroutine_script: CoroutineScript
 
 
-## 入场即把本关卡的注册表登记为「当前世界」（先于任何实体 _ready）
+## 入场登记「当前世界」（先于任何实体 _ready）。
+## 显式、首个赢 —— 不无条件覆盖已在场的世界（多世界并存时不静默抢登记）。
 func _enter_tree() -> void:
-	StageRuntime.current = self
-	EntityRegistry.current = refs
+	if not is_instance_valid(StageRuntime.current):
+		StageRuntime.current = self
+	if not is_instance_valid(EntityRegistry.current):
+		EntityRegistry.current = entity_registry
 
 
 func _exit_tree() -> void:
 	if StageRuntime.current == self:
 		StageRuntime.current = null
+	if EntityRegistry.current == entity_registry:
+		EntityRegistry.current = null
 
 
 ## 当前关卡协程脚本（工作台/调试读取运行时间用）
 func current_stage_script() -> CoroutineScript:
-	return _stage_script
+	return _coroutine_script
 
 
 ## 加载关卡；background = 背景场景实例（由门面/组合根传入，用于启动背景里的协程脚本）
 func load_stage(data: StageData) -> void:
 	var background := current_background
-	if _stage_active:
+	if _is_stage_active:
 		stop_stage()
 
 	# 配置校验：非法数据拒绝启动，防止除零/空脚本崩溃
@@ -67,15 +72,15 @@ func load_stage(data: StageData) -> void:
 	if not errs.is_empty():
 		return
 
-	SaveData.reset_all()
+	SaveData.reset_all(entity_registry)   # 注册表显式传入，不再读 EntityRegistry.current
 
 	current_stage = data
-	_stage_active = true
+	_is_stage_active = true
 
 	var stage_script: CoroutineScript = data.create_script.new()
 	assert(stage_script is CoroutineScript, "StageRuntime: create_script must be a CoroutineScript")
 	add_child(stage_script)
-	_stage_script = stage_script
+	_coroutine_script = stage_script
 	stage_script.finished.connect(_on_stage_finished)
 
 	var ctx := StageContext.new(stage_script)
@@ -95,25 +100,25 @@ func load_stage(data: StageData) -> void:
 
 
 func stop_stage() -> void:
-	_stage_active = false
+	_is_stage_active = false
 	current_stage = null
-	if _stage_script and is_instance_valid(_stage_script):
-		_stage_script.stop()
-		_stage_script.queue_free()
-		_stage_script = null
-	refs.clear()
-	if bullets:
-		bullets.clear_bullets()  # 清弹幕，激光自己淡出
+	if _coroutine_script and is_instance_valid(_coroutine_script):
+		_coroutine_script.stop()
+		_coroutine_script.queue_free()
+		_coroutine_script = null
+	entity_registry.clear()
+	if bullet_manager:
+		bullet_manager.clear_bullets()  # 清弹幕，激光自己淡出
 
 
 func _on_stage_finished() -> void:
 	if not current_stage:
 		return
-	_stage_active = false
+	_is_stage_active = false
 	stage_cleared.emit()
 	all_enemies_defeated.emit()
 	var score := 0
-	var res: PlayerResources = refs.get_player_resources()
+	var res: PlayerResources = entity_registry.get_player_resources()
 	if res != null:
 		score = res.current_score
 	SaveData.save_high_score(current_stage.stage_id, score)
@@ -137,7 +142,7 @@ func spawn_enemy_data(data: EnemyData, p_ctx: StageContext = null) -> Enemy:
 		return null
 	cs.target = enemy
 	var params: Dictionary = data.get_params()
-	ParamValidator.apply(cs, params)   # C4：校验 + 只设合法键 + 打错键名/类型响亮报错
+	ParamValidator.apply(cs, params)   # 校验 + 只设合法键 + 打错键名/类型响亮报错
 	if cs.has_method("setup_custom"):
 		cs.setup_custom(params)
 	enemy.add_child(cs)
@@ -176,7 +181,7 @@ func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: St
 	var runner := CoroutineRunner.new()
 	runner.run(func(): return true)  # 保活：让 ctx.runner 保持 is_running（ctx.active/clock 依赖）
 	var ctx := StageContext.new(runner)
-	ctx.stage = self   # 符卡练习 ctx 也要绑 StageRuntime：ctx.effects/refs 才能解析 Miss 层与自机
+	ctx.stage = self   # 符卡练习 ctx 也要绑 StageRuntime：ctx.effects/entity_registry 才能解析 Miss 层与自机
 	var single := BossData.new()
 	single.boss_name = boss_name
 	single.visual = boss_scene
@@ -194,14 +199,14 @@ func _inject_player_ctx(p_ctx: StageContext) -> void:
 		return
 	var player := world.get_node_or_null("Player") as Player
 	if player:
-		player.ctx = p_ctx
-		refs.bind_player(player)
+		player.bind_ctx(p_ctx)   # 把 stage 一并转发给射击 ctx
+		entity_registry.bind_player(player)
 
 
 func add_enemy_to_scene(node: Node2D) -> void:
 	# 注入注册表：Enemy 在 _ready 自注册、Boss 在 start_boss 注册（都在 add_child 之后，故先给引用）
 	if "registry" in node:
-		node.registry = refs
+		node.registry = entity_registry
 	if "ui_layer" in node:
 		node.ui_layer = ui_layer
 	var parent: Node = null

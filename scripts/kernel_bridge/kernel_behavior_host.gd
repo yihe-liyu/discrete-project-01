@@ -1,4 +1,4 @@
-## KernelBehaviorHost（Track A / S4c）—— 桥接行为的「延后动作」队列。
+## KernelBehaviorHost—— 桥接行为的「延后动作」队列。
 ##
 ## 内核契约：行为循环中途禁止 spawn/despawn（swap-with-last 会搬行）。
 ## 故行为只 request_despawn + 入队新弹；循环结束后由 KernelBulletBackend._physics_process(-4) 统一 flush。
@@ -15,7 +15,7 @@ func setup(p_backend) -> void:
 
 ## 当前 Boss（经后端注入的实体注册表；无则 null）——桥接行为查询用
 func get_boss():
-	return backend.refs.get_boss() if backend != null and backend.refs != null else null
+	return backend.entity_registry.get_boss() if backend != null and backend.entity_registry != null else null
 
 
 ## 入队一次发射。data 须是已按运行时改好的**副本**（模板会被复用）。

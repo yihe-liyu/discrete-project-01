@@ -7,31 +7,31 @@ extends GutTest
 ## 覆盖：节点整体平移 / 稳态零写入 / world↔local 换算 / 淘汰 / 槽位复用 / clear / 动态层兼容
 
 var _bg: Node3D
-var _plane: BackgroundPlane
-var _mgr: DecorManager
+var _background_plane: BackgroundPlane
+var _decor_manager: DecorManager
 
 
 func before_each() -> void:
 	_bg = Node3D.new()
-	_plane = BackgroundPlane.new()
-	_plane.scroll_speed = Vector2(0, -2.0)  # 加速滚动（85.3 m/s）方便测淘汰
-	_plane.plane_size = Vector2(256, 256)
-	_plane.tiling = Vector2(6, 6)
-	_bg.add_child(_plane)
-	_mgr = DecorManager.new()
-	_bg.add_child(_mgr)
+	_background_plane = BackgroundPlane.new()
+	_background_plane.scroll_speed = Vector2(0, -2.0)  # 加速滚动（85.3 m/s）方便测淘汰
+	_background_plane.plane_size = Vector2(256, 256)
+	_background_plane.tiling = Vector2(6, 6)
+	_bg.add_child(_background_plane)
+	_decor_manager = DecorManager.new()
+	_bg.add_child(_decor_manager)
 	var layer := DecorLayer.new()
 	layer.name = "test"
 	layer.alpha_mode = DecorLayer.AlphaMode.SCISSOR
 	layer.size_min = Vector2(4, 4)
 	layer.size_max = Vector2(4, 4)
 	layer.billboard = false
-	_mgr.add_layer(layer)
+	_decor_manager.add_layer(layer)
 	add_child_autofree(_bg)
 
 
 func _group() -> Dictionary:
-	return _mgr._groups
+	return _decor_manager._groups
 
 
 func _alive_count(g: Dictionary) -> int:
@@ -44,7 +44,7 @@ func _alive_count(g: Dictionary) -> int:
 
 ## ① 节点整体平移：mmi 跟随 scroll_offset 移动，实例位置静止不动
 func test_node_translation_instead_of_per_instance():
-	_mgr.batch_spawn("test", 10, Vector2(-90, 90), Vector2(-220, -180), _plane)
+	_decor_manager.batch_spawn("test", 10, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
 	await wait_physics_frames(2)
 	var g: Dictionary = _group()
 	var mm: MultiMesh = g["test"].multi_mesh
@@ -59,21 +59,21 @@ func test_node_translation_instead_of_per_instance():
 
 ## ② 稳态零写入（优化核心不变量）：不生成/不淘汰时，每帧不应有任何实例 transform 写入
 func test_static_path_steady_state_zero_writes():
-	_mgr.batch_spawn("test", 10, Vector2(-90, 90), Vector2(-220, -180), _plane)
+	_decor_manager.batch_spawn("test", 10, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
 	await wait_physics_frames(2)
-	_mgr.debug_take_writes()  # 清掉初始化计数
+	_decor_manager.debug_take_writes()  # 清掉初始化计数
 	await wait_physics_frames(3)
-	assert_eq(_mgr.debug_take_writes(), 0,
+	assert_eq(_decor_manager.debug_take_writes(), 0,
 		"静态路径稳态不应有实例写入（节点平移替代逐实例更新被回归则此断言失败）")
 
 
 ## ③ 中途补种：world 坐标 → local 换算正确（local = world - scroll_offset）
 func test_spawn_world_to_local_conversion():
-	_mgr.batch_spawn("test", 10, Vector2(-90, 90), Vector2(-220, -180), _plane)
+	_decor_manager.batch_spawn("test", 10, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
 	await wait_physics_frames(30)  # 先滚一段，offset 非零
 	var g: Dictionary = _group()
 	var off: Vector3 = g["test"].scroll_offset
-	_mgr.spawn("test", Vector3(0, 4, -200), Vector2(4, 4), _plane)
+	_decor_manager.spawn("test", Vector3(0, 4, -200), Vector2(4, 4), _background_plane)
 	var found := false
 	for e in g["test"].entries:
 		if e.alive and absf((e.position.z + off.z) - (-200.0)) < 1.0:
@@ -83,7 +83,7 @@ func test_spawn_world_to_local_conversion():
 
 ## ④ 淘汰 + 槽位复用：树滚到 world z>100 死亡，新 spawn 复用槽位，高水位不涨
 func test_culling_and_slot_reuse():
-	_mgr.batch_spawn("test", 50, Vector2(-90, 90), Vector2(-220, -180), _plane)
+	_decor_manager.batch_spawn("test", 50, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
 	await wait_physics_frames(2)
 	var g: Dictionary = _group()
 	var mm: MultiMesh = g["test"].multi_mesh
@@ -92,8 +92,8 @@ func test_culling_and_slot_reuse():
 	assert_eq(g["test"].free_slots.size(), 50, "死亡槽应全部进入复用栈")
 
 	var before: int = mm.instance_count
-	_mgr.spawn("test", Vector3(0, 4, -190), Vector2(4, 4), _plane)
-	_mgr.spawn("test", Vector3(10, 4, -190), Vector2(4, 4), _plane)
+	_decor_manager.spawn("test", Vector3(0, 4, -190), Vector2(4, 4), _background_plane)
+	_decor_manager.spawn("test", Vector3(10, 4, -190), Vector2(4, 4), _background_plane)
 	assert_eq(mm.instance_count, before, "新 spawn 应复用死亡槽位（instance_count 不增长）")
 	assert_eq(_alive_count(g), 2, "复用后应有 2 棵存活")
 	assert_eq(g["test"].free_slots.size(), 48, "复用栈应减少 2")
@@ -108,9 +108,9 @@ func test_culling_and_slot_reuse():
 
 ## ⑤ clear_layer：清空 + 复位后能继续使用
 func test_clear_layer_resets_and_restarts():
-	_mgr.batch_spawn("test", 10, Vector2(-90, 90), Vector2(-220, -180), _plane)
+	_decor_manager.batch_spawn("test", 10, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
 	await wait_physics_frames(10)
-	_mgr.clear_layer("test")
+	_decor_manager.clear_layer("test")
 	var g: Dictionary = _group()
 	assert_eq(g["test"].multi_mesh.instance_count, 0, "clear 后实例数应为 0")
 	assert_eq(g["test"].entries.size(), 0, "clear 后 entry 应为空")
@@ -118,7 +118,7 @@ func test_clear_layer_resets_and_restarts():
 	assert_eq(g["test"].scroll_offset, Vector3.ZERO, "clear 应复位 scroll_offset")
 	assert_eq(g["test"].mmi.position, Vector3.ZERO, "clear 应复位 mmi.position")
 
-	_mgr.spawn("test", Vector3(0, 4, -190), Vector2(4, 4), _plane)
+	_decor_manager.spawn("test", Vector3(0, 4, -190), Vector2(4, 4), _background_plane)
 	await wait_physics_frames(1)
 	assert_eq(_alive_count(g), 1, "clear 后重新 spawn 应正常工作")
 
@@ -131,8 +131,8 @@ func test_dynamic_path_still_works():
 	layer.size_min = Vector2(4, 4)
 	layer.size_max = Vector2(4, 4)
 	layer.billboard = true
-	_mgr.add_layer(layer)
-	_mgr.batch_spawn("blend", 20, Vector2(-90, 90), Vector2(-220, -180), _plane)
+	_decor_manager.add_layer(layer)
+	_decor_manager.batch_spawn("blend", 20, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
 	await wait_physics_frames(30)
 	var g: Dictionary = _group()
 	assert_eq(g["blend"].entries.size(), 20, "动态层未淘汰前应保持 20 个 entry")

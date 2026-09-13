@@ -1,5 +1,5 @@
 extends GutTest
-## 阶段组合台（M4）测试：壳副本 / 双槽默认 / 开演真实生成
+## 阶段组合台测试：壳副本 / 双槽默认 / 开演真实生成
 
 const SHELL := preload("res://scripts/workbench/phase_shell.gd")
 const RIG := preload("res://scripts/workbench/phase_bench.gd")
@@ -100,9 +100,9 @@ func test_phase_rig_play_spawns_boss():
 			idx = i
 	rig._select_phase(idx)
 	rig._boss_pos = Vector2(GameConfig.FIELD_CENTER_X, 250.0)
-	rig._stage_runtime.refs.enemies.clear()
+	rig._stage_runtime.entity_registry.enemies.clear()
 	rig._play()
-	assert_true(rig._stage_runtime.refs.get_active_enemies().size() >= 1,
-		"开演生成 Boss（%d）" % rig._stage_runtime.refs.get_active_enemies().size())
+	assert_true(rig._stage_runtime.entity_registry.get_active_enemies().size() >= 1,
+		"开演生成 Boss（%d）" % rig._stage_runtime.entity_registry.get_active_enemies().size())
 	rig._clear_all()
 	rig.queue_free()

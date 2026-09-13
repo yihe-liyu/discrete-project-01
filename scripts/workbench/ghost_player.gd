@@ -1,6 +1,6 @@
 ## 幽灵玩家 —— 工作台关卡沙盒的"假自机"
 ##
-## 用途：给真实关卡提供自机狙目标（ctx.player 读取注入的自机；见 StageRuntime.refs）
+## 用途：给真实关卡提供自机狙目标（ctx.player 读取注入的自机；见 StageRuntime.entity_registry）
 ## 特性：固定路径自动移动、不可操控、不射击、无敌（预览不会 Game Over）
 ## 用法：实例化 player.tscn 后 set_script 为本脚本（继承 Player 保证类型兼容）
 extends Player

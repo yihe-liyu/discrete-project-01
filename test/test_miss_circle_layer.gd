@@ -1,5 +1,5 @@
 extends GutTest
-## Miss 圈特效（W1）：autoload → 场景节点 + 组合根注入。
+## Miss 圈特效：autoload → 场景节点 + 组合根注入。
 ## 覆盖：不再是 autoload / 节点 API 行为 / EffectService 注入路由 / StageContext 取注入。
 
 const RUNNER_SCRIPT = preload("res://scripts/coroutine/base/coroutine_runner.gd")

@@ -6,68 +6,69 @@ const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
 const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
 
 var runner: CoroutineRunner
-## 关卡运行时（W3b-2：由 StageRuntime 创建 ctx 时回填；内容经此拿注入槽/工厂）
+## 关卡运行时（由 StageRuntime 创建 ctx 时回填；内容经此拿注入槽/工厂）
 var stage: StageRuntime
-var _decor_mgr: DecorManager
+var _decor_manager: DecorManager
 
 # 服务懒加载（高频路径优化：每颗协程弹 new 一次 ctx，只创建用到的服务）
 # 大多数子弹协程只用 bullets/player —— 从 8 个对象降到 2 个
-var _clock: ClockService
-var _bullets: BulletService
-var _player: PlayerService
-var _dialogue: DialogueService
-var _items: ItemService
-var _audio: AudioService
-var _effects: EffectService
+var _clock_service: ClockService
+var _bullet_service: BulletService
+var _player_service: PlayerService
+var _dialogue_service: DialogueService
+var _item_service: ItemService
+var _audio_service: AudioService
+var _effect_service: EffectService
 var _boss: BossService
 var _diff: DifficultyService
-var _objects: StageObjects
+var _stage_objects: StageObjects
 
 var clock: ClockService:
 	get:
-		if _clock == null: _clock = ClockService.new()
-		return _clock
+		if _clock_service == null: _clock_service = ClockService.new()
+		return _clock_service
 
 var bullets: BulletService:
 	get:
-		if _bullets == null:
-			_bullets = BulletService.new()
-			_bullets.world = stage.bullets if stage and stage.bullets else BulletManager.current
-		return _bullets
+		if _bullet_service == null:
+			_bullet_service = BulletService.new()
+			# 只认绑定的 stage，不回退 BulletManager.current（无 stage 的 ctx 由宿主显式绑 stage）。
+			_bullet_service.bullet_manager = stage.bullet_manager if stage else null
+		return _bullet_service
 
 var player: PlayerService:
 	get:
-		if _player == null:
-			_player = PlayerService.new()
-			_player.ctx = self
-		return _player
+		if _player_service == null:
+			_player_service = PlayerService.new()
+			_player_service.ctx = self
+		return _player_service
 
 var dialogue: DialogueService:
 	get:
-		if _dialogue == null:
-			_dialogue = DialogueService.new()
-			_dialogue.ctx = self
-		return _dialogue
+		if _dialogue_service == null:
+			_dialogue_service = DialogueService.new()
+			_dialogue_service.ctx = self
+		return _dialogue_service
 
 var items: ItemService:
 	get:
-		if _items == null:
-			_items = ItemService.new()
-			_items.ctx = self
-		return _items
+		if _item_service == null:
+			_item_service = ItemService.new()
+			_item_service.ctx = self
+		return _item_service
 
 var audio: AudioService:
 	get:
-		if _audio == null: _audio = AudioService.new()
-		return _audio
+		if _audio_service == null: _audio_service = AudioService.new()
+		return _audio_service
 
 var effects: EffectService:
 	get:
-		if _effects == null: _effects = EffectService.new()
-		var st: StageRuntime = stage if stage else StageRuntime.current  # 无 stage 的共享 ctx 回退当前关卡
-		_effects.miss_layer = st.miss_layer if st else null  # 组合根注入；每取一次保持最新
-		_effects.fx_pool = st.fx_pool if st else null      # W2：特效层同样由组合根注入
-		return _effects
+		if _effect_service == null: _effect_service = EffectService.new()
+		# 只认绑定的 stage，不回退 StageRuntime.current。
+		_effect_service.miss_layer = stage.miss_layer if stage else null  # 组合根注入；每取一次保持最新
+		_effect_service.fx_pool = stage.fx_pool if stage else null        # 特效层同样由组合根注入
+		return _effect_service
 
 var boss: BossService:
 	get:
@@ -81,34 +82,32 @@ var diff: DifficultyService:
 		if _diff == null: _diff = DifficultyService.new()
 		return _diff
 
-## 战场实体注册表（自机 / 敌机 / Boss）。
-## 优先本关卡 StageRuntime；无 stage 的 ctx（自机射击 / 子弹共享 ctx）回退当前世界。
-var refs: EntityRegistry:
+## 战场实体注册表（自机 / 敌机 / Boss）——只认绑定的 stage。
+## 无 stage 的 ctx（自机射击 / 子弹共享 ctx）由宿主显式绑定同一 StageRuntime，不再回退全局。
+var entity_registry: EntityRegistry:
 	get:
-		if stage and stage.refs:
-			return stage.refs
-		return EntityRegistry.current
+		return stage.entity_registry if stage and stage.entity_registry else null
 
-## 命名对象注册表（W2：per-ctx，随关卡生命周期；原 StageObjects autoload）
+## 命名对象注册表（per-ctx，随关卡生命周期；原 StageObjects autoload）
 var objects: StageObjects:
 	get:
-		if _objects == null: _objects = StageObjects.new()
-		return _objects
+		if _stage_objects == null: _stage_objects = StageObjects.new()
+		return _stage_objects
 
 func _init(p_runner: CoroutineRunner) -> void:
 	runner = p_runner
 
 ## 装饰物管理器（树附着，懒加载）
 func get_decor() -> DecorManager:
-	if _decor_mgr: return _decor_mgr
-	var bg: StageBackground = stage.current_background if stage else null
-	if not bg: return null
-	var mgr: DecorManager = bg.get_node_or_null("DecorManager") as DecorManager
+	if _decor_manager: return _decor_manager
+	var background: StageBackground = stage.current_background if stage else null
+	if not background: return null
+	var mgr: DecorManager = background.get_node_or_null("DecorManager") as DecorManager
 	if not mgr:
 		mgr = DecorManager.new()
 		mgr.name = "DecorManager"
-		bg.add_child(mgr)
-	_decor_mgr = mgr
+		background.add_child(mgr)
+	_decor_manager = mgr
 	return mgr
 
 ## 便捷属性

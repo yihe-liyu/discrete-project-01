@@ -1,5 +1,5 @@
 extends GutTest
-## 敌人组合台（M3a）测试：壳组装 / 真实生成 / 热重载重演
+## 敌人组合台测试：壳组装 / 真实生成 / 热重载重演
 
 const SHELL := preload("res://scripts/workbench/enemy_shell.gd")
 const RIG := preload("res://scripts/workbench/enemy_bench.gd")
@@ -102,19 +102,19 @@ func test_rig_spawn_and_hot_reload():
 	await get_tree().process_frame
 
 	# 真实生成：默认壳 + enemy01 行为
-	rig._stage_runtime.refs.enemies.clear()
+	rig._stage_runtime.entity_registry.enemies.clear()
 	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy01.gd"
 	rig._cur_script = load(rig._cur_script_path)
 	rig._rebuild_watch()
 	rig._spawn_pos = Vector2(GameConfig.FIELD_CENTER_X, 260.0)
 	rig._spawn()
-	assert_true(rig._stage_runtime.refs.get_active_enemies().size() >= 1,
-		"生成出敌人（%d）" % rig._stage_runtime.refs.get_active_enemies().size())
+	assert_true(rig._stage_runtime.entity_registry.get_active_enemies().size() >= 1,
+		"生成出敌人（%d）" % rig._stage_runtime.entity_registry.get_active_enemies().size())
 
 	# 热重载：清场+重新生成
 	rig._do_hot_reload()
-	assert_true(rig._stage_runtime.refs.get_active_enemies().size() >= 1,
-		"重载后重新生成（%d）" % rig._stage_runtime.refs.get_active_enemies().size())
+	assert_true(rig._stage_runtime.entity_registry.get_active_enemies().size() >= 1,
+		"重载后重新生成（%d）" % rig._stage_runtime.entity_registry.get_active_enemies().size())
 	assert_true(rig._reload_status.text.contains("已重载"), "状态成功")
 
 	# 失败路径：坏路径 → 保留旧脚本

@@ -1,5 +1,5 @@
 extends "res://scripts/workbench/bench_base.gd"
-## 阶段组合台（M4）—— 目录选阶段 × 双槽（move/shoot）× 阶段字段（HP/时限）× Boss 视觉
+## 阶段组合台—— 目录选阶段 × 双槽（move/shoot）× 阶段字段（HP/时限）× Boss 视觉
 ## 运行基于 start_spell_card（符卡练习同款单阶段运行器：自建时钟+ctx+Boss 直进阶段）
 
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
@@ -49,7 +49,7 @@ func _ready() -> void:
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()
 	build_world()  # 场地+幽灵（rig_base）
-	ensure_stage_runtime()  # W3b-2：自备关卡运行时（开演用）
+	ensure_stage_runtime()  # 自备关卡运行时（开演用）
 	_build_ui()
 	_toast = STATUS_TOAST.new()
 	add_child(_toast)
@@ -358,7 +358,7 @@ func _clear_all() -> void:
 	if _boss and is_instance_valid(_boss):
 		_boss.queue_free()
 		_boss = null
-	BulletManager.current.clear_all()
+	_bullet_manager.clear_all()
 	_update_stats()
 
 
@@ -379,7 +379,7 @@ func _update_stats() -> void:
 			boss_hp = _boss.get("hp") if _boss.get("hp") != null else -1
 		_stats_label.text = "Boss状态：%s · 弹数 %d · 种子 %d" % [
 			("运行中 hp=%s" % str(boss_hp)) if boss_hp >= 0 else "无",
-			BulletManager.current.active_count(), _seed]
+			_bullet_manager.active_count(), _seed]
 
 
 func _process(delta: float) -> void:

@@ -1,4 +1,4 @@
-## NonMidFleeBehavior（Track A / S4c-3）—— 中boss非符弹丸：
+## NonMidFleeBehavior—— 中boss非符弹丸：
 ## TRAVEL → 靠近自机则 FLEE（沿远离自机方向）→ 靠近 Boss 时散圈并消失。
 ## 移植旧 data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd。
 ## 只 set_velocity；散圈由内容 on_flee_burst 回调入队（KernelBehaviorHost）。
@@ -13,12 +13,12 @@ func process(system: BulletSystem, bullet_id: int, ctx: BehaviorContext) -> void
 	var params: Variant = system.get_behavior_params(bullet_id)
 	if not (params is Dictionary):
 		return
-	var st: Variant = system.get_behavior_state(bullet_id)
-	if not (st is Dictionary):
-		st = {&"skip": 0}
-		system.set_behavior_state(bullet_id, st)
-	st[&"skip"] = int(st[&"skip"]) + 1
-	if int(st[&"skip"]) % CHECK_EVERY != 0:
+	var behavior_state: Variant = system.get_behavior_state(bullet_id)
+	if not (behavior_state is Dictionary):
+		behavior_state = {&"skip": 0}
+		system.set_behavior_state(bullet_id, behavior_state)
+	behavior_state[&"skip"] = int(behavior_state[&"skip"]) + 1
+	if int(behavior_state[&"skip"]) % CHECK_EVERY != 0:
 		return
 	if system.get_behavior_phase(bullet_id) == 0:
 		_travel(system, bullet_id, ctx, params)

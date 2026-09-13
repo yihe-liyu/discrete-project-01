@@ -1,19 +1,16 @@
 # BulletMultiMesh — 用 MultiMeshInstance2D 批量渲染子弹
 # 所有子弹合并为 1 次 draw call（按纹理 × 阵营 × tint_mode 分组）
-# 数据源两路（Track A / S2，Strangler）：
-#   ① 旧：遍历 BulletManager.active_bullets（Bullet 节点）
-#   ② 新：读 KernelBulletBackend 的内核 SoA 快照（backend.system）
-# set_backend() 注入后自动走新路径；两路**共用同一分组键**，批次数才可比对。
+# 数据源：KernelBulletBackend 的内核 SoA 快照（backend.system）；set_backend() 注入后生效。
 extends Node2D
 class_name BulletMultiMesh
 
 ## 是否启用 MultiMesh 批渲染
 @export var enabled: bool = true
 
-## 内核后端（W4a-2 起唯一数据源）。
+## 内核后端（唯一数据源）。
 var backend: KernelBulletBackend
 
-## 宿主阵营常量（原 Bullet.FACTION_*；W4a-2 旧类删除后本地化）
+## 宿主阵营常量（顺序与内核 BulletType.Faction 不同，渲染时显式映射）
 const _FACTION_PLAYER := 0
 const _FACTION_ENEMY := 1
 const _FACTION_BOMB := 2
@@ -21,7 +18,7 @@ const _FACTION_BOMB := 2
 var _groups: Dictionary = {}  # key → {mmi, mm, mesh}
 
 
-## 注入内核后端；null = 回到遍历 Bullet 节点的旧路径。
+## 注入内核后端；null = 无可渲染数据源（不画）。
 func set_backend(b: KernelBulletBackend) -> void:
 	backend = b
 
@@ -42,20 +39,20 @@ func _sync():
 		_sync_kernel()
 
 
-## 新路径（S2）：直接读内核 SoA 快照，不再遍历 Bullet 节点。
+## 直接读内核 SoA 快照（唯一数据源）。
 ## 朝向/颜色语义对齐旧路径（Bullet.bind：rotation = 方向角、modulate = tint，scale = ONE）。
 func _sync_kernel():
-	var sys := backend.system
-	var count: int = sys.get_active_count()
+	var system := backend.system
+	var count: int = system.get_active_count()
 	if count == 0:
 		_hide_all()
 		return
-	var positions := sys.get_positions()
-	var velocities := sys.get_velocities()
-	var colors := sys.get_colors()
-	var type_indices := sys.get_type_indices()
-	var factions := sys.get_factions()
-	var registry := sys.get_type_registry()
+	var positions := system.get_positions()
+	var velocities := system.get_velocities()
+	var colors := system.get_colors()
+	var type_indices := system.get_type_indices()
+	var factions := system.get_factions()
+	var registry := system.get_type_registry()
 	var active_groups: Dictionary = {}
 	for i in count:
 		var ti: int = type_indices[i]
@@ -85,7 +82,7 @@ func _sync_kernel():
 			var rot: float = bt.rotation_for(velocities[r])
 			mm.set_instance_transform_2d(s, Transform2D(rot, Vector2.ONE, 0.0, positions[r]))
 			var c: Color = colors[r]
-			var fade: float = sys.get_render_fade(bt.kind)
+			var fade: float = system.get_render_fade(bt.kind)
 			if fade < 1.0:
 				c.a *= fade
 			mm.set_instance_color(s, c)

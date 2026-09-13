@@ -1,4 +1,4 @@
-## BounceBehavior（Track A / S4c-2）—— 非符1 反弹弹：沿飞行方向加速；碰左/右/上框后
+## BounceBehavior—— 非符1 反弹弹：沿飞行方向加速；碰左/右/上框后
 ## 转向「朝 Boss + bounce_angle」，原地换成直线弹（下墙穿出不反弹）。
 ## 移植旧 data/stages/stage01/bullet/bounce_bullet.gd。
 ## 只 set_velocity；re_fire 走 KernelBehaviorHost 延后队列。

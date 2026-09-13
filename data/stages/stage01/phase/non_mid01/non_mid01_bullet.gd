@@ -8,8 +8,12 @@ extends CoroutineScript
 const PLAYER_PROXIMITY: float = 150.0
 const RING_SPEED: float = 400.0
 
+## 复用弹型实例（M2）
+var _normal_bullet_data: BulletData
+var _red_bullet_data: BulletData
 
-## 内核端口（Track A / S4c-3）：TRAVEL→FLEE + 近 Boss 散圈。散圈逻辑留在内容侧。
+
+## 内核端口：TRAVEL→FLEE + 近 Boss 散圈。散圈逻辑留在内容侧。
 func kernel_port() -> Dictionary:
 	return {
 		"move": &"non_mid_flee",
@@ -26,18 +30,20 @@ func _kernel_on_flee_burst(pos: Vector2, boss_pos: Vector2, has_boss: bool, host
 		return false
 	if pos.distance_to(boss_pos) >= diff_pick([175, 150, 125, 100]):
 		return false
-	var normal := BulletData.new().tex("小玉").speed(RING_SPEED)\
-		.color(Color(0.349, 0.584, 0.798, 1.0)).blend(true).enemy()
+	if _normal_bullet_data == null:
+		_normal_bullet_data = BulletData.new().tex("小玉").speed(RING_SPEED)\
+			.color(Color(0.349, 0.584, 0.798, 1.0)).blend(true).enemy()
 	var rand_dir := Vector2.DOWN.rotated(RNG.randf() * TAU)
-	_kernel_spread(normal, diff_pick([2, 4, 6, 8]), TAU, rand_dir, pos, host)
+	_kernel_spread(_normal_bullet_data, diff_pick([2, 4, 6, 8]), TAU, rand_dir, pos, host)
 	if SaveData.selected_difficulty >= 2:
 		var away := (pos - boss_pos).normalized()
 		var num: int = diff_pick([0, 0, 1, 2])
 		var count: int = diff_pick([0, 0, 4, 8])
+		if _red_bullet_data == null:
+			_red_bullet_data = BulletData.new().tex("棱弹").color(Color.RED).blend(true).enemy()
 		for i in count:
-			var red := BulletData.new().tex("棱弹").speed(RING_SPEED + i * 50)\
-				.color(Color.RED).blend(true).enemy()
-			_kernel_spread(red, num, 1 / TAU / 3, away, pos, host)
+			_red_bullet_data.speed(RING_SPEED + i * 50)  # 速度不属弹型：每发写一次
+			_kernel_spread(_red_bullet_data, num, 1 / TAU / 3, away, pos, host)
 	AudioManager.play_sfx(AssetRegistry.sounds["kira"], -8.0)
 	return true
 

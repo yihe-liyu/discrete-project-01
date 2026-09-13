@@ -7,7 +7,7 @@ var _pages: Array[Texture2D] = []
 var _current: int = 0
 
 @onready var _texture_rect: TextureRect = $"TextureRect"
-@onready var _title: TextureRect = $"TitleTexture"
+@onready var _title_texture: TextureRect = $"TitleTexture"
 
 
 func _ready() -> void:
@@ -19,14 +19,14 @@ func _ready() -> void:
 
 	_texture_rect.texture = _pages[0]
 	_texture_rect.modulate.a = 0.0
-	_title.modulate.a = 0.0
+	_title_texture.modulate.a = 0.0
 
 
 func on_enter() -> void:
 	_fade_overlay_in(0.3)
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(_title, "modulate:a", 1.0, 0.3)
+	tw.tween_property(_title_texture, "modulate:a", 1.0, 0.3)
 	tw.tween_property(_texture_rect, "modulate:a", 1.0, 0.3)
 
 
@@ -34,7 +34,7 @@ func on_leave() -> void:
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_overlay, "modulate:a", 0.0, 0.3)
-	tw.tween_property(_title, "modulate:a", 0.0, 0.3)
+	tw.tween_property(_title_texture, "modulate:a", 0.0, 0.3)
 	tw.tween_property(_texture_rect, "modulate:a", 0.0, 0.3)
 	tw.tween_callback(queue_free)
 

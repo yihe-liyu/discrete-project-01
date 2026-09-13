@@ -31,6 +31,11 @@ var _laser_frame_seq: int = 0             # 帧序列（每轮喷射 +1 → 图�
 var _segments: int = -1                   # 段数缓存（由图集自动算）
 var _segment_textures: Array[AtlasTexture] = []  # 切片缓存（省每段 new）
 
+## 复用弹型实例（M2：内核弹型缓存在 BulletData 实例上，禁止每发 new）
+var _main_bullet_data: BulletData
+var _focus_bullet_data: BulletData
+var _laser_bullets: Array[BulletData] = []
+
 
 func _seg_count() -> int:
 	if _segments < 0:
@@ -59,24 +64,26 @@ func _option_setup() -> Dictionary:
 
 
 func _main_shoot(_ctx: StageContext, player: Player) -> float:
-	var b := BulletData.new().tex("marisa_main").speed(4000).player()
-	b.color(Color(1, 1, 1, 0.5))
-	b.damage = 6
-	b.hit_effect = preload("res://scenes/effect/hit_effect_marisa.tscn")
-	ctx.bullets.shoot_spread(b, 1, 0.0, Vector2.UP, player.global_position + Vector2(-15, 0))
-	ctx.bullets.shoot_spread(b, 1, 0.0, Vector2.UP, player.global_position + Vector2(15, 0))
+	if _main_bullet_data == null:
+		_main_bullet_data = BulletData.new().tex("marisa_main").speed(4000).player()
+		_main_bullet_data.color(Color(1, 1, 1, 0.5))
+		_main_bullet_data.damage = 6
+		_main_bullet_data.hit_effect = preload("res://scenes/effect/hit_effect_marisa.tscn")
+	ctx.bullets.shoot_spread(_main_bullet_data, 1, 0.0, Vector2.UP, player.global_position + Vector2(-15, 0))
+	ctx.bullets.shoot_spread(_main_bullet_data, 1, 0.0, Vector2.UP, player.global_position + Vector2(15, 0))
 	return ctx.clock.wait_frames(MAIN_INTERVAL)
 
 
 func _option_shoot(_ctx: StageContext, _count: int) -> float:
 	if Input.is_action_pressed("focus"):
 		# focus：竖直向上匀加速星弹（初速 + 加速度，每秒加速 —— 数值可调）
-		var b: BulletData = BulletData.new().tex("marisa_opt2").speed(1500).accelerate(0, -5000).player()
-		b.color(Color(1, 1, 1, 0.5))
-		b.damage = 4
-		b.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
-		b.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option02.tscn")
-		_shoot_options(ctx, b, 1, 0.0, Vector2.UP, Vector2.ZERO)
+		if _focus_bullet_data == null:
+			_focus_bullet_data = BulletData.new().tex("marisa_opt2").speed(1500).accelerate(0, -5000).player()
+			_focus_bullet_data.color(Color(1, 1, 1, 0.5))
+			_focus_bullet_data.damage = 4
+			_focus_bullet_data.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
+			_focus_bullet_data.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option02.tscn")
+		_shoot_options(ctx, _focus_bullet_data, 1, 0.0, Vector2.UP, Vector2.ZERO)
 		ctx.audio.play_sfx(AssetRegistry.sounds["msl"], -8.0)
 		return ctx.clock.wait_frames(5)
 	else:
@@ -111,6 +118,24 @@ func _make_laser_segment(i: int) -> AtlasTexture:
 	return _segment_textures[i % _seg_count()]
 
 
+## 段弹型：按帧缓存（同一帧复用同一 BulletData 实例 → 内核弹型表不随发射增长）。
+func _get_laser_bullet(frame: int) -> BulletData:
+	var i: int = frame % _seg_count()
+	while _laser_bullets.size() < _seg_count():
+		var k: int = _laser_bullets.size()
+		var b := BulletData.new().player()
+		b.texture = _make_laser_segment(k)
+		b.color(Color(1, 1, 1, 0.5))
+		b.damage = LASER_DAMAGE
+		b.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option01.tscn")  # 激光专用击中特效
+		# 矩形判定覆盖整段（贴视觉：64x32，旋转后 32x64 竖条）
+		b.hitbox_shape = BulletData.HitboxShape.RECTANGLE
+		b.hitbox_size = Vector2(SEG_W, SEG_H)
+		b.coroutine_script = LASER_FOLLOW
+		_laser_bullets.append(b)
+	return _laser_bullets[i]
+
+
 ## 从指定子机喷出一段激光：段在发射口生成，向上漂移，间距=漂移×间隔（自动无缝）
 func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	# 发射口 = 指定子机（无效时回退自机）
@@ -118,16 +143,7 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 		source = player
 
 	# 本轮共享帧：同轮所有子机图案一致，轮间变换 → 整齐且流动
-	var seg := _make_laser_segment(frame % _seg_count())
-	var b := BulletData.new().player()
-	b.texture = seg
-	b.color(Color(1, 1, 1, 0.5))
-	b.damage = LASER_DAMAGE
-	b.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option01.tscn")  # 激光专用击中特效
-	# 矩形判定覆盖整段（贴视觉：64x32，旋转后 32x64 竖条）
-	b.hitbox_shape = BulletData.HitboxShape.RECTANGLE
-	b.hitbox_size = Vector2(SEG_W, SEG_H)
-	b.coroutine_script = LASER_FOLLOW
+	var b := _get_laser_bullet(frame)
 
 	# 按火力 + 子机索引查发射角度（LASER_ANGLES 表）——旧池/内核共用
 	var opt_idx: int = _options.find(source)
@@ -146,5 +162,5 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	}
 
 	# 段在发射口生成（offset=0），drift 从 0 独立累积 → 根部永远在子机
-	# W4a-2：内核唯一后端（返回 int id）；段参数已走 b.params（见 kernel_port / marisa_laser）
+	# 内核唯一后端（返回 int id）；段参数已走 b.params（见 kernel_port / marisa_laser）
 	ctx.bullets.shoot_spread(b, 1, 0.0, Vector2.UP, source.global_position)

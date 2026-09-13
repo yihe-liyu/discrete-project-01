@@ -1,7 +1,7 @@
 ## BossService —— ctx.boss（无 class_name：使用处 preload 引用，避免 headless 全局类缓存问题）
 extends RefCounted
 ## 关卡 Boss 查询服务 —— ctx.boss 下的"现在场上有没有 Boss / 取哪个"动词。
-## 内容只问"有没有/取哪个"，内部查 StageContext.refs（机制）。
+## 内容只问"有没有/取哪个"，内部查 StageContext.entity_registry（机制）。
 ## 注意：不叫 get() —— 会遮蔽 Object.get(property)，故用 current()/exists()。
 
 var ctx: StageContext
@@ -9,7 +9,7 @@ var ctx: StageContext
 
 ## 当前场上的 Boss（无 → null）
 func current() -> Boss:
-	return ctx.refs.get_boss() if ctx and ctx.refs else null
+	return ctx.entity_registry.get_boss() if ctx and ctx.entity_registry else null
 
 
 ## 当前场上是否有 Boss

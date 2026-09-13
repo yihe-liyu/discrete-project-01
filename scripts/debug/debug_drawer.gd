@@ -6,6 +6,9 @@ extends Node2D
 
 var draw_enabled: bool = false
 var draw_velocity_lines: bool = false  # 速度线（每颗子弹 3 图元，默认关）
+## 由宿主注入（不再读 BulletManager.current / EntityRegistry.current）
+var bullet_manager: BulletManager
+var entity_registry: EntityRegistry
 
 func _ready():
 	set_process(false)  # 默认不开启 _process
@@ -25,17 +28,16 @@ func _draw():
 		return
 
 	# ── 画所有子弹判定（内核行）──
-	var bm := BulletManager.current
-	if bm:
-		var sys := bm.kernel_system()
-		if sys != null:
-			for i in sys.get_active_count():
-				_draw_kernel_bullet_row(sys, i)
+	var manager := bullet_manager
+	if manager:
+		var system := manager.kernel_system()
+		if system != null:
+			for i in system.get_active_count():
+				_draw_kernel_bullet_row(system, i)
 
 	# ── 画所有敌人判定 ──
-	var refs := EntityRegistry.current
-	if refs:
-		for enemy in refs.get_active_enemies():
+	if entity_registry:
+		for enemy in entity_registry.get_active_enemies():
 			if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 				continue
 			var radius: float = enemy.get("hitbox_radius") if "hitbox_radius" in enemy else 8.0
@@ -43,8 +45,8 @@ func _draw():
 			draw_circle(enemy.global_position, 2.0, Color.GREEN)
 
 	# ── 画玩家判定 ──
-	if refs:
-		var player = refs.player
+	if entity_registry:
+		var player = entity_registry.player
 		if is_instance_valid(player):
 			var r: float = player.get("hitbox_radius") if "hitbox_radius" in player else 2.0
 			var gr: float = player.get("graze_radius") if "graze_radius" in player else 24.0
@@ -53,11 +55,11 @@ func _draw():
 			draw_circle(player.global_position, 2.0, Color.CYAN)
 
 	# 左上角显示弹幕计数
-	if bm:
+	if manager:
 		draw_string(
 			ThemeDB.fallback_font,
 			Vector2(64, 64),
-			"弹幕数: %d" % bm.active_count(),
+			"弹幕数: %d" % manager.active_count(),
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1,
 			32,
@@ -66,14 +68,14 @@ func _draw():
 
 
 ## 单颗内核子弹判定（轻量）
-func _draw_kernel_bullet_row(sys: BulletSystem, i: int) -> void:
-	var ti: int = sys.get_type_indices()[i]
+func _draw_kernel_bullet_row(system: BulletSystem, i: int) -> void:
+	var ti: int = system.get_type_indices()[i]
 	if ti < 0:
 		return
-	var bt: BulletType = sys.get_type_registry()[ti]
-	var vel: Vector2 = sys.get_velocities()[i]
+	var bt: BulletType = system.get_type_registry()[ti]
+	var vel: Vector2 = system.get_velocities()[i]
 	var rot: float = bt.rotation_for(vel)
-	var center: Vector2 = sys.get_positions()[i] + bt.hitbox_offset.rotated(rot)
+	var center: Vector2 = system.get_positions()[i] + bt.hitbox_offset.rotated(rot)
 	if bt.hitbox_size != Vector2.ZERO:
 		draw_set_transform(center, rot, Vector2.ONE)
 		draw_rect(Rect2(-bt.hitbox_size / 2.0, bt.hitbox_size), Color.RED, false, 1.0)

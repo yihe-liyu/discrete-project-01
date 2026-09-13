@@ -1,4 +1,4 @@
-## RadialAccelBehavior（Track A / S4c-1）—— 沿初发射方向加速；碰顶边原地换成向下弹。
+## RadialAccelBehavior—— 沿初发射方向加速；碰顶边原地换成向下弹。
 ## 移植旧 data/stages/stage01/bullet/radial_accel_bullet.gd。
 ## 只 set_velocity；re_fire 走 KernelBehaviorHost 延后队列（内核循环中途禁止增删行）。
 ## params（内容给的）：accel_rate | spawn_data(BulletData 模板) | sfx | sfx_db
@@ -14,18 +14,18 @@ func process(system: BulletSystem, bullet_id: int, _ctx: BehaviorContext) -> voi
 	var delta: float = system.get_delta()
 	if delta <= 0.0:
 		return
-	var st: Variant = system.get_behavior_state(bullet_id)
-	if not (st is Dictionary):
+	var behavior_state: Variant = system.get_behavior_state(bullet_id)
+	if not (behavior_state is Dictionary):
 		var dir0: Vector2 = system.get_velocity(bullet_id).normalized()
 		if dir0 == Vector2.ZERO:
 			return   # 无初速：保持静止（与旧行为一致）
-		st = {&"dir": dir0}
-		system.set_behavior_state(bullet_id, st)
+		behavior_state = {&"dir": dir0}
+		system.set_behavior_state(bullet_id, behavior_state)
 	if system.get_position(bullet_id).y <= GameConfig.FIELD_TOP:
 		_re_fire_down(system, bullet_id, params)
 		return
 	var accel_rate: float = params.get(&"accel_rate", 0.0)
-	system.set_velocity(bullet_id, system.get_velocity(bullet_id) + st[&"dir"] * accel_rate * delta)
+	system.set_velocity(bullet_id, system.get_velocity(bullet_id) + behavior_state[&"dir"] * accel_rate * delta)
 
 
 ## 碰顶边：入队一颗向下匀速弹（保留速度大小），并请求回收自己。

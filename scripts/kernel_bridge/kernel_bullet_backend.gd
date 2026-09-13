@@ -1,12 +1,11 @@
-## KernelBulletBackend（Track A / S1）——宿主侧适配：BulletData（原项目）→ BulletType（内核）。
+## KernelBulletBackend——宿主侧适配：BulletData → BulletType。
 ##
-## 边界（见 scripts/kernel/README.md）：内核不认识 BulletData；映射只发生在**本文件**（宿主桥接层）。
-## 缓存按**内容签名**而非实例——原项目两种用法并存：enemy01 复用同一实例并改速度，
-## reimu_shoot / non01_shoot 每发 `BulletData.new()`；按实例缓存会让内核弹型表每发长一个。
+## 边界（见 scripts/kernel/README.md）：内核不认识 BulletData；弹型由 `BulletData.to_bullet_type()` 在
+## **内容侧**产出并缓存（内容须复用 BulletData 实例；每发 new 会让内核弹型表每发长一个）。
 ##
-## S4a 起：`coroutine_script` 走 duck-typed `kernel_port()` 端口映射到内核行为；
+## `coroutine_script` 走 duck-typed `kernel_port()` 端口映射到内核行为（可选覆盖）；
 ## `BulletData.accel` 走桥接 `world_accel`。未映射（无端口）仍按直线发射并计入 unmapped。
-## 渲染不在本类：纹理走**旁表**（`texture_for_index`），S2 把它喂给原项目 BulletMultiMesh。
+## 渲染不在本类：纹理走**旁表**（`texture_for_index`），把它喂给原项目 BulletMultiMesh。
 class_name KernelBulletBackend
 extends Node
 
@@ -22,30 +21,29 @@ const KernelBehaviorHostClass = preload("res://scripts/kernel_bridge/kernel_beha
 const _MOVE_WORLD_ACCEL := &"world_accel"
 const _MOVE_LASER := &"marisa_laser"
 
-## 内核弹池。默认本机新建；S3 交由 BulletManager 注入/接管。
+## 内核弹池。默认本机新建；交由 BulletManager 注入/接管。
 var system: BulletSystem
-## W4b-3b：实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
-var refs: EntityRegistry
-## W4c：弹幕世界（BulletManager 注入）——bomb 宿主节点反查用
-var world: BulletManager
-## 未映射行为（有 coroutine_script 或 accel）的发射次数——S4 前用来看覆盖面。
+## 实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
+var entity_registry: EntityRegistry
+## 弹幕世界（BulletManager 注入）——bomb 宿主节点反查用
+var bullet_manager: BulletManager
+## 未映射行为（有 coroutine_script 或 accel）的发射次数——前用来看覆盖面。
 var unmapped_behavior_count: int = 0
 
-var _type_by_sig: Dictionary = {}              # 内容签名(int) → BulletType
 var _texture_by_index: Array[Texture2D] = []   # 内核弹型下标 → 贴图（渲染旁表；M3 前保留）
 
-## S4a：内核行为注册表 + 上下文（由 BulletManager 装配；见 docs §21.4）。
+## 内核行为注册表 + 上下文（由 BulletManager 装配）。
 var behavior: BehaviorProcessor
 var behavior_ctx: BehaviorContext
 ## 内容签名 → 端口（{move, params} / 预留 {program}）；按 Script×params 缓存，不每发 instantiate。
 var _port_by_sig: Dictionary = {}
 ## 端口探测实例：端口的 params 里可能带 Callable（工厂）→ 必须保活，否则回调失效。
 var _port_probes: Array[Node] = []
-## S4c：桥接行为的延后动作队列（re_fire / 分裂不能在内核行为循环中途做）。
+## 桥接行为的延后动作队列（re_fire / 分裂不能在内核行为循环中途做）。
 var _behavior_host
-## S4c-4：魔理沙激光整批渐隐控制器。
+## 魔理沙激光整批渐隐控制器。
 var _laser_fade
-## S4d：宿主节点 bomb（不进内核池；out_grace 缘由见 docs §21.17）。
+## 宿主节点 bomb（不进内核池；内核 cull 无 per-type 宽限）。
 var _bombs: Array[Node] = []
 
 
@@ -55,7 +53,7 @@ func _ready() -> void:
 
 ## 当前自机的单局资源（经注册表取）；无自机 = null
 func _player_res() -> PlayerResources:
-	return refs.get_player_resources() if refs != null else null
+	return entity_registry.get_player_resources() if entity_registry != null else null
 
 
 func _exit_tree() -> void:
@@ -65,12 +63,12 @@ func _exit_tree() -> void:
 	_port_probes.clear()
 
 
-## S4d：生成宿主节点 bomb（返回节点，供调用方忽略/持有）。
+## 生成宿主节点 bomb（返回节点，供调用方忽略/持有）。
 func spawn_bomb(data: BulletData, pos: Vector2, direction: Vector2) -> Node:
 	var bomb: Node2D = KernelBombClass.new()
-	bomb.refs = refs
-	bomb.world = world
-	bomb.fx_parent = world.fx_parent if world else null
+	bomb.entity_registry = entity_registry
+	bomb.bullet_manager = bullet_manager
+	bomb.fx_parent = bullet_manager.fx_parent if bullet_manager else null
 	add_child(bomb)
 	_bombs.append(bomb)
 	bomb.setup(data, pos, direction)
@@ -112,7 +110,7 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	if data == null:
 		return -1
 	_ensure_system()
-	var type := type_for(data)
+	var type := data.to_bullet_type()
 	var speed: float = data.velocity.length()
 	var vel: Vector2 = direction.normalized() * speed if direction != Vector2.ZERO else data.velocity
 	var move: StringName = &""
@@ -120,7 +118,7 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	if data.coroutine_script != null:
 		var port: Dictionary = _port_for(data)
 		if port.has("program"):
-			unmapped_behavior_count += 1   # S4 预留：VM 未实现，先直线
+			unmapped_behavior_count += 1   # 预留：VM 未实现，先直线
 		elif port.has("move"):
 			move = port.get("move")
 			params = port.get("params", null)
@@ -144,71 +142,15 @@ func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return id
 
 
-## 取（或按内容签名新建）内核弹型：同内容 → 同实例（内核弹型表不随发射膨胀）。
-func type_for(data: BulletData) -> BulletType:
-	var sig: int = signature_of(data)
-	var cached: BulletType = _type_by_sig.get(sig)
-	if cached != null:
-		return cached
-	var bt := _make_type(data)
-	_type_by_sig[sig] = bt
-	return bt
-
-
-## 内核弹型下标 → 贴图（S2 渲染旁表；未映射/越界 = null）。
+## 内核弹型下标 → 贴图（渲染旁表；未映射/越界 = null）。
 func texture_for_index(index: int) -> Texture2D:
 	if index < 0 or index >= _texture_by_index.size():
 		return null
 	return _texture_by_index[index]
 
 
-## 内容签名：只含决定 BulletType 的字段（**不含** velocity / tint——它们随每次发射传入）。
-## M1 起含 damage / hit_sfx —— 它们已是弹型字段，漏掉会让"同贴图不同伤害"的弹共用缓存。
-func signature_of(data: BulletData) -> int:
-	var h: int = hash(data.texture)
-	h = h * 31 + int(data.faction)
-	h = h * 31 + int(data.tint_mode)
-	h = h * 31 + int(data.hitbox_shape)
-	h = h * 31 + hash(data.hitbox_radius)
-	h = h * 31 + hash(data.hitbox_size)
-	h = h * 31 + hash(data.hitbox_offset)
-	h = h * 31 + hash(data.hitbox_rotation)
-	h = h * 31 + hash(data.hit_effect)
-	h = h * 31 + hash(data.damage)
-	h = h * 31 + hash(data.hit_sfx)
-	return h
-
-
-func _make_type(data: BulletData) -> BulletType:
-	var bt := BulletType.new()
-	bt.faction = _map_faction(data.faction)
-	bt.tint_mode = BulletType.TintMode.BLEND if data.tint_mode == BulletData.TintMode.BLEND \
-			else BulletType.TintMode.MULTIPLY
-	bt.hitbox_radius = data.hitbox_radius
-	bt.hitbox_offset = data.hitbox_offset
-	# 内核语义：非零 hitbox_size = 矩形；原项目默认 size(8,8) 但 shape=CIRCLE，必须归零。
-	bt.hitbox_size = data.hitbox_size if data.hitbox_shape == BulletData.HitboxShape.RECTANGLE \
-			else Vector2.ZERO
-	bt.follow_dir = true
-	bt.hit_fx = data.hit_effect
-	# M1：宿主专有字段进弹型（内核只存不解释）
-	bt.damage = data.damage
-	bt.hit_sfx = StringName(data.hit_sfx)
-	return bt
-
-
-func _map_faction(f: int) -> BulletType.Faction:
-	match f:
-		BulletData.Faction.ENEMY:
-			return BulletType.Faction.ENEMY
-		BulletData.Faction.PLAYER:
-			return BulletType.Faction.PLAYER
-		_:
-			return BulletType.Faction.NONE   # BOMB：原项目靠协程自爆，S4 再接
-
-
 ## 装配内核行为管道（幂等；可重复调以刷新自机引用）。
-## 优先级：内核积分 -10 → 行为 -5 → 宿主碰撞 0（原项目无 FrameOrder，见 docs §21.4）。
+## 优先级：内核积分 -10 → 行为 -5 → 宿主碰撞 0（靠显式 process_physics_priority 定序）。
 func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	_ensure_system()
 	if behavior_ctx == null:

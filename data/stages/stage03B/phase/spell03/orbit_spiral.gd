@@ -27,6 +27,8 @@ var _growth: float = -1.0  # 当前外扩速度（-1 哨兵：首次取 radius_g
 var _hold_left: float = 0.0  # 剩余保持时间（>0 = 外圈空转阶段）
 var _inited: bool = false    # 难度模式初始化（首帧按当前难度决定）
 var _always_hold: bool = false  # H/L：全程外圈转（永续 hold）
+## 复用弹型实例（M2）
+var _probe_bullet_data: BulletData
 
 
 func _tick(p_ctx: StageContext):
@@ -77,17 +79,18 @@ func _tick(p_ctx: StageContext):
 	if min_fire_distance > 0.0 and p and emit_pos.distance_to(p.global_position) < min_fire_distance:
 		return p_ctx.clock.wait(itv)
 
-	# ── 子弹定义（往返探测弹行为）──
-	var bullet := BulletData.new() \
-		.tex("环玉") \
-		.speed(bullet_speed) \
-		.color(Color.BLUE_VIOLET) \
-		.blend(true) \
-		.enemy() \
-		.behavior(PROBE) \
-		.grace(4)
+	# ── 子弹定义（往返探测弹行为；复用实例）──
+	if _probe_bullet_data == null:
+		_probe_bullet_data = BulletData.new() \
+			.tex("环玉") \
+			.speed(bullet_speed) \
+			.color(Color.BLUE_VIOLET) \
+			.blend(true) \
+			.enemy() \
+			.behavior(PROBE) \
+			.grace(4)
 	# hold 阶段（含 H/L 全程）发射的探测弹：注入标记 → 分裂时 15% 可转自机狙
-	bullet.params["hold_aim_probe"] = _hold_left > 0.0 and hard
+	_probe_bullet_data.params["hold_aim_probe"] = _hold_left > 0.0 and hard
 
 	# ── 主发射：probe_count 颗铺满圆（按难度取）；hold 阶段 + hold_count_bonus ──
 	var count: int = diff_pick(probe_count)
@@ -98,6 +101,6 @@ func _tick(p_ctx: StageContext):
 		p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"], -8.0)
 		var step := TAU / count
 		for i in count:
-			p_ctx.bullets.shoot_spread(bullet, 1, 0.0, dir.rotated(step * i), emit_pos)
+			p_ctx.bullets.shoot_spread(_probe_bullet_data, 1, 0.0, dir.rotated(step * i), emit_pos)
 
 	return p_ctx.clock.wait(itv)

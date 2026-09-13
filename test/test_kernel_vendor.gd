@@ -1,6 +1,6 @@
 extends GutTest
-## S0：弹幕内核（scripts/kernel/）已 vendor 进原项目，且能**独立** new / spawn / 查询。
-## 目的：证明内核不依赖原项目任何 autoload / 实体层（决策备忘 §10.2、scripts/kernel/README.md）。
+## 弹幕内核（scripts/kernel）已 vendor 进原项目，且能**独立** new / spawn / 查询。
+## 目的：证明内核不依赖原项目任何 autoload / 实体层（决策备忘、scripts/kernel/README.md）。
 
 
 func _make_type() -> BulletType:

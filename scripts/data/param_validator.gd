@@ -1,7 +1,7 @@
 ## ParamValidator —— 参数注入校验（无 class_name，使用处 preload 引用）。
 extends RefCounted
 
-## 参数注入校验（C4：把"类型不匹配静默失效"变成"校验 + 响亮报错"）。
+## 参数注入校验（把"类型不匹配静默失效"变成"校验 + 响亮报错"）。
 ## 用法：把注入点原来那个 `for k in params: if k in script: script.set(...)`
 ##       替换成 `ParamValidator.apply(script, params)`。
 ## - 未在脚本属性列表里的键 → 静默跳过（共享字典跨脚本合法：PhaseData.params 同灌 move+shoot，

@@ -18,20 +18,28 @@ var blend: bool = false          ## 加色混合（视觉效果：弹幕质感�
 var speed: float = 300.0         ## 初速 px/s
 var dir: Vector2 = Vector2.DOWN  ## 发射方向（自由角度；右键场地设指向 / 8 方位预设快捷）
 
+## 按配置缓存（M2：弹型缓存在 BulletData 实例上，连发不得每发 new）
+var _bullet_data: BulletData
+var _cache_key: String = ""
 
-## 组装 BulletData（外形侧 + 可选行为脚本）
+
+## 组装 BulletData（外形侧 + 可选行为脚本）。按配置缓存实例：
+## 配置不变 → 同一实例（内核弹型表不随连发膨胀）；配置变 → 换新实例。
 ## 贴图≡判定：enemy() 不覆盖 hitbox（引擎现行为）→ tex 配置的判定/偏移生效，
 ## 与游戏内敌弹一致（测试锁定 6.0）
 func build(behavior_script: Script = null) -> BulletData:
-	var d := BulletData.new()
-	d.tex(tex_key)               # 贴图 + 判定 + 偏移 一体
-	d.color(tint)
-	d.blend(blend)
-	d.speed(speed)
-	d.enemy()
-	if behavior_script:
-		d.behavior(behavior_script)
-	return d
+	var key := "%s|%s|%s|%s|%s" % [tex_key, tint, blend, speed, behavior_script]
+	if _bullet_data == null or key != _cache_key:
+		_bullet_data = BulletData.new()
+		_bullet_data.tex(tex_key)               # 贴图 + 判定 + 偏移 一体
+		_bullet_data.color(tint)
+		_bullet_data.blend(blend)
+		_bullet_data.speed(speed)
+		_bullet_data.enemy()
+		if behavior_script:
+			_bullet_data.behavior(behavior_script)
+		_cache_key = key
+	return _bullet_data
 
 
 ## 当前发射方向向量

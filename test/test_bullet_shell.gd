@@ -1,5 +1,5 @@
 extends GutTest
-## BulletShell（弹幕试验台"壳"）测试（M2a）—— 自由方向 + 显示辅助
+## BulletShell（弹幕试验台"壳"）测试—— 自由方向 + 显示辅助
 
 const SHELL = preload("res://scripts/workbench/bullet_shell.gd")
 

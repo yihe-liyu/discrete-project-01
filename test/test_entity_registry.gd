@@ -1,5 +1,5 @@
 extends GutTest
-## W4b-3/4：EntityRegistry —— 自机 / 敌机 / Boss 的运行时单一真源（当前世界经 static current 解析）。
+## 4：EntityRegistry —— 自机 / 敌机 / Boss 的运行时单一真源（经 StageContext.stage 显式绑定解析）。
 
 
 func test_register_unregister_and_query():
@@ -40,16 +40,17 @@ func test_clear_frees_enemies_keeps_player():
 	p.free()
 
 
-func test_stageless_context_falls_back_to_current_world():
-	var saved: EntityRegistry = EntityRegistry.current
+func test_context_refs_read_bound_stage():
 	var reg := EntityRegistry.new()
-	EntityRegistry.current = reg
+	var rt := StageRuntime.new()
+	autofree(rt)
+	rt.entity_registry = reg
 	var runner := CoroutineRunner.new()
 	var ctx := StageContext.new(runner)
-	assert_eq(ctx.refs, reg, "无 stage 的 ctx 回退到当前世界注册表")
+	ctx.stage = rt   # 显式绑定，不再回退 EntityRegistry.current
+	assert_eq(ctx.entity_registry, reg, "ctx.entity_registry 应取绑定 stage 的注册表")
 	var p: Player = load("res://scenes/player.tscn").instantiate()
 	reg.bind_player(p)
 	assert_eq(ctx.player.get_player(), p, "自机射击 ctx 能解析到自机")
-	EntityRegistry.current = saved   # 还原
 	runner.free()
 	p.free()

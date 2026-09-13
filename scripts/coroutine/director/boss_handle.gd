@@ -10,20 +10,20 @@ extends RefCounted
 var _key: String
 var data: BossData
 var _hide_name: String = "？？？"
-## 命名槽位注册表（W2：由 StageDirector 注入其 ctx.objects；为空则 resolve 恒 null）
-var _objects: StageObjects
+## 命名槽位注册表（由 StageDirector 注入其 ctx.objects；为空则 resolve 恒 null）
+var _stage_objects: StageObjects
 
 func _init(p_key: String, p_data: BossData, p_hide: String = "？？？", p_objects: StageObjects = null) -> void:
 	_key = p_key
 	data = p_data
 	_hide_name = p_hide
-	_objects = p_objects
+	_stage_objects = p_objects
 
 ## 从命名槽位解析当前 Boss（未注册/已亡 → null）
 func resolve() -> Boss:
-	if _objects == null:
+	if _stage_objects == null:
 		return null
-	return _objects.resolve_as(_key, Boss)
+	return _stage_objects.resolve_as(_key, Boss)
 
 ## Boss 是否已在场上
 func exists() -> bool:

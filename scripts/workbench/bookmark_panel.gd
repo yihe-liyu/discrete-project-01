@@ -20,7 +20,7 @@ var _auto: Array = []
 var _manual: Array = []
 var _list: ItemList
 var _menu: PopupMenu
-var _dialog: DialogHost
+var _dialog_host: DialogHost
 var _menu_index := -1
 
 
@@ -42,8 +42,8 @@ func _init() -> void:
 	_menu = PopupMenu.new()
 	_menu.id_pressed.connect(_on_menu_id)
 	add_child(_menu)
-	_dialog = DialogHost.new()
-	add_child(_dialog)
+	_dialog_host = DialogHost.new()
+	add_child(_dialog_host)
 
 
 ## 设置书签（主控制器加载缓存/收集完成后调用）
@@ -113,7 +113,7 @@ func open_add(t: float = -1.0) -> void:
 	if cur < 0.0:
 		var runner: CoroutineScript = stage_runtime.current_stage_script() if is_instance_valid(stage_runtime) else null
 		cur = runner.game_time() if runner else 0.0
-	var vb := _dialog.open("◆ 添加书签")
+	var vb := _dialog_host.open("◆ 添加书签")
 	# 时刻输入（默认当前/点击处，可自选）
 	var time_row := HBoxContainer.new()
 	time_row.add_child(WorkbenchUI.label("时刻"))
@@ -124,7 +124,7 @@ func open_add(t: float = -1.0) -> void:
 	var line := LineEdit.new()
 	line.placeholder_text = "名称（如：Boss 最难点）"
 	vb.add_child(line)
-	_dialog.add_actions("确定", func():
+	_dialog_host.add_actions("确定", func():
 		var t_use: float = time_edit.text.to_float()
 		if not is_finite(t_use) or t_use < 0.0:
 			t_use = cur
@@ -135,7 +135,7 @@ func open_add(t: float = -1.0) -> void:
 		log_requested.emit("◆ 添加书签：%s" % label)
 		_emit_changed()
 	)
-	line.text_submitted.connect(func(_s: String): _dialog.confirm())  # 回车确认
+	line.text_submitted.connect(func(_s: String): _dialog_host.confirm())  # 回车确认
 	time_edit.grab_focus()
 	time_edit.select_all()
 
@@ -143,11 +143,11 @@ func open_add(t: float = -1.0) -> void:
 func _open_rename(index: int) -> void:
 	var meta: Dictionary = _list.get_item_metadata(index)
 	var is_manual: bool = meta.get("is_manual", false)
-	var vb := _dialog.open("＊ 重命名书签")
+	var vb := _dialog_host.open("＊ 重命名书签")
 	var line := LineEdit.new()
 	line.text = meta.label
 	vb.add_child(line)
-	_dialog.add_actions("确定", func():
+	_dialog_host.add_actions("确定", func():
 		var new_label := line.text.strip_edges()
 		if new_label.is_empty():
 			return
@@ -162,19 +162,19 @@ func _open_rename(index: int) -> void:
 		log_requested.emit("＊ 重命名书签：%s" % new_label)
 		_emit_changed()
 	)
-	line.text_submitted.connect(func(_s: String): _dialog.confirm())
+	line.text_submitted.connect(func(_s: String): _dialog_host.confirm())
 	line.grab_focus()
 	line.select_all()
 
 
 func _open_delete_confirm(index: int) -> void:
 	var meta: Dictionary = _list.get_item_metadata(index)
-	var vb := _dialog.open("× 删除书签")
+	var vb := _dialog_host.open("× 删除书签")
 	var msg := Label.new()
 	msg.text = "确定删除「%s」？" % meta.label
 	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vb.add_child(msg)
-	_dialog.add_actions("确定", func(): _delete_at(index))
+	_dialog_host.add_actions("确定", func(): _delete_at(index))
 
 
 func _delete_at(index: int) -> void:

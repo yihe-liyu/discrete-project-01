@@ -93,11 +93,12 @@
 
 | 写入 | 落点 | 例子 |
 |---|---|---|
-| **需要副作用**（转发子模块 / 重建装配 / 校验 / 统一断开） | **只读属性 + `inject_*()` / `setup_*()` 方法**；方法即唯一写入口 | `BulletManager.inject_fx_pool()` / `inject_world_refs()`；`BehaviorProcessor.setup()` / `LaserEngine.setup()` |
-| **纯赋值**（组合根把已建好的节点挂上，无副作用） | 允许**裸 public var**，但必须 `##` 注明「组合根注入」 | `StageRuntime.world` / `bullets` / `miss_layer` / `fx_pool` / `ui_layer`；`BulletManager.fx_parent` |
+| **需要副作用**（转发子模块 / 重建装配 / 校验 / 统一断开） | **只读属性 + `inject_*()` / `setup_*()` 方法**；方法即唯一写入口 | `BulletManager.inject_fx_pool()` / `inject_entity_registry()`；`BehaviorProcessor.setup()` / `LaserEngine.setup()` |
+| **纯赋值**（组合根把已建好的节点挂上，无副作用） | 允许**裸 public var**，但必须 `##` 注明「组合根注入」 | `StageRuntime.world` / `bullet_manager` / `miss_layer` / `fx_pool` / `ui_layer`；`BulletManager.fx_parent` |
 
 > `ctx.*` 服务（`RefCounted`）由 `StageContext` 懒建 + 回填，不自行摸全局。
-> 有意例外：`StageContext.effects` getter 每次访问把 `StageRuntime` 的 Miss / FX 层回填给服务，供「无 stage 的共享 ctx」回退。
+> 有意例外：`StageContext.effects` getter 每次访问把**绑定 `stage`** 的 Miss / FX 层回填给服务（保持最新）。
+> **P2（2026-09-13）**：`StageContext` 不再回退 `BulletManager.current` / `StageRuntime.current` / `EntityRegistry.current`；无 stage 的 ctx（自机射击 / 子弹共享 ctx）由宿主显式绑 stage（`Player.bind_ctx` / `BulletManager.inject_stage_runtime`）。
 
 ---
 
@@ -108,7 +109,7 @@
 | 对象 | 规则 |
 |---|---|
 | **私有字段**（`_x`，实现细节） | `_` + **类型名 snake**：`EntityRegistry` → `_entity_registry`；`KernelBulletBackend` → `_kernel_bullet_backend`；`LaserEngine` → `_laser_engine` |
-| **公开字段 / 属性**（对外 API、`ctx.*` 门面） | **允许角色名**（意图层，见 §3）：`ctx.bullets` / `ctx.player` / `ctx.audio` / `ctx.effects` / `ctx.stage` / `ctx.objects`、`BulletService.world`。判据：**出现在内容（`data/**`）或文档里吗** → 是则角色名，改名等于破坏 API |
+| **公开字段 / 属性**（对外状态） | **同样类型派生、不缩写**（2026-09-13 拍板）：`refs` → `entity_registry`；`world` / `bullets` → `bullet_manager`。**唯一豁免 = `ctx.*` 意图门面**（见 §3：`ctx.bullets` / `ctx.player` / `ctx.audio`… 是设计好的动词域，不是随手缩写） |
 | **场景节点引用**（`@onready`） | 节点名 snake + `_`：`%FxPool` → `_fx_pool`。**节点名与变量名不符 = 有一方错**：变量错就改变量；节点名太弱（`UI`）或不具体就先改节点 |
 | **类型是内置基类**（`Node2D`/`Control`/`Sprite2D`…） | 节点名赢：`muzzle: Marker2D = $Muzzle` ✅ |
 | **同类型多实例** | `限定词_类型snake`（`stage_entity_registry`）—— 同作用域内必须可区分 |
@@ -119,9 +120,10 @@
 | **函数** | 取值 `get_*`；判定 `is_*` / `has_*`；动作动词开头；事件处理 `_on_*` |
 
 > **缩写白名单（封闭）**：`ctx`（`StageContext`）+ 索引 `i`/`j`/`k`。其余一律不缩写 —— `refs` / `world` / `bullets` / `sys` / `sd` / `st` / `bm` / `bg` / `nav` / `tl` 都算违规。
+> **适用范围**：私有字段、公开状态字段、局部变量都适用；仅 `ctx.*` 门面豁免（2026-09-13 拍板）。**状态字段已收敛**（`refs`→`entity_registry`、`world`/`bullets`→`bullet_manager`）；**局部极短名已清**（`sd`→`stage_data`、`st`→`stage`/`behavior_state`、`bm`→`bullet_manager`/`bookmarks`、`bg`→`background`/`stage_background`、`tl`→`timeline`）；工作台自身本地名按决定不动。`tl` 改名连带 `bookmark_extractor` 正则 → `timeline\.at(`。
 > **形参遮蔽成员** → 加 `p_` 前缀（`p_ctx` 遮蔽 `CoroutineScript.ctx`）；**真的不用** → 单 `_`（`_ctx`）；**禁止叠加** `_p_`。
 > **单字母 / 极短名**：只允许「单行表达式 / 热路径循环」作用域（`bullet_system` 的 `p`/`r`/`s`）；跨行、跨函数、字段一律全名。
-> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI）。违规清单见文末 🔴 待改进。
+> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI）。**当前 0 条**（2026-09-13 收敛）；它只覆盖私有字段 / `@onready` / 节点名三类——**公开字段与局部缩写需人工守**（本表 + 白名单）；`scripts/kernel/**` 是 vendor 快照，不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
 
 ---
 
@@ -232,8 +234,7 @@
 - [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
 - [ ] R2（残余）：`item_service.gd:16` / `player.gd:286` 用 `current_scene.get_node_or_null("World")` 取 World，可改注入
 - [ ] 编排路线（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生（工作台仍正则扫源码）/ Step 6 `ctx.background` 注入服务 待做；Step 5 命令化时间线 + Step 7 命令编辑器 = 可选 / 产品决定，暂缓
-- [ ] **内核融合（M1–M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：`scripts/kernel_bridge/` **979 行 ≈ 内核 1212 行的 80%** + 两套弹型词汇（`BulletData` 19 字段 vs `BulletType` 13 字段）+ 5 张侧表 + 6 个 `kernel_port` → 目标 **≤300 行且只放宿主耦合规则**；判据见 §16.5
-- [ ] 命名契约（`bash tools/check_naming.sh`，当前 **91 条**）：私有字段名 **67** / 同类型多个私有字段名 **13 组**（`EntityRegistry` = `_refs`·`_world_refs`、`BulletManager` = `_bullets`·`_world`…）/ `@onready` 变量名 ≠ 节点名 **8**（`%MissCircleLayer` → `_miss_layer`、`%BulletManager` → `_bullets`、`$UI` → `_game_ui`…）/ 节点名非 PascalCase **3**（`$roll`·`$roll2`·`$logo`）
+- [ ] **内核融合（M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：M1（`damage`/`hit_sfx` 进弹型）+ **M2（词汇合一：`BulletData.to_bullet_type()`，删 `type_for`/`signature_of`/`_type_by_sig`）已完成**；余 `scripts/kernel_bridge/` **906 行** + `_texture_by_index`（渲染/纹理归属 = M3）+ `_port_by_sig` + 6 个 `kernel_port` → 目标 **≤300 行且只放宿主耦合规则**；判据见 §16.5
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
 > - **R14「存档写 res://」已不成立**：`save_manager.gd` 用 `user://save_data.cfg`，**从 TODO 移除**。

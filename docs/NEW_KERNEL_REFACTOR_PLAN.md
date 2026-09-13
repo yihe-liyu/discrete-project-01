@@ -572,12 +572,12 @@ func kernel_port() -> Dictionary:
 | 指标 | 现在 | 融合目标 |
 |---|---|---|
 | `scripts/kernel/` | 14 文件 / **1219** 行（零宿主引用；M1 后） | 保持零宿主引用 |
-| `scripts/kernel_bridge/` | 11 文件 / **964** 行（M1 后；原 979 ≈ 内核 80%） | ≤ **300** 行，且只放**宿主耦合**（Boss / SaveData / 选项节点 / bomb / fx） |
-| 弹型词汇 | `BulletData`(19 字段) vs `BulletType`(13 字段) | **一个**类型 |
-| 桥接侧表 | `_type_by_sig` / `_texture_by_index` / ~~`_damage_by_index`~~ / ~~`_hit_sfx_by_index`~~（M1 已删）/ `_port_by_sig` | 无 `*_by_index`（余 `_texture_by_index`，随 M3）；签名缓存随词汇合一消失 |
+| `scripts/kernel_bridge/` | 11 文件 / **906** 行（M2 后；M1 时 964 / 原 979） | ≤ **300** 行，且只放**宿主耦合**（Boss / SaveData / 选项节点 / bomb / fx） |
+| 弹型词汇 | ✅ **M2 已合一**：`BulletData.to_bullet_type()` 产出并缓存 `BulletType`（~~19 vs 13 字段~~） | 保持一个类型 |
+| 桥接侧表 | `_texture_by_index` / `_port_by_sig`（`_type_by_sig` / `_damage_by_index` / `_hit_sfx_by_index` 已删） | 无 `*_by_index`（余 `_texture_by_index`，随 M3）；`_port_by_sig` 随 VM/端口收口 |
 | 内容翻译 | 6 个脚本 `func kernel_port()` | 退为**可选覆盖**（VM 预留 `program` 除外） |
 
-> 判据一句话：**桥接只该放「宿主耦合的规则」，不该放「两个词汇之间的翻译」。** 现在两者都放，所以有 979 行。
+> 判据一句话：**桥接只该放「宿主耦合的规则」，不该放「两个词汇之间的翻译」。** M2 后翻译层已删，桥接剩 906 行（多为宿主行为桥 + 侧表），继续朝 ≤300 行收。
 
 ### 16.2 为什么现在能做（当初为什么不能）
 
@@ -612,14 +612,14 @@ S3 选 A 方案（§14.3）是为了**保住「内核零改动」这个可回退
 - **量**：内核 1212 → **1219**；桥接 979 → **964**。
 - **没做**：`out_grace` 仍暂缓（bomb 走宿主节点，用不到）。
 
-#### M2 —— 词汇合一：`BulletData` ⇄ `BulletType`
-- 方向二选一（**待拍板**）：
-  - **(a) `BulletData extends BulletType`**：内容层构造链（`.enemy().tex().speed()`）全保留，宿主专有字段留子类；桥接从"映射"降为"登记"。
-  - **(b) `BulletData` 退化成构造助手**，最终产出 `BulletType`：更彻底，但内容层 6 个 port + `bullets.shoot_*` 签名要动。
-- **删**：`type_for()` / `signature_of()` / `_type_by_sig`（内容直接给弹型，不再需要"按内容签名缓存"）。
-- **降级**：`kernel_port()` 从"翻译表"变成"可选覆盖"（默认走数据；只有内容要声明内核行为时才实现）。
-- 验收：全量 GUT + 试玩 stage01 / 魔理沙激光 / 非符1；`grep -rn 'type_for\|signature_of' scripts/` = 0。
-- 回滚点：M1 完成后的 commit。
+#### M2 —— 词汇合一：`BulletData` ⇄ `BulletType` ✅ **已完成（2026-09-13）**
+- **方向 (b)**：`BulletData` 退化成**构造助手**，`to_bullet_type()` 产出 `BulletType`（在实例上缓存）。
+- **删**：`type_for()` / `signature_of()` / `_type_by_sig` 全部移除；映射逻辑从桥接搬进 `BulletData._build_bullet_type()`。
+- **内容契约收紧**：弹型缓存在 **BulletData 实例**上 → 内容**必须复用实例**（禁止每发 `new`），否则内核弹型表每发长一个。已改 13 个内容文件（player 射击 / enemy01–04 / non01 / non_mid01 / bounce / radial / orbit / bullet_shell）。
+- **降级**：`kernel_port()` 本就是可选覆盖（无端口 → 直线；`accel` → `world_accel`）。
+- **量**：桥接 964 → **906** 行；`_texture_by_index`（M3）+ `_port_by_sig` 保留。
+- 验收：`grep -rn 'type_for\|signature_of' scripts/` = **0**；`verify.sh` 全绿（312 测试）；`check_naming` 0。
+- 试玩验证：待人工跑 stage01 / 魔理沙激光 / 非符1。
 
 #### M3 —— 渲染 / 纹理归属（**先决策，再动手**）
 - 现状：内核 `BulletType.texture_key`（图集语义）vs 宿主 `_texture_by_index`（独立 PNG + `BulletMultiMesh`）。内核当初**有意不带渲染**（hybrid，决策备忘 §10.4）。

@@ -4,7 +4,7 @@ extends BasePage
 @onready var _stage_box: VBoxContainer = $StageBox
 @onready var _phase_box: VBoxContainer = $PhaseBox
 @onready var _diff_box: VBoxContainer = $DiffBox
-@onready var _char_label: Label = $CharPanel/CharName
+@onready var _char_name: Label = $CharPanel/CharName
 
 enum Section { STAGE, PHASE, DIFF }
 var _section: int = Section.STAGE
@@ -40,7 +40,7 @@ var _pulse_tween: Tween
 
 func on_enter() -> void:
 	modulate.a = 0.0
-	_char_label.text = "← %s →" % CHAR_NAMES[_char_index]
+	_char_name.text = "← %s →" % CHAR_NAMES[_char_index]
 	_build_data()
 	_build_lists()
 	_highlight()
@@ -157,10 +157,10 @@ func _build_lists() -> void:
 		_clear(_phase_box)
 		return
 
-	for st in _stages:
-		var lbl := _make_label("Stage %d" % st)
+	for stage in _stages:
+		var lbl := _make_label("Stage %d" % stage)
 		# 级联：该 stage 所有 phase 全收 → 正蓝（部分完成不显示中间色）
-		if _stage_capture_state(st) == 2:
+		if _stage_capture_state(stage) == 2:
 			lbl.add_theme_color_override("font_color", CAPTURE_FULL)
 		_stage_box.add_child(lbl)
 	_build_phase_list()
@@ -265,13 +265,13 @@ func _make_label(text: String) -> Label:
 
 ## phase 状态：该 phase 在花名册里所有难度槽的练习收取
 ## 全部收 → 2；部分 → 1；无 → 0。锁定 "?" 槽计 0 收取（该难度也收齐才整条蓝）
-func _phase_capture_all(st: int, boss: int, phase_idx: int) -> int:
-	var candidate: Array = _candidate_diffs(BossCatalog.boss_of_phase(st, phase_idx))
+func _phase_capture_all(stage: int, boss: int, phase_idx: int) -> int:
+	var candidate: Array = _candidate_diffs(BossCatalog.boss_of_phase(stage, phase_idx))
 	if candidate.is_empty():
 		return 0  # 花名册未收录，无法判定
 	var captured := 0
 	for d in candidate:
-		var r: SpellRecord = SaveData.spell_book.get_record(st, phase_idx, boss, _char_index, d)
+		var r: SpellRecord = SaveData.spell_book.get_record(stage, phase_idx, boss, _char_index, d)
 		if r and r.practice_captures > 0:
 			captured += 1
 	if captured == candidate.size():
@@ -282,12 +282,12 @@ func _phase_capture_all(st: int, boss: int, phase_idx: int) -> int:
 
 
 ## stage 状态：所有 phase 全收 → 2；有任意收取 → 1；无 → 0
-func _stage_capture_state(st: int) -> int:
+func _stage_capture_state(stage: int) -> int:
 	var book := SaveData.spell_book
 	var keys: Array = []
 	var any_captured := false
 	for rec in book.records:
-		if rec.stage != st or rec.character != _char_index:
+		if rec.stage != stage or rec.character != _char_index:
 			continue
 		if rec.practice_captures > 0:
 			any_captured = true
@@ -299,7 +299,7 @@ func _stage_capture_state(st: int) -> int:
 	var done_count := 0
 	for k in keys:
 		total += 1
-		if _phase_capture_all(st, k.boss, k.phase) == 2:
+		if _phase_capture_all(stage, k.boss, k.phase) == 2:
 			done_count += 1
 	if done_count == total:
 		return 2
@@ -455,7 +455,7 @@ func _candidate_diffs(boss: BossData) -> Array[int]:
 
 
 func _refresh_char() -> void:
-	_char_label.text = "← %s →" % CHAR_NAMES[_char_index]
+	_char_name.text = "← %s →" % CHAR_NAMES[_char_index]
 	_section = Section.STAGE
 	_stage_index = 0
 	_phase_index = 0

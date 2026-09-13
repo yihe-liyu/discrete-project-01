@@ -1,5 +1,5 @@
 extends GutTest
-## W3a：AssetRegistry 去 autoload（→ `class_name` 静态表）。验证静态访问仍可用。
+## AssetRegistry 去 autoload（→ `class_name` 静态表）。验证静态访问仍可用。
 
 func test_no_longer_autoload() -> void:
 	assert_false(ProjectSettings.has_setting("autoload/AssetRegistry"),

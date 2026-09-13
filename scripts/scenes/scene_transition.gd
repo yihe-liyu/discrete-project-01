@@ -28,10 +28,13 @@ func _setup_transition() -> void:
 	layer.add_child(_transition_rect)
 
 
-func change_scene(path: String, current_scene_path: String, on_scene_left: Callable) -> String:
-	var bm := BulletManager.current
-	if bm:
-		bm.pause_processing()
+## 世界由调用方（GameManager 组合根）经回调登记/操作，transition 不再读 .current 全局。
+## on_pause_world/on_clear_world 作用于**切出**的世界；on_resume_world 作用于**切入**的世界。
+func change_scene(path: String, current_scene_path: String, on_scene_left: Callable,
+		on_pause_world: Callable = Callable(), on_clear_world: Callable = Callable(),
+		on_resume_world: Callable = Callable()) -> String:
+	if on_pause_world.is_valid():
+		on_pause_world.call()
 	_parent.get_tree().paused = true
 
 	if current_scene_path != "":
@@ -39,28 +42,24 @@ func change_scene(path: String, current_scene_path: String, on_scene_left: Calla
 
 	await _fade_out()
 
-	if is_instance_valid(bm):
-		bm.clear_all()
-	var refs := EntityRegistry.current
-	if refs:
-		refs.clear()
+	if on_clear_world.is_valid():
+		on_clear_world.call()
 
 	var err := _parent.get_tree().change_scene_to_file(path)
 	if err != OK:
 		# 场景加载失败：回滚暂停状态，避免永久黑屏
 		push_error("SceneTransition: 场景切换失败 %s (%s)" % [path, error_string(err)])
 		_parent.get_tree().paused = false
-		if is_instance_valid(bm):
-			bm.resume_processing()
+		if on_resume_world.is_valid():
+			on_resume_world.call()
 		return current_scene_path if current_scene_path != "" else path
 	await _parent.get_tree().process_frame
 
 	await _fade_in()
 
 	_parent.get_tree().paused = false
-	var new_bm := BulletManager.current
-	if new_bm:
-		new_bm.resume_processing()
+	if on_resume_world.is_valid():
+		on_resume_world.call()
 
 	return path
 

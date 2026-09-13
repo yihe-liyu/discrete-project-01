@@ -28,7 +28,7 @@ func bgm(key: String) -> StageDirector:
 func boss(key: String, data: BossData, from: Vector2, to: Vector2,
 		hide: String = "？？？") -> BossHandle:
 	if ctx.stage == null:
-		push_warning("StageDirector.boss: ctx.stage 未装配（W3b-2 后由 StageRuntime 回填）")
+		push_warning("StageDirector.boss: ctx.stage 未装配（由 StageRuntime 回填）")
 		return BossHandle.new(key, data, hide, ctx.objects)
 	var b := ctx.stage.spawn_boss(data, from, ctx) as Boss
 	ctx.objects.register(key, b, Boss)

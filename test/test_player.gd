@@ -20,17 +20,17 @@ func test_player_data_applied():
 
 func test_setup_character_same_is_idempotent():
 	var player := _make_player()
-	var shoot := player._shoot_script
+	var shoot := player._player_shoot_script
 	assert_not_null(shoot, "自举后应已有射击脚本")
 	player.setup_character(player.player_data)
-	assert_eq(player._shoot_script, shoot, "同机体重复 setup 不应重建射击脚本（避免组合根重复初始化）")
+	assert_eq(player._player_shoot_script, shoot, "同机体重复 setup 不应重建射击脚本（避免组合根重复初始化）")
 
 
 func test_setup_character_switches_rebuilds_shoot():
 	var player := _make_player()
-	var shoot := player._shoot_script
+	var shoot := player._player_shoot_script
 	player.setup_character(load("res://data/player_data/marisa_data.tres"))
-	assert_ne(player._shoot_script, shoot, "换机体应重建射击脚本")
+	assert_ne(player._player_shoot_script, shoot, "换机体应重建射击脚本")
 	assert_eq(player.player_data.resource_path, "res://data/player_data/marisa_data.tres", "player_data 应切到新机体")
 
 func test_move_left():

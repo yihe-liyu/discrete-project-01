@@ -28,18 +28,18 @@ func test_pause_freezes_dialogue_wait_timer():
 	await wait_seconds(0.6)  # 淡入 + runner 启动 + 第一句
 
 	box._advance()  # "A" 说完 → 进入 WAIT 步骤
-	assert_true(box._runner.is_waiting_time, "应停在 WAIT 计时")
+	assert_true(box._dialogue_runner.is_waiting_time, "应停在 WAIT 计时")
 
 	# 暂停：_runner.tick 应被跳过，计时冻结
 	GameManager.current_state = GameManager.AppState.PAUSED
 	box._process(0.6)  # 若计时未被冻结，0.6 ≥ 0.5 会到点
-	assert_true(box._runner.is_waiting_time, "暂停期间 WAIT 计时应冻结（未到点）")
+	assert_true(box._dialogue_runner.is_waiting_time, "暂停期间 WAIT 计时应冻结（未到点）")
 
 	# 恢复：计时继续，0.6 ≥ 0.5 → 推进到下一句
 	GameManager.current_state = GameManager.AppState.PLAYING
 	box._process(0.6)
-	assert_true(box._runner.is_waiting_line, "恢复后应停在下一句（等待输入）")
-	assert_eq(box._runner.current_line().bubbles[0].text, "B", "下一句应为 B")
+	assert_true(box._dialogue_runner.is_waiting_line, "恢复后应停在下一句（等待输入）")
+	assert_eq(box._dialogue_runner.current_line().bubbles[0].text, "B", "下一句应为 B")
 
 	GameManager.current_state = old
 	box._close()

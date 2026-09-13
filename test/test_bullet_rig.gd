@@ -1,5 +1,5 @@
 extends GutTest
-## 弹幕试验台热更新（M2b）集成测试：重载成功自动重演 / 失败保留旧版
+## 弹幕试验台热更新集成测试：重载成功自动重演 / 失败保留旧版
 
 const RIG := preload("res://scripts/workbench/bullet_bench.gd")
 

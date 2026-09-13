@@ -22,12 +22,12 @@ func get_all() -> Array[StageData]:
 func validate() -> Array[String]:
 	var errs: Array[String] = []
 	var seen: Dictionary = {}
-	for st in stages:
-		if st == null:
+	for stage in stages:
+		if stage == null:
 			errs.append("StageRegistry 含空 StageData 条目")
 			continue
-		if seen.has(st.stage_id):
-			errs.append("StageRegistry 中 stage_id = %d 重复" % st.stage_id)
-		seen[st.stage_id] = true
-		errs.append_array(st.validate())
+		if seen.has(stage.stage_id):
+			errs.append("StageRegistry 中 stage_id = %d 重复" % stage.stage_id)
+		seen[stage.stage_id] = true
+		errs.append_array(stage.validate())
 	return errs

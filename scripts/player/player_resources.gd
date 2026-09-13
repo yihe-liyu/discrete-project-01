@@ -1,5 +1,5 @@
 ## 单局资源状态：火力 / 分数 / 擦弹 / 残机 / 雷 / 碎片 / 记忆。
-## W4b-1：从 SaveData 抽出——单一 owner，所有资源只经显式入口修改（R18）。
+## 从 SaveData 抽出——单一 owner，所有资源只经显式入口修改（R18）。
 ## RefCounted：单局内存状态，不进存档。
 class_name PlayerResources
 extends RefCounted

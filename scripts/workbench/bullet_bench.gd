@@ -1,5 +1,5 @@
 extends "res://scripts/workbench/bench_base.gd"
-## 弹幕试验台（M2a）—— 选行为（脚本）× 换外形（贴图/染色/初速/方向）× 发射点 × 幽灵玩家（鼠标跟随）
+## 弹幕试验台—— 选行为（脚本）× 换外形（贴图/染色/初速/方向）× 发射点 × 幽灵玩家（鼠标跟随）
 ## 跑真实 BulletManager：子弹飞行/碰撞/擦弹/自定义行为 全部真实；所见即最终效果。
 ## 快捷键：F=发射 · C=清场 · 点击场地=设发射点
 
@@ -272,12 +272,12 @@ func _fire() -> void:
 	_shell.speed = _speed_spin.value
 	var data: BulletData = _shell.build(_cur_script)
 	data.params = _param_panel.collect()
-	BulletManager.current.shoot_bullet(data, _emitter_pos, _shell.get_dir())
+	_bullet_manager.shoot_bullet(data, _emitter_pos, _shell.get_dir())
 	_update_stats()
 
 
 func _clear_all() -> void:
-	BulletManager.current.clear_all()
+	_bullet_manager.clear_all()
 	_update_stats()
 
 
@@ -293,7 +293,7 @@ func _next_seed() -> void:
 
 func _update_stats() -> void:
 	if _stats_label:
-		_stats_label.text = "场上弹数：%d · 种子：%d" % [BulletManager.current.active_count(), _seed]
+		_stats_label.text = "场上弹数：%d · 种子：%d" % [_bullet_manager.active_count(), _seed]
 
 
 func _process(delta: float) -> void:
@@ -306,7 +306,7 @@ func _process(delta: float) -> void:
 	_update_stats()
 
 
-# ═══ 热更新（M2b）：保存脚本 → 自动重载重演 ═══
+# ═══ 热更新：保存脚本 → 自动重载重演 ═══
 
 func _on_script_changed(_idx: int) -> void:
 	_set_current_script()
@@ -387,7 +387,7 @@ func _main_watch_path() -> String:
 func _on_hot_reloaded(main_new: Script) -> void:
 	_cur_script = main_new
 	_param_panel.rebuild(_cur_script)  # 脚本参数变更同步
-	BulletManager.current.clear_all()
+	_bullet_manager.clear_all()
 	RNG.set_seed(_seed)
 	_fire()
 	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))

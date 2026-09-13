@@ -137,15 +137,17 @@ func _exit_tree() -> void:
 func _clear_view() -> void:
 	if _view == null:
 		return
+	var bullet_manager: BulletManager = _view.get("_bullet_manager")   # 整关/试验台都有 _bullet_manager（不读 .current）
 	if _current_slot == 0:
 		_view.stop_stage()
-		BulletManager.current.clear_all()
+		if bullet_manager: bullet_manager.clear_all()
 		AudioManager.stop_bgm()
 		_view.queue_free()
 	else:
-		BulletManager.current.clear_all()
-		var refs := EntityRegistry.current
-		for enemy in (refs.get_active_enemies() if refs else []):
+		if bullet_manager: bullet_manager.clear_all()
+		var rt: StageRuntime = _view.get("_stage_runtime")
+		var entity_registry: EntityRegistry = rt.entity_registry if rt else null
+		for enemy in (entity_registry.get_active_enemies() if entity_registry else []):
 			if is_instance_valid(enemy):
 				enemy.queue_free()
 		_view.visible = false

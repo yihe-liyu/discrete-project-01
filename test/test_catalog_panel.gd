@@ -1,5 +1,5 @@
 extends GutTest
-## CatalogPanel 目录树渲染测试（M1.5：组头完整 / 重名消歧）
+## CatalogPanel 目录树渲染测试（.5：组头完整 / 重名消歧）
 
 const PANEL := preload("res://scripts/workbench/catalog_panel.gd")
 

@@ -1,4 +1,4 @@
-## WorldAccelBehavior（Track A / S4a）—— 世界方向匀加速（承接旧 BulletData.accel 与 gravity_bullet）。
+## WorldAccelBehavior—— 世界方向匀加速（承接旧 BulletData.accel 与 gravity_bullet）。
 ##
 ## 边界：本文件是宿主桥接层；内核无 world-accel 行为，故放这里（内核保持零改动）。
 ## params（发射时传）：&"world_accel": Vector2（px/s²；零 = 匀速）。

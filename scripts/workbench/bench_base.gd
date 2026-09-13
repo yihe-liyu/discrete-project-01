@@ -13,11 +13,11 @@ const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 var _world_offset := Vector2.ZERO
 
 var _field: Control
-var _ghost: Player
-## 关卡运行时（W3b-2：组合台自备，门面已移除）
+var _player: Player
+## 关卡运行时（组合台自备，门面已移除）
 var _stage_runtime: StageRuntime
-## W4c：本台的弹幕世界（组合台自持；standalone 也能跑）
-var _bullets: BulletManager
+## 本台的弹幕世界（组合台自持；standalone 也能跑）
+var _bullet_manager: BulletManager
 
 
 # ═══ 创作台工作区接口（子类覆写；CreationStation 统一调用，R6 公开虚函数）═══
@@ -160,12 +160,12 @@ func _do_hot_reload() -> void:
 
 ## 建本台的弹幕世界（幂等）：standalone 工作台无 autoload，需自建
 func ensure_bullet_world() -> BulletManager:
-	if _bullets != null:
-		return _bullets
-	_bullets = BulletManager.new()
-	_bullets.name = "BulletManager"
-	add_child(_bullets)
-	return _bullets
+	if _bullet_manager != null:
+		return _bullet_manager
+	_bullet_manager = BulletManager.new()
+	_bullet_manager.name = "BulletManager"
+	add_child(_bullet_manager)
+	return _bullet_manager
 
 
 ## 建组合台的关卡运行时（幂等）：生成目标 = BenchWorld。_ready 里调用。
@@ -185,9 +185,10 @@ func ensure_stage_runtime() -> StageRuntime:
 ## 场地 + 幽灵（鼠标跟随 = 自机狙目标）搭建；返回场地
 func build_world() -> Control:
 	ensure_stage_runtime()  # 保证本台有关卡运行时（子弹台不显式建：幽灵/注册表注入依赖它）
-	_bullets = ensure_bullet_world()
-	_bullets.fx_parent = _stage_runtime.world
-	_stage_runtime.bullets = _bullets
+	_bullet_manager = ensure_bullet_world()
+	_bullet_manager.fx_parent = _stage_runtime.world
+	_stage_runtime.bullet_manager = _bullet_manager
+	_bullet_manager.inject_stage_runtime(_stage_runtime)   # 共享子弹 ctx 显式绑本台 stage
 	RIG_COMMON.add_stage_bg(self)
 	# 场地：直接子节点绝对定位；(0,0) 起、832x928 → 局部坐标=游戏坐标
 	_field = Control.new()
@@ -197,17 +198,17 @@ func build_world() -> Control:
 	_field.gui_input.connect(_on_field_input)
 	_field.draw.connect(_on_field_draw)
 	add_child(_field)
-	_ghost = PLAYER_SCENE.instantiate()
-	_ghost.set_script(GHOST)
-	_ghost.name = "GhostPlayer"
-	_ghost.set("mode", 1)  # GhostPlayer.Mode.MOUSE（AUTO=0/MOUSE=1/STATIC=2；静态类型 Player 无 mode，用 set 动态写）
-	_ghost.player_data = REIMU_DATA  # 必须：Player._ready 会应用角色数据
-	_ghost.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
-	_ghost.z_index = 30
-	_field.add_child(_ghost)
+	_player = PLAYER_SCENE.instantiate()
+	_player.set_script(GHOST)
+	_player.name = "GhostPlayer"
+	_player.set("mode", 1)  # GhostPlayer.Mode.MOUSE（AUTO=0/MOUSE=1/STATIC=2；静态类型 Player 无 mode，用 set 动态写）
+	_player.player_data = REIMU_DATA  # 必须：Player._ready 会应用角色数据
+	_player.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
+	_player.z_index = 30
+	_field.add_child(_player)
 	# 幽灵（自机）→ 关卡实体注册表；注册表 → 内核弹幕后端
-	_stage_runtime.refs.bind_player(_ghost)
-	_bullets.inject_world_refs(_stage_runtime.refs)
+	_stage_runtime.entity_registry.bind_player(_player)
+	_bullet_manager.inject_entity_registry(_stage_runtime.entity_registry)
 	return _field
 
 

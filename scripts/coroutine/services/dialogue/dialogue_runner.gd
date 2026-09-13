@@ -18,7 +18,7 @@ var state := StageState.new()
 
 var _steps: Array[DialogueStep] = []
 var _idx: int = -1
-var _current_line: DialogueLine = null
+var _dialogue_line: DialogueLine = null
 var _wait_left: float = 0.0
 var _auto_left: float = 0.0
 
@@ -30,7 +30,7 @@ func start(steps: Array[DialogueStep]) -> void:
 	state = StageState.new()
 	_steps = steps
 	_idx = -1
-	_current_line = null
+	_dialogue_line = null
 	is_waiting_line = false
 	is_waiting_time = false
 	_advance()
@@ -55,7 +55,7 @@ func advance() -> void:
 
 
 func current_line() -> DialogueLine:
-	return _current_line
+	return _dialogue_line
 
 
 func is_finished() -> bool:
@@ -67,7 +67,7 @@ func _advance() -> void:
 	is_waiting_time = false
 	_idx += 1
 	if _idx >= _steps.size():
-		_current_line = null
+		_dialogue_line = null
 		finished.emit()
 		return
 	_exec(_steps[_idx])
@@ -81,7 +81,7 @@ func _exec(step: DialogueStep) -> void:
 				push_warning("DialogueRunner: LINE 步骤缺少台词数据")
 				_advance()
 				return
-			_current_line = line
+			_dialogue_line = line
 			var speakers: Array = state.apply_line(line)
 			_auto_left = line.auto_advance
 			state_changed.emit(state, 0.0)

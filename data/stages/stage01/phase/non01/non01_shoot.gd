@@ -19,6 +19,9 @@ var _ring_index: int = 0     # 本波已发圈数 → 本圈附加角 = _bounce_
 var _wave_sign: int = 1  # 本波正负号（_fire_burst 开头翻转并定死，整波统一）
 var _base_dir: Vector2
 
+## 复用弹型实例（M2）
+var _bullet_data: BulletData
+
 
 func _tick(p_ctx: StageContext):
 	if not target:
@@ -63,13 +66,14 @@ func _fire_ring(p_ctx: StageContext) -> void:
 	var bounce_angle: float = diff_pick(_bounce_step) * (_ring_index - diff_pick(_burst_count) / 2) * _wave_sign
 	_ring_index += 1
 
-	var bullet := BulletData.new()\
-		.tex("棱弹")\
-		.speed(speed)\
-		.color(Color.AQUA)\
-		.blend(true)\
-		.enemy()\
-		.behavior(preload("res://data/stages/stage01/bullet/bounce_bullet.gd"))
-	bullet.params = {"bounce_angle": bounce_angle, "accel": _bullet_accel - _ring_index * 3}
+	if _bullet_data == null:
+		_bullet_data = BulletData.new()\
+			.tex("棱弹")\
+			.color(Color.AQUA)\
+			.blend(true)\
+			.enemy()\
+			.behavior(preload("res://data/stages/stage01/bullet/bounce_bullet.gd"))
+	_bullet_data.speed(speed)  # 速度随圈递增：每圈写一次（速度不属弹型）
+	_bullet_data.params = {"bounce_angle": bounce_angle, "accel": _bullet_accel - _ring_index * 3}
 
-	p_ctx.bullets.shoot_spread(bullet, count, TAU, _base_dir, target.global_position)
+	p_ctx.bullets.shoot_spread(_bullet_data, count, TAU, _base_dir, target.global_position)

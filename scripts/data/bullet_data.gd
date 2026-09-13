@@ -97,3 +97,46 @@ func behavior(v: Script) -> BulletData:
 func grace(v: float) -> BulletData:
 	self.out_grace = v
 	return self
+
+
+# ═══ 内核弹型（词汇合一：BulletData 是构造助手，产出 BulletType）═══
+
+## 本实例的内核弹型（首次调用时构建并缓存）。
+## 同实例 → 同 BulletType，内核弹型表不随发射膨胀；**内容必须复用 BulletData 实例**。
+## 类型级字段（faction / tint_mode / 判定 / hit_effect / damage / hit_sfx）首次调用时快照；
+## 运行期再改这些字段需 `invalidate_bullet_type()`。速度 / tint / params 不属弹型，随每次发射传入。
+var _bullet_type: BulletType
+
+
+func to_bullet_type() -> BulletType:
+	if _bullet_type == null:
+		_bullet_type = _build_bullet_type()
+	return _bullet_type
+
+
+## 类型级字段变更后失效缓存（复用实例 + 运行期改型时才需要）。
+func invalidate_bullet_type() -> void:
+	_bullet_type = null
+
+
+func _build_bullet_type() -> BulletType:
+	var bt := BulletType.new()
+	bt.faction = _map_faction()
+	bt.tint_mode = BulletType.TintMode.BLEND if tint_mode == TintMode.BLEND else BulletType.TintMode.MULTIPLY
+	bt.hitbox_radius = hitbox_radius
+	bt.hitbox_offset = hitbox_offset
+	# 内核语义：非零 hitbox_size = 矩形；本类默认 size(8,8) 但 shape=CIRCLE，必须归零。
+	bt.hitbox_size = hitbox_size if hitbox_shape == HitboxShape.RECTANGLE else Vector2.ZERO
+	bt.follow_dir = true
+	bt.hit_fx = hit_effect
+	# 宿主专有字段进弹型（内核只存不解释）
+	bt.damage = damage
+	bt.hit_sfx = StringName(hit_sfx)
+	return bt
+
+
+func _map_faction() -> BulletType.Faction:
+	match faction:
+		Faction.ENEMY: return BulletType.Faction.ENEMY
+		Faction.PLAYER: return BulletType.Faction.PLAYER
+		_: return BulletType.Faction.NONE   # BOMB：炸弹走宿主节点

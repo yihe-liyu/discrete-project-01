@@ -1,5 +1,5 @@
 extends GutTest
-## S1：KernelBulletBackend —— BulletData→BulletType 映射 / 内容签名复用 / 纹理旁表 / 速度语义。
+## KernelBulletBackend —— BulletData→BulletType 映射 / 内容签名复用 / 纹理旁表 / 速度语义。
 ## 目的：证明「原项目内容 API」能被内核驱动，而不改原项目任何现有路径（纯增量）。
 
 
@@ -13,16 +13,23 @@ func _enemy_data() -> BulletData:
 	return BulletData.new().enemy().blend(true).tex("小玉")
 
 
-func test_type_reused_by_content_signature() -> void:
+func test_type_reused_per_bullet_data() -> void:
 	var b := _make_backend()
-	# 两次「不同实例、同内容」——必须复用同一个内核弹型（原项目每发都 new BulletData）
-	var t1 := b.type_for(_enemy_data())
-	var t2 := b.type_for(_enemy_data())
-	assert_same(t1, t2, "同内容应复用内核弹型")
-	b.shoot(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
-	b.shoot(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
-	assert_eq(b.system.get_type_registry().size(), 1, "内核弹型表不应随发射增长")
+	# M2：弹型缓存在 BulletData **实例**上 —— 同实例复用同一内核弹型
+	var d := _enemy_data()
+	assert_same(d.to_bullet_type(), d.to_bullet_type(), "同一 BulletData 应复用内核弹型")
+	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
+	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
+	assert_eq(b.system.get_type_registry().size(), 1, "复用实例 → 弹型表不随发射增长")
 	assert_eq(b.system.get_active_count(), 2, "两发应占两行")
+
+
+func test_distinct_instances_own_distinct_types() -> void:
+	var b := _make_backend()
+	# 契约收紧：不再按内容签名兜底 —— 内容**必须复用实例**，不得每发 new
+	b.shoot(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
+	b.shoot(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
+	assert_eq(b.system.get_type_registry().size(), 2, "每发 new 实例 = 各自弹型")
 
 
 func test_shoot_velocity_follows_direction_not_data_axis() -> void:
@@ -46,9 +53,9 @@ func test_texture_side_table() -> void:
 
 func test_faction_mapping() -> void:
 	var b := _make_backend()
-	assert_eq(b.type_for(BulletData.new().enemy()).faction, BulletType.Faction.ENEMY, "enemy → ENEMY")
-	assert_eq(b.type_for(BulletData.new().player()).faction, BulletType.Faction.PLAYER, "player → PLAYER")
-	assert_eq(b.type_for(BulletData.new().bomb()).faction, BulletType.Faction.NONE, "bomb → NONE（S4 再接）")
+	assert_eq(BulletData.new().enemy().to_bullet_type().faction, BulletType.Faction.ENEMY, "enemy → ENEMY")
+	assert_eq(BulletData.new().player().to_bullet_type().faction, BulletType.Faction.PLAYER, "player → PLAYER")
+	assert_eq(BulletData.new().bomb().to_bullet_type().faction, BulletType.Faction.NONE, "bomb → NONE（炸弹走宿主节点）")
 
 
 func test_rect_hitbox_only_when_rect_shape() -> void:
@@ -56,28 +63,28 @@ func test_rect_hitbox_only_when_rect_shape() -> void:
 	var circle := BulletData.new().enemy()
 	circle.hitbox_shape = BulletData.HitboxShape.CIRCLE
 	circle.hitbox_size = Vector2(8, 8)   # 原项目默认值，但判定是圆
-	assert_eq(b.type_for(circle).hitbox_size, Vector2.ZERO, "圆判定时内核 hitbox_size 必须归零")
+	assert_eq(circle.to_bullet_type().hitbox_size, Vector2.ZERO, "圆判定时内核 hitbox_size 必须归零")
 	var rect := BulletData.new().enemy()
 	rect.hitbox_shape = BulletData.HitboxShape.RECTANGLE
 	rect.hitbox_size = Vector2(48, 24)
-	assert_eq(b.type_for(rect).hitbox_size, Vector2(48, 24), "矩形判定时保留尺寸")
+	assert_eq(rect.to_bullet_type().hitbox_size, Vector2(48, 24), "矩形判定时保留尺寸")
 
 
-## S4a：`BulletData.accel` 已映射到 `world_accel`，不再计未映射。
+## `BulletData.accel` 已映射到 `world_accel`，不再计未映射。
 func test_accel_field_mapped_since_s4a() -> void:
 	var b := _make_backend()
 	var d := _enemy_data()
 	d.accel = Vector2(0, -100)
 	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
-	assert_eq(b.unmapped_behavior_count, 0, "S4a 起 accel 已映射，不应计未映射")
+	assert_eq(b.unmapped_behavior_count, 0, "accel 已映射，不应计未映射")
 	assert_eq(b.system.get_move_name(b.system.get_behavior_id(0)), &"world_accel", "应挂 world_accel")
 
 
-## 无内核端口的行为应计数并走直线（测试夹具，独立于 S4 进度）。
+## 无内核端口的行为应计数并走直线（测试夹具，独立于进度）。
 func test_unmapped_behavior_counted() -> void:
 	var b := _make_backend()
 	var d := _enemy_data()
 	d.coroutine_script = preload("res://test/fixtures/no_port_behavior.gd")
 	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
-	assert_eq(b.unmapped_behavior_count, 1, "无端口行为应计数（供 S4 覆盖率观察）")
+	assert_eq(b.unmapped_behavior_count, 1, "无端口行为应计数（覆盖率观察）")
 	assert_eq(b.system.get_behavior_id(0), BulletSystem.BEHAVIOR_NONE, "未映射应无行为（直线）")

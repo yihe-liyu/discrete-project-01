@@ -29,12 +29,12 @@ var hp: int:
 var hitbox_radius: float:
 	get: return _hitbox_radius
 
-var _ctx: StageContext
+var _stage_context: StageContext
 ## 战场实体注册表（StageRuntime 注入；直接实例化时为 null）——自机 / 资源 / 敌机登记
 var registry
-## K4：HUD 层（StageRuntime 注入；工作台/测试可为 null）——位置指示器挂此
+## HUD 层（StageRuntime 注入；工作台/测试可为 null）——位置指示器挂此
 var ui_layer: CanvasLayer
-var _current_phase: PhaseData
+var _phase_data: PhaseData
 var _pos_indicator: Sprite2D  # Boss 位置指示器（x 跟随 Boss，y 固定游戏框底）
 var _bonus: int = 0
 var _elapsed: float = 0.0
@@ -42,35 +42,35 @@ var _invincible: bool = false
 var _phase_missed: bool = false   # 本阶段内玩家是否 miss 过（东方规则：miss 即失败尝试、miss 后击破不算收取）
 var _open_reduce_left: float = 0.0   # 开局减伤剩余时长（秒）
 var _open_reduce_ratio: float = 0.0  # 开局减伤比例（0~1）
-var _move: CoroutineRunner
-var _shoot: CoroutineRunner
+var _move_coroutine_runner: CoroutineRunner
+var _shoot_coroutine_runner: CoroutineRunner
 var _stage_id: int
-var _pid: PhaseIdentity
+var _phase_identity: PhaseIdentity
 var _exit_controlled: bool = false
 var _cleared: bool = false
 
-func current_phase() -> PhaseData: return _current_phase
+func current_phase() -> PhaseData: return _phase_data
 
 ## 关卡上下文（含本次时钟 ctx.runner —— 练习/工作台清理用）。只读。
 var ctx: StageContext:
-	get: return _ctx
+	get: return _stage_context
 
 
-## 战场实体注册表：优先注入的 `registry`，否则关卡 ctx 自带的（W4b-2b）
+## 战场实体注册表：优先注入的 `registry`，否则关卡 ctx 自带的
 func _refs():
 	if registry != null:
 		return registry
-	return _ctx.refs if _ctx else null
+	return _stage_context.entity_registry if _stage_context else null
 
 
 ## Boss 残血（供命中音效等）：血量 < 当前阶段满血的 45%，且非无敌/非时符
 func is_low_hp() -> bool:
-	if _invincible or not _current_phase or _current_phase.is_timeout_only:
+	if _invincible or not _phase_data or _phase_data.is_timeout_only:
 		return false
-	return _current_phase.hp > 0 and float(_hp) < _current_phase.hp * 0.45
+	return _phase_data.hp > 0 and float(_hp) < _phase_data.hp * 0.45
 func current_bonus() -> int: return _bonus
 func get_elapsed() -> float: return _elapsed
-func get_phase_id() -> PhaseIdentity: return _pid
+func get_phase_id() -> PhaseIdentity: return _phase_identity
 
 
 ## 显示名：运行时覆盖优先，否则用 boss_data.boss_name（UI/外部系统只读这个）
@@ -93,7 +93,7 @@ func set_exit_controlled() -> void:
 
 func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	_boss_data = data
-	_ctx = p_ctx
+	_stage_context = p_ctx
 	z_index = LayerConfig.BOSS
 	if not GameEvents.player_missed.is_connected(_on_player_death):
 		GameEvents.player_missed.connect(_on_player_death)
@@ -178,7 +178,7 @@ func start_phase(data: PhaseData) -> void:
 		push_error("Boss.start_phase 配置错误: " + e)
 	_cleared = false
 	_phase_missed = false  # 每阶段独立判定 miss
-	_current_phase = data
+	_phase_data = data
 	_elapsed = 0.0
 	_bonus = data.bonus
 	_invincible = true
@@ -190,9 +190,9 @@ func start_phase(data: PhaseData) -> void:
 	# 显示血条
 	_set_ring_visible(true)
 
-	_pid = BossCatalog.resolve_identity(_stage_id, data, SaveData.practice_phase_index if SaveData.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
-	if _pid:
-		RecordService.record_phase_start(_pid)   # 记录服务：解锁/记尝试（Boss 不再摸 SaveData.record_*）
+	_phase_identity = BossCatalog.resolve_identity(_stage_id, data, SaveData.practice_phase_index if SaveData.is_practice_mode else -1)   # 身份统一由目录解析（练习用记录键兜底）
+	if _phase_identity:
+		RecordService.record_phase_start(_phase_identity)   # 记录服务：解锁/记尝试（Boss 不再摸 SaveData.record_*）
 
 	if data.name != "":
 		GameEvents.phase_start.emit(data)
@@ -210,15 +210,15 @@ func start_phase(data: PhaseData) -> void:
 			_open_reduce_left = data.open_reduce_time if _open_reduce_ratio > 0.0 else 0.0
 
 		if data.move_script:
-			_move = data.move_script.new()
-			add_child(_move)
-			_apply_phase_params(_move, data.params)
-			_move.start(_ctx, self)
+			_move_coroutine_runner = data.move_script.new()
+			add_child(_move_coroutine_runner)
+			_apply_phase_params(_move_coroutine_runner, data.params)
+			_move_coroutine_runner.start(_stage_context, self)
 		if data.shoot_script:
-			_shoot = data.shoot_script.new()
-			add_child(_shoot)
-			_apply_phase_params(_shoot, data.params)
-			_shoot.start(_ctx, self)
+			_shoot_coroutine_runner = data.shoot_script.new()
+			add_child(_shoot_coroutine_runner)
+			_apply_phase_params(_shoot_coroutine_runner, data.params)
+			_shoot_coroutine_runner.start(_stage_context, self)
 	)
 
 
@@ -227,13 +227,13 @@ func _process(delta: float) -> void:
 	if _pos_indicator and is_instance_valid(_pos_indicator):
 		_pos_indicator.global_position.x = global_position.x
 		_update_indicator_alpha()
-	if not _current_phase: return
+	if not _phase_data: return
 	_elapsed += delta
 
 	if _bonus > 0:
 		# maxf 防御：time_limit 非法为 0 时优雅降级（正常配置由 validate 拦截）
-		var t := maxf(_current_phase.time_limit, 0.001)
-		var tick := maxi(1, int(float(_current_phase.bonus) / t * delta))
+		var t := maxf(_phase_data.time_limit, 0.001)
+		var tick := maxi(1, int(float(_phase_data.bonus) / t * delta))
 		_bonus = maxi(0, _bonus - tick)
 
 	GameEvents.phase_bonus_tick.emit(_bonus)
@@ -241,8 +241,8 @@ func _process(delta: float) -> void:
 	if _open_reduce_left > 0.0:
 		_open_reduce_left = maxf(_open_reduce_left - delta, 0.0)
 
-	if _elapsed >= _current_phase.time_limit:
-		clear_phase(_current_phase.is_timeout_only)
+	if _elapsed >= _phase_data.time_limit:
+		clear_phase(_phase_data.is_timeout_only)
 
 
 ## 小数伤害累积器（0.5×2 次 = 1 → 扣 1 血）
@@ -250,7 +250,7 @@ var _dmg_acc: float = 0.0
 
 func take_damage(damage: float) -> void:
 	if _invincible: return
-	if not _current_phase: return
+	if not _phase_data: return
 	if _open_reduce_left > 0.0 and _open_reduce_ratio > 0.0:
 		damage *= 1.0 - _open_reduce_ratio  # 开局减伤
 	_dmg_acc += damage
@@ -259,7 +259,7 @@ func take_damage(damage: float) -> void:
 		return
 	_dmg_acc -= full
 	_set_hp(_hp - full)
-	if _hp <= 0 and not _current_phase.is_timeout_only:
+	if _hp <= 0 and not _phase_data.is_timeout_only:
 		clear_phase(true)
 
 
@@ -267,7 +267,7 @@ func take_damage(damage: float) -> void:
 func _on_player_death() -> void:
 	if SaveData.is_practice_mode:
 		return  # 练习 miss 走 _die 逻辑
-	if not _current_phase or _cleared or _phase_missed:
+	if not _phase_data or _cleared or _phase_missed:
 		return
 	_phase_missed = true
 
@@ -276,15 +276,15 @@ func clear_phase(captured: bool) -> void:
 	if _cleared: return
 	_cleared = true
 	_invincible = true
-	if _move: _move.stop(); _move.queue_free(); _move = null
-	if _shoot: _shoot.stop(); _shoot.queue_free(); _shoot = null
+	if _move_coroutine_runner: _move_coroutine_runner.stop(); _move_coroutine_runner.queue_free(); _move_coroutine_runner = null
+	if _shoot_coroutine_runner: _shoot_coroutine_runner.stop(); _shoot_coroutine_runner.queue_free(); _shoot_coroutine_runner = null
 
-	if _pid:
-		# 阶段已开始（_pid 已生成）才记录；Ctrl+G 在阶段开始前触发时只跳阶段不落盘
+	if _phase_identity:
+		# 阶段已开始（_phase_identity 已生成）才记录；Ctrl+G 在阶段开始前触发时只跳阶段不落盘
 		if SaveData.is_practice_mode:
-			RecordService.record_phase_capture(_pid, false, 0, 0.0)  # 练习收取
+			RecordService.record_phase_capture(_phase_identity, false, 0, 0.0)  # 练习收取
 		elif captured and not _phase_missed:
-			RecordService.record_phase_capture(_pid, true, _bonus, _elapsed)  # 干净收取
+			RecordService.record_phase_capture(_phase_identity, true, _bonus, _elapsed)  # 干净收取
 
 	GameEvents.phase_end.emit(captured, _bonus)
 	if captured and _bonus > 0:
@@ -294,8 +294,8 @@ func clear_phase(captured: bool) -> void:
 			res.add_score(_bonus)
 
 	_drop_items()
-	if _ctx:
-		_ctx.bullets.death_clear(global_position, 960, 0.75, 30)
+	if _stage_context:
+		_stage_context.bullet_manager.death_clear(global_position, 960, 0.75, 30)
 	phase_cleared.emit(captured, _bonus)
 
 
@@ -306,10 +306,10 @@ func die() -> void:
 
 func _die() -> void:
 	# 注意：不停 _process——指示器 x 跟随在其中，死后离场演出期间仍需跟随 Boss
-	# （阶段逻辑由 _process 开头的 `if not _current_phase: return` 自然跳过）
-	_current_phase = null
+	# （阶段逻辑由 _process 开头的 `if not _phase_data: return` 自然跳过）
+	_phase_data = null
 	_set_ring_visible(false)
-	if SaveData.is_practice_mode and _pid and not _cleared:
+	if SaveData.is_practice_mode and _phase_identity and not _cleared:
 		pass  # 练习 attempt 已在进入阶段时记过（玩家 miss/超时退出也覆盖），这里不再重复记
 	if registry != null:
 		registry.unregister_enemy(self)
@@ -320,7 +320,7 @@ func _die() -> void:
 ## 血量改写唯一入口（封装）：改 _hp 并发 hp_changed 供 UI 订阅
 func _set_hp(v) -> void:
 	_hp = int(v)
-	hp_changed.emit(_hp, _current_phase.hp if _current_phase else 0)
+	hp_changed.emit(_hp, _phase_data.hp if _phase_data else 0)
 
 ## 血条显隐（统一）
 func _set_ring_visible(v: bool) -> void:
@@ -331,10 +331,10 @@ func _set_ring_visible(v: bool) -> void:
 
 
 func _drop_items() -> void:
-	if not _current_phase: return
+	if not _phase_data: return
 	if SaveData.is_practice_mode: return
 	var pos := global_position
-	var phase := _current_phase
+	var phase := _phase_data
 	var scatter := 50.0
 
 	var drops: Array[int] = []
@@ -347,11 +347,11 @@ func _drop_items() -> void:
 
 	for t in drops:
 		var offset := Vector2(RNG.randf_range(-scatter, scatter), RNG.randf_range(-scatter, scatter))
-		if _ctx: _ctx.spawn_item(t, pos + offset)
+		if _stage_context: _stage_context.spawn_item(t, pos + offset)
 
 
 ## 阶段脚本参数注入（工作台编辑的 PhaseData.params → 脚本同名属性）
 ## 注意：这里只有参数注入，掉落逻辑在 _drop_items（clear_phase 击破时）——
 ## 曾经残留过一份掉落代码导致 start_phase 时误掉道具（已删，勿再贴回）
 func _apply_phase_params(script: Node, params: Dictionary) -> void:
-	ParamValidator.apply(script, params)   # C4：校验 + 只设合法键 + 打错键名/类型响亮报错
+	ParamValidator.apply(script, params)   # 校验 + 只设合法键 + 打错键名/类型响亮报错

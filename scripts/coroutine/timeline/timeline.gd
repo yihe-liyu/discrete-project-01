@@ -3,9 +3,9 @@ extends RefCounted
 ## 时间线 —— 声明式替代 match _phase 状态机
 ##
 ##   var tl := Timeline.new(ctx)
-##   tl.at(0.0).call(_bgm)
-##   tl.at(2.0).every(1.5).times(4).call(_wave)
-##   tl.at(10.0).spawn_boss(boss, pos)
+##   timeline.at(0.0).call(_bgm)
+##   timeline.at(2.0).every(1.5).times(4).call(_wave)
+##   timeline.at(10.0).spawn_boss(boss, pos)
 ##   tl.loop()
 ##
 ##   func _on_step(_ctx): return tl.tick(_ctx.clock.delta)

@@ -6,7 +6,7 @@ class_name MarisaLaserFollow
 ##
 ## **内核端口载体**：漂移与整批渐隐的内核实现见桥接
 ## `scripts/kernel_bridge/behavior/marisa_laser_behavior.gd` + `marisa_laser_fade.gd`；
-## W4a-2 删旧池后，弹的协程体不再由本项目启动。
+## 删旧池后，弹的协程体不再由本项目启动。
 ##
 ## 端口参数由 `BulletData.params` 注入（见 `scripts/coroutine/player/marisa_shoot.gd`）。
 
@@ -17,7 +17,7 @@ var port_drift_speed: float = 2000.0
 var port_drift_angle: float = 0.0
 
 
-## 内核端口（Track A / S4c-4）：漂移复用内核 laser_follow；整批渐隐由 MarisaLaserFade 管。
+## 内核端口：漂移复用内核 laser_follow；整批渐隐由 MarisaLaserFade 管。
 func kernel_port() -> Dictionary:
 	return {
 		"move": &"marisa_laser",

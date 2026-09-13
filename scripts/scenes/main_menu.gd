@@ -5,7 +5,7 @@
 
 extends NavPage
 
-@onready var _logo: TextureRect = $"logo"
+@onready var _logo: TextureRect = $"Logo"
 @onready var _particles: GPUParticles2D = $"GPUParticles2D"
 @onready var _page_host: Control = %PageHost   # 子页面容器（注入给 MenuNav）
 

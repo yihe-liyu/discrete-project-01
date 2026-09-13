@@ -18,19 +18,19 @@ var ctx: StageContext
 var target: Node2D
 ## true=播完即止，false=持续运行
 var auto_stop: bool = false
-var _tl: Timeline
+var _timeline: Timeline
 
 
 ## 创建并绑定 Timeline（stage 关卡传入导演，便捷动词由导演统一承担）
 func start_timeline(p_director: StageDirector = null) -> Timeline:
-	_tl = Timeline.new(ctx)
-	_tl.director = p_director
-	return _tl
+	_timeline = Timeline.new(ctx)
+	_timeline.director = p_director
+	return _timeline
 
 
 ## 当前时间线（工作台书签收集/调试用）
 func get_timeline() -> Timeline:
-	return _tl
+	return _timeline
 
 
 ## 启动协程
@@ -78,8 +78,8 @@ func tick_fast(dt: float) -> bool:
 
 ## 每帧回调。覆写此方法可实现自定义逻辑（不用 Timeline）
 func _tick(_ctx: StageContext) -> Variant:
-	if _tl:
-		var alive := _tl.tick(get_dt())
+	if _timeline:
+		var alive := _timeline.tick(get_dt())
 		if not alive and auto_stop:
 			return false
 		return true
