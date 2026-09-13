@@ -645,6 +645,13 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 **后续（可选）**：S13 图集 / `AssetRegistry` 数据化（R17）、R6/R4/R2 红线、S10 确定性收口。
 
+### 12.30 K10 实施记录（2026-09-11，已完成）
+
+**目标**：把 `Player` 的「owner 自建 + 允许预注入」从 `_ready` 的判空分支改为类型化惰性属性。
+
+**落点**：`resources` → 惰性属性（后备 `_resources`，getter 自建 / setter 预注入）；删 `_ready` 自建与两处恒真 null 守卫。
+
+**验收**：`check_syntax` 191/0；全量 **55 套 / 308 测试 / 3207 断言全绿**；orphans 10。
 ### 12.29 K9 实施记录（2026-09-11，已完成）
 
 **目标**：`PlayerResources` 读取全部收口到类型化/总闸，消除字符串旁路（R5）。

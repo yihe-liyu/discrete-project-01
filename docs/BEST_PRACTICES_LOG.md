@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-11 — K10：Player.resources 惰性属性化（去 _ready 判空自建）
+
+- **目标**：`Player._ready` 里 `if resources == null: resources = PlayerResources.new()` 是「owner 自建 + 允许预注入」的防御分支，但生产从不预注入 → 条件恒真，读起来像有注入却在 `_ready` 才建。
+- **做法**：`resources` 改为**惰性属性**（私有后备 `_resources`；getter 首次访问自建，setter 保留预注入）；删 `_ready` 判空自建。
+- **顺带**：`_on_enemy_killed` / `_physics_process` 的 `if resources != null` 守卫（惰性属性下恒真）去掉。
+- **效果**：`resources` 任何读取都保证非 null（入树前读也安全）；`_ready` 更干净；测试桩预注入仍可用。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 308 测试 / 3207 断言全绿**；orphans 10。
 ### 2026-09-11 — K9：PlayerShootScript 资源读取去字符串旁路（R5）
 
 - **目标**：`PlayerShootScript._sync_options` 用 `leader.get("resources")` 字符串访问取火力值，是 `PlayerResources` 唯一不走类型化/总闸的读取。

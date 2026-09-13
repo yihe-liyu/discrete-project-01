@@ -14,8 +14,16 @@ const MIN_MARGIN: int = 8
 
 ## 关卡上下文（StageRuntime/game_scene 注入，系统操作走服务）
 var ctx: StageContext
-## 单局资源（W4b-4：Player 是 owner；消费者经 EntityRegistry 取同一实例）
-var resources: PlayerResources
+## 单局资源（W4b-4：Player 是 owner；消费者经 EntityRegistry 取同一实例）。
+## 惰性创建：任何读取都保证非 null（无需 _ready 判空自建），也允许入树前预注入。
+var _resources: PlayerResources
+var resources: PlayerResources:
+	get:
+		if _resources == null:
+			_resources = PlayerResources.new()
+		return _resources
+	set(v):
+		_resources = v
 
 
 const IDLE = &"idle"
@@ -47,9 +55,6 @@ func _ready() -> void:
 	z_index = LayerConfig.PLAYER
 	# 连接 animation_finished 信号，用于检测一次性动画播完
 	animation.animation_finished.connect(_on_animation_finished)
-	# 单局资源（W4b-4：Player 是资源 owner）
-	if resources == null:
-		resources = PlayerResources.new()
 	# 击破入账（原全局状态处理，W4b-4 迁来）
 	if not GameEvents.enemy_killed.is_connected(_on_enemy_killed):
 		GameEvents.enemy_killed.connect(_on_enemy_killed)
@@ -63,8 +68,7 @@ func _exit_tree() -> void:
 
 
 func _on_enemy_killed(score: int, _position: Vector2) -> void:
-	if resources != null:
-		resources.add_score(score)
+	resources.add_score(score)
 
 
 ## R4：离散动作（解放记忆 / 炸弹）走事件，不在物理帧轮询
@@ -101,8 +105,7 @@ func apply_player_data() -> void:
 
 func _physics_process(delta):
 	# 记忆值自动恢复（原全局状态 _process，W4b-4 迁来）
-	if resources != null:
-		resources.regen(delta)
+	resources.regen(delta)
 	# 无敌倒计时（替代 await，不挂起调用链）
 	if is_invincible:
 		_invincible_timer -= delta

@@ -243,3 +243,4 @@
 > - K7（命名消歧）：`FxLayer` → `FxPool`（精灵池）、`MissEffectManager` → `MissCircleLayer`（全屏 shader 圈），成员/tcn/测试同步。详见 §12.27。
 > - K8（初始化去重）：`Player.setup_character` 幂等入口收口「`_ready` 自举 + 组合根覆盖」的双重初始化。详见 §12.28。
 > - K9（读取收口）：`PlayerShootScript` 的 `leader.get("resources")` → `leader.resources`（类型化）；`.get("resources")` 旁路归零。详见 §12.29。
+> - K10（`resources` 惰性属性）：`Player.resources` 改为惰性属性（getter 自建 / setter 预注入），删 `_ready` 判空自建。详见 §12.30。
