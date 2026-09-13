@@ -1,5 +1,5 @@
-extends CoroutineRunner
 class_name PlayerShootScript
+extends CoroutineRunner
 
 var _options: Array[Node2D] = []
 var _phase: int = 0
@@ -72,12 +72,13 @@ func _option_step(_ctx: StageContext) -> Variant:
 	return true
 
 
-func _sync_options(leader: Node2D, _ctx: StageContext) -> void:
+func _sync_options(leader: Player, _ctx: StageContext) -> void:
 	var setup := _option_setup()
 	if setup.is_empty():
 		return
 	
-	var res = leader.get("resources") if leader != null else null
+	# R5：直接读 leader（Player）的 resources —— 不再用 leader.get("resources") 字符串访问
+	var res: PlayerResources = leader.resources
 	var pw: int = res.power_raw if res != null else 0
 	var focused := Input.is_action_pressed("focus")
 	

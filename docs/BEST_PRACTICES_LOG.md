@@ -18,6 +18,12 @@
 
 ## 记录
 
+### 2026-09-11 — K9：PlayerShootScript 资源读取去字符串旁路（R5）
+
+- **目标**：`PlayerShootScript._sync_options` 用 `leader.get("resources")` 字符串访问取火力值，是 `PlayerResources` 唯一不走类型化/总闸的读取。
+- **做法**：`_sync_options(leader: Node2D, ...)` → `_sync_options(leader: Player, ...)`（调用方本就传 `Player`：`ctx.player.get_player()`）；`leader.get("resources")` → `leader.resources`（类型化直接读）。
+- **效果**：`scripts/**` 里 `.get("resources")` 仅剩 `EntityRegistry.get_player_resources()` 这一个总闸（`entity_registry.gd:43`），旁路**归零**；去掉一处 unsafe 动态属性访问。
+- **验收**：`check_syntax` **191/0**；全量 **55 套 / 308 测试 / 3207 断言全绿**；orphans 10。
 ### 2026-09-11 — K8：Player 机体初始化去重（setup_character 幂等）
 
 - **目标**：`Player._ready` 与 `GameScene._setup_player` 各调一次 `apply_player_data()`（+`reinit_shoot`），选默认机体时白装两遍；收敛成幂等单入口。
