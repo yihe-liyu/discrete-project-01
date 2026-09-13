@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-13 — N4-real：原生整段渲染同步 ✅ ~6.5×（6000 弹 7.19ms → 1.10ms）
+
+- **做法**：原生 `DanmakuRenderBridge` —— 类型表（`tex_key_base/tint_mode/kind/follow_dir/dir_offset`）+ `group(count, SoA, fade) -> {keys,starts,rows,rots,alphas}` + `fill(mm,...)`。**分组 + 每弹旋转/fade + 填充全在原生**；GDScript 只按组（O(groups)）取/建 MultiMesh。
+- **接入**：`BulletMultiMesh` 加 `use_native_sync` + 类型表（类型数变化时重建）+ GDScript `_sync_kernel` 回退。
+- **实测**（同进程对照，`tools/bench_render.gd`）：3000/6000/8000 → **6.53× / 6.54× / 6.57×**（6000: 7.193 → **1.101ms**）。
+- **踩坑（重要）**：内核 SoA 快照数组是**容量大小**，只有前 `count` 条活跃。原生一开始按 `array.size()` 迭代 → 把整个池都分组了。`test_kernel_snapshot_renders_one_batch` 用 `visible_instance_count = 1024 ≠ 3` 抓出。**修法**：`group(count, ...)` 显式传活跃数。
+- **教训**：**SoA 的 `size()` ≠ 活跃数。** 跨语言桥接时，"数组长度"和"有效长度"是两回事；GDScript 的 `for i in count` 里那个 `count` 必须显式过边界。
+- **验收**：`verify.sh` 全绿（322 测试 / 3247 断言）；`test_kernel_render` 5/5。
+
 ### 2026-09-13 — N2.2 探路：只搬「渲染填充」无效（1.14×），已回退 + 记录教训
 
 - **尝试**：原生 `DanmakuBatch.fill_group` 接进 `BulletMultiMesh._sync_kernel`（分组 / 旋转 / fade 仍留 GDScript）。

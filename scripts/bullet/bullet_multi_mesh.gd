@@ -17,10 +17,17 @@ const _FACTION_BOMB := 2
 
 var _groups: Dictionary = {}  # key → {mmi, mm, mesh}
 
+## 渲染同步走原生（DanmakuRenderBridge：分组 + 旋转 + fade + 填充）；不存在则 GDScript 回退。
+var use_native_sync: bool = true
+var _bridge = null
+var _bridge_probed: bool = false
+var _type_table_count: int = -1
+
 
 ## 注入内核后端；null = 无可渲染数据源（不画）。
 func set_backend(b: KernelBulletBackend) -> void:
 	backend = b
+	_type_table_count = -1   # 后端换 → 类型表失效
 
 
 func _ready():
@@ -42,6 +49,14 @@ func _sync():
 ## 直接读内核 SoA 快照（唯一数据源）。
 ## 朝向/颜色语义对齐旧路径（Bullet.bind：rotation = 方向角、modulate = tint，scale = ONE）。
 func _sync_kernel():
+	if _render_bridge() != null:
+		_sync_native()
+		return
+	_sync_gdscript()
+
+
+## GDScript 回退路径：分组 + 逐实例填充全在脚本侧。
+func _sync_gdscript():
 	var system := backend.system
 	var count: int = system.get_active_count()
 	if count == 0:
@@ -89,6 +104,96 @@ func _sync_kernel():
 	for key in _groups:
 		if not active_groups.has(key):
 			_hide_group(key)
+
+
+## 原生渲染同步器（存在则用）。
+func _render_bridge():
+	if not use_native_sync:
+		return null
+	if not _bridge_probed:
+		_bridge_probed = true
+		if ClassDB.class_exists("DanmakuRenderBridge"):
+			_bridge = ClassDB.instantiate("DanmakuRenderBridge")
+	return _bridge
+
+
+## N4-real：分组 + 旋转 + fade + 填充全在原生；这里只按组取/建 MultiMesh（O(groups)）。
+func _sync_native() -> void:
+	var system := backend.system
+	var count: int = system.get_active_count()
+	if count == 0:
+		_hide_all()
+		return
+	var registry := system.get_type_registry()
+	if registry.size() != _type_table_count:
+		_type_table_count = registry.size()
+		_build_type_table(registry)
+	var positions := system.get_positions()
+	var velocities := system.get_velocities()
+	var colors := system.get_colors()
+	var type_indices := system.get_type_indices()
+	var factions := system.get_factions()
+	var fade := PackedFloat32Array([
+		system.get_render_fade(BulletType.Kind.POINT),
+		system.get_render_fade(BulletType.Kind.LASER),
+	])
+	var groups: Dictionary = _bridge.group(count, positions, velocities, colors, type_indices, factions, fade)
+	var keys: PackedInt64Array = groups["keys"]
+	var starts: PackedInt32Array = groups["starts"]
+	var rows: PackedInt32Array = groups["rows"]
+	var rots: PackedFloat32Array = groups["rots"]
+	var alphas: PackedFloat32Array = groups["alphas"]
+	var seen := {}
+	for gi in keys.size():
+		var key: int = keys[gi]
+		var s0: int = starts[gi]
+		var n: int = starts[gi + 1] - s0
+		var rep: int = rows[s0]
+		var ti: int = type_indices[rep]
+		var tex: Texture2D = backend.texture_for_index(ti)
+		var host_faction := _host_faction(factions[rep])
+		var tint_mode: int = registry[ti].tint_mode
+		var eg = _get_or_create_group(key, tex, host_faction, tint_mode, n)
+		var mm: MultiMesh = eg.mm
+		if mm.instance_count < n:
+			mm.instance_count = max(n * 2, 2048)
+		mm.visible_instance_count = n
+		eg.mmi.visible = true
+		_bridge.fill(mm, positions, colors, rows, rots, alphas, s0, n)
+		seen[key] = true
+	for key in _groups:
+		if not seen.has(key):
+			_hide_group(key)
+
+
+## 类型表：纹理句柄 + tint / kind / follow_dir / dir_offset（类型数变化时重建）。
+func _build_type_table(registry: Array[BulletType]) -> void:
+	var n := registry.size()
+	var tex_key := PackedInt64Array()
+	var tint := PackedInt32Array()
+	var kind := PackedInt32Array()
+	var follow := PackedByteArray()
+	var dir_off := PackedFloat32Array()
+	tex_key.resize(n)
+	tint.resize(n)
+	kind.resize(n)
+	follow.resize(n)
+	dir_off.resize(n)
+	for ti in n:
+		var tex: Texture2D = backend.texture_for_index(ti)
+		if tex == null:
+			tex_key[ti] = -1
+			continue
+		var kb: int = tex.get_rid().get_id()
+		if tex is AtlasTexture:
+			kb = kb * 31 + hash((tex as AtlasTexture).region)
+		tex_key[ti] = kb
+		var bt: BulletType = registry[ti]
+		tint[ti] = bt.tint_mode
+		kind[ti] = bt.kind
+		follow[ti] = 1 if bt.follow_dir else 0
+		dir_off[ti] = bt.dir_offset
+	_bridge.set_type_table(tex_key, tint, kind, follow, dir_off)
 
 
 ## 分组键（两路共用）：纹理 RID + region + 阵营 + tint_mode → 唯一 int（避免每帧拼字符串）。

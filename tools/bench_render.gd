@@ -1,7 +1,7 @@
 extends Node
-## 渲染填充对照：同进程、同数据，原生 fill_group on / off 直接比。
+## 渲染同步对照：同进程、同数据，原生整段（分组+旋转+fade+填充）on / off 直接比。
 ## 运行：godot --headless --path . res://tools/bench_render.tscn
-const NS: Array[int] = [3000, 6000]
+const NS: Array[int] = [3000, 6000, 8000]
 const FRAMES := 150
 const DT := 1.0 / 60.0
 const CENTER := Vector2(448.0, 384.0)
@@ -43,7 +43,7 @@ func _run(n: int) -> void:
 
 
 func _time(mm: BulletMultiMesh, native_on: bool) -> float:
-	mm.use_native_fill = native_on
+	mm.use_native_sync = native_on
 	mm._sync_kernel()   # 预热该分支
 	var t0 := Time.get_ticks_usec()
 	for f in FRAMES:
