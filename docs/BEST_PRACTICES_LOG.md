@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-13 — N2.1：原生 DanmakuStore 扩为真实弹数据 + 批量 API（~55× 保持）
+
+- **扩了什么**：per-bullet `type` / `faction` / `color`；**`spawn_batch`**（Packed 数组一次跨界）避免逐弹跨语言开销；`fill_multimesh(mm)` 按每弹色写入。
+- **实测（真实数据 + 批量 spawn）**：3000/6000/8000 弹原生合计 **0.078 / 0.156 / 0.200 ms**；同档 GDScript（直线）4.25 / 8.39 / 11.20 ms → **~54–56×**。
+- **接入计划**：新增 `docs/N2_NATIVE_INTEGRATION_PLAN.md`（N2.2 原生 DanmakuSystem 补 API 子集 + `use_native` 开关；N2.3 批量行为桥；N3 VM；N4-real 图集）。
+- **新增**：`tools/bench_native.gd`（动态用 `ClassDB.instantiate("DanmakuStore")`，未构建也能跑并友好提示）。
+- **验收**：原生基准跑通；`verify.sh` 仍绿（本次未改游戏运行时路径）。
+
 ### 2026-09-13 — N2-real 开工：`gdextension/` 骨架（方案 A）
 
 - **结构**：主 repo 新增 `gdextension/`（源码 + `SConstruct` + godot-cpp 子模块 + README + 加载冒烟）。`.so` 与 `.gdextension` **都是构建产物、不入库** —— **未构建 = 无扩展 = 游戏照跑 GDScript（零报错）**；构建后才加载原生。
