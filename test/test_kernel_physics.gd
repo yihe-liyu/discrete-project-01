@@ -84,7 +84,7 @@ func test_invincible_player_ignores_bullets() -> void:
 	assert_eq(_backend.system.get_active_count(), 1, "无敌时弹应穿过")
 
 
-func test_player_bullet_damages_enemy_via_damage_side_table() -> void:
+func test_player_bullet_damages_enemy_via_bullet_type() -> void:
 	var fake := FakeEnemy.new()
 	fake.global_position = Vector2(200, 200)
 	add_child_autofree(fake)
@@ -95,7 +95,7 @@ func test_player_bullet_damages_enemy_via_damage_side_table() -> void:
 	d.damage = 10.0
 	_backend.shoot(d, Vector2(200, 200), Vector2.UP)
 	_physics.process()
-	assert_almost_eq(fake.damage_taken, 10.0, 0.01, "伤害应来自后端 damage 侧表（内核无 damage）")
+	assert_almost_eq(fake.damage_taken, 10.0, 0.01, "伤害应来自 BulletType.damage（M1 起内核自带）")
 	assert_eq(_backend.system.get_active_count(), 0, "命中后应回收该弹")
 	_refs.unregister_enemy(fake)
 

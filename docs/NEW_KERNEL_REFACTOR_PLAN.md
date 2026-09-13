@@ -571,10 +571,10 @@ func kernel_port() -> Dictionary:
 
 | 指标 | 现在 | 融合目标 |
 |---|---|---|
-| `scripts/kernel/` | 14 文件 / **1212** 行（零宿主引用） | 保持零宿主引用 |
-| `scripts/kernel_bridge/` | 11 文件 / **979** 行 ≈ 内核 **80%** | ≤ **300** 行，且只放**宿主耦合**（Boss / SaveData / 选项节点 / bomb / fx） |
+| `scripts/kernel/` | 14 文件 / **1219** 行（零宿主引用；M1 后） | 保持零宿主引用 |
+| `scripts/kernel_bridge/` | 11 文件 / **964** 行（M1 后；原 979 ≈ 内核 80%） | ≤ **300** 行，且只放**宿主耦合**（Boss / SaveData / 选项节点 / bomb / fx） |
 | 弹型词汇 | `BulletData`(19 字段) vs `BulletType`(13 字段) | **一个**类型 |
-| 桥接侧表 | `_type_by_sig` / `_texture_by_index` / `_damage_by_index` / `_hit_sfx_by_index` / `_port_by_sig` | 无 `*_by_index`；签名缓存随词汇合一消失 |
+| 桥接侧表 | `_type_by_sig` / `_texture_by_index` / ~~`_damage_by_index`~~ / ~~`_hit_sfx_by_index`~~（M1 已删）/ `_port_by_sig` | 无 `*_by_index`（余 `_texture_by_index`，随 M3）；签名缓存随词汇合一消失 |
 | 内容翻译 | 6 个脚本 `func kernel_port()` | 退为**可选覆盖**（VM 预留 `program` 除外） |
 
 > 判据一句话：**桥接只该放「宿主耦合的规则」，不该放「两个词汇之间的翻译」。** 现在两者都放，所以有 979 行。
@@ -603,12 +603,14 @@ S3 选 A 方案（§14.3）是为了**保住「内核零改动」这个可回退
 - **踩坑**：改名后重建版爆 `Could not find script for class "AvoidPlayerBehavior"` —— `.godot/global_script_class_cache.cfg` 还指着旧路径，跑一次 `godot --headless --editor --quit` 即恢复（K1 同款）。**原项目侧同理**。
 - 验收：`bash tools/vendor_kernel.sh --check` → 漂移 0 + 守卫 ✅。
 
-#### M1 —— 内核认数据：`damage` / `hit_sfx` / `out_grace` 进 `BulletType`
-- **删** `KernelBulletBackend._damage_by_index` / `_hit_sfx_by_index` 与 `damage_for_index()` / `hit_sfx_for_index()`；宿主专有字段改由弹型自带。
-- `out_grace` 变弹型属性 —— **正好是 §15.5 当初留的口子**（"将来作为弹型属性接入"）。
+#### M1 —— 内核认数据：`damage` / `hit_sfx` 进 `BulletType` ✅ **已完成（2026-09-13，tag `kernel-v2`）**
+- **内核**：`BulletType` 增 `@export_group("Host payload")`：`damage: float` / `hit_sfx: StringName`（**只存不解释**，规则仍归宿主）。
+- **原项目**：删 `KernelBulletBackend._damage_by_index` / `_hit_sfx_by_index` 与 `damage_for_index()` / `hit_sfx_for_index()`；`KernelBulletPhysics` 改读 `bt.damage` / `bt.hit_sfx`。
 - **不动**：判定的**归属**（graze / 命中几何仍留宿主桥接 `KernelBulletPhysics`）—— 只搬**数据**，不搬**规则**。
-- 验收：`test_kernel_physics` / `test_kernel_behavior` / `test_kernel_swap` 全绿 + 试玩 stage01（TTK / 命中音效 / 出界回收一致）；`grep '_by_index' scripts/kernel_bridge/` 只剩纹理表。
-- 回滚点：M1 前一个 commit。
+- ⚠️ **签名陷阱**：`damage` / `hit_sfx` 既然成了弹型字段，**必须进 `signature_of()`** —— 否则"同贴图同判定、只有伤害不同"的弹会共用缓存弹型 → 伤害串味。已加。
+- 验收：重建版 `tests/` **46 套 / 689 断言全绿** → tag `kernel-v2`（`4f49df1`）→ vendor（仅 `bullet_type.gd` +7 行）→ 原项目 `check_syntax` 191/0 + GUT **57 / 310 / 3215 全绿**。`grep '_by_index' scripts/kernel_bridge/` 只剩 `_texture_by_index`（M3）。
+- **量**：内核 1212 → **1219**；桥接 979 → **964**。
+- **没做**：`out_grace` 仍暂缓（bomb 走宿主节点，用不到）。
 
 #### M2 —— 词汇合一：`BulletData` ⇄ `BulletType`
 - 方向二选一（**待拍板**）：

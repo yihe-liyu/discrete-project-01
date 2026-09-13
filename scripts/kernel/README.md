@@ -1,6 +1,6 @@
 # scripts/kernel — 弹幕内核（vendored 子系统）
 
-> **来源**：从重建版项目 vendored（起点 tag `kernel-v1` / commit `238507a`；现跟随重建版 `main`）。
+> **来源**：从重建版项目 vendored。起点 tag `kernel-v1`（`238507a`）；**当前对应 `kernel-v2`**（重建版 `main`，M1：`BulletType` 增 `damage`/`hit_sfx`）。
 > **同步方式**：`bash tools/vendor_kernel.sh [--check]`（M0b）—— 复制上游 + 两处规范化 + 「内核 0 宿主引用」守卫。
 > **禁止手改本目录**：改动会被下次 vendor 覆盖（K1/K7/A10 三次本地改名都因此漂移过，见 M0）；改内核请在**重建版**改。
 > **单一真相**：当前约定 = 重建版是内核**开发环境**（bench + 46 套测试），本目录是 vendor 快照；内核定型后再宣布原项目为唯一之家、重建版归档。

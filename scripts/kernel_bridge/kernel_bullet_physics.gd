@@ -72,7 +72,7 @@ func _enemy_bullets_vs_player() -> void:
 					sys.despawn(id)
 
 
-## 自机弹 ↔ 敌人：与旧 BulletPhysics._player_vs_enemies 1:1（伤害走后端 damage 侧表，内核无 damage）。
+## 自机弹 ↔ 敌人：与旧 BulletPhysics._player_vs_enemies 1:1（伤害读 BulletType.damage；M1 起内核自带）。
 func _player_bullets_vs_enemies() -> void:
 	var sys := backend.system
 	var enemies: Array = refs.get_active_enemies() if refs else []
@@ -93,12 +93,11 @@ func _player_bullets_vs_enemies() -> void:
 					continue   # 时符 / 未开战：弹穿过
 			if not sys.hit_test(i, enemy.global_position, enemy.hitbox_radius):
 				continue
-			var ti: int = sys.get_type_indices()[i]
-			enemy.take_damage(backend.damage_for_index(ti) * bonus)
+			enemy.take_damage(bt.damage * bonus)
 			var res := _player_res()
 			if res != null:
 				res.add_memory(PlayerResources.MEMORY_HIT_BY_BULLET)
-			_play_hit_sfx(ti, enemy)
+			_play_hit_sfx(bt.hit_sfx, enemy)
 			_spawn_hit_fx(sys, i, bt)
 			sys.despawn(i)
 			break
@@ -136,8 +135,8 @@ func _memory_bonus() -> float:
 
 
 ## 命中音效规则（与旧 BulletPhysics 1:1）：专属 key 任何敌人命中都播；默认仅 Boss 残血播。
-func _play_hit_sfx(ti: int, enemy) -> void:
-	var key: String = backend.hit_sfx_for_index(ti)
+func _play_hit_sfx(sfx_key: StringName, enemy) -> void:
+	var key: String = String(sfx_key)
 	if key == "":
 		if enemy is Boss and (enemy as Boss).is_low_hp():
 			AudioManager.play_sfx(AssetRegistry.sounds["normal_damage"], -14.0, 0.05)

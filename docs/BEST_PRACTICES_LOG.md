@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-13 — M1：内核认数据（damage / hit_sfx 进 BulletType，tag kernel-v2）
+
+- **做了什么**：内核 `BulletType` 增 `Host payload` 组：`damage: float` / `hit_sfx: StringName`（**只存不解释**，规则仍归宿主）→ 原项目删掉 `_damage_by_index` / `_hit_sfx_by_index` 两张侧表与 `damage_for_index()` / `hit_sfx_for_index()`，`KernelBulletPhysics` 改读 `bt.damage` / `bt.hit_sfx`。
+- **流程（M 线首次走通）**：重建版改 + `tests/` **46 套 / 689 断言全绿** → tag `kernel-v2`（`4f49df1`）→ `bash tools/vendor_kernel.sh` 同步（只有 `bullet_type.gd` +7 行）→ 原项目适配层改 → `check_syntax` 191/0 + GUT **57 / 310 / 3215 全绿**。
+- **踩坑（必须记）**：`signature_of()` 是**「内容签名 → 弹型」的缓存键** —— `damage` / `hit_sfx` 既已成为弹型字段，就**必须进签名**，否则"同贴图同判定、只有伤害不同"的弹会共用同一个缓存弹型 → **伤害串味**。已补 `hash(data.damage)` / `hash(data.hit_sfx)`。
+- **量**：内核 1212 → **1219** 行；桥接 979 → **964** 行；`scripts/kernel_bridge/` 里 `_by_index` 只剩 `_texture_by_index`（属 M3）。
+- **测试口径同步**：`test_player_bullet_damages_enemy_via_damage_side_table` → `..._via_bullet_type`，断言消息改「伤害应来自 BulletType.damage」——不留与实现不符的测试名。
+- **没做**：`out_grace` 仍暂缓（bomb 走宿主节点，用不到）；纹理旁表留到 M3。
+
 ### 2026-09-13 — M0：修 vendor 漂移 + 立 vendor 脚本（融合前置）
 
 - **发现**：`scripts/kernel/` 副本与上游（重建版 tag `kernel-v1`）漂移 **4 处**，**全是本地改了、上游没同步**：K1 的 `avoid_player.gd → avoid_player_behavior.gd`（文件名）、K7 的 `FxLayer → FxPool`（注释）、A10 的 `bullet_data → bullet_type`（形参）、A11 的行尾空白。README 担心的「单一真相会烂」**已经在发生** —— 下次 vendor 会把它们覆盖回去，文件名还会变成"两个文件"。

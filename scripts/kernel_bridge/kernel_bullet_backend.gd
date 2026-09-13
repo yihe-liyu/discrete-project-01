@@ -32,9 +32,7 @@ var world: BulletManager
 var unmapped_behavior_count: int = 0
 
 var _type_by_sig: Dictionary = {}              # 内容签名(int) → BulletType
-var _texture_by_index: Array[Texture2D] = []   # 内核弹型下标 → 贴图（渲染旁表）
-var _damage_by_index := PackedFloat32Array()   # 宿主专有：伤害（内核 BulletType 无 damage，见 §16.1）
-var _hit_sfx_by_index: Array[String] = []      # 宿主专有：命中音效 key
+var _texture_by_index: Array[Texture2D] = []   # 内核弹型下标 → 贴图（渲染旁表；M3 前保留）
 
 ## S4a：内核行为注册表 + 上下文（由 BulletManager 装配；见 docs §21.4）。
 var behavior: BehaviorProcessor
@@ -164,21 +162,8 @@ func texture_for_index(index: int) -> Texture2D:
 	return _texture_by_index[index]
 
 
-## 宿主专有：该弹型伤害（内核 BulletType 无 damage；越界回退 10.0 = BulletData 默认）。
-func damage_for_index(index: int) -> float:
-	if index < 0 or index >= _damage_by_index.size():
-		return 10.0
-	return _damage_by_index[index]
-
-
-## 宿主专有：该弹型命中音效 key（"" = 默认规则）。
-func hit_sfx_for_index(index: int) -> String:
-	if index < 0 or index >= _hit_sfx_by_index.size():
-		return ""
-	return _hit_sfx_by_index[index]
-
-
 ## 内容签名：只含决定 BulletType 的字段（**不含** velocity / tint——它们随每次发射传入）。
+## M1 起含 damage / hit_sfx —— 它们已是弹型字段，漏掉会让"同贴图不同伤害"的弹共用缓存。
 func signature_of(data: BulletData) -> int:
 	var h: int = hash(data.texture)
 	h = h * 31 + int(data.faction)
@@ -189,6 +174,8 @@ func signature_of(data: BulletData) -> int:
 	h = h * 31 + hash(data.hitbox_offset)
 	h = h * 31 + hash(data.hitbox_rotation)
 	h = h * 31 + hash(data.hit_effect)
+	h = h * 31 + hash(data.damage)
+	h = h * 31 + hash(data.hit_sfx)
 	return h
 
 
@@ -204,6 +191,9 @@ func _make_type(data: BulletData) -> BulletType:
 			else Vector2.ZERO
 	bt.follow_dir = true
 	bt.hit_fx = data.hit_effect
+	# M1：宿主专有字段进弹型（内核只存不解释）
+	bt.damage = data.damage
+	bt.hit_sfx = StringName(data.hit_sfx)
 	return bt
 
 
@@ -287,8 +277,4 @@ func _sync_host_tables(id: int, data: BulletData) -> void:
 	var ti: int = indices[id]
 	if _texture_by_index.size() <= ti:
 		_texture_by_index.resize(ti + 1)
-		_damage_by_index.resize(ti + 1)
-		_hit_sfx_by_index.resize(ti + 1)
 	_texture_by_index[ti] = data.texture
-	_damage_by_index[ti] = data.damage
-	_hit_sfx_by_index[ti] = data.hit_sfx
