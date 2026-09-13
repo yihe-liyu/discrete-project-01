@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-13 — N2-real 开工：`gdextension/` 骨架（方案 A）
+
+- **结构**：主 repo 新增 `gdextension/`（源码 + `SConstruct` + godot-cpp 子模块 + README + 加载冒烟）。`.so` 与 `.gdextension` **都是构建产物、不入库** —— **未构建 = 无扩展 = 游戏照跑 GDScript（零报错）**；构建后才加载原生。
+- **godot-cpp**：git 子模块，pin 在 `6cceaf6`（master / v10）。`git clone` 的 SSL 不稳 → `-c http.version=HTTP/1.1` 解决（curl/tarball 仅探针期用过）。
+- **构建**：`./tools/build_gdextension.sh`（默认 debug + release；编完自动生成 `.gdextension`）。
+- **加载**：`.gdextension` 需编辑器导入一次 → `ClassDB.class_exists("DanmakuStore") = true`。
+- **CI**：`verify.yml` 加 `submodules: recursive` + `pip install scons` + 构建原生内核，再跑原验证。
+- **验收**：`verify.sh` 五步绿（322 测试 / 3247 断言）；game_scene 启动零错误（扩展已加载）。
+
 ### 2026-09-13 — N2/N4 原生探针：✅ 脚本侧热路径快 ~60×（6000 弹 8.9ms → 0.15ms）
 
 - **做法**：在 `_gdext_spike/` 加原生 `DanmakuStore`（SoA 存储 + 积分 + 剔除 + `fill_multimesh` 写 MultiMesh），godot-cpp 绑定，同一 N 档位对比 GDScript `BulletSystem` + `BulletMultiMesh`。

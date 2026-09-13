@@ -21,3 +21,11 @@ data/registry/spell_records.tres
 
 # 临时工作清单（做完一条删一条；不进库）
 TODO_TEMP.md
+
+# GDExtension 构建产物（.so / .gdextension 都随构建生成，不入库）：
+# 未构建 = 无扩展 = 游戏照跑 GDScript；构建后才加载原生。
+# godot-cpp 是子模块，其产物由子模块自身 .gitignore 管。
+gdextension/bin/
+gdextension/danmaku_kernel.gdextension
+gdextension/src/*.os
+gdextension/src/*.o

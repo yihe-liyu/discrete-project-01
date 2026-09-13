@@ -10,11 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.7.1
           use-dotnet: false
+
+      - name: 安装 SCons
+        run: pip install scons
+
+      - name: 构建原生内核（GDExtension）
+        run: ./tools/build_gdextension.sh
 
       - name: 一键验证（语法 + 启动 + GUT 全量）
         run: |
