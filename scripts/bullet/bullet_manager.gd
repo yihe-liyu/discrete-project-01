@@ -86,16 +86,12 @@ func _physics_process(_delta: float) -> void:
 
 # ═══ 子弹 API（内核后端）═══
 
-func shoot_bullet(data, pos: Vector2, direction: Vector2):
+## 发射一颗弹。阵营由 `data.faction` 决定（自机弹 / 敌弹同一条路）；返回内核行 id（data 为空 = -1）。
+func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return _kernel.shoot(data, pos, direction)
 
-func shoot_player_bullet(data, pos: Vector2, direction: Vector2):
-	return _kernel.shoot(data, pos, direction)
-
-func shoot_enemy_bullet(data, pos: Vector2, direction: Vector2):
-	return _kernel.shoot(data, pos, direction)
-
-func shoot_bomb_bullet(data, pos: Vector2, direction: Vector2):
+## 炸弹：返回宿主节点（KernelBomb，不进内核池）。
+func shoot_bomb_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> Node:
 	return _kernel.spawn_bomb(data, pos, direction)
 
 
@@ -132,10 +128,9 @@ func clear_all_lasers() -> void:
 
 # ═══ 圆内清敌弹（炸弹持续清弹）═══
 
-func clear_enemy_bullets_in_circle(center: Vector2, radius: float) -> int:
+func clear_enemy_bullets_in_circle(center: Vector2, radius: float) -> void:
 	if _kernel_physics != null:
 		_kernel_physics.sweep_enemy_bullets(center, radius, Callable())
-	return 0
 
 
 # ═══ 死亡清弹 ═══
@@ -184,11 +179,6 @@ func resume_processing() -> void:
 
 
 # ═══ 内核后端装配 ═══
-
-## 组合根在自机就绪后调用：刷新行为管道的自机引用（保留旧入口）
-func refresh_kernel_player() -> void:
-	_enable_kernel()
-
 
 ## 注入本次关卡的实体注册表（自机 / 敌机 / Boss）；组合根装配后调用
 func inject_world_refs(refs: EntityRegistry) -> void:

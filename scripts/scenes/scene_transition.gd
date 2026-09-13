@@ -28,7 +28,7 @@ func _setup_transition() -> void:
 	layer.add_child(_transition_rect)
 
 
-func change_scene(path: String, current_scene_path: String, on_scene_left: Callable, _on_scene_entered: Callable) -> String:
+func change_scene(path: String, current_scene_path: String, on_scene_left: Callable) -> String:
 	var bm := BulletManager.current
 	if bm:
 		bm.pause_processing()

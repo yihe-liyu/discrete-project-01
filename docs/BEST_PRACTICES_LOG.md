@@ -18,6 +18,23 @@
 
 ## 记录
 
+### 2026-09-13 — P0-1：清理"说谎的 API"（A1 / A2 / A4 / A5 / A9 / A10 / A13）
+
+- **目标**：去掉一批「名字或返回值与语义不符」的公共 API（代码体检 P0 组的一部分）。
+- **做了什么**：
+  - `BulletManager`：三个**函数体完全相同**的 `shoot_bullet` / `shoot_player_bullet` / `shoot_enemy_bullet` 合成一个 `shoot_bullet(data, pos, dir) -> int` —— 阵营本来就由 `data.faction` 决定，**自机弹与敌弹走的是同一条路**（原名字在撒谎）；`clear_enemy_bullets_in_circle` 的 `-> int`（永远 `return 0`）改 `-> void`；删 `refresh_kernel_player()` 别名（0 调用）。
+  - `SceneTransition.change_scene`：删死参数 `_on_scene_entered`（收了从不调用，`GameManager` 还把 `scene_entered.emit` 传了进去）；调用方同步。
+  - `StageRuntime.spawn_boss`：`-> Node` → `-> Boss`（与 `spawn_enemy_data -> Enemy` 对称，调用方不再需要 `as Boss`）。
+  - `BulletSystem._type_registry_index_of`：参数名 `bullet_data`（实际是 `BulletType`）→ `bullet_type`。
+  - `EntityRegistry.get_boss`：`enemy.get_script() == BossScript` → `enemy is Boss`（删 `BossScript` preload），返回类型补 `-> Boss`。
+  - `shoot_bullet` / `shoot_bomb_bullet` 参数补类型（`data: BulletData` / 返回 `Node`）。
+- **为什么**（对应红线）：R5（引用类型化）、R6（对外接口必须说实话）、R19（DRY——重复函数体是复制粘贴）。API 名与语义不一致会让人绕过类型系统，是"看着整齐、其实不干净"的典型。
+- **验收**：`check_syntax` **191/0**；全量 GUT **57 套 / 310 测试 / 3215 断言全绿**（与清理前逐字一致 → 零行为改动）。
+- **踩坑（阻塞发现）**：给 `return_bullet` / `re_fire` 参数补 `int` 时**编译失败**：`marisa_laser_follow.gd:80` 等 **5 处**仍把 `Node2D` 传进来，而 GDScript 对 `Node2D → int` 是**编译错误**（不是警告）。
+  - 这 5 处**不是活代码**：`BulletData.coroutine_script` 现在只用来取 `kernel_port()`，内核路径**从不启动弹的协程**；它们是 W4a-2「删旧池」时漏掉的内容脚本残体（`marisa_laser_follow.start` / `bounce_bullet._re_fire` / `radial_accel_bullet._spawn_downward` / `non_mid01_bullet` 旧体 / `orbit_probe` 旧体）。
+  - **教训**：类型化"幽灵 API"会顺手把死代码照出来 —— 先删残体（A14），再类型化（A15）。本轮先回退这两处类型化，避免为了面子留下编译不过的代码。
+- **没做什么（刻意）**：`fx_pool` 双入口（A3）、`shoot_spread` 无返回类型（A6）、`_spawn_fx/_render_fade` 空白（A11）、`set_state` 双名（A12）—— 留待后续。
+
 ### 2026-09-11 — K14：动作型总闸静默空跑守卫（reset_* 出声）
 
 - **背景**：全项目审计「无日志 guard return」——`scripts/` **449 处**，依赖类 **107**，P0-ish **18**；但绝大多数是合法控制流。真正值得出声的是**「动作型总闸在依赖缺失时空跑」**（K13 教训）。

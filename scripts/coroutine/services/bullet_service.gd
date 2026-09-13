@@ -15,11 +15,11 @@ func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base
 	if sfx:
 		AudioManager.play_sfx(sfx, -8.0)
 	if count == 1:
-		return world.shoot_enemy_bullet(bullet_data, at, base_dir)
+		return world.shoot_bullet(bullet_data, at, base_dir)
 	var step := spread_angle / (count - 1) if spread_angle < TAU - 0.001 else spread_angle / count
 	for i in count:
 		var dir := base_dir.rotated(-spread_angle / 2.0 + step * i)
-		world.shoot_enemy_bullet(bullet_data, at, dir)
+		world.shoot_bullet(bullet_data, at, dir)
 	return null
 
 

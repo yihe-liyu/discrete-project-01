@@ -5,8 +5,6 @@
 class_name EntityRegistry
 extends RefCounted
 
-const BossScript = preload("res://scripts/enemy/boss.gd")
-
 ## 组合根绑定的"当前世界"注册表（R8 static var）：
 ## 供没有 `stage` 的 StageContext（自机射击 ctx / 子弹共享 ctx）回退解析自机与敌人。
 static var current: EntityRegistry
@@ -43,10 +41,10 @@ func get_player_resources() -> PlayerResources:
 	return player.get("resources")
 
 
-## 当前场上的 Boss（无 → null）。按脚本类型识别，与旧全局查询判据一致。
-func get_boss():
+## 当前场上的 Boss（无 → null）。按类型识别。
+func get_boss() -> Boss:
 	for enemy in enemies:
-		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and enemy.get_script() == BossScript:
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and enemy is Boss:
 			return enemy
 	return null
 

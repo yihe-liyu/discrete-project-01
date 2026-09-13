@@ -13,5 +13,5 @@ func _ready():
 	data.coroutine_script = SLOW
 	for i in 1500:
 		var dir := Vector2.RIGHT.rotated(float(i) * TAU / 1500.0)
-		BulletManager.current.shoot_enemy_bullet(data, Vector2(448, 480), dir)
+		BulletManager.current.shoot_bullet(data, Vector2(448, 480), dir)
 	print("[stress] 已生成 1500 颗慢速协程弹")

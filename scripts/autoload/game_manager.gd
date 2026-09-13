@@ -71,7 +71,7 @@ func change_scene(path: String, target_state: AppState = AppState.PLAYING):
 	_nav.clear_pages()
 	_nav.clear_overlays()
 
-	var new_path: String = await _transition.change_scene(path, current_scene_path, scene_left.emit, scene_entered.emit)
+	var new_path: String = await _transition.change_scene(path, current_scene_path, scene_left.emit)
 	previous_scene_path = current_scene_path
 	current_scene_path = new_path
 

@@ -163,12 +163,12 @@ func _reset_row(id: int) -> void:
 # ==== ② 发射与回收 ====
 
 ## 弹型懒注册（find or append），返回索引。
-func _type_registry_index_of(bullet_data: BulletType) -> int:
-	var registry_index := _type_registry.find(bullet_data)
+func _type_registry_index_of(bullet_type: BulletType) -> int:
+	var registry_index := _type_registry.find(bullet_type)
 	if registry_index == -1:
 		registry_index = _type_registry.size()
-		_type_registry.append(bullet_data)
-		_type_bound.append(_bound_of(bullet_data))
+		_type_registry.append(bullet_type)
+		_type_bound.append(_bound_of(bullet_type))
 	return registry_index
 
 

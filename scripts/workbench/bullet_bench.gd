@@ -272,7 +272,7 @@ func _fire() -> void:
 	_shell.speed = _speed_spin.value
 	var data: BulletData = _shell.build(_cur_script)
 	data.params = _param_panel.collect()
-	BulletManager.current.shoot_enemy_bullet(data, _emitter_pos, _shell.get_dir())
+	BulletManager.current.shoot_bullet(data, _emitter_pos, _shell.get_dir())
 	_update_stats()
 
 

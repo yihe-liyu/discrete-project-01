@@ -25,7 +25,7 @@ func _enemy_data() -> BulletData:
 
 func test_spawn_writes_kernel_pool() -> void:
 	assert_not_null(BulletManager.current.kernel_system(), "内核弹池应已装配")
-	BulletManager.current.shoot_enemy_bullet(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
+	BulletManager.current.shoot_bullet(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "应写进内核池")
 
 
@@ -60,7 +60,7 @@ func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	BulletManager.current.inject_world_refs(refs)
 	var ed := BulletData.new().enemy().tex("小玉")
 	ed.velocity = Vector2.UP * 10.0
-	BulletManager.current.shoot_enemy_bullet(ed, Vector2(448, 700), Vector2.UP)
+	BulletManager.current.shoot_bullet(ed, Vector2(448, 700), Vector2.UP)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "先有 1 颗敌弹")
 	var d := BulletData.new().tex("bomb01_white").bomb()
 	var bomb = BulletManager.current.shoot_bomb_bullet(d, Vector2(448, 700), Vector2.RIGHT)
@@ -82,7 +82,7 @@ func test_radial_accel_via_manager() -> void:
 	var d := BulletData.new().enemy().blend(true).tex("棱弹")
 	d.velocity = Vector2.UP * 300.0
 	d.coroutine_script = preload("res://data/stages/stage01/bullet/radial_accel_bullet.gd")
-	BulletManager.current.shoot_enemy_bullet(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
+	BulletManager.current.shoot_bullet(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
 	for i in 10:
 		await get_tree().physics_frame
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "旧弹回收 + 新弹生成")
@@ -90,7 +90,7 @@ func test_radial_accel_via_manager() -> void:
 
 
 func test_death_clear_sweeps_kernel_bullets() -> void:
-	BulletManager.current.shoot_enemy_bullet(_enemy_data(), Vector2(200, 200), Vector2.RIGHT)
+	BulletManager.current.shoot_bullet(_enemy_data(), Vector2(200, 200), Vector2.RIGHT)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "先有 1 颗内核敌弹")
 	BulletManager.current.start_death_clear(Vector2(200, 200), 100.0, 1.0, 30.0)
 	BulletManager.current._death_clear.process(0.5)
