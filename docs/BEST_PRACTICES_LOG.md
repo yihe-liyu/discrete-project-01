@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-13 — P0-5：shoot_spread 定契约 + 删 spawn_bullet（A6）
+
+- **问题**：`BulletService.shoot_spread` 不声明返回类型，三条 return 路径给两样东西（`count==1` → int 行 id；`count>1` / 不活跃 → null），注释还写着已消失的「旧池 = Bullet 节点 / 用前先 `is Bullet` 判断」。
+- **实测**：17 个调用点 / 12 个文件，**全部丢弃返回值**（赋值 / return / assert 命中 0）。
+- **决定**：改 `-> void` —— 它的语义是「打一波扇形」，不是「取一颗弹」；让 spread 兼职返回单发 id，只会逼调用方**靠 count 猜类型**。将来真要那颗弹的 id，另开语义明确的 `shoot_one(...) -> int`，不要复用 spread。
+- **顺带**：删 `StageRuntime.spawn_bullet`（**0 调用者**，注释同样是过期的「旧池 = Bullet」）—— 与 A16 同一种死法。
+- **验收**：`check_syntax` 191/0；全量 GUT **57 套 / 310 / 3215 全绿**。
+
 ### 2026-09-13 — P0-4：fx_pool 单写入口（setter）/ set_state 去双名 / 行尾空白清零（A3 / A12 / A11）
 
 - **A3**：`BulletManager.fx_pool` 从「public var + `inject_fx_pool()`」双写入口改为**只读属性 + 私有后备**（`_fx_pool` + `var fx_pool: FxPool: get: return _fx_pool`），唯一写入口 = `inject_fx_pool()`；顺带删掉 `_ready` 里那句冗余自注入（`_enable_kernel()` 已把 fx_pool 灌给 `_kernel_physics.fx`）。

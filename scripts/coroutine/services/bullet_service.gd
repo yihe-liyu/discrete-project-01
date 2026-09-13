@@ -7,20 +7,19 @@ var active: bool = true
 var world: BulletManager
 
 
-## 扇形散弹；count == 1 时返回该弹的引用（旧池 = Bullet 节点；内核路径 = int id），否则返回 null。
-## ATTENTION：**不声明返回类型**——两条路返回不同东西（Track A / S3）；用之前先 `is Bullet` 判断。
-func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null):
+## 扇形散弹。count == 1 打一发（忽略 spread_angle）；不发弹（active=false / count ≤ 0）时静默返回。
+func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void:
 	if not active or count <= 0:
-		return null
+		return
 	if sfx:
 		AudioManager.play_sfx(sfx, -8.0)
 	if count == 1:
-		return world.shoot_bullet(bullet_data, at, base_dir)
+		world.shoot_bullet(bullet_data, at, base_dir)
+		return
 	var step := spread_angle / (count - 1) if spread_angle < TAU - 0.001 else spread_angle / count
 	for i in count:
 		var dir := base_dir.rotated(-spread_angle / 2.0 + step * i)
 		world.shoot_bullet(bullet_data, at, dir)
-	return null
 
 
 # ── 激光 ──

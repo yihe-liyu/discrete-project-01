@@ -168,11 +168,6 @@ func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -
 	return boss
 
 
-## 返回类型同 BulletService.shoot_spread：旧池 = Bullet，内核路径 = int id（Track A / S3）。
-func spawn_bullet(data: BulletData, position: Vector2, direction: Vector2):
-	return bullets.shoot_bullet(data, position, direction) if bullets else null
-
-
 ## 开一场"仅单个阶段"的战（符卡练习）：自建一个可运行的协程时钟作 ctx，
 ## 生成对应 Boss 并直接让它进入该阶段。
 ## 与 load_stage（整关编排）不同：本方法只服务"点杀单阶段"，故自建 clock，不复用整关脚本。
