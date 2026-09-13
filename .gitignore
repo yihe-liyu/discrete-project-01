@@ -27,5 +27,8 @@ TODO_TEMP.md
 # godot-cpp 是子模块，其产物由子模块自身 .gitignore 管。
 gdextension/bin/
 gdextension/danmaku_kernel.gdextension
+gdextension/danmaku_kernel.gdextension.uid
 gdextension/src/*.os
 gdextension/src/*.o
+gdextension/.sconsign.dblite
+gdextension/.sconsign*
