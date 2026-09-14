@@ -221,9 +221,18 @@ bounce → phases: [
 | 步 | 做什么 | 产出 |
 |---|---|---|
 | **L0** | 本文档评审定稿 | 词汇 + schema 冻结 |
-| **L1** | `BulletLifecycle` builder（GDScript）+ **参考解释器**（跑描述符，基于现有 `BulletSystem`） | 能跑 + GUT |
+| **L1 ✅（2026-09-13）** | `BulletLifecycle` builder（GDScript）+ **参考解释器**（跑描述符，基于现有 `BulletSystem`） | 2/2 parity：bounce/curve 逐位 |
 | **L2** | 10 行为写成 preset，**parity** vs 现有 GDScript 行为；定死 §5.2 开放项 | parity 测试 |
 | **L3** | **原生描述符执行器**（C++），换执行器；parity vs 参考解释器 | 性能 |
 | **L4** | 拆 GDScript 行为 + `CoroutineScript` 快速模式（按拆除清单） | 净减 |
 
 > 依赖：L3 需要 **N2 存储段**（原生 SoA）—— 否则重演 110ns 的坑。
+
+---
+
+## 10. L1 实测记录（2026-09-13）
+
+- ✅ **通过**：`bounce` + `curve` 与现有行为**逐位 parity**（`test_lifecycle_model` 2/2 / 33 断言）。
+- **结论**：描述符 schema + Phase/Move/Until/Action 词汇**足以表达**条件性最强的行为 —— 模型成立。
+- **暴露的引擎 bug**：`BehaviorProcessor` **升序** drain despawn → 多弹同帧回收**丢一个**（详见 `BEST_PRACTICES_LOG.md`）。L1 在测试 harness 用**降序**绕过；**引擎侧待修**。
+- **待办（L2）**：其余 8 个 preset + parity（homing / radial / non_mid / laser / avoid / world_accel / accel）。
