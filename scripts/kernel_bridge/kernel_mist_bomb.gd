@@ -1,9 +1,9 @@
 ## KernelMistBomb —— 单贴图分阶段展开的自机 bomb（宿主实体，不走内核池）。
 ## 锚点跟随自机（可关）；长（贴图 x）先展开 → 保持 → 宽（贴图 y）展开 → 保持 → 淡出。
-## 展开期间覆盖范围（椭圆，跟当前 scale 走）内持续伤敌 + 清敌弹。
+## 覆盖范围（椭圆，跟当前 scale 走）内清敌弹全程有效；伤敌从 MistBombData.damage_from_stage 起。
 extends BombEntity
 
-enum Stage { LENGTH, HOLD_L, WIDTH, HOLD_W, FADE }
+const Stage = MistBombData.Stage
 
 var _sprite: Sprite2D
 var _size := Vector2.ZERO
@@ -19,6 +19,7 @@ var _hold_len: float = 0.5
 var _grow_wid: float = 0.25
 var _hold_wid: float = 0.5
 var _fade: float = 0.25
+var _damage_from: int = Stage.LENGTH
 var _dps: float = 200.0
 var _clear_scale: float = 1.0
 
@@ -39,6 +40,7 @@ func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Co
 	_grow_wid = maxf(d.grow_width_time, 0.0)
 	_hold_wid = d.hold_width_time
 	_fade = maxf(d.fade_time, 0.001)
+	_damage_from = int(d.damage_from_stage)
 	_dps = d.dps
 	_clear_scale = d.clear_scale
 	rotation = deg_to_rad(d.rotation_deg)
@@ -107,7 +109,8 @@ func _damage_and_clear(delta: float) -> void:
 	var center := _sprite.offset * _sprite.scale
 	var half_a := _size.x * 0.5 * _sprite.scale.x
 	var half_b := _size.y * 0.5 * _sprite.scale.y
-	if entity_registry != null:
+	# 伤敌可从指定阶段才开始（数据决定）；清弹不受此限、全程有效。
+	if entity_registry != null and _stage >= _damage_from:
 		for enemy in entity_registry.get_active_enemies():
 			if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 				continue

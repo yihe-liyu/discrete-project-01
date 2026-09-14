@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — mist bomb 伤敌可推迟到宽展开（damage_from_stage）
+
+- **需求**：marisa 的 bomb 在阶段1（长）/阶段2（保持长）不该有伤害，等阶段3（宽）展开后才有。
+- **做法**：`MistBombData` 定义 `enum Stage { LENGTH, HOLD_L, WIDTH, HOLD_W, FADE }` + `@export var damage_from_stage: Stage = LENGTH`；`KernelMistBomb` 用 `const Stage = MistBombData.Stage` **复用同一枚举**（不再两处各写一遍），伤敌前判 `_stage >= _damage_from`；`marisa_bomb.tres` 设 `damage_from_stage = 2`（WIDTH）。
+- **保留**：清弹不受此限、**全程有效**（细条阶段仍清弹）。
+- **验证**：`test_mist_bomb` 5/5（新增：长/保持长 10 帧 `taken == 0`，进入宽后 `taken > 0`；marisa 数据 = WIDTH）；`./tools/verify.sh` 全绿 **380 / 4188**。
+
 ### 2026-09-14 — mist bomb 清弹改**精确椭圆**（不再是外接圆）
 
 - **先纠正我自己**：上一轮我说"精确椭圆要动 C++、圆链不用"——**看错了**。`_kernel_bullet_physics.sweep_enemy_bullets` 本身就是 **GDScript** 循环（不是原生），所以精确椭圆和圆链**同样"纯宿主"**，而且更准、更简单。

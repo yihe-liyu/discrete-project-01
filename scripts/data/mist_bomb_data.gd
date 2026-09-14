@@ -3,6 +3,9 @@
 extends BombData
 class_name MistBombData
 
+## 分阶段展开的状态机（KernelMistBomb 共用同一套枚举）。
+enum Stage { LENGTH, HOLD_L, WIDTH, HOLD_W, FADE }
+
 @export_group("锚点 / 朝向")
 @export var follow_player: bool = true                      ## 锚点跟随自机
 @export var anchor_offset: Vector2 = Vector2.ZERO           ## 相对自机的偏移
@@ -21,5 +24,6 @@ class_name MistBombData
 @export var fade_time: float = 0.25                         ## 阶段5：淡出
 
 @export_group("判定")
+@export var damage_from_stage: Stage = Stage.LENGTH         ## 从哪个阶段起伤敌（默认全程；WIDTH = 等宽展开才有伤害）
 @export var dps: float = 200.0                              ## 覆盖范围内每秒伤害（每帧 dps*delta）
 @export var clear_scale: float = 1.0                        ## 清弹椭圆 = 判定椭圆 × 它（1.0 = 与贴图一致，>1 多清一圈）

@@ -43,6 +43,7 @@ func test_marisa_bomb_data_is_mist() -> void:
 	assert_true(bd is MistBombData, "应是 MistBombData（后端据此分派 KernelMistBomb）")
 	assert_eq(bd.count, 1, "单颗")
 	assert_not_null(bd.texture, "应有贴图（marisa_bomb01）")
+	assert_eq((bd as MistBombData).damage_from_stage, MistBombData.Stage.WIDTH, "marisa 应等宽展开（阶段3）才有伤害")
 
 
 func test_mist_start_size_comes_from_ranges() -> void:
@@ -55,6 +56,31 @@ func test_mist_start_size_comes_from_ranges() -> void:
 	bomb._physics_process(1.0 / 60.0)   # 仍在阶段1（长）
 	assert_gt(bomb.length_now(), full.x * 0.5, "阶段1 的长应从 length_range.x 起，不是 0")
 	assert_almost_eq(bomb.width_now(), full.y * 0.25, 0.01, "阶段1 的宽 = 贴图宽 × width_range.x（初始宽度）")
+	bomb.queue_free()
+
+
+func test_mist_damage_can_start_at_width_stage() -> void:
+	var bd := _short_mist()
+	bd.texture = MARISA_DATA.bomb.texture
+	bd.damage_from_stage = MistBombData.Stage.WIDTH
+	var reg := EntityRegistry.new()
+	BulletManager.current.inject_entity_registry(reg)
+	var player := Node2D.new()
+	add_child_autofree(player)
+	player.global_position = Vector2(448.0, 700.0)
+	reg.bind_player(player)
+	var enemy := FakeEnemy.new()
+	add_child_autofree(enemy)
+	enemy.global_position = player.global_position + Vector2(0.0, -64.0)   # 长轴上
+	reg.register_enemy(enemy)
+	var bomb = BulletManager.current.shoot_bomb_bullet(bd, player.global_position, Vector2.RIGHT)
+	# 阶段1（长 0.1s）+ 阶段2（保持长 0.1s）≈ 12 帧
+	for _f in 10:
+		bomb._physics_process(1.0 / 60.0)
+	assert_eq(enemy.taken, 0.0, "长 / 保持长阶段不应造成伤害")
+	for _f in 6:
+		bomb._physics_process(1.0 / 60.0)
+	assert_gt(enemy.taken, 0.0, "进入宽展开（阶段3）后应开始造成伤害")
 	bomb.queue_free()
 
 
