@@ -1,12 +1,14 @@
+class_name ItemPool
 extends Node
 ## Item 对象池，挂在 World 下
 
 const ITEM_SCENE = preload("res://scenes/item.tscn")
-const POOL_SIZE := 64
+const POOL_SIZE: int = 64
 
-var _pool: Array[Item] = []
 ## 实体注册表（组合根为 World 注入）——透传给道具
 var entity_registry: EntityRegistry
+
+var _pool: Array[Item] = []
 
 
 func _ready() -> void:
