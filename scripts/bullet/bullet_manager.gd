@@ -100,9 +100,9 @@ func _physics_process(_delta: float) -> void:
 func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return _kernel_bullet_backend.shoot(data, pos, direction)
 
-## 炸弹：返回宿主节点（KernelBomb，不进内核池）。
-func shoot_bomb_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> Node:
-	return _kernel_bullet_backend.spawn_bomb(data, pos, direction)
+## 炸弹：返回宿主节点（KernelBomb，不进内核池）。data 是 BombData。
+func shoot_bomb_bullet(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0) -> Node:
+	return _kernel_bullet_backend.spawn_bomb(data, pos, direction, tint, spawn_delay)
 
 
 # ═══ 激光 API ═══

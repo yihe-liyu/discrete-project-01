@@ -1,22 +1,25 @@
-## KernelBomb—— 宿主节点版 bomb（不走内核池）。
+## KernelBomb —— 宿主节点版 bomb（不走内核池）。
 ## 为什么不用内核行：bomb 需要 out_grace（轨道越界不被剔除），而 A 方案下内核 cull 是统一的，
-## 没有 per-type grace；且 bomb 只有 8 颗、还要做清弹/伤害/视觉等宿主动作 → 宿主节点最干净。
-## 逻辑 1:1 移植 scripts/bullet/bomb_behavior.gd。
+## 没有 per-type grace；且 bomb 只有个位数、还要做清弹/伤害/视觉等宿主动作 → 宿主节点最干净。
+## **本类只做机制**：所有数值来自 BombData（内容数据，.tres 可调）。
 extends Node2D
 
-const EXPLODE_RADIUS: float = 140.0
-const EXPLODE_DURATION: float = 0.4
-const EXPLODE_START_RADIUS: float = 20.0
+## 内容数据（KernelBulletBackend 注入）
+var data: BombData
 
-## 可调参数（可用 BulletData.params 覆盖；默认值与 bomb_behavior.gd 同源）
-var orbit_speed: float = deg_to_rad(300.0)
-var radius_growth: float = 200.0
-var max_radius: float = 200.0
-var hold_time: float = 1.8
-var homing_speed: float = 1500.0
-var explode_damage: float = 150.0
+## 从 data 拷来的运行值
+var orbit_speed: float = 0.0
+var radius_growth: float = 0.0
+var max_radius: float = 0.0
+var hold_time: float = 0.0
+var homing_speed: float = 0.0
+var explode_damage: float = 0.0
+var explode_radius: float = 0.0
+var explode_duration: float = 0.0
+var explode_start_radius: float = 0.0
+var clear_radius: float = 0.0
 var spawn_delay: float = 0.0
-var clear_radius: float = 90.0   ## 持续清弹半径（围绕本弹自己，每帧）
+var _hitbox_radius: float = 45.0
 
 enum Phase { GROW, HOLD, FLY }
 var _phase: int = Phase.GROW
@@ -25,7 +28,6 @@ var _radius: float = 0.0
 var _hold_timer: float = 0.0
 var _fly_dir: Vector2 = Vector2.ZERO
 var _initialized: bool = false
-var _hitbox_radius: float = 45.0
 var _sprite: Sprite2D
 var _init_dir: Vector2 = Vector2.DOWN
 ## Node2D 没有 velocity（旧 Bullet 才有）；bomb 飞行阶段用它。
@@ -38,25 +40,30 @@ var bullet_manager: BulletManager
 var fx_parent: Node2D
 
 
-func setup(data: BulletData, pos: Vector2, direction: Vector2) -> void:
+func setup(p_data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, p_spawn_delay: float = 0.0) -> void:
 	global_position = pos
 	_init_dir = direction if direction != Vector2.ZERO else Vector2.DOWN
-	if data != null:
-		_hitbox_radius = data.hitbox_radius
-		if data.params is Dictionary:
-			orbit_speed = data.params.get("orbit_speed", orbit_speed)
-			radius_growth = data.params.get("radius_growth", radius_growth)
-			max_radius = data.params.get("max_radius", max_radius)
-			hold_time = data.params.get("hold_time", hold_time)
-			homing_speed = data.params.get("homing_speed", homing_speed)
-			explode_damage = data.params.get("explode_damage", explode_damage)
-			spawn_delay = data.params.get("spawn_delay", spawn_delay)
-		clear_radius = data.params.get("clear_radius", clear_radius)
-		_sprite = Sprite2D.new()
-		_sprite.texture = data.texture
-		_sprite.modulate = data.tint
-		add_child(_sprite)
-	z_index = LayerConfig.BOMB
+	data = p_data
+	if data == null:
+		push_error("[KernelBomb] setup 需要 BombData")
+		return
+	spawn_delay = p_spawn_delay
+	_hitbox_radius = data.hitbox_radius
+	orbit_speed = deg_to_rad(data.orbit_speed_deg)
+	radius_growth = data.radius_growth
+	max_radius = data.max_radius
+	hold_time = data.hold_time
+	homing_speed = data.homing_speed
+	explode_damage = data.explode_damage
+	explode_radius = data.explode_radius
+	explode_duration = data.explode_duration
+	explode_start_radius = data.explode_start_radius
+	clear_radius = data.clear_radius
+	_sprite = Sprite2D.new()
+	_sprite.texture = data.texture
+	_sprite.modulate = tint
+	add_child(_sprite)
+	z_index = data.z_index
 
 
 func _physics_process(delta: float) -> void:
@@ -132,11 +139,11 @@ func _explode() -> void:
 	AudioManager.play_sfx(AssetRegistry.sounds["shoot"], -6.0)
 	_spawn_explosion_visual(pos)
 	if bullet_manager:
-		bullet_manager.start_death_clear(pos, EXPLODE_RADIUS, EXPLODE_DURATION, EXPLODE_START_RADIUS)
+		bullet_manager.start_death_clear(pos, explode_radius, explode_duration, explode_start_radius)
 	for enemy in (entity_registry.get_active_enemies() if entity_registry else []):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
-		if enemy.global_position.distance_to(pos) <= EXPLODE_RADIUS + enemy.hitbox_radius:
+		if enemy.global_position.distance_to(pos) <= explode_radius + enemy.hitbox_radius:
 			enemy.take_damage(explode_damage)
 	queue_free()
 
@@ -155,6 +162,6 @@ func _spawn_explosion_visual(pos: Vector2) -> void:
 	spr.z_index = LayerConfig.EFFECT
 	parent.add_child(spr)
 	var tw := spr.create_tween()
-	tw.tween_property(spr, "scale", Vector2(4, 4), EXPLODE_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.parallel().tween_property(spr, "modulate:a", 0.0, EXPLODE_DURATION)
+	tw.tween_property(spr, "scale", Vector2(4, 4), explode_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(spr, "modulate:a", 0.0, explode_duration)
 	tw.tween_callback(spr.queue_free)

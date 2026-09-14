@@ -65,9 +65,9 @@ func death_clear(pos: Vector2, max_radius: float, duration: float,
 	if bullet_manager: bullet_manager.start_death_clear(pos, max_radius, duration, start_radius, on_clear)
 
 
-## 炸弹弹（宿主节点版，不进内核池）——玩家炸弹用
-func shoot_bomb(data: BulletData, pos: Vector2, direction: Vector2):
-	return bullet_manager.shoot_bomb_bullet(data, pos, direction) if bullet_manager else null
+## 炸弹（宿主节点版，不进内核池）——玩家炸弹用；数据是 BombData（不是弹幕的 BulletData）
+func shoot_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0):
+	return bullet_manager.shoot_bomb_bullet(data, pos, direction, tint, spawn_delay) if bullet_manager else null
 
 
 func _bezier_curve(p0: Vector2, p1: Vector2, p2: Vector2) -> Curve2D:

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="BombData" format=3]
+
+[ext_resource type="Texture2D" uid="uid://ctrxg8aehv7lw" path="res://assets/Textures/player/bomb01_white.png" id="1_tex"]
+[ext_resource type="Script" uid="uid://dgggusbpq0rqy" path="res://scripts/data/bomb_data.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+texture = ExtResource("1_tex")
+hitbox_radius = 45.0
+count = 8
+interval = 0.1
+speed = 220.0
+invincible_time = 4.0
+orbit_speed_deg = 300.0
+radius_growth = 200.0
+max_radius = 200.0
+hold_time = 1.8
+homing_speed = 1500.0
+explode_damage = 150.0
+explode_radius = 140.0
+explode_duration = 0.4
+explode_start_radius = 20.0
+clear_radius = 90.0
+metadata/_custom_type_script = "uid://dgggusbpq0rqy"

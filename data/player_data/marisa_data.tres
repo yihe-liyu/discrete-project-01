@@ -3,6 +3,7 @@
 [ext_resource type="SpriteFrames" uid="uid://b7qaawpm1asxi" path="res://data/player_data/marisa_anim.tres" id="1_ewcl1"]
 [ext_resource type="Script" uid="uid://grfvsrralj0y" path="res://scripts/data/player_data.gd" id="2_vvlku"]
 [ext_resource type="Script" uid="uid://1r7vgb3c712x" path="res://scripts/coroutine/player/marisa_shoot.gd" id="3_shoot"]
+[ext_resource type="Resource" path="res://data/player_data/bomb_ring.tres" id="4_bomb"]
 
 [resource]
 script = ExtResource("2_vvlku")
@@ -10,4 +11,5 @@ focus_speed = 300
 normal_speed = 550
 animation = ExtResource("1_ewcl1")
 shoot_script = ExtResource("3_shoot")
+bomb = ExtResource("4_bomb")
 metadata/_custom_type_script = "uid://grfvsrralj0y"

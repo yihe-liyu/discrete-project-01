@@ -200,39 +200,39 @@ func _on_animation_finished() -> void:
 
 # ═══ Bomb（X 键） ═══
 
-const BOMB_SPAWN_COUNT: int = 8
-const BOMB_SPAWN_INTERVAL: float = 0.1
-const BOMB_SPEED: float = 220.0
-const BOMB_DAMAGE: float = 100.0
-const BOMB_RADIUS: float = 45.0
-const BOMB_INVINCIBLE_TIME: float = 4.0
-
+## bomb 数据在 player_data.bomb（BombData）；编队/运动/爆炸全由它决定。
 func _bomb() -> void:
 	if is_invincible:
+		return
+	var bomb_data: BombData = player_data.bomb if player_data else null
+	if bomb_data == null:
+		push_warning("Player._bomb：player_data.bomb 未配置（BombData）")
 		return
 	if not resources.use_bomb():
 		return
 	_play_sfx(AssetRegistry.sounds["card"], -6.0)
 	# Bomb 期间短暂无敌
 	is_invincible = true
-	_invincible_timer = BOMB_INVINCIBLE_TIME
+	_invincible_timer = bomb_data.invincible_time
 	var base_hue := RNG.randf()
 	var tween := create_tween()
-	for i in BOMB_SPAWN_COUNT:
+	for i in bomb_data.count:
 		tween.tween_callback(_spawn_bomb_bullet.bind(i, base_hue))
-		tween.tween_interval(BOMB_SPAWN_INTERVAL)
+		tween.tween_interval(bomb_data.interval)
 
 
 func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
-	var dir := Vector2.RIGHT.rotated(TAU * float(i) / float(BOMB_SPAWN_COUNT))
+	var bomb_data: BombData = player_data.bomb if player_data else null
+	if bomb_data == null:
+		return
+	var count := maxi(bomb_data.count, 1)
+	var dir := Vector2.RIGHT.rotated(TAU * float(i) / float(count))
 	# 随机一个起始色相，后续按等间隔均匀增加，铺满整个色环
-	var hue := fmod(base_hue + float(i) / float(BOMB_SPAWN_COUNT), 1.0)
-	var color := Color.from_hsv(hue, 1.0, 1.0)
-	var data := BulletData.new().tex("bomb01_white").bomb().color(color).dir(dir.x * BOMB_SPEED, dir.y * BOMB_SPEED)
-	data.params = {"spawn_delay": float(i) * BOMB_SPAWN_INTERVAL}
+	var hue := fmod(base_hue + float(i) / float(count), 1.0)
+	var tint := Color.from_hsv(hue, 1.0, 1.0)
 	_play_sfx(AssetRegistry.sounds["shoot"], -6.0)
 	if ctx:
-		ctx.bullets.shoot_bomb(data, global_position, dir)
+		ctx.bullets.shoot_bomb(bomb_data, global_position, dir, tint, float(i) * bomb_data.interval)
 
 
 # ═══ 释放记忆（C 键） ═══

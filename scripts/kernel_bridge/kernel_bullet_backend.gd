@@ -56,15 +56,15 @@ func _exit_tree() -> void:
 	_port_probes.clear()
 
 
-## 生成宿主节点 bomb（返回节点，供调用方忽略/持有）。
-func spawn_bomb(data: BulletData, pos: Vector2, direction: Vector2) -> Node:
+## 生成宿主节点 bomb（返回节点，供调用方忽略/持有）。data 是 BombData（不是弹幕的 BulletData）。
+func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0) -> Node:
 	var bomb: Node2D = KernelBombClass.new()
 	bomb.entity_registry = entity_registry
 	bomb.bullet_manager = bullet_manager
 	bomb.fx_parent = bullet_manager.fx_parent if bullet_manager else null
 	add_child(bomb)
 	_bombs.append(bomb)
-	bomb.setup(data, pos, direction)
+	bomb.setup(data, pos, direction, tint, spawn_delay)
 	return bomb
 
 

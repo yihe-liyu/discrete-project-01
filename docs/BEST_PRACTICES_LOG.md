@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — 自机 bomb 数据化：`BombData` + 现 8 颗炸弹归位
+
+- **动机**：炸弹调参（半径/速度/伤害/时长）散在 `KernelBomb` 与 `player.gd` 两处硬编码，且复用弹幕的 `BulletData`（语义漂）；上一轮还发现 `BOMB_DAMAGE` / `BOMB_RADIUS` / `BOMB_SPEED` 三枚**死常量**（全仓无人引用，`100` 与真正生效的 `150` 还矛盾）。
+- **做法**：新增 `BombData`（Resource：外观/编队/运动/爆炸）+ `data/player_data/bomb_ring.tres`；`PlayerData.bomb` 挂载；`KernelBomb` 变**纯机制**（`setup(BombData, pos, dir, tint, spawn_delay)`）；调用链 `BulletService / BulletManager / KernelBulletBackend.spawn_bomb` 全改收 `BombData`；`player._bomb` 读 `player_data.bomb`。
+- **顺手删死码**：`BOMB_SPAWN_COUNT/INTERVAL/SPEED/DAMAGE/RADIUS/INVINCIBLE_TIME` 六枚常量（值全进 `BombData`；`SPEED/DAMAGE/RADIUS` 本就没被读）。
+- **验证**：新增 `test_bomb_data`（3/3：tres 加载 + PlayerData 挂载 + KernelBomb 读数据）；`./tools/verify.sh` 全绿 **374 / 4161**。
+- **为下一步铺路**：mist bomb（单贴图、横向从 0 展开、椭圆持续伤害+清弹）只需再加一个宿主实体 + 一份 `BombData`，不用再动引擎。
+
 ### 2026-09-14 — 内容归位：non_mid 散圈半径移进 non_mid01_bullet（去重 + 去难度耦合）
 
 - **发现**：`[175,150,125,100]` 曾有**两份** —— `LifecycleCatalog._NON_MID_RADIUS`（引擎）与 `non_mid01_bullet.gd` 回调里的 `diff_pick([...])`（内容）。同一份内容调参写两遍、还跨层，漂移风险。
