@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-1 ✅：原生判定（hit_test / query_circle / grazed）与 GDScript 1:1
+
+- **产出**：原生 `set_hitbox / hit_test / query_circle / is_grazed / mark_grazed`；per-row hitbox（radius / offset / size + follow_dir / dir_offset + grazed）；`_circle_rect` 与 `HitGeometry` 1:1。
+- **实现**：`query_circle` 用**线性扫描**（与 GDScript 的 plain/linear 路径**同序**）；语义对齐 `_narrow_hit`（fx 相位跳过 / 偏移随朝向旋转 / 矩形分支 / 半径相加）。
+- **验证**：`test_native_collision` **4/4（293 断言）** —— 圆 / 偏移 / 矩形三种 hitbox 下 `query_circle` + `hit_test` + `grazed` 全部一致。
+- **注**：宽相 uniform grid **暂未移植**；线性扫描在 C++ 下先量收益再决定（沿用「量到收益再说」）。
+- **验收**：verify.sh 全绿。
+
 ### 2026-09-14 — L3 ✅：原生行为执行器（packed program）与参考解释器 parity
 
 - **目标**：把描述符执行搬到原生（行为 4.25ms 那块）。
@@ -372,13 +380,3 @@
   - **M2** 词汇合一：`BulletData` ⇄ `BulletType`（(a) `extends` / (b) 退化为构造助手，**待拍板**）→ 删 `type_for()` / `signature_of()` / `_type_by_sig`；`kernel_port()` 降为可选覆盖。
   - **M3** 渲染 / 纹理归属（hybrid vs 内核图集）—— 先决策，不阻塞 M1/M2。
 - **流程（硬约束）**：内核改动**必须回重建版做**（那是它的开发环境）→ 跑重建版 `tests/` → 打 tag `kernel-v2` → vendor 回来。**禁止**只改 `scripts/kernel/` 副本（README 明写它只是 vendor 快照，会被覆盖）。
-- **融合完成判据**（§16.5，可 lint）：桥接 ≤300 行且无类型映射/侧表、`_by_index` = 0、`kernel_port` = 0、桥接里 `BulletData` 显著下降、内核仍 **0 宿主引用**。
-- **不做**：L2 壳合一（把内容搬进重建版）≈ big-bang，决策备忘已否决。
-- **前置发现（M0）**：实测 `scripts/kernel/` 副本已与上游漂移 **3 处**，而且**全是本地改了、上游没同步** —— K1 的 `avoid_player.gd → avoid_player_behavior.gd`（文件名）、K7 的 `FxLayer → FxPool`（注释）、A10 的 `bullet_data → bullet_type`（形参）。下次 vendor 会**覆盖回去**（文件名甚至出现两个文件）→ 先做 M0（同步 + 写可复现的 `tools/vendor_kernel.sh`）。
-- **对命名的连带影响**：N17（`KernelBulletBackend → KernelBulletBridge`）**暂缓** —— 类名该叫什么取决于融合后它缩成什么样；等 M1/M2 落地再定，避免 42 处白改。
-
-### 2026-09-13 — P0-7：标识符命名契约 + 命名 lint（N15 / N16）
-
-- **背景**：A17 的命名复查发现「同一概念不同名」成片，根因和 A17 一样 —— **基线 / ARCHITECTURE 从未定义代码内标识符的命名规则**（R15 只管文件/文件夹/节点的大小写）。
-- **骨架（用户定）**：引用类变量名 **= 类型名 snake**；**节点名与变量名不符 → 有一方要改**；除极常见缩写外**不缩写**。
-- **落点**：基线新增「**标识符命名契约**」，与注入契约 / 命名边界契约并列。补了原方案没覆盖的 6 类（集合·映射 / 布尔 / 回调 / preload 常量 / 函数动词 / ``@onready``），并加了**从 lint 结果反推出来的例外**：

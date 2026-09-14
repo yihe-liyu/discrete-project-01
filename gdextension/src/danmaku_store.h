@@ -26,6 +26,8 @@ class DanmakuStore : public RefCounted {
 	std::vector<Color> _color;
 	std::vector<float> _life, _fx, _timer;
 	float _default_life = 20.0f;
+	std::vector<float> _hb_radius, _hb_offx, _hb_offy, _hb_sizex, _hb_sizey, _hb_diroff;
+	std::vector<unsigned char> _hb_follow, _grazed;
 	float _field_left = 0.0f, _field_right = 0.0f, _field_top = 0.0f;
 
 	// L3：packed program 执行（列式；op/args 全局拼接，program 只存偏移）。
@@ -64,6 +66,12 @@ public:
 	void set_margin(float p_margin);
 	void set_default_life(float p_life);
 	void set_field(float p_left, float p_right, float p_top);
+	// L3.5-1：判定（与 GDScript 内核 1:1）
+	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
+	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const;
+	PackedInt32Array query_circle(const Vector2 &p_center, float p_search_radius) const;
+	bool is_grazed(int p_id) const;
+	void mark_grazed(int p_id);
 	void clear();
 	int despawn(int p_id);
 	void set_life(int p_id, float p_life);

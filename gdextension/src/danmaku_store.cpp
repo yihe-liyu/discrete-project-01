@@ -23,6 +23,11 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("fill_multimesh", "mm"), &DanmakuStore::fill_multimesh);
 	ClassDB::bind_method(D_METHOD("set_margin", "margin"), &DanmakuStore::set_margin);
 	ClassDB::bind_method(D_METHOD("set_default_life", "life"), &DanmakuStore::set_default_life);
+	ClassDB::bind_method(D_METHOD("set_hitbox", "id", "radius", "offset", "size", "follow_dir", "dir_offset"), &DanmakuStore::set_hitbox);
+	ClassDB::bind_method(D_METHOD("hit_test", "id", "center", "radius"), &DanmakuStore::hit_test);
+	ClassDB::bind_method(D_METHOD("query_circle", "center", "radius"), &DanmakuStore::query_circle);
+	ClassDB::bind_method(D_METHOD("is_grazed", "id"), &DanmakuStore::is_grazed);
+	ClassDB::bind_method(D_METHOD("mark_grazed", "id"), &DanmakuStore::mark_grazed);
 	ClassDB::bind_method(D_METHOD("set_field", "left", "right", "top"), &DanmakuStore::set_field);
 	ClassDB::bind_method(D_METHOD("register_program", "ops", "args", "move_start", "move_count", "until", "act_start", "act_count", "phase_count", "slots"), &DanmakuStore::register_program);
 	ClassDB::bind_method(D_METHOD("set_program", "id", "program"), &DanmakuStore::set_program);
@@ -67,6 +72,14 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_pslots.assign(p_capacity * SLOT_STRIDE, 0.0f);
 	_pfresh.assign(p_capacity, 1);
 	_phasend.assign(p_capacity, 0);
+	_hb_radius.assign(p_capacity, 0.0f);
+	_hb_offx.assign(p_capacity, 0.0f);
+	_hb_offy.assign(p_capacity, 0.0f);
+	_hb_sizex.assign(p_capacity, 0.0f);
+	_hb_sizey.assign(p_capacity, 0.0f);
+	_hb_diroff.assign(p_capacity, 0.0f);
+	_hb_follow.assign(p_capacity, 0);
+	_grazed.assign(p_capacity, 0);
 	_count = 0;
 }
 
@@ -139,6 +152,14 @@ void DanmakuStore::_swap_remove(int p_id) {
 	for (int s = 0; s < SLOT_STRIDE; ++s) {
 		_pslots[p_id * SLOT_STRIDE + s] = _pslots[last * SLOT_STRIDE + s];
 	}
+	_hb_radius[p_id] = _hb_radius[last];
+	_hb_offx[p_id] = _hb_offx[last];
+	_hb_offy[p_id] = _hb_offy[last];
+	_hb_sizex[p_id] = _hb_sizex[last];
+	_hb_sizey[p_id] = _hb_sizey[last];
+	_hb_diroff[p_id] = _hb_diroff[last];
+	_hb_follow[p_id] = _hb_follow[last];
+	_grazed[p_id] = _grazed[last];
 }
 
 // 完整积分循环：寿命 / 出生相位 / 位移 / 计时 / 剔除 —— 与 scripts/kernel/bullet_system.gd 1:1。
@@ -665,6 +686,81 @@ Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, 
 	out["x"] = ex; out["y"] = ey; out["dx"] = edx; out["dy"] = edy; out["val"] = eval;
 	return out;
 }
+
+
+// ═══ L3.5-1：判定几何（与 scripts/kernel/collision/hit_geometry.gd 1:1）═══
+static bool _circle_rect(const Vector2 &center, float radius, const Vector2 &rect_center, float rot, const Vector2 &size) {
+	const Vector2 local = (center - rect_center).rotated(-rot);
+	const Vector2 half = size * 0.5f;
+	const float dx = MAX(0.0f, ABS(local.x) - half.x);
+	const float dy = MAX(0.0f, ABS(local.y) - half.y);
+	return dx * dx + dy * dy <= radius * radius;
+}
+
+static float _hit_rot(const Vector2 &vel, unsigned char follow, float diroff) {
+	if (follow && vel != Vector2()) {
+		return vel.angle() + diroff;
+	}
+	return 0.0f;
+}
+
+void DanmakuStore::set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset) {
+	_hb_radius[p_id] = p_radius;
+	_hb_offx[p_id] = p_offset.x;
+	_hb_offy[p_id] = p_offset.y;
+	_hb_sizex[p_id] = p_size.x;
+	_hb_sizey[p_id] = p_size.y;
+	_hb_follow[p_id] = p_follow_dir ? 1 : 0;
+	_hb_diroff[p_id] = p_dir_offset;
+}
+
+bool DanmakuStore::hit_test(int p_id, const Vector2 &p_center, float p_radius) const {
+	if (_fx[p_id] > 0.0f) { return false; }
+	if (_type[p_id] < 0) { return false; }
+	Vector2 hit(_x[p_id], _y[p_id]);
+	const float rot = _hit_rot(Vector2(_vx[p_id], _vy[p_id]), _hb_follow[p_id], _hb_diroff[p_id]);
+	if (_hb_offx[p_id] != 0.0f || _hb_offy[p_id] != 0.0f) {
+		hit += Vector2(_hb_offx[p_id], _hb_offy[p_id]).rotated(rot);
+	}
+	const float sx = _hb_sizex[p_id];
+	const float sy = _hb_sizey[p_id];
+	if (sx == 0.0f && sy == 0.0f) {
+		const Vector2 d = p_center - hit;
+		const float rr = p_radius + _hb_radius[p_id];
+		return d.length_squared() <= rr * rr;
+	}
+	return _circle_rect(p_center, p_radius, hit, rot, Vector2(sx, sy));
+}
+
+PackedInt32Array DanmakuStore::query_circle(const Vector2 &p_center, float p_search_radius) const {
+	PackedInt32Array out;
+	for (int i = 0; i < _count; ++i) {
+		if (_fx[i] > 0.0f) { continue; }
+		Vector2 hit(_x[i], _y[i]);
+		const bool special = _hb_offx[i] != 0.0f || _hb_offy[i] != 0.0f || _hb_sizex[i] != 0.0f || _hb_sizey[i] != 0.0f;
+		if (special) {
+			const float rot = _hit_rot(Vector2(_vx[i], _vy[i]), _hb_follow[i], _hb_diroff[i]);
+			if (_hb_offx[i] != 0.0f || _hb_offy[i] != 0.0f) {
+				hit += Vector2(_hb_offx[i], _hb_offy[i]).rotated(rot);
+			}
+			if (_hb_sizex[i] != 0.0f || _hb_sizey[i] != 0.0f) {
+				if (_circle_rect(p_center, p_search_radius, hit, rot, Vector2(_hb_sizex[i], _hb_sizey[i]))) {
+					out.push_back(i);
+				}
+				continue;
+			}
+		}
+		const Vector2 d = hit - p_center;
+		const float r = p_search_radius + _hb_radius[i];
+		if (d.length_squared() <= r * r) {
+			out.push_back(i);
+		}
+	}
+	return out;
+}
+
+bool DanmakuStore::is_grazed(int p_id) const { return _grazed[p_id] != 0; }
+void DanmakuStore::mark_grazed(int p_id) { _grazed[p_id] = 1; }
 
 DanmakuStore::DanmakuStore() {}
 DanmakuStore::~DanmakuStore() {}
