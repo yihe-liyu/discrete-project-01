@@ -1,8 +1,8 @@
-## LifecycleBehavior —— BulletLifecycle 描述符的 GDScript 参考解释器（L1）。
+## LifecycleBehavior —— BulletLifecycle 描述符的 GDScript 参考解释器（L1.5）。
 ##
-## 见 docs/LIFECYCLE_MODEL.md §3。它是 Behavior 的一个 tenant：从 params.lifecycle 取描述符，
-## 在当前相位施加 moves，判定 until，成立则跑 on_end 动作并进入下一相位。
-## L3 由原生执行器替换（schema 不变）；本文件随 GDScript 行为在 L4 删除。
+## 见 docs/LIFECYCLE_MODEL.md §3。它是 Behavior 的一个 tenant：从 params.lifecycle 取描述符。
+## 状态**显式**：每弹一个 slots 数组（由 builder 按相位自动分配），相位切换清零 →
+## unit 组合不互相污染。L3 由原生执行器替换（schema 不变）。
 class_name LifecycleBehavior
 extends Behavior
 
@@ -19,13 +19,7 @@ func process(system: BulletSystem, bullet_id: int, ctx: BehaviorContext) -> void
 		return
 	var st: Variant = system.get_behavior_state(bullet_id)
 	if not (st is Dictionary):
-		st = {
-			&"phase": 0,
-			&"turned": 0.0,
-			&"elapsed": 0.0,
-			&"drift": float(params.get(&"initial_drift", 0.0)),
-			&"hit_pos": null,
-		}
+		st = _new_state(lc)
 		system.set_behavior_state(bullet_id, st)
 	var phases: Array = lc.phases
 	var pi: int = int(st[&"phase"])
@@ -38,20 +32,48 @@ func process(system: BulletSystem, bullet_id: int, ctx: BehaviorContext) -> void
 		_apply_move(system, bullet_id, st, mv, dt, ctx)
 	if _check_until(system, bullet_id, st, phase[&"until"], ctx):
 		_run_actions(system, bullet_id, st, phase[&"on_end"], ctx)
-		st[&"phase"] = pi + 1
+		_enter_phase(st, pi + 1)
+
+
+func _new_state(lc) -> Dictionary:
+	var count: int = int(lc.slots)
+	var slots := []
+	slots.resize(count)
+	slots.fill(0.0)
+	return {
+		&"phase": 0,
+		&"elapsed": 0.0,
+		&"slots": slots,
+		&"end_pos": Vector2.ZERO,
+		&"has_end_pos": false,
+		&"next_check": 0.0,
+	}
+
+
+func _enter_phase(st: Dictionary, phase: int) -> void:
+	st[&"phase"] = phase
+	st[&"elapsed"] = 0.0
+	st[&"end_pos"] = Vector2.ZERO
+	st[&"has_end_pos"] = false
+	st[&"next_check"] = 0.0
+	var slots: Array = st[&"slots"]
+	for i in slots.size():
+		slots[i] = 0.0
 
 
 func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, dt: float, ctx: BehaviorContext) -> void:
-	match mv[&"kind"]:
+	match mv[&"op"]:
 		BulletLifecycle.M_ACCEL_WORLD:
 			system.set_velocity(id, system.get_velocity(id) + Vector2(mv[&"vec"]) * dt)
-		BulletLifecycle.M_ACCEL_ALONG_VEL:
+		BulletLifecycle.M_ACCEL_HEADING:
 			var v := system.get_velocity(id)
 			var dir := v.normalized()
 			if dir != Vector2.ZERO:
 				system.set_velocity(id, v + dir * float(mv[&"a"]) * dt)
 		BulletLifecycle.M_ROTATE:
-			var turned: float = float(st[&"turned"])
+			var slots: Array = st[&"slots"]
+			var si: int = int(mv[&"slot"])
+			var turned: float = float(slots[si])
 			var step: float = float(mv[&"w"]) * dt
 			var limit: float = float(mv[&"limit"])
 			if limit > 0.0:
@@ -59,62 +81,70 @@ func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, 
 				if remain <= 0.0:
 					return
 				step = clampf(step, -remain, remain)
-			st[&"turned"] = turned + absf(step)
+			slots[si] = turned + absf(step)
 			system.set_velocity(id, system.get_velocity(id).rotated(step))
-		BulletLifecycle.M_SET_VEL:
-			system.set_velocity(id, Vector2(mv[&"dir"]).normalized() * float(mv[&"speed"]))
-		BulletLifecycle.M_SCALE:
-			system.set_velocity(id, system.get_velocity(id) * float(mv[&"f"]))
-		BulletLifecycle.M_SPEED_RAMP:
-			var t: float = 1.0 if float(mv[&"time"]) <= 0.0 else clampf(float(st[&"elapsed"]) / float(mv[&"time"]), 0.0, 1.0)
-			var d := system.get_velocity(id).normalized()
-			if d != Vector2.ZERO:
-				system.set_velocity(id, d * lerpf(float(mv[&"min"]), float(mv[&"top"]), t))
-		BulletLifecycle.M_AIM:
+		BulletLifecycle.M_STEER:
 			var from := system.get_position(id)
-			var target: Node2D = ctx.get_world().get_nearest_enemy(from)
-			if target != null:
+			var tp = _target_pos(mv[&"target"], from, ctx)
+			if tp != null:
 				var vel := system.get_velocity(id)
 				var cur := vel.normalized()
 				if cur != Vector2.ZERO:
-					var diff: Vector2 = target.global_position - from
+					var diff: Vector2 = tp - from
 					var dist: float = maxf(diff.length(), 1.0)
-					var dw: float = 1.0 if float(mv[&"dist_weight"]) <= 0.0 else 1.0 + float(mv[&"dist_weight"]) / (dist + float(mv[&"dist_weight"]))
-					var max_turn: float = float(mv[&"max_turn"]) * dw * dt
+					var ramp: float = float(mv[&"ramp"])
+					var factor: float = 1.0 if ramp <= 0.0 else clampf(float(st[&"elapsed"]) / ramp, 0.0, 1.0)
+					var dw: float = 1.0
+					var dist_weight: float = float(mv[&"dist_weight"])
+					if dist_weight > 0.0:
+						dw = 1.0 + dist_weight / (dist + dist_weight)
+					var max_turn: float = float(mv[&"max_turn"]) * factor * dw * dt
 					var turn: float = clampf(cur.angle_to(diff / dist), -max_turn, max_turn)
 					system.set_velocity(id, cur.rotated(turn) * vel.length())
-		BulletLifecycle.M_ANCHOR:
-			var anchor: Vector2 = ctx.get_player_position()
-			if int(mv[&"anchor_id"]) != 0:
-				var node: Object = instance_from_id(int(mv[&"anchor_id"]))
-				if node is Node2D:
-					anchor = (node as Node2D).global_position if bool(mv[&"use_global"]) else (node as Node2D).position
-			anchor += Vector2(mv[&"offset"])
+		BulletLifecycle.M_SPEED_LERP:
+			var ramp2: float = float(mv[&"ramp"])
+			var f2: float = 1.0 if ramp2 <= 0.0 else clampf(float(st[&"elapsed"]) / ramp2, 0.0, 1.0)
+			var d2 := system.get_velocity(id).normalized()
+			if d2 != Vector2.ZERO:
+				system.set_velocity(id, d2 * lerpf(float(mv[&"from"]), float(mv[&"to"]), f2))
+		BulletLifecycle.M_SCALE_SPEED:
+			system.set_velocity(id, system.get_velocity(id) * float(mv[&"f"]))
+		BulletLifecycle.M_SET_HEADING:
+			var d3 := _dir(mv[&"dir"], system.get_position(id), ctx)
+			if d3 != Vector2.ZERO:
+				system.set_velocity(id, d3 * system.get_velocity(id).length())
+		BulletLifecycle.M_SET_SPEED:
+			var d4 := system.get_velocity(id).normalized()
+			if d4 != Vector2.ZERO:
+				system.set_velocity(id, d4 * float(mv[&"speed"]))
+		BulletLifecycle.M_ANCHOR_DRIFT:
+			var base := _anchor_pos(int(mv[&"anchor_id"]), Vector2(mv[&"offset"]), bool(mv[&"use_global"]), ctx)
+			var slots2: Array = st[&"slots"]
+			var si2: int = int(mv[&"slot"])
+			slots2[si2] = float(slots2[si2]) + float(mv[&"speed"]) * dt
 			var adir := Vector2(sin(float(mv[&"angle"])), -cos(float(mv[&"angle"])))
-			st[&"drift"] = float(st[&"drift"]) + float(mv[&"drift"]) * dt
-			system.set_position(id, anchor + adir * float(st[&"drift"]))
+			system.set_position(id, base + adir * float(slots2[si2]))
 		_:
-			push_warning("LifecycleBehavior: 未知 move '%s'" % mv[&"kind"])
+			push_warning("LifecycleBehavior: 未知 move '%s'" % mv[&"op"])
 
 
 func _check_until(system: BulletSystem, id: int, st: Dictionary, cond: Dictionary, ctx: BehaviorContext) -> bool:
-	match cond[&"kind"]:
+	match cond[&"op"]:
 		BulletLifecycle.C_NEVER:
 			return false
-		BulletLifecycle.C_TIMEOUT:
+		BulletLifecycle.C_ELAPSED:
 			return float(st[&"elapsed"]) >= float(cond[&"t"])
-		BulletLifecycle.C_TOP_EDGE:
-			return system.get_position(id).y <= GameConfig.FIELD_TOP
-		BulletLifecycle.C_TURNED:
-			return float(st[&"turned"]) >= float(cond[&"limit"])
-		BulletLifecycle.C_NEAR_PLAYER:
-			return system.get_position(id).distance_to(ctx.get_player_position()) < float(cond[&"r"])
-		BulletLifecycle.C_NEAR_BOSS:
-			var boss = _boss()
-			if not is_instance_valid(boss):
+		BulletLifecycle.C_NEAR:
+			var every: float = float(cond[&"every"])
+			if every > 0.0:
+				if float(st[&"elapsed"]) < float(st[&"next_check"]):
+					return false
+				st[&"next_check"] = float(st[&"elapsed"]) + every
+			var tp = _target_pos(cond[&"target"], system.get_position(id), ctx)
+			if tp == null:
 				return false
-			return system.get_position(id).distance_to(boss.global_position) < float(cond[&"r"])
-		BulletLifecycle.C_WALL_HIT:
+			return system.get_position(id).distance_to(tp) < float(cond[&"r"])
+		BulletLifecycle.C_AT_WALL:
 			var mask: int = int(cond[&"mask"])
 			var pos := system.get_position(id)
 			var clamped := pos
@@ -125,45 +155,90 @@ func _check_until(system: BulletSystem, id: int, st: Dictionary, cond: Dictionar
 			if (mask & BulletLifecycle.WALL_TOP) and pos.y <= GameConfig.FIELD_TOP:
 				clamped.y = GameConfig.FIELD_TOP
 			if clamped != pos:
-				st[&"hit_pos"] = clamped
+				st[&"end_pos"] = clamped
+				st[&"has_end_pos"] = true
 				return true
 			return false
+		BulletLifecycle.C_STATE:
+			var sv: float = float(st[&"slots"][int(cond[&"slot"])])
+			return sv >= float(cond[&"value"]) if int(cond[&"cmp"]) == BulletLifecycle.CMP_GE else sv <= float(cond[&"value"])
 		_:
 			return false
 
 
 func _run_actions(system: BulletSystem, id: int, st: Dictionary, actions: Array, ctx: BehaviorContext) -> void:
 	for act in actions:
-		match act[&"kind"]:
+		match act[&"op"]:
 			BulletLifecycle.A_SFX:
 				if act[&"key"] != &"" and host != null and host.has_method("play_sfx"):
 					host.play_sfx(act[&"key"], float(act[&"db"]))
 			BulletLifecycle.A_EMIT:
-				_do_emit(system, id, st, act)
+				_do_emit(system, id, st, act, ctx)
 			BulletLifecycle.A_DESPAWN:
 				system.request_despawn(id)
-			BulletLifecycle.A_SET_VEL:
-				system.set_velocity(id, Vector2(act[&"dir"]).normalized() * float(act[&"speed"]))
+			BulletLifecycle.A_SET_HEADING:
+				var d := _dir(act[&"dir"], system.get_position(id), ctx)
+				if d != Vector2.ZERO:
+					system.set_velocity(id, d * system.get_velocity(id).length())
+			BulletLifecycle.A_SET_SPEED:
+				var d2 := system.get_velocity(id).normalized()
+				if d2 != Vector2.ZERO:
+					system.set_velocity(id, d2 * float(act[&"speed"]))
 
 
-func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary) -> void:
-	var at: Variant = st[&"hit_pos"]
-	var at_v: Vector2 = at if at != null else system.get_position(id)
+func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ctx: BehaviorContext) -> void:
+	var at: Vector2 = system.get_position(id)
+	if bool(act[&"at_end"]) and bool(st[&"has_end_pos"]):
+		at = Vector2(st[&"end_pos"])
 	var speed: float = system.get_velocity(id).length()
 	if float(act[&"speed"]) > 0.0:
 		speed = float(act[&"speed"])
-	var aim := Vector2.DOWN
-	if bool(act[&"aim_boss"]):
-		var boss = _boss()
-		if is_instance_valid(boss):
-			aim = (boss.global_position - at_v).normalized()
-	var dir: Vector2 = aim.rotated(float(act[&"angle"]))
+	var dir: Vector2 = _dir(act[&"dir"], at, ctx)
 	var factory: Callable = act.get(&"factory", Callable())
 	if factory.is_valid() and host != null and host.has_method("queue_spawn"):
 		var b = factory.call()
 		if b != null:
 			b.velocity = Vector2(0, speed)
-			host.queue_spawn(b, at_v, dir)
+			host.queue_spawn(b, at, dir)
+
+
+# ── 目标 / 方向 / 锚点 ──
+func _target_pos(target: StringName, from: Vector2, ctx: BehaviorContext) -> Variant:
+	match target:
+		BulletLifecycle.T_PLAYER:
+			return ctx.get_player_position()
+		BulletLifecycle.T_BOSS:
+			var boss = _boss()
+			return boss.global_position if is_instance_valid(boss) else null
+		BulletLifecycle.T_NEAREST_ENEMY:
+			return ctx.get_world().get_nearest_enemy(from)
+		_:
+			return null
+
+
+func _dir(spec: Dictionary, pos: Vector2, ctx: BehaviorContext) -> Vector2:
+	var angle: float = float(spec[&"angle"])
+	match spec[&"kind"]:
+		BulletLifecycle.D_HEADING:
+			return Vector2(sin(angle), -cos(angle))
+		BulletLifecycle.D_TOWARD:
+			var tp = _target_pos(spec[&"target"], pos, ctx)
+			var base: Vector2 = (tp - pos).normalized() if tp != null else Vector2.DOWN
+			return base.rotated(angle)
+		BulletLifecycle.D_AWAY:
+			var tp2 = _target_pos(spec[&"target"], pos, ctx)
+			var base2: Vector2 = (pos - tp2).normalized() if tp2 != null else Vector2.DOWN
+			return base2.rotated(angle)
+		_:
+			return Vector2.DOWN
+
+
+func _anchor_pos(anchor_id: int, offset: Vector2, use_global: bool, ctx: BehaviorContext) -> Vector2:
+	if anchor_id != 0:
+		var node: Object = instance_from_id(anchor_id)
+		if node is Node2D:
+			return (node as Node2D).global_position if use_global else (node as Node2D).position + offset
+	return ctx.get_player_position() + offset
 
 
 func _boss():

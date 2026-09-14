@@ -1,47 +1,66 @@
-## BulletLifecycle —— per-bullet 生命周期的**固定 schema 描述符** + 创作者 fluent builder。
+## BulletLifecycle —— per-bullet 生命周期的**固定 schema 描述符** + fluent builder（L1.5）。
 ##
-## 见 docs/LIFECYCLE_MODEL.md。L1 = GDScript 参考实现；L3 换原生执行器，**schema 不变**。
-## 创作者只调高层方法（accel_along_vel / until_wall / emit ...），永不写数值 opcode。
+## L1.5 相对 L1 的两处修正（见 docs/LIFECYCLE_MODEL.md §3/§11）：
+##   ① **状态显式化**：每个有状态 unit 自带槽（slot），builder 按相位**自动分配**；相位切换清零
+##      → unit 组合不再互相污染（L1 的隐式 Dictionary 是隐藏通道：两个 phase 都 rotate 会共用 turned）。
+##   ② **unit 正交化**：aim → steer(toward())；anchor+drift 合成语义单元 anchor_drift；
+##      emit 收 dir 表达式；top_edge → at_wall；near_player/near_boss → near(target)。
+## 创作者只调高层方法，看不到槽。
 class_name BulletLifecycle
 extends RefCounted
 
-# ---- Move 原语 ----
+# ---- Move ----
 const M_ACCEL_WORLD := &"accel_world"
-const M_ACCEL_ALONG_VEL := &"accel_along_vel"
+const M_ACCEL_HEADING := &"accel_heading"
 const M_ROTATE := &"rotate"
-const M_AIM := &"aim"
-const M_ANCHOR := &"anchor"
-const M_SPEED_RAMP := &"speed_ramp"
-const M_SET_VEL := &"set_vel"
-const M_SCALE := &"scale"
+const M_STEER := &"steer"
+const M_SPEED_LERP := &"speed_lerp"
+const M_SCALE_SPEED := &"scale_speed"
+const M_SET_HEADING := &"set_heading"
+const M_SET_SPEED := &"set_speed"
+const M_ANCHOR_DRIFT := &"anchor_drift"
 
-# ---- Until 条件 ----
+# ---- Condition ----
 const C_NEVER := &"never"
-const C_TIMEOUT := &"timeout"
-const C_TOP_EDGE := &"top_edge"
-const C_WALL_HIT := &"wall_hit"
-const C_NEAR_PLAYER := &"near_player"
-const C_NEAR_BOSS := &"near_boss"
-const C_TURNED := &"turned"
+const C_ELAPSED := &"elapsed"
+const C_NEAR := &"near"
+const C_AT_WALL := &"at_wall"
+const C_STATE := &"state"
 
 # ---- Action ----
 const A_EMIT := &"emit"
 const A_SFX := &"sfx"
 const A_DESPAWN := &"despawn"
-const A_SET_VEL := &"set_vel"
+const A_SET_HEADING := &"set_heading"
+const A_SET_SPEED := &"set_speed"
 
-# ---- 墙位掩码 ----
+# ---- 目标 / 方向 ----
+const T_PLAYER := &"player"
+const T_NEAREST_ENEMY := &"nearest_enemy"
+const T_BOSS := &"boss"
+const D_HEADING := &"heading"
+const D_TOWARD := &"toward"
+const D_AWAY := &"away"
+
+# ---- 墙位掩码 / 比较 ----
 const WALL_LEFT := 1
 const WALL_RIGHT := 2
 const WALL_TOP := 4
 const WALL_BOTTOM := 8
+const CMP_GE := 0
+const CMP_LE := 1
 
-## 有序相位：[{moves: Array, until: Dictionary, on_end: Array}]
+## 有序相位：[{moves, until, on_end}]
 var phases: Array = []
+## 每弹状态槽数（所有相位取最大；builder 自动分配）。
+var slots: int = 0
 
 var _moves: Array = []
 var _until: Dictionary = {}
 var _on_end: Array = []
+var _slot_next: int = 0
+var _last_turn_slot: int = -1
+var _last_turn_limit: float = 0.0
 
 
 func _init() -> void:
@@ -50,8 +69,11 @@ func _init() -> void:
 
 func _begin_phase() -> void:
 	_moves = []
-	_until = {&"kind": C_NEVER}
+	_until = {&"op": C_NEVER}
 	_on_end = []
+	_slot_next = 0
+	_last_turn_slot = -1
+	_last_turn_limit = 0.0
 	phases.append({&"moves": _moves, &"until": _until, &"on_end": _on_end})
 
 
@@ -61,129 +83,148 @@ func then() -> BulletLifecycle:
 	return self
 
 
+func _alloc() -> int:
+	var s := _slot_next
+	_slot_next += 1
+	slots = maxi(slots, _slot_next)
+	return s
+
+
+func _set_until(op: StringName, extra: Dictionary = {}) -> void:
+	_until.clear()
+	_until[&"op"] = op
+	for k in extra:
+		_until[k] = extra[k]
+
+
+# ═══ 方向表达式（静态构造，供 steer/emit/set_heading 用）═══
+static func heading(angle: float) -> Dictionary:
+	return {&"kind": D_HEADING, &"target": &"", &"angle": angle}
+
+static func toward(target: StringName, angle: float = 0.0) -> Dictionary:
+	return {&"kind": D_TOWARD, &"target": target, &"angle": angle}
+
+static func away(target: StringName, angle: float = 0.0) -> Dictionary:
+	return {&"kind": D_AWAY, &"target": target, &"angle": angle}
+
+
 # ═══ Move ═══
 func accel_world(v: Vector2) -> BulletLifecycle:
-	_moves.append({&"kind": M_ACCEL_WORLD, &"vec": v})
+	_moves.append({&"op": M_ACCEL_WORLD, &"vec": v})
 	return self
 
-func accel_along_vel(a: float) -> BulletLifecycle:
-	_moves.append({&"kind": M_ACCEL_ALONG_VEL, &"a": a})
+func accel_heading(a: float) -> BulletLifecycle:
+	_moves.append({&"op": M_ACCEL_HEADING, &"a": a})
 	return self
 
 ## 角速度 w（弧度/秒）；limit > 0 时累计转角钳到 limit（与 CurveBehavior 1:1）。
 func rotate(w: float, limit: float = 0.0) -> BulletLifecycle:
-	_moves.append({&"kind": M_ROTATE, &"w": w, &"limit": limit})
+	var s := _alloc()
+	_last_turn_slot = s
+	_last_turn_limit = limit
+	_moves.append({&"op": M_ROTATE, &"w": w, &"limit": limit, &"slot": s})
 	return self
 
-func aim(max_turn_per_sec: float, dist_weight: float = 0.0) -> BulletLifecycle:
-	_moves.append({&"kind": M_AIM, &"max_turn": max_turn_per_sec, &"dist_weight": dist_weight})
+func steer(target: StringName, max_turn_per_sec: float, ramp: float = 0.0, dist_weight: float = 0.0) -> BulletLifecycle:
+	_moves.append({&"op": M_STEER, &"target": target, &"max_turn": max_turn_per_sec, &"ramp": ramp, &"dist_weight": dist_weight})
 	return self
 
-func speed_ramp(min_speed: float, top_speed: float, time: float) -> BulletLifecycle:
-	_moves.append({&"kind": M_SPEED_RAMP, &"min": min_speed, &"top": top_speed, &"time": time})
+func speed_lerp(from_speed: float, to_speed: float, ramp: float) -> BulletLifecycle:
+	_moves.append({&"op": M_SPEED_LERP, &"from": from_speed, &"to": to_speed, &"ramp": ramp})
 	return self
 
-func anchor(anchor_id: int, offset: Vector2, drift_speed: float, angle: float, use_global: bool = true) -> BulletLifecycle:
-	_moves.append({&"kind": M_ANCHOR, &"anchor_id": anchor_id, &"offset": offset, &"drift": drift_speed, &"angle": angle, &"use_global": use_global})
+func scale_speed(f: float) -> BulletLifecycle:
+	_moves.append({&"op": M_SCALE_SPEED, &"f": f})
 	return self
 
-func set_vel(dir: Vector2, speed: float) -> BulletLifecycle:
-	_moves.append({&"kind": M_SET_VEL, &"dir": dir, &"speed": speed})
+func set_heading(dir: Dictionary) -> BulletLifecycle:
+	_moves.append({&"op": M_SET_HEADING, &"dir": dir})
 	return self
 
-func scale(f: float) -> BulletLifecycle:
-	_moves.append({&"kind": M_SCALE, &"f": f})
+func set_speed(speed: float) -> BulletLifecycle:
+	_moves.append({&"op": M_SET_SPEED, &"speed": speed})
+	return self
+
+## 锚定 + 线性漂移（激光段）：pos = anchor + dir(angle) * 累计漂移。
+func anchor_drift(anchor_id: int, offset: Vector2, angle: float, speed: float, use_global: bool = true) -> BulletLifecycle:
+	var s := _alloc()
+	_moves.append({&"op": M_ANCHOR_DRIFT, &"anchor_id": anchor_id, &"offset": offset, &"angle": angle, &"speed": speed, &"use_global": use_global, &"slot": s})
 	return self
 
 
 # ═══ Until ═══
-## 原地改（不重新赋值）——phases[0].until 持有同一个 Dictionary 引用，重赋值会让条件丢失。
-func _set_until(kind: StringName, extra: Dictionary = {}) -> void:
-	_until.clear()
-	_until[&"kind"] = kind
-	for k in extra:
-		_until[k] = extra[k]
-
 func until_never() -> BulletLifecycle:
 	_set_until(C_NEVER)
 	return self
 
-func until_timeout(t: float) -> BulletLifecycle:
-	_set_until(C_TIMEOUT, {&"t": t})
+func until_elapsed(t: float) -> BulletLifecycle:
+	_set_until(C_ELAPSED, {&"t": t})
 	return self
 
-func until_top_edge() -> BulletLifecycle:
-	_set_until(C_TOP_EDGE)
+## every > 0 = 每 every 秒才检查一次（avoid_player 的 jump）。
+func until_near(target: StringName, r: float, every: float = 0.0) -> BulletLifecycle:
+	_set_until(C_NEAR, {&"target": target, &"r": r, &"every": every})
 	return self
 
-func until_wall(mask: int) -> BulletLifecycle:
-	_set_until(C_WALL_HIT, {&"mask": mask})
+func until_at_wall(mask: int) -> BulletLifecycle:
+	_set_until(C_AT_WALL, {&"mask": mask})
 	return self
 
-func until_near_player(r: float) -> BulletLifecycle:
-	_set_until(C_NEAR_PLAYER, {&"r": r})
+func until_state(slot: int, cmp: int, value: float) -> BulletLifecycle:
+	_set_until(C_STATE, {&"slot": slot, &"cmp": cmp, &"value": value})
 	return self
 
-func until_near_boss(r: float) -> BulletLifecycle:
-	_set_until(C_NEAR_BOSS, {&"r": r})
-	return self
-
-func until_turned(limit: float) -> BulletLifecycle:
-	_set_until(C_TURNED, {&"limit": limit})
-	return self
-
-# ═══ Action ═══
-## 相位结束时发射替换弹：factory 返回 BulletData；aim_boss 时朝 Boss（无则 DOWN），再旋转 angle。
-func on_end_emit(factory: Callable, aim_boss: bool = false, angle: float = 0.0, speed: float = 0.0) -> BulletLifecycle:
-	_on_end.append({&"kind": A_EMIT, &"factory": factory, &"aim_boss": aim_boss, &"angle": angle, &"speed": speed})
-	return self
-
-func on_end_sfx(key: StringName, db: float = 0.0) -> BulletLifecycle:
-	_on_end.append({&"kind": A_SFX, &"key": key, &"db": db})
-	return self
-
-func on_end_despawn() -> BulletLifecycle:
-	_on_end.append({&"kind": A_DESPAWN})
-	return self
-
-func on_end_set_vel(dir: Vector2, speed: float) -> BulletLifecycle:
-	_on_end.append({&"kind": A_SET_VEL, &"dir": dir, &"speed": speed})
+## 便捷：当前相位的 rotate 累计转角 >= 其 limit（curve 用法，不重复传 limit）。
+func until_turned() -> BulletLifecycle:
+	_set_until(C_STATE, {&"slot": _last_turn_slot, &"cmp": CMP_GE, &"value": _last_turn_limit})
 	return self
 
 
-# ═══ Canned preset（现有 10 行为 → 预置生命周期）═══
+# ═══ Action（当前相位的 on_end）═══
+func sfx(key: StringName, db: float = 0.0) -> BulletLifecycle:
+	_on_end.append({&"op": A_SFX, &"key": key, &"db": db})
+	return self
 
-## 非符1 反弹弹：沿飞行方向加速 → 碰左/右/上框 → 朝 Boss 转 bounce_angle 换弹 → 回收。
+## at_end = true 时用条件（at_wall）输出的落点，否则用当前弹位置。
+func emit(factory: Callable, dir: Dictionary, speed: float = 0.0, at_end: bool = false) -> BulletLifecycle:
+	_on_end.append({&"op": A_EMIT, &"factory": factory, &"dir": dir, &"speed": speed, &"at_end": at_end})
+	return self
+
+func despawn() -> BulletLifecycle:
+	_on_end.append({&"op": A_DESPAWN})
+	return self
+
+## 转向但保持速度大小（avoid / non_mid 的「逃离自机」）。
+func on_end_heading(dir: Dictionary) -> BulletLifecycle:
+	_on_end.append({&"op": A_SET_HEADING, &"dir": dir})
+	return self
+
+
+# ═══ Canned preset（现有行为 → 命名组合；创作者也可自己拼）═══
 static func bounce(accel: float, bounce_angle: float, spawn_speed: float, factory: Callable,
 		sfx_key: StringName = &"kira", sfx_db: float = -8.0) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
-	lc.accel_along_vel(accel)
-	lc.until_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)
+	lc.accel_heading(accel)
+	lc.until_at_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)
 	if sfx_key != &"":
-		lc.on_end_sfx(sfx_key, sfx_db)
-	lc.on_end_emit(factory, true, bounce_angle, spawn_speed)
-	lc.on_end_despawn()
+		lc.sfx(sfx_key, sfx_db)
+	lc.emit(factory, toward(T_BOSS, bounce_angle), spawn_speed, true)
+	lc.despawn()
 	return lc
 
-
-## 弯曲弹：转满 limit 弧度后直线。
 static func curve(w: float, limit: float) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
 	lc.rotate(w, limit)
-	lc.until_turned(limit)
+	lc.until_turned()
 	lc.then()
 	return lc
 
-
-## 世界方向匀加速（承接旧 BulletData.accel / gravity_bullet）。
 static func world_accel(v: Vector2) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
 	lc.accel_world(v)
 	return lc
 
-
-## 沿飞行方向匀加速。
 static func accel(a: float) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
-	lc.accel_along_vel(a)
+	lc.accel_heading(a)
 	return lc

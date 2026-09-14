@@ -236,3 +236,30 @@ bounce → phases: [
 - **结论**：描述符 schema + Phase/Move/Until/Action 词汇**足以表达**条件性最强的行为 —— 模型成立。
 - **暴露的引擎 bug**：`BehaviorProcessor` **升序** drain despawn → 多弹同帧回收**丢一个**（详见 `BEST_PRACTICES_LOG.md`）。**已修**（2026-09-13 降序 drain：重建版 `2466a93` / 主工程 `16645d0`）。
 - **待办（L2）**：其余 8 个 preset + parity（homing / radial / non_mid / laser / avoid / world_accel / accel）。
+
+---
+
+## 11. L1.5：正交 unit 集（实现，2026-09-13）
+
+> §3 的 Move/Condition 表是初稿；L1.5 按「**状态显式 + unit 正交**」定型为下表。**状态由 builder 按相位自动分配槽，相位切换清零**；创作者看不到槽。
+
+| 类 | unit | 说明 |
+|---|---|---|
+| Move | `accel_world(v)` | v += v_world·dt |
+| | `accel_heading(a)` | 沿航向加速 |
+| | `rotate(w, limit=0)` | 角速度；limit>0 钳到累计转角（自带槽） |
+| | `steer(target, max_turn, ramp=0, dist_weight=0)` | 朝目标转向（target = player / nearest_enemy / boss） |
+| | `speed_lerp(from, to, ramp)` | 速度按相位 elapsed 插值 |
+| | `scale_speed(f)` / `set_speed(s)` / `set_heading(dir)` | 原语 |
+| | `anchor_drift(anchor_id, offset, angle, speed, use_global)` | 锚定 + 线性漂移（自带槽） |
+| Condition | `never` / `elapsed(t)` | — |
+| | `near(target, r, every=0)` | every>0 = 每 every 秒才检查一次 |
+| | `at_wall(mask)` | 夹位并输出落点（供 `emit(at_end)`） |
+| | `state(slot, cmp, v)` | 读槽（`until_turned()` 是便利封装） |
+| Action | `emit(factory, dir, speed, at_end)` | dir 表达式；at_end 用条件落点 |
+| | `sfx(key, db)` / `despawn` / `on_end_heading(dir)` | — |
+| 方向表达式 | `toward(t, angle)` / `away(t, angle)` / `heading(angle)` | t = player / nearest_enemy / boss |
+
+**边界**：unit 停在**语义**层（上表 ~15 个）；不下沉到微 op（否则变回 §5 大 VM）。
+
+**踩坑**：`then()` 生成的新相位 `until=never`；在其上挂 `on_end` 动作**永不触发**。

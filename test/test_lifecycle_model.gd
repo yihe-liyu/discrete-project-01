@@ -139,3 +139,23 @@ func test_curve_lifecycle_parity() -> void:
 				fail_test("curve 位置帧 %d 行 %d 分歧" % [f, i])
 				return
 	pass_test("curve %d 帧逐位一致" % 180)
+
+## 组合性：两段各自 rotate 一个独立槽。若相位切换不清槽，第二段会「以为已转满」→ 立刻结束。
+func test_composition_phases_isolate_slots() -> void:
+	var bt := BulletType.new()
+	var system := _system()
+	var beh := LifecycleBehavior.new()
+	var ctx := BehaviorContext.new()
+	var lc := BulletLifecycle.new()
+	lc.rotate(2.0, 1.0)
+	lc.until_turned()
+	lc.then()
+	lc.rotate(2.0, 1.0)
+	lc.until_turned()
+	lc.despawn()
+	system.spawn(bt, Vector2(300.0, 400.0), Vector2.UP * 100.0, Color.WHITE, &"lifecycle", {&"lifecycle": lc})
+	_step(system, beh, ctx, 50)
+	assert_eq(system.get_active_count(), 1, "第二相位应仍在转（1.0s 前不应结束）")
+	_step(system, beh, ctx, 15)
+	assert_eq(system.get_active_count(), 0, "两段各转满 1 弧度后应回收（约 1.0s）")
+
