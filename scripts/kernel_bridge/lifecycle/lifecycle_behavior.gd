@@ -278,11 +278,7 @@ func _dir(spec: Dictionary, pos: Vector2, ctx: BehaviorContext) -> Vector2:
 
 
 func _anchor_pos(anchor_id: int, offset: Vector2, use_global: bool, ctx: BehaviorContext) -> Vector2:
-	if anchor_id != 0:
-		var node: Object = instance_from_id(anchor_id)
-		if node is Node2D:
-			return (node as Node2D).global_position if use_global else (node as Node2D).position + offset
-	return ctx.get_player_position() + offset
+	return BulletLifecycle.anchor_base(anchor_id, offset, use_global, ctx.get_player_position())
 
 
 func _boss():

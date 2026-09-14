@@ -298,6 +298,22 @@ static func marisa_laser(anchor_id: int, offset: Vector2, angle: float, drift_sp
 	lc.until_never()
 	return lc
 
+
+## 锚点解析（**唯一真相**；原生/参考解释器/测试都走它，避免两套语义漂移）：
+##   anchor_id=0       → player + offset
+##   use_global=true   → 锚点 global_position + offset（marisa 子机是 World 兄弟）
+##   use_global=false  → player + 锚点局部 position（focus 子机是 player 子节点；
+##                       **不读 global**，父级移动后 global 会滞后一帧 → 根部多偏 v·dt）
+static func anchor_base(anchor_id: int, offset: Vector2, use_global: bool, player: Vector2) -> Vector2:
+	if anchor_id != 0:
+		var node: Object = instance_from_id(anchor_id)
+		if node is Node2D:
+			if use_global:
+				return (node as Node2D).global_position + offset
+			return player + (node as Node2D).position
+	return player + offset
+
+
 # ═══ L3：编译成原生可读的 packed program ═══
 # op / target / dirk / cmp 的整数编码**必须与 C++ DanmakuStore.behavior_tick 一致**。
 const ARGS := 8

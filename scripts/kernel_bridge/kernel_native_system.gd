@@ -26,6 +26,8 @@ var _pelapsed := PackedFloat32Array()
 var _pslots := PackedFloat32Array()
 var _catalog := LifecycleCatalog.new()
 var _program_data: Array = []
+## 与 _program_data 对齐：每个 program 的锚点参数（无锚点 = null）。
+var _program_anchors: Array = []
 var _sig_to_program: Dictionary = {}
 
 
@@ -103,8 +105,19 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 		if pid != expected:
 			push_error("[KernelNativeSystem] program 对齐失败：native pid=%d, 期望 %d" % [pid, expected])
 		_program_data.append(c)
+		_program_anchors.append(_anchor_spec_for(move, params))
 	_sig_to_program[sig] = pid
 	return pid
+
+
+## program 是否要每帧解析锚点 base（marisa=global 兄弟 / laser_follow=player 子节点）。
+func _anchor_spec_for(move: StringName, params: Dictionary) -> Variant:
+	match move:
+		&"marisa_laser":
+			return {&"id": int(params.get(&"anchor_id", 0)), &"offset": params.get(&"anchor_offset", Vector2.ZERO), &"use_global": true}
+		&"laser_follow":
+			return {&"id": int(params.get(&"anchor_id", 0)), &"offset": params.get(&"anchor_offset", Vector2.ZERO), &"use_global": false}
+	return null
 
 
 ## 覆写：原生积分（integrate_batch）+ 原生行为（behavior_batch）。
@@ -149,10 +162,16 @@ func _run_native_behaviors(delta: float) -> void:
 	var boss = boss_getter.call() if boss_getter.is_valid() else null
 	var has_boss: bool = is_instance_valid(boss)
 	var boss_pos: Vector2 = boss.global_position if has_boss else Vector2.ZERO
+	# 锚点每帧解析成 program 级 base（原生不认 instance id）。无锚点的 program 填 player 占位。
+	var anchor_base := PackedVector2Array()
+	anchor_base.resize(_program_data.size())
+	for apid in _program_data.size():
+		var spec: Variant = _program_anchors[apid] if apid < _program_anchors.size() else null
+		anchor_base[apid] = player if spec == null else BulletLifecycle.anchor_base(spec[&"id"], spec[&"offset"], spec[&"use_global"], player)
 	var res: Dictionary = _accel.behavior_batch(
 		_active_count, _positions, _velocities, _life_left, _fx_phase,
 		_program, _pphase, _ptick, _pelapsed, _pslots,
-		delta, player, boss_pos, has_boss, enemies)
+		delta, player, boss_pos, has_boss, enemies, anchor_base)
 	_positions = res.positions
 	_velocities = res.velocities
 	_life_left = res.life

@@ -59,7 +59,8 @@ func _apply_events(ev: Dictionary, compiled: Dictionary, host: FakeHost, boss: N
 
 func _run(tag: String, lc: BulletLifecycle, beh_a: Behavior, params_a: Dictionary,
 		host_a: FakeHost, ctx: BehaviorContext, spawns: Array, frames: int,
-		player: Vector2, boss: Node2D, has_boss: bool, enemies: Array) -> void:
+		player: Vector2, boss: Node2D, has_boss: bool, enemies: Array,
+		anchor_base: PackedVector2Array = PackedVector2Array()) -> void:
 	var store = ClassDB.instantiate("DanmakuStore")
 	store.setup(1024, CULL)
 	store.set_margin(0.0)
@@ -97,7 +98,7 @@ func _run(tag: String, lc: BulletLifecycle, beh_a: Behavior, params_a: Dictionar
 			gs.despawn(id)
 
 		store.integrate(DT)
-		var ev: Dictionary = store.behavior_tick(DT, player, boss_pos, has_boss, enemy_pos)
+		var ev: Dictionary = store.behavior_tick(DT, player, boss_pos, has_boss, enemy_pos, anchor_base)
 		_apply_events(ev, compiled, host_nat, boss, has_boss)
 
 		if gs.get_active_count() != store.get_active_count():
@@ -203,10 +204,15 @@ func test_native_non_mid_flee() -> void:
 func test_native_marisa_laser() -> void:
 	if not _available(): pending("无扩展"); return
 	var player: Node2D = add_child_autofree(Node2D.new()); player.position = Vector2(300.0, 600.0)
+	# 真实游戏用非 0 anchor_id（子机是 World 兄弟）；历史原生把它整个忽略 → 段全粘在 player 上。
+	var anchor: Node2D = add_child_autofree(Node2D.new()); anchor.position = Vector2(340.0, 560.0)
 	var ctx := BehaviorContext.new(); ctx.setup(player)
-	var lc := BulletLifecycle.marisa_laser(0, Vector2(10.0, 0.0), 0.3, 800.0, 5.0)
+	var off := Vector2(10.0, 0.0)
+	var lc := BulletLifecycle.marisa_laser(anchor.get_instance_id(), off, 0.3, 800.0, 5.0)
 	var spawns: Array = []
 	for i in 3:
 		spawns.append([Vector2(280.0 + i * 5.0, 600.0), Vector2(0.0, -200.0)])
-	_run("marisa_laser", lc, CurveBehavior.new(), {}, FakeHost.new(), ctx, spawns, 30, player.global_position, null, false, [])
+	# 手工按 use_global 语义算 base（不复用被测 helper）→ 原生若忽略锚点会立刻发散。
+	var base := PackedVector2Array([anchor.global_position + off])
+	_run("marisa_laser", lc, CurveBehavior.new(), {}, FakeHost.new(), ctx, spawns, 30, player.global_position, null, false, [], base)
 

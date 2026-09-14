@@ -123,3 +123,28 @@ func test_batch_bounce_returns_dead() -> void:
 	assert_gt(dead_total, 0, "bounce 应返回 dead")
 	assert_eq(pos.size(), 0, "全部碰框后应清空")
 	pass_test("bounce dead 返回 + 重放正确")
+
+
+func test_batch_anchor_drift_first_frame_uses_initial() -> void:
+	if not _available(): pending("无扩展"); return
+	# 新弹首帧必须用 initial_drift（不是 0 + speed·dt）；batch 路径没有 set_program，
+	# 内部状态（_pfresh/_pnext/_phasend...）要在 tick==0 时初始化。
+	var lc := BulletLifecycle.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 50.0)
+	var st = _store()
+	var r: Array = _reg(st, lc)
+	var pid: int = r[0]
+	var pos := PackedVector2Array([Vector2(100.0, 100.0)])
+	var vel := PackedVector2Array([Vector2.ZERO])
+	var life := PackedFloat32Array([100.0])
+	var fx := PackedFloat32Array([0.0])
+	var prog := PackedInt32Array([pid])
+	var phase := PackedInt32Array([0])
+	var tick := PackedInt32Array([0])
+	var elapsed := PackedFloat32Array([0.0])
+	var slots := PackedFloat32Array()
+	slots.resize(8)
+	var player := Vector2(200.0, 300.0)
+	var res: Dictionary = st.behavior_batch(1, pos, vel, life, fx, prog, phase, tick, elapsed, slots, DT, player, Vector2.ZERO, false, PackedVector2Array())
+	var out: Vector2 = res["positions"][0]
+	assert_almost_eq(out.x, 200.0, 0.01, "angle=0 段应贴 player x")
+	assert_almost_eq(out.y, 250.0, 0.01, "首帧应用 initial_drift=50（player.y - 50）")

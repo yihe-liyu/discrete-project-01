@@ -16,7 +16,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_colors"), &DanmakuStore::get_colors);
 	ClassDB::bind_method(D_METHOD("get_type_indices"), &DanmakuStore::get_type_indices);
 	ClassDB::bind_method(D_METHOD("get_factions"), &DanmakuStore::get_factions);
-	ClassDB::bind_method(D_METHOD("behavior_batch", "count", "positions", "velocities", "life", "fx", "program", "phase", "tick", "elapsed", "slots", "delta", "player", "boss", "has_boss", "enemies"), &DanmakuStore::behavior_batch);
+	ClassDB::bind_method(D_METHOD("behavior_batch", "count", "positions", "velocities", "life", "fx", "program", "phase", "tick", "elapsed", "slots", "delta", "player", "boss", "has_boss", "enemies", "anchor_base"), &DanmakuStore::behavior_batch, DEFVAL(PackedVector2Array()));
 	ClassDB::bind_method(D_METHOD("get_position", "id"), &DanmakuStore::get_position);
 	ClassDB::bind_method(D_METHOD("get_velocity", "id"), &DanmakuStore::get_velocity);
 	ClassDB::bind_method(D_METHOD("get_positions"), &DanmakuStore::get_positions);
@@ -36,7 +36,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("register_program", "ops", "args", "move_start", "move_count", "until", "act_start", "act_count", "phase_count", "slots"), &DanmakuStore::register_program);
 	ClassDB::bind_method(D_METHOD("set_program", "id", "program"), &DanmakuStore::set_program);
 	ClassDB::bind_method(D_METHOD("get_program", "id"), &DanmakuStore::get_program);
-	ClassDB::bind_method(D_METHOD("behavior_tick", "delta", "player", "boss", "has_boss", "enemies"), &DanmakuStore::behavior_tick);
+	ClassDB::bind_method(D_METHOD("behavior_tick", "delta", "player", "boss", "has_boss", "enemies", "anchor_base"), &DanmakuStore::behavior_tick, DEFVAL(PackedVector2Array()));
 	ClassDB::bind_method(D_METHOD("clear"), &DanmakuStore::clear);
 	ClassDB::bind_method(D_METHOD("despawn", "id"), &DanmakuStore::despawn);
 	ClassDB::bind_method(D_METHOD("set_life", "id", "life"), &DanmakuStore::set_life);
@@ -441,7 +441,7 @@ Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector
 	return base.rotated(angle);
 }
 
-void DanmakuStore::_exec_move(int i, float *slots, int ins, float dt, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies) {
+void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const PackedVector2Array &p_anchor_base) {
 	const int op = _p_ops[ins];
 	const float *a = &_p_args[ins * OPS_ARGS];
 	Vector2 v(_vx[i], _vy[i]);
@@ -536,7 +536,10 @@ void DanmakuStore::_exec_move(int i, float *slots, int ins, float dt, const Vect
 		}
 		case 9: { // anchor_drift
 			const int si = (int)a[7];
+			// 锚点（anchor_id/use_global/offset）由桥接侧解析成 program 级 base 传入；
+			// 缺省回退 player + offset（anchor_id=0 语义），保证旧调用不回归。
 			Vector2 base = player + Vector2(a[1], a[2]);
+			if (prog >= 0 && prog < p_anchor_base.size()) { base = p_anchor_base[prog]; }
 			const float adir_x = sin(a[3]);
 			const float adir_y = -cos(a[3]);
 			if (_pfresh[i]) {
@@ -663,7 +666,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 	}
 }
 
-void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies) {
+void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base) {
 	_tick_dead.clear();
 	_ev_kind.clear(); _ev_prog.clear(); _ev_local.clear(); _ev_bullet.clear();
 	_ev_x.clear(); _ev_y.clear(); _ev_dx.clear(); _ev_dy.clear(); _ev_val.clear();
@@ -682,7 +685,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 		const int ms = _p_move_start[base + ph];
 		const int mc = _p_move_count[base + ph];
 		for (int k = 0; k < mc; ++k) {
-			_exec_move(i, slots, ms + k, dt, p_player, p_boss, p_has_boss, p_enemies);
+			_exec_move(i, prog, slots, ms + k, dt, p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
 		}
 		if (_check_until(i, slots, _p_until[base + ph], p_player, p_boss, p_has_boss, p_enemies)) {
 			const int as = _p_act_start[base + ph];
@@ -713,8 +716,8 @@ Dictionary DanmakuStore::_events_dict() const {
 	return out;
 }
 
-Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies) {
-	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies);
+Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base) {
+	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
 	std::sort(_tick_dead.begin(), _tick_dead.end(), std::greater<int>());
 	for (int id : _tick_dead) {
 		if (id >= 0 && id < _count) { _swap_remove(id); }
@@ -726,7 +729,8 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 		const PackedFloat32Array &p_life, const PackedFloat32Array &p_fx,
 		const PackedInt32Array &p_program, const PackedInt32Array &p_phase, const PackedInt32Array &p_tick,
 		const PackedFloat32Array &p_elapsed, const PackedFloat32Array &p_slots,
-		double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies) {
+		double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies,
+		const PackedVector2Array &p_anchor_base) {
 	const int n = MIN(p_count, MIN(p_pos.size(), p_vel.size()));
 	_ensure_capacity(n);
 	_count = n;
@@ -739,12 +743,19 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 		_pphase[i] = i < p_phase.size() ? p_phase[i] : 0;
 		_ptick[i] = i < p_tick.size() ? p_tick[i] : 0;
 		_pelapsed[i] = i < p_elapsed.size() ? p_elapsed[i] : 0.0f;
+		// batch 路径没有 set_program：新弹首帧（tick/phase 都为 0）把「不随数组传入」的
+		// 内部状态初始化成 set_program 同款，否则会残留上一颗弹的值（anchor_drift 首帧漂移错、
+		// near 节流错、at_wall 落点残留）。
+		if (_ptick[i] == 0 && _pphase[i] == 0) {
+			_pnext[i] = 0.0f; _pfresh[i] = 1; _phasend[i] = 0;
+			_pendx[i] = 0.0f; _pendy[i] = 0.0f;
+		}
 		for (int s = 0; s < SLOT_STRIDE; ++s) {
 			const int k = i * SLOT_STRIDE + s;
 			_pslots[k] = k < p_slots.size() ? p_slots[k] : 0.0f;
 		}
 	}
-	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies);
+	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
 	PackedVector2Array opos, ovel;
 	PackedFloat32Array olife, ofx, oelapsed, oslots;
 	PackedInt32Array oprog, ophase, otick, odead;

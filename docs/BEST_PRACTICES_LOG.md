@@ -18,6 +18,22 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-3b 修复②：锚定漂移（魔理沙激光）锚点解析 + batch 首帧状态
+
+- **症状**：魔理沙非 focus 激光段全部粘在自机身上（子机锚点被整个忽略）。
+- **根因**：
+  1. 原生 `anchor_drift`（case 9）`base = player + offset`，**完全没读 `anchor_id` / `use_global`**；而 GDScript 参考解释器 `_anchor_pos` 的 `use_global` 分支又丢了 offset → 旧行为 / 参考 / 原生三套语义互不一致。且测试只覆盖 `anchor_id = 0`，真机非 0 时全错。
+  2. `behavior_batch` 没有 `set_program` 那步 → **新弹首帧的内部状态（`_pfresh/_pnext/_phasend/_pendx/_pendy`）残留上一颗弹的值**，激光首帧漂移错。
+- **修复**：
+  - 新增**唯一真相** `BulletLifecycle.anchor_base(id, offset, use_global, player)`：`id=0 → player+offset`；`global → 锚点 global+offset`（marisa 子机是 World 兄弟）；`local → player+锚点局部 position`（focus 子机，不读 global，避免父级移动滞后一帧）。参考解释器与桥接统一走它。
+  - 原生 `behavior_batch` / `behavior_tick` 增参 `anchor_base`（`DEFVAL`，旧调用不回归）：桥接每帧把每个 program 的锚点解析成 base 传入，原生 case 9 直接用 `anchor_base[prog]`。
+  - `behavior_batch` 在 `tick==0 && phase==0`（新弹首帧）初始化上述五个内部状态。
+- **双向证明**：
+  - `test_native_marisa_laser` 改用**非 0 anchor_id**（子机在 (340,560)，与自机 (300,600) 不同）：传空 base（= 旧原生行为）时 **FAIL**，偏差恰好 = 锚点−自机 = (40,−40)；传正确 base 时 PASS。
+  - 新增 `test_batch_anchor_drift_first_frame_uses_initial`（首帧用 `initial_drift`，不是 `0+speed·dt`）。
+  - 新增 `test_native_laser_anchor`：端到端走真实 `BulletManager → KernelNativeSystem`，断言段 x 贴锚点 340（旧原生会是 player.x=0）。
+- **验证**：`./tools/verify.sh` 全绿；**364 / 3970**。
+
 ### 2026-09-14 — L3.5-3b 修复：行为事件按「事件自己的 program」派发
 
 - **症状**：真实舞台（stage01 非符1）约 27s 报两类错：
