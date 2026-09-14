@@ -2,6 +2,9 @@
 .godot/
 .trae/
 /android/
+
+# 编辑器本地配置（C/C++ Runner 等含机器绝对路径，不入库）
+.vscode/
 a.out
 
 # npm
