@@ -30,10 +30,16 @@ if [ -f "$PWD/data/registry/spell_records.tres" ]; then
 	HAD_RECORDS=1
 fi
 
-if ! godot --headless --path "$PWD" -s addons/gut/gut_cmdln.gd "${GUT_ARGS[@]}" -gexit "$@"; then
-	GUT_EXIT=1
-else
+if GUT_OUT="$(godot --headless --path "$PWD" -s addons/gut/gut_cmdln.gd "${GUT_ARGS[@]}" -gexit "$@" 2>&1)"; then
 	GUT_EXIT=0
+else
+	GUT_EXIT=$?
+fi
+echo "$GUT_OUT"
+# 有测试脚本加载失败 → GUT 只 warning + 跳过（套件仍可能「绿」）→ 门禁必须红
+if echo "$GUT_OUT" | grep -q "Failed to load script"; then
+	echo "❌ 有测试脚本加载失败（被 GUT 静默跳过）"
+	GUT_EXIT=1
 fi
 
 # 恢复必须在任何退出路径前执行（set -e 会因 GUT 失败中止，这里用 if 结构兜底）

@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — 修复：原生积分 parity 测试被静默跳过（死测试）
+
+- **症状**：`test_native_integrate.gd` 自 4f 起加载失败 → GUT 只 warning + `Ignoring script ... does not extend GutTest` → 该文件 2 个测试**从未运行**，套件却一直「绿」（347 / 4061 不含它）。
+- **根因**：4f 把 `KernelNativeSystem` 从 `extends BulletSystem` 改为 `extends Node`，但测试仍按旧继承写：`nt: BulletSystem`、`(nt as KernelNativeSystem)` ×2（非法转换）、`backend.system is BulletSystem`（恒假）、`backend.use_native`（4f 已删）。
+- **修复**：`nt` 类型改 `KernelNativeSystem`；去掉 `as`；backend 测试去掉 `use_native` 与死 else，直接断言原生内核。
+- **门禁加固**：`test/run_tests.sh` 捕获 GUT 输出，出现 `Failed to load script` 即判红 —— 死测试文件不能再藏在「绿」里。（`check_syntax` 只扫 `scripts/`+`data/`，未覆盖 `test/`，故此前也没拦住。）
+- **验收**：`./tools/verify.sh` 全绿；GUT **349 / 4072**（+2 测试 / +11 断言，正是复活的 parity）。
+
 ### 2026-09-14 — 清理：删除 `EntityRegistry.current` + StageRuntime 生命周期重载
 
 - **目标**：上一条留下的 `EntityRegistry.current` 只剩一个测试读者 → 一并清掉；`StageRuntime` 因此只剩登记用途的 `_enter_tree` / `_exit_tree` 也整个删除。

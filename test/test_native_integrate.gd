@@ -17,14 +17,14 @@ func _pair() -> Array:
 	gs.cull_rect = CULL
 	gs.cull_margin = MARGIN
 	gs.default_lifetime = 3.0
-	var nt: BulletSystem = autofree(KernelNativeSystem.new())
+	var nt: KernelNativeSystem = autofree(KernelNativeSystem.new())
 	nt.cull_rect = CULL
 	nt.cull_margin = MARGIN
 	nt.default_lifetime = 3.0
 	return [gs, nt]
 
 
-func _spawn_same(gs: BulletSystem, nt: BulletSystem, bt: BulletType) -> void:
+func _spawn_same(gs: BulletSystem, nt: KernelNativeSystem, bt: BulletType) -> void:
 	for i in 400:
 		var pos := Vector2(80.0 + (i % 20) * 30.0, 60.0 + (i / 20) * 12.0)
 		var vel := Vector2.RIGHT.rotated(i * 0.37) * (140.0 + (i % 9) * 20.0)
@@ -42,7 +42,7 @@ func _spawn_same(gs: BulletSystem, nt: BulletSystem, bt: BulletType) -> void:
 		nt.set_timer(i, 0.25)
 
 
-func _assert_identical(gs: BulletSystem, nt: BulletSystem, tag: String) -> void:
+func _assert_identical(gs: BulletSystem, nt: KernelNativeSystem, tag: String) -> void:
 	assert_eq(nt.get_active_count(), gs.get_active_count(), tag + "：活跃数")
 	var n: int = gs.get_active_count()
 	for i in n:
@@ -70,8 +70,8 @@ func test_native_integrate_matches_gdscript() -> void:
 		return
 	var p := _pair()
 	var gs: BulletSystem = p[0]
-	var nt: BulletSystem = p[1]
-	assert_true((nt as KernelNativeSystem).is_native_ready(), "原生应就绪")
+	var nt: KernelNativeSystem = p[1]
+	assert_true(nt.is_native_ready(), "原生应就绪")
 	_spawn_same(gs, nt, BulletType.new())
 	_assert_identical(gs, nt, "t=0")
 	for f in 30:
@@ -84,15 +84,11 @@ func test_native_integrate_matches_gdscript() -> void:
 	_assert_identical(gs, nt, "t=2.0s")
 	assert_gt(gs.get_active_count(), 0, "长寿命弹仍应在场（保证原生跑满全程）")
 	# 覆盖证明：原生路径必须真的跑过，否则 parity 是「两边都走 GDScript」的空断言
-	assert_gt((nt as KernelNativeSystem).native_frames, 100, "原生积分路径应实际执行")
+	assert_gt(nt.native_frames, 100, "原生积分路径应实际执行")
 
 
 func test_backend_picks_native_when_available() -> void:
 	var backend: KernelBulletBackend = autofree(KernelBulletBackend.new())
-	backend.use_native = true
 	backend._ensure_system()
-	if _native_available():
-		assert_true(backend.system is KernelNativeSystem, "扩展存在时应用原生内核")
-	else:
-		assert_true(backend.system is BulletSystem, "无扩展时退回 GDScript 内核")
+	assert_true(backend.system is KernelNativeSystem, "扩展为必需：弹池应装配原生内核")
 	assert_true(backend.system != null, "弹池应建立")
