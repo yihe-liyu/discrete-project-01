@@ -3,7 +3,7 @@ extends Node
 ## Item 对象池，挂在 World 下
 
 const ITEM_SCENE = preload("res://scenes/item.tscn")
-const POOL_SIZE: int = 64
+const POOL_SIZE: int = 128
 
 ## 实体注册表（组合根为 World 注入）——透传给道具
 var entity_registry: EntityRegistry
@@ -13,7 +13,7 @@ var _pool: Array[Item] = []
 
 func _ready() -> void:
 	for i in range(POOL_SIZE):
-		var item: Item = ITEM_SCENE.instantiate() as Item
+		var item: Item = ITEM_SCENE.instantiate()
 		item.set_physics_process(false)
 		item.visible = false
 		add_child(item)
@@ -23,16 +23,12 @@ func _ready() -> void:
 func spawn(pos: Vector2, type: int) -> Item:
 	var item: Item
 	if _pool.is_empty():
-		item = ITEM_SCENE.instantiate() as Item
-		if not item:
-			return null
+		item = ITEM_SCENE.instantiate()
 		add_child(item)
 	else:
 		item = _pool.pop_back()
 		if not is_instance_valid(item):
-			item = ITEM_SCENE.instantiate() as Item
-			if not item:
-				return null
+			item = ITEM_SCENE.instantiate()
 			add_child(item)
 		elif not item.is_inside_tree():
 			add_child(item)

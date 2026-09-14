@@ -1,19 +1,17 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://bseaq8cpf5tjm"]
 
-[ext_resource type="Script" path="res://scripts/item/item.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/Textures/item/point.png" id="2_tex"]
+[ext_resource type="Script" uid="uid://dw4y11q0gojlr" path="res://scripts/item/item.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dx4or188b14yp" path="res://assets/Textures/item/point.png" id="2_tex"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_item"]
-radius = 12.0
+radius = 32.0
 
-[node name="Item" type="Area2D"]
+[node name="Item" type="Area2D" unique_id=563441958]
 collision_layer = 128
-collision_mask = 1
 script = ExtResource("1_script")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=261002458]
 texture = ExtResource("2_tex")
-scale = Vector2(1, 1)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1060306554]
 shape = SubResource("CircleShape2D_item")
