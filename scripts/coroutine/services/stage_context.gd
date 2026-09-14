@@ -101,7 +101,7 @@ func _init(p_runner: CoroutineRunner) -> void:
 func get_decor() -> DecorManager:
 	if _decor_manager: return _decor_manager
 	var background: StageBackground = stage.current_background if stage else null
-	if not background: return null
+	if not is_instance_valid(background): return null
 	var mgr: DecorManager = background.get_node_or_null("DecorManager") as DecorManager
 	if not mgr:
 		mgr = DecorManager.new()

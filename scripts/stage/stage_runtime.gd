@@ -27,7 +27,7 @@ var miss_layer: MissCircleLayer
 var fx_pool: FxPool
 ## Boss 位置指示器所属 HUD 层（组合根注入）
 var ui_layer: CanvasLayer
-var current_background: StageBackground
+var current_background: StageBackground		## 背景场景实例（组合根在 load_stage 前注入）
 
 var current_stage: StageData
 var _is_stage_active: bool = false
@@ -39,7 +39,7 @@ func current_stage_script() -> CoroutineScript:
 	return _coroutine_script
 
 
-## 加载关卡；background = 背景场景实例（由门面/组合根传入，用于启动背景里的协程脚本）
+## 加载关卡；背景实例由 current_background 注入（会启动背景里挂的协程脚本）
 func load_stage(data: StageData) -> void:
 	var background := current_background
 	if _is_stage_active:
@@ -69,7 +69,7 @@ func load_stage(data: StageData) -> void:
 	_inject_player_ctx(ctx)
 
 	# 自动启动背景场景里挂的所有协程脚本
-	if background:
+	if is_instance_valid(background):
 		for child in background.get_children():
 			if child is CoroutineScript:
 				var bctx := StageContext.new(child)
