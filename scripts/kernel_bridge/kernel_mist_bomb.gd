@@ -1,18 +1,24 @@
-## KernelMistBomb —— 单贴图横向展开的云状自机 bomb（宿主实体，不走内核池）。
-## 宽从 0 生长到贴图实际宽；覆盖范围（轴对齐椭圆）内持续伤敌 + 清敌弹；结束淡出。
+## KernelMistBomb —— 单贴图分阶段展开的自机 bomb（宿主实体，不走内核池）。
+## 锚点跟随自机（可关）；长（贴图 x）先展开 → 保持 → 宽（贴图 y）展开 → 保持 → 淡出。
+## 展开期间覆盖范围（椭圆，跟当前 scale 走）内持续伤敌 + 清敌弹。
 extends BombEntity
 
+enum Stage { LENGTH, HOLD_L, WIDTH, HOLD_W, FADE }
+
 var _sprite: Sprite2D
-var _t: float = 0.0
 var _size := Vector2.ZERO
-var _grow_time: float = 0.35
-var _hold_time: float = 0.6
-var _fade_time: float = 0.25
+var _stage: int = Stage.LENGTH
+var _stage_t: float = 0.0
+
+var _follow: bool = true
+var _anchor_offset := Vector2.ZERO
+var _grow_len: float = 0.35
+var _hold_len: float = 0.5
+var _grow_wid: float = 0.25
+var _hold_wid: float = 0.5
+var _fade: float = 0.25
 var _dps: float = 200.0
 var _clear_scale: float = 0.95
-var _half_a: float = 0.0
-var _half_b: float = 0.0
-var _center := Vector2.ZERO
 
 
 func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Color.WHITE, _spawn_delay: float = 0.0) -> void:
@@ -21,65 +27,93 @@ func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Co
 	if data == null:
 		push_error("[KernelMistBomb] setup 需要 BombData")
 		return
-	_grow_time = maxf(data.grow_time, 0.001)
-	_hold_time = data.hold_time
-	_fade_time = data.fade_time
+	_follow = data.follow_player
+	_anchor_offset = data.anchor_offset
+	_grow_len = maxf(data.grow_length_time, 0.0)
+	_hold_len = data.hold_length_time
+	_grow_wid = maxf(data.grow_width_time, 0.0)
+	_hold_wid = data.hold_width_time
+	_fade = maxf(data.fade_time, 0.001)
 	_dps = data.dps
 	_clear_scale = data.clear_scale
+	rotation = deg_to_rad(data.rotation_deg)
 	_sprite = Sprite2D.new()
 	_sprite.texture = data.texture
 	_sprite.modulate = tint
 	if data.texture != null:
 		_size = data.texture.get_size()
 		_sprite.offset = _size * (Vector2(0.5, 0.5) - data.pivot_ratio)   # 让"弯曲处"对齐节点原点
-	_sprite.scale = Vector2(0.0, 1.0)
+	_sprite.scale = Vector2.ZERO
 	add_child(_sprite)
 	z_index = data.z_index
-	_update_area(0.0)
 
 
-## 当前覆盖椭圆的半长轴（宽的一半；测试/调试用）。
-func half_width() -> float:
-	return _half_a
+## 当前展开的"长" / "宽"（贴图对应维的全长；测试/调试用）。
+func length_now() -> float:
+	return _size.x * _sprite.scale.x
+
+
+func width_now() -> float:
+	return _size.y * _sprite.scale.y
 
 
 func _physics_process(delta: float) -> void:
-	_t += delta
-	if _t > _grow_time + _hold_time:
-		var fk := (_t - _grow_time - _hold_time) / _fade_time
-		_sprite.modulate.a = clampf(1.0 - fk, 0.0, 1.0)
-		if fk >= 1.0:
-			queue_free()
-		return
-	var k := clampf(_t / _grow_time, 0.0, 1.0)
-	_sprite.scale = Vector2(k, 1.0)
-	_update_area(k)
-	_damage_enemies(delta)
-	_clear_bullets()
+	_stage_t += delta
+	if _follow and entity_registry != null:
+		var p = entity_registry.player
+		if is_instance_valid(p):
+			global_position = p.global_position + _anchor_offset
+	match _stage:
+		Stage.LENGTH:
+			_sprite.scale = Vector2(_k(_grow_len), 0.0)
+			if _stage_t >= _grow_len:
+				_advance(Stage.HOLD_L)
+		Stage.HOLD_L:
+			_sprite.scale = Vector2(1.0, 0.0)
+			if _stage_t >= _hold_len:
+				_advance(Stage.WIDTH)
+		Stage.WIDTH:
+			_sprite.scale = Vector2(1.0, _k(_grow_wid))
+			if _stage_t >= _grow_wid:
+				_advance(Stage.HOLD_W)
+		Stage.HOLD_W:
+			_sprite.scale = Vector2(1.0, 1.0)
+			if _stage_t >= _hold_wid:
+				_advance(Stage.FADE)
+		Stage.FADE:
+			_sprite.modulate.a = clampf(1.0 - _stage_t / _fade, 0.0, 1.0)
+			if _stage_t >= _fade:
+				queue_free()
+			return
+	_damage_and_clear(delta)
 
 
-func _update_area(k: float) -> void:
-	_half_a = _size.x * 0.5 * k
-	_half_b = _size.y * 0.5
-	_center = global_position + _sprite.offset * _sprite.scale
+func _advance(next_stage: int) -> void:
+	_stage = next_stage
+	_stage_t = 0.0
 
 
-func _damage_enemies(delta: float) -> void:
-	if entity_registry == null:
-		return
-	for enemy in entity_registry.get_active_enemies():
-		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
-			continue
-		if _ellipse_hit(enemy.global_position, _center, _half_a + enemy.hitbox_radius, _half_b + enemy.hitbox_radius):
-			enemy.take_damage(_dps * delta)
+func _k(duration: float) -> float:
+	return 1.0 if duration <= 0.0 else clampf(_stage_t / duration, 0.0, 1.0)
 
 
-func _clear_bullets() -> void:
+func _damage_and_clear(delta: float) -> void:
+	# 椭圆判定在 bomb 本地空间做 → 天然支持 rotation / anchor_offset
+	var center := _sprite.offset * _sprite.scale
+	var half_a := _size.x * 0.5 * _sprite.scale.x
+	var half_b := _size.y * 0.5 * _sprite.scale.y
+	if entity_registry != null:
+		for enemy in entity_registry.get_active_enemies():
+			if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+				continue
+			if _ellipse_hit(to_local(enemy.global_position), center,
+					half_a + enemy.hitbox_radius, half_b + enemy.hitbox_radius):
+				enemy.take_damage(_dps * delta)
 	if bullet_manager:
-		bullet_manager.clear_enemy_bullets_in_circle(_center, maxf(_half_a, _half_b) * _clear_scale)
+		bullet_manager.clear_enemy_bullets_in_circle(to_global(center), maxf(half_a, half_b) * _clear_scale)
 
 
-## 轴对齐椭圆包含测试（伤害 / 清弹判定共用）。
+## 轴对齐椭圆包含测试（伤害 / 清弹判定共用；调用方把点转到本地空间）。
 static func _ellipse_hit(p: Vector2, c: Vector2, a: float, b: float) -> bool:
 	if a <= 0.0 or b <= 0.0:
 		return false

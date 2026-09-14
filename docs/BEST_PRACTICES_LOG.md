@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — mist bomb 改为"分阶段展开 + 跟随自机"
+
+- **规格修正**：marisa 的 bomb 不是横向一次展开，而是**朝上**、**锚点跟随自机**，且分阶段：长(贴图 x) 0→满 → 保持 → 宽(贴图 y) 0→满 → 保持 → 淡出。
+- **数据**：`BombData` mist 组改为 `follow_player` / `anchor_offset` / `rotation_deg` / `grow_length_time` / `hold_length_time` / `grow_width_time` / `hold_width_time` / `fade_time` / `dps` / `clear_scale`（去掉单一 `grow_time`）。
+- **实体**：`KernelMistBomb` 改 5 阶段状态机（LENGTH→HOLD_L→WIDTH→HOLD_W→FADE）；每帧跟随自机；椭圆判定改在 **bomb 本地空间**（`to_local`）→ 天然支持旋转/偏移。
+- **踩坑**：① Godot 把 `Node2D.scale` 的 0 夹到 `CMP_EPSILON`(1e-5) —— "宽=0"实际 0.0013px，测试别断精确 0；② 清弹圆需 `clear_scale ≥ 1` 才盖得住椭圆长轴端点（外接圆）。
+- **验证**：`test_mist_bomb` 2/2；`./tools/verify.sh` 全绿 **376 / 4174**。
+
 ### 2026-09-14 — 第二个自机 bomb：KernelMistBomb（单贴图横向展开）
 
 - **做法**：抽出 `BombEntity` 基类（统一注入槽 + setup 签名）；`KernelBomb` 改继承它；新增 `KernelMistBomb`（宽 `scale.x` 0→1 生长 → 保持 → 淡出，期间**轴对齐椭圆**内 `take_damage(dps*delta)` + 外接圆清弹）；`BombData` 加 `kind`（RING/MIST）+ mist 字段（`grow_time` / `fade_time` / `dps` / `clear_scale` / `pivot_ratio`）；`KernelBulletBackend.spawn_bomb` 按 `kind` 分派。

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="BombData" format=3]
+[gd_resource type="Resource" script_class="BombData" format=3 uid="uid://vfgkk5w5xfqd"]
 
 [ext_resource type="Texture2D" uid="uid://bs54btunv8dtv" path="res://assets/Textures/player/marisa_bomb01.png" id="1_tex"]
 [ext_resource type="Script" uid="uid://dgggusbpq0rqy" path="res://scripts/data/bomb_data.gd" id="2_script"]
@@ -22,9 +22,15 @@ explode_radius = 0.0
 explode_duration = 0.0
 explode_start_radius = 0.0
 clear_radius = 0.0
-grow_time = 0.35
-fade_time = 0.25
+follow_player = true
+anchor_offset = Vector2(0, 0)
+rotation_deg = -90.0
+pivot_ratio = Vector2(0, 0.5)
+grow_length_time = 1.0
+hold_length_time = 0.6
+grow_width_time = 1.0
+hold_width_time = 0.6
+fade_time = 2.0
 dps = 200.0
-clear_scale = 0.95
-pivot_ratio = Vector2(0.5, 0.5)
+clear_scale = 1.0
 metadata/_custom_type_script = "uid://dgggusbpq0rqy"

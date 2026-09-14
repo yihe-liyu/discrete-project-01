@@ -25,12 +25,18 @@ enum Kind { RING, MIST }
 @export var hold_time: float = 1.8                          ## 外圈保持时长
 @export var homing_speed: float = 1500.0                    ## 追踪速度
 
-@export_group("Mist（kind = MIST：单贴图横向展开）")
-@export var grow_time: float = 0.35                        ## 宽 0 → 满宽用时
-@export var fade_time: float = 0.25                        ## 结束淡出用时
+@export_group("Mist（kind = MIST：单贴图分阶段展开）")
+@export var follow_player: bool = true                     ## 锚点跟随自机
+@export var anchor_offset: Vector2 = Vector2.ZERO         ## 相对自机的偏移
+@export var rotation_deg: float = -90.0                    ## 贴图朝向（-90 = 长轴朝上）
+@export var pivot_ratio: Vector2 = Vector2(0.0, 0.5)       ## 锚点（贴图 0..1；接在自机上的"弯曲处"）
+@export var grow_length_time: float = 0.35                 ## 阶段1：长（贴图 x）0→满
+@export var hold_length_time: float = 0.5                  ## 阶段2：保持长
+@export var grow_width_time: float = 0.25                  ## 阶段3：宽（贴图 y）0→满
+@export var hold_width_time: float = 0.5                   ## 阶段4：保持宽
+@export var fade_time: float = 0.25                        ## 阶段5：淡出
 @export var dps: float = 200.0                             ## 覆盖范围内每秒伤害（每帧 dps*delta）
-@export var clear_scale: float = 0.95                      ## 清弹半径 = 椭圆长半轴 × 它
-@export var pivot_ratio: Vector2 = Vector2(0.5, 0.5)       ## 锚点（贴图 0..1 比例；"弯曲处"）
+@export var clear_scale: float = 1.0                       ## 清弹半径 = 椭圆长半轴 × 它（≥1 才盖住整个椭圆）
 
 @export_group("爆炸（kind = RING）")
 @export var explode_damage: float = 150.0
