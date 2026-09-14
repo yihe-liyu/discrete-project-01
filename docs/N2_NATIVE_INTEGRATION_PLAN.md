@@ -2,7 +2,7 @@
 
 > **状态**：进行中。N2.1 ✅ / N2.2 积分段 ✅ / **N2.2 存储段核心 ✅** / N4-real ✅ /
 > **L3.5-1 ✅ · L3.5-2 ✅ · L3.5-3 ✅（含 3b）· L3.5-5 主体 ✅ · L3.5-6 真人试玩 ✅**；
-> 当前批次 = **L3.5-4「消费方改读原生」**（4a ✅ · 4b-pre ✅；4b 待做）。
+> 当前批次 = **L3.5-4「消费方改读原生」**（4a ✅ · 4b-pre ✅ · **4e ✅**；4f 待做）。
 > **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §10（N0–N5）；`gdextension/`。
 
 ## 目标
@@ -139,9 +139,12 @@
    - ✅ **4b-pre（2026-09-14）原生宽相 uniform grid**：`query_circle` 查询前惰性重建，与 GDScript `BulletSystem` 同参数/同语义
      （CELL=64 / MIN_COUNT=64 / MAX_CELLS=8192；cull 有面积用 cull，否则活跃包围盒；超限/弹少回退线性）。
      `test_native_broadphase` 3/3（129 断言，circle/offset/rect + 网格↔暴力逐行 + 启用/回退判定）。
-   - 余：**4b** 判定切原生（物理走 `overlap_pairs`）→ **4c** 渲染数据源 → **4d** 激光/调试 → **4e** 存储翻转 → **4f** 删壳。
-     ⚠️ **4b 前置**：原生 store 现在不持有 `type/faction/color/hitbox`（`behavior_batch` 不填；`scripts/` 无 `set_hitbox`），
-     须先做 4e 存储翻转或一个 meta 镜像。
+   - ✅ **4e（2026-09-14）存储翻转**：`KernelNativeSystem` 改用原生**有状态** API（spawn/despawn/clear/integrate/behavior_tick），
+     原生 `DanmakuStore` 成**唯一存储**；每帧 pull 成 GDScript **只读快照**供消费方零改读取。
+     覆写 `query_circle/hit_test/is_grazed/mark_grazed` → 原生 → **顺带完成 4b/4c/4d**（判定已原生；渲染/激光/调试读的就是原生快照）。
+     原生补齐：`spawn/spawn_batch` 整行归零、`reserve`、`set_cull`、`get_factions_bytes`。
+     验证：`test_native_integrate` 2/2 + `test_kernel_swap` 9/9 + `test_native_laser_anchor` 1/1 + 全量 **370/4123** + workbench 70s 零错误。
+   - 余：**4f** 去 `extends BulletSystem` + 删 `scripts/kernel/**`（L4）。
 5. **L3.5-5 主体 ✅（随 3b）** 事件 drain（emit / sfx / call → `queue_spawn` / sfx / 内容回调）；余：边界完善。
 6. **L3.5-6 ✅（2026-09-14）** 真实舞台开机 + 真人试玩 —— 非符1 打穿，行为 / 激光 / 判定手感通过（并因此抓出 3b 两处 bug）。
 7. **L4** 拆除（删 1219 + 273 + rebuild）。

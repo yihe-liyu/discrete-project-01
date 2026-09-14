@@ -1,16 +1,16 @@
-## KernelNativeSystem —— 原生积分 + 原生行为执行（N2.2 + L3.5-3b）。
+## KernelNativeSystem —— 原生权威存储 + 原生积分/行为/判定（L3.5-4e）。
 ##
-## 归属：**桥接层**，继承 vendored BulletSystem，只覆写存储 / 积分 / 行为钩子。
-## 接入：KernelBulletBackend 在原生可用时用它，并**不再创建 BehaviorProcessor** ——
-## 行为由原生 behavior_batch 执行（描述符经 LifecycleCatalog + compile 注册成 program）。
-## 未加载扩展时 is_native_ready() = false，调用方退回纯 GDScript 内核。
+## 归属：**桥接层**。原生 `DanmakuStore` 是**唯一存储**（spawn / despawn / integrate / behavior / collision）。
+## 本类维护 GDScript 侧的表（BulletType / render_fade）与**每帧只读快照**，供渲染 / 物理 / 调试**零改**读取。
+##
+## **契约**：消费方在遍历中 `despawn` **必须倒序** —— 快照在帧内不即时更新；倒序时被 swap 进来的尾行
+## 索引更大、已处理过，故安全（现状已如此）。
+## 未加载扩展时 `is_native_ready() = false`，调用方退回纯 GDScript 内核（`super`）。
 class_name KernelNativeSystem
 extends BulletSystem
 
-const SLOT_STRIDE := 8
-
 var _accel: Object = null
-## 诊断计数器：真正走了原生积分路径的帧数。
+## 诊断计数器：真正走了原生路径的帧数。
 var native_frames: int = 0
 
 # ── 原生行为执行（由 KernelBulletBackend 装配）──
@@ -19,11 +19,6 @@ var behavior_ctx: BehaviorContext
 var behavior_host          # KernelBehaviorHost
 var boss_getter: Callable
 
-var _program := PackedInt32Array()
-var _pphase := PackedInt32Array()
-var _ptick := PackedInt32Array()
-var _pelapsed := PackedFloat32Array()
-var _pslots := PackedFloat32Array()
 var _catalog := LifecycleCatalog.new()
 var _program_data: Array = []
 ## 与 _program_data 对齐：每个 program 的锚点参数（无锚点 = null）。
@@ -39,8 +34,11 @@ func _init() -> void:
 func _ensure_native() -> void:
 	if _accel == null and ClassDB.class_exists("DanmakuStore"):
 		_accel = ClassDB.instantiate("DanmakuStore")
+		_accel.setup(initial_capacity, cull_rect)
 		# 原生侧不知宿主场域常量：注入（at_wall 判定用）。
 		_accel.set_field(GameConfig.FIELD_LEFT, GameConfig.FIELD_RIGHT, GameConfig.FIELD_TOP)
+		_accel.set_margin(cull_margin)
+		_accel.set_default_life(default_lifetime)
 
 
 func is_native_ready() -> bool:
@@ -48,45 +46,94 @@ func is_native_ready() -> bool:
 	return _accel != null
 
 
-## 容量变化时同步桥接侧的行为数组（基类会 resize 自己的 SoA）。
+## 容量变化：基类扩 SoA；原生 store 同步 reserve（grow-only）。
 func _ensure_capacity(capacity: int) -> void:
 	super(capacity)
-	var cap: int = _positions.size()
-	if _program.size() < cap:
-		_program.resize(cap)
-		_pphase.resize(cap)
-		_ptick.resize(cap)
-		_pelapsed.resize(cap)
-		_pslots.resize(cap * SLOT_STRIDE)
+	if _accel != null:
+		_accel.reserve(_positions.size())
 
 
-## 发射：基类写入 GDScript 存储；这里再绑定原生 program。
+## 发射：基类写 GDScript 快照行；原生写**权威行**（type/faction/color/life/fx/timer/hitbox/program）。
 func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color: Color = Color.WHITE, move: StringName = &"", behavior_params: Variant = null) -> int:
 	var id: int = super(bullet_data, position, velocity, color, move, behavior_params)
-	var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
-	var prog: int = _program_for(move, params) if native_behaviors else -1
-	_program[id] = prog
-	_pphase[id] = 0
-	_ptick[id] = 0
-	_pelapsed[id] = 0.0
-	for s in SLOT_STRIDE:
-		_pslots[id * SLOT_STRIDE + s] = 0.0
+	if _accel != null:
+		var nid: int = _accel.spawn(position, velocity, _type_index[id], int(bullet_data.faction), color)
+		if nid < 0:
+			push_error("[KernelNativeSystem] 原生 store 溢出（capacity=%d）" % _accel.get_capacity())
+			return id
+		_accel.set_hitbox(nid, bullet_data.hitbox_radius, bullet_data.hitbox_offset, bullet_data.hitbox_size, bullet_data.follow_dir, bullet_data.dir_offset)
+		_accel.set_life(nid, _life_left[id])
+		_accel.set_fx(nid, _fx_phase[id])
+		_accel.set_timer(nid, _timer[id])
+		var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
+		var prog: int = _program_for(move, params) if native_behaviors else -1
+		_accel.set_program(nid, prog)
 	return id
 
 
-## 回收：镜像基类的 swap-with-last（尾行搬进空槽）。
+## 回收：基类 swap 快照行 + 原生 swap 权威行（同一状态出发 → 保持同序）。
 func despawn(id: int) -> void:
 	if id < 0 or id >= _active_count:
 		return
-	var tail: int = _active_count - 1
 	super(id)
-	if id != tail:
-		_program[id] = _program[tail]
-		_pphase[id] = _pphase[tail]
-		_ptick[id] = _ptick[tail]
-		_pelapsed[id] = _pelapsed[tail]
-		for s in SLOT_STRIDE:
-			_pslots[id * SLOT_STRIDE + s] = _pslots[tail * SLOT_STRIDE + s]
+	if _accel != null:
+		_accel.despawn(id)
+
+
+## 清空：两边都清。
+func clear() -> void:
+	super()
+	if _accel != null:
+		_accel.clear()
+
+
+## 写访问器：快照 + 原生一起写（工具 / 测试 / 回退行为都可能调）。
+func set_velocity(id: int, value: Vector2) -> void:
+	super(id, value)
+	if _accel != null:
+		_accel.set_velocity(id, value)
+
+func set_position(id: int, value: Vector2) -> void:
+	super(id, value)
+	if _accel != null:
+		_accel.set_position(id, value)
+
+# 基类没有 set_life / set_fx（只有行数组直写）→ 这里新增桥接方法：快照 + 原生一起写。
+func set_life(id: int, value: float) -> void:
+	_life_left[id] = value
+	if _accel != null:
+		_accel.set_life(id, value)
+
+func set_fx(id: int, value: float) -> void:
+	_fx_phase[id] = value
+	if _accel != null:
+		_accel.set_fx(id, value)
+
+func set_timer(id: int, value: float) -> void:
+	super(id, value)
+	if _accel != null:
+		_accel.set_timer(id, value)
+
+
+## 判定：权威在原生（宽相网格）。
+func query_circle(center: Vector2, search_radius: float) -> PackedInt32Array:
+	if _accel != null:
+		return _accel.query_circle(center, search_radius)
+	return super(center, search_radius)
+
+func hit_test(id: int, center: Vector2, radius: float) -> bool:
+	if _accel != null:
+		return _accel.hit_test(id, center, radius)
+	return super(id, center, radius)
+
+func is_grazed(id: int) -> bool:
+	return _accel.is_grazed(id) if _accel != null else super(id)
+
+func mark_grazed(id: int) -> void:
+	if _accel != null:
+		_accel.mark_grazed(id)
+	else:
+		super(id)
 
 
 ## move+params → 原生 program（编译 + 注册，按签名缓存）。
@@ -120,38 +167,28 @@ func _anchor_spec_for(move: StringName, params: Dictionary) -> Variant:
 	return null
 
 
-## 覆写：原生积分（integrate_batch）+ 原生行为（behavior_batch）。
+## 覆写：原生**有状态**积分 + 行为（原生 store 内部 swap-remove dead）→ 每帧 pull 快照。
 func _physics_process(delta: float) -> void:
 	_ensure_native()
 	if _accel == null:
 		super(delta)
 		return
 	_last_delta = delta
-	if _active_count == 0:
-		return
-	_grid_active = false
-	_grid_dirty = true
-	var cull := cull_rect
-	var res: Dictionary = _accel.integrate_batch(
-		_active_count, _positions, _velocities, _life_left, _fx_phase, _timer,
-		delta, cull.position, cull.size, cull_margin)
-	if not res.has("positions") or (res.positions as PackedVector2Array).size() < _active_count:
-		super(delta)
+	_accel.set_cull(cull_rect)
+	_accel.set_margin(cull_margin)
+	_accel.set_default_life(default_lifetime)
+	if _accel.get_active_count() == 0:
+		_pull_snapshot()
 		return
 	native_frames += 1
-	_positions = res.positions
-	_velocities = res.velocities
-	_life_left = res.life_left
-	_fx_phase = res.fx_phase
-	_timer = res.timers
-	for id in res.dead:
-		despawn(id)
+	_accel.integrate(delta)
 	if native_behaviors:
 		_run_native_behaviors(delta)
+	_pull_snapshot()
 
 
 func _run_native_behaviors(delta: float) -> void:
-	if _active_count == 0:
+	if _accel.get_active_count() == 0:
 		return
 	var player := Vector2.ZERO
 	var enemies := PackedVector2Array()
@@ -168,27 +205,21 @@ func _run_native_behaviors(delta: float) -> void:
 	for apid in _program_data.size():
 		var spec: Variant = _program_anchors[apid] if apid < _program_anchors.size() else null
 		anchor_base[apid] = player if spec == null else BulletLifecycle.anchor_base(spec[&"id"], spec[&"offset"], spec[&"use_global"], player)
-	var res: Dictionary = _accel.behavior_batch(
-		_active_count, _positions, _velocities, _life_left, _fx_phase,
-		_program, _pphase, _ptick, _pelapsed, _pslots,
-		delta, player, boss_pos, has_boss, enemies, anchor_base)
-	_positions = res.positions
-	_velocities = res.velocities
-	_life_left = res.life
-	_fx_phase = res.fx
-	_program = res.oprogram
-	_pphase = res.phase
-	_ptick = res.tick
-	_pelapsed = res.elapsed
-	_pslots = res.slots
-	var ids: Array = []
-	for id in res.dead:
-		ids.append(id)
-	ids.sort()
-	ids.reverse()
-	for id in ids:
-		despawn(id)
+	var res: Dictionary = _accel.behavior_tick(delta, player, boss_pos, has_boss, enemies, anchor_base)
 	_drain_events(res, has_boss, boss_pos)
+
+
+## 每帧把原生权威 SoA pull 成 GDScript **只读快照**（渲染 / 物理 / 调试零改读它）。
+func _pull_snapshot() -> void:
+	_active_count = _accel.get_active_count()
+	_positions = _accel.get_positions()
+	_velocities = _accel.get_velocities()
+	_color = _accel.get_colors()
+	_type_index = _accel.get_type_indices()
+	_faction = _accel.get_factions_bytes()
+	_life_left = _accel.get_life_lefts()
+	_fx_phase = _accel.get_fx_phases()
+	_timer = _accel.get_timers()
 
 
 func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:

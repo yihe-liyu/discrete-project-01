@@ -18,6 +18,21 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-4e ✅：存储翻转（原生权威 + GDScript 只读快照）
+
+- **改动**：`KernelNativeSystem` 改用原生**有状态** API（`spawn`/`despawn`/`clear`/`integrate`/`behavior_tick`），
+  原生 `DanmakuStore` 成为**唯一存储**；每帧把原生 SoA pull 成 GDScript **只读快照**
+  （pos/vel/color/type_index/faction/life/fx/timer/active_count），渲染/物理/调试**零改**。
+- **判定顺带切原生**：覆写 `query_circle/hit_test/is_grazed/mark_grazed` → 原生（宽相网格）；`get_type(id)` 仍走 GDScript 类型表。
+- **写访问器**：`set_velocity/set_position/set_timer` 覆写转发原生；`set_life/set_fx` **新增**（基类无这两个方法）快照+原生双写。
+- **原生补齐**：`spawn/spawn_batch` **整行归零**（有状态 spawn 必须；batch 路径由调用方传数组，之前一直没清 program/hb/grazed）；
+  `reserve(n)`（grow-only）、`set_cull(Rect2)`、`get_factions_bytes()`（宿主 `_faction` 是 PackedByteArray）。
+- **契约**：消费方遍历中 despawn **必须倒序**（快照在帧内不即时更新；倒序时被 swap 进来的尾行索引更大、已处理过）。
+- **验证**：`test_native_integrate` 2/2（原生有状态 ↔ GDScript 逐位）/ `test_kernel_swap` 9/9 / `test_native_laser_anchor` 1/1 /
+  全量 **370 / 4123**；workbench 真实舞台 70s 零错误。
+- **回退**：`use_native=false` 回 GDScript 内核；`_accel==null` 时桥接整体走 `super`。
+- **下一步**：4f 去 `extends BulletSystem` + 删 `scripts/kernel/**`。
+
 ### 2026-09-14 — L3.5-4b-pre ✅：原生宽相 uniform grid
 
 - **背景**：原生 `query_circle` 是线性扫描，而 GDScript `BulletSystem` 早有 uniform grid（`BROADPHASE_MIN_COUNT=64`）→

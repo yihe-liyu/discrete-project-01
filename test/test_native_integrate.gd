@@ -30,16 +30,16 @@ func _spawn_same(gs: BulletSystem, nt: BulletSystem, bt: BulletType) -> void:
 		var vel := Vector2.RIGHT.rotated(i * 0.37) * (140.0 + (i % 9) * 20.0)
 		gs.spawn(bt, pos, vel, Color.WHITE)
 		nt.spawn(bt, pos, vel, Color.WHITE)
-	# 覆盖出生相位 / 短寿命 / 计时器三条分支
+	# 覆盖出生相位 / 短寿命 / 计时器三条分支（nt 走写访问器 → 同步原生权威行）
 	for i in 40:
 		gs._fx_phase[i] = 0.2
-		nt._fx_phase[i] = 0.2
+		nt.set_fx(i, 0.2)
 	for i in range(100, 160):
 		gs._life_left[i] = 0.3
-		nt._life_left[i] = 0.3
+		nt.set_life(i, 0.3)
 	for i in range(200, 260):
 		gs._timer[i] = 0.25
-		nt._timer[i] = 0.25
+		nt.set_timer(i, 0.25)
 
 
 func _assert_identical(gs: BulletSystem, nt: BulletSystem, tag: String) -> void:

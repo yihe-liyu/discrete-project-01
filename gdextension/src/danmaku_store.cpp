@@ -16,6 +16,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_colors"), &DanmakuStore::get_colors);
 	ClassDB::bind_method(D_METHOD("get_type_indices"), &DanmakuStore::get_type_indices);
 	ClassDB::bind_method(D_METHOD("get_factions"), &DanmakuStore::get_factions);
+	ClassDB::bind_method(D_METHOD("get_factions_bytes"), &DanmakuStore::get_factions_bytes);
 	ClassDB::bind_method(D_METHOD("behavior_batch", "count", "positions", "velocities", "life", "fx", "program", "phase", "tick", "elapsed", "slots", "delta", "player", "boss", "has_boss", "enemies", "anchor_base"), &DanmakuStore::behavior_batch, DEFVAL(PackedVector2Array()));
 	ClassDB::bind_method(D_METHOD("get_position", "id"), &DanmakuStore::get_position);
 	ClassDB::bind_method(D_METHOD("get_velocity", "id"), &DanmakuStore::get_velocity);
@@ -25,6 +26,8 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_faction", "id"), &DanmakuStore::get_faction);
 	ClassDB::bind_method(D_METHOD("get_color", "id"), &DanmakuStore::get_color);
 	ClassDB::bind_method(D_METHOD("fill_multimesh", "mm"), &DanmakuStore::fill_multimesh);
+	ClassDB::bind_method(D_METHOD("reserve", "n"), &DanmakuStore::reserve);
+	ClassDB::bind_method(D_METHOD("set_cull", "cull"), &DanmakuStore::set_cull);
 	ClassDB::bind_method(D_METHOD("set_margin", "margin"), &DanmakuStore::set_margin);
 	ClassDB::bind_method(D_METHOD("set_default_life", "life"), &DanmakuStore::set_default_life);
 	ClassDB::bind_method(D_METHOD("set_hitbox", "id", "radius", "offset", "size", "follow_dir", "dir_offset"), &DanmakuStore::set_hitbox);
@@ -107,6 +110,20 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_life[i] = _default_life;
 	_fx[i] = 0.0f;
 	_timer[i] = 0.0f;
+	// L3.5-4e：有状态 spawn 必须整行归零（batch 路径由调用方传数组，stateful 没有）。
+	_program[i] = -1;
+	_pphase[i] = 0;
+	_ptick[i] = 0;
+	_pelapsed[i] = 0.0f;
+	_pnext[i] = 0.0f;
+	_pendx[i] = 0.0f;
+	_pendy[i] = 0.0f;
+	_pfresh[i] = 1;
+	_phasend[i] = 0;
+	for (int s = 0; s < SLOT_STRIDE; ++s) { _pslots[i * SLOT_STRIDE + s] = 0.0f; }
+	_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
+	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
+	_grazed[i] = 0;
 	return _count++;
 }
 
@@ -128,6 +145,22 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		_type[i] = k < p_type.size() ? p_type[k] : 0;
 		_faction[i] = k < p_faction.size() ? p_faction[k] : 0;
 		_color[i] = k < p_color.size() ? p_color[k] : Color(1, 1, 1, 1);
+		_life[i] = _default_life;
+		_fx[i] = 0.0f;
+		_timer[i] = 0.0f;
+		_program[i] = -1;
+		_pphase[i] = 0;
+		_ptick[i] = 0;
+		_pelapsed[i] = 0.0f;
+		_pnext[i] = 0.0f;
+		_pendx[i] = 0.0f;
+		_pendy[i] = 0.0f;
+		_pfresh[i] = 1;
+		_phasend[i] = 0;
+		for (int s = 0; s < SLOT_STRIDE; ++s) { _pslots[i * SLOT_STRIDE + s] = 0.0f; }
+		_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
+		_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
+		_grazed[i] = 0;
 		++_count;
 		++added;
 	}
@@ -223,6 +256,9 @@ void DanmakuStore::integrate(double p_delta) {
 	}
 }
 
+// L3.5-4e：有状态存储的容量扩容（grow-only）与剔除区注入。
+void DanmakuStore::reserve(int p_n) { _ensure_capacity(p_n); }
+void DanmakuStore::set_cull(const Rect2 &p_cull) { _cull = p_cull; _grid_dirty = true; }
 void DanmakuStore::set_margin(float p_margin) { _margin = p_margin; }
 void DanmakuStore::set_default_life(float p_life) { _default_life = p_life; }
 void DanmakuStore::set_field(float p_left, float p_right, float p_top) { _field_left = p_left; _field_right = p_right; _field_top = p_top; }
@@ -812,6 +848,14 @@ PackedInt32Array DanmakuStore::get_factions() const {
 	PackedInt32Array out;
 	out.resize(_count);
 	for (int i = 0; i < _count; ++i) { out[i] = _faction[i]; }
+	return out;
+}
+
+// L3.5-4e：宿主 BulletSystem 的 `_faction` 是 PackedByteArray → 需要同型快照。
+PackedByteArray DanmakuStore::get_factions_bytes() const {
+	PackedByteArray out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) { out[i] = (unsigned char)_faction[i]; }
 	return out;
 }
 

@@ -77,6 +77,8 @@ public:
 	int get_faction(int p_id) const;
 	Color get_color(int p_id) const;
 	// N2 存储段：原生持有 SoA；积分/回收语义与 GDScript 内核 1:1。
+	void reserve(int p_n);
+	void set_cull(const Rect2 &p_cull);
 	void set_margin(float p_margin);
 	void set_default_life(float p_life);
 	void set_field(float p_left, float p_right, float p_top);
@@ -91,6 +93,7 @@ public:
 	PackedColorArray get_colors() const;
 	PackedInt32Array get_type_indices() const;
 	PackedInt32Array get_factions() const;
+	PackedByteArray get_factions_bytes() const;
 	void _run_behavior_pass(float p_dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base);
 	Dictionary _events_dict() const;
 	// L3.5-3：无状态行为批（数组进/出，不做 swap；回收由调用方按 dead 重放）—— 与 integrate_batch 同款模式。
