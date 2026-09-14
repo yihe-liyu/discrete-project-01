@@ -45,6 +45,19 @@ func test_marisa_bomb_data_is_mist() -> void:
 	assert_not_null(bd.texture, "应有贴图（marisa_bomb01）")
 
 
+func test_mist_start_size_comes_from_ranges() -> void:
+	var bd := _short_mist()
+	bd.texture = MARISA_DATA.bomb.texture
+	bd.length_range = Vector2(0.5, 1.0)
+	bd.width_range = Vector2(0.25, 1.0)
+	var full := bd.texture.get_size()
+	var bomb = BulletManager.current.shoot_bomb_bullet(bd, Vector2(448.0, 700.0), Vector2.RIGHT)
+	bomb._physics_process(1.0 / 60.0)   # 仍在阶段1（长）
+	assert_gt(bomb.length_now(), full.x * 0.5, "阶段1 的长应从 length_range.x 起，不是 0")
+	assert_almost_eq(bomb.width_now(), full.y * 0.25, 0.01, "阶段1 的宽 = 贴图宽 × width_range.x（初始宽度）")
+	bomb.queue_free()
+
+
 func test_mist_bomb_stages_grow_follow_and_expire() -> void:
 	var bd := _short_mist()
 	bd.texture = MARISA_DATA.bomb.texture

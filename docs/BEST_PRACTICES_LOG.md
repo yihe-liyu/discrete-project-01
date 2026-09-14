@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — mist bomb 展开范围参数化：length_range / width_range 两个 vec2
+
+- **起因**："初始宽度在哪"——原先阶段1/2 把宽写死成 `scale.y = 0.0`，数据里根本没有"起始宽度"这种参数；手改成 `0.2` 只能改代码。
+- **做法**：`MistBombData` 增 `length_range` / `width_range`（各一个 `Vector2` = 该轴 **起始比例→最终比例**）。宿主 5 阶段改 `lerpf(range.x, range.y, k)`：阶段1 长 从 x→y（宽固定 `width_range.x`），阶段3 宽 从 x→y。默认 `(0,1)` 与旧行为逐帧等价。
+- **保真**：你工作区手改的 `0.2` 没丢，搬到 `marisa_bomb.tres` 的 `width_range = Vector2(0.2, 1)`。
+- **验证**：`test_mist_bomb` 3/3（新增"起始长/宽来自 range"）；`./tools/verify.sh` 全绿 **378 / 4182**。
+
 ### 2026-09-14 — BombData 拆家族：基类 + RingBombData / MistBombData
 
 - **目标**：兑现"BombData 只是一个模板"的反馈——一个 Resource 塞两种炸弹的全部字段，第 3 种一来就糊了。

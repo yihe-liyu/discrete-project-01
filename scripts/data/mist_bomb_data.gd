@@ -9,10 +9,14 @@ class_name MistBombData
 @export var rotation_deg: float = -90.0                     ## 贴图朝向（-90 = 长轴朝上）
 @export var pivot_ratio: Vector2 = Vector2(0.0, 0.5)        ## 锚点（贴图 0..1；接在自机上的"弯曲处"）
 
+@export_group("展开范围（每轴 起始→最终；1.0 = 贴图该维全长）")
+@export var length_range: Vector2 = Vector2(0.0, 1.0)       ## x=长的起始比例，y=长的最终比例
+@export var width_range: Vector2 = Vector2(0.0, 1.0)        ## x=宽的起始比例（= 初始宽度），y=宽的最终比例
+
 @export_group("分阶段展开（秒）")
-@export var grow_length_time: float = 0.35                  ## 阶段1：长（贴图 x）0→满
+@export var grow_length_time: float = 0.35                  ## 阶段1：长 起始→最终
 @export var hold_length_time: float = 0.5                   ## 阶段2：保持长
-@export var grow_width_time: float = 0.25                   ## 阶段3：宽（贴图 y）0→满
+@export var grow_width_time: float = 0.25                   ## 阶段3：宽 起始→最终
 @export var hold_width_time: float = 0.5                    ## 阶段4：保持宽
 @export var fade_time: float = 0.25                         ## 阶段5：淡出
 

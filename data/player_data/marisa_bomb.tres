@@ -8,6 +8,7 @@ script = ExtResource("2_script")
 texture = ExtResource("1_tex")
 count = 1
 interval = 0.0
+width_range = Vector2(0.2, 1)
 grow_length_time = 1.0
 hold_length_time = 0.6
 grow_width_time = 1.0

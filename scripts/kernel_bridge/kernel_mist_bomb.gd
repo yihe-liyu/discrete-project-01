@@ -12,6 +12,8 @@ var _stage_t: float = 0.0
 
 var _follow: bool = true
 var _anchor_offset := Vector2.ZERO
+var _length: Vector2 = Vector2(0.0, 1.0)      # 长的 起始→最终（贴图 x 的比例）
+var _width: Vector2 = Vector2(0.0, 1.0)       # 宽的 起始→最终（贴图 y 的比例）
 var _grow_len: float = 0.35
 var _hold_len: float = 0.5
 var _grow_wid: float = 0.25
@@ -30,6 +32,8 @@ func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Co
 	data = d
 	_follow = d.follow_player
 	_anchor_offset = d.anchor_offset
+	_length = d.length_range
+	_width = d.width_range
 	_grow_len = maxf(d.grow_length_time, 0.0)
 	_hold_len = d.hold_length_time
 	_grow_wid = maxf(d.grow_width_time, 0.0)
@@ -66,19 +70,19 @@ func _physics_process(delta: float) -> void:
 			global_position = p.global_position + _anchor_offset
 	match _stage:
 		Stage.LENGTH:
-			_sprite.scale = Vector2(_k(_grow_len), 0.0)
+			_sprite.scale = Vector2(lerpf(_length.x, _length.y, _k(_grow_len)), _width.x)
 			if _stage_t >= _grow_len:
 				_advance(Stage.HOLD_L)
 		Stage.HOLD_L:
-			_sprite.scale = Vector2(1.0, 0.0)
+			_sprite.scale = Vector2(_length.y, _width.x)
 			if _stage_t >= _hold_len:
 				_advance(Stage.WIDTH)
 		Stage.WIDTH:
-			_sprite.scale = Vector2(1.0, _k(_grow_wid))
+			_sprite.scale = Vector2(_length.y, lerpf(_width.x, _width.y, _k(_grow_wid)))
 			if _stage_t >= _grow_wid:
 				_advance(Stage.HOLD_W)
 		Stage.HOLD_W:
-			_sprite.scale = Vector2(1.0, 1.0)
+			_sprite.scale = Vector2(_length.y, _width.y)
 			if _stage_t >= _hold_wid:
 				_advance(Stage.FADE)
 		Stage.FADE:
