@@ -7,6 +7,8 @@ extends CoroutineScript
 
 const PLAYER_PROXIMITY: float = 150.0
 const RING_SPEED: float = 400.0
+## 近 Boss 散圈半径（按难度）—— **唯一真相**：端口与回调都用它
+const BOSS_RADIUS := [175.0, 150.0, 125.0, 100.0]
 
 ## 复用弹型实例（M2）
 var _normal_bullet_data: BulletData
@@ -19,6 +21,7 @@ func kernel_port() -> Dictionary:
 		"move": &"non_mid_flee",
 		"params": {
 			&"player_proximity": PLAYER_PROXIMITY,
+			&"boss_radius": diff_pick(BOSS_RADIUS),
 			&"on_flee_burst": Callable(self, "_kernel_on_flee_burst"),
 		},
 	}
@@ -28,7 +31,7 @@ func kernel_port() -> Dictionary:
 func _kernel_on_flee_burst(pos: Vector2, boss_pos: Vector2, has_boss: bool, host) -> bool:
 	if not has_boss:
 		return false
-	if pos.distance_to(boss_pos) >= diff_pick([175, 150, 125, 100]):
+	if pos.distance_to(boss_pos) >= diff_pick(BOSS_RADIUS):
 		return false
 	if _normal_bullet_data == null:
 		_normal_bullet_data = BulletData.new().tex("小玉").speed(RING_SPEED)\

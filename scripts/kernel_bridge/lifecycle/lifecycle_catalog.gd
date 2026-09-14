@@ -6,7 +6,6 @@
 class_name LifecycleCatalog
 extends RefCounted
 
-const _NON_MID_RADIUS := [175.0, 150.0, 125.0, 100.0]
 ## 预拼描述符入口：内容 `kernel_port()` 直接给 `{lifecycle: BulletLifecycle}`（可选 `anchor`）。
 ## 对应 docs/LIFECYCLE_MODEL.md §7「`*_bullet.gd` → builder sugar」。
 const MOVE_LIFECYCLE := &"lifecycle"
@@ -63,7 +62,7 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 			lc.until_elapsed(float(params.get(&"flee_time", 2.0)))
 			lc.despawn()
 		&"non_mid_flee":
-			var radius: float = float(params.get(&"boss_radius", _NON_MID_RADIUS[clampi(SaveData.selected_difficulty, 0, _NON_MID_RADIUS.size() - 1)]))
+			var radius: float = float(params.get(&"boss_radius", 150.0))   # 半径是内容调参，由内容按难度传
 			lc.until_near(BulletLifecycle.T_PLAYER, float(params.get(&"player_proximity", 150.0)), 0.0, 3)
 			lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
 			lc.then()
@@ -85,13 +84,13 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 	return lc
 
 
-## 签名：同 (move, params, 难度) 只编译一次。难度入签名是因为 non_mid 的半径随难度。
+## 签名：同 (move, params) 只编译一次。难度相关值（如 non_mid 半径）由内容放进 params，故无需额外入签名。
 static func signature(move: StringName, params: Dictionary) -> int:
 	if move == MOVE_LIFECYCLE:
 		var lc: BulletLifecycle = params.get(&"lifecycle", null)
 		var obj_id: int = lc.get_instance_id() if lc != null else 0
 		return hash(move) * 31 + obj_id * 7 + hash(params.get(&"anchor"))
-	return hash(move) * 31 + hash(params) * 7 + SaveData.selected_difficulty
+	return hash(move) * 31 + hash(params) * 7
 
 
 var _cache: Dictionary = {}

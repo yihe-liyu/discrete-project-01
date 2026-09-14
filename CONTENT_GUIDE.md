@@ -260,7 +260,7 @@ func kernel_port() -> Dictionary:
 | `radial_accel` | `accel_rate`、`spawn_factory: Callable`、`sfx`、`sfx_db` | 沿初向加速 + 碰顶换向下弹 |
 | `bounce` | `accel`、`bounce_angle`、`spawn_speed`(0)、`spawn_factory`、`sfx`("kira")、`sfx_db`(-8) | 碰框朝 Boss 转 `bounce_angle` 后换弹 |
 | `avoid_player` | （类型级固定；内容不覆盖） | 靠近自机逃 |
-| `non_mid_flee` | `player_proximity`(150)、`on_flee_burst: Callable`；半径随难度 | 逃 → 近 Boss 散圈 |
+| `non_mid_flee` | `player_proximity`(150)、`boss_radius`、`on_flee_burst: Callable` | 逃 → 近 Boss 散圈（半径由内容按难度传） |
 | `marisa_laser` | `anchor_id`、`anchor_offset`、`angle`、`drift_speed`(2000)、`initial_drift` | 子机锚定激光（World 兄弟，用 global） |
 | `laser_follow` | 同上 | 自机子节点锚定（用局部 position） |
 

@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — 内容归位：non_mid 散圈半径移进 non_mid01_bullet（去重 + 去难度耦合）
+
+- **发现**：`[175,150,125,100]` 曾有**两份** —— `LifecycleCatalog._NON_MID_RADIUS`（引擎）与 `non_mid01_bullet.gd` 回调里的 `diff_pick([...])`（内容）。同一份内容调参写两遍、还跨层，漂移风险。
+- **做法**：数组收到内容文件（`const BOSS_RADIUS`，端口与回调共用）；catalog 的 `non_mid_flee` 改读 `params.get(&"boss_radius", 150.0)`。半径是**内容调参**，引擎不该持有。
+- **顺带简化**：`signature()` 去掉难度项 —— 半径进 params 后难度自然随 `hash(params)` 区分；`LifecycleCatalog` **不再引用 `SaveData`**（引擎层去全局耦合）。
+- **验证**：`./tools/verify.sh` 全绿 **371 / 4149**。
+
 ### 2026-09-14 — 展开：preset 组合就地搬进 `LifecycleCatalog.build()`
 
 - **动机**：读 `build()` 看不到行为逻辑（只看到 `BulletLifecycle.bounce(...)` 之类），得跳文件；而且组合定义在"值类型"上，与"schema 权威 = `build()`"的定位不符。
