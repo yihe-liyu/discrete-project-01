@@ -57,8 +57,8 @@ func _apply_events(ev: Dictionary, compiled: Dictionary, host: FakeHost, boss: N
 				(acts[local[k]] as Callable).call(Vector2(xs[k], ys[k]), boss_pos, has_boss, host)
 
 
-func _run(tag: String, lc: BulletLifecycle, beh_a: Behavior, params_a: Dictionary,
-		host_a: FakeHost, ctx: BehaviorContext, spawns: Array, frames: int,
+func _run(tag: String, lc: BulletLifecycle, _beh_a: Behavior, _params_a: Dictionary,
+		_host_a: FakeHost, ctx: BehaviorContext, spawns: Array, frames: int,
 		player: Vector2, boss: Node2D, has_boss: bool, enemies: Array,
 		anchor_base: PackedVector2Array = PackedVector2Array()) -> void:
 	var store = ClassDB.instantiate("DanmakuStore")

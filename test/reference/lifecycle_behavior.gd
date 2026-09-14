@@ -255,7 +255,9 @@ func _target_pos(target: StringName, from: Vector2, ctx: BehaviorContext) -> Var
 				if d2 < bd:
 					bd = d2
 					best = e
-			return best.global_position if best != null else null
+			if best == null:
+				return null
+			return best.global_position
 		_:
 			return null
 

@@ -18,6 +18,20 @@
 
 ## 记录
 
+### 2026-09-14 — 清空 test/tools 存量警告：全项目警告=错误
+
+- **接上一批**：上一批只让生产严格（`directory_rules` 排除 test/tools）。这一批把 **24 个文件约 30 处存量警告**全部清掉，并**删掉 `directory_rules`** → 全项目严格。
+- **修法（按警告类型）**：
+  - `shadowed_variable_base_class` / `shadowed_global_identifier`：`name` → `char_name` / `setting` / `entry`，`seed` → `rng_seed`，`wrap` → `row_hbox`，常量 `MoveHoming` → `MoveHomingScript`。
+  - `unused_parameter` / `unused_variable`：前缀 `_`（`_host_a` / `_speakers` / `_b` / `_died` …），或直接删死代码（`test_player` 那段空 `if`）。
+  - `incompatible_ternary`：冻结 oracle `test/reference/lifecycle_behavior.gd:258` 的三元（`Vector2` vs `null`）改 `if/else`（**行为逐字等价**）。
+  - `integer_division`：网格行号是故意整除 → `@warning_ignore("integer_division")` 显式标注。
+  - `standalone_expression`：微基准故意裸访问属性 → `@warning_ignore("standalone_expression")`。
+- **删**：`tools/bench_native_system.gd`（+`.tscn`/`.uid`）—— 架构切换后 stale，藏着真 parse error；**无外部引用**。
+- **顺手修**：`tools/bench_danmaku.gd` 也在调已内联进内核的 `CollisionResolver.overlap_ids`（同类真 parse error）→ 改调 `backend.system.query_circle(...)`（原生宽相），bench 复活。
+- **闸门扩到全项目**：`check_syntax_runner.SCAN_DIRS` 从 `scripts+data` 扩到 `+scenes+test+tools`（294 脚本）——以后 test/tools 的警告/真错误也逃不掉。
+- **验证**：全项目 `--check-only` **0 Parse Error**；`./tools/verify.sh` 全绿 **381 / 4194**。
+
 ### 2026-09-14 — GDScript 警告升级为错误（语法闸门开）
 
 - **动机**：上一轮 `INCOMPATIBLE_TERNARY` 只在编辑器里报，`verify.sh` 全绿也漏过去了。

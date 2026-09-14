@@ -21,6 +21,7 @@ func _build(bt: BulletType, n: int, cull: Rect2) -> Array:
 	store.set_default_life(100.0)
 	store.set_field(GameConfig.FIELD_LEFT, GameConfig.FIELD_RIGHT, GameConfig.FIELD_TOP)
 	for i in n:
+		@warning_ignore("integer_division")   # 网格行号，故意整除
 		var pos := Vector2(GameConfig.FIELD_LEFT + (i % 16) * 45.0, GameConfig.FIELD_TOP + (i / 16) * 45.0)
 		if i % 17 == 0:
 			pos = Vector2(-200.0 + i, 1300.0 + i)   # 界外：单元钳到边缘（两路同规则）

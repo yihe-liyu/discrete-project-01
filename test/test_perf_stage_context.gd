@@ -11,7 +11,9 @@ func test_stage_context_creation_bench():
 	for i in N:
 		var ctx := StageContext.new(runner)
 		# 模拟子弹协程典型用法（只用 bullets + player）
+		@warning_ignore("standalone_expression")
 		ctx.bullets
+		@warning_ignore("standalone_expression")
 		ctx.player
 	t0 = Time.get_ticks_usec() - t0
 	var per := float(t0) / float(N)

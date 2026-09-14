@@ -23,15 +23,15 @@ func _scan(dir_path: String, offenders: Array[String]) -> void:
 	if dir == null:
 		return
 	dir.list_dir_begin()
-	var name := dir.get_next()
-	while name != "":
-		var full := dir_path.path_join(name)
+	var entry := dir.get_next()
+	while entry != "":
+		var full := dir_path.path_join(entry)
 		if dir.current_is_dir():
-			if name != "kernel":   # vendor 快照豁免
+			if entry != "kernel":   # vendor 快照豁免
 				_scan(full, offenders)
-		elif name.ends_with(".gd"):
+		elif entry.ends_with(".gd"):
 			_scan_file(full, offenders)
-		name = dir.get_next()
+		entry = dir.get_next()
 	dir.list_dir_end()
 
 

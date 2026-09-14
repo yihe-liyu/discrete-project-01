@@ -26,6 +26,7 @@ func _pair() -> Array:
 
 func _spawn_same(gs: BulletSystem, nt: KernelNativeSystem, bt: BulletType) -> void:
 	for i in 400:
+		@warning_ignore("integer_division")   # 网格行号，故意整除
 		var pos := Vector2(80.0 + (i % 20) * 30.0, 60.0 + (i / 20) * 12.0)
 		var vel := Vector2.RIGHT.rotated(i * 0.37) * (140.0 + (i % 9) * 20.0)
 		gs.spawn(bt, pos, vel, Color.WHITE)

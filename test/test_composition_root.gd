@@ -3,8 +3,8 @@ extends GutTest
 
 func test_removed_autoloads_stay_removed() -> void:
 	# 收敛守卫：这些都不是 autoload 了
-	for name in ["LayerConfig", "MissCircleLayer", "StageObjects", "HitEffectPool", "AssetRegistry", "StageManager"]:
-		assert_false(ProjectSettings.has_setting("autoload/" + name), "%s 不应再是 autoload" % name)
+	for setting in ["LayerConfig", "MissCircleLayer", "StageObjects", "HitEffectPool", "AssetRegistry", "StageManager"]:
+		assert_false(ProjectSettings.has_setting("autoload/" + setting), "%s 不应再是 autoload" % setting)
 
 
 func test_game_scene_binds_stage_runtime() -> void:

@@ -2,9 +2,9 @@ extends GutTest
 ## 对话可暂停性测试：暂停菜单（GameManager PAUSED）期间对话的 WAIT/auto_advance 计时应冻结，
 ## 恢复后从原地继续（对应用户设计："对话就是要可以被暂停的"）。
 
-func _make_profile(name: String) -> CharacterProfile:
+func _make_profile(char_name: String) -> CharacterProfile:
 	var p := CharacterProfile.new()
-	p.char_name = name
+	p.char_name = char_name
 	return p
 
 

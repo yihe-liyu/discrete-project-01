@@ -4,9 +4,9 @@ extends GutTest
 
 # ═══════════ 辅助 ═══════════
 
-func _make_profile(name: String) -> CharacterProfile:
+func _make_profile(char_name: String) -> CharacterProfile:
 	var p := CharacterProfile.new()
-	p.char_name = name
+	p.char_name = char_name
 	return p
 
 
@@ -14,7 +14,7 @@ func _attach(runner: DialogueRunner) -> Dictionary:
 	var seen: Dictionary = {
 		shown = [], events = [], finished = 0, states = [],
 	}
-	runner.line_shown.connect(func(line, speakers, state): seen.shown.append(line))
+	runner.line_shown.connect(func(line, _speakers, _state): seen.shown.append(line))
 	runner.event_fired.connect(func(key): seen.events.append(key))
 	runner.finished.connect(func(): seen.finished += 1)
 	runner.state_changed.connect(func(state, _duration): seen.states.append(state))

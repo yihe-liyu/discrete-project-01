@@ -235,7 +235,7 @@ func test_engine_step_detects_hit_and_graze():
 
 func test_engine_graze():
 	var engine := _make_engine()
-	var player := _make_engine_player(30.0)  # 擦弹范围（22+graze 40）
+	var _player := _make_engine_player(30.0)  # 擦弹范围（22+graze 40）；player 注册进 _entity_registry，靠副作用
 	var beam: LaserBeam = engine.spawn_line(Vector2(0, 0), Vector2(0, 600), Color.RED, {"grow": false})
 	assert_eq(beam.phase, LaserBeam.Phase.SUSTAIN, "opts 生效：瞬间全开")
 	var g0 := _entity_registry.get_player_resources().graze_count

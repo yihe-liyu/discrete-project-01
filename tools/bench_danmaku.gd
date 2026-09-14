@@ -6,7 +6,7 @@ extends Node
 ## 测的是**脚本侧热路径**（GDExtension 要替换的正是这部分）：
 ##   ① 内核积分 system._physics_process（SoA 积分 + 计时 + 剔除）
 ##   ② 行为 behavior.process（world_accel 路径）
-##   ③ 宽相 CollisionResolver.overlap_ids（uniform grid）
+##   ③ 原生宽相 system.query_circle（uniform grid；原 CollisionResolver.overlap_ids 已内联进内核）
 ##   ④ 渲染 CPU 同步 BulletMultiMesh._sync_kernel（分组 + 填 MultiMesh）
 ## **GPU 绘制不计**（headless 无 GPU）。
 ## 参照：60fps 预算 16.67ms/帧。
@@ -67,7 +67,7 @@ func _run(n: int, with_behavior: bool) -> void:
 		if with_behavior:
 			backend.behavior.process()
 		var c := Time.get_ticks_usec()
-		CollisionResolver.overlap_ids(backend.system, CENTER, 120.0, BulletType.Faction.ENEMY)
+		backend.system.query_circle(CENTER, 120.0)
 		var d := Time.get_ticks_usec()
 		mm._sync_kernel()
 		var e := Time.get_ticks_usec()

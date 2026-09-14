@@ -2,9 +2,9 @@ extends GutTest
 ## 对话系统播放层测试：DialogueBox 步骤驱动（台词内联 DSL）
 ## 覆盖：DialogueBox 播放冒烟 / 行间 event 触发 / 角色表情
 
-func _make_profile(name: String) -> CharacterProfile:
+func _make_profile(char_name: String) -> CharacterProfile:
 	var p := CharacterProfile.new()
-	p.char_name = name
+	p.char_name = char_name
 	return p
 
 

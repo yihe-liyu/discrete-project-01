@@ -52,14 +52,14 @@ func test_texture_side_table() -> void:
 
 
 func test_faction_mapping() -> void:
-	var b := _make_backend()
+	var _b := _make_backend()
 	assert_eq(BulletData.new().enemy().to_bullet_type().faction, BulletType.Faction.ENEMY, "enemy → ENEMY")
 	assert_eq(BulletData.new().player().to_bullet_type().faction, BulletType.Faction.PLAYER, "player → PLAYER")
 	assert_eq(BulletData.new().bomb().to_bullet_type().faction, BulletType.Faction.NONE, "bomb → NONE（炸弹走宿主节点）")
 
 
 func test_rect_hitbox_only_when_rect_shape() -> void:
-	var b := _make_backend()
+	var _b := _make_backend()
 	var circle := BulletData.new().enemy()
 	circle.hitbox_shape = BulletData.HitboxShape.CIRCLE
 	circle.hitbox_size = Vector2(8, 8)   # 原项目默认值，但判定是圆

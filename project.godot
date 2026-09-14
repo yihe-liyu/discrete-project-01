@@ -25,7 +25,6 @@ AudioManager="*res://scripts/autoload/audio_manager.gd"
 
 [debug]
 
-gdscript/warnings/directory_rules={ "res://test": 0, "res://tools": 0, "res://addons": 0 }
 gdscript/warnings/unassigned_variable=2
 gdscript/warnings/unassigned_variable_op_assign=2
 gdscript/warnings/unused_variable=2

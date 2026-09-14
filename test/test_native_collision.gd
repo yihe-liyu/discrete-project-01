@@ -21,6 +21,7 @@ func _pair(bt: BulletType, n: int) -> Array:
 	store.set_default_life(100.0)
 	store.set_field(64.0, 832.0, 32.0)
 	for i in n:
+		@warning_ignore("integer_division")   # 网格行号，故意整除
 		var pos := Vector2(100.0 + (i % 10) * 40.0, 100.0 + (i / 10) * 40.0)
 		var vel := Vector2.RIGHT.rotated(i * 0.4) * 200.0
 		gs.spawn(bt, pos, vel, Color.WHITE)

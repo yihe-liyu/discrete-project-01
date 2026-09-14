@@ -51,6 +51,7 @@ func test_native_storage_matches_gdscript() -> void:
 	var bt := BulletType.new()
 	var rows := 100
 	for i in rows:
+		@warning_ignore("integer_division")   # 网格行号，故意整除
 		var pos := Vector2(80.0 + (i % 20) * 30.0, 60.0 + (i / 20) * 20.0)
 		var vel := Vector2.RIGHT.rotated(i * 0.19) * (150.0 + (i % 7) * 20.0)
 		gs.spawn(bt, pos, vel, Color.WHITE)

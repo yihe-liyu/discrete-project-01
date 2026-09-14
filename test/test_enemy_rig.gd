@@ -74,10 +74,10 @@ func test_vector2_and_color_params():
 	for row in rig._param_panel.get_rows():
 		if row.name == "target_pos" and row.kind == "vec2":
 			found_vec = true
-			var wrap: HBoxContainer = row.ctrl
-			assert_eq(float(wrap.get_child(0).value), 0.0, "x 默认 0（游戏里永远注入，裸跑=左上角陷阱）")
-			wrap.get_child(0).value = 400.0
-			wrap.get_child(1).value = 300.0
+			var row_hbox: HBoxContainer = row.ctrl
+			assert_eq(float(row_hbox.get_child(0).value), 0.0, "x 默认 0（游戏里永远注入，裸跑=左上角陷阱）")
+			row_hbox.get_child(0).value = 400.0
+			row_hbox.get_child(1).value = 300.0
 		if row.name == "bullet_color" and row.kind == "color":
 			found_color = true
 	assert_true(found_vec, "target_pos 是 Vector2 可调")

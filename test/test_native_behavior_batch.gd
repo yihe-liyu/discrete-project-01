@@ -37,7 +37,7 @@ func test_batch_curve_matches_tick() -> void:
 	var st_tick = _store()
 	var rt: Array = _reg(st_tick, lc)
 	var st_batch = _store()
-	var rb: Array = _reg(st_batch, lc)
+	var _rb: Array = _reg(st_batch, lc)
 	var pid: int = rt[0]
 	var n := 10
 	var seeds := _seeds(n)

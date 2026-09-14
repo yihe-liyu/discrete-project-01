@@ -43,7 +43,7 @@ func _step(system: BulletSystem, behavior: Behavior, ctx: BehaviorContext, frame
 
 
 func _parity(tag: String, beh_a: Behavior, params_a: Dictionary, lc: BulletLifecycle,
-		host_a, host_b, ctx: BehaviorContext, spawns: Array, frames: int) -> void:
+		_host_a, host_b, ctx: BehaviorContext, spawns: Array, frames: int) -> void:
 	var bt := BulletType.new()
 	var sys_a := _system()
 	var sys_b := _system()

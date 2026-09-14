@@ -77,9 +77,6 @@ func test_miss_loses_life_and_invincible():
 func test_miss_no_life_game_over():
 	var player := _make_player()
 	player.resources.lives = 0
-	var died := false
-	if not GameEvents.player_death.is_connected(func(): pass):
-		pass
 	player.miss()
 	assert_true(player.is_invincible, "无命也进无敌（防连续触发）")
 

@@ -3,7 +3,7 @@ extends Node
 ## 每个脚本用 GDScript.source_code + reload() 从源码强制重编译，绕开 .godot 文件缓存。
 ## 用法：godot --headless --path . res://tools/check_syntax_scene.tscn
 
-const SCAN_DIRS: Array[String] = ["res://scripts", "res://data"]
+const SCAN_DIRS: Array[String] = ["res://scripts", "res://data", "res://scenes", "res://test", "res://tools"]
 
 var _failures: Array[String] = []
 var _total := 0
