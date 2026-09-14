@@ -35,6 +35,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_field", "left", "right", "top"), &DanmakuStore::set_field);
 	ClassDB::bind_method(D_METHOD("register_program", "ops", "args", "move_start", "move_count", "until", "act_start", "act_count", "phase_count", "slots"), &DanmakuStore::register_program);
 	ClassDB::bind_method(D_METHOD("set_program", "id", "program"), &DanmakuStore::set_program);
+	ClassDB::bind_method(D_METHOD("get_program", "id"), &DanmakuStore::get_program);
 	ClassDB::bind_method(D_METHOD("behavior_tick", "delta", "player", "boss", "has_boss", "enemies"), &DanmakuStore::behavior_tick);
 	ClassDB::bind_method(D_METHOD("clear"), &DanmakuStore::clear);
 	ClassDB::bind_method(D_METHOD("despawn", "id"), &DanmakuStore::despawn);
@@ -390,6 +391,11 @@ int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFl
 	return pid;
 }
 
+int DanmakuStore::get_program(int p_id) const {
+	if (p_id < 0 || p_id >= _count) { return -2; }
+	return _program[p_id];
+}
+
 void DanmakuStore::set_program(int p_id, int p_program) {
 	_program[p_id] = p_program;
 	_pphase[p_id] = 0;
@@ -702,7 +708,7 @@ Dictionary DanmakuStore::_events_dict() const {
 		kind.push_back(_ev_kind[k]); eprog.push_back(_ev_prog[k]); local.push_back(_ev_local[k]); bullet.push_back(_ev_bullet[k]);
 		ex.push_back(_ev_x[k]); ey.push_back(_ev_y[k]); edx.push_back(_ev_dx[k]); edy.push_back(_ev_dy[k]); eval.push_back(_ev_val[k]);
 	}
-	out["kind"] = kind; out["program"] = eprog; out["local"] = local; out["bullet"] = bullet;
+	out["kind"] = kind; out["eprog"] = eprog; out["local"] = local; out["bullet"] = bullet;
 	out["x"] = ex; out["y"] = ey; out["dx"] = edx; out["dy"] = edy; out["val"] = eval;
 	return out;
 }
@@ -759,7 +765,8 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 	Dictionary out = _events_dict();
 	out["positions"] = opos; out["velocities"] = ovel;
 	out["life"] = olife; out["fx"] = ofx; out["elapsed"] = oelapsed;
-	out["program"] = oprog; out["phase"] = ophase; out["tick"] = otick; out["slots"] = oslots;
+	out["program"] = oprog; out["oprogram"] = oprog;
+	out["phase"] = ophase; out["tick"] = otick; out["slots"] = oslots;
 	out["dead"] = odead;
 	return out;
 }

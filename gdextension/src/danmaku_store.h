@@ -55,6 +55,7 @@ public:
 	int spawn_batch(const PackedVector2Array &p_pos, const PackedVector2Array &p_vel, const PackedInt32Array &p_type, const PackedInt32Array &p_faction, const PackedColorArray &p_color);
 	void integrate(double p_delta);
 	int get_active_count() const;
+	int get_program(int p_id) const;
 	Vector2 get_position(int p_id) const;
 	Vector2 get_velocity(int p_id) const;
 	PackedVector2Array get_positions() const;

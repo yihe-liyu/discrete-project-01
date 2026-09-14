@@ -98,7 +98,10 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 	var pid: int = -1
 	if lc != null:
 		var c: Dictionary = lc.compile()
+		var expected: int = _program_data.size()
 		pid = _accel.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
+		if pid != expected:
+			push_error("[KernelNativeSystem] program 对齐失败：native pid=%d, 期望 %d" % [pid, expected])
 		_program_data.append(c)
 	_sig_to_program[sig] = pid
 	return pid
@@ -154,7 +157,7 @@ func _run_native_behaviors(delta: float) -> void:
 	_velocities = res.velocities
 	_life_left = res.life
 	_fx_phase = res.fx
-	_program = res.program
+	_program = res.oprogram
 	_pphase = res.phase
 	_ptick = res.tick
 	_pelapsed = res.elapsed
@@ -173,16 +176,17 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	var kinds: PackedInt32Array = res.kind
 	if kinds.is_empty():
 		return
-	var bullet: PackedInt32Array = res.bullet
 	var local: PackedInt32Array = res.local
 	var xs: PackedFloat32Array = res.x
 	var ys: PackedFloat32Array = res.y
 	var dxs: PackedFloat32Array = res.dx
 	var dys: PackedFloat32Array = res.dy
 	var vals: PackedFloat32Array = res.val
-	var bprog: PackedInt32Array = res.program
+	# 事件携带自己的 program（eprog）；**不能**用 per-bullet program 去反查 ——
+	# 两者在本调用内不一致会静默错派（历史 bug，见 BEST_PRACTICES_LOG）。
+	var eprog: PackedInt32Array = res.eprog
 	for k in kinds.size():
-		var prog: int = bprog[bullet[k]]
+		var prog: int = eprog[k]
 		if prog < 0 or prog >= _program_data.size():
 			continue
 		var c: Dictionary = _program_data[prog]

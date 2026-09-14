@@ -18,6 +18,22 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-3b 修复：行为事件按「事件自己的 program」派发
+
+- **症状**：真实舞台（stage01 非符1）约 27s 报两类错：
+  - `_drain_events` sfx 分支 `Invalid access of index '0' on Array[StringName]`；
+  - emit 分支把内容回调当工厂调：`_kernel_on_flee_burst (Callable). Expected 4 argument(s)`。
+- **定位**：`_drain_events` 用 `res.program[bullet[k]]`（per-bullet 快照）反查事件 program。原生 `get_program(35)=1`（bounce），但**同一次调用**返回的快照读回 `0`。
+  根因：**快照数组与宿主 `_program` 成员共享底层缓冲**；`_program = res.program` 之后先跑 despawn 的 swap 镜像写，把「刚发射事件的那颗弹」的 program 槽覆盖了，事件才 drain → 派发到错误 program（sfx 越界 / emit 调成 call）。
+- **修复**：
+  - C++ `_events_dict` 增加独立键 `eprog`（事件自带发射 program）；
+  - `behavior_batch` 的 per-bullet 输出改键 `oprogram`（保留 `program` 别名兼容既有测试）；
+  - GDScript `_drain_events` 改用 `res.eprog[k]`；`_program = res.oprogram`。
+- **证据**：workbench headless 70s 复现 → 修复后零错误；新增 `test_native_event_dispatch`（13 断言）锁定契约：**事件 program == 发射弹 program == 原生 `_program[弹]`，且 `eprog` 不被 per-bullet 写污染**；新增原生 `get_program(id)` 访问器。
+- **附带**：`bullet_lifecycle.gd` 三处 SHADOWED_VARIABLE 消除（`bounce(accel_rate)`；`compile()/_args_act` 的 `sfx_keys`）。
+- **验证**：`./tools/verify.sh` 全绿；**362 / 3962**。
+- **教训**：**别把「原生返回的快照数组」与「之后会被就地改写的宿主数组成员」当同一个东西**；事件应在产生时携带自身全部身份（program），而不是 drain 时反查可能已变形的 per-bullet 状态。
+
 ### 2026-09-14 — L3.5-3b ✅：bridge 接入原生行为执行（替 BehaviorProcessor）
 
 - **改动**：`KernelNativeSystem` 维护 per-bullet `program/phase/tick/elapsed/slots`（随 spawn/despawn swap 同步），每帧 `integrate_batch` + `behavior_batch`（数组进/出）→ 回写 → **降序重放 dead** → drain 事件（emit→queue_spawn / sfx→AudioManager / call→内容回调）。`KernelBulletBackend.setup_behaviors` 原生可用时**不创建 BehaviorProcessor**。

@@ -209,10 +209,10 @@ func on_end_call(fn: Callable) -> BulletLifecycle:
 
 
 # ═══ Canned preset（现有行为 → 命名组合；创作者也可自己拼）═══
-static func bounce(accel: float, bounce_angle: float, spawn_speed: float, factory: Callable,
+static func bounce(accel_rate: float, bounce_angle: float, spawn_speed: float, factory: Callable,
 		sfx_key: StringName = &"kira", sfx_db: float = -8.0) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
-	lc.accel_heading(accel)
+	lc.accel_heading(accel_rate)
 	lc.until_at_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)
 	if sfx_key != &"":
 		lc.sfx(sfx_key, sfx_db)
@@ -341,7 +341,7 @@ func compile() -> Dictionary:
 	var act_start := PackedInt32Array()
 	var act_count := PackedInt32Array()
 	var actions: Array[Callable] = []
-	var sfx: Array[StringName] = []
+	var sfx_keys: Array[StringName] = []
 	for phase in phases:
 		var mv: Array = phase[&"moves"]
 		move_start.append(ops.size())
@@ -354,14 +354,14 @@ func compile() -> Dictionary:
 		act_start.append(ops.size())
 		act_count.append(acts.size())
 		for a in acts:
-			_emit(ops, args, _op_act(a[&"op"]), _args_act(a, actions, sfx))
+			_emit(ops, args, _op_act(a[&"op"]), _args_act(a, actions, sfx_keys))
 	return {
 		&"ops": ops, &"args": args,
 		&"move_start": move_start, &"move_count": move_count,
 		&"until_idx": until_idx,
 		&"act_start": act_start, &"act_count": act_count,
 		&"phase_count": phases.size(), &"slots": slots,
-		&"actions": actions, &"sfx": sfx,
+		&"actions": actions, &"sfx": sfx_keys,
 	}
 
 
@@ -451,15 +451,15 @@ func _args_cond(c: Dictionary) -> Array:
 	return []
 
 
-func _args_act(a: Dictionary, actions: Array[Callable], sfx: Array[StringName]) -> Array:
+func _args_act(a: Dictionary, actions: Array[Callable], sfx_keys: Array[StringName]) -> Array:
 	match a[&"op"]:
 		A_EMIT:
 			var aid := actions.size()
 			actions.append(a[&"factory"])
 			return [float(aid)] + _dir_args(a[&"dir"]) + [float(a[&"speed"]), 1.0 if bool(a[&"at_end"]) else 0.0]
 		A_SFX:
-			var sid := sfx.size()
-			sfx.append(a[&"key"])
+			var sid := sfx_keys.size()
+			sfx_keys.append(a[&"key"])
 			return [float(sid), float(a[&"db"])]
 		A_SET_HEADING: return _dir_args(a[&"dir"])
 		A_SET_SPEED: return [float(a[&"speed"])]
