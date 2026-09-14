@@ -4,13 +4,13 @@ extends RefCounted
 class_name BehaviorContext
 
 var _player: Node2D
-var _world: WorldQuery
+var _world_query: WorldQuery
 
 
 ## 注入自机与世界查询（world 可省 = 空查询：永远没有敌人）。
 func setup(player: Node2D, world: WorldQuery = null) -> void:
 	_player = player
-	_world = world
+	_world_query = world
 
 
 ## 自机世界坐标（无自机时返回 ZERO）。
@@ -20,6 +20,6 @@ func get_player_position() -> Vector2:
 
 ## 世界查询（未注入 = 惰建空查询，内容脚本不必判空）。
 func get_world() -> WorldQuery:
-	if _world == null:
-		_world = WorldQuery.new()
-	return _world
+	if _world_query == null:
+		_world_query = WorldQuery.new()
+	return _world_query

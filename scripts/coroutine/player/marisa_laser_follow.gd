@@ -5,7 +5,7 @@ class_name MarisaLaserFollow
 ## 松开射击（非 focus）时整条激光渐隐消失
 ##
 ## **内核端口载体**：漂移与整批渐隐的内核实现见桥接
-## `scripts/kernel_bridge/behavior/marisa_laser_behavior.gd` + `marisa_laser_fade.gd`；
+## `test/reference/behavior/marisa_laser_behavior.gd` + `marisa_laser_fade.gd`；
 ## 删旧池后，弹的协程体不再由本项目启动。
 ##
 ## 端口参数由 `BulletData.params` 注入（见 `scripts/coroutine/player/marisa_shoot.gd`）。

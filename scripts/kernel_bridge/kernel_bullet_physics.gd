@@ -53,7 +53,7 @@ func _enemy_bullets_vs_player() -> void:
 		return
 	var system := backend.system
 	# 查询半径 = 擦弹半径（覆盖命中 + 擦弹两阈值；query 内部已按弹半径外扩）
-	var ids: PackedInt32Array = CollisionResolver.overlap_ids(
+	var ids: PackedInt32Array = _overlap_ids(
 		system, player.global_position, player.graze_radius, BulletType.Faction.ENEMY)
 	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收
 	for k in range(ids.size() - 1, -1, -1):
@@ -149,10 +149,22 @@ func _play_hit_sfx(sfx_key: StringName, enemy) -> void:
 
 
 ## 命中特效：场景在 BulletType.hit_fx，颜色取该弹当前色（与旧 _spawn_effect 1:1）。
-func _spawn_hit_fx(system: BulletSystem, id: int, bt: BulletType) -> void:
+func _spawn_hit_fx(system: KernelNativeSystem, id: int, bt: BulletType) -> void:
 	if bt.hit_fx == null or fx == null:
 		return
 	fx.play(bt.hit_fx, system.get_position(id), system.get_velocity(id), system.get_color(id))
+
+
+## 圆-圆重叠：`query_circle`（原生宽相网格）+ 阵营过滤（原 `CollisionResolver.overlap_ids` 内联）。
+func _overlap_ids(system: KernelNativeSystem, center: Vector2, radius: float, faction: BulletType.Faction) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	if radius <= 0.0:
+		return out
+	for id in system.query_circle(center, radius):
+		var bt: BulletType = system.get_type(id)
+		if bt != null and bt.faction == faction:
+			out.append(id)
+	return out
 
 
 ## 擦弹结算：与旧 BulletPhysics.on_graze 1:1。

@@ -2,7 +2,7 @@ extends CoroutineScript
 ## 弹丸行为：飞行 → 靠近自机时转向逃跑 → 靠近 Boss 时消失并散开一圈
 ##
 ## **内核端口载体**：状态机（TRAVEL → 近自机 FLEE）+ 距离检测在桥接
-## `scripts/kernel_bridge/behavior/non_mid_flee_behavior.gd`；散圈（难度 / RNG / 形状）
+## `test/reference/behavior/non_mid_flee_behavior.gd`；散圈（难度 / RNG / 形状）
 ## 留在内容侧，由 `on_flee_burst` 回调提供。
 
 const PLAYER_PROXIMITY: float = 150.0

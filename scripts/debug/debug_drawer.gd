@@ -68,7 +68,7 @@ func _draw():
 
 
 ## 单颗内核子弹判定（轻量）
-func _draw_kernel_bullet_row(system: BulletSystem, i: int) -> void:
+func _draw_kernel_bullet_row(system: KernelNativeSystem, i: int) -> void:
 	var ti: int = system.get_type_indices()[i]
 	if ti < 0:
 		return

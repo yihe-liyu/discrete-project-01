@@ -81,7 +81,7 @@ func test_accel_preset_parity() -> void:
 
 
 func test_world_accel_preset_parity() -> void:
-	var beh = preload("res://scripts/kernel_bridge/behavior/world_accel_behavior.gd").new()
+	var beh = preload("res://test/reference/behavior/world_accel_behavior.gd").new()
 	_parity("world_accel", beh, {&"world_accel": Vector2(0.0, 300.0)}, BulletLifecycle.world_accel(Vector2(0.0, 300.0)),
 		null, null, BehaviorContext.new(), _spawns_spread(6, 300.0), 120)
 
@@ -93,7 +93,7 @@ func test_radial_accel_preset_parity() -> void:
 		var d := BulletData.new(); d.velocity = Vector2(1.0, 1.0); return d
 	var ha := FakeHost.new(); ha.boss = boss
 	var hb := FakeHost.new(); hb.boss = boss
-	var beh = preload("res://scripts/kernel_bridge/behavior/radial_accel_behavior.gd").new()
+	var beh = preload("res://test/reference/behavior/radial_accel_behavior.gd").new()
 	beh.host = ha
 	_parity("radial_accel", beh, {&"accel_rate": 120.0, &"spawn_factory": factory, &"sfx": "", &"sfx_db": 0.0},
 		BulletLifecycle.radial_accel(120.0, factory, &""), ha, hb, BehaviorContext.new(), _spawns_spread(6, 400.0), 200)
@@ -122,7 +122,7 @@ func test_homing_preset_parity() -> void:
 	var ctx := BehaviorContext.new()
 	ctx.setup(null, WorldQuery.new())
 	ctx.get_world().setup(provider)
-	var beh = preload("res://scripts/kernel_bridge/behavior/homing_behavior.gd").new()
+	var beh = preload("res://test/reference/behavior/homing_behavior.gd").new()
 	var params := {&"homing_angle_per_sec": deg_to_rad(720.0), &"accel_time": 1.0, &"min_speed": 200.0,
 		&"max_speed": 500.0, &"homing_duration": 2.0, &"proximity_boost": 150.0}
 	var lc := BulletLifecycle.homing(deg_to_rad(720.0), 1.0, 200.0, 500.0, 2.0, 150.0)
@@ -149,7 +149,7 @@ func test_marisa_laser_preset_parity() -> void:
 	player.position = Vector2(300.0, 600.0)
 	var ctx := BehaviorContext.new()
 	ctx.setup(player)
-	var beh = preload("res://scripts/kernel_bridge/behavior/marisa_laser_behavior.gd").new()
+	var beh = preload("res://test/reference/behavior/marisa_laser_behavior.gd").new()
 	var params := {&"anchor_id": 0, &"anchor_offset": Vector2(10.0, 0.0), &"drift_speed": 800.0, &"angle": 0.3, &"initial_drift": 5.0}
 	var lc := BulletLifecycle.marisa_laser(0, Vector2(10.0, 0.0), 0.3, 800.0, 5.0)
 	var spawns: Array = []
@@ -170,7 +170,7 @@ func test_non_mid_flee_preset_parity() -> void:
 		return has_boss and pos.distance_to(boss_pos) < r
 	var ha := FakeHost.new(); ha.boss = boss
 	var hb := FakeHost.new(); hb.boss = boss
-	var beh = preload("res://scripts/kernel_bridge/behavior/non_mid_flee_behavior.gd").new()
+	var beh = preload("res://test/reference/behavior/non_mid_flee_behavior.gd").new()
 	beh.host = ha
 	var params := {&"player_proximity": 150.0, &"on_flee_burst": burst}
 	var lc := BulletLifecycle.non_mid_flee(150.0, r, burst)

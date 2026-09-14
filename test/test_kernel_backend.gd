@@ -77,7 +77,8 @@ func test_accel_field_mapped_since_s4a() -> void:
 	d.accel = Vector2(0, -100)
 	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
 	assert_eq(b.unmapped_behavior_count, 0, "accel 已映射，不应计未映射")
-	assert_eq(b.system.get_move_name(b.system.get_behavior_id(0)), &"world_accel", "应挂 world_accel")
+	# 4f：行为全原生 → 断言已注册一个 program（原「move 槽」概念已随 GDScript 内核删除）
+	assert_eq(b.system._program_data.size(), 1, "应注册 world_accel program")
 
 
 ## 无内核端口的行为应计数并走直线（测试夹具，独立于进度）。
@@ -87,4 +88,4 @@ func test_unmapped_behavior_counted() -> void:
 	d.coroutine_script = preload("res://test/fixtures/no_port_behavior.gd")
 	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
 	assert_eq(b.unmapped_behavior_count, 1, "无端口行为应计数（覆盖率观察）")
-	assert_eq(b.system.get_behavior_id(0), BulletSystem.BEHAVIOR_NONE, "未映射应无行为（直线）")
+	assert_eq(b.system._program_data.size(), 0, "未映射应无 program（直线）")

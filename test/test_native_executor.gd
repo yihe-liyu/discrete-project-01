@@ -136,7 +136,7 @@ func test_native_accel() -> void:
 
 func test_native_world_accel() -> void:
 	if not _available(): pending("无扩展"); return
-	_run("world_accel", BulletLifecycle.world_accel(Vector2(0, 300.0)), preload("res://scripts/kernel_bridge/behavior/world_accel_behavior.gd").new(), {&"world_accel": Vector2(0, 300.0)}, FakeHost.new(), BehaviorContext.new(), _spread(6, 300.0), 120, Vector2.ZERO, null, false, [])
+	_run("world_accel", BulletLifecycle.world_accel(Vector2(0, 300.0)), preload("res://test/reference/behavior/world_accel_behavior.gd").new(), {&"world_accel": Vector2(0, 300.0)}, FakeHost.new(), BehaviorContext.new(), _spread(6, 300.0), 120, Vector2.ZERO, null, false, [])
 
 
 func test_native_bounce() -> void:
@@ -145,7 +145,7 @@ func test_native_bounce() -> void:
 	var factory := func() -> BulletData:
 		var d := BulletData.new(); d.velocity = Vector2(1, 1); return d
 	var ha := FakeHost.new(); ha.boss = boss
-	var beh = preload("res://scripts/kernel_bridge/behavior/bounce_behavior.gd").new()
+	var beh = preload("res://test/reference/behavior/bounce_behavior.gd").new()
 	beh.host = ha
 	var params := {&"accel": 100.0, &"bounce_angle": 0.3, &"spawn_factory": factory, &"spawn_speed": 0.0, &"sfx": "", &"sfx_db": 0.0}
 	_run("bounce", BulletLifecycle.bounce(100.0, 0.3, 0.0, factory, &""), beh, params, ha, BehaviorContext.new(), _spread(8, 300.0), 300, Vector2.ZERO, boss, true, [])

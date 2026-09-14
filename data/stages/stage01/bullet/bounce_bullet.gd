@@ -3,7 +3,7 @@ extends CoroutineScript
 ## 转向朝向 Boss 并旋转 bounce_angle，然后消除自己，原地生成一颗直线弹
 ## 带加速度 accel（沿飞行方向加速；0 = 匀速）
 ##
-## **内核端口载体**：行为实现已移到桥接 `scripts/kernel_bridge/behavior/bounce_behavior.gd`；
+## **内核端口载体**：行为实现已移到桥接 `test/reference/behavior/bounce_behavior.gd`；
 ## 删旧池后，弹的协程体不再由本项目启动，本文件只把参数翻译成内核端口。
 
 var bounce_angle: float = 0.0  ## 反弹附加角（弧度），发射时决定并固定

@@ -2,7 +2,7 @@
 
 > **状态**：进行中。N2.1 ✅ / N2.2 积分段 ✅ / **N2.2 存储段核心 ✅** / N4-real ✅ /
 > **L3.5-1 ✅ · L3.5-2 ✅ · L3.5-3 ✅（含 3b）· L3.5-5 主体 ✅ · L3.5-6 真人试玩 ✅**；
-> 当前批次 = **L3.5-4「消费方改读原生」**（4a ✅ · 4b-pre ✅ · **4e ✅**；4f 待做）。
+> 当前批次 = **L3.5-4 ✅ 全部完成**（4a · 4b-pre · 4e · **4f ✅**）。
 > **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §10（N0–N5）；`gdextension/`。
 
 ## 目标
@@ -85,17 +85,17 @@
 
 | 删什么 | 量 | 门槛 |
 |---|---|---|
-| `scripts/kernel/**`（GDScript 内核整棵） | **1219 行** | N2 存储段 + N3 全覆盖 |
-| `scripts/kernel_bridge/behavior/**` + `_port_by_sig` + `kernel_port` | **273 行** + 2 处 | N3 |
-| `_sync_gdscript`（渲染回退） | ~56 行 | 扩展必需 + N4-real |
-| `use_native` / `is_native_ready` 回退分支 | 7 处 | 内核删除后 |
-| `KernelNativeSystem extends BulletSystem` scaffold | ~62 行 | 原生系统直接当内核 |
-| rebuild 仓库（14 内核 .gd + 94 测试） + `tools/vendor_kernel.sh` | 120 行 + 一仓库 | 同上 |
+| `scripts/kernel/**`（GDScript 内核整棵） | **1225 行** | ✅ 2026-09-14（4f） |
+| `scripts/kernel_bridge/behavior/**` + `_port_by_sig` + `kernel_port` | **273 行** + 2 处 | ✅ 2026-09-14（4f） |
+| `_sync_gdscript`（渲染回退） | ~56 行 | ⏳ 死代码，可后续清 |
+| `use_native` / `is_native_ready` 回退分支 | 7 处 | ✅ 2026-09-14（4f，扩展为必需） |
+| `KernelNativeSystem extends BulletSystem` scaffold | ~62 行 | ✅ 2026-09-14（4f，standalone Node） |
+| rebuild 仓库（14 内核 .gd + 94 测试） + `tools/vendor_kernel.sh` | 120 行 + 一仓库 | oracle 冻结进 `test/reference/`（选 A）；`vendor_kernel.sh` 已删；重建版仓库归档待登记 |
 | **保留**：`kernel_bridge/` 宿主耦合（伤害 / 擦弹 / bomb / Boss） | **~688 行** | **不是重复** |
 
 **诚实提醒**：原生会长到 ~800–1200 行接替，**行数未必大减**；真收益 = **双维护消失 + 一处改 + 少一个仓库与 vendor 纪律**。
 
-**待定**：`BulletType` / `EffectType` 在 `scripts/kernel/**` 删除后归位何处（原生 `DanmakuType`？还是搬 `scripts/data/`）。
+**已定（4f-1）**：`BulletType` / `EffectType` → `scripts/data/`（宿主侧描述符；原生只存 int 下标）。
 
 ---
 
@@ -144,7 +144,11 @@
      覆写 `query_circle/hit_test/is_grazed/mark_grazed` → 原生 → **顺带完成 4b/4c/4d**（判定已原生；渲染/激光/调试读的就是原生快照）。
      原生补齐：`spawn/spawn_batch` 整行归零、`reserve`、`set_cull`、`get_factions_bytes`。
      验证：`test_native_integrate` 2/2 + `test_kernel_swap` 9/9 + `test_native_laser_anchor` 1/1 + 全量 **370/4123** + workbench 70s 零错误。
-   - 余：**4f** 去 `extends BulletSystem` + 删 `scripts/kernel/**`（L4）。
+   - ✅ **4f（2026-09-14）拆壳**：`KernelNativeSystem` 不再 `extends BulletSystem`（standalone `Node`，自实现快照/类型表/属性/RNG/render_fade）；
+     `scripts/kernel/**` 从生产删除；生产依赖（`BehaviorContext`/`WorldQuery`）搬 `kernel_bridge/`，`CollisionResolver` 内联进物理；
+     **oracle**（`BulletSystem`/`HitGeometry`/参考解释器/fallback 行为）移 `test/reference/` 作冻结参照（选 A，保住 parity 安全网）。
+     `BulletType`/`EffectType` → `scripts/data/`（4f-1）。全量 **347/4061**（掉的是随 fallback 删除的 `test_kernel_behavior`）+ workbench 70s 零错误。
+   - 余：`_sync_gdscript` 渲染回退（死代码）可后续清；rebuild 仓库归档登记见下。
 5. **L3.5-5 主体 ✅（随 3b）** 事件 drain（emit / sfx / call → `queue_spawn` / sfx / 内容回调）；余：边界完善。
 6. **L3.5-6 ✅（2026-09-14）** 真实舞台开机 + 真人试玩 —— 非符1 打穿，行为 / 激光 / 判定手感通过（并因此抓出 3b 两处 bug）。
 7. **L4** 拆除（删 1219 + 273 + rebuild）。

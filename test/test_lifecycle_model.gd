@@ -52,7 +52,7 @@ func test_bounce_lifecycle_parity() -> void:
 	var ctx := BehaviorContext.new()
 
 	var sys_a := _system()
-	var beh_a = preload("res://scripts/kernel_bridge/behavior/bounce_behavior.gd").new()
+	var beh_a = preload("res://test/reference/behavior/bounce_behavior.gd").new()
 	var host_a := FakeHost.new()
 	host_a.boss = boss
 	beh_a.host = host_a

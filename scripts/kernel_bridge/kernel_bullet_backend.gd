@@ -1,6 +1,6 @@
 ## KernelBulletBackend——宿主侧适配：BulletData → BulletType。
 ##
-## 边界（见 scripts/kernel/README.md）：内核不认识 BulletData；弹型由 `BulletData.to_bullet_type()` 在
+## 边界：内核不认识 BulletData；弹型由 `BulletData.to_bullet_type()` 在
 ## **内容侧**产出并缓存（内容须复用 BulletData 实例；每发 new 会让内核弹型表每发长一个）。
 ##
 ## `coroutine_script` 走 duck-typed `kernel_port()` 端口映射到内核行为（可选覆盖）；
@@ -9,22 +9,14 @@
 class_name KernelBulletBackend
 extends Node
 
-const WorldAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/world_accel_behavior.gd")
-const HomingBehaviorClass = preload("res://scripts/kernel_bridge/behavior/homing_behavior.gd")
-const RadialAccelBehaviorClass = preload("res://scripts/kernel_bridge/behavior/radial_accel_behavior.gd")
-const BounceBehaviorClass = preload("res://scripts/kernel_bridge/behavior/bounce_behavior.gd")
-const NonMidFleeBehaviorClass = preload("res://scripts/kernel_bridge/behavior/non_mid_flee_behavior.gd")
 const MarisaLaserFadeClass = preload("res://scripts/kernel_bridge/marisa_laser_fade.gd")
-const MarisaLaserBehaviorClass = preload("res://scripts/kernel_bridge/behavior/marisa_laser_behavior.gd")
 const KernelBombClass = preload("res://scripts/kernel_bridge/kernel_bomb.gd")
 const KernelBehaviorHostClass = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
 const _MOVE_WORLD_ACCEL := &"world_accel"
 const _MOVE_LASER := &"marisa_laser"
 
-## 内核弹池。默认本机新建；交由 BulletManager 注入/接管。
-var system: BulletSystem
-## N2.2：积分循环走原生（KernelNativeSystem）。扩展未加载时自动退回 GDScript 内核。
-var use_native: bool = true
+## 内核弹池（原生权威；L3.5-4f 起扩展为必需）。
+var system: KernelNativeSystem
 ## 实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
 var entity_registry: EntityRegistry
 ## 弹幕世界（BulletManager 注入）——bomb 宿主节点反查用
@@ -34,8 +26,7 @@ var unmapped_behavior_count: int = 0
 
 var _texture_by_index: Array[Texture2D] = []   # 纹理句柄表（render socket）：弹型下标 → 贴图；M3 ③ 判定为设计 seam，N4 换原生实例缓冲
 
-## 内核行为注册表 + 上下文（由 BulletManager 装配）。
-var behavior: BehaviorProcessor
+## 内核行为上下文（由 BulletManager 装配）。
 var behavior_ctx: BehaviorContext
 ## 内容签名 → 端口（{move, params} / 预留 {program}）；按 Script×params 缓存，不每发 instantiate。
 var _port_by_sig: Dictionary = {}
@@ -89,15 +80,10 @@ func clear_bombs() -> void:
 func _ensure_system() -> void:
 	if system != null:
 		return
-	if use_native:
-		var native := KernelNativeSystem.new()
-		if native.is_native_ready():
-			system = native
-		else:
-			native.free()   # 无扩展：探测实例不成树，必须显式释放（否则孤儿节点泄漏）
-	if system == null:
-		system = BulletSystem.new()
+	system = KernelNativeSystem.new()
 	system.name = "KernelBulletSystem"
+	if not system.is_native_ready():
+		push_error("[KernelBulletBackend] 原生扩展未加载：本项目已要求 GDExtension（见 docs/N2_NATIVE_INTEGRATION_PLAN.md §63）")
 	add_child(system)
 
 
@@ -182,42 +168,18 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	if enemy_provider.is_valid():
 		behavior_ctx.get_world().setup(enemy_provider)   # 可重复注入（测试 / 换关）
 	behavior_ctx.setup(player, behavior_ctx.get_world())   # 刷新自机
-	if behavior != null or (system is KernelNativeSystem and (system as KernelNativeSystem).native_behaviors):
+	if system.native_behaviors:
 		return
 	process_physics_priority = -4   # 延后动作 flush：行为之后、宿主碰撞(0) 之前
 	_behavior_host = KernelBehaviorHostClass.new()
 	_behavior_host.setup(self)
 	_laser_fade = MarisaLaserFadeClass.new()
 	_laser_fade.setup(self)
-	# L3.5-3b：原生可用 → 行为交给原生 behavior_batch，**不创建 BehaviorProcessor**。
-	if system is KernelNativeSystem and (system as KernelNativeSystem).is_native_ready():
-		var ns := system as KernelNativeSystem
-		ns.native_behaviors = true
-		ns.behavior_ctx = behavior_ctx
-		ns.behavior_host = _behavior_host
-		ns.boss_getter = func(): return _behavior_host.get_boss()
-		return
-	behavior = BehaviorProcessor.new()
-	behavior.name = "KernelBehaviorProcessor"
-	behavior.process_physics_priority = -5
-	add_child(behavior)
-	behavior.setup(system, behavior_ctx)
-	behavior.register_behavior(&"accel", AccelBehavior.new())
-	behavior.register_behavior(&"curve", CurveBehavior.new())
-	behavior.register_behavior(&"laser_follow", LaserFollowBehavior.new())
-	behavior.register_behavior(&"avoid_player", AvoidPlayerBehavior.new())
-	behavior.register_behavior(_MOVE_WORLD_ACCEL, WorldAccelBehaviorClass.new())
-	behavior.register_behavior(&"homing", HomingBehaviorClass.new())
-	var radial = RadialAccelBehaviorClass.new()
-	radial.host = _behavior_host
-	behavior.register_behavior(&"radial_accel", radial)
-	var bounce = BounceBehaviorClass.new()
-	bounce.host = _behavior_host
-	behavior.register_behavior(&"bounce", bounce)
-	var flee = NonMidFleeBehaviorClass.new()
-	flee.host = _behavior_host
-	behavior.register_behavior(&"non_mid_flee", flee)
-	behavior.register_behavior(_MOVE_LASER, MarisaLaserBehaviorClass.new())
+	# 行为全程原生（behavior_tick）；宿主回调（emit/call）经 behavior_host。
+	system.native_behaviors = true
+	system.behavior_ctx = behavior_ctx
+	system.behavior_host = _behavior_host
+	system.boss_getter = func(): return _behavior_host.get_boss()
 
 
 ## 取内容脚本的内核端口（duck-typed `kernel_port()`），按内容签名缓存。

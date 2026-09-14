@@ -2,7 +2,7 @@ extends CoroutineScript
 ## 沿初始发射方向加速（径向扩散弹）
 ## 首次 tick 记录子弹发射方向（初始速度方向 = 发射角度），此后沿该方向恒定加速
 ##
-## **内核端口载体**：行为实现已移到桥接 `scripts/kernel_bridge/behavior/radial_accel_behavior.gd`；
+## **内核端口载体**：行为实现已移到桥接 `test/reference/behavior/radial_accel_behavior.gd`；
 ## 删旧池后，弹的协程体不再由本项目启动，本文件只把参数翻译成内核端口。
 
 var accel_rate: float = 150.0  ## 加速度（px/s²），可用 param("accel_rate", v) 注入

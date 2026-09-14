@@ -196,7 +196,7 @@ func _on_rng_seed_changed(seed_value: int) -> void:
 
 
 ## 当前内核弹池（未装配 = null）
-func kernel_system() -> BulletSystem:
+func kernel_system() -> KernelNativeSystem:
 	return _kernel_bullet_backend.system if _kernel_bullet_backend != null else null
 
 

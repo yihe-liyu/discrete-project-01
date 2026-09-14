@@ -18,6 +18,21 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-4f ✅：拆壳（删除 GDScript 内核整棵）
+
+- **目标**：兑现「扩展为必需，GDScript 内核为过渡脚手架」（N2 §63）——**生产不再依赖 `scripts/kernel/**`**。
+- **oracle 策略（拍板 A）**：`test_native_integrate` / `test_native_storage` / `test_native_executor` 需要 GDScript `BulletSystem` 当逐位参照 →
+  把 oracle **移成测试夹具** `test/reference/`（`BulletSystem` / `HitGeometry` / `Behavior` / 参考解释器 / fallback 行为），
+  **production 删内核但 parity 安全网保留**。
+- **生产依赖搬迁**：`BehaviorContext` + `WorldQuery` → `scripts/kernel_bridge/`；`CollisionResolver.overlap_ids` 内联进 `KernelBulletPhysics`。
+- **standalone**：`KernelNativeSystem` 不再 `extends BulletSystem`，改 `extends Node`；自实现快照 getter / `_type_registry` / 属性 / RNG / `_render_fade` / `_spawn_fx`；
+  `BulletManager.kernel_system() -> KernelNativeSystem`。
+- **删除**：`scripts/kernel/**`（1225 行）+ `scripts/kernel_bridge/behavior/**`（原 fallback）+ `BehaviorProcessor` 装配 + `use_native` 回退
+  + `tools/vendor_kernel.sh` + `test_kernel_behavior.gd`。
+- **lint**：`check_naming.sh` 的 vendor 豁免从 `scripts/kernel` → `test/reference`；`behavior_context.gd` 的 `_world` → `_world_query`（现归宿主）。
+- **验证**：`./tools/verify.sh` 全绿 **347 / 4061**（掉的是随 fallback 删除的 `test_kernel_behavior` 的 23 条）+ workbench 真实舞台 70s 零错误。
+- **余**：`_sync_gdscript` 渲染回退（死代码）可后续清；重建版仓库归档登记。
+
 ### 2026-09-14 — L3.5-4f-1 ✅：BulletType / EffectType 归位 `scripts/data/`
 
 - **依据**：N2 §96 待定项拍板 —— 类型表是**宿主侧**渲染/判定/伤害描述（原生只存 int 下标），归内容面，不属内核逻辑。

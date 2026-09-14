@@ -1,13 +1,24 @@
-## KernelNativeSystem —— 原生权威存储 + 原生积分/行为/判定（L3.5-4e）。
+## KernelNativeSystem —— 原生权威弹幕存储（L3.5-4e/4f）。
 ##
 ## 归属：**桥接层**。原生 `DanmakuStore` 是**唯一存储**（spawn / despawn / integrate / behavior / collision）。
-## 本类维护 GDScript 侧的表（BulletType / render_fade）与**每帧只读快照**，供渲染 / 物理 / 调试**零改**读取。
+## 本类维护 GDScript 侧的表（BulletType / render_fade / spawn_fx）与**每帧只读快照**，
+## 供渲染 / 物理 / 调试读取；**不再依赖 GDScript BulletSystem**（4f 拆掉 scaffold）。
 ##
-## **契约**：消费方在遍历中 `despawn` **必须倒序** —— 快照在帧内不即时更新；倒序时被 swap 进来的尾行
-## 索引更大、已处理过，故安全（现状已如此）。
-## 未加载扩展时 `is_native_ready() = false`，调用方退回纯 GDScript 内核（`super`）。
+## **契约**：消费方在遍历中 `despawn` **必须倒序** —— 快照在帧内不即时更新；倒序时被 swap 进来的
+## 尾行索引更大、已处理过，故安全（现状已如此）。
 class_name KernelNativeSystem
-extends BulletSystem
+extends Node
+
+@export_group("Pool")
+@export var initial_capacity: int = 1024
+## 默认最长存活秒数；<=0 = 由行为/超时决定。
+@export var default_lifetime: float = 20.0
+
+@export_group("World bounds (cull)")
+## 世界坐标失效区：超出即回收；空 = 不剔除。
+@export var cull_rect: Rect2
+## 剔除余量。
+@export var cull_margin: float = 32.0
 
 var _accel: Object = null
 ## 诊断计数器：真正走了原生路径的帧数。
@@ -19,15 +30,33 @@ var behavior_ctx: BehaviorContext
 var behavior_host          # KernelBehaviorHost
 var boss_getter: Callable
 
+# ── 每帧只读快照（pull 自原生权威 SoA）──
+var _active_count: int = 0
+var _positions := PackedVector2Array()
+var _velocities := PackedVector2Array()
+var _color := PackedColorArray()
+var _type_index := PackedInt32Array()      # 行 → _type_registry 下标
+var _faction := PackedByteArray()
+var _life_left := PackedFloat32Array()
+var _fx_phase := PackedFloat32Array()
+var _timer := PackedFloat32Array()
+
+# ── 宿主侧表 ──
+var _type_registry: Array[BulletType] = []
+var _render_fade: Dictionary = {}          # Kind → 整批淡出 0..1
+var _spawn_fx: Dictionary = {}             # Faction → 出生特效 EffectType
+
+## 确定性 RNG（宿主 seed；N3 后行为已原生，仅保留宿主接口）。
+var _random := RandomNumberGenerator.new()
+
+# ── 原生 program（move+params → packed）──
 var _catalog := LifecycleCatalog.new()
 var _program_data: Array = []
-## 与 _program_data 对齐：每个 program 的锚点参数（无锚点 = null）。
 var _program_anchors: Array = []
 var _sig_to_program: Dictionary = {}
 
 
 func _init() -> void:
-	super()
 	_ensure_native()
 
 
@@ -35,7 +64,6 @@ func _ensure_native() -> void:
 	if _accel == null and ClassDB.class_exists("DanmakuStore"):
 		_accel = ClassDB.instantiate("DanmakuStore")
 		_accel.setup(initial_capacity, cull_rect)
-		# 原生侧不知宿主场域常量：注入（at_wall 判定用）。
 		_accel.set_field(GameConfig.FIELD_LEFT, GameConfig.FIELD_RIGHT, GameConfig.FIELD_TOP)
 		_accel.set_margin(cull_margin)
 		_accel.set_default_life(default_lifetime)
@@ -46,18 +74,63 @@ func is_native_ready() -> bool:
 	return _accel != null
 
 
-## 容量变化：基类扩 SoA；原生 store 同步 reserve（grow-only）。
+# ═══ 容量 ═══
+
 func _ensure_capacity(capacity: int) -> void:
-	super(capacity)
+	if _positions.size() >= capacity:
+		return
+	var n: int = maxi(maxi(capacity, _positions.size() * 2), 16)
+	_positions.resize(n)
+	_velocities.resize(n)
+	_color.resize(n)
+	_type_index.resize(n)
+	_faction.resize(n)
+	_life_left.resize(n)
+	_fx_phase.resize(n)
+	_timer.resize(n)
 	if _accel != null:
-		_accel.reserve(_positions.size())
+		_accel.reserve(n)
 
 
-## 发射：基类写 GDScript 快照行；原生写**权威行**（type/faction/color/life/fx/timer/hitbox/program）。
+# ═══ 发射 / 回收 ═══
+
+## 弹型懒注册（find or append），返回下标。
+func _type_registry_index_of(bullet_type: BulletType) -> int:
+	var idx := _type_registry.find(bullet_type)
+	if idx == -1:
+		idx = _type_registry.size()
+		_type_registry.append(bullet_type)
+	return idx
+
+
+## 某阵营的出生特效（改一处全变）。
+func set_spawn_fx(faction: BulletType.Faction, effect: EffectType) -> void:
+	_spawn_fx[faction] = effect
+
+
+func _set_row_fx(id: int, effect: EffectType) -> void:
+	if effect != null and effect.duration > 0.0:
+		_fx_phase[id] = effect.duration
+	else:
+		_fx_phase[id] = 0.0
+
+
+## 发射（写快照行 + 原生权威行）。
 func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color: Color = Color.WHITE, move: StringName = &"", behavior_params: Variant = null) -> int:
-	var id: int = super(bullet_data, position, velocity, color, move, behavior_params)
+	var ti := _type_registry_index_of(bullet_data)
+	var id := _active_count
+	_ensure_capacity(id + 1)
+	_active_count += 1
+	_positions[id] = position
+	_velocities[id] = velocity
+	_color[id] = color
+	_type_index[id] = ti
+	_faction[id] = bullet_data.faction
+	_life_left[id] = default_lifetime
+	_timer[id] = 0.0
+	_set_row_fx(id, _spawn_fx.get(bullet_data.faction))
 	if _accel != null:
-		var nid: int = _accel.spawn(position, velocity, _type_index[id], int(bullet_data.faction), color)
+		var nid: int = _accel.spawn(position, velocity, ti, int(bullet_data.faction), color)
 		if nid < 0:
 			push_error("[KernelNativeSystem] 原生 store 溢出（capacity=%d）" % _accel.get_capacity())
 			return id
@@ -65,76 +138,163 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 		_accel.set_life(nid, _life_left[id])
 		_accel.set_fx(nid, _fx_phase[id])
 		_accel.set_timer(nid, _timer[id])
+		# program 在发射时就绑定（与 native_behaviors 是否执行无关）；未映射 move → -1。
 		var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
-		var prog: int = _program_for(move, params) if native_behaviors else -1
+		var prog: int = _program_for(move, params)
 		_accel.set_program(nid, prog)
 	return id
 
 
-## 回收：基类 swap 快照行 + 原生 swap 权威行（同一状态出发 → 保持同序）。
+## 回收：快照 swap-with-last（供帧内一致性）+ 原生权威 swap。
 func despawn(id: int) -> void:
 	if id < 0 or id >= _active_count:
 		return
-	super(id)
+	var tail := _active_count - 1
+	if id != tail:
+		_positions[id] = _positions[tail]
+		_velocities[id] = _velocities[tail]
+		_color[id] = _color[tail]
+		_type_index[id] = _type_index[tail]
+		_faction[id] = _faction[tail]
+		_life_left[id] = _life_left[tail]
+		_fx_phase[id] = _fx_phase[tail]
+		_timer[id] = _timer[tail]
+	_active_count -= 1
 	if _accel != null:
 		_accel.despawn(id)
 
 
-## 清空：两边都清。
 func clear() -> void:
-	super()
+	_active_count = 0
 	if _accel != null:
 		_accel.clear()
 
 
-## 写访问器：快照 + 原生一起写（工具 / 测试 / 回退行为都可能调）。
+# ═══ 写访问器（工具 / 回退 / 测试）═══
+
 func set_velocity(id: int, value: Vector2) -> void:
-	super(id, value)
+	_velocities[id] = value
 	if _accel != null:
 		_accel.set_velocity(id, value)
 
+
+## 直接设定世界位置（锚定型行为用；普通行为请用 set_velocity）。
 func set_position(id: int, value: Vector2) -> void:
-	super(id, value)
+	_positions[id] = value
 	if _accel != null:
 		_accel.set_position(id, value)
 
-# 基类没有 set_life / set_fx（只有行数组直写）→ 这里新增桥接方法：快照 + 原生一起写。
+
 func set_life(id: int, value: float) -> void:
 	_life_left[id] = value
 	if _accel != null:
 		_accel.set_life(id, value)
+
 
 func set_fx(id: int, value: float) -> void:
 	_fx_phase[id] = value
 	if _accel != null:
 		_accel.set_fx(id, value)
 
+
 func set_timer(id: int, value: float) -> void:
-	super(id, value)
+	_timer[id] = value
 	if _accel != null:
 		_accel.set_timer(id, value)
 
 
-## 判定：权威在原生（宽相网格）。
+# ═══ 判定（权威在原生；宽相网格）═══
+
 func query_circle(center: Vector2, search_radius: float) -> PackedInt32Array:
 	if _accel != null:
 		return _accel.query_circle(center, search_radius)
-	return super(center, search_radius)
+	return PackedInt32Array()
+
 
 func hit_test(id: int, center: Vector2, radius: float) -> bool:
-	if _accel != null:
-		return _accel.hit_test(id, center, radius)
-	return super(id, center, radius)
+	return _accel.hit_test(id, center, radius) if _accel != null else false
+
 
 func is_grazed(id: int) -> bool:
-	return _accel.is_grazed(id) if _accel != null else super(id)
+	return _accel.is_grazed(id) if _accel != null else false
+
 
 func mark_grazed(id: int) -> void:
 	if _accel != null:
 		_accel.mark_grazed(id)
-	else:
-		super(id)
 
+
+# ═══ 读访问器（快照）═══
+
+func get_active_count() -> int:
+	return _active_count
+
+func get_positions() -> PackedVector2Array:
+	return _positions
+
+func get_velocities() -> PackedVector2Array:
+	return _velocities
+
+func get_colors() -> PackedColorArray:
+	return _color
+
+func get_type_indices() -> PackedInt32Array:
+	return _type_index
+
+func get_factions() -> PackedByteArray:
+	return _faction
+
+## 该行弹型；越界/纯特效行 → null。
+func get_type(id: int) -> BulletType:
+	var ti: int = _type_index[id]
+	return _type_registry[ti] if ti >= 0 and ti < _type_registry.size() else null
+
+func get_position(id: int) -> Vector2:
+	return _positions[id]
+
+func get_velocity(id: int) -> Vector2:
+	return _velocities[id]
+
+func get_color(id: int) -> Color:
+	return _color[id]
+
+func get_life_left(id: int) -> float:
+	return _life_left[id]
+
+func get_fx_phase(id: int) -> float:
+	return _fx_phase[id]
+
+func get_timer(id: int) -> float:
+	return _timer[id]
+
+func get_type_registry() -> Array[BulletType]:
+	return _type_registry
+
+
+## 按弹型类别（Kind）设/取整批渲染淡出（0..1）。
+func set_render_fade(kind: int, value: float) -> void:
+	_render_fade[kind] = clampf(value, 0.0, 1.0)
+
+func get_render_fade(kind: int) -> float:
+	return _render_fade.get(kind, 1.0)
+
+
+# ═══ 确定性 RNG（宿主 seed）═══
+
+func set_seed(seed_value: int) -> void:
+	_random.seed = seed_value
+
+func randf() -> float:
+	return _random.randf()
+
+func randf_range(from: float, to: float) -> float:
+	return _random.randf_range(from, to)
+
+func randi_range(from: int, to: int) -> int:
+	return _random.randi_range(from, to)
+
+
+# ═══ 行为 program ═══
 
 ## move+params → 原生 program（编译 + 注册，按签名缓存）。
 func _program_for(move: StringName, params: Dictionary) -> int:
@@ -157,7 +317,6 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 	return pid
 
 
-## program 是否要每帧解析锚点 base（marisa=global 兄弟 / laser_follow=player 子节点）。
 func _anchor_spec_for(move: StringName, params: Dictionary) -> Variant:
 	match move:
 		&"marisa_laser":
@@ -167,13 +326,12 @@ func _anchor_spec_for(move: StringName, params: Dictionary) -> Variant:
 	return null
 
 
-## 覆写：原生**有状态**积分 + 行为（原生 store 内部 swap-remove dead）→ 每帧 pull 快照。
+# ═══ 每帧 ═══
+
 func _physics_process(delta: float) -> void:
 	_ensure_native()
 	if _accel == null:
-		super(delta)
 		return
-	_last_delta = delta
 	_accel.set_cull(cull_rect)
 	_accel.set_margin(cull_margin)
 	_accel.set_default_life(default_lifetime)
@@ -209,7 +367,7 @@ func _run_native_behaviors(delta: float) -> void:
 	_drain_events(res, has_boss, boss_pos)
 
 
-## 每帧把原生权威 SoA pull 成 GDScript **只读快照**（渲染 / 物理 / 调试零改读它）。
+## 把原生权威 SoA pull 成 GDScript 只读快照。
 func _pull_snapshot() -> void:
 	_active_count = _accel.get_active_count()
 	_positions = _accel.get_positions()
@@ -232,8 +390,7 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	var dxs: PackedFloat32Array = res.dx
 	var dys: PackedFloat32Array = res.dy
 	var vals: PackedFloat32Array = res.val
-	# 事件携带自己的 program（eprog）；**不能**用 per-bullet program 去反查 ——
-	# 两者在本调用内不一致会静默错派（历史 bug，见 BEST_PRACTICES_LOG）。
+	# 事件携带自己的 program（eprog）；**不能**用 per-bullet program 去反查（历史 bug）。
 	var eprog: PackedInt32Array = res.eprog
 	for k in kinds.size():
 		var prog: int = eprog[k]

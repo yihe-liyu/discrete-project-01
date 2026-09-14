@@ -17,8 +17,8 @@ ROOTS = ["scripts", "data", "test"]
 
 def files(root):
     for dp, _dn, fn in os.walk(root):
-        # scripts/kernel 是 vendor 快照（改在重建版），不适用宿主命名契约
-        if ".godot" in dp or (os.sep + "kernel") in (dp + os.sep):
+        # test/reference 是冻结的 vendor 参照实现（原 scripts/kernel，改在重建版），不适用宿主命名契约
+        if ".godot" in dp or (os.sep + "reference") in (dp + os.sep):
             continue
         for n in fn:
             if n.endswith(".gd"):
