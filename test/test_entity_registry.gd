@@ -47,7 +47,7 @@ func test_context_refs_read_bound_stage():
 	rt.entity_registry = reg
 	var runner := CoroutineRunner.new()
 	var ctx := StageContext.new(runner)
-	ctx.stage = rt   # 显式绑定，不再回退 EntityRegistry.current
+	ctx.stage = rt   # 显式绑定，不再回退全局
 	assert_eq(ctx.entity_registry, reg, "ctx.entity_registry 应取绑定 stage 的注册表")
 	var p: Player = load("res://scenes/player.tscn").instantiate()
 	reg.bind_player(p)

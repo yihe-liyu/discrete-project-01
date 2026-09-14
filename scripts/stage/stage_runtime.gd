@@ -34,18 +34,6 @@ var _is_stage_active: bool = false
 var _coroutine_script: CoroutineScript
 
 
-## 入场登记实体注册表（先于任何实体 _ready）。
-## 显式、首个赢 —— 不无条件覆盖已在场的注册表（多世界并存时不静默抢登记）。
-func _enter_tree() -> void:
-	if not is_instance_valid(EntityRegistry.current):
-		EntityRegistry.current = entity_registry
-
-
-func _exit_tree() -> void:
-	if EntityRegistry.current == entity_registry:
-		EntityRegistry.current = null
-
-
 ## 当前关卡协程脚本（工作台/调试读取运行时间用）
 func current_stage_script() -> CoroutineScript:
 	return _coroutine_script
@@ -64,7 +52,7 @@ func load_stage(data: StageData) -> void:
 	if not errs.is_empty():
 		return
 
-	SaveData.reset_all(entity_registry)   # 注册表显式传入，不再读 EntityRegistry.current
+	SaveData.reset_all(entity_registry)   # 注册表显式传入，不再读全局
 
 	current_stage = data
 	_is_stage_active = true

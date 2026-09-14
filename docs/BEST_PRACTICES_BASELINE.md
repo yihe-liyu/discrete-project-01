@@ -97,7 +97,7 @@
 
 > `ctx.*` 服务（`RefCounted`）由 `StageContext` 懒建 + 回填，不自行摸全局。
 > 有意例外：`StageContext.effects` getter 每次访问把**绑定 `stage`** 的 Miss / FX 层回填给服务（保持最新）。
-> **P2（2026-09-13）**：`StageContext` 不再回退 `BulletManager.current` / `EntityRegistry.current`；无 stage 的 ctx（自机射击 / 子弹共享 ctx）由宿主显式绑 stage（`Player.bind_ctx` / `BulletManager.inject_stage_runtime`）。
+> **P2（2026-09-13）**：`StageContext` 不再回退 `BulletManager.current`；无 stage 的 ctx（自机射击 / 子弹共享 ctx）由宿主显式绑 stage（`Player.bind_ctx` / `BulletManager.inject_stage_runtime`）。
 
 ---
 
@@ -134,7 +134,7 @@
 | `current_stage_id` | `SaveData` | 默认 1；通关 +1（**仅当下一关存在**） | `reset_session` |
 | `restarting` | `SaveData` | `pause_menu` / `game_over_menu` | `reset_session` |
 | `is_stage_practice` | `SaveData` | `stage_practice_menu` | `reset_session` |
-| `BulletManager.current` / `EntityRegistry.current` | 各自 | `_ready` / `_enter_tree` | `_exit_tree` |
+| `BulletManager.current` | 各自 | `_ready` | `_exit_tree` |
 | `AssetRegistry._bgm_cache` / `BossCatalog._cache` | 各自 | 懒加载 | 进程级缓存，无需清 |
 
 > **反例（已修）**：只复位布尔标志、留下载荷（`end_practice` 曾只清 `is_practice_mode`）→ 下一局进入别的流程时带脏状态。**校验**：`test/test_session_state.gd`。

@@ -17,7 +17,8 @@ func test_practice_mode_zeroes_lives_and_bombs():
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	var res: PlayerResources = EntityRegistry.current.get_player_resources()
+	var rt: StageRuntime = inst.get_node("World/StageRuntime")
+	var res: PlayerResources = rt.entity_registry.get_player_resources()
 	assert_not_null(res, "练习应有自机资源")
 	if res:
 		assert_eq(res.lives, 0, "练习残机应为 0")

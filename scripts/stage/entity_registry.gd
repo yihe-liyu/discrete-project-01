@@ -5,10 +5,6 @@
 class_name EntityRegistry
 extends RefCounted
 
-## 组合根绑定的"当前世界"注册表（R8 static var）：登记 / 注销自身，仅供工具 / 测试便捷取用。
-## 游戏运行时一律走组合根显式注入，不读本静态（P2 收口）。
-static var current: EntityRegistry
-
 ## 当前自机（Player / GhostPlayer）；未注入 = null。
 ## 用内建 Node2D 类型：对象释放时 Godot 自动置 null（无类型 Variant 会残留"已释放实例"）。
 var player: Node2D

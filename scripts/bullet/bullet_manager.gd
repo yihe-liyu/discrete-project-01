@@ -31,7 +31,7 @@ var fx_pool: FxPool:
 var fx_parent: Node2D
 
 ## 组合根注入的实体注册表（自机 / 敌机 / Boss）。**只读** —— 唯一写入口是 `inject_entity_registry()`。
-## 不再回退 EntityRegistry.current；未注入 = null（碰撞/行为数据源为空）。
+## 不再回退全局；未注入 = null（碰撞/行为数据源为空）。
 var _entity_registry: EntityRegistry
 var entity_registry: EntityRegistry:
 	get:
@@ -215,7 +215,7 @@ func _enable_kernel() -> void:
 			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 		_kernel_bullet_backend.system.cull_margin = 90.0
 		_kernel_bullet_backend.system.set_seed(RNG.get_seed())   # 内核 RNG 从宿主 seed 派生
-	# 只认注入，不回退 EntityRegistry.current
+	# 只认注入，不回退全局
 	if _kernel_bullet_backend != null:
 		_kernel_bullet_backend.entity_registry = entity_registry
 		_kernel_bullet_backend.bullet_manager = self

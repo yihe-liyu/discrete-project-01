@@ -6,7 +6,7 @@ extends Node2D
 
 var draw_enabled: bool = false
 var draw_velocity_lines: bool = false  # 速度线（每颗子弹 3 图元，默认关）
-## 由宿主注入（不再读 BulletManager.current / EntityRegistry.current）
+## 由宿主注入（不再读 BulletManager.current）
 var bullet_manager: BulletManager
 var entity_registry: EntityRegistry
 

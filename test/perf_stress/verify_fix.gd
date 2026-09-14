@@ -29,7 +29,6 @@ func _ready():
 	add_child(enemy)
 	var entity_registry := EntityRegistry.new()
 	entity_registry.register_enemy(enemy)
-	EntityRegistry.current = entity_registry
 	var bscript := GDScript.new()
 	bscript.source_code = "extends Node2D\nvar velocity := Vector2.ZERO\nfunc _ready(): velocity = Vector2(0,-500)"
 	bscript.reload()

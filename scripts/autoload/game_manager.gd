@@ -77,7 +77,7 @@ func change_scene(path: String, target_state: AppState = AppState.PLAYING):
 	scene_entered.emit(current_scene_path)
 
 
-# ═══ 当前世界登记（取代跨场景读 BulletManager.current / EntityRegistry.current）═══
+# ═══ 当前世界登记（取代跨场景读 BulletManager.current）═══
 
 ## 当前存在世界的显式登记（GameScene 组合根 `_ready` 调）；切场时由壳统一暂停/清场/恢复。
 var world_bullets: BulletManager

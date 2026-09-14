@@ -18,11 +18,18 @@
 
 ## 记录
 
+### 2026-09-14 — 清理：删除 `EntityRegistry.current` + StageRuntime 生命周期重载
+
+- **目标**：上一条留下的 `EntityRegistry.current` 只剩一个测试读者 → 一并清掉；`StageRuntime` 因此只剩登记用途的 `_enter_tree` / `_exit_tree` 也整个删除。
+- **依据**：全仓扫描（含动态 `get("current")`）——生产 0 读（P2 已切 `StageContext.entity_registry` 回退；生产走 `GameManager.entity_registry` 显式登记）；唯一读者 `test/test_practice_mode.gd:20` 改为 `inst.get_node("World/StageRuntime").entity_registry`；`test/perf_stress/verify_fix.gd` 的写入已无消费者，删除。
+- **落点**：`entity_registry.gd` 删 `static var current`；`stage_runtime.gd` 删 `_enter_tree` / `_exit_tree` 两个重载；注释中对已删符号的引用（`bullet_manager` / `debug_drawer` / `game_manager` / `stage_runtime` / `test_entity_registry`）同步改为"不回退全局"。
+- **验收**：`./tools/verify.sh` 全绿；GUT **347 / 4061**。
+
 ### 2026-09-14 — 清理：删除死 static `StageRuntime.current`
 
 - **目标**：删掉零消费者的 `StageRuntime.current`，少一条"有生命周期却无人读"的隐式全局。
 - **依据**：全仓扫描（含动态 `get("current")`）确认——生产早已不读（P2 已切掉 `StageContext` 回退），测试 / 工作台也无人读；兄弟 `BulletManager.current` / `EntityRegistry.current` 都还有工具 / 测试读者，唯独它没有。
-- **落点**：`stage_runtime.gd` 删 `static var current` 与 `_enter_tree` / `_exit_tree` 的登记 / 注销；保留 `EntityRegistry.current` 的登记 / 注销（有消费者）。
+- **落点**：`stage_runtime.gd` 删 `static var current` 与 `_enter_tree` / `_exit_tree` 的登记 / 注销；保留 `EntityRegistry.current` 的登记 / 注销（当时唯一读者是 `test_practice_mode`）。
 - **文档**：`BEST_PRACTICES_BASELINE.md` §会话状态契约表格与 P2 注记去掉该项；`entity_registry.gd` / `stage_context.gd` / `test_composition_root.gd` 的过时注释改为"只走显式注入"。
 - **验收**：`./tools/verify.sh` exit 0；GUT **347 / 4061**（与改前同——无测试引用它）。
 
