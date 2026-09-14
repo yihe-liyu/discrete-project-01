@@ -35,7 +35,9 @@
   parity `test_native_integrate` 2/2（含 `native_frames` 覆盖断言）。
 - **边界铁律（N2.2 实测）**：原生逐次 `get_position(i)` **110ns** vs GDScript `Packed[i]` **13ns**；
   批量 `get_positions()` 快照 15ns。→ **搬存储必须配套批量快照 / 写回**，逐次转发反而更慢。
-- **N2.2（存储段，未做）** spawn / despawn / 宽相仍 GDScript。churn 6000 发 **8.2ms/波**（原生 ~1.1ms，含复位）
+- **N2.2（存储段核心 ✅ 2026-09-14）** 原生 `DanmakuStore` 持有真实 SoA（`pos/vel/type/faction/color` + **`life/fx/timer`**）+ `spawn/despawn/clear` + 完整 `integrate`（寿命/相位/位移/计时/剔除），与 GDScript 内核 **1:1**（`test_native_storage` 2/2：100 弹 × 180 帧逐位一致）。
+  **未做**：原生宽相 `query_circle`（需 per-row hitbox 一并原生）、**原生行为执行器（L3）**、接入游戏。
+  **注**：存储段与 L3 是同一原生系统的两面 —— 原生持有 SoA 后必须由原生执行描述符，否则 GDScript 行为逐弹跨界必亏。
   → 有空间，但必须按上面的批量约定设计。
 - **N2.3** 批量行为桥：`get_behavior_inputs()` / `apply_behavior_outputs()`（Packed 数组），
   每帧**常数次**跨界；GDScript 行为循环照跑（成本仍在，等 N3）。

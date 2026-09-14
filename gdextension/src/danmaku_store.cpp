@@ -11,11 +11,29 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("integrate", "delta"), &DanmakuStore::integrate);
 	ClassDB::bind_method(D_METHOD("get_active_count"), &DanmakuStore::get_active_count);
 	ClassDB::bind_method(D_METHOD("get_position", "id"), &DanmakuStore::get_position);
+	ClassDB::bind_method(D_METHOD("get_velocity", "id"), &DanmakuStore::get_velocity);
 	ClassDB::bind_method(D_METHOD("get_positions"), &DanmakuStore::get_positions);
+	ClassDB::bind_method(D_METHOD("get_velocities"), &DanmakuStore::get_velocities);
 	ClassDB::bind_method(D_METHOD("get_type", "id"), &DanmakuStore::get_type);
 	ClassDB::bind_method(D_METHOD("get_faction", "id"), &DanmakuStore::get_faction);
 	ClassDB::bind_method(D_METHOD("get_color", "id"), &DanmakuStore::get_color);
 	ClassDB::bind_method(D_METHOD("fill_multimesh", "mm"), &DanmakuStore::fill_multimesh);
+	ClassDB::bind_method(D_METHOD("set_margin", "margin"), &DanmakuStore::set_margin);
+	ClassDB::bind_method(D_METHOD("set_default_life", "life"), &DanmakuStore::set_default_life);
+	ClassDB::bind_method(D_METHOD("clear"), &DanmakuStore::clear);
+	ClassDB::bind_method(D_METHOD("despawn", "id"), &DanmakuStore::despawn);
+	ClassDB::bind_method(D_METHOD("set_life", "id", "life"), &DanmakuStore::set_life);
+	ClassDB::bind_method(D_METHOD("set_fx", "id", "fx"), &DanmakuStore::set_fx);
+	ClassDB::bind_method(D_METHOD("set_timer", "id", "timer"), &DanmakuStore::set_timer);
+	ClassDB::bind_method(D_METHOD("set_velocity", "id", "vel"), &DanmakuStore::set_velocity);
+	ClassDB::bind_method(D_METHOD("set_position", "id", "pos"), &DanmakuStore::set_position);
+	ClassDB::bind_method(D_METHOD("get_life_left", "id"), &DanmakuStore::get_life_left);
+	ClassDB::bind_method(D_METHOD("get_fx_phase", "id"), &DanmakuStore::get_fx_phase);
+	ClassDB::bind_method(D_METHOD("get_timer", "id"), &DanmakuStore::get_timer);
+	ClassDB::bind_method(D_METHOD("get_life_lefts"), &DanmakuStore::get_life_lefts);
+	ClassDB::bind_method(D_METHOD("get_fx_phases"), &DanmakuStore::get_fx_phases);
+	ClassDB::bind_method(D_METHOD("get_timers"), &DanmakuStore::get_timers);
+	ClassDB::bind_method(D_METHOD("get_capacity"), &DanmakuStore::get_capacity);
 	ClassDB::bind_method(D_METHOD("integrate_batch", "count", "positions", "velocities", "life_left", "fx_phase", "timers", "delta", "cull_pos", "cull_size", "margin"), &DanmakuStore::integrate_batch);
 }
 
@@ -29,6 +47,9 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_type.assign(p_capacity, 0);
 	_faction.assign(p_capacity, 0);
 	_color.assign(p_capacity, Color(1, 1, 1, 1));
+	_life.assign(p_capacity, 0.0f);
+	_fx.assign(p_capacity, 0.0f);
+	_timer.assign(p_capacity, 0.0f);
 	_count = 0;
 }
 
@@ -44,6 +65,9 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_type[i] = p_type;
 	_faction[i] = p_faction;
 	_color[i] = p_color;
+	_life[i] = _default_life;
+	_fx[i] = 0.0f;
+	_timer[i] = 0.0f;
 	return _count++;
 }
 
@@ -70,26 +94,106 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 	return added;
 }
 
+// swap-with-last 回收：把尾行整行搬进空槽（新增字段必须在这里同步）。
+void DanmakuStore::_swap_remove(int p_id) {
+	const int last = --_count;
+	if (p_id == last) {
+		return;
+	}
+	_x[p_id] = _x[last];
+	_y[p_id] = _y[last];
+	_vx[p_id] = _vx[last];
+	_vy[p_id] = _vy[last];
+	_type[p_id] = _type[last];
+	_faction[p_id] = _faction[last];
+	_color[p_id] = _color[last];
+	_life[p_id] = _life[last];
+	_fx[p_id] = _fx[last];
+	_timer[p_id] = _timer[last];
+}
+
+// 完整积分循环：寿命 / 出生相位 / 位移 / 计时 / 剔除 —— 与 scripts/kernel/bullet_system.gd 1:1。
 void DanmakuStore::integrate(double p_delta) {
 	const float dt = (float)p_delta;
 	const bool cull = _cull.has_area();
 	const Rect2 grown = _cull.grow(_margin);
 	for (int i = _count - 1; i >= 0; --i) {
-		_x[i] += _vx[i] * dt;
-		_y[i] += _vy[i] * dt;
-		if (cull && !grown.has_point(Vector2(_x[i], _y[i]))) {
-			const int last = --_count;
-			if (i != last) {
-				_x[i] = _x[last];
-				_y[i] = _y[last];
-				_vx[i] = _vx[last];
-				_vy[i] = _vy[last];
-				_type[i] = _type[last];
-				_faction[i] = _faction[last];
-				_color[i] = _color[last];
+		if (_life[i] >= 0.0f) {
+			_life[i] -= dt;
+			if (_life[i] <= 0.0f) {
+				_swap_remove(i);
+				continue;
 			}
 		}
+		if (_fx[i] > 0.0f) {
+			_fx[i] -= dt;
+			if (_fx[i] > 0.0f) {
+				continue;
+			}
+			_fx[i] = 0.0f;
+		}
+		_x[i] += _vx[i] * dt;
+		_y[i] += _vy[i] * dt;
+		if (_timer[i] > 0.0f) {
+			_timer[i] -= dt;
+		}
+		if (cull && !grown.has_point(Vector2(_x[i], _y[i]))) {
+			_swap_remove(i);
+		}
 	}
+}
+
+void DanmakuStore::set_margin(float p_margin) { _margin = p_margin; }
+void DanmakuStore::set_default_life(float p_life) { _default_life = p_life; }
+int DanmakuStore::get_capacity() const { return _capacity; }
+
+void DanmakuStore::clear() {
+	_count = 0;
+}
+
+int DanmakuStore::despawn(int p_id) {
+	if (p_id < 0 || p_id >= _count) {
+		return -1;
+	}
+	const int moved = _count - 1;
+	_swap_remove(p_id);
+	return moved == p_id ? -1 : moved;
+}
+
+void DanmakuStore::set_life(int p_id, float p_life) { _life[p_id] = p_life; }
+void DanmakuStore::set_fx(int p_id, float p_fx) { _fx[p_id] = p_fx; }
+void DanmakuStore::set_timer(int p_id, float p_timer) { _timer[p_id] = p_timer; }
+void DanmakuStore::set_velocity(int p_id, const Vector2 &p_vel) { _vx[p_id] = p_vel.x; _vy[p_id] = p_vel.y; }
+void DanmakuStore::set_position(int p_id, const Vector2 &p_pos) { _x[p_id] = p_pos.x; _y[p_id] = p_pos.y; }
+float DanmakuStore::get_life_left(int p_id) const { return _life[p_id]; }
+float DanmakuStore::get_fx_phase(int p_id) const { return _fx[p_id]; }
+float DanmakuStore::get_timer(int p_id) const { return _timer[p_id]; }
+
+PackedFloat32Array DanmakuStore::get_life_lefts() const {
+	PackedFloat32Array out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) {
+		out[i] = _life[i];
+	}
+	return out;
+}
+
+PackedFloat32Array DanmakuStore::get_fx_phases() const {
+	PackedFloat32Array out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) {
+		out[i] = _fx[i];
+	}
+	return out;
+}
+
+PackedFloat32Array DanmakuStore::get_timers() const {
+	PackedFloat32Array out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) {
+		out[i] = _timer[i];
+	}
+	return out;
 }
 
 int DanmakuStore::get_active_count() const {
@@ -105,6 +209,19 @@ PackedVector2Array DanmakuStore::get_positions() const {
 	out.resize(_count);
 	for (int i = 0; i < _count; ++i) {
 		out[i] = Vector2(_x[i], _y[i]);
+	}
+	return out;
+}
+
+Vector2 DanmakuStore::get_velocity(int p_id) const {
+	return Vector2(_vx[p_id], _vy[p_id]);
+}
+
+PackedVector2Array DanmakuStore::get_velocities() const {
+	PackedVector2Array out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) {
+		out[i] = Vector2(_vx[i], _vy[i]);
 	}
 	return out;
 }
