@@ -18,6 +18,19 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-4b-pre ✅：原生宽相 uniform grid
+
+- **背景**：原生 `query_circle` 是线性扫描，而 GDScript `BulletSystem` 早有 uniform grid（`BROADPHASE_MIN_COUNT=64`）→
+  不补网格就切判定必倒退。
+- **产出**：原生 `DanmakuStore` 加宽相网格（与 GDScript 同参数/同语义）：惰性重建（`_grid_dirty`）、
+  cull 有面积用 cull 否则活跃包围盒、cell=64 / min=64 / max_cells=8192、超限回退线性；
+  `query_circle` 命中时走桶链表 + `hit_test`。新增只读诊断 `is_broadphase_active()`。
+- **验证**：`test_native_broadphase` **3/3（129 断言）**：circle/offset/rect × 多中心/半径，
+  ① 原生网格 ↔ GDScript 网格；② **原生网格 ↔ 暴力逐行**（证明不漏/不重）；③ 场地 cull+96 弹启用网格、
+  <64 弹 / cull 过大回退线性。
+- **实测**（6000 弹 / query 半径 24 / 3000 次）：原生网格 `1.44 µs/query` vs 原生线性 `13.93 µs/query` → **9.7×**。
+- **未做**：`overlap_pairs` 仍线性（多目标网格化另议）；4b 判定切原生须先解决「原生持有碰撞元数据」。
+
 ### 2026-09-14 — L3.5-4a ✅：原生批量重叠 `overlap_pairs`
 
 - **背景**：方案 A（原生权威）下判定层若逐弹调原生 `hit_test`，按边界铁律（110ns vs 13ns）会比现在更慢；

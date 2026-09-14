@@ -46,6 +46,19 @@ class DanmakuStore : public RefCounted {
 	Rect2 _cull;
 	float _margin = 0.0f;
 
+	// L3.5-4b-pre：宽相 uniform grid（参数与 GDScript `BulletSystem` 一致；查询前按需重建）。
+	// mutable：`query_circle` / `overlap_pairs` 是 const，但需要惰性重建网格。
+	static constexpr float GRID_CELL = 64.0f;
+	static constexpr int GRID_MIN_COUNT = 64;
+	static constexpr int GRID_MAX_CELLS = 8192;
+	mutable bool _grid_dirty = true;
+	mutable bool _grid_active = false;
+	mutable int _grid_gx = 0;
+	mutable int _grid_gy = 0;
+	mutable Vector2 _grid_origin;
+	mutable float _grid_max_bound = 0.0f;
+	mutable std::vector<int> _grid_head, _grid_prev, _grid_next, _grid_cell_of;
+
 protected:
 	static void _bind_methods();
 
@@ -71,6 +84,8 @@ public:
 	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
 	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const;
 	PackedInt32Array query_circle(const Vector2 &p_center, float p_search_radius) const;
+	// 宽相是否已启用（诊断 / 测试；调用过 query_circle 后才反映最近一次重建结果）。
+	bool is_broadphase_active() const;
 	// L3.5-4a：批量重叠（几何整体下沉，杜绝 O(弹×目标) 次跨界）。返回扁平对 [bullet, target, ...]。
 	PackedInt32Array overlap_pairs(int p_faction, const PackedVector2Array &p_targets, const PackedFloat32Array &p_radii) const;
 	PackedColorArray get_colors() const;
@@ -108,6 +123,11 @@ public:
 	// 保证颜色/行为等 GDScript 专有字段的行身份一致）。数组按值 CoW 进出，无跨帧状态。
 	void _swap_remove(int p_id);
 	void _ensure_capacity(int p_n);
+	// L3.5-4b-pre：宽相网格（惰性重建；与 GDScript `_ensure_broadphase/_rebuild_broadphase/_cell_index` 同序）。
+	void _ensure_broadphase() const;
+	void _rebuild_broadphase() const;
+	int _cell_index(int p_i) const;
+	PackedInt32Array _query_circle_grid(const Vector2 &p_center, float p_search_radius) const;
 
 	// L3：注册一个编译后的 program，返回 program_id。
 	int register_program(const PackedInt32Array &p_ops, const PackedFloat32Array &p_args,

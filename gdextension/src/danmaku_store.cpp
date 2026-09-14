@@ -30,6 +30,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_hitbox", "id", "radius", "offset", "size", "follow_dir", "dir_offset"), &DanmakuStore::set_hitbox);
 	ClassDB::bind_method(D_METHOD("hit_test", "id", "center", "radius"), &DanmakuStore::hit_test);
 	ClassDB::bind_method(D_METHOD("query_circle", "center", "radius"), &DanmakuStore::query_circle);
+	ClassDB::bind_method(D_METHOD("is_broadphase_active"), &DanmakuStore::is_broadphase_active);
 	ClassDB::bind_method(D_METHOD("overlap_pairs", "faction", "targets", "radii"), &DanmakuStore::overlap_pairs);
 	ClassDB::bind_method(D_METHOD("is_grazed", "id"), &DanmakuStore::is_grazed);
 	ClassDB::bind_method(D_METHOD("mark_grazed", "id"), &DanmakuStore::mark_grazed);
@@ -56,6 +57,7 @@ void DanmakuStore::_bind_methods() {
 }
 
 void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
+	_grid_dirty = true;
 	_capacity = p_capacity;
 	_cull = p_cull;
 	_x.assign(p_capacity, 0.0f);
@@ -90,6 +92,7 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 }
 
 int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, int p_faction, const Color &p_color) {
+	_grid_dirty = true;
 	if (_count >= _capacity) {
 		return -1;
 	}
@@ -108,6 +111,7 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 }
 
 int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVector2Array &p_vel, const PackedInt32Array &p_type, const PackedInt32Array &p_faction, const PackedColorArray &p_color) {
+	_grid_dirty = true;
 	const int n = p_pos.size();
 	int added = 0;
 	for (int k = 0; k < n; ++k) {
@@ -150,6 +154,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 
 // swap-with-last 回收：把尾行整行搬进空槽（新增字段必须在这里同步）。
 void DanmakuStore::_swap_remove(int p_id) {
+	_grid_dirty = true;
 	const int last = --_count;
 	if (p_id == last) {
 		return;
@@ -188,6 +193,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 
 // 完整积分循环：寿命 / 出生相位 / 位移 / 计时 / 剔除 —— 与 scripts/kernel/bullet_system.gd 1:1。
 void DanmakuStore::integrate(double p_delta) {
+	_grid_dirty = true;
 	const float dt = (float)p_delta;
 	const bool cull = _cull.has_area();
 	const Rect2 grown = _cull.grow(_margin);
@@ -223,6 +229,7 @@ void DanmakuStore::set_field(float p_left, float p_right, float p_top) { _field_
 int DanmakuStore::get_capacity() const { return _capacity; }
 
 void DanmakuStore::clear() {
+	_grid_dirty = true;
 	_count = 0;
 }
 
@@ -239,7 +246,10 @@ void DanmakuStore::set_life(int p_id, float p_life) { _life[p_id] = p_life; }
 void DanmakuStore::set_fx(int p_id, float p_fx) { _fx[p_id] = p_fx; }
 void DanmakuStore::set_timer(int p_id, float p_timer) { _timer[p_id] = p_timer; }
 void DanmakuStore::set_velocity(int p_id, const Vector2 &p_vel) { _vx[p_id] = p_vel.x; _vy[p_id] = p_vel.y; }
-void DanmakuStore::set_position(int p_id, const Vector2 &p_pos) { _x[p_id] = p_pos.x; _y[p_id] = p_pos.y; }
+void DanmakuStore::set_position(int p_id, const Vector2 &p_pos) {
+	_x[p_id] = p_pos.x; _y[p_id] = p_pos.y;
+	_grid_dirty = true;
+}
 float DanmakuStore::get_life_left(int p_id) const { return _life[p_id]; }
 float DanmakuStore::get_fx_phase(int p_id) const { return _fx[p_id]; }
 float DanmakuStore::get_timer(int p_id) const { return _timer[p_id]; }
@@ -668,6 +678,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 }
 
 void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base) {
+	_grid_dirty = true;
 	_tick_dead.clear();
 	_ev_kind.clear(); _ev_prog.clear(); _ev_local.clear(); _ev_bullet.clear();
 	_ev_x.clear(); _ev_y.clear(); _ev_dx.clear(); _ev_dy.clear(); _ev_val.clear();
@@ -821,6 +832,7 @@ static float _hit_rot(const Vector2 &vel, unsigned char follow, float diroff) {
 }
 
 void DanmakuStore::set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset) {
+	_grid_dirty = true;
 	_hb_radius[p_id] = p_radius;
 	_hb_offx[p_id] = p_offset.x;
 	_hb_offy[p_id] = p_offset.y;
@@ -868,8 +880,94 @@ PackedInt32Array DanmakuStore::overlap_pairs(int p_faction, const PackedVector2A
 	return out;
 }
 
+// ═══ L3.5-4b-pre：宽相 uniform grid（与 GDScript `BulletSystem` 同参数/同语义）═══
+
+void DanmakuStore::_ensure_broadphase() const {
+	if (!_grid_dirty) { return; }
+	_grid_dirty = false;
+	_rebuild_broadphase();
+}
+
+void DanmakuStore::_rebuild_broadphase() const {
+	_grid_active = false;
+	const int count = _count;
+	if (count < GRID_MIN_COUNT) { return; }
+	int gx;
+	int gy;
+	Vector2 origin;
+	if (_cull.size.x > 0.0f && _cull.size.y > 0.0f) {
+		origin = _cull.position;
+		gx = MAX(1, (int)std::ceil(_cull.size.x / GRID_CELL) + 1);
+		gy = MAX(1, (int)std::ceil(_cull.size.y / GRID_CELL) + 1);
+	} else {
+		Vector2 minp(INFINITY, INFINITY);
+		Vector2 maxp(-INFINITY, -INFINITY);
+		for (int i = 0; i < count; ++i) {
+			minp.x = MIN(minp.x, _x[i]); minp.y = MIN(minp.y, _y[i]);
+			maxp.x = MAX(maxp.x, _x[i]); maxp.y = MAX(maxp.y, _y[i]);
+		}
+		origin = minp;
+		gx = MAX(1, (int)std::floor((maxp.x - minp.x) / GRID_CELL) + 1);
+		gy = MAX(1, (int)std::floor((maxp.y - minp.y) / GRID_CELL) + 1);
+	}
+	if (gx * gy > GRID_MAX_CELLS) { return; }   // 坐标异常 / 剔除区过大：退回线性
+	_grid_origin = origin;
+	_grid_gx = gx;
+	_grid_gy = gy;
+	_grid_head.assign(gx * gy, -1);
+	_grid_prev.assign(count, -1);
+	_grid_next.assign(count, -1);
+	_grid_cell_of.assign(count, -1);
+	float max_bound = 0.0f;
+	for (int i = 0; i < count; ++i) {
+		const float b = (_hb_sizex[i] != 0.0f || _hb_sizey[i] != 0.0f)
+			? Vector2(_hb_sizex[i], _hb_sizey[i]).length() * 0.5f + Vector2(_hb_offx[i], _hb_offy[i]).length()
+			: _hb_radius[i];
+		max_bound = MAX(max_bound, b);
+		const int ci = _cell_index(i);
+		_grid_cell_of[i] = ci;
+		_grid_prev[i] = -1;
+		_grid_next[i] = _grid_head[ci];
+		if (_grid_head[ci] >= 0) { _grid_prev[_grid_head[ci]] = i; }
+		_grid_head[ci] = i;
+	}
+	_grid_max_bound = max_bound;
+	_grid_active = true;
+}
+
+int DanmakuStore::_cell_index(int p_i) const {
+	const int cx = CLAMP((int)std::floor((_x[p_i] - _grid_origin.x) / GRID_CELL), 0, _grid_gx - 1);
+	const int cy = CLAMP((int)std::floor((_y[p_i] - _grid_origin.y) / GRID_CELL), 0, _grid_gy - 1);
+	return cy * _grid_gx + cx;
+}
+
+PackedInt32Array DanmakuStore::_query_circle_grid(const Vector2 &p_center, float p_search_radius) const {
+	PackedInt32Array out;
+	const float reach = p_search_radius + _grid_max_bound;
+	const int x0 = CLAMP((int)std::floor((p_center.x - reach - _grid_origin.x) / GRID_CELL), 0, _grid_gx - 1);
+	const int x1 = CLAMP((int)std::floor((p_center.x + reach - _grid_origin.x) / GRID_CELL), 0, _grid_gx - 1);
+	const int y0 = CLAMP((int)std::floor((p_center.y - reach - _grid_origin.y) / GRID_CELL), 0, _grid_gy - 1);
+	const int y1 = CLAMP((int)std::floor((p_center.y + reach - _grid_origin.y) / GRID_CELL), 0, _grid_gy - 1);
+	for (int cy = y0; cy <= y1; ++cy) {
+		const int row_base = cy * _grid_gx;
+		for (int cx = x0; cx <= x1; ++cx) {
+			int i = _grid_head[row_base + cx];
+			while (i >= 0) {
+				if (hit_test(i, p_center, p_search_radius)) { out.push_back(i); }
+				i = _grid_next[i];
+			}
+		}
+	}
+	return out;
+}
+
+bool DanmakuStore::is_broadphase_active() const { return _grid_active; }
+
 PackedInt32Array DanmakuStore::query_circle(const Vector2 &p_center, float p_search_radius) const {
 	PackedInt32Array out;
+	if (_count == 0) { return out; }
+	_ensure_broadphase();
+	if (_grid_active) { return _query_circle_grid(p_center, p_search_radius); }
 	for (int i = 0; i < _count; ++i) {
 		if (_fx[i] > 0.0f) { continue; }
 		Vector2 hit(_x[i], _y[i]);

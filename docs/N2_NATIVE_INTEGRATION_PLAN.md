@@ -2,7 +2,7 @@
 
 > **状态**：进行中。N2.1 ✅ / N2.2 积分段 ✅ / **N2.2 存储段核心 ✅** / N4-real ✅ /
 > **L3.5-1 ✅ · L3.5-2 ✅ · L3.5-3 ✅（含 3b）· L3.5-5 主体 ✅ · L3.5-6 真人试玩 ✅**；
-> 当前批次 = **L3.5-4「消费方改读原生」**（4a ✅，4b 待做）。
+> 当前批次 = **L3.5-4「消费方改读原生」**（4a ✅ · 4b-pre ✅；4b 待做）。
 > **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §10（N0–N5）；`gdextension/`。
 
 ## 目标
@@ -136,7 +136,12 @@
    - ✅ **4a（2026-09-14）原生批量重叠**：`overlap_pairs(faction, targets, radii) -> [bullet, target, ...]` 扁平对；
      几何整体下沉，一次跨界返回全部命中对，杜绝 `O(弹×目标)` 次跨界。`test_native_overlap_pairs` 3/3
      （circle / offset / rect × 阵营 × 双阈值 + 非空洞）。
+   - ✅ **4b-pre（2026-09-14）原生宽相 uniform grid**：`query_circle` 查询前惰性重建，与 GDScript `BulletSystem` 同参数/同语义
+     （CELL=64 / MIN_COUNT=64 / MAX_CELLS=8192；cull 有面积用 cull，否则活跃包围盒；超限/弹少回退线性）。
+     `test_native_broadphase` 3/3（129 断言，circle/offset/rect + 网格↔暴力逐行 + 启用/回退判定）。
    - 余：**4b** 判定切原生（物理走 `overlap_pairs`）→ **4c** 渲染数据源 → **4d** 激光/调试 → **4e** 存储翻转 → **4f** 删壳。
+     ⚠️ **4b 前置**：原生 store 现在不持有 `type/faction/color/hitbox`（`behavior_batch` 不填；`scripts/` 无 `set_hitbox`），
+     须先做 4e 存储翻转或一个 meta 镜像。
 5. **L3.5-5 主体 ✅（随 3b）** 事件 drain（emit / sfx / call → `queue_spawn` / sfx / 内容回调）；余：边界完善。
 6. **L3.5-6 ✅（2026-09-14）** 真实舞台开机 + 真人试玩 —— 非符1 打穿，行为 / 激光 / 判定手感通过（并因此抓出 3b 两处 bug）。
 7. **L4** 拆除（删 1219 + 273 + rebuild）。
