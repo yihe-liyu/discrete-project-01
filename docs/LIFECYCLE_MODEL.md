@@ -109,6 +109,14 @@ func kernel_port() -> Dictionary:
     return {"move": &"bounce", "params": {&"accel": 120.0, &"bounce_angle": 0.3}}
 ```
 
+**预设表不够时**，还有第二种端口形状 —— 直接用 builder 拼描述符（`{lifecycle}`，**仍然不碰 opcode**），见 `CONTENT_GUIDE.md`「自定义行为」：
+```gdscript
+func kernel_port() -> Dictionary:
+    var lc := BulletLifecycle.new()
+    lc.rotate(2.0, 0.5).until_turned().then().accel_heading(300.0).until_elapsed(1.0).despawn()
+    return {"lifecycle": lc}
+```
+
 **引擎侧**（`LifecycleCatalog` 的 preset 实现）用 fluent builder → 描述符（真实方法名）：
 ```gdscript
 BulletLifecycle.new()\
@@ -134,7 +142,7 @@ BulletLifecycle.laser_follow(anchor_id, offset, angle, drift_speed, initial_drif
 BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drift)
 ```
 
-> **创作者只写 `move + params`**，不碰 opcode —— 没有原语泄漏（满足"创作者方便"硬约束）。
+> **创作者写 `move + params` 或自定义 `{lifecycle}`**（builder），都不碰 opcode —— 没有原语泄漏（满足"创作者方便"硬约束）。
 
 ---
 
@@ -206,7 +214,7 @@ bounce → phases: [
 | `CoroutineScript` / `StageDirector` / `PhaseData` | **保留**（低频） |
 | `*_shoot.gd`（波编排） | **保留** + 加 pattern builder |
 | `kernel_bridge/behavior/*.gd`（10 个） | → **描述符 preset**（L2）→ 删 GDScript 实现（L4） |
-| `*_bullet.gd`（`kernel_port` 参数翻译） | → **builder sugar** |
+| `*_bullet.gd`（`kernel_port`：命名 `move` / 自定义 `{lifecycle}`） | → **builder sugar**（✅ 已接，见 `test_lifecycle_port`） |
 | `CoroutineScript` 快速模式（子弹协程） | 已废，随 GDScript 内核拆除 |
 
 ---
