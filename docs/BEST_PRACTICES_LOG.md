@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-2 ✅：LifecycleCatalog（move+params → preset）+ 签名缓存
+
+- **目标**：内容 `kernel_port()` 的 `{move, params}` → `BulletLifecycle`（L3.5-3 接入的前置）。
+- **产出**：`scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` —— `build(move, params)` 纯映射 + `signature()/get_lifecycle()` 缓存（**难度入签名**，因 non_mid 半径随难度）。
+- **映射 10 个 move**：world_accel / accel / curve / homing / radial_accel / bounce / avoid_player / non_mid_flee / marisa_laser / laser_follow。
+- **内容零改动**：仍写 `kernel_port() -> {move, params}`；`sfx` 的 String → StringName。
+- **验证**：`test_lifecycle_catalog` **5/5（35 断言）**：10 个 move 全映射、结构正确、未知 move → null、缓存按签名命中、空 sfx 不加动作。
+- **验收**：verify.sh 全绿。
+
 ### 2026-09-14 — L3.5-1 ✅：原生判定（hit_test / query_circle / grazed）与 GDScript 1:1
 
 - **产出**：原生 `set_hitbox / hit_test / query_circle / is_grazed / mark_grazed`；per-row hitbox（radius / offset / size + follow_dir / dir_offset + grazed）；`_circle_rect` 与 `HitGeometry` 1:1。
@@ -376,7 +385,3 @@
 - **度量（为什么是现在）**：`scripts/kernel_bridge/` **979 行 ≈ 内核 1212 行的 80%**；弹型词汇两套（`BulletData` 19 字段 vs `BulletType` 13 字段，**差集恰好是桥接的活**）；5 张侧表；6 个内容脚本手写 `kernel_port()`。桥接现在**同时干两件事** —— 宿主耦合规则 + 词汇翻译 —— **后者才是 979 行的大头**。
 - **为什么能反转 A 方案**：S3 选 A（§14.3）是为了保住「内核零改动」这个**可回退前提**；如今 Track A/B 收口、`use_kernel` 与旧池都删了、GUT 57 套兜底 —— 可回退的收益已经兑现，继续冻结的代价超过收益。
 - **路线**（详见 §16）：
-  - **M1** 内核认数据：`damage` / `hit_sfx` / `out_grace` 进 `BulletType` → 删 `_damage_by_index` / `_hit_sfx_by_index`（**只搬数据不搬规则**，graze / 命中几何仍留宿主）。`out_grace` 正好兑现 §15.5 留的口子。
-  - **M2** 词汇合一：`BulletData` ⇄ `BulletType`（(a) `extends` / (b) 退化为构造助手，**待拍板**）→ 删 `type_for()` / `signature_of()` / `_type_by_sig`；`kernel_port()` 降为可选覆盖。
-  - **M3** 渲染 / 纹理归属（hybrid vs 内核图集）—— 先决策，不阻塞 M1/M2。
-- **流程（硬约束）**：内核改动**必须回重建版做**（那是它的开发环境）→ 跑重建版 `tests/` → 打 tag `kernel-v2` → vendor 回来。**禁止**只改 `scripts/kernel/` 副本（README 明写它只是 vendor 快照，会被覆盖）。
