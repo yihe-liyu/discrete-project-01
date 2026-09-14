@@ -208,95 +208,68 @@ func on_end_call(fn: Callable) -> BulletLifecycle:
 	return self
 
 
-# ═══ Canned preset（现有行为 → 命名组合；创作者也可自己拼）═══
+# ═══ Canned preset（10 个 move 的**类型化薄包装**）═══
+# 组合定义在 LifecycleCatalog.build()（唯一真相）；这里只把类型化参数转成 params 字典。
+
 static func bounce(accel_rate: float, bounce_angle: float, spawn_speed: float, factory: Callable,
 		sfx_key: StringName = &"kira", sfx_db: float = -8.0) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.accel_heading(accel_rate)
-	lc.until_at_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)
-	if sfx_key != &"":
-		lc.sfx(sfx_key, sfx_db)
-	lc.emit(factory, toward(T_BOSS, bounce_angle), spawn_speed, true)
-	lc.despawn()
-	return lc
+	return LifecycleCatalog.build(&"bounce", {
+		&"accel": accel_rate, &"bounce_angle": bounce_angle, &"spawn_speed": spawn_speed,
+		&"spawn_factory": factory, &"sfx": sfx_key, &"sfx_db": sfx_db,
+	})
+
 
 static func curve(w: float, limit: float) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.rotate(w, limit)
-	lc.until_turned()
-	lc.then()
-	return lc
+	return LifecycleCatalog.build(&"curve", {&"curve": w, &"curve_limit": limit})
+
 
 static func world_accel(v: Vector2) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.accel_world(v)
-	return lc
+	return LifecycleCatalog.build(&"world_accel", {&"world_accel": v})
+
 
 static func accel(a: float) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.accel_heading(a)
-	return lc
+	return LifecycleCatalog.build(&"accel", {&"accel": a})
 
-# ═══ 其余 preset ═══
 
-## 追踪最近敌人：steer + 速度爬升；超 duration 停诱导（speed_lerp 与 steer 共用 ramp）。
 static func homing(angle_per_sec: float, accel_time: float, min_speed: float, max_speed: float,
 		duration: float, proximity_boost: float) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.steer(T_NEAREST_ENEMY, angle_per_sec, accel_time, proximity_boost, min_speed, max_speed if max_speed > 0.0 else min_speed, duration)
-	lc.until_never()   # duration 只控制「转向多久」，弹体继续飞
-	return lc
+	return LifecycleCatalog.build(&"homing", {
+		&"homing_angle_per_sec": angle_per_sec, &"accel_time": accel_time,
+		&"min_speed": min_speed, &"max_speed": max_speed,
+		&"homing_duration": duration, &"proximity_boost": proximity_boost,
+	})
 
 
-## 沿初向加速；碰顶边换向下弹（保留速度大小）+ sfx。
 static func radial_accel(accel_rate: float, factory: Callable, sfx_key: StringName = &"", sfx_db: float = 0.0) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.accel_heading(accel_rate)
-	lc.until_at_wall(WALL_TOP)
-	if sfx_key != &"":
-		lc.sfx(sfx_key, sfx_db)
-	lc.emit(factory, heading(PI), 0.0, true)
-	lc.despawn()
-	return lc
+	return LifecycleCatalog.build(&"radial_accel", {
+		&"accel_rate": accel_rate, &"spawn_factory": factory, &"sfx": sfx_key, &"sfx_db": sfx_db,
+	})
 
 
-## 靠近自机则逃；逃满 flee_time 自灭。
 static func avoid_player(proximity: float, jump: float, flee_time: float) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.until_near(T_PLAYER, proximity, jump)
-	lc.on_end_heading(away(T_PLAYER))
-	lc.then()
-	lc.until_elapsed(flee_time)
-	lc.despawn()
-	return lc
+	return LifecycleCatalog.build(&"avoid_player", {
+		&"player_proximity": proximity, &"jump": jump, &"flee_time": flee_time,
+	})
 
 
-## 靠近自机逃 → 靠近 Boss 散圈（内容回调）+ 回收。
 static func non_mid_flee(proximity: float, boss_radius: float, burst: Callable) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.until_near(T_PLAYER, proximity, 0.0, 3)
-	lc.on_end_heading(away(T_PLAYER))
-	lc.then()
-	lc.until_near(T_BOSS, boss_radius, 0.0, 3)
-	lc.on_end_call(burst)
-	lc.despawn()
-	return lc
+	return LifecycleCatalog.build(&"non_mid_flee", {
+		&"player_proximity": proximity, &"boss_radius": boss_radius, &"on_flee_burst": burst,
+	})
 
 
-## 锚定漂移激光（内核 laser_follow：锚点用局部 position）。
 static func laser_follow(anchor_id: int, offset: Vector2, angle: float, drift_speed: float, initial_drift: float) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.anchor_drift(anchor_id, offset, angle, drift_speed, false, initial_drift, false)
-	lc.until_never()
-	return lc
+	return LifecycleCatalog.build(&"laser_follow", {
+		&"anchor_id": anchor_id, &"anchor_offset": offset, &"angle": angle,
+		&"drift_speed": drift_speed, &"initial_drift": initial_drift,
+	})
 
 
-## 魔理沙非 focus 激光（锚点用 global_position；速度设为朝向）。
 static func marisa_laser(anchor_id: int, offset: Vector2, angle: float, drift_speed: float, initial_drift: float) -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.anchor_drift(anchor_id, offset, angle, drift_speed, true, initial_drift, true)
-	lc.until_never()
-	return lc
+	return LifecycleCatalog.build(&"marisa_laser", {
+		&"anchor_id": anchor_id, &"anchor_offset": offset, &"angle": angle,
+		&"drift_speed": drift_speed, &"initial_drift": initial_drift,
+	})
 
 
 ## 锚点解析（**唯一真相**；原生/参考解释器/测试都走它，避免两套语义漂移）：

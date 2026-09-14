@@ -13,62 +13,76 @@ const MOVE_LIFECYCLE := &"lifecycle"
 
 
 ## 纯映射：move + params → lifecycle；未知 move 返回 null。
+## **每个 move 的组合在此就地展开为原语**（唯一真相）；BulletLifecycle 的同名 preset 只是它的类型化薄包装。
 static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 	if move == MOVE_LIFECYCLE:
 		return params.get(&"lifecycle", null) as BulletLifecycle
+	var lc := BulletLifecycle.new()
 	match move:
 		&"world_accel":
-			return BulletLifecycle.world_accel(params.get(&"world_accel", Vector2.ZERO))
+			lc.accel_world(params.get(&"world_accel", Vector2.ZERO))
 		&"accel":
-			return BulletLifecycle.accel(float(params.get(&"accel", 0.0)))
+			lc.accel_heading(float(params.get(&"accel", 0.0)))
 		&"curve":
-			return BulletLifecycle.curve(float(params.get(&"curve", 0.0)), float(params.get(&"curve_limit", 0.0)))
+			lc.rotate(float(params.get(&"curve", 0.0)), float(params.get(&"curve_limit", 0.0)))
+			lc.until_turned()
+			lc.then()
 		&"homing":
-			return BulletLifecycle.homing(
+			var speed_min := float(params.get(&"min_speed", 500.0))
+			var speed_max := float(params.get(&"max_speed", 2000.0))
+			lc.steer(BulletLifecycle.T_NEAREST_ENEMY,
 				float(params.get(&"homing_angle_per_sec", deg_to_rad(720.0))),
 				float(params.get(&"accel_time", 2.0)),
-				float(params.get(&"min_speed", 500.0)),
-				float(params.get(&"max_speed", 2000.0)),
-				float(params.get(&"homing_duration", 2.0)),
-				float(params.get(&"proximity_boost", 150.0)))
+				float(params.get(&"proximity_boost", 150.0)),
+				speed_min,
+				speed_max if speed_max > 0.0 else speed_min,
+				float(params.get(&"homing_duration", 2.0)))
+			lc.until_never()
 		&"radial_accel":
-			return BulletLifecycle.radial_accel(
-				float(params.get(&"accel_rate", 0.0)),
-				params.get(&"spawn_factory", Callable()),
-				StringName(params.get(&"sfx", "")),
-				float(params.get(&"sfx_db", 0.0)))
+			lc.accel_heading(float(params.get(&"accel_rate", 0.0)))
+			lc.until_at_wall(BulletLifecycle.WALL_TOP)
+			var sfx_radial := StringName(params.get(&"sfx", ""))
+			if sfx_radial != &"":
+				lc.sfx(sfx_radial, float(params.get(&"sfx_db", 0.0)))
+			lc.emit(params.get(&"spawn_factory", Callable()), BulletLifecycle.heading(PI), 0.0, true)
+			lc.despawn()
 		&"bounce":
-			return BulletLifecycle.bounce(
-				float(params.get(&"accel", 0.0)),
-				float(params.get(&"bounce_angle", 0.0)),
-				float(params.get(&"spawn_speed", 0.0)),
-				params.get(&"spawn_factory", Callable()),
-				StringName(params.get(&"sfx", "kira")),
-				float(params.get(&"sfx_db", -8.0)))
+			lc.accel_heading(float(params.get(&"accel", 0.0)))
+			lc.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+			var sfx_bounce := StringName(params.get(&"sfx", "kira"))
+			if sfx_bounce != &"":
+				lc.sfx(sfx_bounce, float(params.get(&"sfx_db", -8.0)))
+			lc.emit(params.get(&"spawn_factory", Callable()),
+				BulletLifecycle.toward(BulletLifecycle.T_BOSS, float(params.get(&"bounce_angle", 0.0))),
+				float(params.get(&"spawn_speed", 0.0)), true)
+			lc.despawn()
 		&"avoid_player":
-			# 该行为是类型级配置（构造参数），内容不通过 params 覆盖。
-			return BulletLifecycle.avoid_player(150.0, 0.05, 2.0)
+			lc.until_near(BulletLifecycle.T_PLAYER, float(params.get(&"player_proximity", 150.0)), float(params.get(&"jump", 0.05)))
+			lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
+			lc.then()
+			lc.until_elapsed(float(params.get(&"flee_time", 2.0)))
+			lc.despawn()
 		&"non_mid_flee":
-			var r: float = _NON_MID_RADIUS[clampi(SaveData.selected_difficulty, 0, _NON_MID_RADIUS.size() - 1)]
-			return BulletLifecycle.non_mid_flee(
-				float(params.get(&"player_proximity", 150.0)),
-				r,
-				params.get(&"on_flee_burst", Callable()))
+			var radius: float = float(params.get(&"boss_radius", _NON_MID_RADIUS[clampi(SaveData.selected_difficulty, 0, _NON_MID_RADIUS.size() - 1)]))
+			lc.until_near(BulletLifecycle.T_PLAYER, float(params.get(&"player_proximity", 150.0)), 0.0, 3)
+			lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
+			lc.then()
+			lc.until_near(BulletLifecycle.T_BOSS, radius, 0.0, 3)
+			lc.on_end_call(params.get(&"on_flee_burst", Callable()))
+			lc.despawn()
 		&"marisa_laser":
-			return BulletLifecycle.marisa_laser(
-				int(params.get(&"anchor_id", 0)),
-				params.get(&"anchor_offset", Vector2.ZERO),
-				float(params.get(&"angle", 0.0)),
-				float(params.get(&"drift_speed", 2000.0)),
-				float(params.get(&"initial_drift", 0.0)))
+			lc.anchor_drift(int(params.get(&"anchor_id", 0)), params.get(&"anchor_offset", Vector2.ZERO),
+				float(params.get(&"angle", 0.0)), float(params.get(&"drift_speed", 2000.0)),
+				true, float(params.get(&"initial_drift", 0.0)), true)
+			lc.until_never()
 		&"laser_follow":
-			return BulletLifecycle.laser_follow(
-				int(params.get(&"anchor_id", 0)),
-				params.get(&"anchor_offset", Vector2.ZERO),
-				float(params.get(&"angle", 0.0)),
-				float(params.get(&"drift_speed", 2000.0)),
-				float(params.get(&"initial_drift", 0.0)))
-	return null
+			lc.anchor_drift(int(params.get(&"anchor_id", 0)), params.get(&"anchor_offset", Vector2.ZERO),
+				float(params.get(&"angle", 0.0)), float(params.get(&"drift_speed", 2000.0)),
+				false, float(params.get(&"initial_drift", 0.0)), false)
+			lc.until_never()
+		_:
+			return null
+	return lc
 
 
 ## 签名：同 (move, params, 难度) 只编译一次。难度入签名是因为 non_mid 的半径随难度。

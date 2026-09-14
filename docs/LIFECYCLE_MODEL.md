@@ -117,7 +117,7 @@ func kernel_port() -> Dictionary:
     return {"lifecycle": lc}
 ```
 
-**引擎侧**（`LifecycleCatalog` 的 preset 实现）用 fluent builder → 描述符（真实方法名）：
+**引擎侧**（`LifecycleCatalog.build()` **就地展开**）用 fluent builder → 描述符（真实方法名）：
 ```gdscript
 BulletLifecycle.new()\
     .accel_heading(100.0)                                   # Move\
@@ -129,7 +129,7 @@ BulletLifecycle.new()\
 - **Action**：`sfx` `emit` `despawn` `on_end_heading` `on_end_call`
 - **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)`
 
-**Canned preset**（10 个 `move` 的实现）：
+**Canned preset**（10 个 `move` 的**类型化薄包装**，组合在 `build()`）：
 ```gdscript
 BulletLifecycle.bounce(accel_rate, bounce_angle, spawn_speed, factory, sfx_key := &"kira", sfx_db := -8.0)
 BulletLifecycle.homing(angle_per_sec, accel_time, min_speed, max_speed, duration, proximity_boost)

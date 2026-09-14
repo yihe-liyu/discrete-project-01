@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — 展开：preset 组合就地搬进 `LifecycleCatalog.build()`
+
+- **动机**：读 `build()` 看不到行为逻辑（只看到 `BulletLifecycle.bounce(...)` 之类），得跳文件；而且组合定义在"值类型"上，与"schema 权威 = `build()`"的定位不符。
+- **做法**：把 10 个 move 的组合**就地展开为原语**（`build()` 的 `match`）；`BulletLifecycle` 的同名 preset 改成**类型化薄包装**（`return LifecycleCatalog.build(move, {args})`）——**组合只有一份，不复制**。
+- **契约不变**：`avoid_player` / `non_mid_flee` 的 `jump` / `boss_radius` / `flee_time` 改走 `params.get(…, 默认)`，内容不传 → 默认值与原硬编码一致；preset 传 → 类型化参数照旧生效。
+- **验证**：`./tools/verify.sh` 全绿 **371 / 4149**（与改前同数 —— 行为零变化）。
+
 ### 2026-09-14 — 测试：最小原语级 parity（补上 4 个零覆盖 Move）
 
 - **动机**：既有 parity 测试都锚在 **preset** 上（`test_native_executor` / `test_lifecycle_presets`），只覆盖"被 preset 用到"的原语。实测 9 个 Move 里 `speed_lerp` / `scale_speed` / `set_heading` / `set_speed` **没有任何 preset 使用 → 零覆盖**。

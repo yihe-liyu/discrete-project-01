@@ -266,7 +266,7 @@ func kernel_port() -> Dictionary:
 
 > - `spawn_factory` 是**换弹工厂**，返回 `BulletData`（内容侧提供；工厂实例要复用，别每发 new）。
 > - **未知 `move` → 按直线发射**（计入 `unmapped_behavior_count`）。
-> - **新增 `move`** = 在 `LifecycleCatalog.build()` 加分支 + 在 `BulletLifecycle` 加 preset（**组合现有 Move/Until/Action 无需改 C++**）；只有需要**新原语**才动 `gdextension/src/danmaku_store.cpp`。
+> - **新增 `move`** = 在 `LifecycleCatalog.build()` 加分支，**就地用原语拼出组合**（组合唯一在此）；`BulletLifecycle` 的同名 preset 是可选类型化糖。**组合现有 Move/Until/Action 无需改 C++**；只有需要**新原语**才动 `gdextension/src/danmaku_store.cpp`。
 > - **只是某一颗弹想要"预设表里没有"的组合** → 不用新增 `move`，见下节 `{lifecycle}`。
 
 ---
