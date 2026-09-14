@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — 接线：`{lifecycle}` 预拼描述符入口（内容可自己拼，build() 不再膨胀）
+
+- **动机**：`build()` 的 `match` 每加一个"带流程控制的新组合"就要 +一个分支 +一个 preset → 内容多样时**线性膨胀**；而 `LIFECYCLE_MODEL.md §7` 本就写了 `*_bullet.gd` 应进化为 **builder sugar**，`prepare_shot` 也早留了 `port.has("program")` 注释「预留：VM 未实现」——**门凿了没装**。
+- **落点**：`kernel_port()` 可返回 `{"lifecycle": BulletLifecycle}`（可选 `"anchor"`）；`prepare_shot` 认出后走 `LifecycleCatalog.MOVE_LIFECYCLE`；`build()` / `signature()` / `_anchor_spec_for()` 各加**一支**（不是每个行为一支）。
+- **效果**：常用词汇仍走 `{move, params}`（10 个稳定）；一次性 / 流程控制弹走 `{lifecycle}`，`build()` 一个行为都不涨。
+- **验证**：`test_lifecycle_port` 2/2 —— ① 端口透传；② **非 preset** 的两段组合（rotate→turned→then→accel→elapsed→despawn）经原生跑起来（速度确实被拉高、最终 despawn）。`./tools/verify.sh` 全绿 **351 / 4080**。
+- **边界**：描述符语言仍是固定 schema（9 Move / 5 Until / 5 Action + 线性相位），无变量 / 表达式 / goto；超出的部分靠 `emit` / `on_end_call` 回调或加新原语。
+
 ### 2026-09-14 — 修复：原生积分 parity 测试被静默跳过（死测试）
 
 - **症状**：`test_native_integrate.gd` 自 4f 起加载失败 → GUT 只 warning + `Ignoring script ... does not extend GutTest` → 该文件 2 个测试**从未运行**，套件却一直「绿」（347 / 4061 不含它）。

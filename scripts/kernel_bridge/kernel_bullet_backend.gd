@@ -114,7 +114,11 @@ func prepare_shot(data: BulletData, pos: Vector2, direction: Vector2) -> Diction
 	var params: Variant = null
 	if data.coroutine_script != null:
 		var port: Dictionary = _port_for(data)
-		if port.has("program"):
+		if port.has("lifecycle"):
+			# 预拼描述符入口：内容自己拼 BulletLifecycle（builder sugar），不经过命名 move。
+			move = LifecycleCatalog.MOVE_LIFECYCLE
+			params = {&"lifecycle": port.get("lifecycle"), &"anchor": port.get("anchor")}
+		elif port.has("program"):
 			unmapped_behavior_count += 1   # 预留：VM 未实现，先直线
 		elif port.has("move"):
 			move = port.get("move")

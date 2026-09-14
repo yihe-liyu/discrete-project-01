@@ -318,6 +318,8 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 
 
 func _anchor_spec_for(move: StringName, params: Dictionary) -> Variant:
+	if move == LifecycleCatalog.MOVE_LIFECYCLE:
+		return params.get(&"anchor")
 	match move:
 		&"marisa_laser":
 			return {&"id": int(params.get(&"anchor_id", 0)), &"offset": params.get(&"anchor_offset", Vector2.ZERO), &"use_global": true}

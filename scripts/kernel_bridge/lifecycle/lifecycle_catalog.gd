@@ -7,10 +7,15 @@ class_name LifecycleCatalog
 extends RefCounted
 
 const _NON_MID_RADIUS := [175.0, 150.0, 125.0, 100.0]
+## 预拼描述符入口：内容 `kernel_port()` 直接给 `{lifecycle: BulletLifecycle}`（可选 `anchor`）。
+## 对应 docs/LIFECYCLE_MODEL.md §7「`*_bullet.gd` → builder sugar」。
+const MOVE_LIFECYCLE := &"lifecycle"
 
 
 ## 纯映射：move + params → lifecycle；未知 move 返回 null。
 static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
+	if move == MOVE_LIFECYCLE:
+		return params.get(&"lifecycle", null) as BulletLifecycle
 	match move:
 		&"world_accel":
 			return BulletLifecycle.world_accel(params.get(&"world_accel", Vector2.ZERO))
@@ -68,6 +73,10 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 
 ## 签名：同 (move, params, 难度) 只编译一次。难度入签名是因为 non_mid 的半径随难度。
 static func signature(move: StringName, params: Dictionary) -> int:
+	if move == MOVE_LIFECYCLE:
+		var lc: BulletLifecycle = params.get(&"lifecycle", null)
+		var obj_id: int = lc.get_instance_id() if lc != null else 0
+		return hash(move) * 31 + obj_id * 7 + hash(params.get(&"anchor"))
 	return hash(move) * 31 + hash(params) * 7 + SaveData.selected_difficulty
 
 
