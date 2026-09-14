@@ -18,6 +18,12 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-4f-1 ✅：BulletType / EffectType 归位 `scripts/data/`
+
+- **依据**：N2 §96 待定项拍板 —— 类型表是**宿主侧**渲染/判定/伤害描述（原生只存 int 下标），归内容面，不属内核逻辑。
+- **零改动**：全仓**没有** `preload("res://scripts/kernel/...")`，所有引用走全局 `class_name` → 纯 `git mv`（+ `.uid`），无调用点改动。
+- **验证**：`./tools/verify.sh` 全绿 **370 / 4123**。
+
 ### 2026-09-14 — L3.5-4e ✅：存储翻转（原生权威 + GDScript 只读快照）
 
 - **改动**：`KernelNativeSystem` 改用原生**有状态** API（`spawn`/`despawn`/`clear`/`integrate`/`behavior_tick`），
