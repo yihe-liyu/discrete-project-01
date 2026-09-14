@@ -71,6 +71,8 @@ public:
 	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
 	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const;
 	PackedInt32Array query_circle(const Vector2 &p_center, float p_search_radius) const;
+	// L3.5-4a：批量重叠（几何整体下沉，杜绝 O(弹×目标) 次跨界）。返回扁平对 [bullet, target, ...]。
+	PackedInt32Array overlap_pairs(int p_faction, const PackedVector2Array &p_targets, const PackedFloat32Array &p_radii) const;
 	PackedColorArray get_colors() const;
 	PackedInt32Array get_type_indices() const;
 	PackedInt32Array get_factions() const;

@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-4a ✅：原生批量重叠 `overlap_pairs`
+
+- **背景**：方案 A（原生权威）下判定层若逐弹调原生 `hit_test`，按边界铁律（110ns vs 13ns）会比现在更慢；
+  `_player_bullets_vs_enemies` 是 `O(玩家弹×敌人)`。
+- **产出**：原生 `overlap_pairs(faction, targets, radii) -> [bullet, target, ...]`（`faction<0` = 不限；跳过未出生/纯特效行；
+  几何复用 `hit_test`）。一次跨界返回全部命中对。
+- **验证**：`test_native_overlap_pairs` **3/3（24 断言）** —— circle / offset / rect 三种判定 × 阵营（含 -1）× 单点双阈值；
+  **非空洞**断言（至少产生命中对），防止 `0==0` 假过。
+- **下一步**：4b 判定层改走 `overlap_pairs`（GDScript 只算伤害/RNG/音效）。
+
 ### 2026-09-14 — L3.5-3b 修复②：锚定漂移（魔理沙激光）锚点解析 + batch 首帧状态
 
 - **症状**：魔理沙非 focus 激光段全部粘在自机身上（子机锚点被整个忽略）。

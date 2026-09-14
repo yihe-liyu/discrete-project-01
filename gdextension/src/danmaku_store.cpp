@@ -30,6 +30,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_hitbox", "id", "radius", "offset", "size", "follow_dir", "dir_offset"), &DanmakuStore::set_hitbox);
 	ClassDB::bind_method(D_METHOD("hit_test", "id", "center", "radius"), &DanmakuStore::hit_test);
 	ClassDB::bind_method(D_METHOD("query_circle", "center", "radius"), &DanmakuStore::query_circle);
+	ClassDB::bind_method(D_METHOD("overlap_pairs", "faction", "targets", "radii"), &DanmakuStore::overlap_pairs);
 	ClassDB::bind_method(D_METHOD("is_grazed", "id"), &DanmakuStore::is_grazed);
 	ClassDB::bind_method(D_METHOD("mark_grazed", "id"), &DanmakuStore::mark_grazed);
 	ClassDB::bind_method(D_METHOD("set_field", "left", "right", "top"), &DanmakuStore::set_field);
@@ -845,6 +846,26 @@ bool DanmakuStore::hit_test(int p_id, const Vector2 &p_center, float p_radius) c
 		return d.length_squared() <= rr * rr;
 	}
 	return _circle_rect(p_center, p_radius, hit, rot, Vector2(sx, sy));
+}
+
+// L3.5-4a：对所有（阵营匹配、已出生的）弹 × 目标圆做 narrow 判定，一次跨界返回全部命中对。
+// p_faction < 0 = 不限阵营。配合「原生权威存储」：几何在原生 O(弹×目标) 跑完，
+// GDScript 只处理命中后的宿主规则（伤害 / RNG / 记忆 / 音效），避免逐弹跨界。
+PackedInt32Array DanmakuStore::overlap_pairs(int p_faction, const PackedVector2Array &p_targets, const PackedFloat32Array &p_radii) const {
+	PackedInt32Array out;
+	const int tn = MIN(p_targets.size(), p_radii.size());
+	if (tn == 0 || _count == 0) { return out; }
+	for (int i = 0; i < _count; ++i) {
+		if (p_faction >= 0 && _faction[i] != p_faction) { continue; }
+		if (_fx[i] > 0.0f || _type[i] < 0) { continue; }
+		for (int t = 0; t < tn; ++t) {
+			if (hit_test(i, p_targets[t], p_radii[t])) {
+				out.push_back(i);
+				out.push_back(t);
+			}
+		}
+	}
+	return out;
 }
 
 PackedInt32Array DanmakuStore::query_circle(const Vector2 &p_center, float p_search_radius) const {

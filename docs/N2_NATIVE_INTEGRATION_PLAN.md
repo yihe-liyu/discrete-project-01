@@ -2,7 +2,7 @@
 
 > **状态**：进行中。N2.1 ✅ / N2.2 积分段 ✅ / **N2.2 存储段核心 ✅** / N4-real ✅ /
 > **L3.5-1 ✅ · L3.5-2 ✅ · L3.5-3 ✅（含 3b）· L3.5-5 主体 ✅ · L3.5-6 真人试玩 ✅**；
-> 当前批次 = **L3.5-4「消费方改读原生」**（4a 进行中）。
+> 当前批次 = **L3.5-4「消费方改读原生」**（4a ✅，4b 待做）。
 > **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §10（N0–N5）；`gdextension/`。
 
 ## 目标
@@ -133,8 +133,10 @@
 3. **L3.5-3 ✅（2026-09-14，含 3b）** bridge 接入：`KernelNativeSystem` 维护 per-bullet 批状态，每帧 `integrate_batch + behavior_batch`，降序重放 dead，drain 事件；原生可用时**不再创建 `BehaviorProcessor`**。修 3 个真 bug（场域未注入 / store 未 setup / 测试期望）。全量 361/3951 全绿。
    - **3b 后修复（2026-09-14，真人试玩暴露）**：① 事件必须按**事件自身 program**（`eprog`）派发，不能用 per-bullet 快照反查（despawn 会污染快照）；② 原生 `anchor_drift` 忽略 `anchor_id` / `use_global` → 魔理沙激光全粘自机，另修 `behavior_batch` 新弹首帧内部状态未初始化。详见 `BEST_PRACTICES_LOG.md`。
 4. **L3.5-4 进行中** 消费方（render / physics / laser / debug）改读原生。
-   - **前置（2026-09-14 发现，4a）**：判定层是 `O(玩家弹×敌人)` 次 `hit_test`；按边界铁律，若原生 `hit_test` **逐次**调会比现在更慢。
-     → 先加**原生批量重叠接口**（`overlap_pairs(mask, targets, radii)`），几何整体下沉，GDScript 只算命中后的规则（伤害 / RNG / 记忆 / 音效）。
+   - ✅ **4a（2026-09-14）原生批量重叠**：`overlap_pairs(faction, targets, radii) -> [bullet, target, ...]` 扁平对；
+     几何整体下沉，一次跨界返回全部命中对，杜绝 `O(弹×目标)` 次跨界。`test_native_overlap_pairs` 3/3
+     （circle / offset / rect × 阵营 × 双阈值 + 非空洞）。
+   - 余：**4b** 判定切原生（物理走 `overlap_pairs`）→ **4c** 渲染数据源 → **4d** 激光/调试 → **4e** 存储翻转 → **4f** 删壳。
 5. **L3.5-5 主体 ✅（随 3b）** 事件 drain（emit / sfx / call → `queue_spawn` / sfx / 内容回调）；余：边界完善。
 6. **L3.5-6 ✅（2026-09-14）** 真实舞台开机 + 真人试玩 —— 非符1 打穿，行为 / 激光 / 判定手感通过（并因此抓出 3b 两处 bug）。
 7. **L4** 拆除（删 1219 + 273 + rebuild）。
