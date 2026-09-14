@@ -18,6 +18,19 @@
 
 ## 记录
 
+### 2026-09-14 — L3 ✅：原生行为执行器（packed program）与参考解释器 parity
+
+- **目标**：把描述符执行搬到原生（行为 4.25ms 那块）。
+- **产出**：
+  - `BulletLifecycle.compile()`：描述符 → **packed program**（ops / args / 相位偏移 / 槽）；Callable / SFX 留**程序级表**（事件回传 local_id，Callable 永不进原生）。
+  - 原生 `DanmakuStore`：per-bullet program/phase/tick/elapsed/slots + `register_program / set_program / behavior_tick(dt, player, boss, has_boss, enemies) → events`。执行全部 9 move / 5 condition / 6 action；emit / sfx / call 走**事件**。
+- **验证**：`test_native_executor` **9/9（55 断言）** —— curve / accel / world_accel / bounce / avoid / homing / radial / non_mid / marisa 原生 ↔ GDScript 参考解释器位置 / 速度 / 发射事件一致。
+- **两个关键发现**：
+  1. **32↔64 位浮点**：GDScript 标量 64 位、原生 32 位 → 三角函数类累积漂移，需容差（2e-3）。N2.2 积分（纯加法）能逐位是特例。
+  2. **steer 是反馈环**：转向→位置→角度→放大；浮点差会被放大成方向翻转。故 homing 只在「加速未饱和、反馈未放大」的地平线内对照。**原生成为唯一实现后这不再是问题**（确定性在原生内部自洽）——这是过渡期对照的限制。
+- **踩坑**：原生 emit 读错参数下标（`speed=a[5] / at_end=a[7]`，应为 `a[4] / a[5]`）→ 全部发射位置 / 方向错。测试自身也踩过「参考 host 与原生 host 共用」。
+- **验收**：verify.sh 全绿。
+
 ### 2026-09-14 — N2 存储段（核心）：原生 SoA 存储 + 积分 + 回收；与 GDScript 1:1
 
 - **背景**：N2 存储段**单独做**会掉进 110ns 的坑（GDScript 行为逐弹 get/set 原生存储）。所以按**融合形态**推进：原生持有 SoA，并将由原生**直接执行描述符**（L3）。本步先落**存储核心**。
@@ -369,8 +382,3 @@
 - **背景**：A17 的命名复查发现「同一概念不同名」成片，根因和 A17 一样 —— **基线 / ARCHITECTURE 从未定义代码内标识符的命名规则**（R15 只管文件/文件夹/节点的大小写）。
 - **骨架（用户定）**：引用类变量名 **= 类型名 snake**；**节点名与变量名不符 → 有一方要改**；除极常见缩写外**不缩写**。
 - **落点**：基线新增「**标识符命名契约**」，与注入契约 / 命名边界契约并列。补了原方案没覆盖的 6 类（集合·映射 / 布尔 / 回调 / preload 常量 / 函数动词 / ``@onready``），并加了**从 lint 结果反推出来的例外**：
-  - **公开字段/属性 = 角色名允许**（`ctx.bullets` / `ctx.player` / `ctx.stage`）—— 它们是对外 **API**（ARCHITECTURE §3 意图层）；硬套类名会把 `ctx.bullets.shoot_spread` 变成 `ctx.bullet_service.shoot_spread`，**破坏内容与文档**。判据：**名字出现在内容（`data/**`）或文档里 → 角色名**。
-  - 内置基类类型（`Marker2D`）**节点名赢**；只有**私有**字段才套「类型→名」。
-- **工具**：`tools/check_naming.sh`（默认只报告，`--fail` 交 CI）四组：① 私有字段名 ≠ `_`+类型snake；② 同类型多个私有字段名；③ ``@onready`` 变量名 ≠ 节点名；④ 节点名 PascalCase。
-- **实测**：253 脚本 / 127 自定义类型 → **应改 91 条**（私有字段 67 / 多名称类型 13 / 节点引用 8 / 节点名 3）；公开字段·属性 70 条（角色名，放行）。
-- **为什么值得**：这条规则**可机械校验** —— lint 一进 CI 就再也不会漂回「同物不同名」。

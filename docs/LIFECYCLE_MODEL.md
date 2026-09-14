@@ -223,7 +223,7 @@ bounce → phases: [
 | **L0** | 本文档评审定稿 | 词汇 + schema 冻结 |
 | **L1 ✅（2026-09-13）** | `BulletLifecycle` builder（GDScript）+ **参考解释器**（跑描述符，基于现有 `BulletSystem`） | 2/2 parity：bounce/curve 逐位 |
 | **L2 ✅（2026-09-13）** | 10 行为写成 preset，**parity** vs 现有 GDScript 行为 | 10/10 逐位 parity（bounce/curve + 8 个） |
-| **L3** | **原生描述符执行器**（C++），换执行器；parity vs 参考解释器 | 性能 |
+| **L3 ✅（2026-09-14）** | **原生描述符执行器**（C++ `behavior_tick`），换执行器；parity vs 参考解释器 | `test_native_executor` 9/9 |
 | **L4** | 拆 GDScript 行为 + `CoroutineScript` 快速模式（按拆除清单） | 净减 |
 
 > 依赖：L3 需要 **N2 存储段**（原生 SoA）—— 否则重演 110ns 的坑。

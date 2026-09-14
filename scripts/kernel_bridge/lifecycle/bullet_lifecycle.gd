@@ -297,3 +297,174 @@ static func marisa_laser(anchor_id: int, offset: Vector2, angle: float, drift_sp
 	lc.anchor_drift(anchor_id, offset, angle, drift_speed, true, initial_drift, true)
 	lc.until_never()
 	return lc
+
+# ═══ L3：编译成原生可读的 packed program ═══
+# op / target / dirk / cmp 的整数编码**必须与 C++ DanmakuStore.behavior_tick 一致**。
+const ARGS := 8
+
+const OP_M_ACCEL_WORLD := 1
+const OP_M_ACCEL_HEADING := 2
+const OP_M_ROTATE := 3
+const OP_M_STEER := 4
+const OP_M_SPEED_LERP := 5
+const OP_M_SCALE_SPEED := 6
+const OP_M_SET_HEADING := 7
+const OP_M_SET_SPEED := 8
+const OP_M_ANCHOR_DRIFT := 9
+const OP_C_NEVER := 20
+const OP_C_ELAPSED := 21
+const OP_C_NEAR := 22
+const OP_C_AT_WALL := 23
+const OP_C_STATE := 24
+const OP_A_EMIT := 40
+const OP_A_SFX := 41
+const OP_A_DESPAWN := 42
+const OP_A_SET_HEADING := 43
+const OP_A_SET_SPEED := 44
+const OP_A_CALL := 45
+
+const TG_PLAYER := 0
+const TG_NEAREST := 1
+const TG_BOSS := 2
+const DK_HEADING := 0
+const DK_TOWARD := 1
+const DK_AWAY := 2
+
+## 编译为扁平 packed program。actions / sfx 是**程序级**表：事件回传 (program, local_id)，
+## 由宿主查这两张表（Callable 永不进原生）。
+func compile() -> Dictionary:
+	var ops := PackedInt32Array()
+	var args := PackedFloat32Array()
+	var move_start := PackedInt32Array()
+	var move_count := PackedInt32Array()
+	var until_idx := PackedInt32Array()
+	var act_start := PackedInt32Array()
+	var act_count := PackedInt32Array()
+	var actions: Array[Callable] = []
+	var sfx: Array[StringName] = []
+	for phase in phases:
+		var mv: Array = phase[&"moves"]
+		move_start.append(ops.size())
+		move_count.append(mv.size())
+		for m in mv:
+			_emit(ops, args, _op_move(m[&"op"]), _args_move(m))
+		until_idx.append(ops.size())
+		_emit(ops, args, _op_cond(phase[&"until"][&"op"]), _args_cond(phase[&"until"]))
+		var acts: Array = phase[&"on_end"]
+		act_start.append(ops.size())
+		act_count.append(acts.size())
+		for a in acts:
+			_emit(ops, args, _op_act(a[&"op"]), _args_act(a, actions, sfx))
+	return {
+		&"ops": ops, &"args": args,
+		&"move_start": move_start, &"move_count": move_count,
+		&"until_idx": until_idx,
+		&"act_start": act_start, &"act_count": act_count,
+		&"phase_count": phases.size(), &"slots": slots,
+		&"actions": actions, &"sfx": sfx,
+	}
+
+
+func _emit(ops: PackedInt32Array, args: PackedFloat32Array, op: int, a: Array) -> void:
+	ops.append(op)
+	for i in ARGS:
+		args.append(float(a[i]) if i < a.size() else 0.0)
+
+
+func _op_move(op: StringName) -> int:
+	match op:
+		M_ACCEL_WORLD: return OP_M_ACCEL_WORLD
+		M_ACCEL_HEADING: return OP_M_ACCEL_HEADING
+		M_ROTATE: return OP_M_ROTATE
+		M_STEER: return OP_M_STEER
+		M_SPEED_LERP: return OP_M_SPEED_LERP
+		M_SCALE_SPEED: return OP_M_SCALE_SPEED
+		M_SET_HEADING: return OP_M_SET_HEADING
+		M_SET_SPEED: return OP_M_SET_SPEED
+		M_ANCHOR_DRIFT: return OP_M_ANCHOR_DRIFT
+	return 0
+
+
+func _op_cond(op: StringName) -> int:
+	match op:
+		C_NEVER: return OP_C_NEVER
+		C_ELAPSED: return OP_C_ELAPSED
+		C_NEAR: return OP_C_NEAR
+		C_AT_WALL: return OP_C_AT_WALL
+		C_STATE: return OP_C_STATE
+	return 0
+
+
+func _op_act(op: StringName) -> int:
+	match op:
+		A_EMIT: return OP_A_EMIT
+		A_SFX: return OP_A_SFX
+		A_DESPAWN: return OP_A_DESPAWN
+		A_SET_HEADING: return OP_A_SET_HEADING
+		A_SET_SPEED: return OP_A_SET_SPEED
+		A_CALL: return OP_A_CALL
+	return 0
+
+
+func _target_code(t: StringName) -> int:
+	match t:
+		T_PLAYER: return TG_PLAYER
+		T_NEAREST_ENEMY: return TG_NEAREST
+		T_BOSS: return TG_BOSS
+	return -1
+
+
+func _dir_args(d: Dictionary) -> Array:
+	var dk := DK_HEADING
+	if d[&"kind"] == D_TOWARD:
+		dk = DK_TOWARD
+	elif d[&"kind"] == D_AWAY:
+		dk = DK_AWAY
+	return [dk, _target_code(d[&"target"]), float(d[&"angle"])]
+
+
+func _args_move(m: Dictionary) -> Array:
+	match m[&"op"]:
+		M_ACCEL_WORLD: return [Vector2(m[&"vec"]).x, Vector2(m[&"vec"]).y]
+		M_ACCEL_HEADING: return [float(m[&"a"])]
+		M_ROTATE: return [float(m[&"w"]), float(m[&"limit"]), float(m[&"slot"])]
+		M_STEER: return [_target_code(m[&"target"]), float(m[&"max_turn"]), float(m[&"ramp"]), float(m[&"dist_weight"]), float(m[&"speed_from"]), float(m[&"speed_to"]), float(m[&"steer_until"])]
+		M_SPEED_LERP: return [float(m[&"from"]), float(m[&"to"]), float(m[&"ramp"])]
+		M_SCALE_SPEED: return [float(m[&"f"])]
+		M_SET_HEADING: return _dir_args(m[&"dir"])
+		M_SET_SPEED: return [float(m[&"speed"])]
+		M_ANCHOR_DRIFT:
+			var flags := 0.0
+			if bool(m[&"use_global"]): flags += 1.0
+			if bool(m[&"render_heading"]): flags += 2.0
+			var off := Vector2(m[&"offset"])
+			return [float(m[&"anchor_id"]), off.x, off.y, float(m[&"angle"]), float(m[&"speed"]), flags, float(m[&"initial"]), float(m[&"slot"])]
+	return []
+
+
+func _args_cond(c: Dictionary) -> Array:
+	match c[&"op"]:
+		C_ELAPSED: return [float(c[&"t"])]
+		C_NEAR: return [_target_code(c[&"target"]), float(c[&"r"]), float(c[&"every"]), float(c[&"every_ticks"])]
+		C_AT_WALL: return [float(c[&"mask"])]
+		C_STATE: return [float(c[&"slot"]), float(c[&"cmp"]), float(c[&"value"])]
+	return []
+
+
+func _args_act(a: Dictionary, actions: Array[Callable], sfx: Array[StringName]) -> Array:
+	match a[&"op"]:
+		A_EMIT:
+			var aid := actions.size()
+			actions.append(a[&"factory"])
+			return [float(aid)] + _dir_args(a[&"dir"]) + [float(a[&"speed"]), 1.0 if bool(a[&"at_end"]) else 0.0]
+		A_SFX:
+			var sid := sfx.size()
+			sfx.append(a[&"key"])
+			return [float(sid), float(a[&"db"])]
+		A_SET_HEADING: return _dir_args(a[&"dir"])
+		A_SET_SPEED: return [float(a[&"speed"])]
+		A_CALL:
+			var cid := actions.size()
+			actions.append(a[&"fn"])
+			return [float(cid)]
+	return []
