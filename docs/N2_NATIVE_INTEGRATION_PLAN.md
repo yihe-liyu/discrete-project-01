@@ -71,3 +71,24 @@
   不让原语泄漏进创作面。
 - **依赖顺序**：N2 存储段 → N3 行为 → 删 GDScript 内核 / 归档重建版（M4）。
   在此之前 GDScript 内核仍是**在跑的实现**，不得半途删。
+
+---
+
+## 拆除清单（N3 的验收尾巴，2026-09-13 登记）
+
+> 铁律：旧实现必须等新实现**全覆盖**才能删。**N3 单独不简化；N3 + 拆除才简化。**
+> **M4 并进本清单**（不给将死的实现单独选家）。**建议：N3 之前不做零碎删除**（收益低、伤过渡期 DX）。
+
+| 删什么 | 量 | 门槛 |
+|---|---|---|
+| `scripts/kernel/**`（GDScript 内核整棵） | **1219 行** | N2 存储段 + N3 全覆盖 |
+| `scripts/kernel_bridge/behavior/**` + `_port_by_sig` + `kernel_port` | **273 行** + 2 处 | N3 |
+| `_sync_gdscript`（渲染回退） | ~56 行 | 扩展必需 + N4-real |
+| `use_native` / `is_native_ready` 回退分支 | 7 处 | 内核删除后 |
+| `KernelNativeSystem extends BulletSystem` scaffold | ~62 行 | 原生系统直接当内核 |
+| rebuild 仓库（14 内核 .gd + 94 测试） + `tools/vendor_kernel.sh` | 120 行 + 一仓库 | 同上 |
+| **保留**：`kernel_bridge/` 宿主耦合（伤害 / 擦弹 / bomb / Boss） | **~688 行** | **不是重复** |
+
+**诚实提醒**：原生会长到 ~800–1200 行接替，**行数未必大减**；真收益 = **双维护消失 + 一处改 + 少一个仓库与 vendor 纪律**。
+
+**待定**：`BulletType` / `EffectType` 在 `scripts/kernel/**` 删除后归位何处（原生 `DanmakuType`？还是搬 `scripts/data/`）。
