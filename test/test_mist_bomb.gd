@@ -58,6 +58,35 @@ func test_mist_start_size_comes_from_ranges() -> void:
 	bomb.queue_free()
 
 
+func test_mist_clear_shape_is_exact_ellipse() -> void:
+	# 满尺寸椭圆（贴图 256×128 → 半轴 128/64）。椭圆中心在本地 c（pivot 造成的偏移），
+	# 两颗敌弹都落在**外接圆(半径 128)内**：
+	#   ① 椭圆内
+	#   ② 椭圆四角之外（到 c 距离 ≈114 < 128，但 x²/a²+y²/b² ≈1.35 > 1）
+	# 旧的外接圆清弹会把 ①② 全清；精确椭圆只清 ①。
+	var bd := _short_mist()
+	bd.texture = MARISA_DATA.bomb.texture
+	bd.length_range = Vector2(1.0, 1.0)
+	bd.width_range = Vector2(1.0, 1.0)
+	var tex: Vector2 = bd.texture.get_size()
+	var half: Vector2 = tex * 0.5
+	var c: Vector2 = tex * (Vector2(0.5, 0.5) - bd.pivot_ratio)   # 椭圆中心（bomb 本地）
+	var bomb = BulletManager.current.shoot_bomb_bullet(bd, Vector2(448.0, 700.0), Vector2.RIGHT)
+	bomb._physics_process(1.0 / 60.0)
+	var inside_pt: Vector2 = bomb.to_global(c + Vector2(0.0, half.y * 0.78))
+	var corner_pt: Vector2 = bomb.to_global(c + Vector2(half.x * 0.78, half.y * 0.86))
+	for p in [inside_pt, corner_pt]:
+		var ed := BulletData.new().enemy().tex("小玉")
+		ed.velocity = Vector2.ZERO
+		BulletManager.current.shoot_bullet(ed, p, Vector2.UP)
+	assert_eq(BulletManager.current.kernel_system().get_active_count(), 2, "先有 2 颗敌弹")
+	bomb._physics_process(1.0 / 60.0)
+	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "只清椭圆内的那颗")
+	var survivor: Vector2 = BulletManager.current.kernel_system().get_position(0)
+	assert_almost_eq(survivor.distance_to(corner_pt), 0.0, 0.5, "留下的是椭圆四角外那颗")
+	bomb.queue_free()
+
+
 func test_mist_bomb_stages_grow_follow_and_expire() -> void:
 	var bd := _short_mist()
 	bd.texture = MARISA_DATA.bomb.texture

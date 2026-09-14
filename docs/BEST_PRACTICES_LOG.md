@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — mist bomb 清弹改**精确椭圆**（不再是外接圆）
+
+- **先纠正我自己**：上一轮我说"精确椭圆要动 C++、圆链不用"——**看错了**。`_kernel_bullet_physics.sweep_enemy_bullets` 本身就是 **GDScript** 循环（不是原生），所以精确椭圆和圆链**同样"纯宿主"**，而且更准、更简单。
+- **做法**：`sweep_enemy_bullets(center, radius, on_clear, inside)` 加可选 `inside` 形状过滤（`radius` 仅当外接预筛）；`BulletManager` 加 `clear_enemy_bullets_in_shape(center, radius, inside)`，`..._in_circle` 转发给它；`KernelMistBomb` 传 `inside = _ellipse_hit(to_local(p), center, half * clear_scale)`。
+- **收益**：伤敌 / 清弹现在**共用同一个** `_ellipse_hit` → 清弹形状与贴图一致（旧外接圆在椭圆四角多清）；`clear_scale` 语义变干净（1.0 = 与贴图一致，>1 多清一圈）。
+- **代价**：每帧一个 `Callable`（bomb 只有 1 个，可忽略）。
+- **验证**：`test_mist_bomb` 4/4（新增：外接圆内、椭圆四角外的敌弹**不被清**）；`./tools/verify.sh` 全绿 **379 / 4185**。
+
 ### 2026-09-14 — mist bomb 展开范围参数化：length_range / width_range 两个 vec2
 
 - **起因**："初始宽度在哪"——原先阶段1/2 把宽写死成 `scale.y = 0.0`，数据里根本没有"起始宽度"这种参数；手改成 `0.2` 只能改代码。

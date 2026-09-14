@@ -115,10 +115,13 @@ func _damage_and_clear(delta: float) -> void:
 					half_a + enemy.hitbox_radius, half_b + enemy.hitbox_radius):
 				enemy.take_damage(_dps * delta)
 	if bullet_manager:
-		bullet_manager.clear_enemy_bullets_in_circle(to_global(center), maxf(half_a, half_b) * _clear_scale)
+		var half := Vector2(half_a, half_b) * _clear_scale
+		var inside := func(p: Vector2) -> bool:
+			return _ellipse_hit(to_local(p), center, half.x, half.y)
+		bullet_manager.clear_enemy_bullets_in_shape(to_global(center), maxf(half.x, half.y), inside)
 
 
-## 轴对齐椭圆包含测试（伤害 / 清弹判定共用；调用方把点转到本地空间）。
+## 轴对齐椭圆包含测试（伤敌 + 清敌弹共用；调用方把点转到 bomb 本地空间）。
 static func _ellipse_hit(p: Vector2, c: Vector2, a: float, b: float) -> bool:
 	if a <= 0.0 or b <= 0.0:
 		return false

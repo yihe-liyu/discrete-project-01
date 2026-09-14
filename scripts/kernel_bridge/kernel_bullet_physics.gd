@@ -104,10 +104,11 @@ func _player_bullets_vs_enemies() -> void:
 
 
 ## 死亡清弹圈的一帧扫掠：清 center/radius 内的敌弹，逐弹播消散特效 + on_clear。
+## inside 可选：额外形状判定（如 bomb 椭圆），不通过则跳过；radius 只当外接预筛。
 ## 与旧 DeathClear 的逐弹循环 1:1（颜色取内核该弹当前色；不做出生雾过滤——旧池 is_ready
 ## 在 bind() 末尾无条件置真，雾中弹同样参与消弹）。
 ## 供 BulletManager 以 DeathClear 的每帧回调形式驱动。
-func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Callable()) -> void:
+func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Callable(), inside: Callable = Callable()) -> void:
 	var system := backend.system
 	if system == null:
 		return
@@ -119,6 +120,8 @@ func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Ca
 			continue
 		var pos: Vector2 = system.get_position(i)
 		if pos.distance_squared_to(center) > r2:
+			continue
+		if inside.is_valid() and not inside.call(pos):
 			continue
 		if on_clear.is_valid():
 			on_clear.call(pos)

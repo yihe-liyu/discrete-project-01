@@ -123,11 +123,17 @@ func clear_all_lasers() -> void:
 	_laser_engine.clear()
 
 
-# ═══ 圆内清敌弹（炸弹持续清弹）═══
+# ═══ 形状内清敌弹（炸弹持续清弹）═══
 
+## 圆内清敌弹。
 func clear_enemy_bullets_in_circle(center: Vector2, radius: float) -> void:
+	clear_enemy_bullets_in_shape(center, radius, Callable())
+
+
+## 外接圆(center, radius)内 + inside(pos) 判定清敌弹（bomb 椭圆等非圆形状都走这里）。
+func clear_enemy_bullets_in_shape(center: Vector2, radius: float, inside: Callable) -> void:
 	if _kernel_bullet_physics != null:
-		_kernel_bullet_physics.sweep_enemy_bullets(center, radius, Callable())
+		_kernel_bullet_physics.sweep_enemy_bullets(center, radius, Callable(), inside)
 
 
 # ═══ 死亡清弹 ═══

@@ -22,4 +22,4 @@ class_name MistBombData
 
 @export_group("判定")
 @export var dps: float = 200.0                              ## 覆盖范围内每秒伤害（每帧 dps*delta）
-@export var clear_scale: float = 1.0                        ## 清弹半径 = 椭圆长半轴 × 它（≥1 才盖住整个椭圆）
+@export var clear_scale: float = 1.0                        ## 清弹椭圆 = 判定椭圆 × 它（1.0 = 与贴图一致，>1 多清一圈）
