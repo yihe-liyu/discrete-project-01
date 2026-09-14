@@ -17,10 +17,8 @@ const _FACTION_BOMB := 2
 
 var _groups: Dictionary = {}  # key → {mmi, mm, mesh}
 
-## 渲染同步走原生（DanmakuRenderBridge：分组 + 旋转 + fade + 填充）；不存在则 GDScript 回退。
-var use_native_sync: bool = true
+## 渲染同步走原生 DanmakuRenderBridge（分组 + 旋转 + fade + 填充）；L3.5-4f 起扩展为必需。
 var _bridge = null
-var _bridge_probed: bool = false
 var _type_table_count: int = -1
 
 
@@ -51,69 +49,14 @@ func _sync():
 func _sync_kernel():
 	if _render_bridge() != null:
 		_sync_native()
-		return
-	_sync_gdscript()
-
-
-## GDScript 回退路径：分组 + 逐实例填充全在脚本侧。
-func _sync_gdscript():
-	var system := backend.system
-	var count: int = system.get_active_count()
-	if count == 0:
+	else:
 		_hide_all()
-		return
-	var positions := system.get_positions()
-	var velocities := system.get_velocities()
-	var colors := system.get_colors()
-	var type_indices := system.get_type_indices()
-	var factions := system.get_factions()
-	var registry := system.get_type_registry()
-	var active_groups: Dictionary = {}
-	for i in count:
-		var ti: int = type_indices[i]
-		if ti < 0:
-			continue   # 纯特效行：本批不画（与旧路径"无贴图不进组"同语义）
-		var tex: Texture2D = backend.texture_for_index(ti)
-		if tex == null:
-			continue
-		var bt: BulletType = registry[ti]
-		var host_faction := _host_faction(factions[i])
-		var key := _group_key(tex, host_faction, bt.tint_mode)
-		if not active_groups.has(key):
-			active_groups[key] = {tex = tex, faction = host_faction, tint_mode = bt.tint_mode, rows = []}
-		active_groups[key].rows.append(i)
-	for key in active_groups:
-		var g = active_groups[key]
-		var rows: Array = g.rows
-		var eg = _get_or_create_group(key, g.tex, g.faction, g.tint_mode, rows.size())
-		var mm: MultiMesh = eg.mm
-		if mm.instance_count < rows.size():
-			mm.instance_count = max(rows.size() * 2, 2048)
-		mm.visible_instance_count = rows.size()
-		eg.mmi.visible = true
-		for s in rows.size():
-			var r: int = rows[s]
-			var bt: BulletType = registry[type_indices[r]]
-			var rot: float = bt.rotation_for(velocities[r])
-			mm.set_instance_transform_2d(s, Transform2D(rot, Vector2.ONE, 0.0, positions[r]))
-			var c: Color = colors[r]
-			var fade: float = system.get_render_fade(bt.kind)
-			if fade < 1.0:
-				c.a *= fade
-			mm.set_instance_color(s, c)
-	for key in _groups:
-		if not active_groups.has(key):
-			_hide_group(key)
 
 
 ## 原生渲染同步器（存在则用）。
 func _render_bridge():
-	if not use_native_sync:
-		return null
-	if not _bridge_probed:
-		_bridge_probed = true
-		if ClassDB.class_exists("DanmakuRenderBridge"):
-			_bridge = ClassDB.instantiate("DanmakuRenderBridge")
+	if _bridge == null and ClassDB.class_exists("DanmakuRenderBridge"):
+		_bridge = ClassDB.instantiate("DanmakuRenderBridge")
 	return _bridge
 
 

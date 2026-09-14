@@ -47,10 +47,9 @@
 
 | 优先级 | 谁 | 做什么 |
 |---|---|---|
-| `-10` | BulletSystem | 积分位置、递减计时/相位、剔除 |
-| `0` | World / 敌机 / 自机 / 子机 | 移动、发弹、跟随 |
-| `5` | BulletBehavior | 弹行为：设速度 / 锚定 / 标记回收 |
-| `10` | CollisionCoordinator | 检测 + 派发 |
+| `-10` | `KernelNativeSystem`（原生 `DanmakuStore` 权威） | `integrate`（积分/寿命/相位/剔除）+ `behavior_tick`（行为）+ 每帧 pull 只读快照 |
+| `-4` | `KernelBulletBackend` | 延后动作 flush（emit/call 队列）+ 激光整批渐隐 |
+| `0` | `BulletManager` / World / 敌机 / 自机 / 子机 | 碰撞规则（`KernelBulletPhysics`：命中/擦弹/伤害/清弹，几何走原生网格）+ 移动、发弹 |
 
 > 原项目现状：无显式 `FrameOrder`，顺序依赖 autoload 的 `_physics_process`（见轨道 B / B5）。
 
@@ -123,7 +122,7 @@
 > **适用范围**：私有字段、公开状态字段、局部变量都适用；仅 `ctx.*` 门面豁免（2026-09-13 拍板）。**状态字段已收敛**（`refs`→`entity_registry`、`world`/`bullets`→`bullet_manager`）；**局部极短名已清**（`sd`→`stage_data`、`st`→`stage`/`behavior_state`、`bm`→`bullet_manager`/`bookmarks`、`bg`→`background`/`stage_background`、`tl`→`timeline`）；工作台自身本地名按决定不动。`tl` 改名连带 `bookmark_extractor` 正则 → `timeline\.at(`。
 > **形参遮蔽成员** → 加 `p_` 前缀（`p_ctx` 遮蔽 `CoroutineScript.ctx`）；**真的不用** → 单 `_`（`_ctx`）；**禁止叠加** `_p_`。
 > **单字母 / 极短名**：只允许「单行表达式 / 热路径循环」作用域（`bullet_system` 的 `p`/`r`/`s`）；跨行、跨函数、字段一律全名。
-> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI；`verify.sh` 第 2 步已启用 `--fail`）。**当前 0 条**（2026-09-13 收敛）；覆盖 ① 私有字段名 / ② 同类型多私名 / ③ `@onready` 节点名 / ④ 节点名 PascalCase 四类，**外加 ⑤ 形参·局部·循环变量遮蔽类成员**（2026-09-13 补，对应上条 `p_` 规则；静态扫描，不依赖 Godot reload）——**公开字段与局部缩写仍需人工守**（本表 + 白名单）；`scripts/kernel/**` 是 vendor 快照，不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
+> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI；`verify.sh` 第 2 步已启用 `--fail`）。**当前 0 条**（2026-09-13 收敛）；覆盖 ① 私有字段名 / ② 同类型多私名 / ③ `@onready` 节点名 / ④ 节点名 PascalCase 四类，**外加 ⑤ 形参·局部·循环变量遮蔽类成员**（2026-09-13 补，对应上条 `p_` 规则；静态扫描，不依赖 Godot reload）——**公开字段与局部缩写仍需人工守**（本表 + 白名单）；`test/reference/**` 是冻结的 vendor 参照实现（原 `scripts/kernel`，不在生产），不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
 
 ### 会话状态契约（per-run static）
 
@@ -249,7 +248,7 @@
 - [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
 - [ ] R2（残余）：`item_service.gd:16` / `player.gd:286` 用 `current_scene.get_node_or_null("World")` 取 World，可改注入
 - [ ] 编排路线（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生（工作台仍正则扫源码）/ Step 6 `ctx.background` 注入服务 待做；Step 5 命令化时间线 + Step 7 命令编辑器 = 可选 / 产品决定，暂缓
-- [ ] **内核融合（M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：M1（`damage`/`hit_sfx` 进弹型）+ **M2（词汇合一）已完成**；**M3（渲染/纹理归属）已拍板 ③ 纹理句柄** —— `_texture_by_index` 是**保留的渲染插座**（非债），由 N4 原生替换；余 `scripts/kernel_bridge/` **924 行**（适配器 236 + 宿主耦合 688；**行数不是目标**）+ `_port_by_sig` + 6 个 `kernel_port`（VM 前身）→ 判据改为**结构性**（0 类型映射 / 0 内容签名侧表），见 §16.5；**2026-09-13 决策：扩展为必需** —— GDScript 内核降为过渡，N2 存储段 + N3 后删除（见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策）
+- [ ] **内核融合（M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：M1（`damage`/`hit_sfx` 进弹型）+ **M2（词汇合一）已完成**；**M3（渲染/纹理归属）已拍板 ③ 纹理句柄** —— `_texture_by_index` 是**保留的渲染插座**（非债），由 N4 原生替换；余 `scripts/kernel_bridge/` **924 行**（适配器 236 + 宿主耦合 688；**行数不是目标**）+ `_port_by_sig` + 6 个 `kernel_port`（VM 前身）→ 判据改为**结构性**（0 类型映射 / 0 内容签名侧表），见 §16.5；**2026-09-13 决策：扩展为必需** —— GDScript 内核降为过渡，N2 存储段 + N3 后删除（见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策）。**2026-09-14 已完成（L3.5-4e/4f）**：原生 `DanmakuStore` 成**唯一存储**；`scripts/kernel/**` 已从**生产删除**，冻结参照（oracle）移入 `test/reference/`；`KernelNativeSystem` 为 standalone 桥接类（`kernel_bridge/` 宿主耦合保留）
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
 > - **R14（2026-09-13 A1 更正）**：`save_manager.gd` 走 `user://save_data.cfg`；但**内容侧**符卡簿 / 音乐解锁曾直接 `ResourceSaver.save` 到 `res://`（4 处，导出包只读必失败）→ 已迁「res:// 出厂默认 + user:// 覆盖」，并加 `test_persistence_paths` 守卫。

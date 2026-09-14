@@ -1,9 +1,11 @@
 # GDExtension 弹幕内核 + Danmaku VM —— 终局形态设计（草案）
 
 > **性质**：终局形态设计（北极星）。本文写"要长成什么样"，好让**每一步都朝它对齐**。
-> **状态（2026-09-13 刷新）**：触发条件**已达成**（6000 弹带行为 ≈ 77% 帧预算，见 §0.2）；N1 工具链 ✅、N2.2 原生积分 ✅（5.9×）、N4-real 原生渲染 ✅（6.5×）均已实测。
+> **状态（2026-09-14 刷新）**：触发条件**已达成**；N1 工具链 ✅、N2.2 原生积分 ✅、N4-real 原生渲染 ✅、
+> **L3.5 全落地 ✅**（原生行为/判定/宽相 + 存储翻转：`KernelNativeSystem` 为唯一存储），**`scripts/kernel/**` 已从生产删除**
+> 冻结参照移入 `test/reference/`（见 `BEST_PRACTICES_LOG.md` 4e/4f）。**扩展为必需**。
 > **已拍板**：① 扩展成为**必需**（GDScript 内核转过渡，见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策）；② N3 走 **§5.7 路径 B「数据先行 → 原生 VM」**。
-> **前置阅读**：`docs/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`docs/N2_NATIVE_INTEGRATION_PLAN.md`（终局决策 + 拆除清单）；`scripts/kernel/README.md`。
+> **前置阅读**：`docs/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`docs/N2_NATIVE_INTEGRATION_PLAN.md`（终局决策 + 拆除清单）；`test/reference/`（冻结的 GDScript 参照实现）。
 
 ---
 
@@ -98,7 +100,7 @@ DanmakuWorld (Node)            # 组合根注入的宿主节点；唯一公开�
 └─ DeterministicClock/Rng      # 整数 tick + 单 RNG 通道（种子 = RunConfig.seed）
 ```
 
-**边界规则**：原生层零 `res://`、零 `class_name` 依赖、零 autoload；它只认自己的类型与 Packed 数组。这正是今天 `scripts/kernel/` 的 R2/R9 契约，换成原生后**依旧成立**。
+**边界规则**：原生层零 `res://`、零 `class_name` 依赖、零 autoload；它只认自己的类型与 Packed 数组。这正是原 `scripts/kernel/` 的 R2/R9 契约；换成原生后**依旧成立**（该内核已从生产删除，冻结参照在 `test/reference/`）。
 
 ---
 
@@ -259,7 +261,7 @@ for e in world.drain_events():                  # 帧末一次
         GRAZE: ...
 ```
 
-对比今天：`ctx.bullets.shoot_spread` → `BulletManager` → `KernelBulletBackend` → `BulletSystem` 的五跳，收成 **一跳**。
+对比今天：`ctx.bullets.shoot_spread` → `BulletManager` → `KernelBulletBackend` → `KernelNativeSystem`（原生 store）的链路（宿主 rules + 原生机制，不再是两个内核）。
 
 ---
 
@@ -282,7 +284,7 @@ for e in world.drain_events():                  # 帧末一次
 - **N0 边界冻结**（已完成）：`scripts/kernel/` 0 宿主引用、vendor 流程、FrameOrder 契约。
 - **N1 工具链验证 ✅ 已实测通过（2026-09-13）**：godot-cpp **v10（master）** + `api_version=4.7` → `scons target=template_debug` 编译最小 extension → **Godot 4.7.2 成功加载并注册类**（`ClassDB.class_exists("Hello") = true`）。环境：SCons 4.11.1 / g++ 16.2.1 / Python 3.14.7。**注意**：`.gdextension` 需编辑器导入一次（写 `.godot/extension_list.cfg`）才会被加载。**工具链已不是门。**
 - **N2.1 ✅（2026-09-13）** 原生 `DanmakuStore`：SoA + per-bullet type/faction/color + `spawn_batch`（~55×）。
-- **N2.2 积分段 ✅（2026-09-13）** 原生 `integrate_batch`（积分 / 寿命 / 相位 / 剔除）；桥接子类 `KernelNativeSystem extends BulletSystem` 接入（**5.9×**，6000 弹 0.699→0.118ms）；**不碰 vendor 内核**。
+- **N2.2 积分段 ✅（2026-09-13）** 原生积分（**5.9×**）；**L3.5-4e ✅（2026-09-14）** 改为原生**有状态** `integrate`/`behavior_tick`，`KernelNativeSystem` 为唯一存储（standalone，不再 extends `BulletSystem`）。
 - **N2 存储段（待做）** 原生接管 spawn / despawn / 宽相，消除 GDScript SoA。
 - **N3 行为 VM（待做，路径 B）**：按 §5.7 —— **先定 program schema + GDScript 参考解释器**，内容 `kernel_port()` → `{program:[...]}`，测试锁定；再换原生 VM 执行器。§5.1 的**手写原生 tenant** 留给宿主耦合行为。
 - **N4-real ✅（2026-09-13）** 原生 `DanmakuRenderBridge` 整段渲染同步（**6.5×**，6000 弹 7.19→1.10ms）；余图集资源（S13）按需。
@@ -292,7 +294,7 @@ for e in world.drain_events():                  # 帧末一次
 
 ## 11. 能删掉什么（对现工程的清算）
 
-- `scripts/kernel_bridge/`：**翻译层删除**；**宿主耦合 ~688 行永久保留**（§16.5 实测更正：行数不是目标）。
+- `scripts/kernel_bridge/`：**翻译层已删**（4f）；**宿主耦合永久保留**（伤害/擦弹/bomb/Boss + 原生 store 快照桥 + 行为 program 装配）。
 - `BulletData` ⇄ `BulletType` **双词汇 → 一套**（M2 的终局答案）。
 - 5 张侧表 → 0（`type_id` / `program_id` 取代）。
 - `ctx.bullets` 五跳 → 一跳。
