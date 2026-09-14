@@ -4,7 +4,7 @@ extends GutTest
 func test_start_records_seed():
 	var rec := ReplayRecorder.new()
 	rec.start()
-	assert_eq(rec.seed, RNG.get_seed(), "开始录制应记录当前 RNG 种子")
+	assert_eq(rec.rng_seed, RNG.get_seed(), "开始录制应记录当前 RNG 种子")
 	assert_true(rec.recording, "start 后应在录制中")
 
 func test_capture_appends_frames():
@@ -60,7 +60,7 @@ func test_save_load_roundtrip():
 	assert_true(rec.save(path), "应能存盘")
 	var rec2 := ReplayRecorder.new()
 	assert_true(rec2.load_file(path), "应能读盘")
-	assert_eq(rec2.seed, rec.seed, "种子应一致")
+	assert_eq(rec2.rng_seed, rec.rng_seed, "种子应一致")
 	assert_eq(rec2.duration_frames, rec.duration_frames, "帧数应一致")
 	assert_eq(rec2.frames, rec.frames, "帧数据应一致")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

@@ -24,15 +24,15 @@ func _scan(dir_path: String) -> void:
 		push_error("无法打开目录: " + dir_path)
 		return
 	dir.list_dir_begin()
-	var name := dir.get_next()
-	while name != "":
-		if dir.current_is_dir() and not name.begins_with("."):
-			_scan(dir_path.path_join(name))
-		elif name.ends_with(".gd"):
-			var path := dir_path.path_join(name)
+	var entry := dir.get_next()
+	while entry != "":
+		if dir.current_is_dir() and not entry.begins_with("."):
+			_scan(dir_path.path_join(entry))
+		elif entry.ends_with(".gd"):
+			var path := dir_path.path_join(entry)
 			_total += 1
 			# 场景模式 load()：autoload 完整注册、class_name 全局可用，编译上下文与真实游戏一致
 			if load(path) == null:
 				_failures.append(path)
-		name = dir.get_next()
+		entry = dir.get_next()
 	dir.list_dir_end()

@@ -10,7 +10,7 @@ const ACTIONS := ["move_left", "move_right", "move_up", "move_down", "shoot", "f
 const FORMAT_VERSION := 1
 
 var frames: PackedByteArray = PackedByteArray()  ## 每帧输入位掩码
-var seed: int = 0                                 ## 录制起始 RNG 种子
+var rng_seed: int = 0                             ## 录制起始 RNG 种子（勿叫 seed：会遮蔽内建 seed()）
 var recording := false                            ## 是否正在录制
 var duration_frames := 0                          ## 已录帧数
 
@@ -18,7 +18,7 @@ var duration_frames := 0                          ## 已录帧数
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
 func start() -> void:
 	frames = PackedByteArray()
-	seed = RNG.get_seed()
+	rng_seed = RNG.get_seed()
 	recording = true
 	duration_frames = 0
 
@@ -58,7 +58,7 @@ func to_dict() -> Dictionary:
 	return {
 		"version": FORMAT_VERSION,
 		"actions": ACTIONS,
-		"seed": str(seed),  # 字符串防 JSON int64 精度丢失（种子决定可复现性！）
+		"seed": str(rng_seed),  # 字符串防 JSON int64 精度丢失（种子决定可复现性！）
 		"duration": duration_frames,
 		"frames_hex": frames.hex_encode(),
 	}
@@ -78,7 +78,7 @@ func save(path: String) -> bool:
 func load_dict(d: Dictionary) -> bool:
 	if d.get("version", 0) != FORMAT_VERSION:
 		return false
-	seed = int(d.get("seed", "0"))  # 兼容字符串存储
+	rng_seed = int(d.get("seed", "0"))  # 兼容字符串存储（JSON 键仍叫 seed）
 	duration_frames = d.get("duration", 0)
 	frames = (d.get("frames_hex", "") as String).hex_decode()
 	if frames.size() != duration_frames:

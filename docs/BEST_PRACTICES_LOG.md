@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-14 — GDScript 警告升级为错误（语法闸门开）
+
+- **动机**：上一轮 `INCOMPATIBLE_TERNARY` 只在编辑器里报，`verify.sh` 全绿也漏过去了。
+- **查清机制**：GDScript **没有** `treat_warnings_as_errors` 总开关（只有 Shader 有）；它是**逐警告** mode：0=忽略 / 1=警告 / 2=错误（`debug/gdscript/warnings/<name>`）。运行时 `ProjectSettings.set_setting` 改不动（解析器启动即缓存），必须落进 `project.godot`。
+- **做法**：`project.godot [debug]` 把全部 37 个当前为 `1` 的警告设成 `=2`；另加 `directory_rules` 把 `res://test` / `res://tools` / `res://addons` 设为 0。
+- **为什么排除 test/tools**：一开就牵出 **25 个文件、约 30 处存量警告**（24 个在 test/：`unused_parameter` / `unused_variable` / `integer_division` / `name` 遮蔽 `Node.name` …；tools/bench_native_system.gd 还藏着一个**真 parse error**）。一次全清属于独立批次。**生产（scripts/ data/ scenes/）0 警告**，已严格。
+- **顺手修**：`scripts/replay/replay_recorder.gd` 的 `var seed`（遮蔽内建 `seed()`）→ `rng_seed`（JSON 键仍是 `"seed"`，存档格式不变）；`test/test_replay_recorder.gd` 跟随；`tools/check_syntax_runner.gd` 的 `var name` → `entry`。
+- **闸门双向验证**：`scripts/` 放一个 `unused_variable` 探针 → `check_syntax.sh` **红**（exit 1）；移除 → 绿；同样探针放 `test/` → 不报（directory_rules 排除）。
+- **验证**：`./tools/verify.sh` 全绿 **381 / 4194**；生产 186 脚本 `--check-only` 0 Parse Error。
+- **待办**：清掉 test/tools 存量警告后，从 `directory_rules` 移除它们 → 全项目严格。
+
 ### 2026-09-14 — 修 INCOMPATIBLE_TERNARY：bomb 分派别用三元
 
 - **现象**：编辑器输出 `kernel_bullet_backend.gd:63 Values of the ternary operator are not mutually compatible (INCOMPATIBLE_TERNARY)`。
