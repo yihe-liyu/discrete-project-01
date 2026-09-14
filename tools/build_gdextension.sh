@@ -24,6 +24,7 @@ for t in "${targets[@]}"; do
 	(cd "$GDX" && scons -j"$(nproc)" target="$t")
 done
 
+# 多平台条目：只构建当前平台的产物，其它平台的路径指向不存在的文件（Godot 只加载匹配平台/架构那条）。
 cat > "$GDX/danmaku_kernel.gdextension" <<'EOF'
 [configuration]
 
@@ -35,6 +36,10 @@ reloadable = false
 
 linux.debug.x86_64 = "res://gdextension/bin/libdanmaku_kernel.linux.template_debug.x86_64.so"
 linux.release.x86_64 = "res://gdextension/bin/libdanmaku_kernel.linux.template_release.x86_64.so"
+windows.debug.x86_64 = "res://gdextension/bin/libdanmaku_kernel.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://gdextension/bin/libdanmaku_kernel.windows.template_release.x86_64.dll"
+macos.debug = "res://gdextension/bin/libdanmaku_kernel.macos.template_debug.universal.dylib"
+macos.release = "res://gdextension/bin/libdanmaku_kernel.macos.template_release.universal.dylib"
 EOF
 
 echo "✅ 产物："

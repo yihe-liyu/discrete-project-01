@@ -1,0 +1,57 @@
+name: gdextension
+
+# 多平台原生内核构建（Linux / Windows / macOS）。只构建扩展（不跑 Godot/GUT——完整门禁在 verify.yml 的 Linux job）。
+# 注意：Windows/macOS 分支需推送 GitHub 才能实跑验证；命名遵循 godot-cpp 的 suffix 约定。
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: windows-latest
+            arch: x86_64
+          - os: macos-latest
+            arch: universal
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: 安装 SCons
+        run: pip install scons
+
+      - name: MSVC 环境（Windows）
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: 构建（debug + release）
+        shell: bash
+        run: |
+          cd gdextension
+          scons -j2 target=template_debug arch=${{ matrix.arch }}
+          scons -j2 target=template_release arch=${{ matrix.arch }}
+
+      - name: 列出产物
+        shell: bash
+        run: ls -la gdextension/bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: danmaku-kernel-${{ matrix.os }}
+          path: gdextension/bin/*
+          if-no-files-found: error
