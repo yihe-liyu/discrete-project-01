@@ -11,7 +11,7 @@
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. F6 运行工作台 → 命中框/固定种子/逐帧看效果；改完代码**重启工作台**生效
 4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完同样重启工作台看
-5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为接口」（`kernel_port()` → `move + params`，**权威表**）
+5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为接口」（`kernel_port()`：命名 `move + params`，或自定义拼 `{lifecycle}`）
 
 > 工作台**不是编辑器**：不写数据、不热重载，是「跑真实代码看效果」的预览沙盒。
 > 数据（关卡/Boss/阶段）全部以代码 + .tres 形式存在，由 AI/人直接写。
@@ -236,7 +236,7 @@ extends CoroutineScript
 
 ### 弹幕行为接口（`kernel_port` → `move + params`）
 
-弹丸脚本（`*_bullet.gd`）只做一件事：把参数翻译成内核**端口**。**权威真相 = `scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` 的 `build()`**（下表由此抄出）。
+弹丸脚本（`*_bullet.gd`）做一件事：把参数翻译成内核**端口**——**命名 `move`**（下表）或 **自定义 `{lifecycle}`**（下节）。**权威真相 = `scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` 的 `build()`**（下表由此抄出）。
 
 ```gdscript
 extends CoroutineScript
@@ -267,6 +267,49 @@ func kernel_port() -> Dictionary:
 > - `spawn_factory` 是**换弹工厂**，返回 `BulletData`（内容侧提供；工厂实例要复用，别每发 new）。
 > - **未知 `move` → 按直线发射**（计入 `unmapped_behavior_count`）。
 > - **新增 `move`** = 在 `LifecycleCatalog.build()` 加分支 + 在 `BulletLifecycle` 加 preset（**组合现有 Move/Until/Action 无需改 C++**）；只有需要**新原语**才动 `gdextension/src/danmaku_store.cpp`。
+> - **只是某一颗弹想要"预设表里没有"的组合** → 不用新增 `move`，见下节 `{lifecycle}`。
+
+---
+
+### 自定义行为（预设表不够时用 `{lifecycle}`）
+
+上表 10 个 `move` 是**常用词汇**。要"预设表里没有"的流程控制组合，**不用新增 `move`**——直接在自己的弹丸脚本里用 `BulletLifecycle`（builder）拼好，端口返回 `{"lifecycle": ...}`：
+
+```gdscript
+extends CoroutineScript
+
+var turn: float = 0.5
+var accel: float = 300.0
+
+func kernel_port() -> Dictionary:
+    var lc := BulletLifecycle.new()
+    lc.rotate(2.0, turn)      # 相位1：边飞边转
+    lc.until_turned()         # 转满 turn 弧度
+    lc.then()                 # ← 流程控制：开下一相位
+    lc.accel_heading(accel)   # 相位2：沿当前方向加速
+    lc.until_elapsed(1.0)
+    lc.despawn()
+    return {"lifecycle": lc}
+```
+
+可用词汇（**Move / Until / Action 三类**，签名见 `scripts/kernel_bridge/lifecycle/bullet_lifecycle.gd`）：
+
+| 类 | 成员 |
+|---|---|
+| Move | `accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift` |
+| Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_state` `until_turned`；`then()` 开新相位 |
+| Action | `sfx` `emit` `despawn` `on_end_heading` `on_end_call` |
+| 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` |
+
+锚定激光（用了 `anchor_drift`）再带一个 `anchor`：
+
+```gdscript
+return {"lifecycle": lc, "anchor": {"id": anchor_id, "offset": offset, "use_global": true}}
+```
+
+> - **用哪个？** 稳定复用 / 有名字 → 上表的命名 `move`；一次性 / 流程控制组合 → `{lifecycle}`。
+> - **边界**：固定 schema 描述符，**没有变量 / 表达式 / goto**，相位线性（`then()` 只往下）。超出语言的部分只能用 `emit`（换弹工厂）/ `on_end_call`（回调 GDScript）两个逃生舱，或加新原语（改 C++）。
+> - **验证范式**：`test/fixtures/lifecycle_port_behavior.gd` + `test/test_lifecycle_port.gd`。
 
 ---
 
