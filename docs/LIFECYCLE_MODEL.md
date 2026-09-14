@@ -101,33 +101,40 @@ Action    = { kind, action_id, f0..f3 }  # action_id → 宿主表（工厂 / sf
 
 ---
 
-## 4. 创作者面（两个 builder，一套词）
+## 4. 创作者面
 
-**低频（spawn / 关卡）** —— `Timeline`（已有）+ pattern builder：
+**内容创作者实际写的是「端口」**（`move + params`）—— 权威表见 `CONTENT_GUIDE.md`「弹幕行为接口」：
 ```gdscript
-timeline.at(2.0).every(1.5).times(4).ring(count := 30, speed := 200)
-        .at(10.0).spawn_boss(boss_data, pos)
+func kernel_port() -> Dictionary:
+    return {"move": &"bounce", "params": {&"accel": 120.0, &"bounce_angle": 0.3}}
 ```
 
-**高频（per-bullet）** —— fluent builder → 描述符：
+**引擎侧**（`LifecycleCatalog` 的 preset 实现）用 fluent builder → 描述符（真实方法名）：
 ```gdscript
 BulletLifecycle.new()\
-    .accel_along_vel(100.0)\
-    .until_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)\
-    .on_break().aim_boss(bounce_angle).emit_action(factory).sfx("kira").despawn()
+    .accel_heading(100.0)                                   # Move\
+    .until_at_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)       # Until\
+    .sfx(&"kira", -8.0).emit(factory, toward(T_BOSS, 0.3), 0.0, true).despawn()   # Action
 ```
+- **Move**：`accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift`
+- **Until**：`until_never` `until_elapsed` `until_near` `until_at_wall` `until_state` `until_turned`；`then()` 开新相位
+- **Action**：`sfx` `emit` `despawn` `on_end_heading` `on_end_call`
+- **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)`
 
-**Canned preset** —— 现有 10 行为 = 预置 lifecycle：
+**Canned preset**（10 个 `move` 的实现）：
 ```gdscript
-BulletLifecycle.bounce(angle, accel, spawn_speed)
+BulletLifecycle.bounce(accel_rate, bounce_angle, spawn_speed, factory, sfx_key := &"kira", sfx_db := -8.0)
 BulletLifecycle.homing(angle_per_sec, accel_time, min_speed, max_speed, duration, proximity_boost)
 BulletLifecycle.curve(w, limit)
-BulletLifecycle.radial_accel(rate, factory, sfx, sfx_db)
-BulletLifecycle.non_mid_flee(proximity, burst_action)
-BulletLifecycle.laser_anchor(anchor_id, offset, drift_speed, angle, use_global)
+BulletLifecycle.radial_accel(accel_rate, factory, sfx_key := &"", sfx_db := 0.0)
+BulletLifecycle.non_mid_flee(proximity, boss_radius, burst)
+BulletLifecycle.avoid_player(proximity, jump, flee_time)
+BulletLifecycle.world_accel(v)   /   BulletLifecycle.accel(a)
+BulletLifecycle.laser_follow(anchor_id, offset, angle, drift_speed, initial_drift)
+BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drift)
 ```
 
-> **创作者永远只调高层方法**，不写数值 opcode。**没有原语泄漏**（满足"创作者方便"硬约束）。
+> **创作者只写 `move + params`**，不碰 opcode —— 没有原语泄漏（满足"创作者方便"硬约束）。
 
 ---
 

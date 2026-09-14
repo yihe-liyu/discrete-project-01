@@ -1,6 +1,6 @@
 # 🛠️ 东方星 STG 引擎 — 内容制作流程
 
-> 版本：2026-08 · 协程代码版（关卡/Boss/弹幕全在 Godot 里写代码；工作台只做预览/调试）
+> 版本：2026-09 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕行为走 `kernel_port()` 端口，原生执行**；工作台只做预览/调试）
 
 ---
 
@@ -11,6 +11,7 @@
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. F6 运行工作台 → 命中框/固定种子/逐帧看效果；改完代码**重启工作台**生效
 4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完同样重启工作台看
+5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为接口」（`kernel_port()` → `move + params`，**权威表**）
 
 > 工作台**不是编辑器**：不写数据、不热重载，是「跑真实代码看效果」的预览沙盒。
 > 数据（关卡/Boss/阶段）全部以代码 + .tres 形式存在，由 AI/人直接写。
@@ -232,6 +233,40 @@ extends CoroutineScript
 ## @name: 回卷探测弹        # 目录显示名（默认=注释首行）
 ## @desc: 描述（默认=其余注释行；@name 存在时=全部注释行）
 ```
+
+### 弹幕行为接口（`kernel_port` → `move + params`）
+
+弹丸脚本（`*_bullet.gd`）只做一件事：把参数翻译成内核**端口**。**权威真相 = `scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` 的 `build()`**（下表由此抄出）。
+
+```gdscript
+extends CoroutineScript
+
+var accel: float = 0.0
+var bounce_angle: float = 0.0
+
+func kernel_port() -> Dictionary:
+    return {
+        "move": &"bounce",
+        "params": {&"accel": accel, &"bounce_angle": bounce_angle, &"sfx": "kira"},
+    }
+```
+
+| `move` | 参数（括号内为默认） | 说明 |
+|---|---|---|
+| `world_accel` | `world_accel: Vector2` | 恒定世界加速度 |
+| `accel` | `accel: float` | 沿当前方向加速 |
+| `curve` | `curve`（角速度）、`curve_limit`（累计转角上限，0=无限） | 边飞边转 |
+| `homing` | `homing_angle_per_sec`(720°)、`accel_time`(2)、`min_speed`(500)、`max_speed`(2000)、`homing_duration`(2)、`proximity_boost`(150) | 追踪最近敌人 |
+| `radial_accel` | `accel_rate`、`spawn_factory: Callable`、`sfx`、`sfx_db` | 沿初向加速 + 碰顶换向下弹 |
+| `bounce` | `accel`、`bounce_angle`、`spawn_speed`(0)、`spawn_factory`、`sfx`("kira")、`sfx_db`(-8) | 碰框朝 Boss 转 `bounce_angle` 后换弹 |
+| `avoid_player` | （类型级固定；内容不覆盖） | 靠近自机逃 |
+| `non_mid_flee` | `player_proximity`(150)、`on_flee_burst: Callable`；半径随难度 | 逃 → 近 Boss 散圈 |
+| `marisa_laser` | `anchor_id`、`anchor_offset`、`angle`、`drift_speed`(2000)、`initial_drift` | 子机锚定激光（World 兄弟，用 global） |
+| `laser_follow` | 同上 | 自机子节点锚定（用局部 position） |
+
+> - `spawn_factory` 是**换弹工厂**，返回 `BulletData`（内容侧提供；工厂实例要复用，别每发 new）。
+> - **未知 `move` → 按直线发射**（计入 `unmapped_behavior_count`）。
+> - **新增 `move`** = 在 `LifecycleCatalog.build()` 加分支 + 在 `BulletLifecycle` 加 preset（**组合现有 Move/Until/Action 无需改 C++**）；只有需要**新原语**才动 `gdextension/src/danmaku_store.cpp`。
 
 ---
 

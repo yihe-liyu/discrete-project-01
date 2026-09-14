@@ -43,18 +43,37 @@
 
 | 系统 | 责任 | 对外接口（intent） | 主要文件 |
 |---|---|---|---|
-| **Boss/敌人** | 演一段阶段 | `start_phase(phase)``get_boss_name`“set_boss_name”“current_phase” | `scripts/enemy/boss.gd“enemy.gd` |
-| **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread(...)`“death_clear” | `scripts/bullet/*“laser/*` |
-| **玩家** | 移动/射击/僚机/道具 | `ctx.player`“ctx.effects” | `scripts/player/player.gd“coroutine/player/*` |
-| **对话** | 纯逻辑步骤 + 渲染 | `ctx.play_dialogue_steps(steps)`“d.event(...)” | `scripts/coroutine/services/dialogue/*` |
+| **Boss/敌人** | 演一段阶段 | `start_phase(phase)` / `get_boss_name` / `set_boss_name` / `current_phase` | `scripts/enemy/boss.gd` / `enemy.gd` |
+| **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread(...)` / `death_clear` | `scripts/bullet/*` / `laser/*` · **内核** `gdextension/src/danmaku_store.*` |
+| **玩家** | 移动/射击/僚机/道具 | `ctx.player` / `ctx.effects` | `scripts/player/player.gd` / `coroutine/player/*` |
+| **对话** | 纯逻辑步骤 + 渲染 | `ctx.play_dialogue_steps(steps)` / `d.event(...)` | `scripts/coroutine/services/dialogue/*` |
 | **记录** | 持久化符卡簿 | `RecordService.record_phase_*` | `scripts/data/spell_*.gd` |
-| **背景** | 环境/装饰/相机/太阳/雾 | `StageBackground`(相机/太阳/雾命令，待接 ctx.background) | `scripts/background/*` |
-| **时间线/关卡** | 编排“何时做什么” | `timeline.at()“{do,cmd,spawn_boss,...}` | `scripts/coroutine/timeline/*“stage_manager.gd` |
+| **背景** | 环境/装饰/相机/太阳/雾 | `StageBackground`（相机/太阳/雾命令，待接 `ctx.background`） | `scripts/background/*` |
+| **时间线/关卡** | 编排“何时做什么” | `timeline.at()` / `{do,cmd,spawn_boss,...}` | `scripts/coroutine/timeline/*` / `stage_manager.gd` |
 | **工作台** | 预览/调试/书签 | `workbench` | `scripts/workbench/*` |
 
 ---
 
-## 2.2 使用层（接口）—— 动词，不是协程/Timeline
+
+### 2.1.5 弹幕链路（端到端 · 追一条弹）
+
+```
+内容弹丸脚本 *_bullet.gd
+  └─ kernel_port() → {move, params}
+       └─ KernelBulletBackend.prepare_shot()        ← _port_for() 缓存端口
+            └─ KernelNativeSystem.spawn()           ← 原生 DanmakuStore.spawn + set_hitbox + set_program
+                 └─ [每物理帧] DanmakuStore.integrate() + behavior_tick()    ← 积分 + 行为，全原生
+                      └─ KernelNativeSystem._pull_snapshot()                 ← 原生 → GDScript 只读快照
+                           ├─ 渲染：BulletMultiMesh._sync_native() → DanmakuRenderBridge → MultiMesh
+                           └─ 判定：KernelBulletPhysics → system.query_circle / hit_test（原生宽相网格）
+```
+
+- **权威存储** = 原生 `DanmakuStore`（`gdextension/src/danmaku_store.{h,cpp}`）；GDScript 只是每帧只读快照。
+- **行为** = `LifecycleCatalog` 把 `move+params` 映射成 `BulletLifecycle` → `compile()` 成 packed program → 原生 `behavior_tick`。
+- **事件**（发射 / 音效 / 回调）→ `KernelNativeSystem._drain_events` → `KernelBehaviorHost` / `AudioManager` / 内容回调。
+- 改哪看哪：行为词汇 → `docs/LIFECYCLE_MODEL.md`；参数表 → `CONTENT_GUIDE.md`「弹幕行为接口」；执行/判定 → `gdextension/src/`。
+
+### 2.2 使用层（接口）—— 动词，不是协程/Timeline
 
 > **接口 = 一组"意图动词"，各归其主，且时序无关。** 协程 / Timeline **不是接口**，是接口下方的**运行时原语**（行为的引擎 / 编排的引擎）。"使用层"是**基建层**与**内容层**之间的缝：内容只写左边，基建在右边，缝上就是动词。
 
@@ -127,7 +146,7 @@
 
 ### 新增 Boss
 - 内容：`boss_catalog.gd` 加 `BossData`（名字/视觉/阶段）+ `PhaseData` 资源。
-- 身份/记录：**不用碰**——`resolve_identity`“`RecordService` 自动生效。
+- 身份/记录：**不用碰**——`resolve_identity` / `RecordService` 自动生效。
 - 运行时：`boss.gd` 如需新“演”逻辑，加方法；**别在 Boss 里写身份/记录**。
 - 引用：关卡 spawn 后 `StageObjects.register("boss_xxx", b, Boss)` 用名字引用。
 - 绝不：在 Boss 里 `record_*`、算 `phase_index`。
@@ -139,12 +158,17 @@
 ### 新增敌人
 - `EnemyData` 资源 + 行为脚本；**别在关卡脚本 `EnemyData.new()...spawn`**，做成资源引用。
 
+### 新增弹幕行为（`move`）
+- **组合现有原语**（推荐）：`LifecycleCatalog.build()` 加分支（`move+params` → `BulletLifecycle` preset），内容写 `kernel_port()`；**无需改 C++**。
+- **要新原语**（新 Move / Until / Action）才动 `gdextension/src/danmaku_store.cpp`（`_exec_move` / `_check_until` / `_exec_action`）+ `BulletLifecycle` 编译；改完重建扩展。
+- 权威参数表见 `CONTENT_GUIDE.md`「弹幕行为接口」。
+
 ### 新增关卡
 - `StageData` + 关卡脚本（`CoroutineScript`）；内容=数据；boss 用槽位；记录走服务；编排声明式。
 
 ### 新增“系统能力”（新动作）
-- 给**系统**加方法（如 `Boss.start_phase`），或给 `StageObjects`“服务加操作；**别在关卡脚本里临时实现**。
-- 然后 `cmd(slot, action, args)`“`_stage_events.on(name, handler)` 调用它。
+- 给**系统**加方法（如 `Boss.start_phase`），或给 `StageObjects` / 服务加操作；**别在关卡脚本里临时实现**。
+- 然后 `cmd(slot, action, args)` / `_stage_events.on(name, handler)` 调用它。
 
 ---
 
