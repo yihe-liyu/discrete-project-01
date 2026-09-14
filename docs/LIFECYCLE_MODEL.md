@@ -234,5 +234,5 @@ bounce → phases: [
 
 - ✅ **通过**：`bounce` + `curve` 与现有行为**逐位 parity**（`test_lifecycle_model` 2/2 / 33 断言）。
 - **结论**：描述符 schema + Phase/Move/Until/Action 词汇**足以表达**条件性最强的行为 —— 模型成立。
-- **暴露的引擎 bug**：`BehaviorProcessor` **升序** drain despawn → 多弹同帧回收**丢一个**（详见 `BEST_PRACTICES_LOG.md`）。L1 在测试 harness 用**降序**绕过；**引擎侧待修**。
+- **暴露的引擎 bug**：`BehaviorProcessor` **升序** drain despawn → 多弹同帧回收**丢一个**（详见 `BEST_PRACTICES_LOG.md`）。**已修**（2026-09-13 降序 drain：重建版 `2466a93` / 主工程 `16645d0`）。
 - **待办（L2）**：其余 8 个 preset + parity（homing / radial / non_mid / laser / avoid / world_accel / accel）。
