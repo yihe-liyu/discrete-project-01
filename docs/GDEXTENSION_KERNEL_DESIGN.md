@@ -1,8 +1,9 @@
 # GDExtension 弹幕内核 + Danmaku VM —— 终局形态设计（草案）
 
-> **性质**：提案 / 未排期。本文写"以后要长成什么样"，好让**现在每一步都朝它对齐**；不是现在就要开工的任务。
-> **触发条件**见 §0.2 —— 当前 3000 弹约 2.5ms/帧，离触发还远（决策备忘 §8），所以**先设计、后动手**。
-> **前置阅读**：`1-st-touhou-star-rebuild/docs/DECISION_DANMAKU_ARCHITECTURE.md` §5/§6/§8；`docs/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`scripts/kernel/README.md`。
+> **性质**：终局形态设计（北极星）。本文写"要长成什么样"，好让**每一步都朝它对齐**。
+> **状态（2026-09-13 刷新）**：触发条件**已达成**（6000 弹带行为 ≈ 77% 帧预算，见 §0.2）；N1 工具链 ✅、N2.2 原生积分 ✅（5.9×）、N4-real 原生渲染 ✅（6.5×）均已实测。
+> **已拍板**：① 扩展成为**必需**（GDScript 内核转过渡，见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策）；② N3 走 **§5.7 路径 B「数据先行 → 原生 VM」**。
+> **前置阅读**：`docs/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`docs/N2_NATIVE_INTEGRATION_PLAN.md`（终局决策 + 拆除清单）；`scripts/kernel/README.md`。
 
 ---
 
@@ -51,6 +52,19 @@
 > **结论**：脚本侧热路径（积分 + 实例缓冲写入）原生快 **~60×** —— 6000 弹原生合计 **0.15ms**（GDScript 8.9–12.8ms）。
 > **对 6000+ 弹的目标，GDExtension 是必需，不是奢侈。** N2(存储) + N4(渲染) 收益被坐实。
 > 探针是简化版（单 MultiMesh / 单色 / 无行为 / 无碰撞 / 无图集），但覆盖了每帧每颗的主成本；真实版还需 N3(行为 VM) + 图集 + 纹理句柄。
+>
+> **更新（2026-09-13，N2.2 积分段 + N4-real 后，真实拆分）**
+>
+> | 6000 弹 | ms/帧 | 归属 |
+> |---|---|---|
+> | 积分 | **0.12** | 原生 ✅（N2.2，5.9×） |
+> | 行为 | **4.25** | GDScript（**N3 目标**） |
+> | 宽相 | 0.33 | GDScript（N2 存储段） |
+> | 渲染同步 | **1.10** | 原生 ✅（N4-real，6.5×） |
+> | **合计** | **≈5.8（35% 预算）** | 原 12.80（77%） |
+>
+> **边界铁律（实测）**：原生逐次访问 **110ns/次** vs GDScript `Packed[i]` **13ns**；批量快照 15ns。→ **跨边界必须批量**（命令 + 事件），逐弹 / 逐次转发必亏。
+> **剩余大头 = 行为（4.25ms）→ N3。**
 
 ---
 
@@ -166,7 +180,7 @@ native program_id                  # 结构数组 / 字节码；运行期零哈�
 | 判定 | `collision` | flags | can_be_canceled / out_grace / faction |
 | 表现 | `fx` / `sfx` | key | 事件输出（帧末 drain） |
 
-> 第一批只需覆盖现在 6 个 `kernel_port()` 内容（world_accel / homing / bounce / non_mid_flee / marisa_laser / radial_accel）。VM 的**触发条件**仍是计划 §15.6：行为种类/复杂度爆炸，或解释器成为热点。
+> 第一批只需覆盖现在 **2 个** `kernel_port()` 内容（`move_homing` / `marisa_laser_follow`；2026-09-13 grep 实测，原稿写 6 —— 已过时）。但**行为集共 10 个**（含 `BulletData.accel` 派生的 world_accel 等，见 §5.7）。VM 的**触发条件**仍是计划 §15.6：行为种类/复杂度爆炸，或解释器成为热点 —— **现按路径 B 主动推进**。
 
 ### 5.4 寄存器模型
 
@@ -191,7 +205,7 @@ native program_id                  # 结构数组 / 字节码；运行期零哈�
 | 阶段 | 内容脚本写什么 | 谁来跑 |
 |---|---|---|
 | 今天 | `kernel_port()` → `{move, params}` | GDScript `Behavior` |
-| 过渡（推荐先做） | `kernel_port()` → `{program: [op...]}` | **GDScript 参考解释器**（同一份数据） |
+| 过渡（**已选路径 B**，先做） | `kernel_port()` → `{program: [op...]}` | **GDScript 参考解释器**（同一份数据） |
 | 终局 | 同上（或 `DanmakuProgram` .tres） | 原生 VM |
 
 **先迁数据、后换实现**：程序 schema 一旦定下，内容可以先改成数据形态，GDScript 解释器先跑通并写进测试；等原生 VM 就位，换执行器即可，内容零改动。这条能把"上原生"的风险砍掉一大半。
@@ -267,16 +281,18 @@ for e in world.drain_events():                  # 帧末一次
 
 - **N0 边界冻结**（已完成）：`scripts/kernel/` 0 宿主引用、vendor 流程、FrameOrder 契约。
 - **N1 工具链验证 ✅ 已实测通过（2026-09-13）**：godot-cpp **v10（master）** + `api_version=4.7` → `scons target=template_debug` 编译最小 extension → **Godot 4.7.2 成功加载并注册类**（`ClassDB.class_exists("Hello") = true`）。环境：SCons 4.11.1 / g++ 16.2.1 / Python 3.14.7。**注意**：`.gdextension` 需编辑器导入一次（写 `.godot/extension_list.cfg`）才会被加载。**工具链已不是门。**
-- **N2 原生 BulletStore spike**：SoA + 积分 + 宽相 + 实例缓冲；adapter 保持今天的 GDScript API 不变；用 `tools/bench_danmaku.gd` 同口径对比。**不上 EnTT**（单一 archetype，手写 struct 数组即可，决策备忘 §6.7）。
-- **N3 VM/行为迁原生**：`kernel_port()` → program；删 `_port_by_sig`（`signature_of` / `_type_by_sig` 已随 M2 删除）。
-- **N4 渲染原生**：把宿主纹理句柄表（`_texture_by_index` / `texture_for_index()` —— M3 ③ 的渲染插座）换成原生实例缓冲；删 `BulletMultiMesh` 的映射层。
-- **N5 收口**：GDScript 只剩内容 / 外壳 / 宿主规则；`kernel_bridge` 目标 → 0。
+- **N2.1 ✅（2026-09-13）** 原生 `DanmakuStore`：SoA + per-bullet type/faction/color + `spawn_batch`（~55×）。
+- **N2.2 积分段 ✅（2026-09-13）** 原生 `integrate_batch`（积分 / 寿命 / 相位 / 剔除）；桥接子类 `KernelNativeSystem extends BulletSystem` 接入（**5.9×**，6000 弹 0.699→0.118ms）；**不碰 vendor 内核**。
+- **N2 存储段（待做）** 原生接管 spawn / despawn / 宽相，消除 GDScript SoA。
+- **N3 行为 VM（待做，路径 B）**：按 §5.7 —— **先定 program schema + GDScript 参考解释器**，内容 `kernel_port()` → `{program:[...]}`，测试锁定；再换原生 VM 执行器。§5.1 的**手写原生 tenant** 留给宿主耦合行为。
+- **N4-real ✅（2026-09-13）** 原生 `DanmakuRenderBridge` 整段渲染同步（**6.5×**，6000 弹 7.19→1.10ms）；余图集资源（S13）按需。
+- **N5 收口**：GDScript 只剩内容 / 外壳 / 宿主规则；`kernel_bridge` **行数不是目标** —— 改**结构性判据**（0 类型映射 / 0 内容签名侧表 / 内核 0 宿主引用，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16.5）。
 
 ---
 
 ## 11. 能删掉什么（对现工程的清算）
 
-- `scripts/kernel_bridge/` **964 行 → 0**（翻译消失）。
+- `scripts/kernel_bridge/`：**翻译层删除**；**宿主耦合 ~688 行永久保留**（§16.5 实测更正：行数不是目标）。
 - `BulletData` ⇄ `BulletType` **双词汇 → 一套**（M2 的终局答案）。
 - 5 张侧表 → 0（`type_id` / `program_id` 取代）。
 - `ctx.bullets` 五跳 → 一跳。
