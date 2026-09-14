@@ -19,6 +19,7 @@ var _saved_memory: float = 50.0
 
 func before_each() -> void:
 	_kernel_bullet_backend = KernelBulletBackend.new()
+	_kernel_bullet_backend.use_native = false   # 本文件测 GDScript 行为（原生执行见 test_native_executor）
 	add_child_autofree(_kernel_bullet_backend)
 	# 资源读取经 entity_registry.player.resources：绑一个带独立 PlayerResources 的自机桩
 	_entity_registry = EntityRegistry.new()

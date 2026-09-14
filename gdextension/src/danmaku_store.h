@@ -103,6 +103,7 @@ public:
 	// 返回新数组 + 本帧应回收的行 id（**不做 swap**：回收由 GDScript 侧按既有契约重放，
 	// 保证颜色/行为等 GDScript 专有字段的行身份一致）。数组按值 CoW 进出，无跨帧状态。
 	void _swap_remove(int p_id);
+	void _ensure_capacity(int p_n);
 
 	// L3：注册一个编译后的 program，返回 program_id。
 	int register_program(const PackedInt32Array &p_ops, const PackedFloat32Array &p_args,

@@ -128,7 +128,7 @@
 
 1. **L3.5-1 ✅（2026-09-14）** 原生 `query_circle` / `hit_test` / `grazed`（`test_native_collision` 4/4 / 293 断言）。线性扫描（同序），宽相网格按需再上。
 2. **L3.5-2 ✅（2026-09-14）** `LifecycleCatalog`：`move + params` → `BulletLifecycle`（10 个 move 全覆盖，内容零改动）+ 签名缓存（`test_lifecycle_catalog` 5/5）。
-3. **L3.5-3** 原生 store 替 `KernelNativeSystem`；`BulletSystem` 退化快照视图。**(3a ✅ 2026-09-14)**：原生无状态 `behavior_batch`（数组进/出 + dead 重放）已就绪（`test_native_behavior_batch` 2/2）；**3b**：bridge 接入（映射 → 原生批，替 `BehaviorProcessor`）。
+3. **L3.5-3 ✅（2026-09-14）** bridge 接入：`KernelNativeSystem` 维护 per-bullet 批状态，每帧 `integrate_batch + behavior_batch`，降序重放 dead，drain 事件；原生可用时**不再创建 `BehaviorProcessor`**。修 3 个真 bug（场域未注入 / store 未 setup / 测试期望）。全量 361/3951 全绿。**行为执行已原生 —— 但还需真实舞台试玩验证。**
 4. **L3.5-4** 消费方（render / physics / laser / debug）改读原生。
 5. **L3.5-5** 事件 drain（emit / sfx / call → `queue_spawn` / sfx / 内容回调）。
 6. **L3.5-6** 真实舞台开机 + 试玩。

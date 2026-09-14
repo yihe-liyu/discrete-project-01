@@ -182,13 +182,21 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	if enemy_provider.is_valid():
 		behavior_ctx.get_world().setup(enemy_provider)   # 可重复注入（测试 / 换关）
 	behavior_ctx.setup(player, behavior_ctx.get_world())   # 刷新自机
-	if behavior != null:
+	if behavior != null or (system is KernelNativeSystem and (system as KernelNativeSystem).native_behaviors):
 		return
-	process_physics_priority = -4   # 延后动作 flush：行为(-5) 之后、宿主碰撞(0) 之前
+	process_physics_priority = -4   # 延后动作 flush：行为之后、宿主碰撞(0) 之前
 	_behavior_host = KernelBehaviorHostClass.new()
 	_behavior_host.setup(self)
 	_laser_fade = MarisaLaserFadeClass.new()
 	_laser_fade.setup(self)
+	# L3.5-3b：原生可用 → 行为交给原生 behavior_batch，**不创建 BehaviorProcessor**。
+	if system is KernelNativeSystem and (system as KernelNativeSystem).is_native_ready():
+		var ns := system as KernelNativeSystem
+		ns.native_behaviors = true
+		ns.behavior_ctx = behavior_ctx
+		ns.behavior_host = _behavior_host
+		ns.boss_getter = func(): return _behavior_host.get_boss()
+		return
 	behavior = BehaviorProcessor.new()
 	behavior.name = "KernelBehaviorProcessor"
 	behavior.process_physics_priority = -5

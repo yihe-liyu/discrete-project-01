@@ -128,6 +128,24 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 	return added;
 }
 
+// 按需扩容内部向量（behavior_batch 无状态入口用：桥接侧不调 setup，_capacity 可能为 0）。
+void DanmakuStore::_ensure_capacity(int p_n) {
+	if (p_n <= _capacity) {
+		return;
+	}
+	_capacity = p_n;
+	_x.resize(p_n); _y.resize(p_n); _vx.resize(p_n); _vy.resize(p_n);
+	_type.resize(p_n); _faction.resize(p_n); _color.resize(p_n);
+	_life.resize(p_n); _fx.resize(p_n); _timer.resize(p_n);
+	_program.resize(p_n); _pphase.resize(p_n); _ptick.resize(p_n);
+	_pelapsed.resize(p_n); _pnext.resize(p_n); _pendx.resize(p_n); _pendy.resize(p_n);
+	_pslots.resize(p_n * SLOT_STRIDE);
+	_pfresh.resize(p_n); _phasend.resize(p_n);
+	_hb_radius.resize(p_n); _hb_offx.resize(p_n); _hb_offy.resize(p_n);
+	_hb_sizex.resize(p_n); _hb_sizey.resize(p_n); _hb_diroff.resize(p_n);
+	_hb_follow.resize(p_n); _grazed.resize(p_n);
+}
+
 // swap-with-last 回收：把尾行整行搬进空槽（新增字段必须在这里同步）。
 void DanmakuStore::_swap_remove(int p_id) {
 	const int last = --_count;
@@ -704,7 +722,8 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 		const PackedFloat32Array &p_elapsed, const PackedFloat32Array &p_slots,
 		double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies) {
 	const int n = MIN(p_count, MIN(p_pos.size(), p_vel.size()));
-	_count = MIN(n, _capacity);
+	_ensure_capacity(n);
+	_count = n;
 	for (int i = 0; i < _count; ++i) {
 		_x[i] = p_pos[i].x; _y[i] = p_pos[i].y;
 		_vx[i] = p_vel[i].x; _vy[i] = p_vel[i].y;

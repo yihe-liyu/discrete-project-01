@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-3b ✅：bridge 接入原生行为执行（替 BehaviorProcessor）
+
+- **改动**：`KernelNativeSystem` 维护 per-bullet `program/phase/tick/elapsed/slots`（随 spawn/despawn swap 同步），每帧 `integrate_batch` + `behavior_batch`（数组进/出）→ 回写 → **降序重放 dead** → drain 事件（emit→queue_spawn / sfx→AudioManager / call→内容回调）。`KernelBulletBackend.setup_behaviors` 原生可用时**不创建 BehaviorProcessor**。
+- **验证**：全量 **361 / 3951 全绿**（原生行为 ON）。
+- **三个真 bug（都是接入才暴露的）**：
+  1. **原生 store 的场域常量从没注入** → 游戏里 `_field_*`=0，`at_wall` 判定错。修：创建 store 时 `set_field(GameConfig...)`。
+  2. **原生 store 从没 `setup()`** → `_capacity=0` → `behavior_batch` 返回**空数组** → base OOB（`_life_left[0]`）。`integrate_batch` 无状态所以从未暴露。修：原生 `_ensure_capacity` 按需扩容。
+  3. 测试侧：`test_kernel_behavior` 改 `use_native=false`（它测 GDScript 行为）；`test_kernel_swap::test_behavior_pipeline_wired` 兼容原生路径。
+- **验收**：verify.sh 全绿。
+
 ### 2026-09-14 — L3.5-3a：原生无状态行为批 behavior_batch + 扩展加载守卫
 
 - **目标**：让原生执行器能跑在 GDScript 存储的数组上（接入 3b 的前置）。
@@ -385,12 +395,4 @@
 - **没做**：`out_grace` 仍暂缓（bomb 走宿主节点，用不到）；纹理旁表留到 M3。
 
 ### 2026-09-13 — M0：修 vendor 漂移 + 立 vendor 脚本（融合前置）
-
-- **发现**：`scripts/kernel/` 副本与上游（重建版 tag `kernel-v1`）漂移 **4 处**，**全是本地改了、上游没同步**：K1 的 `avoid_player.gd → avoid_player_behavior.gd`（文件名）、K7 的 `FxLayer → FxPool`（注释）、A10 的 `bullet_data → bullet_type`（形参）、A11 的行尾空白。README 担心的「单一真相会烂」**已经在发生** —— 下次 vendor 会把它们覆盖回去，文件名还会变成"两个文件"。
-- **M0a**：前 3 处同步回重建版上游并跑其 `tests/`（46 套）全绿；第 4 处不写回上游，交给 vendor 规范化。
-- **M0b**：新增 `tools/vendor_kernel.sh` —— 复制上游 + 两处规范化（删 `BulletRenderer` 注入 / 去行尾空白）+ 「内核 0 宿主引用」守卫（去注释后正则；`LayerConfig` 是唯一豁免，不在名单里）+ `--check` 报漂移。`.uid` 属项目本地（`uid://` 指向本工程），不参与 vendor，只清孤儿。
-- **坑**：重建版改名后 `behavior_processor_test` 挂 `Could not find script for class "AvoidPlayerBehavior"` —— 全局类缓存 `.godot/global_script_class_cache.cfg` 还指着旧路径；`godot --headless --editor --quit` 重建后全绿（K1 同款教训，已写进 `scripts/kernel/README.md`）。
-- **验收**：`bash tools/vendor_kernel.sh --check` → 漂移 0 + 守卫 ✅；重建版 46 套全绿；原项目本轮只加脚本与文档，GUT/语法不受影响。
-
-### 2026-09-13 — 决策：内核融合（M1–M3）—— 结束 Strangler，转向「一套架构」
 

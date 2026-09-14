@@ -51,9 +51,15 @@ func test_kernel_priority_precedes_manager() -> void:
 
 
 func test_behavior_pipeline_wired() -> void:
+	var sys = BulletManager.current.kernel_system()
+	if sys is KernelNativeSystem and (sys as KernelNativeSystem).native_behaviors:
+		# L3.5-3b：原生可用时行为由 behavior_batch 在内核 _physics_process 内跑 → 同 -10，先于宿主碰撞。
+		assert_lt(sys.process_physics_priority, BulletManager.current.process_physics_priority,
+			"原生行为随内核积分先于宿主碰撞")
+		return
 	var b: BehaviorProcessor = BulletManager.current._kernel_bullet_backend.behavior
 	assert_not_null(b, "应装配 BehaviorProcessor")
-	assert_gt(b.process_physics_priority, BulletManager.current.kernel_system().process_physics_priority,
+	assert_gt(b.process_physics_priority, sys.process_physics_priority,
 		"行为必须在积分之后（-10 < -5）")
 	assert_lt(b.process_physics_priority, BulletManager.current.process_physics_priority,
 		"行为必须在宿主碰撞之前（-5 < 0）")
