@@ -12,3 +12,9 @@ class_name BombData
 @export var count: int = 8                                  ## 生成几颗（Player 逐颗 spawn）
 @export var interval: float = 0.1                           ## 每颗间隔（秒）
 @export var invincible_time: float = 4.0                    ## 自机无敌时长
+
+
+## 第 index 颗 bomb 的染色（Player 逐颗 spawn 时调用）。
+## 默认 **保留贴图原色**；子类可覆写（如环状炸按色环给多颗上色）。
+func tint_for(_index: int, _base_hue: float) -> Color:
+	return Color.WHITE

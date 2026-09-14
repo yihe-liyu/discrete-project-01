@@ -17,3 +17,8 @@ class_name RingBombData
 @export var explode_duration: float = 0.4                   ## 引爆清弹动画时长
 @export var explode_start_radius: float = 20.0              ## 引爆清弹起始半径
 @export var clear_radius: float = 90.0                      ## 飞行途中持续清弹半径（每帧）
+
+
+## 环状炸：多颗按色环均匀上色（base_hue 随机起色 → 彩虹；i/count 铺满色环）。
+func tint_for(index: int, base_hue: float) -> Color:
+	return Color.from_hsv(fmod(base_hue + float(index) / float(maxi(count, 1)), 1.0), 1.0, 1.0)

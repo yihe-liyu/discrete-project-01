@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — 修 bug：marisa 的 bomb 被随机染色
+
+- **现象**：marisa 的 bomb（单颗）每次放出来颜色都不同。
+- **根因**：`Player._spawn_bomb_bullet` **无条件**用 `RNG.randf()` 起色 + `Color.from_hsv` 给每颗上色——这段当初是给 reimu **环状炸的 8 颗彩虹**写的；mist 只有 1 颗，于是整张贴图被染成一个随机纯色。
+- **做法**：把"第 i 颗染什么色"下放到数据类——`BombData.tint_for(index, base_hue)` 默认 `Color.WHITE`（保留贴图原色）；`RingBombData` 覆写为色环 `from_hsv(base_hue + i/count)`；`Player` 只调 `bomb_data.tint_for(i, base_hue)`。**以后新 bomb 默认就是原色**，不会再踩。
+- **验证**：新增 `test_bomb_data.test_tint_for_keeps_texture_by_default`（base/mist = 白；ring 第 0 颗 = 起始色相、第 4 颗 = 色环中点）+ `test_mist_bomb` 断言 marisa `tint_for` = 白；`./tools/verify.sh` 全绿 **381 / 4194**。
+
 ### 2026-09-14 — mist bomb 伤敌可推迟到宽展开（damage_from_stage）
 
 - **需求**：marisa 的 bomb 在阶段1（长）/阶段2（保持长）不该有伤害，等阶段3（宽）展开后才有。

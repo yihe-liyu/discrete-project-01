@@ -227,9 +227,7 @@ func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
 		return
 	var count := maxi(bomb_data.count, 1)
 	var dir := Vector2.RIGHT.rotated(TAU * float(i) / float(count))
-	# 随机一个起始色相，后续按等间隔均匀增加，铺满整个色环
-	var hue := fmod(base_hue + float(i) / float(count), 1.0)
-	var tint := Color.from_hsv(hue, 1.0, 1.0)
+	var tint := bomb_data.tint_for(i, base_hue)
 	_play_sfx(AssetRegistry.sounds["shoot"], -6.0)
 	if ctx:
 		ctx.bullets.shoot_bomb(bomb_data, global_position, dir, tint, float(i) * bomb_data.interval)

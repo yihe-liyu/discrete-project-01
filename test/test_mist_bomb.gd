@@ -44,6 +44,7 @@ func test_marisa_bomb_data_is_mist() -> void:
 	assert_eq(bd.count, 1, "单颗")
 	assert_not_null(bd.texture, "应有贴图（marisa_bomb01）")
 	assert_eq((bd as MistBombData).damage_from_stage, MistBombData.Stage.WIDTH, "marisa 应等宽展开（阶段3）才有伤害")
+	assert_eq((bd as MistBombData).tint_for(0, 0.42), Color.WHITE, "marisa bomb 不应被随机染色（贴图自带颜色）")
 
 
 func test_mist_start_size_comes_from_ranges() -> void:
