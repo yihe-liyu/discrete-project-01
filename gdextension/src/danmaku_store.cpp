@@ -13,6 +13,10 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("spawn_batch", "pos", "vel", "type", "faction", "color"), &DanmakuStore::spawn_batch);
 	ClassDB::bind_method(D_METHOD("integrate", "delta"), &DanmakuStore::integrate);
 	ClassDB::bind_method(D_METHOD("get_active_count"), &DanmakuStore::get_active_count);
+	ClassDB::bind_method(D_METHOD("get_colors"), &DanmakuStore::get_colors);
+	ClassDB::bind_method(D_METHOD("get_type_indices"), &DanmakuStore::get_type_indices);
+	ClassDB::bind_method(D_METHOD("get_factions"), &DanmakuStore::get_factions);
+	ClassDB::bind_method(D_METHOD("behavior_batch", "count", "positions", "velocities", "life", "fx", "program", "phase", "tick", "elapsed", "slots", "delta", "player", "boss", "has_boss", "enemies"), &DanmakuStore::behavior_batch);
 	ClassDB::bind_method(D_METHOD("get_position", "id"), &DanmakuStore::get_position);
 	ClassDB::bind_method(D_METHOD("get_velocity", "id"), &DanmakuStore::get_velocity);
 	ClassDB::bind_method(D_METHOD("get_positions"), &DanmakuStore::get_positions);
@@ -635,8 +639,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 	}
 }
 
-Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies) {
-	const float dt = (float)p_delta;
+void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies) {
 	_tick_dead.clear();
 	_ev_kind.clear(); _ev_prog.clear(); _ev_local.clear(); _ev_bullet.clear();
 	_ev_x.clear(); _ev_y.clear(); _ev_dx.clear(); _ev_dy.clear(); _ev_val.clear();
@@ -671,10 +674,9 @@ Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, 
 			for (int s = 0; s < SLOT_STRIDE; ++s) { slots[s] = 0.0f; }
 		}
 	}
-	std::sort(_tick_dead.begin(), _tick_dead.end(), std::greater<int>());
-	for (int id : _tick_dead) {
-		if (id >= 0 && id < _count) { _swap_remove(id); }
-	}
+}
+
+Dictionary DanmakuStore::_events_dict() const {
 	Dictionary out;
 	PackedInt32Array kind, eprog, local, bullet;
 	PackedFloat32Array ex, ey, edx, edy, eval;
@@ -687,6 +689,82 @@ Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, 
 	return out;
 }
 
+Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies) {
+	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies);
+	std::sort(_tick_dead.begin(), _tick_dead.end(), std::greater<int>());
+	for (int id : _tick_dead) {
+		if (id >= 0 && id < _count) { _swap_remove(id); }
+	}
+	return _events_dict();
+}
+
+Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p_pos, const PackedVector2Array &p_vel,
+		const PackedFloat32Array &p_life, const PackedFloat32Array &p_fx,
+		const PackedInt32Array &p_program, const PackedInt32Array &p_phase, const PackedInt32Array &p_tick,
+		const PackedFloat32Array &p_elapsed, const PackedFloat32Array &p_slots,
+		double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies) {
+	const int n = MIN(p_count, MIN(p_pos.size(), p_vel.size()));
+	_count = MIN(n, _capacity);
+	for (int i = 0; i < _count; ++i) {
+		_x[i] = p_pos[i].x; _y[i] = p_pos[i].y;
+		_vx[i] = p_vel[i].x; _vy[i] = p_vel[i].y;
+		_life[i] = i < p_life.size() ? p_life[i] : 0.0f;
+		_fx[i] = i < p_fx.size() ? p_fx[i] : 0.0f;
+		_program[i] = i < p_program.size() ? p_program[i] : -1;
+		_pphase[i] = i < p_phase.size() ? p_phase[i] : 0;
+		_ptick[i] = i < p_tick.size() ? p_tick[i] : 0;
+		_pelapsed[i] = i < p_elapsed.size() ? p_elapsed[i] : 0.0f;
+		for (int s = 0; s < SLOT_STRIDE; ++s) {
+			const int k = i * SLOT_STRIDE + s;
+			_pslots[k] = k < p_slots.size() ? p_slots[k] : 0.0f;
+		}
+	}
+	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies);
+	PackedVector2Array opos, ovel;
+	PackedFloat32Array olife, ofx, oelapsed, oslots;
+	PackedInt32Array oprog, ophase, otick, odead;
+	opos.resize(_count); ovel.resize(_count);
+	olife.resize(_count); ofx.resize(_count); oelapsed.resize(_count);
+	oprog.resize(_count); ophase.resize(_count); otick.resize(_count);
+	oslots.resize(_count * SLOT_STRIDE);
+	for (int i = 0; i < _count; ++i) {
+		opos[i] = Vector2(_x[i], _y[i]);
+		ovel[i] = Vector2(_vx[i], _vy[i]);
+		olife[i] = _life[i]; ofx[i] = _fx[i]; oelapsed[i] = _pelapsed[i];
+		oprog[i] = _program[i]; ophase[i] = _pphase[i]; otick[i] = _ptick[i];
+		for (int s = 0; s < SLOT_STRIDE; ++s) {
+			oslots[i * SLOT_STRIDE + s] = _pslots[i * SLOT_STRIDE + s];
+		}
+	}
+	for (int id : _tick_dead) { odead.push_back(id); }
+	Dictionary out = _events_dict();
+	out["positions"] = opos; out["velocities"] = ovel;
+	out["life"] = olife; out["fx"] = ofx; out["elapsed"] = oelapsed;
+	out["program"] = oprog; out["phase"] = ophase; out["tick"] = otick; out["slots"] = oslots;
+	out["dead"] = odead;
+	return out;
+}
+
+PackedColorArray DanmakuStore::get_colors() const {
+	PackedColorArray out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) { out[i] = _color[i]; }
+	return out;
+}
+
+PackedInt32Array DanmakuStore::get_type_indices() const {
+	PackedInt32Array out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) { out[i] = _type[i]; }
+	return out;
+}
+
+PackedInt32Array DanmakuStore::get_factions() const {
+	PackedInt32Array out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) { out[i] = _faction[i]; }
+	return out;
+}
 
 // ═══ L3.5-1：判定几何（与 scripts/kernel/collision/hit_geometry.gd 1:1）═══
 static bool _circle_rect(const Vector2 &center, float radius, const Vector2 &rect_center, float rot, const Vector2 &size) {

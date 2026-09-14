@@ -18,6 +18,19 @@
 
 ## 记录
 
+### 2026-09-14 — L3.5-3a：原生无状态行为批 behavior_batch + 扩展加载守卫
+
+- **目标**：让原生执行器能跑在 GDScript 存储的数组上（接入 3b 的前置）。
+- **产出**：
+  - `behavior_tick` 核心抽成 `_run_behavior_pass` + `_events_dict`。
+  - 新 `behavior_batch(count, pos, vel, life, fx, program, phase, tick, elapsed, slots, dt, world) -> {pos, vel, ..., dead, events}`：**数组进 / 出、不做 swap**，回收由调用方按 `dead` 重放（与 `integrate_batch` 同款）。
+  - 数组 getter：`get_colors / get_type_indices / get_factions`。
+- **验证**：`test_native_behavior_batch` **2/2（244 断言）** —— curve batch ↔ tick 120 帧一致；bounce batch 返回 dead + 重放清空。
+- **踩坑（重要，已加守卫）**：重构 `behavior_tick` 时用 `slice(start,end)` 替换到构造函数前，**把 L3.5-1 的判定函数整段删了** → `.so` 含未定义符号 `hit_test` → **扩展加载失败**（`ClassDB.class_exists` false）。而所有原生测试只会 `pending`、门禁全绿也发现不了（只有真实加载时才报）。
+  - **教训**：C++ 大段替换必须核对删掉了什么；**扩展加载失败是静默的**。
+  - **处置**：新增 `test_native_extension_loads` —— 扩展已构建时断言类真的注册 + 关键 API 存在；之前那类失败会**变红**。
+- **验收**：verify.sh 全绿。
+
 ### 2026-09-14 — L3.5-2 ✅：LifecycleCatalog（move+params → preset）+ 签名缓存
 
 - **目标**：内容 `kernel_port()` 的 `{move, params}` → `BulletLifecycle`（L3.5-3 接入的前置）。
@@ -381,7 +394,3 @@
 
 ### 2026-09-13 — 决策：内核融合（M1–M3）—— 结束 Strangler，转向「一套架构」
 
-- **决定**：不再维持「内核冻结 + 宿主侧适配」。进入**融合**；终局按 `scripts/kernel/README.md` 的既定约定 —— **原项目成为内核唯一之家、重建版归档**。
-- **度量（为什么是现在）**：`scripts/kernel_bridge/` **979 行 ≈ 内核 1212 行的 80%**；弹型词汇两套（`BulletData` 19 字段 vs `BulletType` 13 字段，**差集恰好是桥接的活**）；5 张侧表；6 个内容脚本手写 `kernel_port()`。桥接现在**同时干两件事** —— 宿主耦合规则 + 词汇翻译 —— **后者才是 979 行的大头**。
-- **为什么能反转 A 方案**：S3 选 A（§14.3）是为了保住「内核零改动」这个**可回退前提**；如今 Track A/B 收口、`use_kernel` 与旧池都删了、GUT 57 套兜底 —— 可回退的收益已经兑现，继续冻结的代价超过收益。
-- **路线**（详见 §16）：
