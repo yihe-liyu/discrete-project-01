@@ -203,7 +203,7 @@
 
 ## S9. 性能（几千发子弹下的帧率余量）
 状态：🚧 ｜ 适用红线：R10, R19
-- [x] 子弹用内核 SoA 池 + MultiMesh，规避每弹节点开销 —— `BulletSystem` + `bullet_multi_mesh.gd`；**旧 `BulletPool`/`Bullet` 节点/`SpatialHash` 已删（W4a-2）**
+- [x] 子弹用内核 SoA 池 + MultiMesh，规避每弹节点开销 —— **原生 `DanmakuStore`（唯一存储）+ `KernelNativeSystem` 只读快照 + `bullet_multi_mesh.gd`**；旧 `BulletPool`/`Bullet` 节点/`SpatialHash` 已删（W4a-2）；GDScript `BulletSystem` 已从生产删除（L3.5-4f，冻结参照在 `test/reference/`）
 - [~] 无每帧临时分配（贪心 alloc）；热路径避免 get_node("...") —— MultiMesh 同步每帧做分组/拼 key（旧代码自注有分配）；字符串 `get_node`/`get_node_or_null` 调用点 **29 处**（生产 14 / 测试 15；A3 更正）
 - [x] 碰撞/移动每帧 walk 用数组索引（内核 SoA），不频繁排序
 - [~] 大量对象时帧率稳定（目标：满载 60fps 有冗余）—— `test/perf_stress/*` 有压测场景，需实机确认

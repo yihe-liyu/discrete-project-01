@@ -4,6 +4,7 @@
 > 前置阅读：`1-st-touhou-star-rebuild/docs/DECISION_DANMAKU_ARCHITECTURE.md`（含「为何不建议 big-bang」与两个方向的对比）。
 > 方法论：**Strangler（绞杀者）** —— 新内核先自包含接入，旧调用点经 adapter 原样可用；再逐子系统替换；最后删旧实现。
 > 状态（2026-09-13）：**Track A / Track B 均已完成**——内核是唯一弹幕后端（`use_kernel` 已转正、旧池已删），autoload **12 → 4**。逐波实施记录已移入 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**；本文只保留**方案 / 契约 / 决策**。§1 是迁移前的现状审计快照。
+> **后续（2026-09-14）**：GDScript 内核本身也完成了历史使命 —— **原生 GDExtension `DanmakuStore` 成唯一存储**，`scripts/kernel/**` 从生产删除（见 [N2_NATIVE_INTEGRATION_PLAN.md](N2_NATIVE_INTEGRATION_PLAN.md) / LOG 4e/4f）。本文中的 `BulletSystem` 等指的是**当时的 GDScript 内核**。
 
 ---
 

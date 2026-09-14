@@ -4,7 +4,9 @@
 > **状态（2026-09-14 刷新）**：触发条件**已达成**；N1 工具链 ✅、N2.2 原生积分 ✅、N4-real 原生渲染 ✅、
 > **L3.5 全落地 ✅**（原生行为/判定/宽相 + 存储翻转：`KernelNativeSystem` 为唯一存储），**`scripts/kernel/**` 已从生产删除**
 > 冻结参照移入 `test/reference/`（见 `BEST_PRACTICES_LOG.md` 4e/4f）。**扩展为必需**。
-> **已拍板**：① 扩展成为**必需**（GDScript 内核转过渡，见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策）；② N3 走 **§5.7 路径 B「数据先行 → 原生 VM」**。
+> **已拍板**：① 扩展成为**必需**（**GDScript 内核已从生产删除**，见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策 / 4f）；
+> ② 实现**不走通用 opcode VM** —— 采用更精简的**「生命周期描述符」**（`BulletLifecycle` → `compile()` 成 packed program → 原生 `behavior_tick`）；
+> 本文 §5.7 的「通用 Danmaku VM」为**早期设想，已被取代**。
 > **前置阅读**：`docs/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`docs/N2_NATIVE_INTEGRATION_PLAN.md`（终局决策 + 拆除清单）；`test/reference/`（冻结的 GDScript 参照实现）。
 
 ---
@@ -211,6 +213,10 @@ native program_id                  # 结构数组 / 字节码；运行期零哈�
 | 终局 | 同上（或 `DanmakuProgram` .tres） | 原生 VM |
 
 **先迁数据、后换实现**：程序 schema 一旦定下，内容可以先改成数据形态，GDScript 解释器先跑通并写进测试；等原生 VM 就位，换执行器即可，内容零改动。这条能把"上原生"的风险砍掉一大半。
+
+> **实际落地（2026-09-14，取代本节的「通用 VM」设想）**：数据形态 = **`BulletLifecycle` 描述符**（Phase / Move / Until / Action 词汇），
+> `compile()` 成 packed program；执行器 = 原生 `DanmakuStore.behavior_tick`；内容仍写 `kernel_port() → {move, params}`，
+> 由 `LifecycleCatalog` 映射成描述符（**创作者接口零改**）。见 `docs/LIFECYCLE_MODEL.md` 与 LOG 的 4e/4f 条目。
 
 ### 5.8 确定性
 

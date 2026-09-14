@@ -1,7 +1,8 @@
-# 弹幕生命周期模型（LIFECYCLE MODEL）—— 草案
+# 弹幕生命周期模型（LIFECYCLE MODEL）—— 已落地（L1–L4）
 
-> **性质**：设计草案。B 路线（N3）的正确形态 = **一套词汇，三种 runtime**。
-> **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §1/§5/§5.7；`docs/N2_NATIVE_INTEGRATION_PLAN.md`；`scripts/kernel/README.md`。
+> **状态**：**已落地（2026-09-14，L1–L4）**。B 路线（N3）的形态 = **一套词汇，三种 runtime**
+> （低频 GDScript / 高频 per-bullet 固定描述符 / 原生执行）。
+> **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §1/§5/§5.7；`docs/N2_NATIVE_INTEGRATION_PLAN.md`。
 > **由来（2026-09-13 决策）**：放弃「通用 opcode VM」，改为「频率分层 + 固定 schema 相位描述符」。理由见 §8。
 
 ---
@@ -221,10 +222,10 @@ bounce → phases: [
 | 步 | 做什么 | 产出 |
 |---|---|---|
 | **L0** | 本文档评审定稿 | 词汇 + schema 冻结 |
-| **L1 ✅（2026-09-13）** | `BulletLifecycle` builder（GDScript）+ **参考解释器**（跑描述符，基于现有 `BulletSystem`） | 2/2 parity：bounce/curve 逐位 |
+| **L1 ✅（2026-09-13）** | `BulletLifecycle` builder（GDScript）+ **参考解释器**（跑描述符；现冻结在 `test/reference/lifecycle_behavior.gd`） | 2/2 parity：bounce/curve 逐位 |
 | **L2 ✅（2026-09-13）** | 10 行为写成 preset，**parity** vs 现有 GDScript 行为 | 10/10 逐位 parity（bounce/curve + 8 个） |
 | **L3 ✅（2026-09-14）** | **原生描述符执行器**（C++ `behavior_tick`），换执行器；parity vs 参考解释器 | `test_native_executor` 9/9 |
-| **L4** | 拆 GDScript 行为 + `CoroutineScript` 快速模式（按拆除清单） | 净减 |
+| **L4 ✅（2026-09-14，4f）** | 拆 GDScript 行为 + GDScript 内核（按拆除清单） | `scripts/kernel/**` 1225 行从生产删除；oracle 冻结进 `test/reference/` |
 
 > 依赖：L3 需要 **N2 存储段**（原生 SoA）—— 否则重演 110ns 的坑。
 
@@ -234,7 +235,7 @@ bounce → phases: [
 
 - ✅ **通过**：`bounce` + `curve` 与现有行为**逐位 parity**（`test_lifecycle_model` 2/2 / 33 断言）。
 - **结论**：描述符 schema + Phase/Move/Until/Action 词汇**足以表达**条件性最强的行为 —— 模型成立。
-- **暴露的引擎 bug**：`BehaviorProcessor` **升序** drain despawn → 多弹同帧回收**丢一个**（详见 `BEST_PRACTICES_LOG.md`）。**已修**（2026-09-13 降序 drain：重建版 `2466a93` / 主工程 `16645d0`）。
+- **暴露的引擎 bug**：`BehaviorProcessor` **升序** drain despawn → 多弹同帧回收**丢一个**（详见 `BEST_PRACTICES_LOG.md`）。**已修**（2026-09-13 降序 drain：重建版 `2466a93` / 主工程 `16645d0`）；`BehaviorProcessor` 本身已随 L3.5-4f 删除。
 - **待办（L2）**：其余 8 个 preset + parity（homing / radial / non_mid / laser / avoid / world_accel / accel）。
 
 ---

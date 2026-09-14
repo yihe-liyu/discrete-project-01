@@ -1,11 +1,12 @@
 # N2-real 接入计划：原生弹幕系统替换 BulletSystem
 
-> **状态**：进行中。N2.1 ✅ / N2.2 积分段 ✅ / **N2.2 存储段核心 ✅** / N4-real ✅ /
-> **L3.5-1 ✅ · L3.5-2 ✅ · L3.5-3 ✅（含 3b）· L3.5-5 主体 ✅ · L3.5-6 真人试玩 ✅**；
-> 当前批次 = **L3.5-4 ✅ 全部完成**（4a · 4b-pre · 4e · **4f ✅**）。
+> **状态：已完成（2026-09-14）**。N2.1 ✅ / N2.2 存储段 ✅ / N4-real ✅ /
+> L3.5-1 ✅ · L3.5-2 ✅ · L3.5-3 ✅（含 3b）· **L3.5-4 ✅（4a · 4b-pre · 4e · 4f）** · L3.5-5 主体 ✅ · L3.5-6 真人试玩 ✅。
+> **结果**：原生 `DanmakuStore` 是弹幕**唯一存储**（积分/行为/判定/宽相）；`scripts/kernel/**` 已从生产删除，
+> oracle 冻结在 `test/reference/`；扩展为必需（见本文「终局决策」「拆除清单」「L3.5 接入方案」）。
 > **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §10（N0–N5）；`gdextension/`。
 
-## 目标
+## 目标（历史——已达成）
 
 把 `KernelBulletBackend.system` 从 GDScript `BulletSystem`（vendor 快照）换成**原生系统**，
 同时**保持桥接 / 渲染 / 物理看到的 API 不变**，可开关、可回退。

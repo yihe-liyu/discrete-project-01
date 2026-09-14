@@ -66,7 +66,7 @@
 | 「这项目怎么组织 / 谁归谁管 / 怎么改对」 | docs/ARCHITECTURE.md |
 | 「项目现在什么状态 / 还差什么」 | docs/BEST_PRACTICES_BASELINE.md |
 | 「为什么当初这么改 / 踩过什么坑」 | docs/BEST_PRACTICES_LOG.md |
-| 「内核迁移到哪了 / 有哪些决策」 | docs/NEW_KERNEL_REFACTOR_PLAN.md |
+| 「原生内核接入到哪了 / 怎么拆的」 | docs/N2_NATIVE_INTEGRATION_PLAN.md + docs/GDEXTENSION_KERNEL_DESIGN.md |
 | 「怎么加一个新敌人 / 符卡」 | CONTENT_GUIDE.md |
 | 「某面角色说什么台词」 | docs/DIALOGUE.md |
 | 「怎么跑 / 怎么测 / 快捷键」 | README.md（本页） |
@@ -75,6 +75,12 @@
 
 ## ⚡ 快速开始
 
+0. **先构建原生内核扩展（必需）** —— 未构建 = 无扩展 = 游戏无法启动（L3.5-4f 起扩展为必需）：
+   ```bash
+   git submodule update --init --recursive   # 首次：拉 godot-cpp
+   ./tools/build_gdextension.sh              # 需 SCons + C++ 工具链
+   ```
+   > 玩家侧不受影响：导出的包内含 `.so` / `.dll` / `.dylib`，玩家从不编译。
 1. 用 Godot 4.7 打开 `project.godot`
 2. 按 F5 运行 → 主菜单
 3. 选 Start → 选难度 → 选角色 → 进入 Stage 1
@@ -82,7 +88,7 @@
 ### 跑测试（重构/改动后的安全带）
 
 ```bash
-# 一键运行全部测试（310 个用例 / 57 个脚本，GUT 框架）
+# 一键运行全部测试（GUT）
 ./test/run_tests.sh
 ```
 
@@ -134,10 +140,10 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 ## 🏗️ 技术栈
 
 - **引擎**: Godot 4.7
-- **测试**: GUT 9.7.1（`test/` 目录，310 个用例 / 57 个脚本覆盖核心系统）
+- **测试**: GUT 9.7.1（`test/` 目录；`./tools/verify.sh` 全量门禁）
 - **协程框架**: CoroutineScript + Timeline（游戏逻辑） / await（UI 过渡，见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)）
 - **服务层**: StageContext（clock/bullets/player/dialogue/items/audio/effects）
-- **弹幕**: 内核 SoA `BulletSystem` + MultiMesh（uniform grid 宽相碰撞；旧 `BulletPool` 已删）
+- **弹幕**: 原生内核 GDExtension `DanmakuStore`（**唯一存储**：积分/行为/判定/宽相）+ MultiMesh 渲染（`KernelNativeSystem` 桥接 + 每帧只读快照）
 - **激光**: 生长/直线/固定路径 三种模式
 - **UI**: NavPage + MenuNav 页面栈（场景化 Overlay/PageHost）
 - **数据**: .tres Resource 文件（EnemyData 构造链模板 / SpellRecordBook / MusicRegistry）

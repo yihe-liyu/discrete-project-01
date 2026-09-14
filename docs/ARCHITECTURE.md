@@ -151,7 +151,7 @@
 ## 7. 索引 / 该读哪些
 
 - **总纲（本文）**：分层/系统地图/所有权/边界/债/操作指南。
-- **内核（现状/迁移）**：`docs/NEW_KERNEL_REFACTOR_PLAN.md`（Strangler→融合 M1–M3）。
+- **内核迁移（历史，已完成）**：`docs/NEW_KERNEL_REFACTOR_PLAN.md`（Strangler→融合 M1–M3）。
 - **弹幕内核（现状 ✅）**：原生 GDExtension `DanmakuStore` 为**唯一存储**（L3.5-4e/4f，`KernelNativeSystem` 桥接）；设计见 `docs/GDEXTENSION_KERNEL_DESIGN.md`，接入/拆除见 `docs/N2_NATIVE_INTEGRATION_PLAN.md`；冻结参照 `test/reference/`。
 - **路线**：`docs/archive/STAGE_FLOW_PLAN.md`（(b) 规划：对象自治/身份归位/命令化 + 七步；Step 1 / 3 / 4 已完成）。
 - **对话**：`docs/DIALOGUE_SYSTEM.md`（当前系统）+ `docs/DIALOGUE.md`（剧本归档）。
