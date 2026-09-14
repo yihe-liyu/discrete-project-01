@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-13 — 修引擎 bug：despawn drain 改降序（升序会丢大 id）
+
+- **来源**：L1 生命周期 parity 时挖出。
+- **bug**：`BehaviorProcessor.process()` 升序 `for id in take_despawn_requests(): despawn(id)`。despawn 是 swap-with-last —— 先回收小 id 会搬走大 id 行并缩小 `_active_count` → 大 id 越界**静默丢弃**。
+- **症状**：多弹同帧回收丢一个 → bounce **重复发射**（diag `spawns=8`）、行为弹残留 / 晚一帧回收。**会咬现游戏。**
+- **修**：按 id **降序**回收（`requests.sort(); requests.reverse()`）。降序时当前 id 恒 ≤ 尾行，被搬的行必是幸存行 → 回收集合精确等于请求集。
+- **落点（重建版单一真相）**：先改 `1-st-touhou-star-rebuild/scripts/behavior/behavior_processor.gd`（commit `2466a93`）→ `bash tools/vendor_kernel.sh` 同步（0 漂移 / 0 宿主引用）。
+- **双向证明**：`test_kernel_despawn_drain` —— 修复后 **2/2 pass**；临时 `git checkout` 回退旧实现 → **0/2 fail**（5 弹全请求残留 2；3 弹回收 #0/#2 剩 2 而非 1）；re-vendor 恢复 → pass。
+- **教训**：swap-with-last 的**批量删除必须降序**。升序的 bug 会被「下帧再 request」自愈掩盖，只有**同帧多删**才暴露 —— 生命周期描述符（推进 phase、不重请求）把它放大成永久残留，反而**帮我们抓到了它**。
+- **验收**：verify.sh 全绿。
+
 ### 2026-09-13 — L1 ✅：BulletLifecycle 描述符 + 参考解释器；bounce/curve parity 逐位通过
 
 - **目标**：验证 `docs/LIFECYCLE_MODEL.md` 的 per-bullet 描述符能否表达现有行为。
@@ -358,17 +369,3 @@
 - **A3**：`BulletManager.fx_pool` 从「public var + `inject_fx_pool()`」双写入口改为**只读属性 + 私有后备**（`_fx_pool` + `var fx_pool: FxPool: get: return _fx_pool`），唯一写入口 = `inject_fx_pool()`；顺带删掉 `_ready` 里那句冗余自注入（`_enable_kernel()` 已把 fx_pool 灌给 `_kernel_physics.fx`）。
   - **为什么是 setter 而不是删 setter**：setter 不只赋值，还要**转发给子模块**（`_kernel_physics.fx`）——删了它，调用方就得知道内部结构；只读属性则让「外部硬写」直接编译不过。
 - **A12**：`GameManager.set_state` / `_set_state` 双名合一 —— 删私有壳，函数体搬进 `set_state`，内部 2 处调用改走它。
-- **A11**：清掉 `scripts/**` 全部行尾空白（**183 行 / 31 文件**）。**同时更正上一条记录的错误**：`_spawn_fx` / `_render_fade` 本来就是 `Dictionary = {}`（有显式类型、无尾随空格）—— 原判断是我自己 `sed` 过滤掉了 `{}` 造成的误读。
-- **为什么**：R5（接口类型化）+ R6（对外接口说实话）+ R19（同一件事只有一个入口）。「同一依赖两种注入风格」会让组合根越写越像约定、而不是机制。
-- **验收**：`check_syntax` 191/0；全量 GUT **57 套 / 310 / 3215 全绿**（行尾空白纯机械改动，零行为变化）。
-- **已知遗留**：`StageRuntime` 的注入槽（`bullets` / `world` / `miss_layer` / `fx_pool` / `ui_layer`）仍是**裸 public var**（`game_scene.gd` 直接赋值），与 `BulletManager` 的 setter 风格不统一 → 记为 A17（统一前得先定「槽用只读属性还是 inject 方法」）。
-
-### 2026-09-13 — P0-3：删掉无调用者的 return_bullet / re_fire（A16）
-
-- **目标**：A15 类型化后暴露的「typed 但没人调」公开 API 收尾 —— `BulletManager.return_bullet` / `re_fire` 与 `BulletService.return_bullet` / `re_fire` 一起删。
-- **为什么**：内核行为走 `KernelBehaviorHost.request_despawn` / `queue_spawn`（延后队列 + `BulletSystem.despawn`），宿主侧「按 handle 回收 / 原地重发」这条 API 已无存在理由；留着只会让人以为别处在用（R19）。
-- **验收**：`check_syntax` 191/0；全量 GUT 57 套 / 310 / 3215 全绿；净 -23 行。
-- **注**：`docs/NEW_KERNEL_REFACTOR_PLAN.md` §5 的 adapter 清单仍列着这两个名字 —— 那是 Phase 1 的历史设计（当时旧池还在），按「方案/决策不动」原则不回写。
-
-### 2026-09-13 — P0-2：删掉 5 处旧池协程残体 + 类型化 return_bullet/re_fire（A14 / A15）
-

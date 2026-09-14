@@ -56,6 +56,12 @@ func process() -> void:
 		var behavior: Behavior = _by_slot[slot]
 		if behavior:
 			behavior.process(_system, i, _ctx)
-	# 回收 pass：行为只标记，这里统一执行
-	for id in _system.take_despawn_requests():
+	# 回收 pass：行为只标记，这里统一执行。
+	# 必须按 id **降序**：despawn 是 swap-with-last —— 升序时先回收小 id 会把大 id 所在的行
+	# 搬到小 id 槽并缩小 _active_count，使后续大 id 越界被**静默丢弃**
+	# （症状：多弹同帧回收丢一个 → bounce 重复发射 / 行为弹残留）。
+	var requests: PackedInt32Array = _system.take_despawn_requests()
+	requests.sort()
+	requests.reverse()
+	for id in requests:
 		_system.despawn(id)
