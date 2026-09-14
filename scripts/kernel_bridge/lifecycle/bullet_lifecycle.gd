@@ -33,6 +33,7 @@ const A_SFX := &"sfx"
 const A_DESPAWN := &"despawn"
 const A_SET_HEADING := &"set_heading"
 const A_SET_SPEED := &"set_speed"
+const A_CALL := &"call"
 
 # ---- 目标 / 方向 ----
 const T_PLAYER := &"player"
@@ -125,8 +126,9 @@ func rotate(w: float, limit: float = 0.0) -> BulletLifecycle:
 	_moves.append({&"op": M_ROTATE, &"w": w, &"limit": limit, &"slot": s})
 	return self
 
-func steer(target: StringName, max_turn_per_sec: float, ramp: float = 0.0, dist_weight: float = 0.0) -> BulletLifecycle:
-	_moves.append({&"op": M_STEER, &"target": target, &"max_turn": max_turn_per_sec, &"ramp": ramp, &"dist_weight": dist_weight})
+## speed_from/speed_to 给了就同时设速度（与参考 homing 的融合一步 1:1，避免两段组合的浮点漂移）。
+func steer(target: StringName, max_turn_per_sec: float, ramp: float = 0.0, dist_weight: float = 0.0, speed_from: float = NAN, speed_to: float = NAN, steer_until: float = 0.0) -> BulletLifecycle:
+	_moves.append({&"op": M_STEER, &"target": target, &"max_turn": max_turn_per_sec, &"ramp": ramp, &"dist_weight": dist_weight, &"speed_from": speed_from, &"speed_to": speed_to, &"steer_until": steer_until})
 	return self
 
 func speed_lerp(from_speed: float, to_speed: float, ramp: float) -> BulletLifecycle:
@@ -146,9 +148,9 @@ func set_speed(speed: float) -> BulletLifecycle:
 	return self
 
 ## 锚定 + 线性漂移（激光段）：pos = anchor + dir(angle) * 累计漂移。
-func anchor_drift(anchor_id: int, offset: Vector2, angle: float, speed: float, use_global: bool = true) -> BulletLifecycle:
+func anchor_drift(anchor_id: int, offset: Vector2, angle: float, speed: float, use_global: bool = true, initial: float = 0.0, render_heading: bool = false) -> BulletLifecycle:
 	var s := _alloc()
-	_moves.append({&"op": M_ANCHOR_DRIFT, &"anchor_id": anchor_id, &"offset": offset, &"angle": angle, &"speed": speed, &"use_global": use_global, &"slot": s})
+	_moves.append({&"op": M_ANCHOR_DRIFT, &"anchor_id": anchor_id, &"offset": offset, &"angle": angle, &"speed": speed, &"use_global": use_global, &"initial": initial, &"render_heading": render_heading, &"slot": s})
 	return self
 
 
@@ -162,8 +164,9 @@ func until_elapsed(t: float) -> BulletLifecycle:
 	return self
 
 ## every > 0 = 每 every 秒才检查一次（avoid_player 的 jump）。
-func until_near(target: StringName, r: float, every: float = 0.0) -> BulletLifecycle:
-	_set_until(C_NEAR, {&"target": target, &"r": r, &"every": every})
+## every = 秒；every_ticks = 帧（与 non_mid 的 skip%3 门控 1:1）。
+func until_near(target: StringName, r: float, every: float = 0.0, every_ticks: int = 0) -> BulletLifecycle:
+	_set_until(C_NEAR, {&"target": target, &"r": r, &"every": every, &"every_ticks": every_ticks})
 	return self
 
 func until_at_wall(mask: int) -> BulletLifecycle:
@@ -199,6 +202,11 @@ func on_end_heading(dir: Dictionary) -> BulletLifecycle:
 	_on_end.append({&"op": A_SET_HEADING, &"dir": dir})
 	return self
 
+## 内容回调动作（一次性、低频）：fn.call(pos, boss_pos, has_boss, host)。
+func on_end_call(fn: Callable) -> BulletLifecycle:
+	_on_end.append({&"op": A_CALL, &"fn": fn})
+	return self
+
 
 # ═══ Canned preset（现有行为 → 命名组合；创作者也可自己拼）═══
 static func bounce(accel: float, bounce_angle: float, spawn_speed: float, factory: Callable,
@@ -227,4 +235,65 @@ static func world_accel(v: Vector2) -> BulletLifecycle:
 static func accel(a: float) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
 	lc.accel_heading(a)
+	return lc
+
+# ═══ 其余 preset ═══
+
+## 追踪最近敌人：steer + 速度爬升；超 duration 停诱导（speed_lerp 与 steer 共用 ramp）。
+static func homing(angle_per_sec: float, accel_time: float, min_speed: float, max_speed: float,
+		duration: float, proximity_boost: float) -> BulletLifecycle:
+	var lc := BulletLifecycle.new()
+	lc.steer(T_NEAREST_ENEMY, angle_per_sec, accel_time, proximity_boost, min_speed, max_speed if max_speed > 0.0 else min_speed, duration)
+	lc.until_never()   # duration 只控制「转向多久」，弹体继续飞
+	return lc
+
+
+## 沿初向加速；碰顶边换向下弹（保留速度大小）+ sfx。
+static func radial_accel(accel_rate: float, factory: Callable, sfx_key: StringName = &"", sfx_db: float = 0.0) -> BulletLifecycle:
+	var lc := BulletLifecycle.new()
+	lc.accel_heading(accel_rate)
+	lc.until_at_wall(WALL_TOP)
+	if sfx_key != &"":
+		lc.sfx(sfx_key, sfx_db)
+	lc.emit(factory, heading(PI), 0.0, true)
+	lc.despawn()
+	return lc
+
+
+## 靠近自机则逃；逃满 flee_time 自灭。
+static func avoid_player(proximity: float, jump: float, flee_time: float) -> BulletLifecycle:
+	var lc := BulletLifecycle.new()
+	lc.until_near(T_PLAYER, proximity, jump)
+	lc.on_end_heading(away(T_PLAYER))
+	lc.then()
+	lc.until_elapsed(flee_time)
+	lc.despawn()
+	return lc
+
+
+## 靠近自机逃 → 靠近 Boss 散圈（内容回调）+ 回收。
+static func non_mid_flee(proximity: float, boss_radius: float, burst: Callable) -> BulletLifecycle:
+	var lc := BulletLifecycle.new()
+	lc.until_near(T_PLAYER, proximity, 0.0, 3)
+	lc.on_end_heading(away(T_PLAYER))
+	lc.then()
+	lc.until_near(T_BOSS, boss_radius, 0.0, 3)
+	lc.on_end_call(burst)
+	lc.despawn()
+	return lc
+
+
+## 锚定漂移激光（内核 laser_follow：锚点用局部 position）。
+static func laser_follow(anchor_id: int, offset: Vector2, angle: float, drift_speed: float, initial_drift: float) -> BulletLifecycle:
+	var lc := BulletLifecycle.new()
+	lc.anchor_drift(anchor_id, offset, angle, drift_speed, false, initial_drift, false)
+	lc.until_never()
+	return lc
+
+
+## 魔理沙非 focus 激光（锚点用 global_position；速度设为朝向）。
+static func marisa_laser(anchor_id: int, offset: Vector2, angle: float, drift_speed: float, initial_drift: float) -> BulletLifecycle:
+	var lc := BulletLifecycle.new()
+	lc.anchor_drift(anchor_id, offset, angle, drift_speed, true, initial_drift, true)
+	lc.until_never()
 	return lc

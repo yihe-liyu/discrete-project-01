@@ -27,6 +27,7 @@ func process(system: BulletSystem, bullet_id: int, ctx: BehaviorContext) -> void
 		return
 	var phase: Dictionary = phases[pi]
 	var dt: float = system.get_delta()
+	st[&"tick"] = int(st[&"tick"]) + 1
 	st[&"elapsed"] = float(st[&"elapsed"]) + dt
 	for mv in phase[&"moves"]:
 		_apply_move(system, bullet_id, st, mv, dt, ctx)
@@ -47,6 +48,8 @@ func _new_state(lc) -> Dictionary:
 		&"end_pos": Vector2.ZERO,
 		&"has_end_pos": false,
 		&"next_check": 0.0,
+		&"tick": 0,
+		&"fresh": true,
 	}
 
 
@@ -56,6 +59,7 @@ func _enter_phase(st: Dictionary, phase: int) -> void:
 	st[&"end_pos"] = Vector2.ZERO
 	st[&"has_end_pos"] = false
 	st[&"next_check"] = 0.0
+	st[&"fresh"] = true
 	var slots: Array = st[&"slots"]
 	for i in slots.size():
 		slots[i] = 0.0
@@ -85,22 +89,29 @@ func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, 
 			system.set_velocity(id, system.get_velocity(id).rotated(step))
 		BulletLifecycle.M_STEER:
 			var from := system.get_position(id)
-			var tp = _target_pos(mv[&"target"], from, ctx)
-			if tp != null:
-				var vel := system.get_velocity(id)
-				var cur := vel.normalized()
-				if cur != Vector2.ZERO:
+			var vel := system.get_velocity(id)
+			var cur := vel.normalized()
+			if cur != Vector2.ZERO:
+				var ramp: float = float(mv[&"ramp"])
+				var factor: float = 1.0 if ramp <= 0.0 else clampf(float(st[&"elapsed"]) / ramp, 0.0, 1.0)
+				var rotated := cur
+				var steer_until: float = float(mv[&"steer_until"])
+				var can_steer: bool = steer_until <= 0.0 or float(st[&"elapsed"]) <= steer_until
+				var tp = _target_pos(mv[&"target"], from, ctx) if can_steer else null
+				if tp != null:
 					var diff: Vector2 = tp - from
 					var dist: float = maxf(diff.length(), 1.0)
-					var ramp: float = float(mv[&"ramp"])
-					var factor: float = 1.0 if ramp <= 0.0 else clampf(float(st[&"elapsed"]) / ramp, 0.0, 1.0)
 					var dw: float = 1.0
 					var dist_weight: float = float(mv[&"dist_weight"])
 					if dist_weight > 0.0:
 						dw = 1.0 + dist_weight / (dist + dist_weight)
 					var max_turn: float = float(mv[&"max_turn"]) * factor * dw * dt
-					var turn: float = clampf(cur.angle_to(diff / dist), -max_turn, max_turn)
-					system.set_velocity(id, cur.rotated(turn) * vel.length())
+					rotated = cur.rotated(clampf(cur.angle_to(diff / dist), -max_turn, max_turn))
+				var sf: float = float(mv[&"speed_from"])
+				if is_nan(sf):
+					system.set_velocity(id, rotated * vel.length())
+				else:
+					system.set_velocity(id, rotated * lerpf(sf, float(mv[&"speed_to"]), factor))
 		BulletLifecycle.M_SPEED_LERP:
 			var ramp2: float = float(mv[&"ramp"])
 			var f2: float = 1.0 if ramp2 <= 0.0 else clampf(float(st[&"elapsed"]) / ramp2, 0.0, 1.0)
@@ -121,9 +132,15 @@ func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, 
 			var base := _anchor_pos(int(mv[&"anchor_id"]), Vector2(mv[&"offset"]), bool(mv[&"use_global"]), ctx)
 			var slots2: Array = st[&"slots"]
 			var si2: int = int(mv[&"slot"])
-			slots2[si2] = float(slots2[si2]) + float(mv[&"speed"]) * dt
+			if bool(st[&"fresh"]):
+				slots2[si2] = float(mv[&"initial"])   # 首帧：初始漂移，不推进（与 laser_follow 1:1）
+				st[&"fresh"] = false
+			else:
+				slots2[si2] = float(slots2[si2]) + float(mv[&"speed"]) * dt
 			var adir := Vector2(sin(float(mv[&"angle"])), -cos(float(mv[&"angle"])))
 			system.set_position(id, base + adir * float(slots2[si2]))
+			if bool(mv[&"render_heading"]):
+				system.set_velocity(id, adir)
 		_:
 			push_warning("LifecycleBehavior: 未知 move '%s'" % mv[&"op"])
 
@@ -135,6 +152,9 @@ func _check_until(system: BulletSystem, id: int, st: Dictionary, cond: Dictionar
 		BulletLifecycle.C_ELAPSED:
 			return float(st[&"elapsed"]) >= float(cond[&"t"])
 		BulletLifecycle.C_NEAR:
+			var every_ticks: int = int(cond[&"every_ticks"])
+			if every_ticks > 0 and int(st[&"tick"]) % every_ticks != 0:
+				return false
 			var every: float = float(cond[&"every"])
 			if every > 0.0:
 				if float(st[&"elapsed"]) < float(st[&"next_check"]):
@@ -184,6 +204,8 @@ func _run_actions(system: BulletSystem, id: int, st: Dictionary, actions: Array,
 				var d2 := system.get_velocity(id).normalized()
 				if d2 != Vector2.ZERO:
 					system.set_velocity(id, d2 * float(act[&"speed"]))
+			BulletLifecycle.A_CALL:
+				_call(act[&"fn"], system, id, ctx)
 
 
 func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ctx: BehaviorContext) -> void:
@@ -202,6 +224,16 @@ func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ct
 			host.queue_spawn(b, at, dir)
 
 
+# ── 内容回调（一次性、低频）──
+func _call(fn: Callable, system: BulletSystem, id: int, _ctx: BehaviorContext) -> void:
+	if not fn.is_valid():
+		return
+	var boss = _boss()
+	var has_boss: bool = is_instance_valid(boss)
+	var boss_pos: Vector2 = boss.global_position if has_boss else Vector2.ZERO
+	fn.call(system.get_position(id), boss_pos, has_boss, host)
+
+
 # ── 目标 / 方向 / 锚点 ──
 func _target_pos(target: StringName, from: Vector2, ctx: BehaviorContext) -> Variant:
 	match target:
@@ -211,7 +243,19 @@ func _target_pos(target: StringName, from: Vector2, ctx: BehaviorContext) -> Var
 			var boss = _boss()
 			return boss.global_position if is_instance_valid(boss) else null
 		BulletLifecycle.T_NEAREST_ENEMY:
-			return ctx.get_world().get_nearest_enemy(from)
+			# 与 homing_behavior._nearest_enemy 1:1：跳过时符 / 未开战 Boss。
+			var best: Node2D = null
+			var bd := INF
+			for e in ctx.get_world().get_enemies():
+				if e is Boss:
+					var ph: PhaseData = (e as Boss).current_phase()
+					if not ph or ph.is_timeout_only:
+						continue
+				var d2: float = from.distance_squared_to(e.global_position)
+				if d2 < bd:
+					bd = d2
+					best = e
+			return best.global_position if best != null else null
 		_:
 			return null
 

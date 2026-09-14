@@ -222,7 +222,7 @@ bounce → phases: [
 |---|---|---|
 | **L0** | 本文档评审定稿 | 词汇 + schema 冻结 |
 | **L1 ✅（2026-09-13）** | `BulletLifecycle` builder（GDScript）+ **参考解释器**（跑描述符，基于现有 `BulletSystem`） | 2/2 parity：bounce/curve 逐位 |
-| **L2** | 10 行为写成 preset，**parity** vs 现有 GDScript 行为；定死 §5.2 开放项 | parity 测试 |
+| **L2 ✅（2026-09-13）** | 10 行为写成 preset，**parity** vs 现有 GDScript 行为 | 10/10 逐位 parity（bounce/curve + 8 个） |
 | **L3** | **原生描述符执行器**（C++），换执行器；parity vs 参考解释器 | 性能 |
 | **L4** | 拆 GDScript 行为 + `CoroutineScript` 快速模式（按拆除清单） | 净减 |
 
@@ -248,18 +248,20 @@ bounce → phases: [
 | Move | `accel_world(v)` | v += v_world·dt |
 | | `accel_heading(a)` | 沿航向加速 |
 | | `rotate(w, limit=0)` | 角速度；limit>0 钳到累计转角（自带槽） |
-| | `steer(target, max_turn, ramp=0, dist_weight=0)` | 朝目标转向（target = player / nearest_enemy / boss） |
+| | `steer(target, max_turn, ramp=0, dist_weight=0, speed_from, speed_to, steer_until=0)` | 朝目标转向；可融合速度（homing 1:1）/ 限时转向 |
 | | `speed_lerp(from, to, ramp)` | 速度按相位 elapsed 插值 |
 | | `scale_speed(f)` / `set_speed(s)` / `set_heading(dir)` | 原语 |
 | | `anchor_drift(anchor_id, offset, angle, speed, use_global)` | 锚定 + 线性漂移（自带槽） |
 | Condition | `never` / `elapsed(t)` | — |
-| | `near(target, r, every=0)` | every>0 = 每 every 秒才检查一次 |
+| | `near(target, r, every=0, every_ticks=0)` | every>0 秒；every_ticks>0 帧门控（non_mid 的 skip%3） |
 | | `at_wall(mask)` | 夹位并输出落点（供 `emit(at_end)`） |
 | | `state(slot, cmp, v)` | 读槽（`until_turned()` 是便利封装） |
 | Action | `emit(factory, dir, speed, at_end)` | dir 表达式；at_end 用条件落点 |
-| | `sfx(key, db)` / `despawn` / `on_end_heading(dir)` | — |
+| | `sfx(key, db)` / `despawn` / `on_end_heading(dir)` / `on_end_call(fn)` | 内容回调（散圈）用 call |
 | 方向表达式 | `toward(t, angle)` / `away(t, angle)` / `heading(angle)` | t = player / nearest_enemy / boss |
 
 **边界**：unit 停在**语义**层（上表 ~15 个）；不下沉到微 op（否则变回 §5 大 VM）。
 
 **踩坑**：`then()` 生成的新相位 `until=never`；在其上挂 `on_end` 动作**永不触发**。
+
+**L2 实测（2026-09-13）**：10 个行为全部逐位 parity（`test_lifecycle_model` + `test_lifecycle_presets`）。为 parity 追加的语义化 unit 细节：`steer` 的 `speed_from/speed_to`（融合速度）与 `steer_until`（限时转向）、`near` 的 `every_ticks`（帧门控）、`on_end_call`（内容回调）、`T_NEAREST_ENEMY` 跳过时符 Boss。

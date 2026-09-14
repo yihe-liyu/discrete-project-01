@@ -18,6 +18,20 @@
 
 ## 记录
 
+### 2026-09-13 — L2 ✅：其余 8 个 preset 逐位 parity；描述符覆盖面补齐
+
+- **目标**：`LIFECYCLE_MODEL` 的正交 unit 能否覆盖全部 10 个行为。
+- **产出**：preset `homing / radial_accel / avoid_player / non_mid_flee / laser_follow / marisa_laser / accel / world_accel` + `test_lifecycle_presets`。
+- **结果**：**8/8（10 断言）逐位 parity**（位置 / 速度 / 发射 pos·dir·vel）。加 L1 的 bounce/curve → **10 个行为全覆盖**。
+- **为 parity 加的 unit 细节（都保持语义化）**：
+  - `steer` 融合速度（`speed_from/speed_to`）：参考 homing 是「unit 方向旋转 + 赋速度」**一步**；拆成 `steer+speed_lerp` 会因多一次 `normalize` 累积到 2e-4。
+  - `steer` 的 `steer_until`：duration 是「转向多久」而**非**相位结束（弹体继续飞）。
+  - `near` 的 `every_ticks`：non_mid 的 `skip % 3` 帧门控 1:1。
+  - `on_end_call(fn)`：内容散圈回调（一次性、低频）。
+  - `T_NEAREST_ENEMY` 跳过时符 Boss（与 `homing_behavior` 1:1）。
+- **踩坑**：`WorldQuery.get_nearest_enemy` 返回 **Node2D**，不是 Vector2 —— 我直接拿它做减法，报 `Invalid operands 'Object' and 'Vector2'`。
+- **验收**：verify.sh 全绿。
+
 ### 2026-09-13 — L1.5：状态显式化（按相位自动分配槽）+ unit 正交化
 
 - **动机**：L1 用 flat Dictionary 存状态（`turned` / `hit_pos` / `drift` / `elapsed`）是**隐藏通道** —— 两个相位都 rotate 会共用 `turned`，unit 无法自由组合。
@@ -361,11 +375,3 @@
 - **落点**：`docs/BEST_PRACTICES_BASELINE.md` 新增「**注入契约（组合根 → 场景节点）**」，与帧序/层序/命名边界契约并列，按「**写入是否需要副作用**」二分：
   - 需要（转发子模块 / 重建装配 / 校验 / 统一断开）→ **只读属性 + `inject_*()` / `setup_*()`**，方法即唯一写入口；
   - 纯赋值 → 允许**裸 public var**，但必须 `##` 注明「组合根注入」。
-- **收口**：按规则唯一偏离 = `BulletManager.world_refs`（只被 `inject_world_refs()` 写、且写它有 `_enable_kernel()` 副作用，却仍挂着裸 var 写入口）→ 改 `_world_refs` + 只读属性，与 `fx_pool` 对称。
-- **验收**：`check_syntax` 191/0；全量 GUT 57 套 / 310 / 3215 全绿。
-- **顺带（命名审计）**：复查命名时发现「**同一概念不同名**」成片（`EntityRegistry` = `refs`×8 vs `world_refs`×1；`BulletManager` 实例 = `world` vs `bullets`；`BulletSystem` = `system`×16 vs `sys`×3；`StageContext` 参数 = `p_ctx`×21 vs `_ctx`×20 vs `_p_ctx`×1；`StageData` = `sd` / `current_stage` / `_stage_data`）→ 已单列为 TODO 的 **N 组**（8 条）。
-
-### 2026-09-13 — P0-5：shoot_spread 定契约 + 删 spawn_bullet（A6）
-
-- **问题**：`BulletService.shoot_spread` 不声明返回类型，三条 return 路径给两样东西（`count==1` → int 行 id；`count>1` / 不活跃 → null），注释还写着已消失的「旧池 = Bullet 节点 / 用前先 `is Bullet` 判断」。
-- **实测**：17 个调用点 / 12 个文件，**全部丢弃返回值**（赋值 / return / assert 命中 0）。
