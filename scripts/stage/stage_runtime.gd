@@ -1,40 +1,32 @@
+class_name StageRuntime
+extends Node
 ## 关卡运行时 —— 关卡生命周期 + 生成敌人/Boss（World 下的场景节点）。
 ## StageManager autoload 已删除；本节点是关卡生命周期的唯一实现（World 下声明）。
 ## 依赖由组合根注入 `world`（敌人生成 / 自机 ctx 注入的父节点），不再 get_tree().current_scene 全树找（R2）。
 ## 运行时引用归 EntityRegistry / SaveData，运行时字段已清空。
-class_name StageRuntime
-extends Node
-
-const ENEMY_SCENE = preload("res://scenes/enemy.tscn")
-const BossClass = preload("res://scripts/enemy/boss.gd")
-const ParamValidator = preload("res://scripts/data/param_validator.gd")
 
 signal stage_started()
 signal stage_cleared()
 signal all_enemies_defeated()
 
-## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
-var world: Node2D
+const ENEMY_SCENE = preload("res://scenes/enemy.tscn")
+const BossClass = preload("res://scripts/enemy/boss.gd")
+const ParamValidator = preload("res://scripts/data/param_validator.gd")
 
-## 战场实体注册表（自机 / 敌机 / Boss 的单一真源）
-var entity_registry := EntityRegistry.new()
 
-## 弹幕世界（组合根注入；供关卡发弹 / 清弹）
-var bullet_manager: BulletManager
-
-## 注入槽（组合根 / 工作台设置）
-var miss_layer: MissCircleLayer
+var world: Node2D							## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
+var entity_registry := EntityRegistry.new()	## 战场实体注册表（自机 / 敌机 / Boss 的单一真源）
+var bullet_manager: BulletManager			## 弹幕世界（组合根注入；供关卡发弹 / 清弹）
+var miss_layer: MissCircleLayer				## 注入槽（组合根 / 工作台设置）
 var fx_pool: FxPool
-## Boss 位置指示器所属 HUD 层（组合根注入）
-var ui_layer: CanvasLayer
+var ui_layer: CanvasLayer					## Boss 位置指示器所属 HUD 层（组合根注入）
 var current_background: StageBackground		## 背景场景实例（组合根在 load_stage 前注入）
-
 var current_stage: StageData
 var _is_stage_active: bool = false
-var _coroutine_script: CoroutineScript
+var _coroutine_script: CoroutineScript		##关卡协程脚本
 
 
-## 当前关卡协程脚本（工作台/调试读取运行时间用）
+## 获取当前关卡协程脚本（工作台/调试读取运行时间用）
 func current_stage_script() -> CoroutineScript:
 	return _coroutine_script
 

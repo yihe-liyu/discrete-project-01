@@ -7,8 +7,9 @@ extends RefCounted
 ##
 ## 注意：name 会遮蔽 Node.name，故句柄侧用 key 而非 name 做槽位键。
 
-var _key: String
 var data: BossData
+
+var _key: String
 var _hide_name: String = "？？？"
 ## 命名槽位注册表（由 StageDirector 注入其 ctx.objects；为空则 resolve 恒 null）
 var _stage_objects: StageObjects

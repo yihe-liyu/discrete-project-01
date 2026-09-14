@@ -1,9 +1,8 @@
+extends NavPage
 # MainMenu.gd — 标题画面 + 子页面导航中枢
 #
 # 特殊处理：MainMenu 是场景根节点，不走 MenuNav push 流程。
 # 它继承 NavPage 以复用选项导航，但自己管理入口时机。
-
-extends NavPage
 
 @onready var _logo: TextureRect = $"Logo"
 @onready var _particles: GPUParticles2D = $"GPUParticles2D"

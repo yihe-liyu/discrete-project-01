@@ -1,10 +1,10 @@
+class_name LifecycleCatalog
+extends RefCounted
 ## LifecycleCatalog —— 把内容现有的 `move + params` 映射到 L2 的 `BulletLifecycle`（L3.5-2）。
 ##
 ## **内容零改动**：内容仍写 `kernel_port() -> {move, params}`，创作者看不到这一层。
 ## move 名与参数键**以本文件 build() 为准**（原生执行器跑编译后的 packed program；
 ## test/reference/behavior/*.gd 只是冻结参照，不驱动 schema）。新增 move 见 CONTENT_GUIDE.md「弹幕行为接口」。
-class_name LifecycleCatalog
-extends RefCounted
 
 ## 预拼描述符入口：内容 `kernel_port()` 直接给 `{lifecycle: BulletLifecycle}`（可选 `anchor`）。
 ## 对应 docs/LIFECYCLE_MODEL.md §7「`*_bullet.gd` → builder sugar」。

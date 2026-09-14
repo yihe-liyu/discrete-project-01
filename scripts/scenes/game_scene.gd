@@ -1,19 +1,19 @@
-extends Node
 class_name GameScene
+extends Node
 
 const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
+
+var _blur_rect: ColorRect
+var _background_instance: Node  # StageBackground 或测试 Node3D
 
 @onready var _sub_viewport: SubViewport = %SubViewport
 @onready var _world: Node2D = %World
 @onready var _fx_pool: FxPool = %FxPool
 @onready var _stage_runtime: StageRuntime = %StageRuntime
-@onready var _miss_circle_layer: MissCircleLayer = %MissCircleLayer
 @onready var _game_ui: GameUI = $GameUI
 @onready var _item_pool: ItemPool = %ItemPool
 @onready var _bullet_manager: BulletManager = %BulletManager   # R21：弹幕世界（game_scene.tscn 声明）
-
-var _blur_rect: ColorRect
-var _background_instance: Node  # StageBackground 或测试 Node3D
+@onready var _miss_circle_layer: MissCircleLayer = %MissCircleLayer
 
 
 func _ready():
@@ -53,7 +53,7 @@ func _ready():
 
 
 func _start_normal_game() -> void:
-	var data := _resolve_stage_data()
+	var data: StageData = _resolve_stage_data()
 	if not data:
 		push_error("GameScene: 找不到关卡 stage_id=%d difficulty=%d" % [SaveData.current_stage_id, SaveData.selected_difficulty])
 		return
@@ -69,7 +69,7 @@ func _start_practice_game() -> void:
 		push_error("GameScene: practice_phase 未设置")
 		return
 
-	var boss := _stage_runtime.start_spell_card(
+	var boss: Boss = _stage_runtime.start_spell_card(
 		phase, PracticeSession.boss_scene, PracticeSession.boss_name,
 		Vector2(GameConfig.FIELD_CENTER_X, 240)
 	)

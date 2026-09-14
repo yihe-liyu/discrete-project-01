@@ -1,8 +1,14 @@
-# BulletMultiMesh — 用 MultiMeshInstance2D 批量渲染子弹
-# 所有子弹合并为 1 次 draw call（按纹理 × 阵营 × tint_mode 分组）
-# 数据源：KernelBulletBackend 的内核 SoA 快照（backend.system）；set_backend() 注入后生效。
-extends Node2D
 class_name BulletMultiMesh
+extends Node2D
+## BulletMultiMesh — 用 MultiMeshInstance2D 批量渲染子弹
+## 所有子弹合并为 1 次 draw call（按纹理 × 阵营 × tint_mode 分组）
+## 数据源：KernelBulletBackend 的内核 SoA 快照（backend.system）；set_backend() 注入后生效。
+
+
+## 宿主阵营常量（顺序与内核 BulletType.Faction 不同，渲染时显式映射）
+const _FACTION_PLAYER := 0
+const _FACTION_ENEMY := 1
+const _FACTION_BOMB := 2
 
 ## 是否启用 MultiMesh 批渲染
 @export var enabled: bool = true
@@ -10,22 +16,11 @@ class_name BulletMultiMesh
 ## 内核后端（唯一数据源）。
 var backend: KernelBulletBackend
 
-## 宿主阵营常量（顺序与内核 BulletType.Faction 不同，渲染时显式映射）
-const _FACTION_PLAYER := 0
-const _FACTION_ENEMY := 1
-const _FACTION_BOMB := 2
-
 var _groups: Dictionary = {}  # key → {mmi, mm, mesh}
 
 ## 渲染同步走原生 DanmakuRenderBridge（分组 + 旋转 + fade + 填充）；L3.5-4f 起扩展为必需。
 var _bridge = null
 var _type_table_count: int = -1
-
-
-## 注入内核后端；null = 无可渲染数据源（不画）。
-func set_backend(b: KernelBulletBackend) -> void:
-	backend = b
-	_type_table_count = -1   # 后端换 → 类型表失效
 
 
 func _ready():
@@ -36,6 +31,12 @@ func _process(_delta):
 	if not enabled:
 		return
 	_sync()
+
+
+## 注入内核后端；null = 无可渲染数据源（不画）。
+func set_backend(b: KernelBulletBackend) -> void:
+	backend = b
+	_type_table_count = -1   # 后端换 → 类型表失效
 
 
 ## 数据源：内核 SoA 快照。
