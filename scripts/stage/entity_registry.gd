@@ -5,8 +5,8 @@
 class_name EntityRegistry
 extends RefCounted
 
-## 组合根绑定的"当前世界"注册表（R8 static var）：
-## 供没有 `stage` 的 StageContext（自机射击 ctx / 子弹共享 ctx）回退解析自机与敌人。
+## 组合根绑定的"当前世界"注册表（R8 static var）：登记 / 注销自身，仅供工具 / 测试便捷取用。
+## 游戏运行时一律走组合根显式注入，不读本静态（P2 收口）。
 static var current: EntityRegistry
 
 ## 当前自机（Player / GhostPlayer）；未注入 = null。

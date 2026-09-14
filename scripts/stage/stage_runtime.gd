@@ -22,10 +22,6 @@ var entity_registry := EntityRegistry.new()
 ## 弹幕世界（组合根注入；供关卡发弹 / 清弹）
 var bullet_manager: BulletManager
 
-## 当前世界的登记（R8 static var）：仅登记 / 注销自身。
-## 生产路径已不读它——无 stage 的 ctx 由宿主显式绑 stage（P2 收口）。
-static var current: StageRuntime
-
 ## 注入槽（组合根 / 工作台设置）
 var miss_layer: MissCircleLayer
 var fx_pool: FxPool
@@ -38,18 +34,14 @@ var _is_stage_active: bool = false
 var _coroutine_script: CoroutineScript
 
 
-## 入场登记「当前世界」（先于任何实体 _ready）。
-## 显式、首个赢 —— 不无条件覆盖已在场的世界（多世界并存时不静默抢登记）。
+## 入场登记实体注册表（先于任何实体 _ready）。
+## 显式、首个赢 —— 不无条件覆盖已在场的注册表（多世界并存时不静默抢登记）。
 func _enter_tree() -> void:
-	if not is_instance_valid(StageRuntime.current):
-		StageRuntime.current = self
 	if not is_instance_valid(EntityRegistry.current):
 		EntityRegistry.current = entity_registry
 
 
 func _exit_tree() -> void:
-	if StageRuntime.current == self:
-		StageRuntime.current = null
 	if EntityRegistry.current == entity_registry:
 		EntityRegistry.current = null
 

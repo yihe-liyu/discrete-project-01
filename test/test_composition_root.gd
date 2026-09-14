@@ -71,7 +71,7 @@ func test_context_effects_read_bound_stage() -> void:
 	rt.fx_pool = fx
 	var runner := CoroutineRunner.new()
 	var ctx := StageContext.new(runner)
-	ctx.stage = rt   # 显式绑定，不再回退 StageRuntime.current
+	ctx.stage = rt   # 显式绑定，不再回退全局
 	assert_eq(ctx.effects.miss_layer, miss, "ctx.effects 应取绑定 stage 的 Miss 层")
 	assert_eq(ctx.effects.fx_pool, fx, "ctx.effects 应取绑定 stage 的 FX 层")
 	runner.free()

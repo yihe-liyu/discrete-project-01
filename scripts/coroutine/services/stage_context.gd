@@ -65,7 +65,7 @@ var audio: AudioService:
 var effects: EffectService:
 	get:
 		if _effect_service == null: _effect_service = EffectService.new()
-		# 只认绑定的 stage，不回退 StageRuntime.current。
+		# 只认绑定的 stage，不回退全局。
 		_effect_service.miss_layer = stage.miss_layer if stage else null  # 组合根注入；每取一次保持最新
 		_effect_service.fx_pool = stage.fx_pool if stage else null        # 特效层同样由组合根注入
 		return _effect_service

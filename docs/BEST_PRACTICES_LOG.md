@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — 清理：删除死 static `StageRuntime.current`
+
+- **目标**：删掉零消费者的 `StageRuntime.current`，少一条"有生命周期却无人读"的隐式全局。
+- **依据**：全仓扫描（含动态 `get("current")`）确认——生产早已不读（P2 已切掉 `StageContext` 回退），测试 / 工作台也无人读；兄弟 `BulletManager.current` / `EntityRegistry.current` 都还有工具 / 测试读者，唯独它没有。
+- **落点**：`stage_runtime.gd` 删 `static var current` 与 `_enter_tree` / `_exit_tree` 的登记 / 注销；保留 `EntityRegistry.current` 的登记 / 注销（有消费者）。
+- **文档**：`BEST_PRACTICES_BASELINE.md` §会话状态契约表格与 P2 注记去掉该项；`entity_registry.gd` / `stage_context.gd` / `test_composition_root.gd` 的过时注释改为"只走显式注入"。
+- **验收**：`./tools/verify.sh` exit 0；GUT **347 / 4061**（与改前同——无测试引用它）。
+
 ### 2026-09-14 — L3.5-4f ✅：拆壳（删除 GDScript 内核整棵）
 
 - **目标**：兑现「扩展为必需，GDScript 内核为过渡脚手架」（N2 §63）——**生产不再依赖 `scripts/kernel/**`**。
