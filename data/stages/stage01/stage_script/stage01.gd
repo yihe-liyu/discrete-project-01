@@ -28,7 +28,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	if p_target: target = p_target
 	_stage_director = StageDirector.new(ctx)   # 导演：场景动词 + 事件路由（内部监听 dialogue_event）
-	var timeline := start_timeline(_stage_director)   # 传导演：Timeline 便捷动词委托给导演（单一 owner）
+	var timeline: Timeline = start_timeline(_stage_director)   # 传导演：Timeline 便捷动词委托给导演（单一 owner）
 	var logo_tex: Texture2D = preload("res://assets/Textures/front/logo/logo1.png")
 
 	# 0s: BGM
@@ -141,11 +141,12 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		)
 
 	timeline.at(60.0).do(func():
-		EnemyData.new().blue_big_fairy() \
-			.with_script(ENEMY04) \
-			.pos(Vector2(GameConfig.FIELD_CENTER_X - 64, -32)) \
-			.hp(500) \
-			.spawn(ctx)
+		if not ctx.boss.exists():
+			EnemyData.new().blue_big_fairy() \
+				.with_script(ENEMY04) \
+				.pos(Vector2(GameConfig.FIELD_CENTER_X - 64, -32)) \
+				.hp(500) \
+				.spawn(ctx)
 	)
 	timeline.at(68.5).do(func():
 		EnemyData.new().blue_big_fairy() \
