@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — 修 INCOMPATIBLE_TERNARY：bomb 分派别用三元
+
+- **现象**：编辑器输出 `kernel_bullet_backend.gd:63 Values of the ternary operator are not mutually compatible (INCOMPATIBLE_TERNARY)`。
+- **根因**：`KernelMistBombClass.new() if data is MistBombData else KernelBombClass.new()` —— 两个分支是**兄弟类**（KernelMistBomb / KernelBomb），而三元运算符要求分支类型互相兼容（一个是另一个的子类）。
+- **做法**：改成显式 `var bomb: BombEntity` + `if/else` 赋值。
+- **闸门盲区（实测）**：`check_syntax_runner` 用无头 `load()` 编译脚本，**不打印 GDScript parse 警告**（用一个故意写坏的探针脚本试过：无头下无输出、编辑器才报），所以 `check_syntax.sh` 只看 SCRIPT ERROR / SYNTAX FAIL 会漏掉这类警告。要堵住得开 `debug/gdscript/warnings/treat_warnings_as_errors`（警告→编译失败 → runner 的 SYNTAX FAIL 就能抓）。
+- **验证**：`godot --headless --editor --quit` 已无 `W` 行；`./tools/verify.sh` 全绿 **381 / 4194**。
+
 ### 2026-09-14 — 修 bug：marisa 的 bomb 被随机染色
 
 - **现象**：marisa 的 bomb（单颗）每次放出来颜色都不同。

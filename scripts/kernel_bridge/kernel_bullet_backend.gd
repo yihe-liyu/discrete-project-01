@@ -60,7 +60,13 @@ func _exit_tree() -> void:
 ## 生成宿主节点 bomb（返回节点，供调用方忽略/持有）。data 是 BombData（不是弹幕的 BulletData）。
 ## 宿主实体由 data 的**实际类型**决定（MistBombData → KernelMistBomb；其余/基类 → KernelBomb）。
 func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0) -> Node:
-	var bomb: BombEntity = KernelMistBombClass.new() if data is MistBombData else KernelBombClass.new()
+	# 用 if/else 而非三元：两个分支是**兄弟类**（KernelMistBomb / KernelBomb），
+	# 三元要求分支类型互相兼容，静态分析会报 INCOMPATIBLE_TERNARY。
+	var bomb: BombEntity
+	if data is MistBombData:
+		bomb = KernelMistBombClass.new()
+	else:
+		bomb = KernelBombClass.new()
 	bomb.entity_registry = entity_registry
 	bomb.bullet_manager = bullet_manager
 	bomb.fx_parent = bullet_manager.fx_parent if bullet_manager else null
