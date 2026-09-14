@@ -2,10 +2,7 @@
 ## 为什么不用内核行：bomb 需要 out_grace（轨道越界不被剔除），而 A 方案下内核 cull 是统一的，
 ## 没有 per-type grace；且 bomb 只有个位数、还要做清弹/伤害/视觉等宿主动作 → 宿主节点最干净。
 ## **本类只做机制**：所有数值来自 BombData（内容数据，.tres 可调）。
-extends Node2D
-
-## 内容数据（KernelBulletBackend 注入）
-var data: BombData
+extends BombEntity
 
 ## 从 data 拷来的运行值
 var orbit_speed: float = 0.0
@@ -32,12 +29,6 @@ var _sprite: Sprite2D
 var _init_dir: Vector2 = Vector2.DOWN
 ## Node2D 没有 velocity（旧 Bullet 才有）；bomb 飞行阶段用它。
 var velocity: Vector2 = Vector2.ZERO
-## 实体注册表（自机 / 敌机 / Boss；KernelBulletBackend 注入）
-var entity_registry: EntityRegistry
-## 弹幕世界（KernelBulletBackend 注入）——持续清弹 / 爆炸清弹用
-var bullet_manager: BulletManager
-## 爆炸贴图父节点（KernelBulletBackend 注入 World；空则挂自身父级）
-var fx_parent: Node2D
 
 
 func setup(p_data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, p_spawn_delay: float = 0.0) -> void:

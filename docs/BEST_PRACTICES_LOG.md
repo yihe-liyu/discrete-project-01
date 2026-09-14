@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — 第二个自机 bomb：KernelMistBomb（单贴图横向展开）
+
+- **做法**：抽出 `BombEntity` 基类（统一注入槽 + setup 签名）；`KernelBomb` 改继承它；新增 `KernelMistBomb`（宽 `scale.x` 0→1 生长 → 保持 → 淡出，期间**轴对齐椭圆**内 `take_damage(dps*delta)` + 外接圆清弹）；`BombData` 加 `kind`（RING/MIST）+ mist 字段（`grow_time` / `fade_time` / `dps` / `clear_scale` / `pivot_ratio`）；`KernelBulletBackend.spawn_bomb` 按 `kind` 分派。
+- **锚点**：`pivot_ratio`（贴图 0..1）→ sprite offset 把"弯曲处"对齐节点原点，横向缩放从它展开。
+- **数据**：`data/player_data/marisa_bomb.tres`（贴图 `marisa_bomb01`，256×128）；marisa 挂它，reimu 保持环绕炸。
+- **验证**：`test_mist_bomb` 2/2（横向展开 / 椭圆内敌机受伤 / 椭圆外不受伤 / 范围内清弹 / 到点自灭）；`./tools/verify.sh` 全绿 **376 / 4172**。
+
 ### 2026-09-14 — 自机 bomb 数据化：`BombData` + 现 8 颗炸弹归位
 
 - **动机**：炸弹调参（半径/速度/伤害/时长）散在 `KernelBomb` 与 `player.gd` 两处硬编码，且复用弹幕的 `BulletData`（语义漂）；上一轮还发现 `BOMB_DAMAGE` / `BOMB_RADIUS` / `BOMB_SPEED` 三枚**死常量**（全仓无人引用，`100` 与真正生效的 `150` 还矛盾）。

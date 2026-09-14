@@ -159,7 +159,7 @@
 - `EnemyData` 资源 + 行为脚本；**别在关卡脚本 `EnemyData.new()...spawn`**，做成资源引用。
 
 ### 新增自机 bomb
-- 数据在 **`BombData`**（`.tres`，例：`data/player_data/bomb_ring.tres`），经 `PlayerData.bomb` 挂到角色；**行为机制在宿主实体**（`KernelBomb` 只读数据，调参别写回引擎代码）。
+- 数据在 **`BombData`**（`.tres`，例：`data/player_data/bomb_ring.tres` / `marisa_bomb.tres`），经 `PlayerData.bomb` 挂到角色；`BombData.kind` 决定宿主实体（`KernelBomb` 环绕 / `KernelMistBomb` 横向展开），**调参别写回引擎代码**。
 
 ### 新增弹幕行为（`move`）
 - **组合现有原语**（推荐）：`LifecycleCatalog.build()` 加分支（`move+params` → `BulletLifecycle` preset），内容写 `kernel_port()`；**无需改 C++**。

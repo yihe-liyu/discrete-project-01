@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="BombData" format=3]
+
+[ext_resource type="Texture2D" uid="uid://bs54btunv8dtv" path="res://assets/Textures/player/marisa_bomb01.png" id="1_tex"]
+[ext_resource type="Script" uid="uid://dgggusbpq0rqy" path="res://scripts/data/bomb_data.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+kind = 1
+texture = ExtResource("1_tex")
+hitbox_radius = 0.0
+count = 1
+interval = 0.0
+speed = 0.0
+invincible_time = 4.0
+orbit_speed_deg = 0.0
+radius_growth = 0.0
+max_radius = 0.0
+hold_time = 0.6
+homing_speed = 0.0
+explode_damage = 0.0
+explode_radius = 0.0
+explode_duration = 0.0
+explode_start_radius = 0.0
+clear_radius = 0.0
+grow_time = 0.35
+fade_time = 0.25
+dps = 200.0
+clear_scale = 0.95
+pivot_ratio = Vector2(0.5, 0.5)
+metadata/_custom_type_script = "uid://dgggusbpq0rqy"
