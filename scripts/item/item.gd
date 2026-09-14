@@ -122,6 +122,6 @@ func _on_area_entered(area: Area2D) -> void:
 
 
 func _recycle() -> void:
-	var pool: Node = get_parent()
-	if pool and pool.has_method("recycle"):
+	var pool: ItemPool = get_parent() as ItemPool
+	if pool:
 		pool.recycle(self)
