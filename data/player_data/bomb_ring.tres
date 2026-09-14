@@ -1,9 +1,9 @@
-[gd_resource type="Resource" script_class="RingBombData" format=3]
+[gd_resource type="Resource" script_class="RingBombData" format=3 uid="uid://b6bvcpxbsoi4p"]
 
-[ext_resource type="Texture2D" uid="uid://ctrxg8aehv7lw" path="res://assets/Textures/player/bomb01_white.png" id="1_tex"]
+[ext_resource type="Texture2D" uid="uid://bt3yyh355kibv" path="res://assets/Textures/player/reimu_bomb01.png" id="2_nqkjf"]
 [ext_resource type="Script" uid="uid://vmbryrfk4srf" path="res://scripts/data/ring_bomb_data.gd" id="2_script"]
 
 [resource]
 script = ExtResource("2_script")
-texture = ExtResource("1_tex")
+texture = ExtResource("2_nqkjf")
 metadata/_custom_type_script = "uid://vmbryrfk4srf"

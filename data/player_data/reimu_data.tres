@@ -3,7 +3,7 @@
 [ext_resource type="SpriteFrames" uid="uid://dwv5hnxn0kxi6" path="res://data/player_data/reimu_anim.tres" id="1_epgkh"]
 [ext_resource type="Script" uid="uid://grfvsrralj0y" path="res://scripts/data/player_data.gd" id="2_tumgh"]
 [ext_resource type="Script" uid="uid://b7k81ohg1ukhi" path="res://scripts/coroutine/player/reimu_shoot.gd" id="3_shoot"]
-[ext_resource type="Resource" path="res://data/player_data/bomb_ring.tres" id="4_bomb"]
+[ext_resource type="Resource" uid="uid://b6bvcpxbsoi4p" path="res://data/player_data/bomb_ring.tres" id="4_bomb"]
 
 [resource]
 script = ExtResource("2_tumgh")

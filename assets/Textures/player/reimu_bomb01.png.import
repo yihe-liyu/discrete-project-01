@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ctrxg8aehv7lw"
-path="res://.godot/imported/bomb01_white.png-ddd62b7c4266903d3e59fcd4f152acd4.ctex"
+uid="uid://bt3yyh355kibv"
+path="res://.godot/imported/reimu_bomb01.png-73b7482143664267a5020a70422fc256.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/Textures/player/bomb01_white.png"
-dest_files=["res://.godot/imported/bomb01_white.png-ddd62b7c4266903d3e59fcd4f152acd4.ctex"]
+source_file="res://assets/Textures/player/reimu_bomb01.png"
+dest_files=["res://.godot/imported/reimu_bomb01.png-73b7482143664267a5020a70422fc256.ctex"]
 
 [params]
 

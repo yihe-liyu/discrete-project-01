@@ -49,7 +49,7 @@ const bullet_configs := {
 	"marisa_main":    {"tex": preload("res://assets/Textures/player/marisa_main_bullet.png"),   "hitbox": {"rect": {"w": 48, "h": 24}, "offset": {"x": 0, "y": 0}}},
 	"marisa_opt1":    {"tex": preload("res://assets/Textures/player/marisa_option_bullet1.png"), "hitbox": {"rect": {"w": 32, "h": 32}, "offset": {"x": 0, "y": 0}}},
 	"marisa_opt2":    {"tex": preload("res://assets/Textures/player/marisa_option_bullet2.png"), "hitbox": {"rect": {"w": 48, "h": 24}, "offset": {"x": 0, "y": 0}}},
-	"bomb01_white":   {"tex": preload("res://assets/Textures/player/bomb01_white.png"), "hitbox": {"circle": 45.0, "offset": {"x": 0, "y": 0}}},
+	"reimu_bomb01":   {"tex": preload("res://assets/Textures/player/reimu_bomb01.png"), "hitbox": {"circle": 45.0, "offset": {"x": 0, "y": 0}}},
 	# 激光贴图（碰撞由激光系统自行处理，这里只提供贴图）
 	"laser":    {"tex": preload("res://assets/Textures/bullet/laser.png"), "hitbox": {"circle": 0.0, "offset": {"x": 0, "y": 0}}},
 }
