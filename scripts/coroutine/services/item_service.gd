@@ -17,5 +17,5 @@ func spawn(type: int, position: Vector2) -> void:
 	if not scene: return
 	var world := scene.get_node_or_null("World")
 	if world:
-		var pool := world.get_node_or_null("ItemPool")
+		var pool: ItemPool = world.get_node_or_null("ItemPool") as ItemPool
 		if pool: pool.spawn(position, type)

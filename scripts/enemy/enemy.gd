@@ -102,7 +102,7 @@ func die():
 func _drop_item() -> void:
 	if not enemy_data:
 		return
-	var pool := _find_item_pool()
+	var pool: ItemPool = _find_item_pool()
 	if not pool:
 		return
 
@@ -113,7 +113,7 @@ func _drop_item() -> void:
 	_spawn_items(pool, Item.Type.LIFE_FULL, enemy_data.item_life_full)
 	_spawn_items(pool, Item.Type.BOMB_FULL, enemy_data.item_bomb_full)
 
-func _spawn_items(pool: Node, type: int, count: int) -> void:
+func _spawn_items(pool: ItemPool, type: int, count: int) -> void:
 	for i in range(count):
 		var offset := Vector2(
 			RNG.randf_range(-enemy_data.item_scatter, enemy_data.item_scatter),
@@ -121,8 +121,8 @@ func _spawn_items(pool: Node, type: int, count: int) -> void:
 		)
 		pool.spawn(global_position + offset, type)
 
-func _find_item_pool() -> Node:
+func _find_item_pool() -> ItemPool:
 	var world := get_parent()
 	if world:
-		return world.get_node_or_null("ItemPool")
+		return world.get_node_or_null("ItemPool") as ItemPool
 	return null

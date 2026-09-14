@@ -9,7 +9,7 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 @onready var _stage_runtime: StageRuntime = %StageRuntime
 @onready var _miss_circle_layer: MissCircleLayer = %MissCircleLayer
 @onready var _game_ui: GameUI = $GameUI
-@onready var _item_pool = %ItemPool
+@onready var _item_pool: ItemPool = %ItemPool
 @onready var _bullet_manager: BulletManager = %BulletManager   # R21：弹幕世界（game_scene.tscn 声明）
 
 var _blur_rect: ColorRect
