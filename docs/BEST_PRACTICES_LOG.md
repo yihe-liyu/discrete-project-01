@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — 测试：最小原语级 parity（补上 4 个零覆盖 Move）
+
+- **动机**：既有 parity 测试都锚在 **preset** 上（`test_native_executor` / `test_lifecycle_presets`），只覆盖"被 preset 用到"的原语。实测 9 个 Move 里 `speed_lerp` / `scale_speed` / `set_heading` / `set_speed` **没有任何 preset 使用 → 零覆盖**。
+- **产出**：`test/test_lifecycle_primitives.gd` —— 9 Move / 5 Until / 5 Action 各一条最小 lifecycle，原生 `behavior_tick` ↔ 参考解释器逐位对照；自身即"原语能干什么"的活文档。
+- **踩坑（教学点）**：阈值压在 `k/60` 上会差一帧 —— 参考侧 64 位累加得 `0.49999…`，原生 32 位得 `0.5`。故 `until_elapsed` / state 阈值取帧边界**之间**的值；已写进测试注释。
+- **未覆盖**：`A_SET_SPEED` 有 op / C++ 实现但**没有 builder**，无法从 builder 构造 → 仍是死原语。
+- **验收**：`test_lifecycle_primitives` 20/20（69 断言）；`./tools/verify.sh` 全绿 **371 / 4149**。
+
 ### 2026-09-14 — 接线：`{lifecycle}` 预拼描述符入口（内容可自己拼，build() 不再膨胀）
 
 - **动机**：`build()` 的 `match` 每加一个"带流程控制的新组合"就要 +一个分支 +一个 preset → 内容多样时**线性膨胀**；而 `LIFECYCLE_MODEL.md §7` 本就写了 `*_bullet.gd` 应进化为 **builder sugar**，`prepare_shot` 也早留了 `port.has("program")` 注释「预留：VM 未实现」——**门凿了没装**。
