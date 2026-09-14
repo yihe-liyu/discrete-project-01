@@ -4,7 +4,7 @@ extends CoroutineScript
 ## 沿初方向位移过零（回到生成位置）→ 分裂 90° 红弹 → 自身消失。
 ##
 ## **暂无内核端口**：旧池协程体（`_tick` / `_spawn_split`）已随删旧池移除；
-## 内核等价物（减速往返 + 分裂）尚未实现，见 `docs/NEW_KERNEL_REFACTOR_PLAN.md`「本轮不做」。
+## 内核等价物（减速往返 + 分裂）尚未实现，见 `docs/archive/NEW_KERNEL_REFACTOR_PLAN.md`「本轮不做」。
 ## 当前挂到 `BulletData.coroutine_script` 时按**未映射**处理（直线发射并计数）。
 
 var decel: float = 150.0     # 反向加速度（px/s²）：越大滑行越短、往返越快

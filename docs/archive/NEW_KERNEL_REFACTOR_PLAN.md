@@ -3,8 +3,8 @@
 > 定位：把原项目「节点弹池 + 12 autoload + 协程行为 + 独立 LaserEngine」的弹幕链路，**逐步**迁到重建版内核的架构（SoA 核心 + 组合根注入 + 数据资源 + 显式帧序/层序 + 无头测试），同时保持游戏可玩、可回退。
 > 前置阅读：`1-st-touhou-star-rebuild/docs/DECISION_DANMAKU_ARCHITECTURE.md`（含「为何不建议 big-bang」与两个方向的对比）。
 > 方法论：**Strangler（绞杀者）** —— 新内核先自包含接入，旧调用点经 adapter 原样可用；再逐子系统替换；最后删旧实现。
-> 状态（2026-09-13）：**Track A / Track B 均已完成**——内核是唯一弹幕后端（`use_kernel` 已转正、旧池已删），autoload **12 → 4**。逐波实施记录已移入 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**；本文只保留**方案 / 契约 / 决策**。§1 是迁移前的现状审计快照。
-> **后续（2026-09-14）**：GDScript 内核本身也完成了历史使命 —— **原生 GDExtension `DanmakuStore` 成唯一存储**，`scripts/kernel/**` 从生产删除（见 [N2_NATIVE_INTEGRATION_PLAN.md](N2_NATIVE_INTEGRATION_PLAN.md) / LOG 4e/4f）。本文中的 `BulletSystem` 等指的是**当时的 GDScript 内核**。
+> 状态（2026-09-13）：**Track A / Track B 均已完成**——内核是唯一弹幕后端（`use_kernel` 已转正、旧池已删），autoload **12 → 4**。逐波实施记录已移入 **[BEST_PRACTICES_LOG.md](../BEST_PRACTICES_LOG.md)**；本文只保留**方案 / 契约 / 决策**。§1 是迁移前的现状审计快照。
+> **后续（2026-09-14）**：GDScript 内核本身也完成了历史使命 —— **原生 GDExtension `DanmakuStore` 成唯一存储**，`scripts/kernel/**` 从生产删除（见 [N2_NATIVE_INTEGRATION_PLAN.md](../N2_NATIVE_INTEGRATION_PLAN.md) / LOG 4e/4f）。本文中的 `BulletSystem` 等指的是**当时的 GDScript 内核**。
 
 ---
 
@@ -412,7 +412,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 ### 12.7 实施记录（W1–W4c / K1–K14）
 
-> 逐波「做了什么 / 为什么 / 踩坑 / 验收」见 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**（唯一历史记录）。此处只留索引。
+> 逐波「做了什么 / 为什么 / 踩坑 / 验收」见 **[BEST_PRACTICES_LOG.md](../BEST_PRACTICES_LOG.md)**（唯一历史记录）。此处只留索引。
 
 | 波次 | 一句话 |
 |---|---|
@@ -436,7 +436,7 @@ func shoot_enemy_bullet(data: BulletData, pos: Vector2, dir: Vector2) -> BulletH
 
 ## 13. Track A 实施记录（S0–S4d）
 
-> 逐波记录见 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**（S0–S4d 条目）。此处只留索引与仍生效的决策。
+> 逐波记录见 **[BEST_PRACTICES_LOG.md](../BEST_PRACTICES_LOG.md)**（S0–S4d 条目）。此处只留索引与仍生效的决策。
 
 | 步 | 成果 |
 |---|---|

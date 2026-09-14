@@ -2,7 +2,7 @@
 
 > **状态**：✅ **已拍板 ③（2026-09-13）**。本文保留作决策记录。
 > **前置**：M2 已完成（词汇合一）；试玩已过一轮（修掉 5 个运行期 bug）。
-> **相关**：`docs/NEW_KERNEL_REFACTOR_PLAN.md` §16.3 / §16.5（M3 与判据）；`docs/GDEXTENSION_KERNEL_DESIGN.md` §6 / §10（N4）。
+> **相关**：`docs/archive/NEW_KERNEL_REFACTOR_PLAN.md` §16.3 / §16.5（M3 与判据）；`docs/GDEXTENSION_KERNEL_DESIGN.md` §6 / §10（N4）。
 
 ---
 
@@ -40,4 +40,4 @@
 - [ ] 选 ①
 - [ ] 选 ②
 
-> 落地：`NEW_KERNEL_REFACTOR_PLAN` §16.1/§16.3/§16.5 已更新；`KernelBulletBackend` 注释正名为「渲染插座」；基线融合 bullet 同步。
+> 落地：`docs/archive/NEW_KERNEL_REFACTOR_PLAN` §16.1/§16.3/§16.5 已更新；`KernelBulletBackend` 注释正名为「渲染插座」；基线融合 bullet 同步。

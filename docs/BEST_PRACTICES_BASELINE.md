@@ -248,7 +248,7 @@
 - [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
 - [ ] R2（残余）：`item_service.gd:16` / `player.gd:286` 用 `current_scene.get_node_or_null("World")` 取 World，可改注入
 - [ ] 编排路线（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生（工作台仍正则扫源码）/ Step 6 `ctx.background` 注入服务 待做；Step 5 命令化时间线 + Step 7 命令编辑器 = 可选 / 产品决定，暂缓
-- [ ] **内核融合（M3，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16）**：M1（`damage`/`hit_sfx` 进弹型）+ **M2（词汇合一）已完成**；**M3（渲染/纹理归属）已拍板 ③ 纹理句柄** —— `_texture_by_index` 是**保留的渲染插座**（非债），由 N4 原生替换；余 `scripts/kernel_bridge/` **924 行**（适配器 236 + 宿主耦合 688；**行数不是目标**）+ `_port_by_sig` + 6 个 `kernel_port`（VM 前身）→ 判据改为**结构性**（0 类型映射 / 0 内容签名侧表），见 §16.5；**2026-09-13 决策：扩展为必需** —— GDScript 内核降为过渡，N2 存储段 + N3 后删除（见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策）。**2026-09-14 已完成（L3.5-4e/4f）**：原生 `DanmakuStore` 成**唯一存储**；`scripts/kernel/**` 已从**生产删除**，冻结参照（oracle）移入 `test/reference/`；`KernelNativeSystem` 为 standalone 桥接类（`kernel_bridge/` 宿主耦合保留）
+- [ ] **内核融合（M3，见 `docs/archive/NEW_KERNEL_REFACTOR_PLAN.md` §16）**：M1（`damage`/`hit_sfx` 进弹型）+ **M2（词汇合一）已完成**；**M3（渲染/纹理归属）已拍板 ③ 纹理句柄** —— `_texture_by_index` 是**保留的渲染插座**（非债），由 N4 原生替换；余 `scripts/kernel_bridge/` **924 行**（适配器 236 + 宿主耦合 688；**行数不是目标**）+ `_port_by_sig` + 6 个 `kernel_port`（VM 前身）→ 判据改为**结构性**（0 类型映射 / 0 内容签名侧表），见 §16.5；**2026-09-13 决策：扩展为必需** —— GDScript 内核降为过渡，N2 存储段 + N3 后删除（见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策）。**2026-09-14 已完成（L3.5-4e/4f）**：原生 `DanmakuStore` 成**唯一存储**；`scripts/kernel/**` 已从**生产删除**，冻结参照（oracle）移入 `test/reference/`；`KernelNativeSystem` 为 standalone 桥接类（`kernel_bridge/` 宿主耦合保留）
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
 > - **R14（2026-09-13 A1 更正）**：`save_manager.gd` 走 `user://save_data.cfg`；但**内容侧**符卡簿 / 音乐解锁曾直接 `ResourceSaver.save` 到 `res://`（4 处，导出包只读必失败）→ 已迁「res:// 出厂默认 + user:// 覆盖」，并加 `test_persistence_paths` 守卫。
@@ -274,4 +274,4 @@
 | R12 | `@export=preload` **1**（`enemy_data.gd:9`） | 待改 |
 | R10/R13/R17/R20/R22 | 内核 SoA / `_physics_process` / 数据资源 / 独立子场景 / `##` 注释 | 无系统性违规 |
 
-> **轨道 B（外壳红线对齐）已完成**：autoload **12 → 4**（`GameEvents / GameManager / RNG / AudioManager`）；`grep GameState` **0**；R6 / R4 / R2 收口见上表。逐波记录（W1–W4c / K1–K14）见 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**、方案与决策见 `NEW_KERNEL_REFACTOR_PLAN.md`。
+> **轨道 B（外壳红线对齐）已完成**：autoload **12 → 4**（`GameEvents / GameManager / RNG / AudioManager`）；`grep GameState` **0**；R6 / R4 / R2 收口见上表。逐波记录（W1–W4c / K1–K14）见 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**、方案与决策见 `docs/archive/NEW_KERNEL_REFACTOR_PLAN.md`。

@@ -51,13 +51,15 @@
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | 架构契约 —— 分层 / 系统地图 / 所有权 / 边界铁律 / 债清单 / 命名禁令 | 开发者（首选） |
 | **[docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md)** | 项目基线 —— STG 品质需求 S1–S13 × 工程红线 R1–R22 + 帧序/层序/命名契约 + 实测审计 | 维护者 |
 | **[docs/BEST_PRACTICES_LOG.md](docs/BEST_PRACTICES_LOG.md)** | 最佳实践日志 —— 每个改动的「为什么 / 踩坑 / 验收」（唯一历史记录） | 维护者 |
-| **[docs/NEW_KERNEL_REFACTOR_PLAN.md](docs/NEW_KERNEL_REFACTOR_PLAN.md)** | 内核迁移方案与决策 —— 路 B / Strangler / 行为端口契约 | 维护者 |
+| **[docs/GDEXTENSION_KERNEL_DESIGN.md](docs/GDEXTENSION_KERNEL_DESIGN.md)** | 原生弹幕内核**北极星设计**（已落地） | 内核/桥接 |
+| **[docs/N2_NATIVE_INTEGRATION_PLAN.md](docs/N2_NATIVE_INTEGRATION_PLAN.md)** | 原生内核**接入与拆除记录**（已完成） | 内核/桥接 |
+| **[docs/LIFECYCLE_MODEL.md](docs/LIFECYCLE_MODEL.md)** | 弹幕生命周期模型（已落地 L1–L4） | 行为/内容 |
 | **[CONTENT_GUIDE.md](CONTENT_GUIDE.md)** | 内容制作流程 —— 怎么加关卡/敌人/Boss/符卡 | 关卡设计师 |
 | **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 | 编剧 |
 | **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（剧本归档） | 编剧 |
 | **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（待实施） | 维护者 |
 | **[docs/omake.txt](docs/omake.txt)** | 附言、Extra Story、全角色设定 | 玩家/读者 |
-| **[docs/archive/](docs/archive/)** | 已归档：SPEC / ROADMAP / REFACTORING / STAGE_FLOW / SPELL_SYSTEM / CREATION_STATION / 旧审计 | 历史 |
+| **[docs/archive/](docs/archive/)** | 已归档：SPEC / ROADMAP / REFACTORING / STAGE_FLOW / SPELL_SYSTEM / CREATION_STATION / NEW_KERNEL_REFACTOR_PLAN / M3_TEXTURE / REBUILD_REPO_STATUS / 旧审计 | 历史 |
 
 ### 我在做什么？看哪份？
 

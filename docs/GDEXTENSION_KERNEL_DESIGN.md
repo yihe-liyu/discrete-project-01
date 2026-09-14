@@ -7,7 +7,7 @@
 > **已拍板**：① 扩展成为**必需**（**GDScript 内核已从生产删除**，见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策 / 4f）；
 > ② 实现**不走通用 opcode VM** —— 采用更精简的**「生命周期描述符」**（`BulletLifecycle` → `compile()` 成 packed program → 原生 `behavior_tick`）；
 > 本文 §5.7 的「通用 Danmaku VM」为**早期设想，已被取代**。
-> **前置阅读**：`docs/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`docs/N2_NATIVE_INTEGRATION_PLAN.md`（终局决策 + 拆除清单）；`test/reference/`（冻结的 GDScript 参照实现）。
+> **前置阅读**：`docs/archive/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`docs/N2_NATIVE_INTEGRATION_PLAN.md`（终局决策 + 拆除清单）；`test/reference/`（冻结的 GDScript 参照实现）。
 
 ---
 
@@ -294,7 +294,7 @@ for e in world.drain_events():                  # 帧末一次
 - **N2 存储段（待做）** 原生接管 spawn / despawn / 宽相，消除 GDScript SoA。
 - **N3 行为 VM（待做，路径 B）**：按 §5.7 —— **先定 program schema + GDScript 参考解释器**，内容 `kernel_port()` → `{program:[...]}`，测试锁定；再换原生 VM 执行器。§5.1 的**手写原生 tenant** 留给宿主耦合行为。
 - **N4-real ✅（2026-09-13）** 原生 `DanmakuRenderBridge` 整段渲染同步（**6.5×**，6000 弹 7.19→1.10ms）；余图集资源（S13）按需。
-- **N5 收口**：GDScript 只剩内容 / 外壳 / 宿主规则；`kernel_bridge` **行数不是目标** —— 改**结构性判据**（0 类型映射 / 0 内容签名侧表 / 内核 0 宿主引用，见 `NEW_KERNEL_REFACTOR_PLAN.md` §16.5）。
+- **N5 收口**：GDScript 只剩内容 / 外壳 / 宿主规则；`kernel_bridge` **行数不是目标** —— 改**结构性判据**（0 类型映射 / 0 内容签名侧表 / 内核 0 宿主引用，见 `docs/archive/NEW_KERNEL_REFACTOR_PLAN.md` §16.5）。
 
 ---
 
