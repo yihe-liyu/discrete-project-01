@@ -94,3 +94,42 @@
 **诚实提醒**：原生会长到 ~800–1200 行接替，**行数未必大减**；真收益 = **双维护消失 + 一处改 + 少一个仓库与 vendor 纪律**。
 
 **待定**：`BulletType` / `EffectType` 在 `scripts/kernel/**` 删除后归位何处（原生 `DanmakuType`？还是搬 `scripts/data/`）。
+
+---
+
+## L3.5 接入方案（2026-09-14）
+
+**目标量化**（`tools/bench_behavior_native.gd`，6000 弹）：
+
+| 执行器 | ms/帧 |
+|---|---|
+| GDScript 行为（世界加速） | ~4.25 |
+| **原生 `behavior_tick` world_accel** | **0.151** |
+| **原生 `behavior_tick` homing** | **0.279** |
+
+→ 行为段 **~15–28×**；全段接入后 6000 弹脚本侧 ≈ **~1.8–2.0ms**（现 5.8）。
+
+**核心难点：两套存储的权威归属。** 现有 `BulletSystem`（GDScript）是渲染 / 物理 / 调试的唯一数据源；原生 store 是行为执行的存储。
+
+### 方案 A（推荐）：原生权威 + GDScript 只读快照
+
+- 原生 store 成为**唯一存储**；spawn / despawn / 积分 / 行为全原生。
+- `BulletSystem` 退化为**快照视图**：每帧 pull 原生数组供渲染 / 物理 / 调试**只读**。
+- GDScript 侧写（物理 despawn / `set_render_fade`）→ 经原生 API 回写。
+- 原生需补：`query_circle` / `hit_test` / `is_grazed` / `mark_grazed`（`despawn` 已有）。
+- 消费方改动：`BulletMultiMesh` / `KernelBulletPhysics` / `MarisaLaserFade` / `debug_drawer`。
+- **代价大、但一次到位**：两套存储消失 → 正是 L4 拆除的前提。
+
+### 方案 B（不推荐）：双存储 + 每帧同步
+
+保持 `BulletSystem` 为权威、原生 store 作行为 scratch（commit/pull 数组）。改动小，但引入**永久同步层**，L4 拆不掉 —— 违背精简目标。
+
+### 分步（方案 A）
+
+1. **L3.5-1** 原生补 `query_circle` / `hit_test` / `grazed`（parity vs GDScript）。
+2. **L3.5-2** `LifecycleCatalog`：`move + params` → `BulletLifecycle`（内容不变，仍写 `kernel_port`）；编译 / 注册缓存。
+3. **L3.5-3** 原生 store 替 `KernelNativeSystem`；`BulletSystem` 退化快照视图。
+4. **L3.5-4** 消费方（render / physics / laser / debug）改读原生。
+5. **L3.5-5** 事件 drain（emit / sfx / call → `queue_spawn` / sfx / 内容回调）。
+6. **L3.5-6** 真实舞台开机 + 试玩。
+7. **L4** 拆除（删 1219 + 273 + rebuild）。
