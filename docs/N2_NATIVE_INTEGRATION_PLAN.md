@@ -1,6 +1,8 @@
 # N2-real 接入计划：原生弹幕系统替换 BulletSystem
 
-> **状态**：进行中。N2.1 完成（原生数据模型 + 批量 API + ~55×）；**N2.2 积分段完成**（原生 integrate 5.9×，桥接子类实现，不碰 vendor 内核）。
+> **状态**：进行中。N2.1 ✅ / N2.2 积分段 ✅ / **N2.2 存储段核心 ✅** / N4-real ✅ /
+> **L3.5-1 ✅ · L3.5-2 ✅ · L3.5-3 ✅（含 3b）· L3.5-5 主体 ✅ · L3.5-6 真人试玩 ✅**；
+> 当前批次 = **L3.5-4「消费方改读原生」**（4a 进行中）。
 > **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §10（N0–N5）；`gdextension/`。
 
 ## 目标
@@ -36,9 +38,9 @@
 - **边界铁律（N2.2 实测）**：原生逐次 `get_position(i)` **110ns** vs GDScript `Packed[i]` **13ns**；
   批量 `get_positions()` 快照 15ns。→ **搬存储必须配套批量快照 / 写回**，逐次转发反而更慢。
 - **N2.2（存储段核心 ✅ 2026-09-14）** 原生 `DanmakuStore` 持有真实 SoA（`pos/vel/type/faction/color` + **`life/fx/timer`**）+ `spawn/despawn/clear` + 完整 `integrate`（寿命/相位/位移/计时/剔除），与 GDScript 内核 **1:1**（`test_native_storage` 2/2：100 弹 × 180 帧逐位一致）。
-  **未做**：原生宽相 `query_circle`（需 per-row hitbox 一并原生）、**原生行为执行器（L3）**、接入游戏。
-  **注**：存储段与 L3 是同一原生系统的两面 —— 原生持有 SoA 后必须由原生执行描述符，否则 GDScript 行为逐弹跨界必亏。
-  → 有空间，但必须按上面的批量约定设计。
+  **后续已补**：原生判定 `set_hitbox/hit_test/query_circle/is_grazed/mark_grazed`（L3.5-1 ✅）；
+  **原生行为执行器**（L3 ✅ / L3.5-3b ✅，`behavior_batch`）；**接入游戏**（L3.5-3b ✅）。
+  **仍未做**：原生宽相网格（现线性，与 GDScript 同序一致）；L3.5-4 消费方改读原生。
 - **N2.3** 批量行为桥：`get_behavior_inputs()` / `apply_behavior_outputs()`（Packed 数组），
   每帧**常数次**跨界；GDScript 行为循环照跑（成本仍在，等 N3）。
 - **N3** 行为 / VM 原生：`kernel_port()` → program；删 `_port_by_sig`。
@@ -128,8 +130,11 @@
 
 1. **L3.5-1 ✅（2026-09-14）** 原生 `query_circle` / `hit_test` / `grazed`（`test_native_collision` 4/4 / 293 断言）。线性扫描（同序），宽相网格按需再上。
 2. **L3.5-2 ✅（2026-09-14）** `LifecycleCatalog`：`move + params` → `BulletLifecycle`（10 个 move 全覆盖，内容零改动）+ 签名缓存（`test_lifecycle_catalog` 5/5）。
-3. **L3.5-3 ✅（2026-09-14）** bridge 接入：`KernelNativeSystem` 维护 per-bullet 批状态，每帧 `integrate_batch + behavior_batch`，降序重放 dead，drain 事件；原生可用时**不再创建 `BehaviorProcessor`**。修 3 个真 bug（场域未注入 / store 未 setup / 测试期望）。全量 361/3951 全绿。**行为执行已原生 —— 但还需真实舞台试玩验证。**
-4. **L3.5-4** 消费方（render / physics / laser / debug）改读原生。
-5. **L3.5-5** 事件 drain（emit / sfx / call → `queue_spawn` / sfx / 内容回调）。
-6. **L3.5-6** 真实舞台开机 + 试玩。
+3. **L3.5-3 ✅（2026-09-14，含 3b）** bridge 接入：`KernelNativeSystem` 维护 per-bullet 批状态，每帧 `integrate_batch + behavior_batch`，降序重放 dead，drain 事件；原生可用时**不再创建 `BehaviorProcessor`**。修 3 个真 bug（场域未注入 / store 未 setup / 测试期望）。全量 361/3951 全绿。
+   - **3b 后修复（2026-09-14，真人试玩暴露）**：① 事件必须按**事件自身 program**（`eprog`）派发，不能用 per-bullet 快照反查（despawn 会污染快照）；② 原生 `anchor_drift` 忽略 `anchor_id` / `use_global` → 魔理沙激光全粘自机，另修 `behavior_batch` 新弹首帧内部状态未初始化。详见 `BEST_PRACTICES_LOG.md`。
+4. **L3.5-4 进行中** 消费方（render / physics / laser / debug）改读原生。
+   - **前置（2026-09-14 发现，4a）**：判定层是 `O(玩家弹×敌人)` 次 `hit_test`；按边界铁律，若原生 `hit_test` **逐次**调会比现在更慢。
+     → 先加**原生批量重叠接口**（`overlap_pairs(mask, targets, radii)`），几何整体下沉，GDScript 只算命中后的规则（伤害 / RNG / 记忆 / 音效）。
+5. **L3.5-5 主体 ✅（随 3b）** 事件 drain（emit / sfx / call → `queue_spawn` / sfx / 内容回调）；余：边界完善。
+6. **L3.5-6 ✅（2026-09-14）** 真实舞台开机 + 真人试玩 —— 非符1 打穿，行为 / 激光 / 判定手感通过（并因此抓出 3b 两处 bug）。
 7. **L4** 拆除（删 1219 + 273 + rebuild）。
