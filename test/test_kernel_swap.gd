@@ -71,14 +71,14 @@ func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	ed.velocity = Vector2.UP * 10.0
 	BulletManager.current.shoot_bullet(ed, Vector2(448, 700), Vector2.UP)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "先有 1 颗敌弹")
-	var bomb_data := BombData.new()
+	var bomb_data := RingBombData.new()
 	var bomb = BulletManager.current.shoot_bomb_bullet(bomb_data, Vector2(448, 700), Vector2.RIGHT)
 	bomb._physics_process(1.0 / 60.0)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 0, "bomb 周围敌弹应被持续清")
 
 
 func test_bomb_spawns_host_node() -> void:
-	var bomb_data := BombData.new()
+	var bomb_data := RingBombData.new()
 	var node = BulletManager.current.shoot_bomb_bullet(bomb_data, Vector2(448, 700), Vector2.RIGHT, Color.WHITE, 0.1)
 	assert_not_null(node, "内核 bomb 应返回宿主节点")
 	assert_true(node is Node2D, "应是 Node2D")

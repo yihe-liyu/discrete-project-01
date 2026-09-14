@@ -1,7 +1,7 @@
 ## KernelBomb —— 宿主节点版 bomb（不走内核池）。
 ## 为什么不用内核行：bomb 需要 out_grace（轨道越界不被剔除），而 A 方案下内核 cull 是统一的，
 ## 没有 per-type grace；且 bomb 只有个位数、还要做清弹/伤害/视觉等宿主动作 → 宿主节点最干净。
-## **本类只做机制**：所有数值来自 BombData（内容数据，.tres 可调）。
+## **本类只做机制**：所有数值来自 RingBombData（内容数据，.tres 可调）。
 extends BombEntity
 
 ## 从 data 拷来的运行值
@@ -34,27 +34,28 @@ var velocity: Vector2 = Vector2.ZERO
 func setup(p_data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, p_spawn_delay: float = 0.0) -> void:
 	global_position = pos
 	_init_dir = direction if direction != Vector2.ZERO else Vector2.DOWN
-	data = p_data
-	if data == null:
-		push_error("[KernelBomb] setup 需要 BombData")
+	var d := p_data as RingBombData
+	if d == null:
+		push_error("[KernelBomb] setup 需要 RingBombData")
 		return
+	data = d
 	spawn_delay = p_spawn_delay
-	_hitbox_radius = data.hitbox_radius
-	orbit_speed = deg_to_rad(data.orbit_speed_deg)
-	radius_growth = data.radius_growth
-	max_radius = data.max_radius
-	hold_time = data.hold_time
-	homing_speed = data.homing_speed
-	explode_damage = data.explode_damage
-	explode_radius = data.explode_radius
-	explode_duration = data.explode_duration
-	explode_start_radius = data.explode_start_radius
-	clear_radius = data.clear_radius
+	_hitbox_radius = d.hitbox_radius
+	orbit_speed = deg_to_rad(d.orbit_speed_deg)
+	radius_growth = d.radius_growth
+	max_radius = d.max_radius
+	hold_time = d.hold_time
+	homing_speed = d.homing_speed
+	explode_damage = d.explode_damage
+	explode_radius = d.explode_radius
+	explode_duration = d.explode_duration
+	explode_start_radius = d.explode_start_radius
+	clear_radius = d.clear_radius
 	_sprite = Sprite2D.new()
-	_sprite.texture = data.texture
+	_sprite.texture = d.texture
 	_sprite.modulate = tint
 	add_child(_sprite)
-	z_index = data.z_index
+	z_index = d.z_index
 
 
 func _physics_process(delta: float) -> void:

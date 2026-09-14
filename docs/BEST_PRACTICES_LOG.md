@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-14 — BombData 拆家族：基类 + RingBombData / MistBombData
+
+- **目标**：兑现"BombData 只是一个模板"的反馈——一个 Resource 塞两种炸弹的全部字段，第 3 种一来就糊了。
+- **做法**：`BombData` 只留**所有 bomb 共有**的字段（`texture` / `z_index` / 编队 `count`·`interval` / `invincible_time`）；`RingBombData extends BombData` 收环绕炸专属（hitbox/运动/爆炸/清弹）；`MistBombData extends BombData` 收分阶段专属（锚点/朝向/五段时长/dps/clear_scale）。
+- **分派改类型**：删掉 `BombData.kind` 枚举，`KernelBulletBackend.spawn_bomb` 用 `data is MistBombData` 决定宿主实体；两个 `KernelBomb`/`KernelMistBomb` 在 `setup` 里 `as` 成自己的类型（签名仍是基类，不破坏 `BombEntity` 覆写契约）。
+- **顺手删死码**：`BombData.speed`（环状炸根本没人读，飞行速度是 `homing_speed`）随拆分消失。
+- **踩坑**：GDScript 静态类型下 `var bd := ... as MistBombData` 后写 `bd is RingBombData` 是**编译错误**（"Expression is of type MistBombData so it can't be of type RingBombData"）——想测"不是另一类"，声明成基类 `var bd: BombData = ...`。
+- **验证**：`test_bomb_data` 4/4（ring/mist 各自 tres + 基类契约 + KernelBomb 读数据）；`./tools/verify.sh` 全绿 **377 / 4180**。
+
 ### 2026-09-14 — mist bomb 改为"分阶段展开 + 跟随自机"
 
 - **规格修正**：marisa 的 bomb 不是横向一次展开，而是**朝上**、**锚点跟随自机**，且分阶段：长(贴图 x) 0→满 → 保持 → 宽(贴图 y) 0→满 → 保持 → 淡出。

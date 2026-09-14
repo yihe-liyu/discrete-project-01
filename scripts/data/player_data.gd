@@ -16,5 +16,5 @@ class_name PlayerData
 @export var shoot_script: Script
 
 @export_group("Bomb")
-## 自机 bomb 数据（BombData；外观 / 编队 / 运动 / 爆炸全在这里）
+## 自机 bomb 数据（BombData 家族；环状 RingBombData / 云状 MistBombData）
 @export var bomb: BombData

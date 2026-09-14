@@ -1,6 +1,6 @@
 extends GutTest
 ## KernelMistBomb：分阶段展开（长→保持→宽→保持→淡出）+ 跟随自机 + 椭圆持续伤害/清弹。
-## 用测试自带短时长 BombData（不依赖 .tres 的可调时长）。
+## 用测试自带短时长 MistBombData（不依赖 .tres 的可调时长）。
 
 const MARISA_DATA = preload("res://data/player_data/marisa_data.tres")
 
@@ -23,9 +23,8 @@ func after_each() -> void:
 	BulletManager.current.inject_entity_registry(null)
 
 
-func _short_mist() -> BombData:
-	var bd := BombData.new()
-	bd.kind = BombData.Kind.MIST
+func _short_mist() -> MistBombData:
+	var bd := MistBombData.new()
 	bd.count = 1
 	bd.grow_length_time = 0.1
 	bd.hold_length_time = 0.1
@@ -41,7 +40,7 @@ func _short_mist() -> BombData:
 func test_marisa_bomb_data_is_mist() -> void:
 	var bd: BombData = MARISA_DATA.bomb
 	assert_not_null(bd, "marisa 应配 bomb")
-	assert_eq(bd.kind, BombData.Kind.MIST, "应是 MIST")
+	assert_true(bd is MistBombData, "应是 MistBombData（后端据此分派 KernelMistBomb）")
 	assert_eq(bd.count, 1, "单颗")
 	assert_not_null(bd.texture, "应有贴图（marisa_bomb01）")
 

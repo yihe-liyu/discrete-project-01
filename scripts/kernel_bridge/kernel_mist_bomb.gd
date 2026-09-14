@@ -18,34 +18,35 @@ var _grow_wid: float = 0.25
 var _hold_wid: float = 0.5
 var _fade: float = 0.25
 var _dps: float = 200.0
-var _clear_scale: float = 0.95
+var _clear_scale: float = 1.0
 
 
 func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Color.WHITE, _spawn_delay: float = 0.0) -> void:
 	global_position = pos
-	data = p_data
-	if data == null:
-		push_error("[KernelMistBomb] setup 需要 BombData")
+	var d := p_data as MistBombData
+	if d == null:
+		push_error("[KernelMistBomb] setup 需要 MistBombData")
 		return
-	_follow = data.follow_player
-	_anchor_offset = data.anchor_offset
-	_grow_len = maxf(data.grow_length_time, 0.0)
-	_hold_len = data.hold_length_time
-	_grow_wid = maxf(data.grow_width_time, 0.0)
-	_hold_wid = data.hold_width_time
-	_fade = maxf(data.fade_time, 0.001)
-	_dps = data.dps
-	_clear_scale = data.clear_scale
-	rotation = deg_to_rad(data.rotation_deg)
+	data = d
+	_follow = d.follow_player
+	_anchor_offset = d.anchor_offset
+	_grow_len = maxf(d.grow_length_time, 0.0)
+	_hold_len = d.hold_length_time
+	_grow_wid = maxf(d.grow_width_time, 0.0)
+	_hold_wid = d.hold_width_time
+	_fade = maxf(d.fade_time, 0.001)
+	_dps = d.dps
+	_clear_scale = d.clear_scale
+	rotation = deg_to_rad(d.rotation_deg)
 	_sprite = Sprite2D.new()
-	_sprite.texture = data.texture
+	_sprite.texture = d.texture
 	_sprite.modulate = tint
-	if data.texture != null:
-		_size = data.texture.get_size()
-		_sprite.offset = _size * (Vector2(0.5, 0.5) - data.pivot_ratio)   # 让"弯曲处"对齐节点原点
+	if d.texture != null:
+		_size = d.texture.get_size()
+		_sprite.offset = _size * (Vector2(0.5, 0.5) - d.pivot_ratio)   # 让"弯曲处"对齐节点原点
 	_sprite.scale = Vector2.ZERO
 	add_child(_sprite)
-	z_index = data.z_index
+	z_index = d.z_index
 
 
 ## 当前展开的"长" / "宽"（贴图对应维的全长；测试/调试用）。
