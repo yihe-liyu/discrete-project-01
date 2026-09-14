@@ -5,14 +5,16 @@
 
 [resource]
 script = ExtResource("2_script")
+length_range = Vector2(0, 4)
+width_range = Vector2(0.05, 4)
+grow_length_time = 0.5
+hold_length_time = 1.0
+grow_width_time = 0.5
+hold_width_time = 2.0
+fade_time = 1.0
+damage_from_stage = 2
+dps = 500.0
 texture = ExtResource("1_tex")
 count = 1
 interval = 0.0
-width_range = Vector2(0.2, 1)
-grow_length_time = 1.0
-hold_length_time = 0.6
-grow_width_time = 1.0
-hold_width_time = 0.6
-fade_time = 2.0
-damage_from_stage = 2
 metadata/_custom_type_script = "uid://r54oodm80tkr"
