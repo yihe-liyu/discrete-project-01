@@ -343,7 +343,7 @@
 - **决定**：M3 走 ③。宿主 `_texture_by_index` / `texture_for_index()` 正式定为**渲染插座（render socket）**；内核 `BulletType.type_index` = **纹理句柄**。**这不是债，是设计好的 seam。**
 - **否决**：① 会让 §16.5 的 `_by_index = 0` 判据永不达标；② 提前把渲染塞回内核（触发条件未到，且破坏「内核 0 渲染」的克制）。
 - **零内核改动**：不回重建版、不 vendor、不 tag。
-- **落点**：plan §16.1 侧表行 / §16.3 M3 段 / §16.5 判据（`_by_index = 0` 收窄为「类型 / 端口 / 伤害侧表」；纹理句柄表按设计保留，N4 原生替换）；`KernelBulletBackend` 注释；基线融合 bullet；决策页 `docs/M3_TEXTURE_OWNERSHIP_DECISION.md`。
+- **落点**：plan §16.1 侧表行 / §16.3 M3 段 / §16.5 判据（`_by_index = 0` 收窄为「类型 / 端口 / 伤害侧表」；纹理句柄表按设计保留，N4 原生替换）；`KernelBulletBackend` 注释；基线融合 bullet；决策页 `docs/archive/M3_TEXTURE_OWNERSHIP_DECISION.md`。
 - **验收**：check_syntax 191/0；GUT 全绿（纯注释 / 文档，无行为变更）。
 
 ### 2026-09-13 — Tier A 收尾：A1 导出阻塞 + A2 测试卫生 + A3–A5 文档失真
@@ -354,7 +354,7 @@
 - **A3/A4/A5（文档失真）**：基线 R5 `get_node` 计数更正为 **29 个调用点**（生产 14 / 测试 15，原记 19 漏了测试）；基线 R14 更正——`SaveManager` 走 user:// 不代表内容侧不写 res://（A1 那 4 处就是漏报）；`CONTENT_GUIDE` §八的 `StageManager` / `GameState` → `StageRuntime` / `SaveData`。
 - **教训**：**"某处达标"不等于"整类达标"** —— R14 只查了 `SaveManager` 就写「0 处」，把内容侧 4 处漏了。审计要按"类"扫，不是按"记得的那个文件"扫。
 - **验收**：verify.sh 五步全绿（322 测试 / 3247 断言，orphans 0）。
-- **附带**：M3 决策页 `docs/M3_TEXTURE_OWNERSHIP_DECISION.md`（推荐 ③ 纹理句柄，待拍板）。
+- **附带**：M3 决策页 `docs/archive/M3_TEXTURE_OWNERSHIP_DECISION.md`（推荐 ③ 纹理句柄；2026-09-14 随其他关闭里程碑文档归档）。
 
 ### 2026-09-13 — 会话状态收口：SaveData.reset_session()（唯一复位入口）
 

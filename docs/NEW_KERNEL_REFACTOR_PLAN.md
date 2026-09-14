@@ -626,7 +626,7 @@ S3 选 A 方案（§14.3）是为了**保住「内核零改动」这个可回退
 - **决定**：走 ③ —— 承认宿主 `_texture_by_index` / `texture_for_index()` 就是**渲染插座（render socket）**：内核 `BulletType.type_index` = **纹理句柄**，宿主负责把句柄解析成贴图（独立 PNG / 未来 `AtlasTexture` 都支持）。**这不是债，是设计好的 seam**（与 `GDEXTENSION_KERNEL_DESIGN` §6 的终局一致）。
 - **否决**：① 会让 `_by_index = 0` 判据永不达标；② 提前把渲染塞回内核（触发条件未到，且破坏「内核 0 渲染」的克制）。
 - **零内核改动**：不回重建版 / 不 vendor / 不 tag。
-- 详见 `docs/M3_TEXTURE_OWNERSHIP_DECISION.md`。
+- 详见 `docs/archive/M3_TEXTURE_OWNERSHIP_DECISION.md`。
 
 ### 16.4 流程：内核改动必须回重建版做
 
