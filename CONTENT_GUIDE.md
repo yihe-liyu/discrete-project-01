@@ -48,8 +48,8 @@ var _final: BossHandle    # 关底 Boss 句柄
 func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	_dir = StageDirector.new(ctx)          # 导演：场景动词 + 事件路由
-	var tl := start_timeline(_dir)         # 传导演：Timeline 便捷动词委托给它（单一 owner）
-	timeline.at(0.0).play_bgm("stage1")          # 按 key（走 _dir.bgm；_dir 是唯一实现）
+	var timeline := start_timeline()       # 纯排程器：无 ctx、无导演依赖
+	timeline.at(0.0).do(func(): _dir.bgm("stage1"))   # 按 key（走 _dir.bgm；_dir 是唯一实现）
 	timeline.at(1.0).do(func(): EnemyData.new().with_script(ENEMY01)...
 		.pos(Vector2(...)).red_little_fairy().param("target_y", 200).spawn(ctx))
 	# Boss 进场：spawn + register + 隐藏名 + tween —— 全在 _dir.boss 里
@@ -67,8 +67,8 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 Timeline 链式 API：`at(t)` 绝对时刻 · `wait(n)` 相对上一 blocking 结束 · `do(cb)` 任意逻辑 ·
 `start_phase(boss_getter, PhaseData)` 起阶段（保留时符等待：击破后激活后续 wait） · `every(t).times(n)` 重复。
-**场景动词（bgm/boss/dialogue/事件路由）由 `StageDirector` 承担**；Timeline 只管时序，唯一的事件级动词是 `play_bgm`。
-其余动作一律 `do(func(): ctx.*)`（或 `do(_dir.xxx.bind(...))`）—— **不再为每个底层方法配包装**（曾有的 `spawn_*/dialogue_steps` 薄委托已删）。
+**场景动词（bgm/boss/dialogue/事件路由）由 `StageDirector` 承担**；Timeline 是**纯排程器**，动作一律 `do(func(): ctx.*)` / `do(func(): _dir.xxx())`。
+Timeline 只保留 `at/every/times/wait/do` + `start_phase`（相对时间 wait 的锚点）—— **不为任何底层方法配包装**。
 
 > ⚠️ start_phase 链注意：`wait()` 后接 `start_phase()` 必须直接链（`timeline.wait(1.0).start_phase(...)`），
 > 中间插 `do(pass)` 会破坏 wait 偏移继承（阶段会立即触发）。

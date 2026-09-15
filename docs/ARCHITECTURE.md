@@ -93,7 +93,7 @@
 - **内容只碰动词**：内容文件不再 import `StageRuntime/GameState/StageObjects/BulletManager/AudioManager`，不再 `create_tween`。一旦不得不在内容里写 `.do(func(): <机制>)`，说明还缺一个动词（判据）。
 - **一知识一 owner**：`dir.boss` 内部才 `spawn_boss + register + hide_name + tween`；`BossHandle.retreat` 内部才 `set_exit_controlled + die + tween`。内容只看到"进 Boss / 揭名 / 退场"。
 - **响亮**：动词缺 Boss/阶段越界等 → `push_warning`/`push_error`，绝不静默。
-- **Timeline 只管时序**：公共面 = `at/every/times/wait/do` + `start_phase`（时符等待）+ 唯一事件级动词 `play_bgm`；其余动作走 `do(func(): ctx.*)`。**不为 `StageDirector` 的每个方法配包装**——曾有的 `spawn_*/dialogue_steps` 薄委托已删（0 调用、且拿不到返回值）。
+- **Timeline 是纯排程器（零服务层依赖）**：只认识 `float`（每帧 delta）+ `Callable`（动作）+ 一条流程锚 `start_phase`；动作一律 `do(func(): ctx.*)`，不为任何底层方法配包装。`Timeline.new()` 无参、可脱树单测。
 
 ### 已落地（D Part 1）
 

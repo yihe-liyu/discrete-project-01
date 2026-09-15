@@ -3,20 +3,16 @@ extends GutTest
 ## 注意：GDScript lambda 无法修改外部局部变量（count += 1 无效），
 ## 必须用数组 append 或成员变量。
 
-var _coroutine_runner: CoroutineRunner
-var _stage_context: StageContext
 var _fired: Array = []
 
 
 func before_each():
-	_coroutine_runner = CoroutineRunner.new()
-	add_child_autofree(_coroutine_runner)
-	_stage_context = StageContext.new(_coroutine_runner)
 	_fired = []
 
 
+## Timeline 是纯排程器：无 ctx、无场景树依赖
 func _make_timeline() -> Timeline:
-	return Timeline.new(_stage_context)
+	return Timeline.new()
 
 
 ## 基础：事件在设定时间点触发，按顺序

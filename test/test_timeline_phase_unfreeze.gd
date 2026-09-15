@@ -3,7 +3,7 @@ extends GutTest
 ## —— 绝对时间事件（at）战斗期间照常触发；wait() 仍等 phase_cleared 激活
 
 func test_absolute_events_fire_during_boss_phase():
-	var timeline := Timeline.new(null)
+	var timeline := Timeline.new()
 	var is_fired: Array[String] = []
 	timeline.at(5.0).do(func(): is_fired.append("a"))
 

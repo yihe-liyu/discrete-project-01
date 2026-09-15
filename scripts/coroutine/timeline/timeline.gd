@@ -1,17 +1,17 @@
 class_name Timeline
 extends RefCounted
-## 时间线 —— 声明式替代 match _phase 状态机
+## 时间线 —— 纯排程器：只回答"何时触发"，不认识任何游戏机制。
+## 动作一律 do(callable)，环境由内容在闭包里自带（ctx / 导演）；
+## 唯一保留的类型耦合是 start_phase —— 相对时间 wait() 必须锚定一个阻塞事件。
 ##
-##   var timeline := Timeline.new(ctx)
-##   timeline.at(0.0).play_bgm("stage1")
+##   var timeline := Timeline.new()
+##   timeline.at(0.0).do(func(): _dir.bgm("stage1"))
 ##   timeline.at(2.0).every(1.5).times(4).do(_wave)
 ##   timeline.at(10.0).do(func(): ctx.bullets.shoot_spread(...))
 ##   timeline.loop()
 ##
-##   func _on_step(_ctx): return timeline.tick(_ctx.clock.delta)
+##   func _on_step(_ctx): return timeline.tick(get_dt())
 
-var ctx: StageContext
-var director: StageDirector  ## 场景导演（Timeline 便捷动词委托给它）；由 start_timeline(dir) 注入，不懒建
 var _events: Array[TimelineEvent] = []
 var _elapsed: float = 0.0
 var _loop_start: float = -1.0
@@ -22,10 +22,6 @@ var _time: float = -1.0
 var _every: float = -1.0
 var _times: int = -1
 var _wait_n: float = -1.0
-
-
-func _init(p_ctx: StageContext) -> void:
-	ctx = p_ctx
 
 
 # ═══ 构建器 ═══
@@ -76,20 +72,6 @@ func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 					ev.is_wait_armed = true
 		, CONNECT_ONE_SHOT)
 	)
-
-
-## 事件级动词：播 BGM（无返回值、无参数构造）。
-## 其余动作一律走 do(func(): ctx.*)，不另设包装 —— 见类注释与 BEST_PRACTICES_LOG。
-func play_bgm(key: String) -> Timeline:
-	var d := _require_director()
-	if d == null: return self
-	return do(func(): d.bgm(key))
-
-## 取导演（须由 start_timeline(dir) 注入；普通 timeline 不该调导演动词）
-func _require_director() -> StageDirector:
-	if director == null:
-		push_error("Timeline: play_bgm 需要 start_timeline(dir) 注入导演")
-	return director
 
 
 # ═══ 内部 ═══

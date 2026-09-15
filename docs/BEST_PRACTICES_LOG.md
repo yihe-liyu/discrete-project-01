@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-14 — Timeline 档 A：纯排程器（无参、零服务层依赖）
+
+- **决定（用户拍板）**：Timeline 只回答"何时触发"—— 公共面 `at/every/times/wait/do` + `start_phase`；动作一律 `do(callable)`，环境由内容在闭包里自带。
+- **为什么可行**：它真正需要的只是 **`float`（每帧 delta，由宿主注入）** + **`Callable`（动作）** —— 两个语言内置值。此前所有"依赖"都是命名糖。
+- **删**：死字段 `ctx: StageContext`（只赋值、从未读）；`director` + `play_bgm` + `_require_director`（唯一服务层脐带）；`_init(p_ctx)` → 无参 `Timeline.new()`。
+- **改**：`CoroutineScript.start_timeline()` 去参数；stage01 `start_timeline(_stage_director)` → `start_timeline()`、`timeline.at(0.0).play_bgm("stage1")` → `do(func(): _stage_director.bgm("stage1"))`；`test_timeline.gd` 去掉 CoroutineRunner/StageContext 脚手架（**不再需要场景树**）。
+- **保留的唯一类型耦合**：`start_phase(boss_getter, PhaseData)` —— `wait(n)` 的语义是"上一阻塞事件结束后 n 秒"，必须锚定 `boss.phase_cleared`。抽掉它得发明通用阻塞原语：复杂度升、收益零。
+- **文档同步**：`CONTENT_GUIDE.md` / `docs/ARCHITECTURE.md` 改写为"纯排程器"。
+- **验证**：`./tools/verify.sh` 全绿 **381 / 4194**。
+
 ### 2026-09-14 — Timeline 减法：删掉"残缺的第二套词汇"（导演包装 + 死面）
 
 - **动机**：Timeline 同时有 `timeline.spawn_enemy(data)` 与 `timeline.do(func(): data.spawn(ctx))` 两种拼法；前者只覆盖 `shoot_spread` / 单个 `EnemyData`，且**丢掉底层返回值**（`EnemyData.spawn -> Enemy`、`StageRuntime.spawn_boss -> Boss`）—— 残缺的第二套词汇。

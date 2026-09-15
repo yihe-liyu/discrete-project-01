@@ -9,7 +9,7 @@ func test_extracts_tl_at_literals() -> void:
 	script.source_code = """
 func start(ctx):
 	var timeline := start_timeline()
-	timeline.at(0.0).play_bgm(bgm)
+	timeline.at(0.0).do(f)
 	timeline.at(7.0).do(func(): pass)
 	timeline.at(35.0).start_phase(func(): return null, phase)
 	timeline.wait(2.0).do(func(): pass)  # 不应被提取
