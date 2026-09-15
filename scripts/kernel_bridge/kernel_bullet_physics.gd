@@ -17,7 +17,7 @@ const HIT_SFX_VOLUME := {
 
 var backend: KernelBulletBackend
 ## 组合根注入的特效层（空则静默）
-var fx: FxPool
+var fx_pool: FxPool
 ## 实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
 var entity_registry: EntityRegistry
 
@@ -33,8 +33,8 @@ func _player_res() -> PlayerResources:
 
 ## 消弹特效（同色）：未注入特效层时静默。
 func _play_clear(pos: Vector2, tint: Color) -> void:
-	if fx:
-		fx.play(_CLEAR_EFFECT, pos, Vector2.ZERO, tint)
+	if fx_pool:
+		fx_pool.play(_CLEAR_EFFECT, pos, Vector2.ZERO, tint)
 
 
 ## 每帧碰撞派发（由 BulletManager._physics_process 在内核积分之后调用）。
@@ -153,9 +153,9 @@ func _play_hit_sfx(sfx_key: StringName, enemy) -> void:
 
 ## 命中特效：场景在 BulletType.hit_fx，颜色取该弹当前色（与旧 _spawn_effect 1:1）。
 func _spawn_hit_fx(system: KernelNativeSystem, id: int, bt: BulletType) -> void:
-	if bt.hit_fx == null or fx == null:
+	if bt.hit_fx == null or fx_pool == null:
 		return
-	fx.play(bt.hit_fx, system.get_position(id), system.get_velocity(id), system.get_color(id))
+	fx_pool.play(bt.hit_fx, system.get_position(id), system.get_velocity(id), system.get_color(id))
 
 
 ## 圆-圆重叠：`query_circle`（原生宽相网格）+ 阵营过滤（原 `CollisionResolver.overlap_ids` 内联）。

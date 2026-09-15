@@ -66,14 +66,14 @@ func test_context_effects_read_bound_stage() -> void:
 	var miss := MissCircleLayer.new()
 	rt.add_child(miss)
 	rt.miss_layer = miss
-	var fx := FxPool.new()
-	rt.add_child(fx)
-	rt.fx_pool = fx
+	var fx_pool := FxPool.new()
+	rt.add_child(fx_pool)
+	rt.fx_pool = fx_pool
 	var runner := CoroutineRunner.new()
 	var ctx := StageContext.new(runner)
 	ctx.stage = rt   # 显式绑定，不再回退全局
 	assert_eq(ctx.effects.miss_layer, miss, "ctx.effects 应取绑定 stage 的 Miss 层")
-	assert_eq(ctx.effects.fx_pool, fx, "ctx.effects 应取绑定 stage 的 FX 层")
+	assert_eq(ctx.effects.fx_pool, fx_pool, "ctx.effects 应取绑定 stage 的 FX 层")
 	runner.free()
 
 
@@ -94,9 +94,9 @@ func test_game_scene_creates_and_injects_fx_pool() -> void:
 	var inst: Node = scene.instantiate()
 	add_child_autofree(inst)
 	await get_tree().process_frame
-	var fx: FxPool = inst.get_node_or_null("World/FxPool")
-	assert_not_null(fx, "GameScene 应在 World 下创建 FxPool")
-	assert_eq(inst.get_node("World/StageRuntime").fx_pool, fx, "应注入 StageRuntime.fx_pool")
-	assert_eq(BulletManager.current.fx_pool, fx, "应注入 BulletManager.current.fx_pool")
-	assert_eq(fx.get_script().resource_path,
+	var fx_pool: FxPool = inst.get_node_or_null("World/FxPool")
+	assert_not_null(fx_pool, "GameScene 应在 World 下创建 FxPool")
+	assert_eq(inst.get_node("World/StageRuntime").fx_pool, fx_pool, "应注入 StageRuntime.fx_pool")
+	assert_eq(BulletManager.current.fx_pool, fx_pool, "应注入 BulletManager.current.fx_pool")
+	assert_eq(fx_pool.get_script().resource_path,
 		"res://scripts/effect/fx_pool.gd", "应挂 FxPool 脚本")

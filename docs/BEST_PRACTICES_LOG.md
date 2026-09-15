@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — 命名统一 N7：FxPool 概念字段收敛为 `fx_pool`
+
+- **问题**：同一个「特效层（FxPool）」概念，字段名有两种：`fx_pool` / `_fx_pool`（StageRuntime / BulletManager / EffectService）vs **`fx`**（`KernelBulletPhysics.fx`，唯一漏网的）。
+- **做法**：`KernelBulletPhysics.fx` → `fx_pool`；调用点 `BulletManager.inject_fx_pool` / `_enable_kernel` 跟着改；`inject_fx_pool(fx: FxPool)` 的形参 `fx` → `pool`（若叫 `fx_pool` 会遮蔽 getter → 撞 check_naming ⑤）。测试里两处 `var fx: FxPool` → `fx_pool`。
+- **没动的**（同名不同义，不属于这条）：`fx_parent`（视觉**父节点**，另一个概念）、`screen_fog_fx.gd` 的插值因子 `fx`、原生测试里的 fx **相位数组**。
+- **验证**：`./tools/verify.sh` 全绿 **381 / 4194**（`check_naming` 0 条）。
+
 ### 2026-09-14 — 清空 test/tools 存量警告：全项目警告=错误
 
 - **接上一批**：上一批只让生产严格（`directory_rules` 排除 test/tools）。这一批把 **24 个文件约 30 处存量警告**全部清掉，并**删掉 `directory_rules`** → 全项目严格。

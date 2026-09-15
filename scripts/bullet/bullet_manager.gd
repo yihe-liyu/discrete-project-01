@@ -53,10 +53,10 @@ func get_bullet_ctx() -> StageContext:
 
 
 ## 组合根注入特效层（唯一写入口），转发给内核碰撞/清弹模块
-func inject_fx_pool(fx: FxPool) -> void:
-	_fx_pool = fx
+func inject_fx_pool(pool: FxPool) -> void:
+	_fx_pool = pool
 	if _kernel_bullet_physics:
-		_kernel_bullet_physics.fx = fx
+		_kernel_bullet_physics.fx_pool = pool
 
 
 func _ready():
@@ -214,7 +214,7 @@ func _enable_kernel() -> void:
 		add_child(_kernel_bullet_backend)
 		_kernel_bullet_physics = KernelBulletPhysics.new()
 		_kernel_bullet_physics.setup(_kernel_bullet_backend)
-		_kernel_bullet_physics.fx = fx_pool
+		_kernel_bullet_physics.fx_pool = fx_pool
 		_kernel_bullet_backend.system.process_physics_priority = -10
 		_kernel_bullet_backend.system.cull_rect = Rect2(
 			GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
