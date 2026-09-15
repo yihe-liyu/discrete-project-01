@@ -328,7 +328,7 @@ func _setup_world() -> void:
 	# 命中框覆盖层：独立 CanvasLayer + 高 z（> 敌弹 10 / 特效 50），画在子弹之上
 	_hitbox_overlay = HITBOX_OVERLAY.new()
 	_hitbox_overlay.name = "HitboxOverlay"
-	_hitbox_overlay.z_index = 60
+	_hitbox_overlay.z_index = LayerConfig.HITBOX_OVERLAY
 	_hitbox_overlay.entity_registry = _stage_runtime.entity_registry
 	_hitbox_overlay.bullet_manager = _bullet_manager
 	$HitboxLayer.add_child(_hitbox_overlay)

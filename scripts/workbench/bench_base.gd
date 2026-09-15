@@ -204,7 +204,7 @@ func build_world() -> Control:
 	_player.set("mode", 1)  # GhostPlayer.Mode.MOUSE（AUTO=0/MOUSE=1/STATIC=2；静态类型 Player 无 mode，用 set 动态写）
 	_player.player_data = REIMU_DATA  # 必须：Player._ready 会应用角色数据
 	_player.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
-	_player.z_index = 30
+	_player.z_index = LayerConfig.GHOST_PLAYER
 	_field.add_child(_player)
 	# 幽灵（自机）→ 关卡实体注册表；注册表 → 内核弹幕后端
 	_stage_runtime.entity_registry.bind_player(_player)

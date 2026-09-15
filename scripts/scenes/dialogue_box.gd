@@ -197,7 +197,7 @@ func _apply_actor(info: Dictionary, actor: ActorState, speakers: Array, pos_dur:
 
 	# UI 内相对排序（讲话者立绘置顶）
 	var is_speaker: bool = speakers.has(actor.char_name)
-	node.z_index = 10 if is_speaker else 0
+	node.z_index = LayerConfig.UI_SPEAKER if is_speaker else LayerConfig.UI_NORMAL
 
 	# 表情
 	_apply_emotion(info, actor.emotion)

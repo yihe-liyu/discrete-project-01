@@ -198,7 +198,7 @@ func _make_number_sprite_on(p_name: String, parent: Node, pos: Vector2, tex: Tex
 	var ns := _make_number_sprite(p_name, pos, tex, dcount)
 	remove_child(ns)
 	parent.add_child(ns)
-	ns.z_index = 0  # 同层内靠到最上（UI 内部相对）
+	ns.z_index = LayerConfig.UI_NORMAL  # 同层内靠到最上（UI 内部相对）
 	return ns
 
 

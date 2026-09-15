@@ -20,7 +20,7 @@ func _ready() -> void:
 	offset_right = 300.0
 	offset_bottom = 22.0
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	z_index = 200
+	z_index = LayerConfig.UI_TOAST
 
 	label = Label.new()
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

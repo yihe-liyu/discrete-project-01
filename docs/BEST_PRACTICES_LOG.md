@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — E8：z_index 裸数字 5 处收进 LayerConfig（R17）
+
+- **做法**：`LayerConfig` 新增两节 —— `UI 内部相对排序`（`UI_NORMAL/UI_SPEAKER/UI_TOAST`）与 `工作台/调试`（`GHOST_PLAYER/HITBOX_OVERLAY`）；五处裸数字全替换。
+- **为什么不混进游戏物件区**：这些值大多是 **UI 内部相对排序 / 工作台专属**，与 PLAYER 0 / ENEMY 5 / BOSS 15 不是一套坐标系 —— 单独成节，避免误以为可跨系比较。
+- **落点**：`dialogue_box.gd`（讲话者立绘）、`game_ui.gd`（同层置顶）、`status_toast.gd`（浮条）、`workbench.gd`（命中框覆盖层）、`bench_base.gd`（幽灵自机）。
+- **验证**：`scripts/**` 裸数字 `z_index` **0 处**；`./tools/verify.sh` 全绿 **382 / 4196**。
+
 ### 2026-09-14 — E6+E7：ItemPool 走注入，删掉 3 处全树搜
 
 - **病根**：组合根 `game_scene.gd:14` 已握着 `%ItemPool`，却只给它注了 `entity_registry`，**没往下注入** —— 于是三个消费点各自爬树：`ItemService.spawn`（`current_scene` → World/ItemPool，违 R2）、`Player._find_item_pool`（R5+R2）、`Enemy._find_item_pool`（`get_parent()` 假设自己挂在 World 下，R5；TODO 只记了 player 一处，enemy 是同款第三处）。

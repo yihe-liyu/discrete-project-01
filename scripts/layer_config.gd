@@ -20,3 +20,12 @@ const GAME_UI   := 1000   ## UI 容器根（语义层）
 const UI_TOP    := 128    ## UI 内部置顶（血条数字/提示等）
 const OVERLAY   := 2000   ## 菜单/暂停遮罩
 const DEBUG     := 9999
+
+# ── UI 内部相对排序（与游戏物件层不同坐标系；只保证 UI 内相对大小）──
+const UI_NORMAL  := 0    ## UI 默认
+const UI_SPEAKER := 10   ## 对话讲话者立绘置顶
+const UI_TOAST   := 200  ## 浮动状态条（盖住 UI 内容）
+
+# ── 工作台 / 调试 ──
+const GHOST_PLAYER   := 30  ## 工作台幽灵自机
+const HITBOX_OVERLAY := 60  ## 命中框覆盖层（> 敌弹 10 / 特效 50）
