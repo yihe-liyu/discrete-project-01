@@ -2,6 +2,7 @@ extends GutTest
 ## L2：其余 preset 与现有 GDScript 行为 parity（见 docs/LIFECYCLE_MODEL.md §9）。
 
 const DT := 1.0 / 60.0
+const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
 
 
 class FakeHost extends RefCounted:
@@ -173,7 +174,8 @@ func test_non_mid_flee_preset_parity() -> void:
 	var beh = preload("res://test/reference/behavior/non_mid_flee_behavior.gd").new()
 	beh.host = ha
 	var params := {&"player_proximity": 150.0, &"on_flee_burst": burst}
-	var lc := BulletLifecycle.non_mid_flee(150.0, r, burst)
+	LIFECYCLE_HOOKS_SCRIPT.register(&"test_non_mid_burst", burst)
+	var lc := BulletLifecycle.non_mid_flee(150.0, r, &"test_non_mid_burst")
 	var spawns: Array = []
 	for i in 6:
 		spawns.append([Vector2(448.0 + (i - 3) * 20.0, 500.0 + (i - 3) * 15.0), Vector2(0.0, -200.0)])

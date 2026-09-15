@@ -6,6 +6,8 @@
 class_name LifecycleBehavior
 extends Behavior
 
+const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
+
 ## KernelBehaviorHost 或测试假体（emit / sfx 用）。
 var host
 
@@ -205,7 +207,7 @@ func _run_actions(system: BulletSystem, id: int, st: Dictionary, actions: Array,
 				if d2 != Vector2.ZERO:
 					system.set_velocity(id, d2 * float(act[&"speed"]))
 			BulletLifecycle.A_CALL:
-				_call(act[&"fn"], system, id, ctx)
+				_call(act[&"call"], system, id, ctx)
 
 
 func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ctx: BehaviorContext) -> void:
@@ -225,7 +227,8 @@ func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ct
 
 
 # ── 内容回调（一次性、低频）──
-func _call(fn: Callable, system: BulletSystem, id: int, _ctx: BehaviorContext) -> void:
+func _call(hook: Variant, system: BulletSystem, id: int, _ctx: BehaviorContext) -> void:
+	var fn: Callable = hook if hook is Callable else LIFECYCLE_HOOKS_SCRIPT.resolve(hook)
 	if not fn.is_valid():
 		return
 	var boss = _boss()

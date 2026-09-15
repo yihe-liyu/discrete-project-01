@@ -9,7 +9,7 @@ func test_hot_reload_debounce_fires_after_stability():
 	var rig = RIG.new()
 	add_child_autofree(rig)
 	await get_tree().process_frame
-	rig._cur_script_path = "res://data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd"
+	rig._cur_script_path = "res://data/stages/stage03B/phase/spell03/orbit_probe.gd"
 	rig._watch_paths.clear()
 	rig._watch_paths.append(rig._cur_script_path)
 	rig._watch_mtimes.clear()
@@ -54,7 +54,7 @@ func test_hot_reload_replays_and_keeps_old_on_failure():
 	await get_tree().process_frame
 
 	# ① 成功路径：选一个真实弹丸脚本 → 重载 → 自动发弹重演
-	rig._cur_script_path = "res://data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd"
+	rig._cur_script_path = "res://data/stages/stage03B/phase/spell03/orbit_probe.gd"
 	rig._rebuild_watch()
 	assert_true(rig._watch_paths.size() >= 1, "监听集非空（%d）" % rig._watch_paths.size())
 	BulletManager.current.clear_all()

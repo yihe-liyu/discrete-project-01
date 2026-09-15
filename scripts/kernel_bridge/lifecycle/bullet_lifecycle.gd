@@ -205,9 +205,10 @@ func on_end_heading(dir: Dictionary) -> BulletLifecycle:
 	_on_end.append({&"op": A_SET_HEADING, &"dir": dir})
 	return self
 
-## 内容回调动作（一次性、低频）：fn.call(pos, boss_pos, has_boss, host)。
-func on_end_call(fn: Callable) -> BulletLifecycle:
-	_on_end.append({&"op": A_CALL, &"fn": fn})
+## 内容回调动作（一次性、低频）：call(pos, boss_pos, has_boss, host)。
+## hook = **StringName**（推荐：注册表解析，可序列化、跨实例共用 program）或 **Callable**（旧写法 / oracle）。
+func on_end_call(hook: Variant) -> BulletLifecycle:
+	_on_end.append({&"op": A_CALL, &"call": hook})
 	return self
 
 
@@ -255,9 +256,9 @@ static func avoid_player(proximity: float, jump: float, flee_time: float) -> Bul
 	})
 
 
-static func non_mid_flee(proximity: float, boss_radius: float, burst: Callable) -> BulletLifecycle:
+static func non_mid_flee(proximity: float, boss_radius: float, burst: Variant) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"non_mid_flee", {
-		&"player_proximity": proximity, &"boss_radius": boss_radius, &"on_flee_burst": burst,
+		&"player_proximity": proximity, &"boss_radius": boss_radius, &"hook": burst,
 	})
 
 
@@ -378,6 +379,8 @@ func content_signature() -> int:
 			h = h * 31 + (a.get_object_id() if a.is_valid() else 0)
 		elif a is BulletData:
 			h = h * 31 + a.get_instance_id()
+		elif a is StringName:
+			h = h * 31 + hash(a)
 	_content_sig = h if h != 0 else 1
 	return _content_sig
 
@@ -482,6 +485,6 @@ func _args_act(a: Dictionary, actions: Array, sfx_keys: Array[StringName]) -> Ar
 		A_SET_SPEED: return [float(a[&"speed"])]
 		A_CALL:
 			var cid := actions.size()
-			actions.append(a[&"fn"])
+			actions.append(a[&"call"])
 			return [float(cid)]
 	return []

@@ -67,7 +67,7 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 			lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
 			lc.then()
 			lc.until_near(BulletLifecycle.T_BOSS, radius, 0.0, 3)
-			lc.on_end_call(params.get(&"on_flee_burst", Callable()))
+			lc.on_end_call(_hook_of(params))
 			lc.despawn()
 		&"marisa_laser":
 			lc.anchor_drift(int(params.get(&"anchor_id", 0)), params.get(&"anchor_offset", Vector2.ZERO),
@@ -87,6 +87,11 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 ## 替换弹来源：新写法 `spawn`（BulletData）优先，兼容旧 `spawn_factory`（Callable）。
 static func _spawn_of(params: Dictionary) -> Variant:
 	return params.get(&"spawn", params.get(&"spawn_factory", null))
+
+
+## 内容回调来源：新写法 `hook`（StringName）优先，兼容旧 `on_flee_burst`（Callable）。
+static func _hook_of(params: Dictionary) -> Variant:
+	return params.get(&"hook", params.get(&"on_flee_burst", null))
 
 
 ## 签名：同 (move, params) 只编译一次。难度相关值（如 non_mid 半径）由内容放进 params，故无需额外入签名。

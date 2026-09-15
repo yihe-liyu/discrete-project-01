@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-14 — b2b：hook 名注册表 —— `on_end_call` 收名字，最后一个 kernel_port 载体拆除
+
+- **新增** `scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd`（无 class_name，preload 引用）：`register(name, fn)` / `resolve(name)` / `clear()`。名字是**唯一键**（同名不同义在注册时暴露）→ program 可只按「结构 + 名字」去重。
+- **schema**：`BulletLifecycle.on_end_call(hook: Variant)` —— **StringName**（推荐）或 **Callable**（旧写法 / oracle 兼容）；`content_signature` 对 StringName 取 `hash`。原生 `_drain_events`（kind 2）与参考解释器 `_call` 都按类型分派（名字 → 注册表解析）。
+- **catalog**：`_hook_of(params)`（`hook` 优先，兼容 `on_flee_burst`）。
+- **迁移**：钩子实现移到 `data/stages/stage01/phase/non_mid01/non_mid_flee_hook.gd`（RefCounted），由 `non_mid01_shoot._init` 注册 `&"non_mid01_flee_burst"`；射击脚本改 `trajectory(BulletLifecycle.non_mid_flee(150.0, diff_pick(BOSS_RADIUS), FLEE_HOOK))`。**删除最后一个 kernel_port 载体 `non_mid01_bullet.gd`**。
+- **效果**：`func kernel_port` 现在**只剩测试夹具** → 端口机制（`_port_for` / `_port_probes` / `_port_by_sig`）生产侧已死，可开 **b2c** 删除。
+- **测试**：新增 `test_lifecycle_hooks`（注册 / 解析 / 未注册无效 / 名字入签名）；`test_lifecycle_presets` 的 non_mid parity 改用**名字**（证明参考解释器名字分发）；hot-reload 测试改指 `orbit_probe.gd`。
+- **验证**：`./tools/verify.sh` 全绿 **392 / 4198**。
+
 ### 2026-09-14 — b2a：`emit` 改收 `BulletData`（Callable 兼容），bounce / radial_accel 去 Callable
 
 - **schema**：`BulletLifecycle.emit(spawn: Variant, ...)` —— 收 **BulletData**（推荐：可序列化、跨实例共用 program）或 **Callable（）-> BulletData**（旧写法 / parity oracle 兼容）。程序级 `actions` 表同时承载两类值；`_drain_events` 与参考解释器按类型分派；`content_signature` 对 BulletData 取**实例身份**（不同替换弹必须分开 program）。

@@ -12,7 +12,6 @@ func test_real_content_role_classification():
 		"res://data/stages/stage01/stage_script/stage01.gd": "stage",
 		"res://data/stages/stage01/phase/non_mid01/non_mid01_move.gd": "boss_move",
 		"res://data/stages/stage01/phase/non_mid01/non_mid01_shoot.gd": "boss_shoot",
-		"res://data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd": "bullet",
 		"res://data/stages/stage03B/phase/spell03/orbit_spiral.gd": "boss_shoot",
 		"res://data/stages/stage03B/phase/spell03/orbit_probe.gd": "bullet",
 		"res://data/stages/stage01/enemy/enemy01.gd": "enemy",
@@ -27,11 +26,6 @@ func test_real_content_role_classification():
 	var e0 = cat.find("res://data/stages/stage01/phase/non_mid01/non_mid01_shoot.gd")
 	if e0:
 		assert_eq(e0.name, "每隔一段时间射一圈特殊弹丸", "默认名=注释首行冒号后")
-	# 超长名截断（18 字符 + …）
-	var e_bullet = cat.find("res://data/stages/stage01/phase/non_mid01/non_mid01_bullet.gd")
-	if e_bullet:
-		assert_true(e_bullet.name.begins_with("飞行 →"), "子弹名取冒号后")
-		assert_true(e_bullet.name.ends_with("…"), "超长名截断带省略号")
 	# 背景演出角色（/background/ 约定）
 	var decor = cat.find("res://data/stages/stage01/background/stage01_decor.gd")
 	if decor:

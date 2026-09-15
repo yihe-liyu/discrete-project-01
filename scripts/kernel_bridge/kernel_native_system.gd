@@ -8,6 +8,7 @@
 ## 尾行索引更大、已处理过，故安全（现状已如此）。
 class_name KernelNativeSystem
 extends Node
+const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
 
 @export_group("Pool")
 @export var initial_capacity: int = 1024
@@ -412,4 +413,7 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 				if stream != null:
 					AudioManager.play_sfx(stream, vals[k])
 			2:
-				(c["actions"][local[k]] as Callable).call(Vector2(xs[k], ys[k]), boss_pos, has_boss, behavior_host)
+				var hook: Variant = c["actions"][local[k]]
+				var fn: Callable = hook if hook is Callable else LIFECYCLE_HOOKS_SCRIPT.resolve(hook)
+				if fn.is_valid():
+					fn.call(Vector2(xs[k], ys[k]), boss_pos, has_boss, behavior_host)
