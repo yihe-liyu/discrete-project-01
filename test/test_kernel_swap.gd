@@ -89,7 +89,7 @@ func test_bomb_spawns_host_node() -> void:
 func test_radial_accel_via_manager() -> void:
 	var d := BulletData.new().enemy().blend(true).tex("棱弹")
 	d.velocity = Vector2.UP * 300.0
-	d.coroutine_script = preload("res://data/stages/stage01/bullet/radial_accel_bullet.gd")
+	d.lifecycle = BulletLifecycle.radial_accel(150.0, BulletData.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA), &"kira", -6.0)
 	BulletManager.current.shoot_bullet(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
 	for i in 10:
 		await get_tree().physics_frame

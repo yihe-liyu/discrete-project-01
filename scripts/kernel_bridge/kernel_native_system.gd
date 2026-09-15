@@ -401,8 +401,8 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 		var c: Dictionary = _program_data[prog]
 		match kinds[k]:
 			0:
-				var factory: Callable = c["actions"][local[k]]
-				var b = factory.call()
+				var spawn_src: Variant = c["actions"][local[k]]
+				var b = spawn_src.call() if spawn_src is Callable else spawn_src
 				if b != null and behavior_host != null:
 					b.velocity = Vector2(0.0, vals[k])
 					behavior_host.queue_spawn(b, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]))

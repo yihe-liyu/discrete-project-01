@@ -191,8 +191,9 @@ func sfx(key: StringName, db: float = 0.0) -> BulletLifecycle:
 	return self
 
 ## at_end = true 时用条件（at_wall）输出的落点，否则用当前弹位置。
-func emit(factory: Callable, dir: Dictionary, speed: float = 0.0, at_end: bool = false) -> BulletLifecycle:
-	_on_end.append({&"op": A_EMIT, &"factory": factory, &"dir": dir, &"speed": speed, &"at_end": at_end})
+## spawn = **BulletData**（推荐：可序列化、跨实例共用 program）或 **Callable（）-> BulletData**（旧写法 / oracle）。
+func emit(spawn: Variant, dir: Dictionary, speed: float = 0.0, at_end: bool = false) -> BulletLifecycle:
+	_on_end.append({&"op": A_EMIT, &"spawn": spawn, &"dir": dir, &"speed": speed, &"at_end": at_end})
 	return self
 
 func despawn() -> BulletLifecycle:
@@ -213,11 +214,11 @@ func on_end_call(fn: Callable) -> BulletLifecycle:
 # ═══ Canned preset（10 个 move 的**类型化薄包装**）═══
 # 组合定义在 LifecycleCatalog.build()（唯一真相）；这里只把类型化参数转成 params 字典。
 
-static func bounce(accel_rate: float, bounce_angle: float, spawn_speed: float, factory: Callable,
+static func bounce(accel_rate: float, bounce_angle: float, spawn_speed: float, spawn: Variant,
 		sfx_key: StringName = &"kira", sfx_db: float = -8.0) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"bounce", {
 		&"accel": accel_rate, &"bounce_angle": bounce_angle, &"spawn_speed": spawn_speed,
-		&"spawn_factory": factory, &"sfx": sfx_key, &"sfx_db": sfx_db,
+		&"spawn": spawn, &"sfx": sfx_key, &"sfx_db": sfx_db,
 	})
 
 
@@ -242,9 +243,9 @@ static func homing(angle_per_sec := deg_to_rad(720.0), accel_time := 2.0, min_sp
 	})
 
 
-static func radial_accel(accel_rate: float, factory: Callable, sfx_key: StringName = &"", sfx_db: float = 0.0) -> BulletLifecycle:
+static func radial_accel(accel_rate: float, spawn: Variant, sfx_key: StringName = &"", sfx_db: float = 0.0) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"radial_accel", {
-		&"accel_rate": accel_rate, &"spawn_factory": factory, &"sfx": sfx_key, &"sfx_db": sfx_db,
+		&"accel_rate": accel_rate, &"spawn": spawn, &"sfx": sfx_key, &"sfx_db": sfx_db,
 	})
 
 
@@ -331,7 +332,7 @@ func compile() -> Dictionary:
 	var until_idx := PackedInt32Array()
 	var act_start := PackedInt32Array()
 	var act_count := PackedInt32Array()
-	var actions: Array[Callable] = []
+	var actions: Array = []
 	var sfx_keys: Array[StringName] = []
 	for phase in phases:
 		var mv: Array = phase[&"moves"]
@@ -373,7 +374,10 @@ func content_signature() -> int:
 	h = h * 31 + int(c[&"phase_count"]) * 7 + int(c[&"slots"])
 	h = h * 31 + hash(c[&"sfx"])
 	for a in c[&"actions"]:
-		h = h * 31 + (a.get_object_id() if a.is_valid() else 0)
+		if a is Callable:
+			h = h * 31 + (a.get_object_id() if a.is_valid() else 0)
+		elif a is BulletData:
+			h = h * 31 + a.get_instance_id()
 	_content_sig = h if h != 0 else 1
 	return _content_sig
 
@@ -464,11 +468,11 @@ func _args_cond(c: Dictionary) -> Array:
 	return []
 
 
-func _args_act(a: Dictionary, actions: Array[Callable], sfx_keys: Array[StringName]) -> Array:
+func _args_act(a: Dictionary, actions: Array, sfx_keys: Array[StringName]) -> Array:
 	match a[&"op"]:
 		A_EMIT:
 			var aid := actions.size()
-			actions.append(a[&"factory"])
+			actions.append(a[&"spawn"])
 			return [float(aid)] + _dir_args(a[&"dir"]) + [float(a[&"speed"]), 1.0 if bool(a[&"at_end"]) else 0.0]
 		A_SFX:
 			var sid := sfx_keys.size()

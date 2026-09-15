@@ -21,6 +21,8 @@ var _base_dir: Vector2
 
 ## 复用弹型实例（M2）
 var _bullet_data: BulletData
+## 反弹替换弹（米弹/GOLD）：**共享实例**（static）→ 同结构 program 跨实例共用
+static var _bounce_spawn_bullet_data: BulletData
 
 
 func _tick(p_ctx: StageContext):
@@ -67,13 +69,12 @@ func _fire_ring(p_ctx: StageContext) -> void:
 	_ring_index += 1
 
 	if _bullet_data == null:
-		_bullet_data = BulletData.new()\
-			.tex("棱弹")\
-			.color(Color.AQUA)\
-			.blend(true)\
-			.enemy()\
-			.behavior(preload("res://data/stages/stage01/bullet/bounce_bullet.gd"))
+		_bullet_data = BulletData.new().tex("棱弹").color(Color.AQUA).blend(true).enemy()
+	if _bounce_spawn_bullet_data == null:
+		_bounce_spawn_bullet_data = BulletData.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
 	_bullet_data.speed(speed)  # 速度随圈递增：每圈写一次（速度不属弹型）
-	_bullet_data.params = {"bounce_angle": bounce_angle, "accel": _bullet_accel - _ring_index * 3}
+	# 弹道每圈一份（accel / bounce_angle 随圈变）；替换弹是共享实例 → 同结构共用 program
+	_bullet_data.trajectory(BulletLifecycle.bounce(
+		_bullet_accel - _ring_index * 3, bounce_angle, 0.0, _bounce_spawn_bullet_data))
 
 	p_ctx.bullets.shoot_spread(_bullet_data, count, TAU, _base_dir, target.global_position)

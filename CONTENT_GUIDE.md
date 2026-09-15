@@ -259,14 +259,14 @@ func kernel_port() -> Dictionary:
 | `accel` | `accel: float` | 沿当前方向加速 |
 | `curve` | `curve`（角速度）、`curve_limit`（累计转角上限，0=无限） | 边飞边转 |
 | `homing` | `homing_angle_per_sec`(720°)、`accel_time`(2)、`min_speed`(500)、`max_speed`(2000)、`homing_duration`(2)、`proximity_boost`(150) | 追踪最近敌人 |
-| `radial_accel` | `accel_rate`、`spawn_factory: Callable`、`sfx`、`sfx_db` | 沿初向加速 + 碰顶换向下弹 |
-| `bounce` | `accel`、`bounce_angle`、`spawn_speed`(0)、`spawn_factory`、`sfx`("kira")、`sfx_db`(-8) | 碰框朝 Boss 转 `bounce_angle` 后换弹 |
+| `radial_accel` | `accel_rate`、`spawn: BulletData`（或旧 `spawn_factory: Callable`）、`sfx`、`sfx_db` | 沿初向加速 + 碰顶换向下弹 |
+| `bounce` | `accel`、`bounce_angle`、`spawn_speed`(0)、`spawn: BulletData`（或旧 `spawn_factory`）、`sfx`("kira")、`sfx_db`(-8) | 碰框朝 Boss 转 `bounce_angle` 后换弹 |
 | `avoid_player` | （类型级固定；内容不覆盖） | 靠近自机逃 |
 | `non_mid_flee` | `player_proximity`(150)、`boss_radius`、`on_flee_burst: Callable` | 逃 → 近 Boss 散圈（半径由内容按难度传） |
 | `marisa_laser` | `anchor_id`、`anchor_offset`、`angle`、`drift_speed`(2000)、`initial_drift` | 子机锚定激光（World 兄弟，用 global） |
 | `laser_follow` | 同上 | 自机子节点锚定（用局部 position） |
 
-> - `spawn_factory` 是**换弹工厂**，返回 `BulletData`（内容侧提供；工厂实例要复用，别每发 new）。
+> - `spawn` 是**替换弹**（`BulletData`，推荐：可序列化、跨实例共用 program）；旧写法 `spawn_factory: Callable` 仍兼容（parity oracle 用）。
 > - **未知 `move` → 按直线发射**（计入 `unmapped_behavior_count`）。
 > - **新增 `move`** = 在 `LifecycleCatalog.build()` 加分支，**就地用原语拼出组合**（组合唯一在此）；`BulletLifecycle` 的同名 preset 是可选类型化糖。**组合现有 Move/Until/Action 无需改 C++**；只有需要**新原语**才动 `gdextension/src/danmaku_store.cpp`。
 > - **只是某一颗弹想要"预设表里没有"的组合** → 不用新增 `move`，见下节 `{lifecycle}`。

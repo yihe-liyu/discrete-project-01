@@ -26,6 +26,16 @@ func test_factory_identity_differs() -> void:
 	assert_ne(a.content_signature(), b.content_signature(), "不同工厂实例应不同签名")
 
 
+func test_spawn_data_identity_in_signature() -> void:
+	var d1 := BulletData.new().enemy()
+	var d2 := BulletData.new().enemy()
+	var a := BulletLifecycle.bounce(100.0, 0.0, 0.0, d1)
+	var b := BulletLifecycle.bounce(100.0, 0.0, 0.0, d1)
+	var c := BulletLifecycle.bounce(100.0, 0.0, 0.0, d2)
+	assert_eq(a.content_signature(), b.content_signature(), "同一替换弹实例应同签名")
+	assert_ne(a.content_signature(), c.content_signature(), "不同替换弹实例应异签名")
+
+
 func test_signature_is_stable() -> void:
 	var a := BulletLifecycle.world_accel(Vector2(0, 200))
 	assert_eq(a.content_signature(), a.content_signature(), "同实例签名应稳定（缓存）")

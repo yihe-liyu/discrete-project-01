@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-14 — b2a：`emit` 改收 `BulletData`（Callable 兼容），bounce / radial_accel 去 Callable
+
+- **schema**：`BulletLifecycle.emit(spawn: Variant, ...)` —— 收 **BulletData**（推荐：可序列化、跨实例共用 program）或 **Callable（）-> BulletData**（旧写法 / parity oracle 兼容）。程序级 `actions` 表同时承载两类值；`_drain_events` 与参考解释器按类型分派；`content_signature` 对 BulletData 取**实例身份**（不同替换弹必须分开 program）。
+- **catalog**：新增 `_spawn_of(params)`（`spawn` 优先，兼容 `spawn_factory`）。
+- **迁移**：`non01_shoot`（bounce）—— **每圈一份描述符**（accel/bounce_angle 随圈变）+ **共享 static 替换弹**；`enemy04`（radial_accel）同理。**删除整个 `data/stages/stage01/bullet/`**（bounce_bullet / radial_accel_bullet）。`test_kernel_swap` / catalog 夹具相应更新。
+- **踩坑**：`KernelNativeSystem` 有 `spawn()` 方法 → `_drain_events` 里 `var spawn` 触发 SHADOWED_VARIABLE（警告=错误）→ 改 `spawn_src`。私有 `static var` 名必须以**类型 snake** 结尾 → `_bounce_spawn_bullet_data` / `_radial_spawn_bullet_data`。
+- **留**：`non_mid_flee` 的 `on_end_call` 仍是 Callable → 等 **b2b** hook 名。
+- **验证**：`./tools/verify.sh` 全绿 **389 / 4199**。
+
 ### 2026-09-14 — b1（无 Callable 批）：homing / marisa_laser / world_accel 迁到 `.trajectory`；删 3 个载体/字段
 
 - **新增**：`BulletData.trajectory(lc, anchor=null)`（链式）与 `lifecycle_anchor`（per-shot 锚点 spec，补全 `{lifecycle}` 路）。

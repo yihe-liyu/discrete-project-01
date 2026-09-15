@@ -43,7 +43,7 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 			var sfx_radial := StringName(params.get(&"sfx", ""))
 			if sfx_radial != &"":
 				lc.sfx(sfx_radial, float(params.get(&"sfx_db", 0.0)))
-			lc.emit(params.get(&"spawn_factory", Callable()), BulletLifecycle.heading(PI), 0.0, true)
+			lc.emit(_spawn_of(params), BulletLifecycle.heading(PI), 0.0, true)
 			lc.despawn()
 		&"bounce":
 			lc.accel_heading(float(params.get(&"accel", 0.0)))
@@ -51,7 +51,7 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 			var sfx_bounce := StringName(params.get(&"sfx", "kira"))
 			if sfx_bounce != &"":
 				lc.sfx(sfx_bounce, float(params.get(&"sfx_db", -8.0)))
-			lc.emit(params.get(&"spawn_factory", Callable()),
+			lc.emit(_spawn_of(params),
 				BulletLifecycle.toward(BulletLifecycle.T_BOSS, float(params.get(&"bounce_angle", 0.0))),
 				float(params.get(&"spawn_speed", 0.0)), true)
 			lc.despawn()
@@ -82,6 +82,11 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 		_:
 			return null
 	return lc
+
+
+## 替换弹来源：新写法 `spawn`（BulletData）优先，兼容旧 `spawn_factory`（Callable）。
+static func _spawn_of(params: Dictionary) -> Variant:
+	return params.get(&"spawn", params.get(&"spawn_factory", null))
 
 
 ## 签名：同 (move, params) 只编译一次。难度相关值（如 non_mid 半径）由内容放进 params，故无需额外入签名。

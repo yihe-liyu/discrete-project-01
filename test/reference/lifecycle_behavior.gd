@@ -216,9 +216,9 @@ func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ct
 	if float(act[&"speed"]) > 0.0:
 		speed = float(act[&"speed"])
 	var dir: Vector2 = _dir(act[&"dir"], at, ctx)
-	var factory: Callable = act.get(&"factory", Callable())
-	if factory.is_valid() and host != null and host.has_method("queue_spawn"):
-		var b = factory.call()
+	var spawn: Variant = act.get(&"spawn", act.get(&"factory", null))
+	if spawn != null and host != null and host.has_method("queue_spawn"):
+		var b = spawn.call() if spawn is Callable else spawn
 		if b != null:
 			b.velocity = Vector2(0, speed)
 			host.queue_spawn(b, at, dir)
