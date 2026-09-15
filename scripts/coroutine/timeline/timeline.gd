@@ -11,7 +11,7 @@ extends RefCounted
 ##   func _on_step(_ctx): return tl.tick(_ctx.clock.delta)
 
 var ctx: StageContext
-var director: StageDirector  ## 场景导演（Timeline 便捷动词委托给它）；null 时用 _get_director 懒建
+var director: StageDirector  ## 场景导演（Timeline 便捷动词委托给它）；由 start_timeline(dir) 注入，不懒建
 var _events: Array[TimelineEvent] = []
 var _elapsed: float = 0.0
 var _is_paused: bool = false
@@ -87,26 +87,39 @@ func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 
 
 ## 便捷动词 —— 全部委托给导演（单一 owner；导演才碰 ctx/机制）
+## 须先 start_timeline(dir) 注入导演；普通 timeline（子弹/敌机波次）不该用这些动词。
+## 缺导演时【构建期】即报错并跳过事件，不静默造一个临时导演。
+
 ## 步骤版对话（DSL 步骤，台词内联）
 func dialogue_steps(steps: Array) -> Timeline:
-	return do(func(): _get_director().dialogue(steps))
+	var d := _require_director()
+	if d == null: return self
+	return do(func(): d.dialogue(steps))
 
 func spawn_wave(data: BulletData, count: int, spread: float, dir: Vector2, at_pos: Vector2) -> Timeline:
-	return do(func(): _get_director().spawn_wave(data, count, spread, dir, at_pos))
+	var d := _require_director()
+	if d == null: return self
+	return do(func(): d.spawn_wave(data, count, spread, dir, at_pos))
 
 func spawn_enemy(data: EnemyData) -> Timeline:
-	return do(func(): _get_director().spawn_enemy(data))
+	var d := _require_director()
+	if d == null: return self
+	return do(func(): d.spawn_enemy(data))
 
 func spawn_boss(data: BossData, pos: Vector2) -> Timeline:
-	return do(func(): _get_director().spawn_boss(data, pos))
+	var d := _require_director()
+	if d == null: return self
+	return do(func(): d.spawn_boss(data, pos))
 
 func play_bgm(key: String) -> Timeline:
-	return do(func(): _get_director().bgm(key))
+	var d := _require_director()
+	if d == null: return self
+	return do(func(): d.bgm(key))
 
-## 取导演（未设置则用 ctx 懒建；stage 关卡由 start_timeline(dir) 传入）
-func _get_director() -> StageDirector:
+## 取导演（须由 start_timeline(dir) 注入；不懒建 —— 普通 timeline 悄悄造临时导演是 bug 温床）
+func _require_director() -> StageDirector:
 	if director == null:
-		director = StageDirector.new(ctx)
+		push_error("Timeline: 导演动词需要 start_timeline(dir) 注入导演（普通 timeline 不该调用）")
 	return director
 
 

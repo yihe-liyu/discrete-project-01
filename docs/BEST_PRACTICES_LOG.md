@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — Timeline：导演动词不再懒建临时导演（缺导演响亮报错）
+
+- **问题**：`Timeline._get_director()` 在 `director == null` 时**懒建** `StageDirector.new(ctx)` —— 普通 timeline（子弹/敌机波次）若误用导演动词，不报错，只会**静默造一个临时导演**（也逃过 `dispose()`），是 bug 温床。
+- **做法**：`_get_director()` → `_require_director()`：缺导演时 `push_error` 并返回 null；5 个导演动词（`dialogue_steps` / `spawn_wave` / `spawn_enemy` / `spawn_boss` / `play_bgm`）在**构建期**取导演，缺则报错并跳过该事件（避免裸 null 调用崩溃）。
+- **契约**：导演动词只属于 `start_timeline(dir)` 注入导演的关卡 timeline；子弹/敌机 timeline 本就不该用这些动词。
+- **验证**：`./tools/verify.sh` 全绿 **381 / 4194**。
+
 ### 2026-09-14 — 命名统一 N13（续）：11 个 `@export` bool 落地
 
 - 按裁定**动词开头保留**：`follow_dir` / `follow_player` / `link_ground_to_fog` / `allow_wrap`（天然"做/不做"）。
