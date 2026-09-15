@@ -55,6 +55,8 @@ const CMP_LE := 1
 var phases: Array = []
 ## 每弹状态槽数（所有相位取最大；builder 自动分配）。
 var slots: int = 0
+## 结构签名缓存（content_signature；0 = 未算）
+var _content_sig: int = 0
 
 var _moves: Array = []
 var _until: Dictionary = {}
@@ -352,6 +354,28 @@ func compile() -> Dictionary:
 		&"phase_count": phases.size(), &"slots": slots,
 		&"actions": actions, &"sfx": sfx_keys,
 	}
+
+
+## 结构签名（内容哈希，**不含实例身份**）：相同结构的 lifecycle 共用一个原生 program。
+## 首次调用后缓存。actions（Callable）按**对象身份**参与 —— 结构相同但工厂不同的必须分开
+## （program 的动作表按 program 存，串了就会调错工厂）。
+func content_signature() -> int:
+	if _content_sig != 0:
+		return _content_sig
+	var c := compile()
+	var h: int = hash(c[&"ops"])
+	h = h * 31 + hash(c[&"args"])
+	h = h * 31 + hash(c[&"move_start"])
+	h = h * 31 + hash(c[&"move_count"])
+	h = h * 31 + hash(c[&"until_idx"])
+	h = h * 31 + hash(c[&"act_start"])
+	h = h * 31 + hash(c[&"act_count"])
+	h = h * 31 + int(c[&"phase_count"]) * 7 + int(c[&"slots"])
+	h = h * 31 + hash(c[&"sfx"])
+	for a in c[&"actions"]:
+		h = h * 31 + (a.get_object_id() if a.is_valid() else 0)
+	_content_sig = h if h != 0 else 1
+	return _content_sig
 
 
 func _emit(ops: PackedInt32Array, args: PackedFloat32Array, op: int, a: Array) -> void:

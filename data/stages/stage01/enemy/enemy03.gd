@@ -1,7 +1,6 @@
 extends CoroutineScript
 ## 红杂鱼: 向下减速 + 自机狙 + 散射
 
-const GRAVITY_BULLET = preload("res://data/stages/stage01/bullet/gravity_bullet.gd")
 const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 
 var target_pos: Vector2
@@ -48,7 +47,7 @@ func _init_enemy() -> void:
 		if ctx.diff.at_least(2) and heavy_wave:
 			if _heavy_bullet_data == null:
 				_heavy_bullet_data = BulletData.new().enemy().blend(true).tex("棱弹").color(Color.GOLD).grace(3)
-				_heavy_bullet_data.coroutine_script = GRAVITY_BULLET
+				_heavy_bullet_data.lifecycle = BulletLifecycle.world_accel(Vector2(0, 200))
 			for i in diff_pick([0, 0, 1, 2]):
 				_heavy_bullet_data.velocity = Vector2(0, 200 + i * 25)
 				ctx.bullets.shoot_spread(_heavy_bullet_data, diff_pick([0, 0, 2, 4]), PI / (3 - i), -dir,

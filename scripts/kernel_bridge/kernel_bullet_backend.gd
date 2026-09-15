@@ -120,7 +120,11 @@ func prepare_shot(data: BulletData, pos: Vector2, direction: Vector2) -> Diction
 	var vel: Vector2 = direction.normalized() * speed if direction != Vector2.ZERO else data.velocity
 	var move: StringName = &""
 	var params: Variant = null
-	if data.coroutine_script != null:
+	if data.lifecycle != null:
+		# b0：内容直接挂描述符，优先于旧的 coroutine_script 端口。
+		move = LifecycleCatalog.MOVE_LIFECYCLE
+		params = {&"lifecycle": data.lifecycle}
+	elif data.coroutine_script != null:
 		var port: Dictionary = _port_for(data)
 		if port.has("lifecycle"):
 			# 预拼描述符入口：内容自己拼 BulletLifecycle（builder sugar），不经过命名 move。

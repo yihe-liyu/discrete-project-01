@@ -1,6 +1,5 @@
 extends CoroutineScript
 
-const GRAVITY_BULLET = preload("res://data/stages/stage01/bullet/gravity_bullet.gd")
 const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 
 var target_pos: Vector2
@@ -42,7 +41,7 @@ func _init_enemy() -> void:
 			timeline.at(1.0 + i * 2.4).every(0.1).times(diff_pick([0, 0, 4, 8])).do(func():
 				if _heavy_bullet_data == null:
 					_heavy_bullet_data = BulletData.new().enemy().blend(true).tex("米弹").color(Color.GOLD)
-					_heavy_bullet_data.coroutine_script = GRAVITY_BULLET
+					_heavy_bullet_data.lifecycle = BulletLifecycle.world_accel(Vector2(0, 200))
 				_heavy_bullet_data.velocity = Vector2(0, 175)
 				var dir = Vector2.UP.rotated(RNG.randf_range(-PI / 3, PI / 3))
 				ctx.bullets.shoot_spread(_heavy_bullet_data, 1, 0, dir,

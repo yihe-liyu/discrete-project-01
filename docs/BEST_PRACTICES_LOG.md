@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — b0：`BulletData.lifecycle` 直接挂描述符（含结构签名前置）+ gravity 试点
+
+- **b0**：`BulletData` 新增 `lifecycle: BulletLifecycle`；`prepare_shot` **优先**用它（走既有 `{lifecycle}` 入口），`coroutine_script` / `params` **并存不破**。
+- **前置（骨头 1，必须同批）**：直接挂 lifecycle 会撞 `signature` 用 `get_instance_id()` —— 每个敌人实例各建一个 → **每敌一个原生 program**（`register_program` 只增不减）。故加 `BulletLifecycle.content_signature()`（缓存；哈希 `compile()` 出的数值结构 + `sfx` + actions 的**对象身份**），`LifecycleCatalog.signature` 改用它 → **相同结构天然去重**；工厂不同仍分开（program 动作表按 program 存，串了会调错工厂）。
+- **试点**：`enemy01/02/03` 重力弹 `coroutine_script = GRAVITY_BULLET` → `_heavy_bullet_data.lifecycle = BulletLifecycle.world_accel(Vector2(0, 200))`；**删除载体 `data/stages/stage01/bullet/gravity_bullet.gd`**（catalog 夹具改用 `bounce_bullet.gd`）。
+- **测试**：新增 `test_lifecycle_signature`（同构同签名 / 参数异签名 / 工厂身份异签名 / 缓存稳定 / **两个同构 lifecycle 只注册 1 个 program**）+ `BulletData.lifecycle` 走 `{lifecycle}` 入口。
+- **验证**：`./tools/verify.sh` 全绿 **388 / 4203**。
+
 ### 2026-09-14 — 清 move_homing 的死协程体（gravity_bullet 同款，×7）
 
 - **问题**：`scripts/coroutine/player/move_homing.gd` 带着**完整的 GDScript 诱导实现**（`start()` 重写 + `timeline.every(0).do(...)` + `_find_nearest_enemy` + `_apply_homing` + `_calc_turn_factor` + `_is_still_homing`），但生产**从不执行** —— `kernel_port()` 存在，后端走原生 `homing`；参照实现早已冻结在 `test/reference/behavior/homing_behavior.gd`（注释"移植旧 move_homing.gd"）。同 `gravity_bullet._tick`，只是大 7 倍。

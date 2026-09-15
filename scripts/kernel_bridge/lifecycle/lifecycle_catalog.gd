@@ -88,8 +88,8 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 static func signature(move: StringName, params: Dictionary) -> int:
 	if move == MOVE_LIFECYCLE:
 		var lc: BulletLifecycle = params.get(&"lifecycle", null)
-		var obj_id: int = lc.get_instance_id() if lc != null else 0
-		return hash(move) * 31 + obj_id * 7 + hash(params.get(&"anchor"))
+		var lc_sig: int = lc.content_signature() if lc != null else 0
+		return hash(move) * 31 + lc_sig * 7 + hash(params.get(&"anchor"))
 	return hash(move) * 31 + hash(params) * 7
 
 

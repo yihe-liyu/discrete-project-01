@@ -17,7 +17,7 @@ func test_real_content_role_classification():
 		"res://data/stages/stage03B/phase/spell03/orbit_probe.gd": "bullet",
 		"res://data/stages/stage01/enemy/enemy01.gd": "enemy",
 		"res://data/stages/stage01/enemy/fly_away.gd": "enemy",
-		"res://data/stages/stage01/bullet/gravity_bullet.gd": "bullet",
+		"res://data/stages/stage01/bullet/bounce_bullet.gd": "bullet",
 	}
 	for path in cases:
 		var e = cat.find(path)
