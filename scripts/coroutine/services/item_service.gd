@@ -13,9 +13,6 @@ var ctx: StageContext:
 func spawn(type: int, position: Vector2) -> void:
 	if not ctx or not ctx.active():
 		return
-	var scene := ctx.runner.get_tree().current_scene
-	if not scene: return
-	var world := scene.get_node_or_null("World")
-	if world:
-		var pool: ItemPool = world.get_node_or_null("ItemPool") as ItemPool
-		if pool: pool.spawn(position, type)
+	var pool: ItemPool = ctx.stage.item_pool if ctx.stage else null
+	if pool:
+		pool.spawn(position, type)

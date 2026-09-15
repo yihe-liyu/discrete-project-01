@@ -18,6 +18,8 @@ var entity_registry := EntityRegistry.new()	## 战场实体注册表（自机 / 
 var bullet_manager: BulletManager			## 弹幕世界（组合根注入；供关卡发弹 / 清弹）
 var miss_layer: MissCircleLayer				## 注入槽（组合根 / 工作台设置）
 var fx_pool: FxPool
+## 道具池（组合根注入；消费端经 ctx.stage.item_pool，不再全树搜 World/ItemPool）
+var item_pool: ItemPool
 var ui_layer: CanvasLayer					## Boss 位置指示器所属 HUD 层（组合根注入）
 var current_background: StageBackground		## 背景场景实例（组合根在 load_stage 前注入）
 var current_stage: StageData

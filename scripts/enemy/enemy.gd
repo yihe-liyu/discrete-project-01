@@ -122,7 +122,6 @@ func _spawn_items(pool: ItemPool, type: int, count: int) -> void:
 		pool.spawn(global_position + offset, type)
 
 func _find_item_pool() -> ItemPool:
-	var world := get_parent()
-	if world:
-		return world.get_node_or_null("ItemPool") as ItemPool
-	return null
+	if ctx == null or ctx.stage == null:
+		return null
+	return ctx.stage.item_pool

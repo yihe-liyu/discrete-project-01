@@ -25,6 +25,7 @@ func _ready():
 	_stage_runtime.world = _world
 	_stage_runtime.miss_layer = _miss_circle_layer
 	_stage_runtime.fx_pool = _fx_pool
+	_stage_runtime.item_pool = _item_pool
 	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层
 
 	_bullet_manager.inject_fx_pool(_fx_pool)

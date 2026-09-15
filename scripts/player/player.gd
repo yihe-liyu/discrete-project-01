@@ -44,7 +44,6 @@ var graze_radius: float = 40.0  # 擦弹判定半径
 ## 玩家机体数据（速度、动画、武器等）
 @export var player_data: PlayerData
 var _player_shoot_script: PlayerShootScript
-var _cached_item_pool: ItemPool = null
 
 # 移动速度（像素/秒）
 var focus_speed: int
@@ -299,14 +298,9 @@ func _spawn_one_item(at: Vector2, limits: Dictionary) -> void:
 
 
 func _find_item_pool() -> ItemPool:
-	if _cached_item_pool:
-		return _cached_item_pool
-	var scene := get_tree().current_scene
-	if not scene: return null
-	var world := scene.get_node_or_null("World")
-	if not world: return null
-	_cached_item_pool = world.get_node_or_null("ItemPool") as ItemPool
-	return _cached_item_pool
+	if ctx == null or ctx.stage == null:
+		return null
+	return ctx.stage.item_pool
 
 
 # ═══ Miss ═══

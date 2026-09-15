@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — E6+E7：ItemPool 走注入，删掉 3 处全树搜
+
+- **病根**：组合根 `game_scene.gd:14` 已握着 `%ItemPool`，却只给它注了 `entity_registry`，**没往下注入** —— 于是三个消费点各自爬树：`ItemService.spawn`（`current_scene` → World/ItemPool，违 R2）、`Player._find_item_pool`（R5+R2）、`Enemy._find_item_pool`（`get_parent()` 假设自己挂在 World 下，R5；TODO 只记了 player 一处，enemy 是同款第三处）。
+- **修**：`StageRuntime` 加注入槽 `item_pool`；`game_scene` 注入（与 `fx_pool`/`miss_layer` 同款）；三处改读 `ctx.stage.item_pool`（三者本就持有 ctx）。
+- **删**：`Player._cached_item_pool` + 两个 `_find_item_pool` 的树搜实现；净删 `current_scene` / `"World"` / `"ItemPool"` 字符串路径 4 条。
+- **语义不变**：工作台/测试没有 ItemPool → 仍为 null（本来就是 no-op）。
+- **验证**：`./tools/verify.sh` 全绿 **382 / 4196**。
+
 ### 2026-09-14 — 敌人生成服务化：`ctx.enemies.spawn(data)`（与 ctx.bullets 对称）
 
 - **动机**：敌人生成一直是 `data.spawn(ctx)` —— 全项目**唯一把 `ctx` 露在调用点**的地方（"不看引擎不理解为什么传 ctx"）；而发弹是 `ctx.bullets.shoot_spread(...)`。"生成"是世界的动作，不该长在数据类身上。
