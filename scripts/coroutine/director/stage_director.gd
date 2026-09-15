@@ -38,26 +38,10 @@ func boss(key: String, data: BossData, from: Vector2, to: Vector2,
 	h.enter(to, from)
 	return h
 
-## 对已存在的 Boss 拿句柄（事件路由里操控用，不重复生成；name 用于揭名）。
-func boss_ref(key: String, data: BossData) -> BossHandle:
-	return BossHandle.new(key, data, "", ctx.objects)
-
 ## 播对话（steps 版 DSL，台词内联）
 func dialogue(steps: Array) -> StageDirector:
 	ctx.play_dialogue_steps(steps)
 	return self
-
-## 生成敌人（快捷，供 Timeline 委托；数据驱动）
-func spawn_enemy(data: EnemyData) -> Enemy:
-	return data.spawn(ctx)
-
-## 弹幕波（快捷，供 Timeline 委托）
-func spawn_wave(data: BulletData, count: int, spread: float, dir: Vector2, at_pos: Vector2) -> void:
-	ctx.bullets.shoot_spread(data, count, spread, dir, at_pos)
-
-## 简单生成 Boss（快捷，供 Timeline 委托：不进场/不隐藏/不返句柄）
-func spawn_boss(data: BossData, pos: Vector2) -> Boss:
-	return ctx.stage.spawn_boss(data, pos, ctx) as Boss if ctx.stage else null
 
 ## 监听对话事件（GameEvents.dialogue_event）→ 路由到 handler
 func on(event_name: String, handler: Callable) -> StageDirector:

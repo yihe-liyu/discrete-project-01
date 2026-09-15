@@ -66,9 +66,9 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 ```
 
 Timeline 链式 API：`at(t)` 绝对时刻 · `wait(n)` 相对上一 blocking 结束 · `do(cb)` 任意逻辑 ·
-`start_phase(boss_getter, PhaseData)` 起阶段（保留时符等待：击破后激活后续 wait） · `every(times)` 重复。
-**场景动词（bgm/spawn_*/dialogue）由 `StageDirector` 承担**，Timeline 只是薄委托：
-`timeline.play_bgm/spawn_boss/spawn_enemy/spawn_wave/dialogue_steps` = `do(func(): _dir.xxx())`，**不用重复实现**。
+`start_phase(boss_getter, PhaseData)` 起阶段（保留时符等待：击破后激活后续 wait） · `every(t).times(n)` 重复。
+**场景动词（bgm/boss/dialogue/事件路由）由 `StageDirector` 承担**；Timeline 只管时序，唯一的事件级动词是 `play_bgm`。
+其余动作一律 `do(func(): ctx.*)`（或 `do(_dir.xxx.bind(...))`）—— **不再为每个底层方法配包装**（曾有的 `spawn_*/dialogue_steps` 薄委托已删）。
 
 > ⚠️ start_phase 链注意：`wait()` 后接 `start_phase()` 必须直接链（`timeline.wait(1.0).start_phase(...)`），
 > 中间插 `do(pass)` 会破坏 wait 偏移继承（阶段会立即触发）。

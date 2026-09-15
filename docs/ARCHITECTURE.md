@@ -93,11 +93,11 @@
 - **内容只碰动词**：内容文件不再 import `StageRuntime/GameState/StageObjects/BulletManager/AudioManager`，不再 `create_tween`。一旦不得不在内容里写 `.do(func(): <机制>)`，说明还缺一个动词（判据）。
 - **一知识一 owner**：`dir.boss` 内部才 `spawn_boss + register + hide_name + tween`；`BossHandle.retreat` 内部才 `set_exit_controlled + die + tween`。内容只看到"进 Boss / 揭名 / 退场"。
 - **响亮**：动词缺 Boss/阶段越界等 → `push_warning`/`push_error`，绝不静默。
-- **Timeline 动词委托给导演（已统一）**：`timeline.play_bgm/spawn_wave/spawn_enemy/spawn_boss/dialogue_steps` 都是 `do(func(): _get_director().xxx())` 的薄委托，**单一 owner = `StageDirector`**；Timeline 只管时序（`at/wait/every/do`）+ `start_phase`（时符等待机制，保留）。关卡用 `start_timeline(_dir)` 把导演传给 Timeline。
+- **Timeline 只管时序**：公共面 = `at/every/times/wait/do` + `start_phase`（时符等待）+ 唯一事件级动词 `play_bgm`；其余动作走 `do(func(): ctx.*)`。**不为 `StageDirector` 的每个方法配包装**——曾有的 `spawn_*/dialogue_steps` 薄委托已删（0 调用、且拿不到返回值）。
 
 ### 已落地（D Part 1）
 
-`StageDirector`（`scripts/coroutine/director/stage_director.gd`）+ `BossHandle`（`…/boss_handle.gd`）：`dir.boss/boss_ref/dialogue/bgm/on/dispose` + 句柄 `reveal/hide_name/enter/phase/retreat`。`stage01.gd` 的 Boss 段与 `_on_dialogue_event` 大 match 已改为动词 + 事件路由。`Timeline.start_phase(boss_getter, data)` 接口未变（有测试锁定）。
+`StageDirector`（`scripts/coroutine/director/stage_director.gd`）+ `BossHandle`（`…/boss_handle.gd`）：`dir.boss/dialogue/bgm/on/dispose` + 句柄 `reveal/hide_name/enter/phase/retreat`。`stage01.gd` 的 Boss 段与 `_on_dialogue_event` 大 match 已改为动词 + 事件路由。`Timeline.start_phase(boss_getter, data)` 接口未变（有测试锁定）。
 
 **服务动词补齐（b）**：`ctx.boss`（`BossService`：`current/exists`）+ `ctx.diff`（`DifficultyService`：`picked/pick/pick_from/at_least`）。内容里的 `GameState.get_boss()`、`GameState.selected_difficulty`、`AudioManager.play_sfx` 改用 `ctx.*`（仅改关卡/行为/玩家协程内容；UI/菜单/工作台属表现/基建层仍可直接摸全局）。两个服务用 **preload const（无 class_name）**，避免 headless 全局类缓存问题（同 `ParamValidator`）。
 

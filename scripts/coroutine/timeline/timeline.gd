@@ -2,22 +2,20 @@ class_name Timeline
 extends RefCounted
 ## 时间线 —— 声明式替代 match _phase 状态机
 ##
-##   var tl := Timeline.new(ctx)
-##   timeline.at(0.0).call(_bgm)
-##   timeline.at(2.0).every(1.5).times(4).call(_wave)
-##   timeline.at(10.0).spawn_boss(boss, pos)
-##   tl.loop()
+##   var timeline := Timeline.new(ctx)
+##   timeline.at(0.0).play_bgm("stage1")
+##   timeline.at(2.0).every(1.5).times(4).do(_wave)
+##   timeline.at(10.0).do(func(): ctx.bullets.shoot_spread(...))
+##   timeline.loop()
 ##
-##   func _on_step(_ctx): return tl.tick(_ctx.clock.delta)
+##   func _on_step(_ctx): return timeline.tick(_ctx.clock.delta)
 
 var ctx: StageContext
 var director: StageDirector  ## 场景导演（Timeline 便捷动词委托给它）；由 start_timeline(dir) 注入，不懒建
 var _events: Array[TimelineEvent] = []
 var _elapsed: float = 0.0
-var _is_paused: bool = false
 var _loop_start: float = -1.0
-var _cursor: float = 0.0   # wait() 的参考点，每次 phase/dialogue 结束后更新
-var bookmark_collector: Callable  # 可选：事件触发时回调(关卡时刻)，工作台书签收集用
+var _cursor: float = 0.0   # wait() 的参考点，phase_cleared 后更新
 
 # builder state
 var _time: float = -1.0
@@ -52,12 +50,6 @@ func do(cb: Callable) -> Timeline:
 	return self
 
 
-## 时钟起点偏移（工作台续跑用）：_elapsed 从 offset 起步，事件时刻保持绝对
-## 状态栏/时间轴显示关卡绝对时刻（而非相对起点），避免"像从头开始"的错觉
-func start_at(offset: float) -> void:
-	_elapsed = maxf(offset, 0.0)
-
-
 ## 等上一个 blocking 事件结束后 N 秒执行（运行时计算）
 func wait(n: float) -> Timeline:
 	_time = -1.0  # 标记为相对事件，tick 时用 _cursor + n
@@ -86,40 +78,17 @@ func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 	)
 
 
-## 便捷动词 —— 全部委托给导演（单一 owner；导演才碰 ctx/机制）
-## 须先 start_timeline(dir) 注入导演；普通 timeline（子弹/敌机波次）不该用这些动词。
-## 缺导演时【构建期】即报错并跳过事件，不静默造一个临时导演。
-
-## 步骤版对话（DSL 步骤，台词内联）
-func dialogue_steps(steps: Array) -> Timeline:
-	var d := _require_director()
-	if d == null: return self
-	return do(func(): d.dialogue(steps))
-
-func spawn_wave(data: BulletData, count: int, spread: float, dir: Vector2, at_pos: Vector2) -> Timeline:
-	var d := _require_director()
-	if d == null: return self
-	return do(func(): d.spawn_wave(data, count, spread, dir, at_pos))
-
-func spawn_enemy(data: EnemyData) -> Timeline:
-	var d := _require_director()
-	if d == null: return self
-	return do(func(): d.spawn_enemy(data))
-
-func spawn_boss(data: BossData, pos: Vector2) -> Timeline:
-	var d := _require_director()
-	if d == null: return self
-	return do(func(): d.spawn_boss(data, pos))
-
+## 事件级动词：播 BGM（无返回值、无参数构造）。
+## 其余动作一律走 do(func(): ctx.*)，不另设包装 —— 见类注释与 BEST_PRACTICES_LOG。
 func play_bgm(key: String) -> Timeline:
 	var d := _require_director()
 	if d == null: return self
 	return do(func(): d.bgm(key))
 
-## 取导演（须由 start_timeline(dir) 注入；不懒建 —— 普通 timeline 悄悄造临时导演是 bug 温床）
+## 取导演（须由 start_timeline(dir) 注入；普通 timeline 不该调导演动词）
 func _require_director() -> StageDirector:
 	if director == null:
-		push_error("Timeline: 导演动词需要 start_timeline(dir) 注入导演（普通 timeline 不该调用）")
+		push_error("Timeline: play_bgm 需要 start_timeline(dir) 注入导演")
 	return director
 
 
@@ -135,8 +104,6 @@ func _add(t: float, cb: Callable, ev: float = -1.0, n: int = -1) -> void:
 # ═══ 运行 ═══
 
 func tick(delta: float) -> bool:
-	if _is_paused:
-		return true
 	_elapsed += delta
 
 	for ev in _events:
@@ -148,8 +115,6 @@ func tick(delta: float) -> bool:
 				continue  # 还没被 phase 激活
 			t = _cursor + ev.wait_offset
 		if _elapsed >= t:
-			if bookmark_collector.is_valid():
-				bookmark_collector.call(t)  # 记录事件设计时刻（快进大 delta 下 _elapsed 会偏移）
 			ev.execute()
 			if ev.repeat_every >= 0:
 				ev.time += ev.repeat_every
@@ -188,18 +153,10 @@ func _reset_onetime() -> void:
 		ev.repeat_times = ev._original_repeat_times
 
 
-func pause() -> void: _is_paused = true
-func resume() -> void: _is_paused = false
-
 func reset() -> void:
 	_elapsed = 0.0
 	for ev in _events:
 		ev.is_fired = false
-
-func seek(time: float) -> void:
-	_elapsed = time
-	for ev in _events:
-		ev.is_fired = ev.time <= time and ev.repeat_every <= 0
 
 func loop() -> void:
 	if _events.is_empty(): return

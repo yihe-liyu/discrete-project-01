@@ -10,7 +10,6 @@ var fired_count: int = 0
 var _original_time: float = 0.0
 var _original_repeat_every: float = -1.0
 var _original_repeat_times: int = -1
-var args: Array = []
 var wait_offset: float = -1.0  # >=0 = 相对事件，运行时 time = cursor + offset
 var is_wait_armed: bool = false   # phase 结束后设 true
 
@@ -24,7 +23,4 @@ func _init(p_time: float, p_cb: Callable, p_every: float = -1.0, p_times: int = 
 	_original_repeat_times = p_times
 
 func execute() -> void:
-	if args.is_empty():
-		callback.call()
-	else:
-		callback.callv(args)
+	callback.call()

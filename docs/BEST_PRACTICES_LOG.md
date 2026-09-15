@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-14 — Timeline 减法：删掉"残缺的第二套词汇"（导演包装 + 死面）
+
+- **动机**：Timeline 同时有 `timeline.spawn_enemy(data)` 与 `timeline.do(func(): data.spawn(ctx))` 两种拼法；前者只覆盖 `shoot_spread` / 单个 `EnemyData`，且**丢掉底层返回值**（`EnemyData.spawn -> Enemy`、`StageRuntime.spawn_boss -> Boss`）—— 残缺的第二套词汇。
+- **删（Timeline）**：`dialogue_steps` / `spawn_wave` / `spawn_enemy` / `spawn_boss`（0 调用）；死面 `start_at` / `seek` / `pause` / `resume`（0 调用，`_is_paused` 随之删）/ `bookmark_collector`（声明后从未赋值）。保留唯一事件级动词 `play_bgm`（stage01 在用）与测试锁定的 `loop` / `reset`。
+- **删（StageDirector）**：`spawn_enemy` / `spawn_wave` / `spawn_boss`（唯一调用者就是上面的死包装）/ `boss_ref`（0 调用）。
+- **删（TimelineEvent）**：`args` 字段与 `execute()` 的 `callv` 分支（从未赋值，死分支）。
+- **修陈旧注释**：类注释里的 `timeline.at(0.0).call(_bgm)` / `.spawn_boss(...)` 是**已不存在的 API**（通用入口早叫 `do`）。
+- **文档同步**：`CONTENT_GUIDE.md` / `docs/ARCHITECTURE.md` 的"Timeline 薄委托给导演"段改写为"Timeline 只管时序"。
+- **验证**：`./tools/verify.sh` 全绿 **381 / 4194**。
+
 ### 2026-09-14 — Timeline：导演动词不再懒建临时导演（缺导演响亮报错）
 
 - **问题**：`Timeline._get_director()` 在 `director == null` 时**懒建** `StageDirector.new(ctx)` —— 普通 timeline（子弹/敌机波次）若误用导演动词，不报错，只会**静默造一个临时导演**（也逃过 `dispose()`），是 bug 温床。
