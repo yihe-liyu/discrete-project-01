@@ -9,28 +9,28 @@ var entity_registry: EntityRegistry
 ## 弹幕世界（工作台注入）；不再读 BulletManager.current
 var bullet_manager: BulletManager
 
-var enabled: bool = false:
+var is_enabled: bool = false:
 	set(v):
-		enabled = v
+		is_enabled = v
 		visible = v
 		set_process(v)  # 关键：开启时才运行 _process（每帧跟随子弹刷新）
-		if enabled:
+		if is_enabled:
 			queue_redraw()
 
 
 func _ready() -> void:
 	# 暂停时冻结（子弹也不动，内容一致即可）
 	process_mode = Node.PROCESS_MODE_PAUSABLE
-	set_process(enabled)
+	set_process(is_enabled)
 
 
 func _process(_delta: float) -> void:
-	if enabled:
+	if is_enabled:
 		queue_redraw()
 
 
 func _draw() -> void:
-	if not enabled:
+	if not is_enabled:
 		return
 	# 子弹判定（红）—— 内核行
 	var bm := bullet_manager

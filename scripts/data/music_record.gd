@@ -11,4 +11,4 @@ class_name MusicRecord
 ## 资源注册器 BGM key（AssetRegistry.BGM_PATHS，如 "music_1"）；播放走 AssetRegistry.get_bgm
 @export var bgm_key: String = ""
 ## 是否已解锁（在游戏中播放过一次）
-@export var unlocked: bool = false
+@export var is_unlocked: bool = false

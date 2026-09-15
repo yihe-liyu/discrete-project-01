@@ -6,7 +6,7 @@ extends CanvasLayer
 ##
 ## 操作:
 ##   Z / Enter     → 下一句 / 结束对话
-##   X (短按)      → 跳过本句（若 line.skippable）
+##   X (短按)      → 跳过本句（若 line.can_skip）
 ##   X (长按 0.6s) → 关闭整个对话
 ##
 ## 文本标记:
@@ -97,7 +97,7 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_released("ui_cancel"):
 		# 短按取消 = 跳过本句
 		var line := _dialogue_runner.current_line()
-		if _cancel_held < cancel_hold_threshold and line and line.skippable:
+		if _cancel_held < cancel_hold_threshold and line and line.can_skip:
 			get_viewport().set_input_as_handled()
 			_advance()
 

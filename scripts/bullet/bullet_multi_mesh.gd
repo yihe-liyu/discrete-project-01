@@ -11,7 +11,7 @@ const _FACTION_ENEMY := 1
 const _FACTION_BOMB := 2
 
 ## 是否启用 MultiMesh 批渲染
-@export var enabled: bool = true
+@export var is_enabled: bool = true
 
 ## 内核后端（唯一数据源）。
 var backend: KernelBulletBackend
@@ -24,11 +24,11 @@ var _type_table_count: int = -1
 
 
 func _ready():
-	set_process(enabled)
+	set_process(is_enabled)
 
 
 func _process(_delta):
-	if not enabled:
+	if not is_enabled:
 		return
 	_sync()
 

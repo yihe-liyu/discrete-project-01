@@ -27,7 +27,7 @@ func _run(n: int) -> void:
 		backend.shoot(data, CENTER + dir * sqrt(randf()) * 300.0, dir)
 
 	var mm := BulletMultiMesh.new()
-	mm.enabled = true
+	mm.is_enabled = true
 	add_child(mm)
 	mm.set_backend(backend)
 

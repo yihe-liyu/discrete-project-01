@@ -24,7 +24,7 @@ const OVERLAY_FADE_IN: float = 0.2
 const OVERLAY_FADE_OUT: float = 0.15
 
 ## 设为 true 则 on_enter 时自动淡入暗色遮罩
-@export var auto_overlay: bool = true
+@export var is_auto_overlay: bool = true
 
 var overlay_color: Color = Color(0, 0, 0, 0.5)
 var _overlay: ColorRect = null
@@ -39,7 +39,7 @@ func _ready() -> void:
 	_create_overlay()
 
 func _create_overlay() -> void:
-	if not auto_overlay:
+	if not is_auto_overlay:
 		return
 	# 检查场景中是否已有 Overlay 节点（复用）
 	for child in get_children():

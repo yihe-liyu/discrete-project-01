@@ -122,7 +122,7 @@ static func load_music_registry() -> MusicRegistry:
 	for r in registry.records:
 		var o: MusicRecord = override.get_by_id(r.music_id)
 		if o != null:
-			r.unlocked = o.unlocked
+			r.is_unlocked = o.is_unlocked
 	return registry
 
 
@@ -174,11 +174,11 @@ static func _unlock_music_by_key(bgm_key: String) -> void:
 		return
 	var changed := false
 	for r in registry.records:
-		if r.unlocked:
+		if r.is_unlocked:
 			continue
 		# 该曲目的注册器路径 == 当前播放路径 → 听过
 		if BGM_PATHS.get(r.bgm_key, "") == path:
-			r.unlocked = true
+			r.is_unlocked = true
 			changed = true
 	if changed:
 		save_music_registry(registry)

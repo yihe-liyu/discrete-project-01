@@ -13,4 +13,4 @@ density = 1.0
 y_offset = 8.0
 lod_distance = 175.0
 alpha_threshold = 0.9
-billboard = false
+is_billboard = false

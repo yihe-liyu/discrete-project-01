@@ -12,7 +12,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
 container_path = NodePath("HBoxContainer")
-auto_overlay = false
+is_auto_overlay = false
 
 [node name="Overlay" type="ColorRect" parent="." unique_id=1686853740]
 layout_mode = 1

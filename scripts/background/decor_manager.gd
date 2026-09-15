@@ -244,7 +244,7 @@ func _build_mesh(g: _LayerGroup, layer: DecorLayer) -> void:
 	else:
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 		mat.alpha_scissor_threshold = layer.alpha_threshold
-	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED if layer.billboard else BaseMaterial3D.BILLBOARD_DISABLED
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED if layer.is_billboard else BaseMaterial3D.BILLBOARD_DISABLED
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mesh.material = mat
 	mm.mesh = mesh

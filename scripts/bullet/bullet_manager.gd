@@ -69,7 +69,7 @@ func _ready():
 	_death_clear = DeathClear.new()
 	_death_clear.setup(_laser_engine, Callable(self, "_sweep_death_clear"))
 	_multi_mesh = BulletMultiMesh.new()
-	_multi_mesh.enabled = true
+	_multi_mesh.is_enabled = true
 	add_child(_multi_mesh)
 	_enable_kernel()
 

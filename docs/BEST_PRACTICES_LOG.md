@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — 命名统一 N13（续）：11 个 `@export` bool 落地
+
+- 按裁定**动词开头保留**：`follow_dir` / `follow_player` / `link_ground_to_fog` / `allow_wrap`（天然"做/不做"）。
+- **加前缀（6 个）**：`enabled`→`is_enabled`（BulletMultiMesh；顺手把 `HitboxOverlay` 里同名的**非 export** 字段也统一——非 export 那批漏了它）、`unlocked`→`is_unlocked`、`default_flip`→`is_default_flip`、`billboard`→`is_billboard`、`auto_overlay`→`is_auto_overlay`、`skippable`→`can_skip`（**DSL key 仍是 `"skippable"`**，创作者不用改）。
+- **同步资源格式**（否则 Godot 静默丢值）：`data/registry/music_registry.tres`（unlocked×9）、`data/stages/stage01/background/oak.tres`（billboard）、`scenes/ui/{difficulty_screen,character_screen,spell_practice_menu}.tscn`（auto_overlay）。
+- **避坑**：`sun.billboard`（`BaseMaterial3D` 内置属性）不动 —— 逐文件精确替换而非全局。
+- **验证**：`./tools/verify.sh` 全绿 **381 / 4194**。**N13 完成**。
+
 ### 2026-09-14 — 命名统一 N13：布尔 `is_` 前缀（非 export 部分）
 
 - **契约早已在** `BEST_PRACTICES_BASELINE.md`：布尔 `is_/has_/can_/should_`（`is_running` / `has_boss`），禁无主语。

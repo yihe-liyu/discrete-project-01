@@ -18,5 +18,5 @@ func setup(p_profile: CharacterProfile) -> void:
 	char_name = p_profile.char_name
 	# 默认值来自 profile（新增字段，向后兼容：旧 .tres 加载用 @export 默认）
 	position = p_profile.default_pos
-	is_flip_h = p_profile.default_flip
+	is_flip_h = p_profile.is_default_flip
 	bubble_offset = p_profile.default_bubble_offset

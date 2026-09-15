@@ -13,7 +13,7 @@ comment = "无缘故之回
 毕竟，从未谋面，自然没有回忆；没有回忆，那么所谓“回”也自然是无缘故的了。
 一面之缘的感情的起伏又有多少真实呢。"
 bgm_key = "music_1"
-unlocked = true
+is_unlocked = true
 
 [sub_resource type="Resource" id="MusicRecord_02"]
 script = ExtResource("1")
@@ -25,7 +25,7 @@ comment = "夜间漫步
 于是就这样，主要是漫步的感觉了，夜不夜间的不是重点了，反正人类也不是能够每时每刻都生活在光明里的吧。
 总之异变就是这样的不是吗？"
 bgm_key = "music_2"
-unlocked = true
+is_unlocked = true
 
 [sub_resource type="Resource" id="Resource_n7uf7"]
 script = ExtResource("1")
@@ -37,7 +37,7 @@ comment = "洞窟蝙蝠
 曲子的后面……是某种对回音的模仿，虽然就是两个一样的音轨错开。
 不过这种氛围至少说明了她真的没有那么大的威胁。"
 bgm_key = "music_3"
-unlocked = true
+is_unlocked = true
 metadata/_custom_type_script = "uid://be08pe8s61ass"
 
 [sub_resource type="Resource" id="MusicRecord_03"]
@@ -50,7 +50,7 @@ comment = "就在那里的不思议宇宙
 这里是梦世界，只能无地飞翔的地方，但并不是只有轻盈一种可能，所以我尝试做成与梦反过来的“沉”，但保留了“悲”。
 当然，没有终点的“沉”，会自然的产生“悲”。"
 bgm_key = "music_7"
-unlocked = true
+is_unlocked = true
 
 [sub_resource type="Resource" id="Resource_lemic"]
 script = ExtResource("1")
@@ -63,7 +63,7 @@ comment = "寂寥记忆界
 活与死，和动与静、知与盲都没有直接关系。
 事物作为事物，依旧依靠着——这是什么；这不是什么。"
 bgm_key = "music_10"
-unlocked = true
+is_unlocked = true
 metadata/_custom_type_script = "uid://be08pe8s61ass"
 
 [sub_resource type="Resource" id="MusicRecord_04"]
@@ -77,7 +77,7 @@ comment = "不尽记忆的天空
 内与外，和是与否、同与异都没有直接关系。
 想要认识事物，也不过——要真识它；不要假定它。"
 bgm_key = "music_12"
-unlocked = true
+is_unlocked = true
 
 [sub_resource type="Resource" id="Resource_p7x6n"]
 script = ExtResource("1")
@@ -87,7 +87,7 @@ comment = "忘不了，与生俱来的未来
 片律的主题曲
 "
 bgm_key = "music_16"
-unlocked = true
+is_unlocked = true
 metadata/_custom_type_script = "uid://be08pe8s61ass"
 
 [sub_resource type="Resource" id="Resource_mnbxo"]
@@ -100,7 +100,7 @@ comment = "朝夕之阳，在远在洋
 我希望能做出日出前后的氛围变化，以及一丝无奈的“那又如何”的感觉。
 是啊，世界就是那样的运行着。"
 bgm_key = "music_17"
-unlocked = true
+is_unlocked = true
 metadata/_custom_type_script = "uid://be08pe8s61ass"
 
 [sub_resource type="Resource" id="Resource_immyd"]
@@ -112,7 +112,7 @@ comment = "以空为核，抽丝剥茧
 这首曲子并没有如名字那样给人柔软、温和的感觉，反而是比较的激烈，她从未知的记忆里醒来，支撑她活下去的，就是记忆、意象、意义本身。
 曲子重复很多，甚至结构上也只有两段，所谓的高潮段就是整整后面半段，我不想赋予这种贫瘠太多意义——那是没有意义的。"
 bgm_key = "music_18"
-unlocked = true
+is_unlocked = true
 metadata/_custom_type_script = "uid://be08pe8s61ass"
 
 [resource]

@@ -37,7 +37,7 @@ func _run(n: int, with_behavior: bool) -> void:
 	backend.system.cull_rect = Rect2(-100000, -100000, 200000, 200000)   # 不剔除 → N 恒定
 
 	var mm := BulletMultiMesh.new()
-	mm.enabled = true
+	mm.is_enabled = true
 	add_child(mm)
 	mm.set_backend(backend)
 

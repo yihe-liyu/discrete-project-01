@@ -78,7 +78,7 @@ func _rebuild_list() -> void:
 		label.name = "Track_%d" % record.music_id
 
 		# 设定文字内容
-		if not record.unlocked:
+		if not record.is_unlocked:
 			label.set_meta("is_locked", true)
 			label.text = "NO.%02d  %s" % [record.music_id, LOCKED_TEXT]
 		else:
@@ -104,7 +104,7 @@ func _on_item_selected(index: int) -> void:
 		return
 
 	var record := _music_records[index]
-	if not record.unlocked:
+	if not record.is_unlocked:
 		return
 
 	if _playing_id == record.music_id:
@@ -139,8 +139,8 @@ func _play_preview(record: MusicRecord) -> void:
 	_playing_id = record.music_id
 
 	# 解锁（在音乐室试听也算听过）
-	if not record.unlocked:
-		record.unlocked = true
+	if not record.is_unlocked:
+		record.is_unlocked = true
 		AssetRegistry.save_music_registry(_music_registry)
 		_rebuild_list()
 		# 保持选中项
@@ -178,7 +178,7 @@ func _update_display(_index: int) -> void:
 		return
 
 	var record := _music_registry.get_by_id(_playing_id)
-	if record and record.unlocked:
+	if record and record.is_unlocked:
 		_comment_text.text = record.comment
 		_comment_text.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	else:
@@ -189,7 +189,7 @@ func _update_list_colors() -> void:
 	for i in _music_records.size():
 		var record := _music_records[i]
 		var label := _list_labels[i]
-		if not record.unlocked:
+		if not record.is_unlocked:
 			label.modulate = locked_color
 			label.text = "NO.%02d  %s" % [record.music_id, LOCKED_TEXT]
 		else:

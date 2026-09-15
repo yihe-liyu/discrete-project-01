@@ -53,7 +53,7 @@ func say(profile: CharacterProfile, text: String, opts: Dictionary = {}) -> Dial
 func screen(specs: Array, opts: Dictionary = {}) -> DialogueSteps:
 	assert(not specs.is_empty(), "DialogueSteps.screen: specs 不能为空")
 	var line_data := DialogueLine.new()
-	line_data.skippable = opts.get("skippable", true)
+	line_data.can_skip = opts.get("skippable", true)
 	line_data.auto_advance = opts.get("auto_advance", 0.0)
 	var has_spoke := false
 	for spec in specs:
@@ -85,7 +85,7 @@ func _build_line(speaker: CharacterProfile, text: String, opts: Dictionary) -> D
 	bubble_data.text = text
 	bubble_data.emotion = opts.get("emotion", "通常")
 	line_data.bubbles = [bubble_data]
-	line_data.skippable = opts.get("skippable", true)
+	line_data.can_skip = opts.get("skippable", true)
 	line_data.auto_advance = opts.get("auto_advance", 0.0)
 	return line_data
 

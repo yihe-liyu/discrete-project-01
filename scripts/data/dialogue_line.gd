@@ -8,6 +8,6 @@ class_name DialogueLine
 ## 行内事件用 DSL 步骤 d.event() 表达，时机精确到行间
 @export var bubbles: Array[DialogueBubble] = []
 ## 是否可跳过（按 X 跳至下一句，false 则必须按 Z）
-@export var skippable: bool = true
+@export var can_skip: bool = true
 ## 自动播放时间（秒），0 为手动控制（DSL 的 line opts 可覆盖）
 @export var auto_advance: float = 0.0

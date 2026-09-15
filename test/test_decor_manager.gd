@@ -25,7 +25,7 @@ func before_each() -> void:
 	layer.alpha_mode = DecorLayer.AlphaMode.SCISSOR
 	layer.size_min = Vector2(4, 4)
 	layer.size_max = Vector2(4, 4)
-	layer.billboard = false
+	layer.is_billboard = false
 	_decor_manager.add_layer(layer)
 	add_child_autofree(_bg)
 
@@ -130,7 +130,7 @@ func test_dynamic_path_still_works():
 	layer.alpha_mode = DecorLayer.AlphaMode.BLEND
 	layer.size_min = Vector2(4, 4)
 	layer.size_max = Vector2(4, 4)
-	layer.billboard = true
+	layer.is_billboard = true
 	_decor_manager.add_layer(layer)
 	_decor_manager.batch_spawn("blend", 20, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
 	await wait_physics_frames(30)

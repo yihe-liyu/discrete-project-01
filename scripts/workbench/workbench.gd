@@ -257,7 +257,7 @@ func _build_ui() -> void:
 	_playback_bar.bg_toggled.connect(_on_bg_toggled)
 	_playback_bar.hitbox_toggled.connect(func(on: bool):
 		if _hitbox_overlay:
-			_hitbox_overlay.enabled = on
+			_hitbox_overlay.is_enabled = on
 	)
 	_playback_bar.speed_selected.connect(_on_speed_selected)
 	_playback_bar.seed_toggled.connect(_on_seed_toggled)

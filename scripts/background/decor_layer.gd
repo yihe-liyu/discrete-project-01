@@ -32,4 +32,4 @@ enum AlphaMode { SCISSOR, BLEND }
 @export var alpha_threshold: float = 0.5
 
 ## 是否 Billboard
-@export var billboard: bool = true
+@export var is_billboard: bool = true
