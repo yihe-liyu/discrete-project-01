@@ -8,9 +8,6 @@ extends Node2D
 static var current: BulletManager
 
 # ═══ 子模块 ───
-const LaserEngineClass = preload("res://scripts/laser/laser_engine.gd")
-const DeathClearClass = preload("res://scripts/bullet/death_clear.gd")
-const BulletMultiMeshClass = preload("res://scripts/bullet/bullet_multi_mesh.gd")
 
 var _laser_engine: LaserEngine
 var _death_clear: DeathClear
@@ -67,11 +64,11 @@ func _ready():
 	_coroutine_runner.run(func() -> bool: return true)
 	_stage_context = StageContext.new(_coroutine_runner)
 	RNG.seed_changed.connect(_on_rng_seed_changed)   # RNG 是唯一随机真源，内核 RNG 跟随同 seed
-	_laser_engine = LaserEngineClass.new()
+	_laser_engine = LaserEngine.new()
 	_laser_engine.setup(self, Callable(self, "_on_laser_graze"))
-	_death_clear = DeathClearClass.new()
+	_death_clear = DeathClear.new()
 	_death_clear.setup(_laser_engine, Callable(self, "_sweep_death_clear"))
-	_multi_mesh = BulletMultiMeshClass.new()
+	_multi_mesh = BulletMultiMesh.new()
 	_multi_mesh.enabled = true
 	add_child(_multi_mesh)
 	_enable_kernel()

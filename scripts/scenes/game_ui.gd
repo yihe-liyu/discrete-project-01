@@ -8,9 +8,6 @@ var resources: PlayerResources
 ## 入场动画完成时发射，供 GameScene 等待
 signal entry_finished()
 
-const NumberSpriteClass = preload("res://scripts/components/number_sprite.gd")
-const SeparatorClass = preload("res://scripts/components/ui_separator.gd")
-
 ## 入场动画：每个元素的间隔时间（秒）
 const ENTRY_INTERVAL: float = 0.03
 ## 入场动画：单个元素滑入持续时间（秒）
@@ -314,7 +311,7 @@ func _update_difficulty_texture() -> void:
 
 
 func _add_separator(pos: Vector2, length: float, col: Color) -> void:
-	var sep := SeparatorClass.new()
+	var sep := UISeparator.new()
 	sep.position = pos
 	sep.line_length = length
 	sep.line_color = col
@@ -326,7 +323,7 @@ func _add_separator(pos: Vector2, length: float, col: Color) -> void:
 
 
 func _make_number_sprite(p_name: String, pos: Vector2, tex: Texture2D = null, dcount: int = 8) -> Node2D:
-	var ns := NumberSpriteClass.new()
+	var ns := NumberSprite.new()
 	ns.name = p_name
 	ns.position = pos
 	ns.z_index = LayerConfig.UI_TOP

@@ -2,9 +2,9 @@
 class_name Boss
 extends Area2D
 
-const HPRingClass = preload("res://scripts/scenes/boss_hp_ring.gd")
+const BOSS_HP_RING_SCRIPT = preload("res://scripts/scenes/boss_hp_ring.gd")
 const POS_INDICATOR_TEX := preload("res://assets/Textures/front/boss_position.png")
-const ParamValidator = preload("res://scripts/data/param_validator.gd")
+const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
 
 ## Boss 位置指示器距离淡出：离自机 x 越远越清晰（近处半透明，远处醒目）
 const INDICATOR_FADE_NEAR := 60.0    ## |dx| ≤ 60px 时最淡
@@ -103,7 +103,7 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	else:
 		_stage_id = SaveData.current_stage_id
 
-	var ring := HPRingClass.new()
+	var ring := BOSS_HP_RING_SCRIPT.new()
 	ring.setup(self)
 	add_child(ring)
 
@@ -325,7 +325,7 @@ func _set_hp(v) -> void:
 ## 血条显隐（统一）
 func _set_ring_visible(v: bool) -> void:
 	for child in get_children():
-		if child.get_script() == HPRingClass:
+		if child.get_script() == BOSS_HP_RING_SCRIPT:
 			child.visible = v
 			break
 
@@ -354,4 +354,4 @@ func _drop_items() -> void:
 ## 注意：这里只有参数注入，掉落逻辑在 _drop_items（clear_phase 击破时）——
 ## 曾经残留过一份掉落代码导致 start_phase 时误掉道具（已删，勿再贴回）
 func _apply_phase_params(script: Node, params: Dictionary) -> void:
-	ParamValidator.apply(script, params)   # 校验 + 只设合法键 + 打错键名/类型响亮报错
+	PARAM_VALIDATOR_SCRIPT.apply(script, params)   # 校验 + 只设合法键 + 打错键名/类型响亮报错

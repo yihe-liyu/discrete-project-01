@@ -5,11 +5,11 @@ class_name HitEffect
 # 用法（池化）：
 #   FxPool.play(scene, pos, vel, tint)
 #   effect.activate(pos, vel, tint)
-#   # 播完后自动 invisible + _on_finish()
+#   # 播完后自动 invisible + on_finish()
 
 var velocity: Vector2 = Vector2.ZERO
 var _age: float = 0.0
-var _on_finish: Callable  # 回收回调，池化时由 FxPool 注入
+var on_finish: Callable  # 回收回调，池化时由 FxPool 注入（命名契约：回调值用 on_x）
 
 
 func activate(p_pos: Vector2, p_vel: Vector2, p_tint: Color, p_on_finish: Callable = Callable()) -> void:
@@ -19,7 +19,7 @@ func activate(p_pos: Vector2, p_vel: Vector2, p_tint: Color, p_on_finish: Callab
 	global_position = p_pos
 	_age = 0.0
 	visible = true
-	_on_finish = p_on_finish
+	on_finish = p_on_finish
 	set_velocity(p_vel)
 	set_tint(p_tint)
 	_setup()
@@ -28,8 +28,8 @@ func activate(p_pos: Vector2, p_vel: Vector2, p_tint: Color, p_on_finish: Callab
 ## 播完后调此方法，而不是 queue_free
 func _finish() -> void:
 	visible = false
-	if _on_finish.is_valid():
-		_on_finish.call(self)
+	if on_finish.is_valid():
+		on_finish.call(self)
 	else:
 		queue_free()
 

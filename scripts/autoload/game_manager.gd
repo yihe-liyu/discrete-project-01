@@ -8,8 +8,6 @@ signal scene_entered(scene_path: String)
 signal scene_left(scene_path: String)
 
 # ═══ 模块 ───
-const TransClass = preload("res://scripts/scenes/scene_transition.gd")
-const NavClass = preload("res://scripts/scenes/menu_nav.gd")
 
 var _scene_transition: SceneTransition
 var _menu_nav: MenuNav
@@ -25,10 +23,10 @@ func _ready():
 
 	SaveData.boot()  # 原 SaveData._ready（主题/存档/设置/注册表）
 
-	_scene_transition = TransClass.new()
+	_scene_transition = SceneTransition.new()
 	_scene_transition.setup(self)
 
-	_menu_nav = NavClass.new()
+	_menu_nav = MenuNav.new()
 	_menu_nav.setup(self)
 
 

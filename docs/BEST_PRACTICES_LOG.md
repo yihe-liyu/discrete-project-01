@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-14 — 命名统一 N11 / N12：preload 常量后缀 + 回调值 vs 信号处理
+
+- **契约早已写在** `BEST_PRACTICES_BASELINE.md`「标识符命名契约」：`preload 常量 = 场景 *_SCENE / 脚本 *_SCRIPT；已有 class_name 的别再起别名`；`回调 Callable = on_x；信号处理方法 = _on_x`。这次是**按契约落地**。
+- **N11**：统一框架层 preload 别名 ——
+  - 已有 `class_name` 的**直接删别名**、用全局类名：`TransClass`→`SceneTransition`、`NavClass`→`MenuNav`、`LaserEngineClass`/`DeathClearClass`/`BulletMultiMeshClass`/`SpellRecordClass`/`BossClass`/`NumberSpriteClass`/`SeparatorClass` → 对应类名。
+  - 无 `class_name` 的改 `*_SCRIPT`：`KernelBombClass`→`KERNEL_BOMB_SCRIPT`、`KernelMistBombClass`→`KERNEL_MIST_BOMB_SCRIPT`、`KernelBehaviorHostClass`→`KERNEL_BEHAVIOR_HOST_SCRIPT`、`MarisaLaserFadeClass`→`MARISA_LASER_FADE_SCRIPT`、`HPRingClass`→`BOSS_HP_RING_SCRIPT`、`ParamValidator`→`PARAM_VALIDATOR_SCRIPT`。
+  - 场景后缀纠正：`DialogueBoxScene` → `DIALOGUE_BOX_SCENE`。
+  - **内容层豁免**：`data/**` 的 `ENEMY01` / `FLY_AWAY` / `GRAVITY_BULLET` … 不动 —— 具体弹幕/敌人/关卡的 preload 名不受此限。
+- **N12**：修两处把**回调值**写成了 `_on_*` 的违规：`LaserEngine._on_graze` → `on_graze`，`HitEffect._on_finish` → `on_finish`；契约补一行区分**生命周期钩子**（`on_enter`/`on_leave`/`on_activate`/`on_deactivate`，MenuNav 调，非信号）。
+- **验证**：`./tools/verify.sh` 全绿 **381 / 4194**（`check_naming` 0 条）。
+
 ### 2026-09-14 — 命名统一 N7：FxPool 概念字段收敛为 `fx_pool`
 
 - **问题**：同一个「特效层（FxPool）」概念，字段名有两种：`fx_pool` / `_fx_pool`（StageRuntime / BulletManager / EffectService）vs **`fx`**（`KernelBulletPhysics.fx`，唯一漏网的）。

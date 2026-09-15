@@ -115,6 +115,7 @@
 | **集合 / 映射** | 集合用复数（`enemies`）；映射用 `值_by_键`（`_type_by_sig` / `_damage_by_index`） |
 | **布尔** | `is_` / `has_` / `can_` / `should_` 前缀（`is_running` / `has_boss`）；禁无主语（`flag` / `active`） |
 | **回调 Callable** | 变量/形参 `on_x`（`on_overlap`）；信号处理**方法** `_on_x`（`_on_player_death`）—— 不互换 |
+| **生命周期钩子**（框架调用、子类覆写，非信号） | `on_enter` / `on_leave` / `on_activate` / `on_deactivate`（`MenuNav` 调）—— 与信号处理 `_on_*` 区分，不斜杠 |
 | **preload 常量** | 场景 `*_SCENE`；脚本 `*_SCRIPT`；已有 `class_name` 的别再起别名 |
 | **函数** | 取值 `get_*`；判定 `is_*` / `has_*`；动作动词开头；事件处理 `_on_*` |
 

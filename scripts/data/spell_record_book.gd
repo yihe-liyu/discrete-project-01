@@ -2,8 +2,6 @@
 extends Resource
 class_name SpellRecordBook
 
-const SpellRecordClass = preload("res://scripts/data/spell_record.gd")
-
 ## 全符卡记录，主键 (stage_id, phase_index, character, difficulty)
 @export var records: Array[SpellRecord] = []
 
@@ -40,7 +38,7 @@ func get_or_create(stage: int, phase_index: int, boss_index: int, character: int
 	# 命中时仍写 boss_index（归属/展示用）—— 但主键不含它，不会因此新建/拆分记录
 	if r:
 		return r
-	r = SpellRecordClass.new()
+	r = SpellRecord.new()
 	r.stage = stage
 	r.phase_index = phase_index
 	r.boss_index = boss_index

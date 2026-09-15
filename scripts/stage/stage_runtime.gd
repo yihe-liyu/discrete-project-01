@@ -10,8 +10,7 @@ signal stage_cleared()
 signal all_enemies_defeated()
 
 const ENEMY_SCENE = preload("res://scenes/enemy.tscn")
-const BossClass = preload("res://scripts/enemy/boss.gd")
-const ParamValidator = preload("res://scripts/data/param_validator.gd")
+const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
 
 
 var world: Node2D							## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
@@ -114,7 +113,7 @@ func spawn_enemy_data(data: EnemyData, p_ctx: StageContext = null) -> Enemy:
 		return null
 	cs.target = enemy
 	var params: Dictionary = data.get_params()
-	ParamValidator.apply(cs, params)   # 校验 + 只设合法键 + 打错键名/类型响亮报错
+	PARAM_VALIDATOR_SCRIPT.apply(cs, params)   # 校验 + 只设合法键 + 打错键名/类型响亮报错
 	if cs.has_method("setup_custom"):
 		cs.setup_custom(params)
 	enemy.add_child(cs)
@@ -134,7 +133,7 @@ func spawn_enemy(data: EnemyData, position: Vector2, auto_start: bool = true) ->
 
 
 func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -> Boss:
-	var boss := BossClass.new()
+	var boss := Boss.new()
 	boss.global_position = position
 	if data.visual:
 		var vis := data.visual.instantiate()

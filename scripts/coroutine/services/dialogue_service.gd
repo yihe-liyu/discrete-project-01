@@ -10,13 +10,13 @@ var ctx: StageContext:
 	set(value):
 		_ctx_ref = weakref(value) if value else null
 
-const DialogueBoxScene = preload("res://scenes/ui/dialogue_box.tscn")
+const DIALOGUE_BOX_SCENE = preload("res://scenes/ui/dialogue_box.tscn")
 
 ## 播放一段对话（DialogueSteps 步骤序列，台词已内联）—— 唯一入口
 func play_steps(steps: Array) -> float:
 	if not ctx or not ctx.active() or not is_instance_valid(ctx.runner):
 		return 0.0
-	var box := DialogueBoxScene.instantiate()
+	var box := DIALOGUE_BOX_SCENE.instantiate()
 	ctx.runner.get_tree().current_scene.add_child(box)
 	ctx.runner.pause()
 	box.finished.connect(func(): ctx.runner.resume(), CONNECT_ONE_SHOT)

@@ -9,10 +9,10 @@
 class_name KernelBulletBackend
 extends Node
 
-const MarisaLaserFadeClass = preload("res://scripts/kernel_bridge/marisa_laser_fade.gd")
-const KernelBombClass = preload("res://scripts/kernel_bridge/kernel_bomb.gd")
-const KernelMistBombClass = preload("res://scripts/kernel_bridge/kernel_mist_bomb.gd")
-const KernelBehaviorHostClass = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
+const MARISA_LASER_FADE_SCRIPT = preload("res://scripts/kernel_bridge/marisa_laser_fade.gd")
+const KERNEL_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_bomb.gd")
+const KERNEL_MIST_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_mist_bomb.gd")
+const KERNEL_BEHAVIOR_HOST_SCRIPT = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
 const _MOVE_WORLD_ACCEL := &"world_accel"
 const _MOVE_LASER := &"marisa_laser"
 
@@ -64,9 +64,9 @@ func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = 
 	# 三元要求分支类型互相兼容，静态分析会报 INCOMPATIBLE_TERNARY。
 	var bomb: BombEntity
 	if data is MistBombData:
-		bomb = KernelMistBombClass.new()
+		bomb = KERNEL_MIST_BOMB_SCRIPT.new()
 	else:
-		bomb = KernelBombClass.new()
+		bomb = KERNEL_BOMB_SCRIPT.new()
 	bomb.entity_registry = entity_registry
 	bomb.bullet_manager = bullet_manager
 	bomb.fx_parent = bullet_manager.fx_parent if bullet_manager else null
@@ -183,9 +183,9 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	if system.native_behaviors:
 		return
 	process_physics_priority = -4   # 延后动作 flush：行为之后、宿主碰撞(0) 之前
-	_behavior_host = KernelBehaviorHostClass.new()
+	_behavior_host = KERNEL_BEHAVIOR_HOST_SCRIPT.new()
 	_behavior_host.setup(self)
-	_laser_fade = MarisaLaserFadeClass.new()
+	_laser_fade = MARISA_LASER_FADE_SCRIPT.new()
 	_laser_fade.setup(self)
 	# 行为全程原生（behavior_tick）；宿主回调（emit/call）经 behavior_host。
 	system.native_behaviors = true
