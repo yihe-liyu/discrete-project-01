@@ -43,13 +43,13 @@
 
 | 系统 | 责任 | 对外接口（intent） | 主要文件 |
 |---|---|---|---|
-| **Boss/敌人** | 演一段阶段 | `start_phase(phase)` / `get_boss_name` / `set_boss_name` / `current_phase` | `scripts/enemy/boss.gd` / `enemy.gd` |
+| **Boss/敌人** | 演一段阶段 / 生成敌人 | `start_phase(phase)` / `get_boss_name` / `set_boss_name` / `current_phase` / `ctx.enemies.spawn(data)` | `scripts/enemy/boss.gd` / `enemy.gd` |
 | **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread(...)` / `death_clear` | `scripts/bullet/*` / `laser/*` · **内核** `gdextension/src/danmaku_store.*` |
 | **玩家** | 移动/射击/僚机/道具 | `ctx.player` / `ctx.effects` | `scripts/player/player.gd` / `coroutine/player/*` |
 | **对话** | 纯逻辑步骤 + 渲染 | `ctx.play_dialogue_steps(steps)` / `d.event(...)` | `scripts/coroutine/services/dialogue/*` |
 | **记录** | 持久化符卡簿 | `RecordService.record_phase_*` | `scripts/data/spell_*.gd` |
 | **背景** | 环境/装饰/相机/太阳/雾 | `StageBackground`（相机/太阳/雾命令，待接 `ctx.background`） | `scripts/background/*` |
-| **时间线/关卡** | 编排“何时做什么” | `timeline.at()` / `{do,cmd,spawn_boss,...}` | `scripts/coroutine/timeline/*` / `stage_manager.gd` |
+| **时间线/关卡** | 编排“何时做什么” | `timeline.at()` / `do(callable)` / `start_phase` | `scripts/coroutine/timeline/*` / `stage_manager.gd` |
 | **工作台** | 预览/调试/书签 | `workbench` | `scripts/workbench/*` |
 
 ---
@@ -81,9 +81,9 @@
 
 | 类别 | 形态 | 例子 | 归属 |
 |---|---|---|---|
-| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
+| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.enemies.spawn(data)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
 | **场景动词**（宏观，跨子系统，一意图） | `dir.verb()` | `dir.boss("boss_mid", data, from, to)` `dir.on(event, handler)` `dir.dialogue(steps)` | `StageDirector` `BossHandle` |
-| **名词构建词** | `Data.builder()` | `EnemyData.new().with_script().pos().param().spawn(ctx)` | 各 `*Data` |
+| **名词构建词** | `Data.builder()` | `ctx.enemies.spawn(EnemyData.new().with_script().pos().param())` | 各 `*Data` |
 | **时序粘合剂** | `timeline.at()/wait()/every()` | `timeline.at(35).do(func(): dir.boss(...))` | `Timeline` |
 | **原语** | 协程 / 事件 | `CoroutineScript` `TimelineEvent` | `coroutine/*` |
 
@@ -115,7 +115,7 @@
 
 ## 4. 边界铁律（“绝不”清单）
 
-1. **内容=数据**——别在关卡/行为脚本里 `EnemyData.new()...spawn()` 现场捏内容；内容做成资源，脚本只引用。
+1. **内容=数据**——别在关卡/行为脚本里 `ctx.enemies.spawn(EnemyData.new()...)` 现场捏内容；内容做成资源，脚本只引用。
 2. **一知识一 owner**——身份问 `BossCatalog`、记录走 `RecordService`、引用走 `StageObjects`、状态走信号；**绝不自己算**。
 3. **系统走服务（ctx.*），不摸全局**——别 `GameState.record_*``BulletManager.` 到处摸；删 `else Global` 双路。
 4. **节点只演、只发信号**——`Boss` 不算身份/记录，`hp``boss_data` 不该裸暴露。
@@ -131,7 +131,7 @@
 |---|---|---|---|---|
 | A | ~~`params` 反射（C4）~~ | 内容/参数 | ✅ 已修到「校验+响亮」（`ParamValidator`）；「全 typed 资源」未做 | 已做（2026） |
 | B | ~~双路 `if ctx else Global`~~ | 领域/接口 | ✅ 已修：系统操作统一走 `ctx.*`，删除 else-Global 回退 | 已做（2026） |
-| C | 调用方拼内容（`EnemyData.new()...spawn`） | 内容/接口 | C1 ✅ **EnemyData 可序列化**（`behavior_script`/`params` `@export` + `validate()`）；C2 内容→原型（`.tres` 或命名 const）未做 | 中 |
+| C | 调用方拼内容（`ctx.enemies.spawn(EnemyData.new()...)`） | 内容/接口 | C1 ✅ **EnemyData 可序列化**（`behavior_script`/`params` `@export` + `validate()`）；C2 内容→原型（`.tres` 或命名 const）未做 | 中 |
 | D | 关卡脚本胖（大 match + 手工 spawn/tween） | 编排/接口 | D1 ✅ 事件派发 + 场景动词（`StageDirector`/`BossHandle`）；D2 命令化/数据化 未做 | 中 |
 | E | ~~Boss 公开可变（`hp`/`boss_data`/`hitbox_radius`）~~ | 运行时/封装 | ✅ 已做：只读 getter + `_set_hp` 唯一改写 + `hp_changed` 信号（血条订阅，不轮询） | 已做（2026） |
 | F | 时间分片/暂停缝（C6） | 运行时/时间 | 统一时间所有权 | 低（系统性） |
@@ -156,7 +156,7 @@
 - 阶段身份由 `BossCatalog` 规范序自动编号；**别手写 index/第N张**。
 
 ### 新增敌人
-- `EnemyData` 资源 + 行为脚本；**别在关卡脚本 `EnemyData.new()...spawn`**，做成资源引用。
+- `EnemyData` 资源 + 行为脚本；**别在关卡脚本现场捏 `ctx.enemies.spawn(EnemyData.new()...)`**，做成资源引用。
 
 ### 新增自机 bomb
 - 数据是 **`BombData` 家族**：基类 `BombData`（外观 / 编队 / 无敌）+ 子类 `RingBombData`（环绕炸）/ `MistBombData`（分阶段展开）；`.tres` 例：`data/player_data/bomb_ring.tres` / `marisa_bomb.tres`，经 `PlayerData.bomb` 挂到角色。

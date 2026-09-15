@@ -5,7 +5,7 @@ class_name Enemy
 ## 敌人配置数据（生命、判定、弹幕模式等）
 var enemy_data: EnemyData
 
-## 运行时上下文（EnemyData.spawn 注入，用于走服务而非全局）
+## 运行时上下文（StageRuntime.spawn_enemy_data 注入，用于走服务而非全局）
 var ctx: StageContext
 
 ## 战场实体注册表（StageRuntime 注入；直接实例化时为空，跳过注册）

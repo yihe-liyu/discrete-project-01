@@ -4,6 +4,7 @@ extends RefCounted
 
 const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
 const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
+const EnemyService = preload("res://scripts/coroutine/services/enemy_service.gd")
 
 var runner: CoroutineRunner
 ## 关卡运行时（由 StageRuntime 创建 ctx 时回填；内容经此拿注入槽/工厂）
@@ -21,6 +22,7 @@ var _audio_service: AudioService
 var _effect_service: EffectService
 var _boss: BossService
 var _diff: DifficultyService
+var _enemy_service: EnemyService
 var _stage_objects: StageObjects
 
 var clock: ClockService:
@@ -76,6 +78,14 @@ var boss: BossService:
 			_boss = BossService.new()
 			_boss.ctx = self
 		return _boss
+
+## 敌人生成服务（内容动词；机制在 StageRuntime.spawn_enemy_data）
+var enemies: EnemyService:
+	get:
+		if _enemy_service == null:
+			_enemy_service = EnemyService.new()
+			_enemy_service.ctx = self
+		return _enemy_service
 
 var diff: DifficultyService:
 	get:

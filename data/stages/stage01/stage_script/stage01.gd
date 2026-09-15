@@ -37,15 +37,15 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	# 1~3s: 妖精波 (左右交替)
 	for i in 7:
 		timeline.at(1.0 + i * 0.1).do(func():
-			EnemyData.new().with_script(ENEMY01)\
+			ctx.enemies.spawn(EnemyData.new().with_script(ENEMY01)\
 				.pos(Vector2(GameConfig.FIELD_CENTER_X + 300 - i * 90, 0)).red_little_fairy()\
-				.param("target_y", 150 + i * 50).spawn(ctx)
+				.param("target_y", 150 + i * 50))
 		)
 	for i in 7:
 		timeline.at(4.0 + i * 0.1).do(func():
-			EnemyData.new().with_script(ENEMY01)\
+			ctx.enemies.spawn(EnemyData.new().with_script(ENEMY01)\
 				.pos(Vector2(GameConfig.FIELD_CENTER_X - 300 + i * 90, 0)).red_little_fairy()\
-				.param("target_y", 150 + i * 50).spawn(ctx)
+				.param("target_y", 150 + i * 50))
 		)
 
 	# 7s: Logo
@@ -71,38 +71,38 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		var target_y = 175 + i * 50
 		if i % 2 == 0:
 			timeline.at(11.0 + i * 3.0).do(func():
-				local_enemy.red_middle_fairy()\
+				ctx.enemies.spawn(local_enemy.red_middle_fairy()\
 				.pos(Vector2(0, target_y))\
-				.param("target_pos", Vector2(GameConfig.FIELD_CENTER_X + 100 + i * 25, target_y)).spawn(ctx)
+				.param("target_pos", Vector2(GameConfig.FIELD_CENTER_X + 100 + i * 25, target_y)))
 			)
 		else:
 			timeline.at(11.0 + i * 3.0).do(func():
-				local_enemy.blue_middle_fairy()\
+				ctx.enemies.spawn(local_enemy.blue_middle_fairy()\
 				.pos(Vector2(914, target_y))\
-				.param("target_pos", Vector2(GameConfig.FIELD_CENTER_X - 100 - i * 25, target_y)).spawn(ctx)
+				.param("target_pos", Vector2(GameConfig.FIELD_CENTER_X - 100 - i * 25, target_y)))
 			)
 
 	for i in 7:
 		timeline.at(17.0 + i * 0.5).do(func():
-			EnemyData.new().with_script(ENEMY01)\
+			ctx.enemies.spawn(EnemyData.new().with_script(ENEMY01)\
 				.pos(Vector2(GameConfig.FIELD_CENTER_X + 300 - i * 90, 0)).red_little_fairy()\
 				.param("target_y", 360 + i * 40)\
-				.param("rate", 4).param("heavy_wave", false).spawn(ctx)
-			EnemyData.new().with_script(ENEMY01)\
+				.param("rate", 4).param("heavy_wave", false))
+			ctx.enemies.spawn(EnemyData.new().with_script(ENEMY01)\
 				.pos(Vector2(GameConfig.FIELD_CENTER_X - 300 + i * 90, 0)).red_little_fairy()\
 				.param("target_y", 360 + i * 40)\
-				.param("rate", 4).param("heavy_wave", false).spawn(ctx)
+				.param("rate", 4).param("heavy_wave", false))
 		)
 	for i in 7:
 		timeline.at(24.0 + i * 0.5).do(func():
-			EnemyData.new().with_script(ENEMY01)\
+			ctx.enemies.spawn(EnemyData.new().with_script(ENEMY01)\
 				.pos(Vector2(GameConfig.FIELD_CENTER_X + 300 - i * 90, 0)).red_little_fairy()\
 				.param("target_y", 200 + i * 40)\
-				.param("rate", 4).param("heavy_wave", false).spawn(ctx)
-			EnemyData.new().with_script(ENEMY01)\
+				.param("rate", 4).param("heavy_wave", false))
+			ctx.enemies.spawn(EnemyData.new().with_script(ENEMY01)\
 				.pos(Vector2(GameConfig.FIELD_CENTER_X - 300 + i * 90, 0)).red_little_fairy()\
 				.param("target_y", 200 + i * 40)\
-				.param("rate", 4).param("heavy_wave", false).spawn(ctx)
+				.param("rate", 4).param("heavy_wave", false))
 		)
 
 	# ── Boss ──
@@ -142,30 +142,26 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	timeline.at(60.0).do(func():
 		if not ctx.boss.exists():
-			EnemyData.new().blue_big_fairy() \
+			ctx.enemies.spawn(EnemyData.new().blue_big_fairy() \
 				.with_script(ENEMY04) \
 				.pos(Vector2(GameConfig.FIELD_CENTER_X - 64, -32)) \
-				.hp(500) \
-				.spawn(ctx)
+				.hp(500))
 	)
 	timeline.at(68.5).do(func():
-		EnemyData.new().blue_big_fairy() \
+		ctx.enemies.spawn(EnemyData.new().blue_big_fairy() \
 			.with_script(ENEMY04) \
 			.pos(Vector2(GameConfig.FIELD_CENTER_X + 64, -32)) \
-			.hp(600) \
-			.spawn(ctx)
+			.hp(600))
 	)
 	timeline.at(77.0).do(func():
-		EnemyData.new().blue_big_fairy() \
+		ctx.enemies.spawn(EnemyData.new().blue_big_fairy() \
 			.with_script(ENEMY04) \
 			.pos(Vector2(GameConfig.FIELD_CENTER_X - 192, -32)) \
-			.hp(500) \
-			.spawn(ctx)
-		EnemyData.new().blue_big_fairy() \
+			.hp(500))
+		ctx.enemies.spawn(EnemyData.new().blue_big_fairy() \
 			.with_script(ENEMY04) \
 			.pos(Vector2(GameConfig.FIELD_CENTER_X + 192, -32)) \
-			.hp(600) \
-			.spawn(ctx)
+			.hp(600))
 	)
 
 	for i in 18:
@@ -236,10 +232,9 @@ func _spawn_mid_enemy(side: int, i: int, heavy_wave: bool, start_time: float = 2
 		e.blue_little_fairy()
 	if !heavy_wave:
 		e.param("rate", 4)
-	e.with_script(ENEMY03) \
+	ctx.enemies.spawn(e.with_script(ENEMY03) \
 		.pos(Vector2(x, y + off - 175)) \
 		.param("target_pos", Vector2(tx + off, y + off)) \
 		.param("bullet_color", Color.RED if i % 2 else Color.BLUE) \
 		.param("heavy_wave", heavy_wave) \
-		.param("start_time", start_time) \
-		.spawn(ctx)
+		.param("start_time", start_time))

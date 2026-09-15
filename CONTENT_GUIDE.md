@@ -7,7 +7,7 @@
 ## 0. 快速上手（加一个弹幕波次 / 一张符卡）
 
 1. 在 Godot 编辑器里打开 `data/stages/stage01/stage_script/stage01.gd`（Timeline 编排）
-2. 加 `timeline.at(时刻).do(func(): EnemyData.new().with_script(...).pos(...).spawn(ctx))`
+2. 加 `timeline.at(时刻).do(func(): ctx.enemies.spawn(EnemyData.new().with_script(...).pos(...)))`
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. F6 运行工作台 → 命中框/固定种子/逐帧看效果；改完代码**重启工作台**生效
 4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完同样重启工作台看
@@ -50,8 +50,8 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	_dir = StageDirector.new(ctx)          # 导演：场景动词 + 事件路由
 	var timeline := start_timeline()       # 纯排程器：无 ctx、无导演依赖
 	timeline.at(0.0).do(func(): _dir.bgm("stage1"))   # 按 key（走 _dir.bgm；_dir 是唯一实现）
-	timeline.at(1.0).do(func(): EnemyData.new().with_script(ENEMY01)...
-		.pos(Vector2(...)).red_little_fairy().param("target_y", 200).spawn(ctx))
+	timeline.at(1.0).do(func(): ctx.enemies.spawn(EnemyData.new().with_script(ENEMY01)...
+		.pos(Vector2(...)).red_little_fairy().param("target_y", 200)))
 	# Boss 进场：spawn + register + 隐藏名 + tween —— 全在 _dir.boss 里
 	timeline.at(35.0).do(func():
 		_mid = _dir.boss("boss_mid", CAMORUI_MID, Vector2(-50, 500), Vector2(FIELD_CENTER_X, 250))
@@ -81,6 +81,8 @@ Timeline 只保留 `at/every/times/wait/do` + `start_phase`（相对时间 wait 
 
 `EnemyData` 提供构造链：`red_little_fairy() / blue_middle_fairy() / red_middle_fairy() / ...`
 （外观/血量/判定/掉落直接写死，`enemy_presets/*.tres` 已移除——数据即代码）。
+
+生成走 **`ctx.enemies.spawn(data)`**（与 `ctx.bullets.shoot_spread` 对称的服务动词；实例化/挂载协程/入场景在 `StageRuntime`）。
 
 ### 行为脚本
 

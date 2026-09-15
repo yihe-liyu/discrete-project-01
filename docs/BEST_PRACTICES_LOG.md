@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-14 — 敌人生成服务化：`ctx.enemies.spawn(data)`（与 ctx.bullets 对称）
+
+- **动机**：敌人生成一直是 `data.spawn(ctx)` —— 全项目**唯一把 `ctx` 露在调用点**的地方（"不看引擎不理解为什么传 ctx"）；而发弹是 `ctx.bullets.shoot_spread(...)`。"生成"是世界的动作，不该长在数据类身上。
+- **新落点**：`scripts/coroutine/services/enemy_service.gd`（`ctx.enemies`；无 class_name + preload const，同 `BossService`/`DifficultyService`）。`spawn(data)` 保留原校验、无 ctx/stage → null；实例化/挂载协程/入场景仍在 `StageRuntime.spawn_enemy_data`。
+- **删**：`EnemyData.spawn(ctx)` —— 数据类只剩构造链 + `validate()`。
+- **内容迁移**：stage01 共 **13 处** `.spawn(ctx)` → `ctx.enemies.spawn(EnemyData...)`。
+- **测试**：`test_ctx_services.gd` 新增 `test_enemy_service_without_stage_returns_null`（无世界 → null，不崩）。
+- **文档同步**：`CONTENT_GUIDE.md` / `docs/ARCHITECTURE.md` 服务动词表 + 边界铁律 + 时间线接口行（顺带修掉已删的 `spawn_boss` 残留）。
+- **验证**：`./tools/verify.sh` 全绿 **382 / 4196**（check_syntax 295/0、check_naming 0、启动零错误）。
+
 ### 2026-09-14 — Timeline 档 A：纯排程器（无参、零服务层依赖）
 
 - **决定（用户拍板）**：Timeline 只回答"何时触发"—— 公共面 `at/every/times/wait/do` + `start_phase`；动作一律 `do(callable)`，环境由内容在闭包里自带。

@@ -40,17 +40,6 @@ func visual(key: String) -> EnemyData:
 	visual_scene = AssetRegistry.enemy_visuals.get(key, preload("res://data/enemy_visual/red_little_fairy.tscn"))
 	return self
 
-## 生成敌人 —— 数据类不持有场景，实例化/挂载委托给 ctx.stage（StageRuntime）
-func spawn(p_ctx: StageContext = null) -> Enemy:
-	var errs := validate()
-	for e in errs:
-		push_error("EnemyData 配置错误: " + e)
-	if not errs.is_empty():
-		return null
-	if p_ctx == null or p_ctx.stage == null:
-		return null
-	return p_ctx.stage.spawn_enemy_data(self, p_ctx)
-
 ## ── 生成参数（供 StageRuntime 读取） ──
 
 func has_script() -> bool:            return behavior_script != null
