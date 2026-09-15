@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-14 — M 组清算：M2/M3 已完成/被取代 —— 删 TODO + 修设计文档 §10
+
+- **发现**：TODO 的 M 组（M2 存储段 / M3 行为 VM）是从 `GDEXTENSION_KERNEL_DESIGN.md §10` 的「待做」行抄来的，但那两行**没跟上同一份文档的顶部状态与 §5.7 落地注记**：
+  - 顶部：**L3.5 全落地 ✅（原生行为/判定/宽相 + 存储翻转：`KernelNativeSystem` 为唯一存储）**；
+  - §5.7：**已拍板不走通用 opcode VM**，落地为 `BulletLifecycle` 描述符 → `compile()` → 原生 `register_program` / `behavior_tick`。
+- **代码核对**：原生 `DanmakuStore` 已含 `spawn/spawn_batch/despawn/_swap_remove` + 宽相 grid + `overlap_pairs` + `hit_test` + `behavior_tick` + `fill_multimesh`；`KernelNativeSystem`（`extends Node`，非 `BulletSystem`）是唯一存储，每帧只 pull **只读镜像**；`enable_native_behaviors` 生产无条件开。
+- **处置（按「做完直接删」）**：TODO 删 **M 组**；**G6 删除**（已完成项不再列；仅剩的 "CI 编译扩展" 并入 G7）；设计文档 §10 删「N2 存储段（待做）」「N3 行为 VM（待做）」两行；顺手校正脚本数 294 → 295。
+- **教训**：**同一文档里「顶部状态」与「§迁移清单」会各说各话** —— 引用前先看状态注记，否则会从旧清单抄出假 TODO（这次就是这么来的）。
+- **验证**：`./tools/verify.sh` 全绿 **382 / 4196**（纯清单/文档改动）。
+
 ### 2026-09-14 — E8：z_index 裸数字 5 处收进 LayerConfig（R17）
 
 - **做法**：`LayerConfig` 新增两节 —— `UI 内部相对排序`（`UI_NORMAL/UI_SPEAKER/UI_TOAST`）与 `工作台/调试`（`GHOST_PLAYER/HITBOX_OVERLAY`）；五处裸数字全替换。

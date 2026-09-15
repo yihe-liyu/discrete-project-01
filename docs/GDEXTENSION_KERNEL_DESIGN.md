@@ -291,8 +291,6 @@ for e in world.drain_events():                  # 帧末一次
 - **N1 工具链验证 ✅ 已实测通过（2026-09-13）**：godot-cpp **v10（master）** + `api_version=4.7` → `scons target=template_debug` 编译最小 extension → **Godot 4.7.2 成功加载并注册类**（`ClassDB.class_exists("Hello") = true`）。环境：SCons 4.11.1 / g++ 16.2.1 / Python 3.14.7。**注意**：`.gdextension` 需编辑器导入一次（写 `.godot/extension_list.cfg`）才会被加载。**工具链已不是门。**
 - **N2.1 ✅（2026-09-13）** 原生 `DanmakuStore`：SoA + per-bullet type/faction/color + `spawn_batch`（~55×）。
 - **N2.2 积分段 ✅（2026-09-13）** 原生积分（**5.9×**）；**L3.5-4e ✅（2026-09-14）** 改为原生**有状态** `integrate`/`behavior_tick`，`KernelNativeSystem` 为唯一存储（standalone，不再 extends `BulletSystem`）。
-- **N2 存储段（待做）** 原生接管 spawn / despawn / 宽相，消除 GDScript SoA。
-- **N3 行为 VM（待做，路径 B）**：按 §5.7 —— **先定 program schema + GDScript 参考解释器**，内容 `kernel_port()` → `{program:[...]}`，测试锁定；再换原生 VM 执行器。§5.1 的**手写原生 tenant** 留给宿主耦合行为。
 - **N4-real ✅（2026-09-13）** 原生 `DanmakuRenderBridge` 整段渲染同步（**6.5×**，6000 弹 7.19→1.10ms）；余图集资源（S13）按需。
 - **N5 收口**：GDScript 只剩内容 / 外壳 / 宿主规则；`kernel_bridge` **行数不是目标** —— 改**结构性判据**（0 类型映射 / 0 内容签名侧表 / 内核 0 宿主引用，见 `docs/archive/NEW_KERNEL_REFACTOR_PLAN.md` §16.5）。
 
