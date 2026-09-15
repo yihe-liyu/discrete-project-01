@@ -20,11 +20,9 @@ class_name CoroutineRunner
 ## 恢复后不会追帧，时钟从暂停处继续。
 
 signal finished()
-signal cancelled()
 
 var is_running: bool = false
 var _is_paused: bool = false
-var _is_fast_mode: bool = false  ## 快速模式（子弹协程）：run() 不创建 Task，由宿主 tick_fast 驱动
 var _tasks: Array[Task] = []
 var _clock: float = 0.0  # 游戏内时间（物理帧累积，暂停时冻结）
 var _last_dt: float = 0.0  # 当前帧物理步长（time_scale 生效；节点/无节点模式一致）
@@ -41,11 +39,6 @@ func game_time() -> float:
 	return _clock
 
 
-## 设置游戏内时间（快进用：外部将 _clock 拨到目标时刻）
-func set_game_time(t: float) -> void:
-	_clock = maxf(t, 0.0)
-
-
 class Task extends RefCounted:
 	var callable: Callable
 	var wake_time: float = 0.0
@@ -54,8 +47,6 @@ class Task extends RefCounted:
 func run(method: Callable):
 	stop()
 	_clock = 0.0
-	if _is_fast_mode:
-		return  # 快速模式：不创建调度 Task（由宿主直接调 _tick）
 	_start_task(method)
 
 func run_parallel(method: Callable):
@@ -76,7 +67,6 @@ func stop():
 		task.callable = Callable()
 	_tasks.clear()
 	is_running = false
-	cancelled.emit()
 
 
 ## 临时暂停：冻结时钟，任务保留（恢复后继续）
@@ -91,10 +81,6 @@ func resume() -> void:
 	_is_paused = false
 
 
-func is_paused() -> bool:
-	return _is_paused
-
-
 func _physics_process(_delta: float) -> void:
 	if not is_running:
 		return
@@ -105,9 +91,8 @@ func _physics_process(_delta: float) -> void:
 	_advance_tasks()
 
 
-## 宿主驱动模式：由宿主（如 Bullet）每帧手动推进，不依赖引擎 _physics_process 回调
-## 子弹协程用：消除"每颗子弹一个节点 → 每帧引擎回调"的最大开销
-## 返回 false = 已结束（宿主应清理引用）；true = 仍在运行
+## 无树驱动：宿主（测试 / 工具）每帧手动推帧，不依赖引擎 _physics_process 回调。
+## 返回 false = 已结束；true = 仍在运行。
 func tick_manual(dt: float) -> bool:
 	if not is_running:
 		return false

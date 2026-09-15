@@ -11,13 +11,13 @@ func test_moves_down_until_offscreen() -> void:
 	add_child_autofree(tgt)
 	tgt.global_position = Vector2(448, 100)
 	cs.target = tgt
-	cs.start_fast(null, tgt)
+	cs.start(null, tgt)
 
 	# 匀速下移 120px/s：每 0.1s 推进 12px。前 50 帧（y=100→700）应仍在屏内
 	var frames := 0
 	var is_alive := true
 	while frames < 50:
-		is_alive = cs.tick_fast(0.1)
+		is_alive = cs.tick_manual(0.1)
 		frames += 1
 		if not is_alive:
 			break
@@ -27,7 +27,7 @@ func test_moves_down_until_offscreen() -> void:
 	# 继续：直到离开屏幕（下缘 + 32px 宽限）→ 返回 false
 	# 从 y=100 到 VIEW_HEIGHT+32=992，120px/s 需 ~75 帧，200 内应绰绰有余
 	var out_frames := 0
-	while cs.tick_fast(0.1) and out_frames < 2000:
+	while cs.tick_manual(0.1) and out_frames < 2000:
 		out_frames += 1
 		if out_frames >= 1999:
 			break

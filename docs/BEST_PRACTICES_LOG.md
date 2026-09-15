@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — CoroutineScript/Runner 提速清理：删「快速模式」与 4 处死访问器
+
+- **病灶**：`CoroutineScript` 的「快速模式」（`start_fast` / `tick_fast` / `_fast_wait_left` + `CoroutineRunner._is_fast_mode`）是**子弹协程时代**的产物（注释自称"子弹协程专用"）；子弹已原生 → 生产 0 调用，只有 2 个测试脚本在用。与 `gravity_bullet._tick` **同源**（同一场拆除的漏网）。
+- **改法**：删 fast 模式；两个测试改 `start()` + `tick_manual()`。`tick_manual` 是**更正确**的无树驱动（推进 `_clock`、复用 `_advance_tasks` 的等待/并行/暂停）；而 `tick_fast` 绕过 `_clock` → `game_time()` 不前进。`tick_manual` 从 0 → 2 调用者，注释从"子弹协程用"改为"宿主（测试/工具）手动推帧"。
+- **顺带删（0 调用/监听）**：`CoroutineScript.get_timeline()`、`CoroutineRunner.set_game_time()`、`CoroutineRunner.is_paused()`、`CoroutineRunner.cancelled` 信号（`stop()` 里 emit 无人收）。
+- **量**：`coroutine_script.gd` 95 → **55** 行；`coroutine_runner.gd` 149 → **139** 行；行为零变化。
+- **验证**：`./tools/verify.sh` 全绿 **382 / 4196**。
+
 ### 2026-09-14 — 删 gravity_bullet 的死 `_tick`（全项目唯一残留的 kernel_port 载体）
 
 - **问题**：`gravity_bullet.gd` 是全项目**唯一**同时有 `kernel_port()` 和 `_tick()` 的载体。`BulletData.coroutine_script` 现在只经 `KernelBulletBackend._port_for()` 当**端口探针**用（`script.new()` → 只调 `kernel_port()`，从不 `start()`/`_tick()`；无端口则按直线发射）→ `_tick` 是删旧池（L3.5-4f）漏掉的残骸。

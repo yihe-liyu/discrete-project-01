@@ -39,10 +39,10 @@ func _ready():
 	bullet_node.velocity = Vector2(0, -500)
 	var homing := MoveHoming.new()
 	var ctx2 := StageContext.new(homing)
-	homing.start_fast(ctx2, bullet_node)
+	homing.start(ctx2, bullet_node)
 	print("[dbg] homing start后 _tl=%s is_running=%s" % [homing._timeline != null, homing.is_running])
 	for i in 60:
-		homing.tick_fast(1.0 / 60.0)
+		homing.tick_manual(1.0 / 60.0)
 	print("[verify] 诱导弹位置=%s 速度=%s（应转向敌人方向）" % [str(bullet_node.global_position), str(bullet_node.velocity)])
 	entity_registry.unregister_enemy(enemy)
 	get_tree().quit()
