@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-14 — 删 gravity_bullet 的死 `_tick`（全项目唯一残留的 kernel_port 载体）
+
+- **问题**：`gravity_bullet.gd` 是全项目**唯一**同时有 `kernel_port()` 和 `_tick()` 的载体。`BulletData.coroutine_script` 现在只经 `KernelBulletBackend._port_for()` 当**端口探针**用（`script.new()` → 只调 `kernel_port()`，从不 `start()`/`_tick()`；无端口则按直线发射）→ `_tick` 是删旧池（L3.5-4f）漏掉的残骸。
+- **为什么危险**：冻结参照 `test/reference/behavior/world_accel_behavior.gd:5` 明确写「只改 velocity，位置由内核下帧积分 —— **别自己 += position，否则双倍**」，而 `_tick` 恰恰自己积分位置 —— 一旦恢复协程路径 / 加回退，立刻双重积分。
+- **修**：删 `_tick`，保留 `kernel_port()`，补上与 `radial_accel_bullet.gd` / `bounce_bullet.gd` 同款的「内核端口载体」注释（指向冻结参照）。
+- **影响**：端口未动 → 表现零变化（enemy01/02/03 的重力弹）；文件 20 → 12 行，与兄弟同构。
+- **验证**：`./tools/verify.sh` 全绿 **382 / 4196**。
+
 ### 2026-09-14 — M 组清算（续）：设计文档 §0.2 / §13 过期段删除
 
 - **§0.2**：删掉「**剩余门 = 性能 Trigger（≥6000 弹 / 实打实卡顿）**」—— 与顶部「触发条件**已达成**」矛盾；保留仍成立的 **v10 仍 Beta** 风险。
