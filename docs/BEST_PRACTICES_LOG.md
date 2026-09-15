@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-14 — b1（无 Callable 批）：homing / marisa_laser / world_accel 迁到 `.trajectory`；删 3 个载体/字段
+
+- **新增**：`BulletData.trajectory(lc, anchor=null)`（链式）与 `lifecycle_anchor`（per-shot 锚点 spec，补全 `{lifecycle}` 路）。
+- **迁移**：`reimu_shoot` 灵梦散射 → `BulletLifecycle.homing()`（preset 补默认值，对齐旧载体）；`marisa_shoot` focus 弹 → `world_accel`、非 focus 激光 → `marisa_laser`（按角度缓存描述符 + per-shot 锚点）。
+- **删除**：`BulletData.accel` 字段 + `accelerate()` + `prepare_shot` 的 accel 分支 + `_MOVE_WORLD_ACCEL`；载体 `move_homing.gd` / `marisa_laser_follow.gd`。
+- **夹具/测试**：`test_param_validator` 改用专用 `test/fixtures/param_probe.gd`；`test_native_laser_anchor` / `test_kernel_backend` / `bench_danmaku` 改走 `.trajectory`。
+- **未迁（有意）**：带工厂 Callable 的 `bounce` / `radial_accel` / `non_mid_flee` 仍走 `coroutine_script` 端口 —— 每实例工厂会让结构签名按身份分裂（每实例一个 program），等 (b2) 的 **Callable → hook 名** 再迁。
+- **验证**：`./tools/verify.sh` 全绿 **388 / 4203**。
+
 ### 2026-09-14 — b0：`BulletData.lifecycle` 直接挂描述符（含结构签名前置）+ gravity 试点
 
 - **b0**：`BulletData` 新增 `lifecycle: BulletLifecycle`；`prepare_shot` **优先**用它（走既有 `{lifecycle}` 入口），`coroutine_script` / `params` **并存不破**。

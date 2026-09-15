@@ -70,14 +70,13 @@ func test_rect_hitbox_only_when_rect_shape() -> void:
 	assert_eq(rect.to_bullet_type().hitbox_size, Vector2(48, 24), "矩形判定时保留尺寸")
 
 
-## `BulletData.accel` 已映射到 `world_accel`，不再计未映射。
-func test_accel_field_mapped_since_s4a() -> void:
+## `BulletData.lifecycle` 走 `{lifecycle}` 入口，不再计未映射。
+func test_lifecycle_mapped() -> void:
 	var b := _make_backend()
 	var d := _enemy_data()
-	d.accel = Vector2(0, -100)
+	d.lifecycle = BulletLifecycle.world_accel(Vector2(0, -100))
 	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
-	assert_eq(b.unmapped_behavior_count, 0, "accel 已映射，不应计未映射")
-	# 4f：行为全原生 → 断言已注册一个 program（原「move 槽」概念已随 GDScript 内核删除）
+	assert_eq(b.unmapped_behavior_count, 0, "lifecycle 已映射，不应计未映射")
 	assert_eq(b.system._program_data.size(), 1, "应注册 world_accel program")
 
 

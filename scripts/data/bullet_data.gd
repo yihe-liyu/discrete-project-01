@@ -11,7 +11,6 @@ var tint_mode: TintMode = TintMode.MULTIPLY          ## MULTIPLY=乘法叠加, B
 var tint: Color = Color.WHITE                        ## 贴图染色
 var damage: float = 10.0                              ## 基础伤害（支持小数，伤害累积到整才扣血）
 var velocity: Vector2 = Vector2.UP                   ## 速度向量
-var accel: Vector2 = Vector2.ZERO                   ## 加速度（世界方向，px/s²，0=匀速）
 var hit_effect: PackedScene                          ## 击中特效
 var faction: Faction = Faction.PLAYER                ## 阵营
 var can_be_canceled: bool = false                    ## 是否可被 Bomb 消除
@@ -27,6 +26,8 @@ var params: Dictionary = {}                          ## 注入给移动协程脚
 ## 生命周期描述符（b0）：设定后**优先于** coroutine_script。
 ## 内容用 `BulletLifecycle.<preset>(...)` 构建；相同结构共用一个原生 program（content_signature）。
 var lifecycle: BulletLifecycle
+## per-shot 锚点 spec（{id, offset, use_global}）；仅锚定型弹道（激光）需要（b1）。
+var lifecycle_anchor: Variant = null
 var hit_sfx: String = ""                             ## 命中音效注册器 key（空 = 默认 normal_damage）
 var out_grace: float = 0.0                           ## 出界宽限（秒）：出界后仍存活这段时间再回收；0 = 出界立即回收
 
@@ -56,9 +57,10 @@ func dir(x: float, y: float) -> BulletData:
 	velocity = Vector2(x, y)
 	return self
 
-## 匀加速：ax/ay 为世界方向加速度（px/s²），如 .accelerate(0, -4000) = 竖直向上匀加速
-func accelerate(ax: float, ay: float) -> BulletData:
-	accel = Vector2(ax, ay)
+## 设定弹道描述符（b0/b1）。anchor 是 per-shot 锚点 spec（{id, offset, use_global}），仅锚定型弹道（激光）需要。
+func trajectory(lc: BulletLifecycle, anchor: Variant = null) -> BulletData:
+	lifecycle = lc
+	lifecycle_anchor = anchor
 	return self
 
 func color(c: Color) -> BulletData:

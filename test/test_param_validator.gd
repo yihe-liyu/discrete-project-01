@@ -2,10 +2,10 @@ extends GutTest
 ## ParamValidator —— 参数注入校验（打错键名/类型不匹配响亮报错，int/float、合法数字串放行）
 
 const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
-const MoveHomingScript = preload("res://scripts/coroutine/player/move_homing.gd")
+const ParamProbeScript = preload("res://test/fixtures/param_probe.gd")
 
 func _make() -> Node:
-	var n := MoveHomingScript.new()
+	var n := ParamProbeScript.new()
 	autofree(n)   # 测试自建的 Node 由 GUT 收尾，避免孤儿
 	return n
 

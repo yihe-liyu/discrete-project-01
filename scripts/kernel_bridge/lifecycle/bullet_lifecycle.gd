@@ -233,8 +233,8 @@ static func accel(a: float) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"accel", {&"accel": a})
 
 
-static func homing(angle_per_sec: float, accel_time: float, min_speed: float, max_speed: float,
-		duration: float, proximity_boost: float) -> BulletLifecycle:
+static func homing(angle_per_sec := deg_to_rad(720.0), accel_time := 2.0, min_speed := 500.0,
+		max_speed := 2000.0, duration := 2.0, proximity_boost := 150.0) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"homing", {
 		&"homing_angle_per_sec": angle_per_sec, &"accel_time": accel_time,
 		&"min_speed": min_speed, &"max_speed": max_speed,

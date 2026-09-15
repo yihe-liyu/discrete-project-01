@@ -215,7 +215,7 @@ bounce → phases: [
 | `*_shoot.gd`（波编排） | **保留** + 加 pattern builder |
 | `kernel_bridge/behavior/*.gd`（10 个） | → **描述符 preset**（L2）→ 删 GDScript 实现（L4） |
 | `*_bullet.gd`（`kernel_port`：命名 `move` / 自定义 `{lifecycle}`） | → **builder sugar**（✅ 已接，见 `test_lifecycle_port`） |
-| `BulletData.lifecycle`（**b0**：直接挂描述符，不经 port） | ✅ 已接（gravity 试点）；`content_signature` 结构去重，同构共用 1 个 program |
+| `BulletData.lifecycle` / `.trajectory(lc, anchor)`（**b0/b1**：直接挂描述符，不经 port） | ✅ 已接：gravity / homing / marisa_laser / world_accel；`content_signature` 结构去重，同构共用 1 个 program。带工厂 Callable 的（bounce/radial_accel/non_mid_flee）待 b2 |
 | `CoroutineScript` 快速模式（子弹协程） | 已废，随 GDScript 内核拆除 |
 
 ---

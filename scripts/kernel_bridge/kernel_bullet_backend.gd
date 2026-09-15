@@ -3,8 +3,8 @@
 ## 边界：内核不认识 BulletData；弹型由 `BulletData.to_bullet_type()` 在
 ## **内容侧**产出并缓存（内容须复用 BulletData 实例；每发 new 会让内核弹型表每发长一个）。
 ##
-## `coroutine_script` 走 duck-typed `kernel_port()` 端口映射到内核行为（可选覆盖）；
-## `BulletData.accel` 走桥接 `world_accel`。未映射（无端口）仍按直线发射并计入 unmapped。
+## `BulletData.lifecycle` 直接挂描述符（b0/b1，优先）；旧路 `coroutine_script` 走 duck-typed
+## `kernel_port()` 端口映射到内核行为。未映射（无 lifecycle / 无端口）仍按直线发射并计入 unmapped。
 ## 渲染不在本类：纹理走**渲染插座**（纹理句柄表 `texture_for_index`，M3 ③），喂给原项目 BulletMultiMesh。
 class_name KernelBulletBackend
 extends Node
@@ -13,7 +13,6 @@ const MARISA_LASER_FADE_SCRIPT = preload("res://scripts/kernel_bridge/marisa_las
 const KERNEL_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_bomb.gd")
 const KERNEL_MIST_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_mist_bomb.gd")
 const KERNEL_BEHAVIOR_HOST_SCRIPT = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
-const _MOVE_WORLD_ACCEL := &"world_accel"
 const _MOVE_LASER := &"marisa_laser"
 
 ## 内核弹池（原生权威；L3.5-4f 起扩展为必需）。
@@ -22,7 +21,7 @@ var system: KernelNativeSystem
 var entity_registry: EntityRegistry
 ## 弹幕世界（BulletManager 注入）——bomb 宿主节点反查用
 var bullet_manager: BulletManager
-## 未映射行为（有 coroutine_script 或 accel）的发射次数——前用来看覆盖面。
+## 未映射行为（有 coroutine_script 但无端口的）的发射次数——前用来看覆盖面。
 var unmapped_behavior_count: int = 0
 
 var _texture_by_index: Array[Texture2D] = []   # 纹理句柄表（render socket）：弹型下标 → 贴图；M3 ③ 判定为设计 seam，N4 换原生实例缓冲
@@ -123,7 +122,7 @@ func prepare_shot(data: BulletData, pos: Vector2, direction: Vector2) -> Diction
 	if data.lifecycle != null:
 		# b0：内容直接挂描述符，优先于旧的 coroutine_script 端口。
 		move = LifecycleCatalog.MOVE_LIFECYCLE
-		params = {&"lifecycle": data.lifecycle}
+		params = {&"lifecycle": data.lifecycle, &"anchor": data.lifecycle_anchor}
 	elif data.coroutine_script != null:
 		var port: Dictionary = _port_for(data)
 		if port.has("lifecycle"):
@@ -137,9 +136,6 @@ func prepare_shot(data: BulletData, pos: Vector2, direction: Vector2) -> Diction
 			params = port.get("params", null)
 		else:
 			unmapped_behavior_count += 1   # 无端口：按直线发射
-	elif data.accel != Vector2.ZERO:
-		move = _MOVE_WORLD_ACCEL
-		params = {&"world_accel": data.accel}
 	if move == _MOVE_LASER:
 		type.kind = BulletType.Kind.LASER   # 供渲染桥整批淡出
 		if _laser_fade != null:

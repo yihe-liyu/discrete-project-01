@@ -11,7 +11,7 @@
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. F6 运行工作台 → 命中框/固定种子/逐帧看效果；改完代码**重启工作台**生效
 4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完同样重启工作台看
-5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为接口」（`kernel_port()`：命名 `move + params`，或自定义拼 `{lifecycle}`）
+5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为接口」（`BulletData.trajectory(lc)` 直接挂；或 `kernel_port()` 端口：命名 `move + params` / 自定义 `{lifecycle}`）
 
 > 工作台**不是编辑器**：不写数据、不热重载，是「跑真实代码看效果」的预览沙盒。
 > 数据（关卡/Boss/阶段）全部以代码 + .tres 形式存在，由 AI/人直接写。
@@ -236,7 +236,7 @@ extends CoroutineScript
 ## @desc: 描述（默认=其余注释行；@name 存在时=全部注释行）
 ```
 
-### 弹幕行为接口（`kernel_port` → `move + params`）
+### 弹幕行为接口（`BulletData.trajectory` 直挂 / `kernel_port` 端口）
 
 弹丸脚本（`*_bullet.gd`）做一件事：把参数翻译成内核**端口**——**命名 `move`**（下表）或 **自定义 `{lifecycle}`**（下节）。**权威真相 = `scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` 的 `build()`**（下表由此抄出）。
 
@@ -270,6 +270,12 @@ func kernel_port() -> Dictionary:
 > - **未知 `move` → 按直线发射**（计入 `unmapped_behavior_count`）。
 > - **新增 `move`** = 在 `LifecycleCatalog.build()` 加分支，**就地用原语拼出组合**（组合唯一在此）；`BulletLifecycle` 的同名 preset 是可选类型化糖。**组合现有 Move/Until/Action 无需改 C++**；只有需要**新原语**才动 `gdextension/src/danmaku_store.cpp`。
 > - **只是某一颗弹想要"预设表里没有"的组合** → 不用新增 `move`，见下节 `{lifecycle}`。
+>
+> **直接挂描述符（推荐，b0/b1）**：多数行为已不需要 `*_bullet.gd` 载体 —— 内容直接
+> `b.trajectory(BulletLifecycle.homing())`（重力 / 诱导 / 激光等已迁移）。**端口保留**给
+> 带工厂 Callable 的行为（`bounce` / `radial_accel` / `non_mid_flee`）与仍写 `move + params` 的内容。
+> 锚定型弹道（激光）用第二参数传 per-shot 锚点：
+> `b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})`。
 
 ---
 

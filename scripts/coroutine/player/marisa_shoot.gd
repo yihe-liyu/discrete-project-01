@@ -2,7 +2,6 @@ extends PlayerShootScript
 class_name MarisaShoot
 
 const OPTION_VISUAL = preload("res://scripts/coroutine/player/marisa_option_visual.gd")
-const LASER_FOLLOW = preload("res://scripts/coroutine/player/marisa_laser_follow.gd")
 ## 激光贴图：从注册器取（与 bullet_configs marisa_opt1 同源）
 var LASER_TEX: Texture2D = AssetRegistry.get_bullet_tex("marisa_opt1")
 
@@ -35,6 +34,8 @@ var _segment_textures: Array[AtlasTexture] = []  # 切片缓存（省每段 new�
 var _main_bullet_data: BulletData
 var _focus_bullet_data: BulletData
 var _laser_bullets: Array[BulletData] = []
+## 激光段描述符缓存（按角度）—— 同角度共用 1 个 program；锚点走 per-shot lifecycle_anchor
+var _laser_trajectories: Dictionary = {}
 
 
 func _seg_count() -> int:
@@ -78,7 +79,7 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 	if Input.is_action_pressed("focus"):
 		# focus：竖直向上匀加速星弹（初速 + 加速度，每秒加速 —— 数值可调）
 		if _focus_bullet_data == null:
-			_focus_bullet_data = BulletData.new().tex("marisa_opt2").speed(1500).accelerate(0, -5000).player()
+			_focus_bullet_data = BulletData.new().tex("marisa_opt2").speed(1500).trajectory(BulletLifecycle.world_accel(Vector2(0, -5000))).player()
 			_focus_bullet_data.color(Color(1, 1, 1, 0.5))
 			_focus_bullet_data.damage = 4
 			_focus_bullet_data.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
@@ -118,6 +119,20 @@ func _make_laser_segment(i: int) -> AtlasTexture:
 	return _segment_textures[i % _seg_count()]
 
 
+## 激光段描述符：按角度缓存（同角度共用 1 个 program）
+func _laser_trajectory(angle_rad: float) -> BulletLifecycle:
+	var lc: BulletLifecycle = _laser_trajectories.get(angle_rad)
+	if lc == null:
+		lc = BulletLifecycle.marisa_laser(0, Vector2.ZERO, angle_rad, LASER_DRIFT_SPEED, 0.0)
+		_laser_trajectories[angle_rad] = lc
+	return lc
+
+
+## 激光段锚点：per-shot（发射口 = 子机；marisa 子机是 World 兄弟 → use_global）
+func _laser_anchor(source: Node2D) -> Dictionary:
+	return {&"id": source.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
+
+
 ## 段弹型：按帧缓存（同一帧复用同一 BulletData 实例 → 内核弹型表不随发射增长）。
 func _get_laser_bullet(frame: int) -> BulletData:
 	var i: int = frame % _seg_count()
@@ -131,7 +146,6 @@ func _get_laser_bullet(frame: int) -> BulletData:
 		# 矩形判定覆盖整段（贴视觉：64x32，旋转后 32x64 竖条）
 		b.hitbox_shape = BulletData.HitboxShape.RECTANGLE
 		b.hitbox_size = Vector2(SEG_W, SEG_H)
-		b.coroutine_script = LASER_FOLLOW
 		_laser_bullets.append(b)
 	return _laser_bullets[i]
 
@@ -153,14 +167,9 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	var angles: Array = LASER_ANGLES[lv]
 	var angle_rad: float = deg_to_rad(angles[opt_idx] if opt_idx < angles.size() else 0.0)
 
-	# 内核端口读 b.params（见 marisa_laser_follow.kernel_port）
-	b.params = {
-		"port_anchor_id": source.get_instance_id(),
-		"port_anchor_offset": Vector2.ZERO,
-		"port_drift_speed": LASER_DRIFT_SPEED,
-		"port_drift_angle": angle_rad,
-	}
+	# 弹道 = 每角度一个描述符（缓存）；锚点是 per-shot（同角度、不同子机各一份 program）
+	b.trajectory(_laser_trajectory(angle_rad), _laser_anchor(source))
 
 	# 段在发射口生成（offset=0），drift 从 0 独立累积 → 根部永远在子机
-	# 内核唯一后端（返回 int id）；段参数已走 b.params（见 kernel_port / marisa_laser）
+	# 段参数已走 b.trajectory（每角度一个描述符 + per-shot 锚点）
 	ctx.bullets.shoot_spread(b, 1, 0.0, Vector2.UP, source.global_position)
