@@ -18,6 +18,13 @@
 
 ## 记录
 
+### 2026-09-14 — 清 move_homing 的死协程体（gravity_bullet 同款，×7）
+
+- **问题**：`scripts/coroutine/player/move_homing.gd` 带着**完整的 GDScript 诱导实现**（`start()` 重写 + `timeline.every(0).do(...)` + `_find_nearest_enemy` + `_apply_homing` + `_calc_turn_factor` + `_is_still_homing`），但生产**从不执行** —— `kernel_port()` 存在，后端走原生 `homing`；参照实现早已冻结在 `test/reference/behavior/homing_behavior.gd`（注释"移植旧 move_homing.gd"）。同 `gravity_bullet._tick`，只是大 7 倍。
+- **修**：删死体，只留参数声明 + `kernel_port()`。**参数声明保留** —— 既是端口来源，也是 `test_param_validator.gd` 的类型化夹具（故 GUT 仍全绿）。
+- **连带**：`test/perf_stress/verify_fix.gd` 的"诱导弹转向"段驱动的正是这段死体 → 摘掉；**保留子机跟随**段（`OptionFollow` 是全项目唯一无 GUT 覆盖的活动协程，手动台值得留）。
+- **验证**：`./tools/verify.sh` 全绿 **382 / 4196**。
+
 ### 2026-09-14 — CoroutineScript/Runner 提速清理：删「快速模式」与 4 处死访问器
 
 - **病灶**：`CoroutineScript` 的「快速模式」（`start_fast` / `tick_fast` / `_fast_wait_left` + `CoroutineRunner._is_fast_mode`）是**子弹协程时代**的产物（注释自称"子弹协程专用"）；子弹已原生 → 生产 0 调用，只有 2 个测试脚本在用。与 `gravity_bullet._tick` **同源**（同一场拆除的漏网）。
