@@ -97,7 +97,7 @@ func enter(profile: CharacterProfile, pos: Vector2, opts: Dictionary = {}) -> Di
 	s.profile = profile
 	s.char_name = profile.char_name
 	s.pos = pos
-	s.flip = opts.get("flip", false)
+	s.is_flip = opts.get("flip", false)
 	s.light = opts.get("dim", 1.0)
 	s.emotion = opts.get("emotion", "通常")
 	# 新角色进场后通常是他说下一句 → 更新延续者
@@ -128,7 +128,7 @@ func flip(char_name: String, flipped: bool) -> DialogueSteps:
 	var s := DialogueStep.new()
 	s.type = DialogueStep.Type.FLIP
 	s.char_name = char_name
-	s.flip = flipped
+	s.is_flip = flipped
 	return _add(s)
 
 

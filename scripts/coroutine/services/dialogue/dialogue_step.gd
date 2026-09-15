@@ -22,7 +22,7 @@ var profile: CharacterProfile     # ENTER 用
 var line_data: DialogueLine       # LINE 用（DSL 内联台词构造的一屏数据）
 var pos: Vector2 = Vector2.ZERO   # ENTER/MOVE 用
 var duration: float = 0.0         # MOVE/WAIT 用
-var flip: bool = false            # ENTER(默认 false)/FLIP 用
+var is_flip: bool = false         # ENTER(默认 false)/FLIP 用
 var light: float = 1.0            # ENTER 的 dim 选项 / DIM 用
 var emotion: String = "通常"      # ENTER/PORTRAIT 用
 var bubble_offset: Vector2 = Vector2(-220.0, 250.0)  # BUBBLE 用

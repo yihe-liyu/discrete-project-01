@@ -12,7 +12,7 @@ var _stage_index: int = 0
 var _phase_index: int = 0
 var _diff_index: int = 0
 var _char_index: int = 0
-var _input_ready: bool = false
+var _is_input_ready: bool = false
 
 const DIFF_NAMES = SpellRecord.DIFF_NAMES
 const DIFF_VALUES = SpellRecord.DIFF_VALUES
@@ -30,7 +30,7 @@ func diff_name(v: int) -> String:
 var _stages: Array[int] = []
 # 每个 phase: {rec: SpellRecord(带配置), diffs: {diff: SpellRecord}}
 var _phases: Array[Dictionary] = []
-# 当前 phase 的难度项：{diff: int, locked: bool}（锁定 = 花名册有该难度但未挑战过）
+# 当前 phase 的难度项：{diff: int, is_locked: bool}（锁定 = 花名册有该难度但未挑战过）
 var _diff_entries: Array[Dictionary] = []
 var _pulse_tween: Tween
 
@@ -51,11 +51,11 @@ func on_enter() -> void:
 	var tw := create_tween()
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "modulate:a", 1.0, 0.35)
-	tw.tween_callback(func(): _input_ready = true)
+	tw.tween_callback(func(): _is_input_ready = true)
 
 
 func on_leave() -> void:
-	_input_ready = false
+	_is_input_ready = false
 	_stop_pulse()
 
 	var tw := create_tween()
@@ -194,13 +194,13 @@ func _build_diff_list() -> void:
 		candidate.sort()
 
 	for d in candidate:
-		var locked: bool = not info["diffs"].has(d)
-		_diff_entries.append({diff = d, locked = locked})
+		var is_locked: bool = not info["diffs"].has(d)
+		_diff_entries.append({diff = d, is_locked = is_locked})
 
 		# 渲染：锁定 → "?" + 更深灰；解锁 → 名字 + 战绩
 		var vbox := VBoxContainer.new()
 		var nl := Label.new()
-		if locked:
+		if is_locked:
 			nl.text = "?"
 		else:
 			var card := BossCatalog.phase_at(rec.stage, rec.phase_index, d)
@@ -208,7 +208,7 @@ func _build_diff_list() -> void:
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nl.add_theme_font_size_override("font_size", 30)
 		var r: SpellRecord = info["diffs"].get(d, null)
-		if r and r.practice_captures > 0 and not locked:
+		if r and r.practice_captures > 0 and not is_locked:
 			nl.add_theme_color_override("font_color", Color(0.4, 0.7, 1.0))
 		vbox.add_child(nl)
 
@@ -216,7 +216,7 @@ func _build_diff_list() -> void:
 		hrow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 		var hl := Label.new()
-		if locked:
+		if is_locked:
 			hl.text = DIFF_NAMES[d]
 		else:
 			var uid_str := ""
@@ -231,7 +231,7 @@ func _build_diff_list() -> void:
 		hrow.add_child(hl)
 
 		var sl := Label.new()
-		sl.text = "--/--" if locked else "%02d/%02d" % [r.practice_captures, r.practice_attempts]
+		sl.text = "--/--" if is_locked else "%02d/%02d" % [r.practice_captures, r.practice_attempts]
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		sl.add_theme_font_size_override("font_size", 22)
 		sl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
@@ -242,7 +242,7 @@ func _build_diff_list() -> void:
 
 	# 初始索引：跳到第一个未锁定的难度
 	for i in _diff_entries.size():
-		if not _diff_entries[i].locked:
+		if not _diff_entries[i].is_locked:
 			_diff_index = i
 			return
 
@@ -353,7 +353,7 @@ func _highlight_one_vbox(vbox: VBoxContainer, idx: int) -> void:
 
 
 func _diff_dim_for(i: int) -> Color:
-	if i < _diff_entries.size() and _diff_entries[i].locked:
+	if i < _diff_entries.size() and _diff_entries[i].is_locked:
 		return Color(0.15, 0.15, 0.15)
 	return Color(0.3, 0.3, 0.3)
 
@@ -440,7 +440,7 @@ func _move_diff(dir: int) -> void:
 	var i := _diff_index
 	for _step in range(n):
 		i = wrapi(i + dir, 0, n)
-		if not _diff_entries[i].locked:
+		if not _diff_entries[i].is_locked:
 			_diff_index = i
 			return
 
@@ -468,7 +468,7 @@ func _refresh_char() -> void:
 # ═══ 输入 ═══
 
 func _input(event: InputEvent) -> void:
-	if not _input_ready: return
+	if not _is_input_ready: return
 
 	if event.is_action_pressed("ui_cancel"):
 		sfx_back()
@@ -567,7 +567,7 @@ func _start_practice() -> void:
 		push_warning("SpellPractice: 难度表为空或索引越界（entries=%d index=%d）——练习未开始" % [_diff_entries.size(), _diff_index])
 		return
 	var entry: Dictionary = _diff_entries[_diff_index]
-	if entry.locked:
+	if entry.is_locked:
 		push_warning("SpellPractice: 难度 %d 未解锁——练习未开始" % int(entry.get("diff", -1)))
 		return  # 锁定难度不可开始
 	var diff: int = entry.diff

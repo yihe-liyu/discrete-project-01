@@ -2,7 +2,7 @@ class_name BulletService
 ## 子弹服务 —— ctx.bullets 下的弹幕/激光 API
 extends RefCounted
 
-var active: bool = true
+var is_active: bool = true
 ## 弹幕世界（StageContext 从绑定的 stage 取；起不再回退 BulletManager.current）。
 ## 无 stage 绑定 = null：方法静默 no-op（测试 / 无场景上下文），不崩。
 var bullet_manager: BulletManager
@@ -10,7 +10,7 @@ var bullet_manager: BulletManager
 
 ## 扇形散弹。count == 1 打一发（忽略 spread_angle）；不发弹（active=false / count ≤ 0）时静默返回。
 func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void:
-	if not active or count <= 0 or bullet_manager == null:
+	if not is_active or count <= 0 or bullet_manager == null:
 		return
 	if sfx:
 		AudioManager.play_sfx(sfx, -8.0)
@@ -27,27 +27,27 @@ func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base
 
 ## 骨架级生成（配合 LaserPresets 预设）：最灵活入口
 func spawn_laser(skeleton: LaserSkeleton, color: Color, opts: Dictionary = {}) -> LaserBeam:
-	if not active or bullet_manager == null: return null
+	if not is_active or bullet_manager == null: return null
 	return bullet_manager.spawn_laser(skeleton, color, opts)
 
 ## 沿 Curve2D 生长的激光
 func fire_growing_laser(curve: Curve2D, color: Color, speed: float = 600.0, tail: float = 300.0, lifetime: float = 8.0, tex: Texture2D = null) -> LaserBeam:
-	if not active or bullet_manager == null: return null
+	if not is_active or bullet_manager == null: return null
 	return bullet_manager.fire_growing_laser(curve, color, speed, tail, lifetime, tex)
 
 ## 两点间直线激光（瞬间全开）
 func fire_line_laser(a: Vector2, b: Vector2, color: Color, lifetime: float = 3.0, tex: Texture2D = null) -> LaserBeam:
-	if not active or bullet_manager == null: return null
+	if not is_active or bullet_manager == null: return null
 	return bullet_manager.fire_line_laser(a, b, color, lifetime, tex)
 
 ## 固定路径激光（沿 Curve2D 瞬间全开）
 func fire_fixed_laser(curve: Curve2D, color: Color, lifetime: float = 3.0, tex: Texture2D = null) -> LaserBeam:
-	if not active or bullet_manager == null: return null
+	if not is_active or bullet_manager == null: return null
 	return bullet_manager.fire_fixed_laser(curve, color, lifetime, tex)
 
 ## 自机导向激光
 func fire_homing_laser(origin: Vector2, player_pos: Vector2, color: Color, bend: float = 100.0, length: float = 500.0, lifetime: float = 5.0) -> LaserBeam:
-	if not active or bullet_manager == null or player_pos == Vector2.ZERO:
+	if not is_active or bullet_manager == null or player_pos == Vector2.ZERO:
 		return null
 	var dir := (player_pos - origin).normalized()
 	var end := origin + dir * length

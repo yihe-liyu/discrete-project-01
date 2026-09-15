@@ -15,13 +15,13 @@ func test_moves_down_until_offscreen() -> void:
 
 	# 匀速下移 120px/s：每 0.1s 推进 12px。前 50 帧（y=100→700）应仍在屏内
 	var frames := 0
-	var alive := true
+	var is_alive := true
 	while frames < 50:
-		alive = cs.tick_fast(0.1)
+		is_alive = cs.tick_fast(0.1)
 		frames += 1
-		if not alive:
+		if not is_alive:
 			break
-	assert_true(alive, "出屏前应持续移动")
+	assert_true(is_alive, "出屏前应持续移动")
 	assert_gt(tgt.global_position.y, 100.0 + 120.0, "应已下移（120px/s × 等价推进）")
 
 	# 继续：直到离开屏幕（下缘 + 32px 宽限）→ 返回 false

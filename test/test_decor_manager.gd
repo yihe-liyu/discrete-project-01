@@ -37,7 +37,7 @@ func _group() -> Dictionary:
 func _alive_count(g: Dictionary) -> int:
 	var n := 0
 	for e in g["test"].entries:
-		if e.alive:
+		if e.is_alive:
 			n += 1
 	return n
 
@@ -76,7 +76,7 @@ func test_spawn_world_to_local_conversion():
 	_decor_manager.spawn("test", Vector3(0, 4, -200), Vector2(4, 4), _background_plane)
 	var found := false
 	for e in g["test"].entries:
-		if e.alive and absf((e.position.z + off.z) - (-200.0)) < 1.0:
+		if e.is_alive and absf((e.position.z + off.z) - (-200.0)) < 1.0:
 			found = true
 	assert_true(found, "补种的树应出现在 world z=-200 附近（local=world-offset 换算错误则失败）")
 
@@ -101,7 +101,7 @@ func test_culling_and_slot_reuse():
 	var off: Vector3 = g["test"].scroll_offset
 	var ok_pos := false
 	for e in g["test"].entries:
-		if e.alive and absf((e.position.z + off.z) - (-190.0)) < 1.0:
+		if e.is_alive and absf((e.position.z + off.z) - (-190.0)) < 1.0:
 			ok_pos = true
 	assert_true(ok_pos, "复用槽位的新树应出现在 world z=-190 附近")
 

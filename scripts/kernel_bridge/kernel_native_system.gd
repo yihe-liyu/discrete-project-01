@@ -25,7 +25,7 @@ var _accel: Object = null
 var native_frames: int = 0
 
 # ── 原生行为执行（由 KernelBulletBackend 装配）──
-var native_behaviors: bool = false
+var enable_native_behaviors: bool = false
 var behavior_ctx: BehaviorContext
 var behavior_host          # KernelBehaviorHost
 var boss_getter: Callable
@@ -138,7 +138,7 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 		_accel.set_life(nid, _life_left[id])
 		_accel.set_fx(nid, _fx_phase[id])
 		_accel.set_timer(nid, _timer[id])
-		# program 在发射时就绑定（与 native_behaviors 是否执行无关）；未映射 move → -1。
+		# program 在发射时就绑定（与 enable_native_behaviors 是否执行无关）；未映射 move → -1。
 		var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
 		var prog: int = _program_for(move, params)
 		_accel.set_program(nid, prog)
@@ -342,7 +342,7 @@ func _physics_process(delta: float) -> void:
 		return
 	native_frames += 1
 	_accel.integrate(delta)
-	if native_behaviors:
+	if enable_native_behaviors:
 		_run_native_behaviors(delta)
 	_pull_snapshot()
 

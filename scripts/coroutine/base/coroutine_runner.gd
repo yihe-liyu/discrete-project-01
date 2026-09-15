@@ -23,8 +23,8 @@ signal finished()
 signal cancelled()
 
 var is_running: bool = false
-var _paused: bool = false
-var _fast_mode: bool = false  ## 快速模式（子弹协程）：run() 不创建 Task，由宿主 tick_fast 驱动
+var _is_paused: bool = false
+var _is_fast_mode: bool = false  ## 快速模式（子弹协程）：run() 不创建 Task，由宿主 tick_fast 驱动
 var _tasks: Array[Task] = []
 var _clock: float = 0.0  # 游戏内时间（物理帧累积，暂停时冻结）
 var _last_dt: float = 0.0  # 当前帧物理步长（time_scale 生效；节点/无节点模式一致）
@@ -54,7 +54,7 @@ class Task extends RefCounted:
 func run(method: Callable):
 	stop()
 	_clock = 0.0
-	if _fast_mode:
+	if _is_fast_mode:
 		return  # 快速模式：不创建调度 Task（由宿主直接调 _tick）
 	_start_task(method)
 
@@ -71,7 +71,7 @@ func _start_task(method: Callable):
 func stop():
 	if not is_running:
 		return
-	_paused = false
+	_is_paused = false
 	for task in _tasks:
 		task.callable = Callable()
 	_tasks.clear()
@@ -83,22 +83,22 @@ func stop():
 func pause() -> void:
 	if not is_running:
 		return
-	_paused = true
+	_is_paused = true
 
 
 ## 恢复运行（时钟从暂停处继续）
 func resume() -> void:
-	_paused = false
+	_is_paused = false
 
 
 func is_paused() -> bool:
-	return _paused
+	return _is_paused
 
 
 func _physics_process(_delta: float) -> void:
 	if not is_running:
 		return
-	if _paused:
+	if _is_paused:
 		return  # 暂停时不累积时钟
 	_last_dt = get_physics_process_delta_time()  # 用引擎时钟（time_scale 生效，快进/慢动作正确）
 	_clock += _last_dt
@@ -111,7 +111,7 @@ func _physics_process(_delta: float) -> void:
 func tick_manual(dt: float) -> bool:
 	if not is_running:
 		return false
-	if _paused:
+	if _is_paused:
 		return true
 	_last_dt = dt
 	_clock += dt

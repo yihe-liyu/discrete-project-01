@@ -268,7 +268,7 @@ func restore(d: Dictionary) -> void:
 func _fire() -> void:
 	_shell.tex_key = _tex_sel.get_item_text(_tex_sel.selected)
 	_shell.tint = _color_btn.color
-	_shell.blend = _blend_chk.button_pressed
+	_shell.is_blend = _blend_chk.button_pressed
 	_shell.speed = _speed_spin.value
 	var data: BulletData = _shell.build(_cur_script)
 	data.params = _param_panel.collect()

@@ -15,13 +15,13 @@ var _logo_tween: Tween
 func _ready() -> void:
 	# 导航初始化（不走 NavPage.on_enter，因为 MainMenu 是场景根）
 	_setup_nav()
-	_nav_enabled = false  # 等 Logo 播完再启用
+	_is_nav_enabled = false  # 等 Logo 播完再启用
 
 	# 锁定项
-	_container.get_node("Extra Start").set_meta("locked", true)
+	_container.get_node("Extra Start").set_meta("is_locked", true)
 
 	if SaveData.spell_book.records.is_empty():
-		_container.get_node("Spell Practice").set_meta("locked", true)
+		_container.get_node("Spell Practice").set_meta("is_locked", true)
 
 	refresh_colors()
 
@@ -123,7 +123,7 @@ func _open_spell_practice() -> void:
 # ═══ 标题停用/恢复 ═══
 
 func _deactivate_title() -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	refresh_colors()
 
@@ -150,7 +150,7 @@ func _activate_title() -> void:
 	tw.tween_property(_particles, "modulate:a", 0.0, 0.25)
 	tw.tween_callback(func():
 		refresh_colors()
-		_nav_enabled = true
+		_is_nav_enabled = true
 		if _nav_index >= 0 and _nav_index < _nav_items.size():
 			_start_pulse(_nav_items[_nav_index])
 	).set_delay(0.25)
@@ -174,5 +174,5 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("debug_toggle"):
 		# TODO: debug_fill_spells 已移除 — 从 stage_registry 自动填充
-		_container.get_node("Spell Practice").remove_meta("locked")
+		_container.get_node("Spell Practice").remove_meta("is_locked")
 		refresh_colors()

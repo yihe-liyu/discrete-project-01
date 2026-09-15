@@ -10,7 +10,7 @@ var _size := Vector2.ZERO
 var _stage: int = Stage.LENGTH
 var _stage_t: float = 0.0
 
-var _follow: bool = true
+var _is_follow: bool = true
 var _anchor_offset := Vector2.ZERO
 var _length: Vector2 = Vector2(0.0, 1.0)      # 长的 起始→最终（贴图 x 的比例）
 var _width: Vector2 = Vector2(0.0, 1.0)       # 宽的 起始→最终（贴图 y 的比例）
@@ -31,7 +31,7 @@ func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Co
 		push_error("[KernelMistBomb] setup 需要 MistBombData")
 		return
 	data = d
-	_follow = d.follow_player
+	_is_follow = d.follow_player
 	_anchor_offset = d.anchor_offset
 	_length = d.length_range
 	_width = d.width_range
@@ -66,7 +66,7 @@ func width_now() -> float:
 
 func _physics_process(delta: float) -> void:
 	_stage_t += delta
-	if _follow and entity_registry != null:
+	if _is_follow and entity_registry != null:
 		var p = entity_registry.player
 		if is_instance_valid(p):
 			global_position = p.global_position + _anchor_offset

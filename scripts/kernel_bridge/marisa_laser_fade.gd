@@ -7,9 +7,9 @@ extends RefCounted
 const FADE_TIME: float = 0.2
 
 var backend   # KernelBulletBackend
-var _fading: bool = false
+var _is_fading: bool = false
 var _fade_t: float = 0.0
-var _spawned: bool = false   # 自上次淡完后是否又生成过激光段
+var _is_spawned: bool = false   # 自上次淡完后是否又生成过激光段
 
 
 func setup(p_backend) -> void:
@@ -21,22 +21,22 @@ func process(delta: float) -> void:
 	var system = backend.system
 	if system == null:
 		return
-	if _fading:
+	if _is_fading:
 		_fade_t -= delta
 		system.set_render_fade(BulletType.Kind.LASER, clampf(_fade_t / FADE_TIME, 0.0, 1.0))
 		if _fade_t <= 0.0:
-			_fading = false
-			_spawned = false
+			_is_fading = false
+			_is_spawned = false
 			_despawn_lasers(system)
-	elif _spawned and _is_released():
-		_fading = true
+	elif _is_spawned and _is_released():
+		_is_fading = true
 		_fade_t = FADE_TIME
 
 
 ## 新激光段发射时复位（按住射击期间保持满亮）。
 func on_laser_spawned() -> void:
-	_fading = false
-	_spawned = true
+	_is_fading = false
+	_is_spawned = true
 	_fade_t = FADE_TIME
 	if backend.system != null:
 		backend.system.set_render_fade(BulletType.Kind.LASER, 1.0)

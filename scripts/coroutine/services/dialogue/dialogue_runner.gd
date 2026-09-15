@@ -90,9 +90,9 @@ func _exec(step: DialogueStep) -> void:
 
 		DialogueStep.Type.ENTER:
 			var a := state.ensure(step.profile)
-			a.visible = true
+			a.is_visible = true
 			a.position = step.pos
-			a.flip_h = step.flip
+			a.is_flip_h = step.is_flip
 			a.light = step.light
 			a.emotion = step.emotion
 			state_changed.emit(state, 0.0)
@@ -100,7 +100,7 @@ func _exec(step: DialogueStep) -> void:
 
 		DialogueStep.Type.EXIT:
 			var a := state.actor(step.char_name)
-			if a: a.visible = false
+			if a: a.is_visible = false
 			state_changed.emit(state, 0.0)
 			_advance()
 
@@ -112,7 +112,7 @@ func _exec(step: DialogueStep) -> void:
 
 		DialogueStep.Type.FLIP:
 			var a := state.actor(step.char_name)
-			if a: a.flip_h = step.flip
+			if a: a.is_flip_h = step.is_flip
 			state_changed.emit(state, 0.0)
 			_advance()
 

@@ -10,7 +10,7 @@ class DecorEntry:
 	var follow: BackgroundPlane
 	var spawn_time: float
 	var lifetime: float = -1.0
-	var alive: bool = true
+	var is_alive: bool = true
 
 
 class _LayerGroup:
@@ -119,7 +119,7 @@ func _process_static(g: _LayerGroup, delta: float) -> void:
 	var offset_z := g.scroll_offset.z
 	for i in entries.size():
 		var e := entries[i]
-		if not e.alive:
+		if not e.is_alive:
 			continue
 		if e.lifetime > 0 and (e.spawn_time > 0 and _elapsed - e.spawn_time >= e.lifetime):
 			_kill(g, i)
@@ -137,13 +137,13 @@ func _process_dynamic(g: _LayerGroup, delta: float) -> void:
 			var ry: float = e.follow.plane_size.y / maxf(e.follow.tiling.y, 1.0)
 			e.position += Vector3(e.follow.scroll_speed.x * rx, 0, -e.follow.scroll_speed.y * ry) * delta
 		if e.lifetime > 0 and (e.spawn_time > 0 and _elapsed - e.spawn_time >= e.lifetime):
-			e.alive = false
+			e.is_alive = false
 		if e.position.z > 100 or e.position.z < -400:
-			e.alive = false
-	var alive: Array[DecorEntry] = []
+			e.is_alive = false
+	var is_alive: Array[DecorEntry] = []
 	for e in entries:
-		if e.alive: alive.append(e)
-	g.entries = alive
+		if e.is_alive: is_alive.append(e)
+	g.entries = is_alive
 	g.entries.sort_custom(func(a, b): return a.position.z < b.position.z)
 	_flush_all(g)
 
@@ -158,7 +158,7 @@ func _alloc_slot(g: _LayerGroup, local_pos: Vector3, sz: Vector2, follow: Backgr
 	e.follow = follow
 	e.spawn_time = _elapsed
 	e.lifetime = lifetime
-	e.alive = true
+	e.is_alive = true
 	# 组级跟随平面：取首个非 null；之后不一致只警告（实际各层都统一 follow 同一地面）
 	if g.follow == null and follow != null:
 		g.follow = follow
@@ -194,7 +194,7 @@ func _ensure_capacity(g: _LayerGroup, needed: int) -> void:
 
 ## 淘汰：占位保留槽位，0 缩放隐藏实例，索引进复用栈
 func _kill(g: _LayerGroup, idx: int) -> void:
-	g.entries[idx].alive = false
+	g.entries[idx].is_alive = false
 	g.free_slots.append(idx)
 	_write_instance(g, idx)  # 0 缩放隐藏该实例
 
@@ -202,7 +202,7 @@ func _kill(g: _LayerGroup, idx: int) -> void:
 func _write_instance(g: _LayerGroup, idx: int) -> void:
 	_instance_writes += 1
 	var e := g.entries[idx]
-	if e.alive:
+	if e.is_alive:
 		g.multi_mesh.set_instance_transform(idx, _scale_transform(e.scale, e.position))
 	else:
 		g.multi_mesh.set_instance_transform(idx, _zero_transform())

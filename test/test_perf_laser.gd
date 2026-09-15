@@ -1,6 +1,6 @@
 extends GutTest
 ## 激光性能基准：100 条激光每帧 step 开销
-## 记录数字供对比（静止激光应接近 0，因为 _dirty 不重建）
+## 记录数字供对比（静止激光应接近 0，因为 _is_dirty 不重建）
 
 var _holder: Node
 

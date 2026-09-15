@@ -25,7 +25,7 @@ static var save_mgr := SaveManager.new()
 ## 关卡练习模式（完整一面，不打下一关）
 static var is_stage_practice: bool = false
 ## 重开中（暂停 / GameOver 选重开时置位；重开时不结束练习）
-static var restarting: bool = false
+static var is_restarting: bool = false
 
 
 # ═══ 启动装配 ═══
@@ -102,7 +102,7 @@ static func reset_practice(entity_registry: EntityRegistry) -> void:
 static func reset_session() -> void:
 	PracticeSession.clear()
 	current_stage_id = 1
-	restarting = false
+	is_restarting = false
 	is_stage_practice = false
 
 

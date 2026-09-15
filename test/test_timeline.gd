@@ -22,16 +22,16 @@ func _make_timeline() -> Timeline:
 ## 基础：事件在设定时间点触发，按顺序
 func test_events_fire_at_scheduled_time():
 	var timeline := _make_timeline()
-	var fired: Array = []
-	timeline.at(1.0).do(func(): fired.append("a"))
-	timeline.at(2.0).do(func(): fired.append("b"))
+	var is_fired: Array = []
+	timeline.at(1.0).do(func(): is_fired.append("a"))
+	timeline.at(2.0).do(func(): is_fired.append("b"))
 
 	timeline.tick(0.5)   # t=0.5
-	assert_eq(fired, [], "t=0.5 不应触发任何事件")
+	assert_eq(is_fired, [], "t=0.5 不应触发任何事件")
 	timeline.tick(0.6)   # t=1.1
-	assert_eq(fired, ["a"], "t=1.1 应触发 a")
+	assert_eq(is_fired, ["a"], "t=1.1 应触发 a")
 	timeline.tick(1.0)   # t=2.1
-	assert_eq(fired, ["a", "b"], "t=2.1 应触发 b")
+	assert_eq(is_fired, ["a", "b"], "t=2.1 应触发 b")
 
 
 ## 重复事件：every + times 恰好触发指定次数
@@ -101,17 +101,17 @@ func test_reset_restarts():
 ## 而不是按跨点后的 _elapsed 重排（旧实现会让下一轮整体推迟 overshoot 量）
 func test_loop_reset_uses_loop_start_not_overshoot():
 	var timeline := _make_timeline()
-	var fired: Array = []
-	timeline.at(1.0).do(func(): fired.append("a"))
-	timeline.at(2.0).do(func(): fired.append("b"))
+	var is_fired: Array = []
+	timeline.at(1.0).do(func(): is_fired.append("a"))
+	timeline.at(2.0).do(func(): is_fired.append("b"))
 	timeline.loop()
 
 	timeline.tick(1.5)   # t=1.5 → a
-	assert_eq(fired, ["a"], "t=1.5 应触发 a")
+	assert_eq(is_fired, ["a"], "t=1.5 应触发 a")
 	timeline.tick(1.5)   # t=3.0 → b，并重置到 loop_start=2.0（跨点 1.0s）
-	assert_eq(fired, ["a", "b"], "t=3.0 应触发 b 并进入下一轮")
+	assert_eq(is_fired, ["a", "b"], "t=3.0 应触发 b 并进入下一轮")
 	timeline.tick(1.0)   # t=3.0 → 新一轮 a 应恰好在 loop_start+1.0 触发
-	assert_eq(fired, ["a", "b", "a"], "跨点后下一轮事件应精确定时（不随 overshoot 漂移）")
+	assert_eq(is_fired, ["a", "b", "a"], "跨点后下一轮事件应精确定时（不随 overshoot 漂移）")
 
 
 ## loop 应恢复重复事件配置：times(2) 每轮都触发 2 次，而不是重置后变成单次

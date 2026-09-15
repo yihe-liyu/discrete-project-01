@@ -51,7 +51,7 @@ var _fast_wait_left: float = 0.0
 ## 快速模式启动（子弹协程）：不创建 Task、不依赖 runner 调度
 ## 关键：调用子类覆写的 start()（初始化/建 timeline 照常），只是 run() 跳过 Task
 func start_fast(p_ctx: StageContext, p_target: Node2D = null) -> void:
-	_fast_mode = true
+	_is_fast_mode = true
 	start(p_ctx, p_target)
 	is_running = true
 	_fast_wait_left = 0.0
@@ -79,8 +79,8 @@ func tick_fast(dt: float) -> bool:
 ## 每帧回调。覆写此方法可实现自定义逻辑（不用 Timeline）
 func _tick(_ctx: StageContext) -> Variant:
 	if _timeline:
-		var alive := _timeline.tick(get_dt())
-		if not alive and auto_stop:
+		var is_alive := _timeline.tick(get_dt())
+		if not is_alive and auto_stop:
 			return false
 		return true
 	return not auto_stop

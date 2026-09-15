@@ -14,7 +14,7 @@ var ctx: StageContext
 var director: StageDirector  ## 场景导演（Timeline 便捷动词委托给它）；null 时用 _get_director 懒建
 var _events: Array[TimelineEvent] = []
 var _elapsed: float = 0.0
-var _paused: bool = false
+var _is_paused: bool = false
 var _loop_start: float = -1.0
 var _cursor: float = 0.0   # wait() 的参考点，每次 phase/dialogue 结束后更新
 var bookmark_collector: Callable  # 可选：事件触发时回调(关卡时刻)，工作台书签收集用
@@ -73,15 +73,15 @@ func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 	return do(func():
 		var boss := boss_getter.call() as Boss
 		boss.start_phase(data)
-		# 旧行为：_paused = true 冻结整个时间轴直到击破（Boss 战期间后续 tl 事件全部失效）
+		# 旧行为：_is_paused = true 冻结整个时间轴直到击破（Boss 战期间后续 tl 事件全部失效）
 		# 现改为：仅 wait 事件等待 phase_cleared 激活，绝对时间事件（at/t）战斗期间照常触发
 		boss.phase_cleared.connect(func(_captured: bool, _bonus: int):
 			_cursor = _elapsed
 			# 激活全部未触发的 wait 事件（多个 wait 各自按 _cursor + offset 触发，
 			# 支持 Boss 击破后编排多段相对波次/演出）
 			for ev in _events:
-				if ev.wait_offset >= 0 and not ev.wait_armed and not ev.fired:
-					ev.wait_armed = true
+				if ev.wait_offset >= 0 and not ev.is_wait_armed and not ev.is_fired:
+					ev.is_wait_armed = true
 		, CONNECT_ONE_SHOT)
 	)
 
@@ -122,16 +122,16 @@ func _add(t: float, cb: Callable, ev: float = -1.0, n: int = -1) -> void:
 # ═══ 运行 ═══
 
 func tick(delta: float) -> bool:
-	if _paused:
+	if _is_paused:
 		return true
 	_elapsed += delta
 
 	for ev in _events:
-		if ev.fired and ev.repeat_every < 0:
+		if ev.is_fired and ev.repeat_every < 0:
 			continue
 		var t := ev.time
 		if ev.wait_offset >= 0:
-			if not ev.wait_armed:
+			if not ev.is_wait_armed:
 				continue  # 还没被 phase 激活
 			t = _cursor + ev.wait_offset
 		if _elapsed >= t:
@@ -142,10 +142,10 @@ func tick(delta: float) -> bool:
 				ev.time += ev.repeat_every
 				ev.fired_count += 1
 				if ev.repeat_times > 0 and ev.fired_count >= ev.repeat_times:
-					ev.fired = true
+					ev.is_fired = true
 					ev.repeat_every = -1.0
 			else:
-				ev.fired = true
+				ev.is_fired = true
 
 	if _loop_start >= 0 and _elapsed >= _loop_start and _all_onetime_fired():
 		_reset_onetime()
@@ -154,20 +154,20 @@ func tick(delta: float) -> bool:
 	if _loop_start >= 0:
 		return true
 	for ev in _events:
-		if not ev.fired:
+		if not ev.is_fired:
 			return true
 	return false
 
 
 func _all_onetime_fired() -> bool:
 	for ev in _events:
-		if not ev.fired:
+		if not ev.is_fired:
 			return false
 	return true
 
 func _reset_onetime() -> void:
 	for ev in _events:
-		ev.fired = false
+		ev.is_fired = false
 		# 用 _loop_start 而非当前 _elapsed：大 delta 跨过循环点时不会把下一轮事件时间戳推远
 		ev.time = _loop_start + ev._original_time
 		ev.fired_count = 0
@@ -175,18 +175,18 @@ func _reset_onetime() -> void:
 		ev.repeat_times = ev._original_repeat_times
 
 
-func pause() -> void: _paused = true
-func resume() -> void: _paused = false
+func pause() -> void: _is_paused = true
+func resume() -> void: _is_paused = false
 
 func reset() -> void:
 	_elapsed = 0.0
 	for ev in _events:
-		ev.fired = false
+		ev.is_fired = false
 
 func seek(time: float) -> void:
 	_elapsed = time
 	for ev in _events:
-		ev.fired = ev.time <= time and ev.repeat_every <= 0
+		ev.is_fired = ev.time <= time and ev.repeat_every <= 0
 
 func loop() -> void:
 	if _events.is_empty(): return

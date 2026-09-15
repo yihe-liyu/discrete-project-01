@@ -45,16 +45,16 @@ func test_event_fires_between_lines():
 	d.say(r, "A")
 	d.event("probe_event")
 	d.say(r, "B")
-	var fired: Array[String] = []
-	var cb := func(event_name: String): fired.append(event_name)
+	var is_fired: Array[String] = []
+	var cb := func(event_name: String): is_fired.append(event_name)
 	GameEvents.dialogue_event.connect(cb)
 	var box: CanvasLayer = load("res://scenes/ui/dialogue_box.tscn").instantiate()
 	add_child(box)
 	box.play_steps(d.steps)
 	await wait_seconds(0.6)
-	assert_eq(fired, [], "第一句显示时还不该触发事件")
+	assert_eq(is_fired, [], "第一句显示时还不该触发事件")
 	box._advance()  # 说完 A → 进入 event 步骤
-	assert_eq(fired, ["probe_event"], "行与行之间触发事件")
+	assert_eq(is_fired, ["probe_event"], "行与行之间触发事件")
 	box._close()
 	await box.finished
 	await get_tree().process_frame

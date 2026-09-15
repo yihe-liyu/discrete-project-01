@@ -14,7 +14,7 @@ static func preset(idx: int) -> Vector2:
 
 var tex_key: String = "小玉"
 var tint: Color = Color.WHITE
-var blend: bool = false          ## 加色混合（视觉效果：弹幕质感差异大）
+var is_blend: bool = false       ## 加色混合（视觉效果：弹幕质感差异大）
 var speed: float = 300.0         ## 初速 px/s
 var dir: Vector2 = Vector2.DOWN  ## 发射方向（自由角度；右键场地设指向 / 8 方位预设快捷）
 
@@ -28,12 +28,12 @@ var _cache_key: String = ""
 ## 贴图≡判定：enemy() 不覆盖 hitbox（引擎现行为）→ tex 配置的判定/偏移生效，
 ## 与游戏内敌弹一致（测试锁定 6.0）
 func build(behavior_script: Script = null) -> BulletData:
-	var key := "%s|%s|%s|%s|%s" % [tex_key, tint, blend, speed, behavior_script]
+	var key := "%s|%s|%s|%s|%s" % [tex_key, tint, is_blend, speed, behavior_script]
 	if _bullet_data == null or key != _cache_key:
 		_bullet_data = BulletData.new()
 		_bullet_data.tex(tex_key)               # 贴图 + 判定 + 偏移 一体
 		_bullet_data.color(tint)
-		_bullet_data.blend(blend)
+		_bullet_data.blend(is_blend)
 		_bullet_data.speed(speed)
 		_bullet_data.enemy()
 		if behavior_script:

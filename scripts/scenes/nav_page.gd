@@ -34,7 +34,7 @@ extends BasePage
 
 var _nav_items: Array[Control] = []
 var _nav_index: int = -1
-var _nav_enabled: bool = false
+var _is_nav_enabled: bool = false
 var _container: Control
 var _pulse_tween: Tween
 var _entrance_tween: Tween
@@ -50,7 +50,7 @@ func on_enter() -> void:
 
 
 func on_leave() -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	queue_free()
 
@@ -78,7 +78,7 @@ func _setup_nav() -> void:
 
 	# 选第一个未锁定项
 	_nav_index = _find_first_unlocked()
-	_nav_enabled = false  # 入场动画结束后再启用
+	_is_nav_enabled = false  # 入场动画结束后再启用
 
 
 # ═══ 锁定判断 ═══
@@ -88,8 +88,8 @@ func _is_locked(index: int) -> bool:
 	if index < 0 or index >= _nav_items.size():
 		return true
 	var item := _nav_items[index]
-	if item.has_meta("locked"):
-		var cond = item.get_meta("locked")
+	if item.has_meta("is_locked"):
+		var cond = item.get_meta("is_locked")
 		if cond is Callable:
 			return cond.call()
 		return true
@@ -124,7 +124,7 @@ func _item_color(index: int) -> Color:
 
 func _play_entrance() -> void:
 	if _nav_items.is_empty():
-		_nav_enabled = true
+		_is_nav_enabled = true
 		return
 
 	_entrance_tween = create_tween().set_parallel(true)
@@ -147,7 +147,7 @@ func _play_entrance() -> void:
 
 	var total: float = (_nav_items.size() - 1) * entrance_stagger + entrance_duration
 	_entrance_tween.tween_callback(func():
-		_nav_enabled = true
+		_is_nav_enabled = true
 		_entrance_tween = null
 		if _nav_index >= 0 and _nav_index < _nav_items.size():
 			_start_pulse(_nav_items[_nav_index])
@@ -170,7 +170,7 @@ func skip_entrance() -> void:
 			item.modulate = normal_color
 		if item is Control:
 			item.scale = Vector2.ONE
-	_nav_enabled = true
+	_is_nav_enabled = true
 	_last_accept_time = Time.get_ticks_msec() / 1000.0  # 防跳过误触
 	if _nav_index >= 0 and _nav_index < _nav_items.size():
 		_start_pulse(_nav_items[_nav_index])
@@ -179,7 +179,7 @@ func skip_entrance() -> void:
 # ═══ 导航 ═══
 
 func navigate(delta: int) -> void:
-	if _nav_items.is_empty() or not _nav_enabled:
+	if _nav_items.is_empty() or not _is_nav_enabled:
 		return
 
 	sfx_nav()
@@ -228,7 +228,7 @@ func accept_current() -> void:
 
 	var item := _nav_items[_nav_index]
 	var idx: int = _nav_index
-	_nav_enabled = false
+	_is_nav_enabled = false
 
 	# 闪烁特效
 	var tween := item.create_tween()
@@ -238,7 +238,7 @@ func accept_current() -> void:
 	tween.tween_property(item, "modulate", highlight_color, 0.08)
 	await tween.finished
 
-	_nav_enabled = true
+	_is_nav_enabled = true
 	_on_item_selected(idx)
 
 
@@ -282,7 +282,7 @@ func _set_color(item: Control, color: Color, instant: bool = true) -> void:
 # ═══ 输入处理（R4：事件驱动，不 _process 轮询）═══
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _nav_enabled or _nav_items.is_empty():
+	if not _is_nav_enabled or _nav_items.is_empty():
 		return
 	if _nav_accept(event) or _nav_cancel(event):
 		return

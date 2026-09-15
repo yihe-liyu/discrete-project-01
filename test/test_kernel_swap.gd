@@ -54,7 +54,7 @@ func test_behavior_pipeline_wired() -> void:
 	# L3.5-4f：行为全程原生（behavior_tick），随内核 _physics_process 先于宿主碰撞。
 	var sys = BulletManager.current.kernel_system()
 	assert_true(sys is KernelNativeSystem, "应使用原生内核")
-	assert_true((sys as KernelNativeSystem).native_behaviors, "原生行为应已装配")
+	assert_true((sys as KernelNativeSystem).enable_native_behaviors, "原生行为应已装配")
 	assert_lt(sys.process_physics_priority, BulletManager.current.process_physics_priority,
 		"原生行为随内核积分先于宿主碰撞")
 

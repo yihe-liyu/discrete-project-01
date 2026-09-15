@@ -63,7 +63,7 @@ func _make_item(zh: String, en: String) -> VBoxContainer:
 
 func _show_record_view() -> void:
 	_view = View.RECORD
-	_nav_enabled = false  # 禁 NavPage 导航，改由本页处理角色/难度/Z/X
+	_is_nav_enabled = false  # 禁 NavPage 导航，改由本页处理角色/难度/Z/X
 	_stop_pulse()
 	$"LeftPanel".modulate = Color(1, 1, 1, 0.4)  # 选项置灰但保留显示（像练习页面的区块感）
 	$RecordView.visible = true
@@ -75,7 +75,7 @@ func _hide_record_view() -> void:
 	_view = View.OPTIONS
 	$RecordView.visible = false
 	$"LeftPanel".modulate = Color.WHITE
-	_nav_enabled = true
+	_is_nav_enabled = true
 	# 冷却：同帧 _input 已处理 cancel，挡住 NavPage._process 的重复 cancel（否则直接退出页面）
 	_last_accept_time = Time.get_ticks_msec() / 1000.0
 	if _nav_index >= 0 and _nav_index < _nav_items.size():

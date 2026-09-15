@@ -50,7 +50,7 @@ func _make_phase(hp: int = 100, time_limit: float = 10.0, timeout_only: bool = f
 
 ## 辅助：跳过 HP 上涨 tween，直接进入可受击状态
 func _skip_hp_tween() -> void:
-	_boss._invincible = false
+	_boss._is_invincible = false
 
 
 ## 普通符卡：超时未击破 → captured=false
@@ -92,7 +92,7 @@ func test_damage_ignored_while_invincible():
 	var phase := _make_phase(100)
 	_boss.start_phase(phase)
 	_boss._hp = 100
-	_boss._invincible = true
+	_boss._is_invincible = true
 	_boss.take_damage(100)
 	assert_eq(_boss.hp, 100, "无敌期间不应扣血")
 
@@ -104,7 +104,7 @@ func test_timeout_spell_immune_to_damage():
 	_boss.start_phase(phase)
 	_skip_hp_tween()
 	_boss.take_damage(999999)
-	assert_false(_boss._cleared, "时符不应因伤害清除")
+	assert_false(_boss._is_cleared, "时符不应因伤害清除")
 
 
 ## 双重清除保护：phase_cleared 只发一次
@@ -114,7 +114,7 @@ func test_no_double_clear():
 	_boss.start_phase(phase)
 	_skip_hp_tween()
 	_boss.take_damage(50)     # 击破
-	_boss.take_damage(50)     # 再来一下（应被 _cleared 保护挡住）
+	_boss.take_damage(50)     # 再来一下（应被 _is_cleared 保护挡住）
 	_boss._process(5.0 + 0.01)  # 超时（也应被挡住）
 	assert_signal_emit_count(_boss, "phase_cleared", 1, "phase_cleared 只能发出一次")
 

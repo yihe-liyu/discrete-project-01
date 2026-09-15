@@ -58,19 +58,19 @@ func on_enter() -> void:
 
 
 func on_leave() -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	queue_free()
 
 
 func _on_item_selected(index: int) -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	finished.emit({"difficulty": index})
 
 
 func _on_cancel() -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	finished.emit({})
 
@@ -203,7 +203,7 @@ func modulate_to(item: Control, color: Color, instant: bool = false) -> void:
 
 func _play_entrance() -> void:
 	if _nav_items.is_empty():
-		_nav_enabled = true
+		_is_nav_enabled = true
 		return
 
 	for i in _nav_items.size():
@@ -238,7 +238,7 @@ func _play_entrance() -> void:
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 	# 入场：选中项已经 instant 设好了 brightness=1.0 / grayscale=0.0，直接起脉冲
-	_nav_enabled = true
+	_is_nav_enabled = true
 	if _nav_index >= 0 and _nav_index < _nav_items.size():
 		_start_pulse(_nav_items[_nav_index])
 
@@ -269,7 +269,7 @@ func accept_current() -> void:
 	sfx_confirm()
 	var item := _nav_items[_nav_index]
 	var idx := _nav_index
-	_nav_enabled = false
+	_is_nav_enabled = false
 
 	var mat := item.material as ShaderMaterial
 	if mat and mat.shader == _grayscale_shader:
@@ -282,5 +282,5 @@ func accept_current() -> void:
 	else:
 		await get_tree().create_timer(0.3).timeout
 
-	_nav_enabled = true
+	_is_nav_enabled = true
 	_on_item_selected(idx)

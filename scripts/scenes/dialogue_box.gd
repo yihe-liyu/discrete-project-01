@@ -28,7 +28,7 @@ const MOD_TWEEN_DEFAULT := 0.25  ## 明暗渐变时长
 var _dialogue_runner: DialogueRunner
 var _portrait_map: Dictionary = {}  # char_name → {node, profile}
 var _cancel_held: float = 0.0
-var _input_ready: bool = false
+var _is_input_ready: bool = false
 var _is_closing: bool = false
 
 # ═══ 生命周期 ═══
@@ -69,7 +69,7 @@ func _process(delta: float) -> void:
 		return
 	# 步骤计时（WAIT / auto_advance）
 	_dialogue_runner.tick(delta)
-	if not _input_ready:
+	if not _is_input_ready:
 		return
 	# 长按取消 → 关闭对话
 	if Input.is_action_pressed("ui_cancel"):
@@ -81,7 +81,7 @@ func _process(delta: float) -> void:
 		_cancel_held = 0.0
 
 func _input(event: InputEvent) -> void:
-	if _is_closing or not _input_ready or not _dialogue_runner:
+	if _is_closing or not _is_input_ready or not _dialogue_runner:
 		return
 	# 暂停时不处理输入
 	if GameManager.current_state == GameManager.AppState.PAUSED:
@@ -130,11 +130,11 @@ func _on_line_shown(line: DialogueLine, speakers: Array, state: StageState) -> v
 
 	# 输入冷却
 	if input_cooldown > 0.0:
-		_input_ready = false
+		_is_input_ready = false
 		await get_tree().create_timer(input_cooldown).timeout
 		if not is_inside_tree() or _is_closing:
 			return
-	_input_ready = true
+	_is_input_ready = true
 
 
 func _on_state_changed(state: StageState, duration: float) -> void:
@@ -165,10 +165,10 @@ func _render_state(state: StageState, speakers: Array, duration: float = 0.0) ->
 
 func _apply_actor(info: Dictionary, actor: ActorState, speakers: Array, pos_dur: float) -> void:
 	var node: Control = info.node
-	if actor.visible != info.get("last_visible", true):
-		node.visible = actor.visible
-		info["last_visible"] = actor.visible
-	if not actor.visible:
+	if actor.is_visible != info.get("last_visible", true):
+		node.visible = actor.is_visible
+		info["last_visible"] = actor.is_visible
+	if not actor.is_visible:
 		return
 	info.profile = actor.profile
 
@@ -182,7 +182,7 @@ func _apply_actor(info: Dictionary, actor: ActorState, speakers: Array, pos_dur:
 	# 翻转（立绘贴图）
 	var tex := node.get_child(0) as TextureRect
 	if tex:
-		tex.flip_h = actor.flip_h
+		tex.flip_h = actor.is_flip_h
 
 	# 明暗：line 时刻按 speakers 判定；演出时刻按 actor.light（apply_line 已编码说话/沉默）
 	var target_mod: Color
@@ -227,7 +227,7 @@ func _add_portrait(actor: ActorState) -> Dictionary:
 	var tex := TextureRect.new()
 	tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	tex.flip_h = actor.flip_h
+	tex.flip_h = actor.is_flip_h
 	ctrl.add_child(tex)
 
 	var profile: CharacterProfile = actor.profile
@@ -257,7 +257,7 @@ func _clear_bubbles() -> void:
 
 func _close() -> void:
 	_is_closing = true
-	_input_ready = false
+	_is_input_ready = false
 	_cancel_held = 0.0
 	process_mode = PROCESS_MODE_INHERIT  # 恢复默认
 

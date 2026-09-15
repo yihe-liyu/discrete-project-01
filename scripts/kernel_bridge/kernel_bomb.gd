@@ -24,7 +24,7 @@ var _angle: float = 0.0
 var _radius: float = 0.0
 var _hold_timer: float = 0.0
 var _fly_dir: Vector2 = Vector2.ZERO
-var _initialized: bool = false
+var _is_initialized: bool = false
 var _sprite: Sprite2D
 var _init_dir: Vector2 = Vector2.DOWN
 ## Node2D 没有 velocity（旧 Bullet 才有）；bomb 飞行阶段用它。
@@ -63,8 +63,8 @@ func _physics_process(delta: float) -> void:
 	var player: Player = p if is_instance_valid(p) else null
 	if not is_instance_valid(player):
 		return
-	if not _initialized:
-		_initialized = true
+	if not _is_initialized:
+		_is_initialized = true
 		_angle = _init_dir.angle() + orbit_speed * spawn_delay
 		_fly_dir = _init_dir.normalized()
 	match _phase:

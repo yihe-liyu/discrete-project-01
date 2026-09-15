@@ -4,7 +4,7 @@
 # 速度线默认关闭（每颗 3 图元是大头）
 extends Node2D
 
-var draw_enabled: bool = false
+var is_draw_enabled: bool = false
 var draw_velocity_lines: bool = false  # 速度线（每颗子弹 3 图元，默认关）
 ## 由宿主注入（不再读 BulletManager.current）
 var bullet_manager: BulletManager
@@ -15,8 +15,8 @@ func _ready():
 
 func _input(event):
 	if event.is_action_pressed("debug_toggle"):
-		draw_enabled = not draw_enabled
-		set_process(draw_enabled)
+		is_draw_enabled = not is_draw_enabled
+		set_process(is_draw_enabled)
 		# 无论是开启还是关闭，都要重绘一次！
 		queue_redraw()
 
@@ -24,7 +24,7 @@ func _process(_delta):
 	queue_redraw()
 
 func _draw():
-	if not draw_enabled:
+	if not is_draw_enabled:
 		return
 
 	# ── 画所有子弹判定（内核行）──

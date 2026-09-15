@@ -4,8 +4,8 @@ extends GutTest
 
 func test_absolute_events_fire_during_boss_phase():
 	var timeline := Timeline.new(null)
-	var fired: Array[String] = []
-	timeline.at(5.0).do(func(): fired.append("a"))
+	var is_fired: Array[String] = []
+	timeline.at(5.0).do(func(): is_fired.append("a"))
 
 	var boss: Boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss)
@@ -18,7 +18,7 @@ func test_absolute_events_fire_during_boss_phase():
 	# 模拟战斗推进 6 秒（Boss 阶段已开始，但绝对事件应照常触发）
 	for i in 10:
 		timeline.tick(0.6)
-	assert_eq(fired.size(), 1, "战斗期间绝对时间事件应照常触发")
+	assert_eq(is_fired.size(), 1, "战斗期间绝对时间事件应照常触发")
 
 	# wait 事件：击破前不触发
 	var wait_fired: Array[String] = []

@@ -1,6 +1,6 @@
 ## 激光光束 —— 状态机驱动骨架生长/持续/收缩/淡出
 ## 阶段：GROW → SUSTAIN → CONTRACT | FADE → DEAD
-## 判定与渲染共用骨架采样；head/tail 未变时 _dirty=false（静止零重建）
+## 判定与渲染共用骨架采样；head/tail 未变时 _is_dirty=false（静止零重建）
 class_name LaserBeam
 extends Node2D
 
@@ -14,7 +14,7 @@ var graze_width: float = 22.0       ## 擦弹判定宽度
 var grow_speed: float = 600.0       ## 生长/收缩速度（px/s）
 var tail_distance: float = 300.0    ## 生长型：尾部滞后距离
 var max_lifetime: float = 8.0       ## 持续时长（0 = 无限）
-var grow_on_spawn: bool = true      ## true=生长型；false=瞬间全开（固定/直线型）
+var is_grow_on_spawn: bool = true      ## true=生长型；false=瞬间全开（固定/直线型）
 var laser_texture: Texture2D          ## 自定义贴图（null=内置 laser.png）
 
 # ── 运行时 ──
@@ -23,9 +23,9 @@ var phase: Phase = Phase.DEAD
 var age: float = 0.0
 var head_dist: float = 0.0
 var tail_dist: float = 0.0
-var _dirty: bool = true             ## 骨架可见段是否变化（渲染层据此重建）
+var _is_dirty: bool = true             ## 骨架可见段是否变化（渲染层据此重建）
 var _fade_age: float = 0.0
-var _head_cut: bool = false         ## 消弹圈切头：头部冻结
+var _is_head_cut: bool = false         ## 消弹圈切头：头部冻结
 
 var _core_line: Line2D                ## Core 亮核（宽 core_width，纹理 stretch）
 var _glow_line: Line2D                ## Glow 光晕（宽 core_width×2.2，提亮透明）
@@ -40,12 +40,12 @@ func spawn(p_skeleton: LaserSkeleton, p_color: Color) -> void:
 	laser_color = p_color
 	age = 0.0
 	_fade_age = 0.0
-	_head_cut = false
-	_dirty = true
+	_is_head_cut = false
+	_is_dirty = true
 	visible = true
 	process_mode = Node.PROCESS_MODE_INHERIT
 	_ensure_meshes()
-	if grow_on_spawn and grow_speed > 0.0:
+	if is_grow_on_spawn and grow_speed > 0.0:
 		phase = Phase.GROW
 		head_dist = 0.0
 		tail_dist = 0.0
@@ -53,7 +53,7 @@ func spawn(p_skeleton: LaserSkeleton, p_color: Color) -> void:
 		phase = Phase.SUSTAIN  # 瞬间全开：可见段 = 全长
 		head_dist = skeleton.total_length
 		tail_dist = 0.0
-	_rebuild_meshes()  # 立即渲染（防止首帧 _dirty 被覆盖为 false）
+	_rebuild_meshes()  # 立即渲染（防止首帧 _is_dirty 被覆盖为 false）
 
 
 func _physics_process(delta: float) -> void:
@@ -72,14 +72,14 @@ func step(delta: float) -> void:
 			head_dist = minf(head_dist + grow_speed * delta, skeleton.total_length)
 			# 尾部滞后：距离头部 tail_distance（不短于 0）
 			tail_dist = maxf(tail_dist, head_dist - tail_distance)
-			if _head_cut:
+			if _is_head_cut:
 				phase = Phase.CONTRACT  # 消弹圈切头 → 尾部追上消失
 			elif head_dist >= skeleton.total_length:
 				phase = Phase.SUSTAIN
 		Phase.SUSTAIN:
 			if max_lifetime > 0.0 and age >= max_lifetime:
 				# 生长型收缩消失；固定型淡出
-				phase = Phase.CONTRACT if grow_on_spawn else Phase.FADE
+				phase = Phase.CONTRACT if is_grow_on_spawn else Phase.FADE
 		Phase.CONTRACT:
 			# 尾部追上头部 → 消失
 			tail_dist = minf(tail_dist + grow_speed * delta, head_dist)
@@ -89,8 +89,8 @@ func step(delta: float) -> void:
 			_fade_age += delta
 			if _fade_age >= 0.15:
 				phase = Phase.DEAD
-	_dirty = old_head != head_dist or old_tail != tail_dist
-	if _dirty:
+	_is_dirty = old_head != head_dist or old_tail != tail_dist
+	if _is_dirty:
 		_rebuild_meshes()
 	if phase == Phase.DEAD:
 		visible = false
@@ -135,7 +135,7 @@ func is_grazing(pos: Vector2, graze_radius: float) -> bool:
 func cut_head() -> void:
 	if _dead_phase() or phase != Phase.GROW:
 		return
-	_head_cut = true
+	_is_head_cut = true
 
 
 ## 池回收：彻底复位
@@ -156,7 +156,7 @@ func _dead_phase() -> bool:
 
 ## Line2D 双层渲染（Core 亮核 + Glow 光晕）+ 头部光点
 ## laser.png 是一整条激光贴图 → 用 LINE_TEXTURE_STRETCH 沿骨架拉伸（不切片！）
-## 静止激光不重建（_dirty）
+## 静止激光不重建（_is_dirty）
 func _ensure_meshes() -> void:
 	if _core_line:
 		return

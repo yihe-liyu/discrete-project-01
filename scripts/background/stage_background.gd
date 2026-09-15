@@ -5,7 +5,7 @@ class_name StageBackground
 var camera: Camera3D
 var world_environment: WorldEnvironment
 var _elapsed: float = 0.0
-var _active: bool = false
+var _is_active: bool = false
 
 func _ready():
 	if camera == null:
@@ -34,8 +34,8 @@ func _own_camera() -> void:
 	camera = cam
 
 func _process(delta):
-	if not _active:
-		_active = true
+	if not _is_active:
+		_is_active = true
 	_elapsed += delta
 	_on_update(delta, _elapsed)
 

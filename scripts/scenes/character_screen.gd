@@ -60,18 +60,18 @@ func _fly_to_badge(tex: Texture2D) -> void:
 
 
 func on_leave() -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	queue_free()
 
 
 func _on_item_selected(index: int) -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	finished.emit({"character": index})
 
 
 func _on_cancel() -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	finished.emit({})

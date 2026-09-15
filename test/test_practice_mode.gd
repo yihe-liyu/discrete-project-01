@@ -30,7 +30,7 @@ func test_practice_mode_zeroes_lives_and_bombs():
 ## 回归：练习结束必须清空载荷——否则「先打练习，再进普通流程」会看到残留 practice_phase
 ## （game_scene 告警「practice_phase 已设置但 is_practice_mode=false」并误判）。
 func test_end_practice_clears_payload():
-	SaveData.restarting = false
+	SaveData.is_restarting = false
 	PracticeSession.start(PhaseData.new(), null, "测试", 1, 0)
 	assert_true(PracticeSession.is_practice_mode, "start_practice 应置位练习模式")
 	PracticeSession.finish()
@@ -45,7 +45,7 @@ func test_end_practice_clears_payload():
 
 ## 回归：reset_all（普通开局 / 重开）也应自愈清掉练习载荷。
 func test_reset_all_clears_practice_payload():
-	SaveData.restarting = false
+	SaveData.is_restarting = false
 	PracticeSession.start(PhaseData.new(), null, "测试", 1, 0)
 	SaveData.reset_all(null)
 	assert_false(PracticeSession.is_practice_mode, "reset_all 应复位练习模式")

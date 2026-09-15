@@ -83,7 +83,7 @@ var _auto_bookmarks: Array = []    # 自动收集时刻（当前缓存，编辑�
 var _manual_bookmarks: Array = []  # 人工打点（可编辑，持久化）
 
 # 播放/编辑状态
-var _paused := false
+var _is_paused := false
 var _muted := false
 var _show_bg := true
 var _speed_idx := 2          # 速度档位索引（SPEEDS）
@@ -359,7 +359,7 @@ func _load_stage() -> void:
 	_stage_runtime.stop_stage()
 	_bullet_manager.clear_all()
 	AudioManager.stop_bgm()  # 重跑时 BGM 从头播（play_bgm 有同流防重保护，必须先停）
-	# 清 World 残留：退场中的 Boss（_exit_controlled 不 queue_free、已从
+	# 清 World 残留：退场中的 Boss（_is_exit_controlled 不 queue_free、已从
 	# active_enemies 移除）stop_stage 清不到 → 立即脱离树，避免卡在画面上
 	for child in _world.get_children():
 		if child == _player or child == _stage_runtime:
@@ -375,7 +375,7 @@ func _load_stage() -> void:
 			bg_parent.remove_child(_background)
 		_background.queue_free()
 		_background = null
-	SaveData.restarting = false
+	SaveData.is_restarting = false
 	SaveData.reset_all(_stage_runtime.entity_registry)
 	if _diff_sel:
 		SaveData.selected_difficulty = _diff_sel.selected
@@ -450,7 +450,7 @@ func _restart() -> void:
 ## 取消进行中的书签收集（切换关卡/重跑时调用，避免旧收集与新流程重叠）
 
 func _toggle_play() -> void:
-	if _paused:
+	if _is_paused:
 		_resume()
 	else:
 		_pause()
@@ -460,7 +460,7 @@ func _pause() -> void:
 	if _ff_target >= 0.0:
 		_stop_fast_forward()
 	get_tree().paused = true
-	_paused = true
+	_is_paused = true
 	_playback_bar.set_playing(false)
 	_apply_audio()
 	_log_line("＊ 暂停")
@@ -468,7 +468,7 @@ func _pause() -> void:
 
 func _resume() -> void:
 	get_tree().paused = false
-	_paused = false
+	_is_paused = false
 	_playback_bar.set_playing(true)
 	_apply_audio()
 	_log_line("▶ 继续")
@@ -483,7 +483,7 @@ func _frame_step() -> void:
 		return
 	if _ff_target >= 0.0:
 		_stop_fast_forward()
-	if not _paused:
+	if not _is_paused:
 		_pause()
 	_stepping = true
 	get_tree().paused = false
@@ -491,7 +491,7 @@ func _frame_step() -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	get_tree().paused = true
-	_paused = true
+	_is_paused = true
 	Engine.time_scale = SPEEDS[_speed_idx]
 	_playback_bar.set_playing(false)
 	_apply_audio()
@@ -561,7 +561,7 @@ func _jump_to(t: float) -> void:
 
 
 func _start_fast_forward(t: float) -> void:
-	if _paused:
+	if _is_paused:
 		_resume()
 	_ff_target = t
 	Engine.time_scale = 12.0
@@ -626,7 +626,7 @@ func _on_difficulty_changed(_i: int) -> void:
 
 
 func _apply_audio() -> void:
-	var m: bool = _muted or _paused or _ff_target >= 0.0
+	var m: bool = _muted or _is_paused or _ff_target >= 0.0
 	var idx := AudioServer.get_bus_index("Master")
 	if idx >= 0:
 		AudioServer.set_bus_mute(idx, m)

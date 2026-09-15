@@ -7,7 +7,7 @@ const POOL_SIZE := 64
 const GRAZE_COOLDOWN_FRAMES := 3
 
 var _pool: Array[LaserBeam] = []
-var _active: Array[LaserBeam] = []
+var _is_active: Array[LaserBeam] = []
 var _parent: Node
 var _pool_index: int = 0
 var on_graze: Callable = Callable()  ## 擦弹结算回调（BulletManager 注入；命名契约：回调值用 on_x）
@@ -35,7 +35,7 @@ func _acquire() -> LaserBeam:
 		if _pool[idx].phase == LaserBeam.Phase.DEAD:
 			_pool_index = (idx + 1) % POOL_SIZE
 			return _pool[idx]
-	var reuse: LaserBeam = _active.pop_front()
+	var reuse: LaserBeam = _is_active.pop_front()
 	return reuse
 
 
@@ -44,7 +44,7 @@ func spawn(skeleton: LaserSkeleton, color: Color, opts: Dictionary = {}) -> Lase
 	var beam := _acquire()
 	if beam == null:
 		return null
-	beam.grow_on_spawn = opts.get("grow", beam.grow_on_spawn)
+	beam.is_grow_on_spawn = opts.get("grow", beam.is_grow_on_spawn)
 	beam.grow_speed = opts.get("grow_speed", beam.grow_speed)
 	beam.tail_distance = opts.get("tail", beam.tail_distance)
 	beam.max_lifetime = opts.get("lifetime", beam.max_lifetime)
@@ -53,7 +53,7 @@ func spawn(skeleton: LaserSkeleton, color: Color, opts: Dictionary = {}) -> Lase
 	beam.graze_width = opts.get("graze_width", beam.graze_width)
 	beam.laser_texture = opts.get("tex", opts.get("texture", beam.laser_texture))
 	beam.spawn(skeleton, color)
-	_active.append(beam)
+	_is_active.append(beam)
 	return beam
 
 
@@ -76,19 +76,19 @@ func step(delta: float) -> void:
 	var p = entity_registry.player if entity_registry else null
 	var player: Player = p if is_instance_valid(p) else null
 	var has_player: bool = is_instance_valid(player) and not player.is_invincible
-	var missed: bool = false
-	for i in range(_active.size() - 1, -1, -1):
-		var beam := _active[i]
+	var is_missed: bool = false
+	for i in range(_is_active.size() - 1, -1, -1):
+		var beam := _is_active[i]
 		beam.step(delta)
 		if beam.phase == LaserBeam.Phase.DEAD:
 			beam.reset()
-			_active.remove_at(i)
+			_is_active.remove_at(i)
 			continue
 		# 玩家判定：命中（每帧最多一次 miss）/ 擦弹（冷却）
-		if has_player and beam.phase != LaserBeam.Phase.FADE and not missed:
+		if has_player and beam.phase != LaserBeam.Phase.FADE and not is_missed:
 			var pos := player.global_position
 			if beam.is_hitting(pos):
-				missed = true
+				is_missed = true
 				player.miss()
 			elif _graze_cooldown <= 0 and beam.is_grazing(pos, player.graze_radius):
 				_graze_cooldown = GRAZE_COOLDOWN_FRAMES
@@ -99,10 +99,10 @@ func step(delta: float) -> void:
 
 
 func clear() -> void:
-	for beam in _active:
+	for beam in _is_active:
 		beam.reset()
-	_active.clear()
+	_is_active.clear()
 
 
 func get_active() -> Array[LaserBeam]:
-	return _active
+	return _is_active

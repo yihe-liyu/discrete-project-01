@@ -144,7 +144,7 @@ func _fade_all_out(content: Control, content_duration: float = OVERLAY_FADE_OUT,
 
 
 ## 覆盖层退场：遮罩淡出 + 内容缩小淡出 → queue_free
-## 调用前需自行关闭导航（_nav_enabled=false, _stop_pulse()）
+## 调用前需自行关闭导航（_is_nav_enabled=false, _stop_pulse()）
 func _overlay_leave(content: Control) -> void:
 	var tween := create_tween().set_parallel(true)
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)

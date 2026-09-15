@@ -102,7 +102,7 @@ func test_fixed_beam_fades_on_timeout():
 	add_child(beam)
 	var sk := LaserSkeleton.new()
 	sk.from_line(Vector2(0, 0), Vector2(0, 300))
-	beam.grow_on_spawn = false  # 瞬间全开
+	beam.is_grow_on_spawn = false  # 瞬间全开
 	beam.max_lifetime = 0.5
 	beam.spawn(sk, Color.BLUE)
 	assert_eq(beam.phase, LaserBeam.Phase.SUSTAIN, "非生长型直接 SUSTAIN")
@@ -120,13 +120,13 @@ func test_dirty_flag_only_on_change():
 	var beam := _make_beam()
 	# 生长中：dirty
 	beam._physics_process(0.1)
-	assert_true(beam._dirty, "生长中应 dirty")
+	assert_true(beam._is_dirty, "生长中应 dirty")
 	# 到顶 SUSTAIN 后静止：不 dirty
 	for i in 25:
 		beam._physics_process(0.1)
 	assert_eq(beam.phase, LaserBeam.Phase.SUSTAIN, "已 SUSTAIN")
 	beam._physics_process(0.1)
-	assert_false(beam._dirty, "SUSTAIN 静止时不应重建（dirty=false）")
+	assert_false(beam._is_dirty, "SUSTAIN 静止时不应重建（dirty=false）")
 
 # ── 判定 ──
 
@@ -137,7 +137,7 @@ func _make_full_beam() -> LaserBeam:
 	add_child(beam)
 	var sk := LaserSkeleton.new()
 	sk.from_line(Vector2(0, 0), Vector2(0, 600))
-	beam.grow_on_spawn = false
+	beam.is_grow_on_spawn = false
 	beam.max_lifetime = 5.0
 	beam.spawn(sk, Color.RED)
 	return beam
@@ -250,7 +250,7 @@ func test_rendering_segments_and_rotation():
 	add_child(beam)
 	var sk := LaserSkeleton.new()
 	sk.from_line(Vector2(0, 0), Vector2(0, 320))  # 320px → 10 段
-	beam.grow_on_spawn = false
+	beam.is_grow_on_spawn = false
 	beam.spawn(sk, Color.RED)
 	assert_eq(beam._core_line.points.size(), 10, "320px/32 = 10 渲染点")
 	# 段旋转 = 骨架切线角（垂直激光切线角 = PI/2）
@@ -265,7 +265,7 @@ func test_rendering_zero_when_dead():
 	add_child(beam)
 	var sk := LaserSkeleton.new()
 	sk.from_line(Vector2(0, 0), Vector2(0, 320))
-	beam.grow_on_spawn = false
+	beam.is_grow_on_spawn = false
 	beam.max_lifetime = 0.2
 	beam.spawn(sk, Color.RED)
 	for i in 5:

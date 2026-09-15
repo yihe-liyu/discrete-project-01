@@ -12,7 +12,7 @@ static var current: BulletManager
 var _laser_engine: LaserEngine
 var _death_clear: DeathClear
 var _multi_mesh: Node2D
-var _processing_paused: bool = false
+var _is_processing_paused: bool = false
 
 ## 内核弹幕后端（唯一后端）
 var _kernel_bullet_backend: KernelBulletBackend
@@ -82,7 +82,7 @@ func _exit_tree() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	if _processing_paused:
+	if _is_processing_paused:
 		return
 	var dt := get_physics_process_delta_time()
 	_death_clear.process(dt)
@@ -168,12 +168,12 @@ func clear_bullets():
 		_kernel_bullet_backend.clear_bombs()
 
 func pause_processing() -> void:
-	_processing_paused = true
+	_is_processing_paused = true
 	if _kernel_bullet_backend != null:
 		_kernel_bullet_backend.system.set_physics_process(false)
 
 func resume_processing() -> void:
-	_processing_paused = false
+	_is_processing_paused = false
 	if _kernel_bullet_backend != null:
 		_kernel_bullet_backend.system.set_physics_process(true)
 

@@ -166,22 +166,22 @@ func update_move(delta: float) -> void:
 	position.y = clamp(position.y, FRONT_UP + MIN_MARGIN * 4, FRONT_DOWN - MIN_MARGIN * 4)
 
 func update_animation() -> void:
-	var pressing_left: bool = input_vector.x < -0.1
-	var pressing_right: bool = input_vector.x > 0.1
+	var is_pressing_left: bool = input_vector.x < -0.1
+	var is_pressing_right: bool = input_vector.x > 0.1
 
-	if (pressing_left and pressing_right) or (not pressing_left and not pressing_right):
+	if (is_pressing_left and is_pressing_right) or (not is_pressing_left and not is_pressing_right):
 		change_state(IDLE)
 		return
 
 	# 根据当前状态和输入，决定下一个状态
 	match anim_state:
 		IDLE:
-			if		pressing_left and not pressing_right: change_state(LEFTING)
-			elif	pressing_right and not pressing_left: change_state(RIGHTING)
-		LEFTING:	if not pressing_left:  change_state(IDLE)
-		LEFT:		if not pressing_left:  change_state(IDLE)
-		RIGHT:		if not pressing_right: change_state(IDLE)
-		RIGHTING:	if not pressing_right: change_state(IDLE)
+			if		is_pressing_left and not is_pressing_right: change_state(LEFTING)
+			elif	is_pressing_right and not is_pressing_left: change_state(RIGHTING)
+		LEFTING:	if not is_pressing_left:  change_state(IDLE)
+		LEFT:		if not is_pressing_left:  change_state(IDLE)
+		RIGHT:		if not is_pressing_right: change_state(IDLE)
+		RIGHTING:	if not is_pressing_right: change_state(IDLE)
 
 func change_state(new_state: String) -> void:
 	if anim_state == new_state:

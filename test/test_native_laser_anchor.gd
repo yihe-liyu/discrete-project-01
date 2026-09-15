@@ -17,7 +17,7 @@ func after_each() -> void:
 
 func test_marisa_laser_segments_track_anchor() -> void:
 	var ns = BulletManager.current.kernel_system() as KernelNativeSystem
-	if ns == null or not ns.native_behaviors:
+	if ns == null or not ns.enable_native_behaviors:
 		pending("无原生行为管道"); return
 	var anchor: Node2D = add_child_autofree(Node2D.new())
 	anchor.global_position = Vector2(340.0, 560.0)

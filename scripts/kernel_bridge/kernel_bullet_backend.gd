@@ -180,7 +180,7 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	if enemy_provider.is_valid():
 		behavior_ctx.get_world().setup(enemy_provider)   # 可重复注入（测试 / 换关）
 	behavior_ctx.setup(player, behavior_ctx.get_world())   # 刷新自机
-	if system.native_behaviors:
+	if system.enable_native_behaviors:
 		return
 	process_physics_priority = -4   # 延后动作 flush：行为之后、宿主碰撞(0) 之前
 	_behavior_host = KERNEL_BEHAVIOR_HOST_SCRIPT.new()
@@ -188,7 +188,7 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	_laser_fade = MARISA_LASER_FADE_SCRIPT.new()
 	_laser_fade.setup(self)
 	# 行为全程原生（behavior_tick）；宿主回调（emit/call）经 behavior_host。
-	system.native_behaviors = true
+	system.enable_native_behaviors = true
 	system.behavior_ctx = behavior_ctx
 	system.behavior_host = _behavior_host
 	system.boss_getter = func(): return _behavior_host.get_boss()

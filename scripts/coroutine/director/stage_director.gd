@@ -10,7 +10,7 @@ extends RefCounted
 var ctx: StageContext
 
 var _handlers: Dictionary = {}   # event_name -> Callable
-var _connected: bool = false
+var _is_connected: bool = false
 
 func _init(p_ctx: StageContext) -> void:
 	ctx = p_ctx
@@ -61,9 +61,9 @@ func spawn_boss(data: BossData, pos: Vector2) -> Boss:
 
 ## 监听对话事件（GameEvents.dialogue_event）→ 路由到 handler
 func on(event_name: String, handler: Callable) -> StageDirector:
-	if not _connected:
+	if not _is_connected:
 		GameEvents.dialogue_event.connect(_route)
-		_connected = true
+		_is_connected = true
 	_handlers[event_name] = handler
 	return self
 
@@ -74,8 +74,8 @@ func _route(event_name: String) -> void:
 
 ## 断开事件连接 + 清空本关命名槽位（关卡 _exit_tree 调用）
 func dispose() -> void:
-	if _connected and GameEvents.dialogue_event.is_connected(_route):
+	if _is_connected and GameEvents.dialogue_event.is_connected(_route):
 		GameEvents.dialogue_event.disconnect(_route)
-	_connected = false
+	_is_connected = false
 	_handlers.clear()
 	ctx.objects.clear()

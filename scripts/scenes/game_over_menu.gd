@@ -13,7 +13,7 @@ func on_enter() -> void:
 
 
 func on_leave() -> void:
-	_nav_enabled = false
+	_is_nav_enabled = false
 	_stop_pulse()
 	_overlay_leave(_container)
 
@@ -22,7 +22,7 @@ func _on_item_selected(index: int) -> void:
 	match index:
 		0:
 			AudioManager.stop_bgm()
-			SaveData.restarting = true
+			SaveData.is_restarting = true
 			GameManager.reload_current_scene()
 		1:
 			GameManager.change_scene.call_deferred("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)

@@ -8,7 +8,7 @@ func test_shell_builds_enemy_bullet_bundle():
 	var s = SHELL.new()
 	s.tex_key = "小玉"
 	s.tint = Color(1, 0, 0)
-	s.blend = true
+	s.is_blend = true
 	s.speed = 500.0
 	var d: BulletData = s.build()
 	assert_eq(d.faction, BulletData.Faction.ENEMY, "敌弹阵营")

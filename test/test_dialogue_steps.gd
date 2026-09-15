@@ -45,7 +45,7 @@ func test_dsl_builds_steps():
 	assert_eq(d.steps[2].event_key, "bgm_switch", "event key")
 	assert_eq(d.steps[3].type, DialogueStep.Type.WAIT, "3 = wait")
 	assert_eq(d.steps[3].duration, 0.5, "wait 时长")
-	assert_eq(d.steps[4].flip, false, "flip 值")
+	assert_eq(d.steps[4].is_flip, false, "flip 值")
 	assert_eq(d.steps[5].pos, Vector2(300, 200), "move 位置")
 	assert_eq(d.steps[6].emotion, "笑", "portrait 表情")
 	assert_eq(d.steps[7].light, 0.4, "dim 明暗")
@@ -100,7 +100,7 @@ func test_apply_line_light_rules():
 	assert_eq(speakers, ["灵梦"], "说话者列表")
 	assert_eq(state.actor("灵梦").light, 1.0, "说话者亮")
 	assert_eq(state.actor("卡摩瑞").light, 0.35, "沉默在场者暗")
-	assert_true(state.actor("灵梦").visible, "说话者在场")
+	assert_true(state.actor("灵梦").is_visible, "说话者在场")
 
 
 func test_apply_line_multi_speaker_both_light():
@@ -143,7 +143,7 @@ func test_runner_enter_then_line():
 	runner.start(d.steps)
 	assert_true(runner.is_waiting_line, "停在 LINE 等输入")
 	var a: ActorState = runner.state.actor("灵梦")
-	assert_true(a.visible, "在场")
+	assert_true(a.is_visible, "在场")
 	assert_eq(a.position, Vector2(200, 200), "位置来自 enter")
 	assert_eq(a.light, 1.0, "说话者亮")
 	assert_eq(seen.shown.size(), 1, "显示了一句")
@@ -218,7 +218,7 @@ func test_runner_enter_opts_applied():
 	d.enter(k, Vector2(550, 230), {"flip": true, "dim": 0.6, "emotion": "耍帅"})
 	runner.start(d.steps)
 	var a: ActorState = runner.state.actor("卡摩瑞")
-	assert_eq(a.flip_h, true, "flip 生效")
+	assert_eq(a.is_flip_h, true, "flip 生效")
 	assert_eq(a.light, 0.6, "dim 生效")
 	assert_eq(a.emotion, "耍帅", "emotion 生效")
 	assert_true(runner.is_finished(), "演出步骤立即结束")
@@ -239,11 +239,11 @@ func test_runner_stage_ops():
 	assert_true(runner.is_finished(), "全部执行完")
 	var a: ActorState = runner.state.actor("灵梦")
 	assert_eq(a.position, Vector2(300, 300), "move 生效")
-	assert_eq(a.flip_h, true, "flip 生效")
+	assert_eq(a.is_flip_h, true, "flip 生效")
 	assert_eq(a.light, 0.2, "dim 生效")
 	assert_eq(a.emotion, "笑", "portrait 生效")
 	assert_eq(a.bubble_offset, Vector2(-650, 250), "bubble 生效")
-	assert_false(a.visible, "exit 后离场")
+	assert_false(a.is_visible, "exit 后离场")
 
 
 func test_runner_state_not_shared_between_runs():
@@ -300,7 +300,7 @@ func test_screen_multi_bubble_silent_dim():
 	var speakers := state.apply_line(line)
 	assert_eq(speakers, ["灵梦"], "只有开口者算说话者")
 	assert_eq(state.actor("灵梦").light, 1.0, "说话者亮")
-	assert_eq(state.actor("卡摩瑞").visible, true, "沉默者也应在场")
+	assert_eq(state.actor("卡摩瑞").is_visible, true, "沉默者也应在场")
 	assert_eq(state.actor("卡摩瑞").light, 0.35, "沉默在场者变暗")
 	assert_eq(state.actor("卡摩瑞").emotion, "震惊", "沉默者表情仍应用")
 

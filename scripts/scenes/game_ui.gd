@@ -86,8 +86,8 @@ func _ready() -> void:
 	_memory_num.modulate    = Color(0.592, 0.549, 1.0, 1.0)
 
 	# 对齐：不带前导零的用左对齐
-	_max_point_num.left_align = true
-	_graze_num.left_align     = true
+	_max_point_num.is_left_align = true
+	_graze_num.is_left_align     = true
 	_memory_num.pct_index     = 13
 	_memory_num.minus_index   = 12
 	_memory_num.char_count    = 14

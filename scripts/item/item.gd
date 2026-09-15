@@ -17,7 +17,7 @@ var _collect_speed: float = 800.0
 var _auto_collect: bool = false
 var _auto_collect_line: float = 256.0
 var _proximity_range: float = 128.0  # 靠近自机即吸
-var _dead: bool = false
+var _is_dead: bool = false
 
 @onready var _sprite: Sprite2D = $Sprite2D
 @onready var _collision: CollisionShape2D = $CollisionShape2D
@@ -31,7 +31,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _dead:
+	if _is_dead:
 		return
 
 	var player: Node2D = entity_registry.player if entity_registry else null
@@ -57,13 +57,13 @@ func _physics_process(delta: float) -> void:
 
 	# 出屏回收
 	if global_position.y > GameConfig.VIEW_HEIGHT:
-		_dead = true
+		_is_dead = true
 		set_physics_process(false)
 		_recycle()
 
 
 func setup(type: Type, pos: Vector2) -> void:
-	_dead = false
+	_is_dead = false
 	item_type = type
 	global_position = pos
 	_velocity = Vector2(0, -180)  # 上抛初速
@@ -90,9 +90,9 @@ func force_collect() -> void:
 
 
 func collect() -> void:
-	if _dead:
+	if _is_dead:
 		return
-	_dead = true
+	_is_dead = true
 	AudioManager.play_sfx(AssetRegistry.sounds["item"], -6.0)
 	visible = false
 	set_physics_process(false)
@@ -115,7 +115,7 @@ func collect() -> void:
 
 
 func _on_area_entered(area: Area2D) -> void:
-	if _dead:
+	if _is_dead:
 		return
 	if area is Player:
 		collect()

@@ -36,7 +36,7 @@ func apply_line(line: DialogueLine) -> Array[String]:
 		if b.speaker == null:
 			continue
 		var a := ensure(b.speaker)
-		a.visible = true
+		a.is_visible = true
 		# 表情是内容属性：这句里该角色什么表情（含沉默者，与旧模型一致）
 		if not b.emotion.is_empty():
 			a.emotion = b.emotion
@@ -55,6 +55,6 @@ func apply_line(line: DialogueLine) -> Array[String]:
 func present_actors() -> Array:
 	var out: Array = []
 	for name_key in actors:
-		if actors[name_key].visible:
+		if actors[name_key].is_visible:
 			out.append(actors[name_key])
 	return out

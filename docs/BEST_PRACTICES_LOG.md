@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-14 — 命名统一 N13：布尔 `is_` 前缀（非 export 部分）
+
+- **契约早已在** `BEST_PRACTICES_BASELINE.md`：布尔 `is_/has_/can_/should_`（`is_running` / `has_boss`），禁无主语。
+- **做法**：非 `@export` 的不合规 bool → 加 `is_`（`active`→`is_active`、`_paused`→`_is_paused`、`locked`→`is_locked`、`spawn_fog`→`is_spawn_fog` …）。
+  - 用**词边界脚本**（`\b`）批量，避免 `_paused` 误伤 `_processing_paused`；脚本用完即删。
+  - 5 个与 Godot 内置/方法**同名**的不能全局替换，手工按接收者改：`BulletService/AudioService.active`、`BulletShell.blend`、`DialogueStep.flip`、`ActorState.visible` / `flip_h`（`node.visible` / `tex.flip_h` 是内置，保留）。
+  - `native_behaviors` → `enable_native_behaviors`。
+  - **动词开头保留**（裁定）：`auto_stop` / `draw_velocity_lines` / `allow_wrap` / `link_ground_to_fog`；契约布尔行同步补「或动词开头」。
+- **踩坑**：`auto_stop` 被**内容层** `data/` 引用（5 处 `auto_stop = true`）——批量脚本只扫 `scripts/`+`test/` 漏掉 → 编译报未声明。教训：**bulk 重命名前先 grep `data/`**，内容字段不在范围。
+- **待办**：11 个 `@export` bool（其中 3 个有 `.tres`/`.tscn` 引用）待拍板。
+- **验证**：`./tools/verify.sh` 全绿 **381 / 4194**。
+
 ### 2026-09-14 — 命名统一 N11 / N12：preload 常量后缀 + 回调值 vs 信号处理
 
 - **契约早已写在** `BEST_PRACTICES_BASELINE.md`「标识符命名契约」：`preload 常量 = 场景 *_SCENE / 脚本 *_SCRIPT；已有 class_name 的别再起别名`；`回调 Callable = on_x；信号处理方法 = _on_x`。这次是**按契约落地**。

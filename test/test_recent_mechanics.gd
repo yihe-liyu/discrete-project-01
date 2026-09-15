@@ -98,7 +98,7 @@ func test_open_reduce_expires():
 
 
 func test_practice_miss_records_failure():
-	# 练习 miss：practice_attempts+1、captures 不加（防重复：击破路径 _cleared=true 已记）
+	# 练习 miss：practice_attempts+1、captures 不加（防重复：击破路径 _is_cleared=true 已记）
 	# 用独立键（stage=99）避免撞真实持久记录；手动预建记录模拟"已解锁"
 	# 备份/还原 book（record_practice 会改 autoload 内存记录；退出时若触发 save 会污染真实文件）
 	var book_backup: Array = SaveData.spell_book.records.duplicate(true)
@@ -122,8 +122,8 @@ func test_practice_miss_records_failure():
 	add_child_autofree(boss)
 	boss._stage_id = 99  # 裸 new() 无 setup，直设（spawn_boss 会走 setup 自动取 practice_stage_id）
 	boss.start_phase(phase)
-	# 先记录一次击破（_cleared=true）
-	boss._invincible = false
+	# 先记录一次击破（_is_cleared=true）
+	boss._is_invincible = false
 	boss.take_damage(99999.0)
 	var r := book.get_record(99, 7, 0, 0, 1)
 	assert_eq(r.practice_attempts, 1, "击破记 1 次尝试")

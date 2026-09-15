@@ -38,16 +38,16 @@ var _phase_data: PhaseData
 var _pos_indicator: Sprite2D  # Boss 位置指示器（x 跟随 Boss，y 固定游戏框底）
 var _bonus: int = 0
 var _elapsed: float = 0.0
-var _invincible: bool = false
-var _phase_missed: bool = false   # 本阶段内玩家是否 miss 过（东方规则：miss 即失败尝试、miss 后击破不算收取）
+var _is_invincible: bool = false
+var _is_phase_missed: bool = false   # 本阶段内玩家是否 miss 过（东方规则：miss 即失败尝试、miss 后击破不算收取）
 var _open_reduce_left: float = 0.0   # 开局减伤剩余时长（秒）
 var _open_reduce_ratio: float = 0.0  # 开局减伤比例（0~1）
 var _move_coroutine_runner: CoroutineRunner
 var _shoot_coroutine_runner: CoroutineRunner
 var _stage_id: int
 var _phase_identity: PhaseIdentity
-var _exit_controlled: bool = false
-var _cleared: bool = false
+var _is_exit_controlled: bool = false
+var _is_cleared: bool = false
 
 func current_phase() -> PhaseData: return _phase_data
 
@@ -65,7 +65,7 @@ func _refs():
 
 ## Boss 残血（供命中音效等）：血量 < 当前阶段满血的 45%，且非无敌/非时符
 func is_low_hp() -> bool:
-	if _invincible or not _phase_data or _phase_data.is_timeout_only:
+	if _is_invincible or not _phase_data or _phase_data.is_timeout_only:
 		return false
 	return _phase_data.hp > 0 and float(_hp) < _phase_data.hp * 0.45
 func current_bonus() -> int: return _bonus
@@ -85,10 +85,10 @@ func set_boss_name(n: String) -> void:
 	_display_name = n
 	display_name_changed.emit(get_boss_name())   # 用有效名：清空覆盖时回退 boss_data.boss_name
 func is_in_gap() -> bool:
-	return _cleared
+	return _is_cleared
 
 func set_exit_controlled() -> void:
-	_exit_controlled = true
+	_is_exit_controlled = true
 
 
 func setup(data: BossData, p_ctx: StageContext = null) -> void:
@@ -176,12 +176,12 @@ func start_phase(data: PhaseData) -> void:
 	# 配置校验：time_limit<=0 会除零/立即超时，防御性拒绝
 	for e in data.validate():
 		push_error("Boss.start_phase 配置错误: " + e)
-	_cleared = false
-	_phase_missed = false  # 每阶段独立判定 miss
+	_is_cleared = false
+	_is_phase_missed = false  # 每阶段独立判定 miss
 	_phase_data = data
 	_elapsed = 0.0
 	_bonus = data.bonus
-	_invincible = true
+	_is_invincible = true
 	_set_hp(0)
 	# 开局减伤参数暂存，计时从"无敌解除"（涨血完，玩家能打伤）开始
 	_open_reduce_ratio = data.open_reduce_ratio
@@ -202,10 +202,10 @@ func start_phase(data: PhaseData) -> void:
 	twn.tween_method(_set_hp, 0, data.hp, 1.0)
 	twn.tween_callback(func():
 		if data.is_timeout_only:
-			_invincible = true
+			_is_invincible = true
 			_set_hp(999999)
 		else:
-			_invincible = false
+			_is_invincible = false
 			# 玩家能打伤时才开始减伤计时（完整 open_reduce_time 秒）
 			_open_reduce_left = data.open_reduce_time if _open_reduce_ratio > 0.0 else 0.0
 
@@ -249,7 +249,7 @@ func _process(delta: float) -> void:
 var _dmg_acc: float = 0.0
 
 func take_damage(damage: float) -> void:
-	if _invincible: return
+	if _is_invincible: return
 	if not _phase_data: return
 	if _open_reduce_left > 0.0 and _open_reduce_ratio > 0.0:
 		damage *= 1.0 - _open_reduce_ratio  # 开局减伤
@@ -267,15 +267,15 @@ func take_damage(damage: float) -> void:
 func _on_player_death() -> void:
 	if PracticeSession.is_practice_mode:
 		return  # 练习 miss 走 _die 逻辑
-	if not _phase_data or _cleared or _phase_missed:
+	if not _phase_data or _is_cleared or _is_phase_missed:
 		return
-	_phase_missed = true
+	_is_phase_missed = true
 
 
 func clear_phase(captured: bool) -> void:
-	if _cleared: return
-	_cleared = true
-	_invincible = true
+	if _is_cleared: return
+	_is_cleared = true
+	_is_invincible = true
 	if _move_coroutine_runner: _move_coroutine_runner.stop(); _move_coroutine_runner.queue_free(); _move_coroutine_runner = null
 	if _shoot_coroutine_runner: _shoot_coroutine_runner.stop(); _shoot_coroutine_runner.queue_free(); _shoot_coroutine_runner = null
 
@@ -283,7 +283,7 @@ func clear_phase(captured: bool) -> void:
 		# 阶段已开始（_phase_identity 已生成）才记录；Ctrl+G 在阶段开始前触发时只跳阶段不落盘
 		if PracticeSession.is_practice_mode:
 			RecordService.record_phase_capture(_phase_identity, false, 0, 0.0)  # 练习收取
-		elif captured and not _phase_missed:
+		elif captured and not _is_phase_missed:
 			RecordService.record_phase_capture(_phase_identity, true, _bonus, _elapsed)  # 干净收取
 
 	GameEvents.phase_end.emit(captured, _bonus)
@@ -309,12 +309,12 @@ func _die() -> void:
 	# （阶段逻辑由 _process 开头的 `if not _phase_data: return` 自然跳过）
 	_phase_data = null
 	_set_ring_visible(false)
-	if PracticeSession.is_practice_mode and _phase_identity and not _cleared:
+	if PracticeSession.is_practice_mode and _phase_identity and not _is_cleared:
 		pass  # 练习 attempt 已在进入阶段时记过（玩家 miss/超时退出也覆盖），这里不再重复记
 	if registry != null:
 		registry.unregister_enemy(self)
 	GameEvents.boss_defeated.emit(self)
-	if not _exit_controlled:
+	if not _is_exit_controlled:
 		queue_free()
 
 ## 血量改写唯一入口（封装）：改 _hp 并发 hp_changed 供 UI 订阅

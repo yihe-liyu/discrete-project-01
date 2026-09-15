@@ -43,7 +43,7 @@ func test_prebuilt_lifecycle_runs_natively() -> void:
 	ns.cull_rect = CULL
 	ns.cull_margin = 0.0
 	ns.default_lifetime = 100.0
-	ns.native_behaviors = true
+	ns.enable_native_behaviors = true
 	var pid: int = ns._program_for(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": lc})
 	assert_true(pid >= 0, "预拼 lifecycle 应注册成 program（非 -1）")
 	assert_eq(ns._program_data.size(), 1, "应注册恰好 1 个 program")

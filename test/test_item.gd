@@ -67,7 +67,7 @@ func test_collect_once_only():
 	var item := _make_item()
 	item.setup(Item.Type.POWER, Vector2(100, 100))
 	item.collect()
-	item.collect()  # 第二次无效（_dead 保护）
+	item.collect()  # 第二次无效（_is_dead 保护）
 	assert_eq(_player_resources.power_raw, 1, "重复收集不叠加")
 
 func test_item_pool_reuse():

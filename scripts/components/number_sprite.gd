@@ -10,7 +10,7 @@ var dot_index: int = -1
 var slash_index: int = -1
 var pct_index: int = -1
 var minus_index: int = -1
-var left_align: bool = false
+var is_left_align: bool = false
 var digit_count: int = 8
 var digit_spacing: float = 24.0
 @export var value: int = 0:
@@ -19,16 +19,16 @@ var digit_spacing: float = 24.0
 			return
 		value = v
 		_text = ""
-		_dirty = true
+		_is_dirty = true
 
 var _digits: Array[Sprite2D] = []
 var _text: String = ""
-var _ready_done: bool = false
-var _dirty: bool = true
+var _is_ready_done: bool = false
+var _is_dirty: bool = true
 
 
 func _ready() -> void:
-	_ready_done = true
+	_is_ready_done = true
 	if not digit_texture or char_count <= 0:
 		return
 	_setup_digits()
@@ -50,19 +50,19 @@ func _setup_digits() -> void:
 
 
 func _process(_delta: float) -> void:
-	if not _ready_done or not _dirty:
+	if not _is_ready_done or not _is_dirty:
 		return
-	_dirty = false
+	_is_dirty = false
 
 	var text := _text
 	if text == "":
-		if left_align:
+		if is_left_align:
 			text = str(value)
 		else:
 			text = "%0*d" % [digit_count, value]
 
 	var offset := 0
-	if not left_align:
+	if not is_left_align:
 		offset = digit_count - text.length()
 
 	for i in range(digit_count):
@@ -100,4 +100,4 @@ func _process(_delta: float) -> void:
 
 func show_text(t: String) -> void:
 	_text = t
-	_dirty = true
+	_is_dirty = true

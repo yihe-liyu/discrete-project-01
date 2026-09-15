@@ -25,9 +25,9 @@ static func start(p_phase: PhaseData, p_boss_scene: PackedScene, p_boss_name: St
 	background = StageCatalog.background(p_stage_id)
 
 
-## 结束练习（重开中不清：restarting 时保留载荷）
+## 结束练习（重开中不清：is_restarting 时保留载荷）
 static func finish() -> void:
-	if SaveData.restarting:
+	if SaveData.is_restarting:
 		return
 	clear()
 

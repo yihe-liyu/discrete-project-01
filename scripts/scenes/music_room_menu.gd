@@ -79,7 +79,7 @@ func _rebuild_list() -> void:
 
 		# 设定文字内容
 		if not record.unlocked:
-			label.set_meta("locked", true)
+			label.set_meta("is_locked", true)
 			label.text = "NO.%02d  %s" % [record.music_id, LOCKED_TEXT]
 		else:
 			label.text = "NO.%02d  %s" % [record.music_id, record.title]

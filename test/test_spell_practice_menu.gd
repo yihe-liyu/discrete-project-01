@@ -33,10 +33,10 @@ func test_build_diff_list_shows_all_slots_but_locks_unseen():
 	menu._build_diff_list()
 
 	assert_eq(menu._diff_entries.size(), 4, "卡摩瑞应有 4 个难度槽（Easy~Lunatic）")
-	assert_eq(menu._diff_entries[1].locked, false, "Normal(1) 已解锁")
-	assert_eq(menu._diff_entries[0].locked, true, "Easy(0) 未解锁 → 锁定")
-	assert_eq(menu._diff_entries[2].locked, true, "Hard(2) 未解锁 → 锁定")
-	assert_eq(menu._diff_entries[3].locked, true, "Lunatic(3) 未解锁 → 锁定")
+	assert_eq(menu._diff_entries[1].is_locked, false, "Normal(1) 已解锁")
+	assert_eq(menu._diff_entries[0].is_locked, true, "Easy(0) 未解锁 → 锁定")
+	assert_eq(menu._diff_entries[2].is_locked, true, "Hard(2) 未解锁 → 锁定")
+	assert_eq(menu._diff_entries[3].is_locked, true, "Lunatic(3) 未解锁 → 锁定")
 	assert_eq(menu._diff_index, 1, "初始索引跳到第一个解锁难度(Normal)")
 
 

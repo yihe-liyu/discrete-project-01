@@ -113,7 +113,7 @@
 | **类型是内置基类**（`Node2D`/`Control`/`Sprite2D`…） | 节点名赢：`muzzle: Marker2D = $Muzzle` ✅ |
 | **同类型多实例** | `限定词_类型snake`（`stage_entity_registry`）—— 同作用域内必须可区分 |
 | **集合 / 映射** | 集合用复数（`enemies`）；映射用 `值_by_键`（`_type_by_sig` / `_damage_by_index`） |
-| **布尔** | `is_` / `has_` / `can_` / `should_` 前缀（`is_running` / `has_boss`）；禁无主语（`flag` / `active`） |
+| **布尔** | （a）`is_` / `has_` / `can_` / `should_` 前缀（`is_running` / `has_boss`）；或（b）**动词开头**、天然表达"做/不做"（`draw_velocity_lines` / `allow_wrap` / `link_ground_to_fog` / `enable_native_behaviors`）；禁无主语名词（`flag` / `active`） |
 | **回调 Callable** | 变量/形参 `on_x`（`on_overlap`）；信号处理**方法** `_on_x`（`_on_player_death`）—— 不互换 |
 | **生命周期钩子**（框架调用、子类覆写，非信号） | `on_enter` / `on_leave` / `on_activate` / `on_deactivate`（`MenuNav` 调）—— 与信号处理 `_on_*` 区分，不斜杠 |
 | **preload 常量** | 场景 `*_SCENE`；脚本 `*_SCRIPT`；已有 `class_name` 的别再起别名 |
