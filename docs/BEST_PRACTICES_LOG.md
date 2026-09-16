@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-16 — 文档对齐：弹幕行为「由浅入深」落回 CONTENT_GUIDE，不新开文档
+
+- **提问**：「弹幕内核要不要专门加一份由浅入深的教学文档？」→ 一度提议新开 `docs/KERNEL_GUIDE.md`；用户反问「不是有 CONTENT_GUIDE 吗」→ **采纳**：创作者那份就是 CONTENT_GUIDE，新开文件违反「精简易懂」。
+- **真问题不是缺文档，是漂移**：`CONTENT_GUIDE §六` 还在教 `kernel_port()` + `*_bullet.gd` 端口（`data/**` 已 0 处，仅桥接旧通路 + 测试夹具）；文件地图还列着已删的 `data/*/bullet/`；`LIFECYCLE_MODEL` 词汇表还是设计期草稿名（`accel_along_vel` / `wall_hit` / `near_player` / `set_vel`）。
+- **做法**：
+  - `CONTENT_GUIDE §六` 弹幕部分重排成**六步由浅入深**：① 最简 `trajectory(preset)` → ② 10 个 preset 表 → ③ 自己拼相位 → ④ 全词汇 → ⑤ 何时才动 C++ → ⑥ 旧通路已弃用。顺带修文件地图 / 目录注解示例 / `on_flee_burst` 旧名。
+  - `docs/LIFECYCLE_MODEL.md`：§3 首批表（Move/Condition）与 §11 换成**实现名**；§4 创作者面改成 `trajectory(lc)` 主路；§7 映射表更新（载体已删 / hook 注册表 / 变体发射 / K1/K2 全部 ✅）；§5「表达力试金石」加一行注明是**设计期草稿名**。
+- **原则**：**教学位置已有，别开新文件** —— 先对齐现有文档，缺了再补。
+- **验收**：`verify.sh` 全绿（409 测试 / 4258 断言 / 1 pending）；纯文档改动，无代码行为变化。
+
 ### 2026-09-15 — 变体发射：把"自机狙转红"从丢失改回可表达（emit_variant）
 
 - **背景**：orbit_probe 迁移（下一条）时丢了颜色 tell —— 旧实现里 `is_aim` 同时决定**方向**（朝自机）与**颜色**（RED/AQUA），而描述符只有方向表达能力。

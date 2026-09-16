@@ -25,7 +25,7 @@
 | **Phase 相位** | 生命周期的一段：进入时一次，之后每 tick 跑 moves，直到 until 成立 | ✅ |
 | **Move 原语** | 每 tick 施加的**数学**变换 | per-bullet（低频层用时间线事件替代） |
 | **Until 条件** | 结束当前相位的判据（时间 / 位置 / 距离 / 事件） | ✅ |
-| **Action 动作** | 相位结束（或时刻到）时的**一次性**动作：emit / sfx / transform / despawn | ✅ |
+| **Action 动作** | 相位结束（或时刻到）时的**一次性**动作：emit / emit_variant / sfx / on_end_heading / despawn | ✅ |
 | **Timer 计时** | 秒或 tick 倒计时 | ✅ |
 | **Emit 发射** | 生成子弹（低频=直接 spawn；高频=入延后队列） | ✅ |
 
@@ -59,14 +59,14 @@ Phase {
 }
 Move      = { kind, f0..f3 }             # 纯数值参数
 Condition = { kind, f0..f3 }
-Action    = { kind, action_id, f0..f3 }  # action_id → 宿主表（工厂 / sfx / 内容回调）
+Action    = { kind, action_id, f0..f3 }  # action_id → 宿主表（模板 / sfx / 内容回调）
 
 每弹另有：phase_index(PackedInt32) + state 行块
 ```
 
 - **状态槽静态分配**：每个 Move 声明所需行状态（`rotate`→`turned`、`aim`→`elapsed`、`anchor`→`drift`）；编译期算好总 stride，运行期零分配、零哈希。
 - **per-shot 参数**（弹速 / 反弹角 / 难度值）在发射时绑定到描述符实例的数值槽；**结构**（phases）是共享只读的。
-- **Callable 不进原生**：`spawn_factory` / 内容回调注册成 `action_id`，原生只回传 id（沿用 N2.2 的事件思路）。
+- **Callable / BulletData 不进原生**：emit 模板 / 内容回调注册成 `action_id`，原生只回传 id；变体发射另回传概率分支号。
 
 > **关键原则（让描述符封闭）**：**Move 与 Condition 必须原生**（每帧每颗）；**Action / Emit 是一次性（低频）→ 可以回调 GDScript 内容**。
 > 所以「复杂散圈 / 难度 / RNG / 多弹型」全部落在 Action，**天然不进热路径** —— 这是本模型能既封闭又精简的原因。
@@ -76,45 +76,41 @@ Action    = { kind, action_id, f0..f3 }  # action_id → 宿主表（工厂 / sf
 | Move | 参数 | 行状态 |
 |---|---|---|
 | `accel_world` | vec | — |
-| `accel_along_vel` | a | — |
-| `rotate` | w | turned |
-| `aim` | target_kind, max_turn/s, dist_weight | elapsed |
-| `anchor` | anchor_id / offset, drift_speed, angle | drift |
-| `speed_ramp` | min, top, time | elapsed |
-| `set_vel` | dir, speed | — |
-| `scale` | f | — |
+| `accel_heading` | a | — |
+| `rotate` | w, limit | turned |
+| `steer` | target, max_turn/s, ramp, dist_weight, speed_from/to, steer_until | elapsed |
+| `anchor_drift` | anchor_id, offset, angle, speed, use_global | drift |
+| `speed_lerp` | from, to, ramp | elapsed |
+| `set_heading` | dir | — |
+| `set_speed` | speed | — |
+| `scale_speed` | f | — |
 
 ### Condition 首批
 
 | Condition | 参数 | 用于 |
 |---|---|---|
 | `never` | — | accel / 直线 |
-| `timeout` | t | homing_duration / avoid flee_time |
-| `top_edge` | — | radial_accel |
-| `wall_hit` | sides mask | bounce（碰框时位置夹到框上） |
-| `near_player` | r | avoid / non_mid travel |
-| `near_boss` | r | non_mid flee（**待验证**，见 §5.2） |
-| `turned` | limit | curve |
+| `elapsed` | t | homing_duration / avoid flee_time |
+| `near` | target, r, every / every_ticks | bounce / avoid / non_mid（`near_boss(r)` 已闭合，见 §5.2） |
+| `at_wall` | mask | radial_accel / bounce（碰框时夹位并输出落点） |
+| `state` | slot, cmp, value | curve（`until_turned()` 是糖） |
 
 ### Action 首批
-`emit` / `sfx` / `transform` / `despawn` / `set_vel`。
+`emit` / `emit_variant` / `sfx` / `on_end_heading` / `despawn` / `on_end_call`。
 
 ---
 
 ## 4. 创作者面
 
-**内容创作者实际写的是「端口」**（`move + params`）—— 权威表见 `CONTENT_GUIDE.md`「弹幕行为接口」：
+**内容创作者写的是 `BulletData.trajectory(lc)`** —— 直接挂 `BulletLifecycle`（builder），**不碰 opcode**。权威用法见 `CONTENT_GUIDE.md`「弹幕行为」：
 ```gdscript
-func kernel_port() -> Dictionary:
-    return {"move": &"bounce", "params": {&"accel": 120.0, &"bounce_angle": 0.3}}
-```
+# 现成 preset
+_bullet.trajectory(BulletLifecycle.homing())
 
-**预设表不够时**，还有第二种端口形状 —— 直接用 builder 拼描述符（`{lifecycle}`，**仍然不碰 opcode**），见 `CONTENT_GUIDE.md`「自定义行为」：
-```gdscript
-func kernel_port() -> Dictionary:
-    var lc := BulletLifecycle.new()
-    lc.rotate(2.0, 0.5).until_turned().then().accel_heading(300.0).until_elapsed(1.0).despawn()
-    return {"lifecycle": lc}
+# 预设不够：自己拼相位
+var lc := BulletLifecycle.new()
+lc.rotate(2.0, 0.5).until_turned().then().accel_heading(300.0).until_elapsed(1.0).despawn()
+_bullet.trajectory(lc)
 ```
 
 **引擎侧**（`LifecycleCatalog.build()` **就地展开**）用 fluent builder → 描述符（真实方法名）：
@@ -122,19 +118,19 @@ func kernel_port() -> Dictionary:
 BulletLifecycle.new()\
     .accel_heading(100.0)                                   # Move\
     .until_at_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)       # Until\
-    .sfx(&"kira", -8.0).emit(factory, toward(T_BOSS, 0.3), 0.0, true).despawn()   # Action
+    .sfx(&"kira", -8.0).emit(_replacement, toward(T_BOSS, 0.3), 0.0, true).despawn()   # Action
 ```
 - **Move**：`accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift`
 - **Until**：`until_never` `until_elapsed` `until_near` `until_at_wall` `until_state` `until_turned`；`then()` 开新相位
 - **Action**：`sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call`
-- **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)`
+- **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)` `forward(angle)` `random_dir(spread)` `chance_toward(target, p, spread)`
 
 **Canned preset**（10 个 `move` 的**类型化薄包装**，组合在 `build()`）：
 ```gdscript
-BulletLifecycle.bounce(accel_rate, bounce_angle, spawn_speed, factory, sfx_key := &"kira", sfx_db := -8.0)
+BulletLifecycle.bounce(accel_rate, bounce_angle, spawn_speed, spawn, sfx_key := &"kira", sfx_db := -8.0)
 BulletLifecycle.homing(angle_per_sec, accel_time, min_speed, max_speed, duration, proximity_boost)
 BulletLifecycle.curve(w, limit)
-BulletLifecycle.radial_accel(accel_rate, factory, sfx_key := &"", sfx_db := 0.0)
+BulletLifecycle.radial_accel(accel_rate, spawn, sfx_key := &"", sfx_db := 0.0)
 BulletLifecycle.non_mid_flee(proximity, boss_radius, burst)
 BulletLifecycle.avoid_player(proximity, jump, flee_time)
 BulletLifecycle.world_accel(v)   /   BulletLifecycle.accel(a)
@@ -142,11 +138,14 @@ BulletLifecycle.laser_follow(anchor_id, offset, angle, drift_speed, initial_drif
 BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drift)
 ```
 
-> **创作者写 `move + params` 或自定义 `{lifecycle}`**（builder），都不碰 opcode —— 没有原语泄漏（满足"创作者方便"硬约束）。
+> **创作者两条路**：现成 preset（`move` 的糖）或自定义相位组合（builder），都不碰 opcode —— 没有原语泄漏（满足"创作者方便"硬约束）。
+> 旧 `kernel_port` 端口（`*_bullet.gd`）已弃用，仅测试夹具保留（见 §7）。
 
 ---
 
 ## 5. 表达力试金石
+
+> **本节是设计期试金石（2026-09-13）**：用当时的草稿名（`accel_along_vel` / `wall_hit` / `near_player` / `set_vel`…）证明描述符能覆盖 10 个行为。**当前实现名以 §3 / §11 为准。**
 
 ### 5.1 `bounce`（最有条件性的一个）
 
@@ -213,9 +212,11 @@ bounce → phases: [
 | `Timeline` / `TimelineEvent` | **保留**（低频 runtime 主体） |
 | `CoroutineScript` / `StageDirector` / `PhaseData` | **保留**（低频） |
 | `*_shoot.gd`（波编排） | **保留** + 加 pattern builder |
-| `kernel_bridge/behavior/*.gd`（10 个） | → **描述符 preset**（L2）→ 删 GDScript 实现（L4） |
-| `*_bullet.gd`（`kernel_port`：命名 `move` / 自定义 `{lifecycle}`） | → **builder sugar**（✅ 已接，见 `test_lifecycle_port`） |
-| `BulletData.lifecycle` / `.trajectory(lc, anchor)`（**b0/b1/b2a**：直接挂描述符，不经 port） | ✅ 已接：gravity / homing / marisa_laser / world_accel / bounce / radial_accel（替换弹改收 `BulletData`）；`content_signature` 结构去重。余 `non_mid_flee`（`on_end_call`）待 **hook 名**（b2b） |
+| `kernel_bridge/behavior/*.gd`（10 个） | → **描述符 preset**（L2）→ 删 GDScript 实现（L4）✅ |
+| `*_bullet.gd`（`kernel_port`：命名 `move` / 自定义 `{lifecycle}`） | **载体已删**：`data/**` 全部直接 `trajectory(lc)`；桥接端口仅测试夹具保留（待清 b2c） |
+| `BulletData.lifecycle` / `.trajectory(lc, anchor)`（**b0/b1/b2a**：直接挂描述符，不经 port） | ✅ 全部迁移（gravity / homing / marisa_laser / world_accel / bounce / radial_accel / non_mid_flee）；`content_signature` 结构去重 |
+| 内容回调 + 变体发射（**b2b / 变体**） | ✅ **hook 名注册表**（`LIFECYCLE_HOOKS_SCRIPT.register`）+ `emit_variant`（内核回传概率分支号，宿主按分支选模板） |
+| 内核随机 / 朝向（**K1/K2**） | ✅ 原生 PRNG（`set_seed` 由宿主种子派生）+ per-bullet 朝向（`accel_heading` 与速度解耦） |
 | `CoroutineScript` 快速模式（子弹协程） | 已废，随 GDScript 内核拆除 |
 
 ---
@@ -273,7 +274,7 @@ bounce → phases: [
 | | `near(target, r, every=0, every_ticks=0)` | every>0 秒；every_ticks>0 帧门控（non_mid 的 skip%3） |
 | | `at_wall(mask)` | 夹位并输出落点（供 `emit(at_end)`） |
 | | `state(slot, cmp, v)` | 读槽（`until_turned()` 是便利封装） |
-| Action | `emit(factory, dir, speed, at_end)` | dir 表达式；at_end 用条件落点 |
+| Action | `emit(spawn, dir, speed, at_end)` | spawn = BulletData / Callable / 数组；at_end 用条件落点 |
 | | `emit_variant([t0, t1], dir, speed, at_end)` | 概率分支（`chance_toward`）选模板：0=未命中 t0，1=命中 t1；内核只回传分支号 |
 | | `sfx(key, db)` / `despawn` / `on_end_heading(dir)` / `on_end_call(fn)` | 内容回调（散圈）用 call |
 | 方向表达式 | `toward(t, angle)` / `away(t, angle)` / `heading(angle)` | t = player / nearest_enemy / boss |

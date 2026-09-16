@@ -1,6 +1,6 @@
 # 🛠️ 东方星 STG 引擎 — 内容制作流程
 
-> 版本：2026-09 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕行为走 `kernel_port()` 端口，原生执行**；工作台只做预览/调试）
+> 版本：2026-09 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `BulletData.trajectory(lc)`，原生执行**；工作台只做预览/调试）
 
 ---
 
@@ -11,7 +11,7 @@
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. F6 运行工作台 → 命中框/固定种子/逐帧看效果；改完代码**重启工作台**生效
 4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完同样重启工作台看
-5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为接口」（`BulletData.trajectory(lc)` 直接挂；或 `kernel_port()` 端口：命名 `move + params` / 自定义 `{lifecycle}`）
+5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`BulletData.trajectory(lc)` 直接挂现成 preset，或自己用 builder 拼相位）
 
 > 工作台**不是编辑器**：不写数据、不热重载，是「跑真实代码看效果」的预览沙盒。
 > 数据（关卡/Boss/阶段）全部以代码 + .tres 形式存在，由 AI/人直接写。
@@ -191,16 +191,17 @@ func _fire(ctx):
 
 > 类型级字段（贴图 / 阵营 / 判定 / 伤害 / 命中特效）在**首次发射时快照**；运行期改型需 `invalidate_bullet_type()`。
 >
-> 通过内核行为端口**延后发射**（`host.queue_spawn` / `on_flee_burst` 等）时，队列会在**入队瞬间**快照速度 / 染色，所以「复用实例 + 每发改速度」是安全的；但别在**入队之后、flush 之前**再改同一实例。
+> 内核**延后发射**（`emit` / `at_end` 落点等）在**入队瞬间**快照速度 / 染色，所以「复用实例 + 每发改速度」是安全的；但别在**入队之后、flush 之前**再改同一实例。
 
 ### 脚本文件地图
 
 ```
-敌人行为   data/stages/stage01/enemy/   enemy01.gd / enemy02.gd / enemy03.gd / enemy04.gd / fly_away.gd（关卡脚本 preload 即用）
-弹丸行为   data/stages/stage01/bullet/   gravity_bullet.gd / radial_accel_bullet.gd（被行为脚本 preload）
-Boss 阶段  data/stages/?/phase/*/        每阶段一个目录：*.tres + *_{move,shoot,bullet}.gd（.tres 显式引用）
-关卡专属   data/stages/stage01/          stage_script(stage01.gd) + phase/ + enemy/ + bullet/ + background/ + stage_data/
+敌人行为   data/stages/<stage>/enemy/     *.gd（关卡脚本 preload 即用）
+Boss 阶段  data/stages/<stage>/phase/*/   每阶段一个目录：*.tres + *_{move,shoot}.gd（.tres 显式引用）
+关卡专属   data/stages/<stage>/           stage_script/ + phase/ + enemy/ + background/ + stage_data/
 ```
+
+> 弹丸行为**不再单列目录**：`data/**/*_bullet.gd` 已删，飞行规律直接挂在发射脚本的 `BulletData` 上（见「弹幕行为」）。
 
 ### 行为脚本示例
 
@@ -223,84 +224,72 @@ func _init_enemy() -> void:
 ### 目录注解（创作台自动索引，2026-08+）
 
 协程脚本会被**自动扫描**进创作台目录（`ContentCatalog`，只扫 `res://data/`、只收 `extends CoroutineScript/CoroutineRunner`）。
-角色默认按**路径/命名约定**判定（`*_move.gd`→Boss移动 · `*_shoot.gd`→弹幕发射 · `*_bullet.gd`或`bullet/`→弹丸行为 ·
-`enemy/`→敌人行为 · `stage_script/`→关卡编排 · `background/`→背景演出）；约定判不出时按**真实引用**反推（阶段 .tres 的 move/shoot 字段、发射脚本 preload 的弹丸）。
+角色默认按**路径/命名约定**判定（`*_move.gd`→Boss移动 · `*_shoot.gd`→弹幕发射 ·
+`enemy/`→敌人行为 · `stage_script/`→关卡编排 · `background/`→背景演出）；约定判不出时按**真实引用**反推（阶段 .tres 的 move/shoot 字段）。
+`*_bullet.gd` / `bullet/` 约定仍在代码里，但 `data/**` 已无文件使用（飞行规律直接挂在发射脚本的 `BulletData` 上）。
 
 **注解可选，优先级最高**（写在文件头部注释块，与普通描述行混排即可）：
 
 ```gdscript
 extends CoroutineScript
-## 回卷探测弹：飞出→回点→分裂
-## @role: bullet           # 角色覆盖（约定判错时才用；打架会出 warning）
-## @name: 回卷探测弹        # 目录显示名（默认=注释首行）
-## @desc: 描述（默认=其余注释行；@name 存在时=全部注释行）
+## 非符一：三向扇形
+## @name: 非符一                 # 目录显示名（默认=注释首行）
+## @desc: 扇开三向、每向 5 连      # 描述（默认=其余注释行；@name 存在时=全部注释行）
+## @role: boss_shoot             # 角色覆盖（约定判错时才用；打架会出 warning）
 ```
 
-### 弹幕行为接口（`BulletData.trajectory` 直挂 / `kernel_port` 端口）
+### 弹幕行为（由浅入深）
 
-弹丸脚本（`*_bullet.gd`）做一件事：把参数翻译成内核**端口**——**命名 `move`**（下表）或 **自定义 `{lifecycle}`**（下节）。**权威真相 = `scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` 的 `build()`**（下表由此抄出）。
+一颗弹的飞行规律**只有一个入口**：`BulletData.trajectory(lc)`（`lc` = `BulletLifecycle`，fluent builder）。
+**不改 C++** 就能拼出绝大多数弹幕 —— 下面从"直接用现成 preset"讲到"自己排相位"。
+
+#### ① 最简：挂一个现成 preset
 
 ```gdscript
-extends CoroutineScript
+var _bullet: BulletData          # 成员：复用实例（见「弹型实例复用」）
 
-var accel: float = 0.0
-var bounce_angle: float = 0.0
-
-func kernel_port() -> Dictionary:
-    return {
-        "move": &"bounce",
-        "params": {&"accel": accel, &"bounce_angle": bounce_angle, &"sfx": "kira"},
-    }
+func _fire(p_ctx: StageContext) -> void:
+	if _bullet == null:
+		_bullet = BulletData.new().tex("小玉").speed(300).enemy() \
+			.trajectory(BulletLifecycle.homing())     # ← 追踪最近敌人
+	p_ctx.bullets.shoot_spread(_bullet, 8, TAU, Vector2.RIGHT, global_position)
 ```
 
-| `move` | 参数（括号内为默认） | 说明 |
+#### ② 常用：10 个命名 preset
+
+| preset | 参数（括号内为默认） | 说明 |
 |---|---|---|
-| `world_accel` | `world_accel: Vector2` | 恒定世界加速度 |
-| `accel` | `accel: float` | 沿当前方向加速 |
-| `curve` | `curve`（角速度）、`curve_limit`（累计转角上限，0=无限） | 边飞边转 |
-| `homing` | `homing_angle_per_sec`(720°)、`accel_time`(2)、`min_speed`(500)、`max_speed`(2000)、`homing_duration`(2)、`proximity_boost`(150) | 追踪最近敌人 |
-| `radial_accel` | `accel_rate`、`spawn: BulletData`（或旧 `spawn_factory: Callable`）、`sfx`、`sfx_db` | 沿初向加速 + 碰顶换向下弹 |
-| `bounce` | `accel`、`bounce_angle`、`spawn_speed`(0)、`spawn: BulletData`（或旧 `spawn_factory`）、`sfx`("kira")、`sfx_db`(-8) | 碰框朝 Boss 转 `bounce_angle` 后换弹 |
-| `avoid_player` | （类型级固定；内容不覆盖） | 靠近自机逃 |
-| `non_mid_flee` | `player_proximity`(150)、`boss_radius`、`on_flee_burst: Callable` | 逃 → 近 Boss 散圈（半径由内容按难度传） |
-| `marisa_laser` | `anchor_id`、`anchor_offset`、`angle`、`drift_speed`(2000)、`initial_drift` | 子机锚定激光（World 兄弟，用 global） |
-| `laser_follow` | 同上 | 自机子节点锚定（用局部 position） |
+| `world_accel(v)` | `v: Vector2` | 恒定世界加速度 |
+| `accel(a)` | `a: float` | 沿当前方向加速 |
+| `curve(w, limit)` | `w`（角速度）、`limit`（累计转角上限，0=无限） | 边飞边转 |
+| `homing(...)` | `angle_per_sec`(720°)、`accel_time`(2)、`min_speed`(500)、`max_speed`(2000)、`duration`(2)、`proximity_boost`(150) | 追踪最近敌人 |
+| `bounce(accel_rate, bounce_angle, spawn_speed, spawn, sfx, sfx_db)` | `spawn: BulletData`（替换弹）、`sfx`("kira")、`sfx_db`(-8) | 碰框朝 Boss 转 `bounce_angle` 后换弹 |
+| `radial_accel(accel_rate, spawn, sfx, sfx_db)` | `spawn: BulletData`、`sfx`("")、`sfx_db`(0) | 沿初向加速 + 碰顶换向下弹 |
+| `avoid_player(proximity, jump, flee_time)` | — | 靠近自机逃 |
+| `non_mid_flee(proximity, boss_radius, burst)` | `burst` = 已注册 hook 名（`StringName`） | 逃 → 近 Boss 散圈 |
+| `marisa_laser(...)` / `laser_follow(...)` | `anchor_id`、`offset`、`angle`、`drift_speed`、`initial_drift` | 子机锚定激光（前者 World 兄弟用 global，后者子节点用局部） |
 
-> - `spawn` 是**替换弹**（`BulletData`，推荐：可序列化、跨实例共用 program）；旧写法 `spawn_factory: Callable` 仍兼容（parity oracle 用）。
-> - **未知 `move` → 按直线发射**（计入 `unmapped_behavior_count`）。
-> - **新增 `move`** = 在 `LifecycleCatalog.build()` 加分支，**就地用原语拼出组合**（组合唯一在此）；`BulletLifecycle` 的同名 preset 是可选类型化糖。**组合现有 Move/Until/Action 无需改 C++**；只有需要**新原语**才动 `gdextension/src/danmaku_store.cpp`。
-> - **只是某一颗弹想要"预设表里没有"的组合** → 不用新增 `move`，见下节 `{lifecycle}`。
->
-> **直接挂描述符（推荐，b0/b1）**：多数行为已不需要 `*_bullet.gd` 载体 —— 内容直接
-> `b.trajectory(BulletLifecycle.homing())`（重力 / 诱导 / 激光等已迁移）。**端口保留**给
-> 带工厂 Callable 的行为（`bounce` / `radial_accel` / `non_mid_flee`）与仍写 `move + params` 的内容。
-> 锚定型弹道（激光）用第二参数传 per-shot 锚点：
-> `b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})`。
+> **权威真相 = `scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` 的 `build()`**（组合定义唯一在此）；上表是它的类型化薄包装。
+> **新增 preset** = 在 `build()` 加分支、用已有原语拼，**不用写 `*_bullet.gd`，也不用改 C++**。
 
----
-
-### 自定义行为（预设表不够时用 `{lifecycle}`）
-
-上表 10 个 `move` 是**常用词汇**。要"预设表里没有"的流程控制组合，**不用新增 `move`**——直接在自己的弹丸脚本里用 `BulletLifecycle`（builder）拼好，端口返回 `{"lifecycle": ...}`：
+#### ③ 不够用：自己拼相位
 
 ```gdscript
-extends CoroutineScript
+# 边转 0.5 弧度 → 转满后沿当前方向加速 1 秒 → 消失
+func _sharp_turn() -> BulletLifecycle:
+	var lc := BulletLifecycle.new()
+	lc.rotate(2.0, 0.5)      # 相位1：边飞边转（limit=0.5 弧度）
+	lc.until_turned()        # 转满 → 进下一相位
+	lc.then()                # ← 流程控制：开新相位
+	lc.accel_heading(300.0)  # 相位2：沿当前方向加速
+	lc.until_elapsed(1.0)
+	lc.despawn()
+	return lc
 
-var turn: float = 0.5
-var accel: float = 300.0
-
-func kernel_port() -> Dictionary:
-    var lc := BulletLifecycle.new()
-    lc.rotate(2.0, turn)      # 相位1：边飞边转
-    lc.until_turned()         # 转满 turn 弧度
-    lc.then()                 # ← 流程控制：开下一相位
-    lc.accel_heading(accel)   # 相位2：沿当前方向加速
-    lc.until_elapsed(1.0)
-    lc.despawn()
-    return {"lifecycle": lc}
+_bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 ```
 
-可用词汇（**Move / Until / Action 三类**，签名见 `scripts/kernel_bridge/lifecycle/bullet_lifecycle.gd`）：
+#### ④ 全词汇（Move / Until / Action / 方向糖）
 
 | 类 | 成员 |
 |---|---|
@@ -309,18 +298,25 @@ func kernel_port() -> Dictionary:
 | Action | `sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call` |
 | 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` |
 
-> `emit_variant([未命中, 命中], chance_toward(T_PLAYER, p, spread), speed)` —— 概率分支选**模板**（内核只回传分支号）；
-> `chance_toward` 命中时那发精确朝目标。典型用法：自机狙那发换色，玩家一眼能读出来。
+> - `target` = `T_PLAYER` / `T_BOSS` / `T_NEAREST_ENEMY`。
+> - **`emit`**：相位结束时生成替换弹。第一参 = `BulletData`（推荐）／`Callable（）-> BulletData`（旧写法）／数组（变体发射）。
+> - **`emit_variant([未命中, 命中], chance_toward(T_PLAYER, p, spread), speed)`**：内核按概率分支抽签，0 = 未中取第 1 个、1 = 命中取第 2 个。
+>   自机狙转红的例子：`lc.emit_variant([_青玉, _红玉], BulletLifecycle.chance_toward(T_PLAYER, 0.1, a), 60.0)`。
+>   **模板永远留在宿主**（内核只回传一个分支号），所以换色 / 换贴图 / 换大小都行。
+> - **`on_end_call(hook)`**：低频内容回调。`hook` 传**已注册的 hook 名**（`StringName`，先 `LIFECYCLE_HOOKS_SCRIPT.register()`）或 `Callable`（旧写法）。
+> - **锚定型弹道**（激光）用第二参数传 per-shot 锚点：`b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})`。
 
-锚定激光（用了 `anchor_drift`）再带一个 `anchor`：
+#### ⑤ 什么时候才动 C++
 
-```gdscript
-return {"lifecycle": lc, "anchor": {"id": anchor_id, "offset": offset, "use_global": true}}
-```
+只有要**新的数学原语**（现 Move 9 / Until 5 / Action 6 之外）时才动 `gdextension/src/danmaku_store.cpp`：
+新增一个 op 要同时改**原生执行分支**与**编译端编码**（若回传事件，还要加事件数组项），并补 parity 测试。
+其余一切 —— 新 preset、新组合、新颜色分支 —— 都在宿主侧完成。
 
-> - **用哪个？** 稳定复用 / 有名字 → 上表的命名 `move`；一次性 / 流程控制组合 → `{lifecycle}`。
-> - **边界**：固定 schema 描述符，**没有变量 / 表达式 / goto**，相位线性（`then()` 只往下）。超出语言的部分只能用 `emit`（换弹工厂）/ `on_end_call`（回调 GDScript）两个逃生舱，或加新原语（改 C++）。
-> - **验证范式**：`test/fixtures/lifecycle_port_behavior.gd` + `test/test_lifecycle_port.gd`。
+#### ⑥ 旧通路：`kernel_port` / `*_bullet.gd`（已弃用）
+
+`data/**` 里**已经没有** `*_bullet.gd` 载体了：飞行规律一律直接 `trajectory(lc)`。
+桥接层仍保留 `kernel_port` 通路（返回 `{"move": ..., "params": ...}` 或 `{"lifecycle": ...}`），但它**只服务测试夹具**
+（`test/fixtures/lifecycle_port_behavior.gd` + `test/test_lifecycle_port.gd`），新内容不要再用；待清（TODO b2c）。
 
 ---
 
