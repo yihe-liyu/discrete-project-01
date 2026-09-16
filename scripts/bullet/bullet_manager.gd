@@ -231,7 +231,7 @@ func _enable_kernel() -> void:
 	if entity_registry != null:
 		if is_instance_valid(entity_registry.player):
 			p = entity_registry.player
-		enemy_provider = Callable(entity_registry, "get_active_enemies")
+		enemy_provider = Callable(entity_registry, "get_targetable_enemies")   # 只喂可选目标（未开战 Boss 不算）
 	_kernel_bullet_backend.setup_behaviors(p, enemy_provider)
 	if _multi_mesh != null:
 		_multi_mesh.set_backend(_kernel_bullet_backend)

@@ -87,6 +87,12 @@ func set_boss_name(n: String) -> void:
 func is_in_gap() -> bool:
 	return _is_cleared
 
+
+## 是否已进入战斗、可作为自机弹的目标。对话 / 进场期间（还没 start_phase）为 false ——
+## 自机诱导弹（steer 最近敌）因此不会追一位还没开打的 Boss。
+func is_targetable() -> bool:
+	return _phase_data != null
+
 func set_exit_controlled() -> void:
 	_is_exit_controlled = true
 

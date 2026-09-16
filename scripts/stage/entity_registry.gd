@@ -30,6 +30,16 @@ func get_active_enemies() -> Array:
 	return enemies
 
 
+## 当前**可选目标**的敌机（过滤"在场但未开战"的实体，如对话中的 Boss）。
+## 目标查询（WorldQuery → 内核 steer / near / homing）走这个；碰撞 / UI 仍用 get_active_enemies()。
+func get_targetable_enemies() -> Array:
+	var targets: Array = []
+	for enemy in enemies:
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and enemy.is_targetable():
+			targets.append(enemy)
+	return targets
+
+
 ## 当前自机的单局资源（无自机 = null）——消费者统一经此读，避免 unsafe 属性访问
 func get_player_resources() -> PlayerResources:
 	if not is_instance_valid(player):

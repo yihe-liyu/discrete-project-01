@@ -16,6 +16,8 @@ func _ready() -> void:
 	# 导航初始化（不走 NavPage.on_enter，因为 MainMenu 是场景根）
 	_setup_nav()
 	_is_nav_enabled = false  # 等 Logo 播完再启用
+	# 音效意图自行接线：MainMenu 是场景根，不经 MenuNav._connect_signals（那条只服务 push 的子页面）
+	sfx_requested.connect(AudioManager.play_ui_sfx)
 
 	# 锁定项
 	_container.get_node("Extra Start").set_meta("is_locked", true)

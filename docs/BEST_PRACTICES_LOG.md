@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-16 — 修两个小问题：主菜单音效断线 + 诱导弹追未开战的 Boss
+
+- **① 主菜单音效没了**：`BasePage.sfx_*` 只发 `sfx_requested` 意图，由 `MenuNav._connect_signals`（只在 push/push_overlay 时调用）接线到 `AudioManager.play_ui_sfx`。**MainMenu 是场景根，从不走 MenuNav.push** → 信号无人接，导航/确认/取消全哑。修：`main_menu._ready()` 自接 `sfx_requested → AudioManager.play_ui_sfx`。子页面本来就正常，所以只有主菜单哑。
+- **② 灵梦诱导弹追「还没开打的 Boss」**：`homing` = `steer(T_NEAREST_ENEMY)`，目标来自 `WorldQuery` ← `EntityRegistry.get_active_enemies()`；而 Boss 在 `spawn_boss → start_boss()`（对话进场期）就注册了 → 对话时也能被追。
+  - 修法（**只动「目标查询」，不动注册/碰撞语义**）：`Enemy.is_targetable()` 恒真；`Boss.is_targetable()` = `_phase_data != null`（进入第一个阶段前为 false）；`EntityRegistry.get_targetable_enemies()` 过滤；`BulletManager` 的内核行为目标源改用后者。
+  - **为什么不把注册推迟到开战**：`get_active_enemies()` 还被碰撞 / 命中框覆盖 / 调试绘制共用；推迟注册会连带改变「子弹能否碰到对话中的 Boss」，超出本次范围。新增 `get_targetable_enemies()` 把「在场」与「可追」分开，语义更清。
+- **测试**：`test/test_boss_targeting.gd`（杂兵恒真 / Boss 开战前 false、开战后 true / 注册表过滤只留杂兵）。
+- **验收**：`verify.sh` 全绿（412 测试 / 4264 断言 / 1 pending）；原生未改，无需重编。
+
 ### 2026-09-16 — 文档对齐：弹幕行为「由浅入深」落回 CONTENT_GUIDE，不新开文档
 
 - **提问**：「弹幕内核要不要专门加一份由浅入深的教学文档？」→ 一度提议新开 `docs/KERNEL_GUIDE.md`；用户反问「不是有 CONTENT_GUIDE 吗」→ **采纳**：创作者那份就是 CONTENT_GUIDE，新开文件违反「精简易懂」。

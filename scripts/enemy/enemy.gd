@@ -38,6 +38,11 @@ func _on_tree_exited():
 		registry.unregister_enemy(self)
 
 
+## 是否可作为自机弹的目标（杂兵恒真；预留给"未现形 / 无敌期"敌机覆写）。
+func is_targetable() -> bool:
+	return true
+
+
 func _process(_delta: float) -> void:
 	if is_queued_for_deletion():
 		return
