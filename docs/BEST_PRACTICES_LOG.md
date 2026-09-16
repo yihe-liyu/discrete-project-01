@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-16 — BulletLifecycle 文件内注释补全（与 DANMAKU_API.md 对齐）
+
+- **动机**：§DANMAKU_API.md§ 是外部参考，但读代码时最需要的还是**就地注释**。
+- **做法（纯注释，零行为改动）**：`bullet_lifecycle.gd` —
+  - 头注释重写：模型（Phase / moves / until / on_end）+ 用法 + 三条设计要点（槽显式化 / unit 正交 / 朝向与速度解耦）；
+  - 每个常量组加词汇说明；方向表达式 6 个全部补语义（heading 0=上顺时针、toward 目标不可用退化向下、chance_toward 命中忽略 angle）；
+  - Move 9 / Until 5+1 / Action 6 每条补精确语义与陷阱（accel_heading 可反向、rotate limit 槽、steer 融合速度、scale_speed 复利、at_wall 只夹左右上、emit 速度继承、emit_variant 分支号、on_end_call 未注册静默）；
+  - **10 个 preset 全补一句说明**（之前一个注释都没有），并注明展开见 DANMAKU_API.md §3.8。
+- **附带**：用户的新符卡 `spell001_shoot.gd` 两个私有字段违反命名契约（`_bullet` / `_lc`）→ 改为 `_bullet_data` / `_bullet_lifecycle`（`check_naming` 2 → 0）。
+- **验收**：`verify.sh` 全绿（417 测试 / 4293 断言 / 1 pending）。
+
 ### 2026-09-16 — 新增 `docs/DANMAKU_API.md`：弹幕内核接口参考
 
 - **动机**：讨论「好文档能不能让 AI 不通读项目就写弹幕」。结论：**API 正确性可以靠文档**；但可枚举值（贴图/音效 key）与**静默失败**是最大坑（`get_bullet_tex("typo")` → null + 默认 4px 判定，无警告）。
