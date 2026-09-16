@@ -18,6 +18,19 @@
 
 ## 记录
 
+### 2026-09-15 — K2：弹道「朝向」状态化（原生加 heading 列；首次改 C++ + 重编 .so）
+
+- **问题**：`accel_heading` 用 `v.normalized()` 当朝向 → 速度归零时 `normalize(0)=0`，弹**冻住**，无法表达"减速 → 反向飞回"（orbit_probe 卡在这，**不是随机**）。
+- **改**：原生 `DanmakuStore` 加 per-bullet 朝向列 `_hx/_hy`（出生取自初速）+ `get_forward/set_forward`；
+  - `accel_heading` 改读**朝向**（与速度解耦，v=0 仍有效）→ `accel_heading(-d)` 自然"减速 → 反向"；
+  - `rotate` / `set_heading`（move 7 / action 43）同步改朝向；
+  - 新方向 kind `DK_FORWARD=3`（`_resolve_dir(..., forward)`）→ builder 糖 **`BulletLifecycle.forward(angle)`** = 沿自身朝向再转 angle（与 `heading(世界角)` 正交）。
+- **兼容**：手上 10 个行为零变化（`radial_accel`/`bounce` 只沿朝向加速、从不反向；无"既转向又沿速度加速"的组合）。
+- **踩坑**：`setup()` **直接 `assign` 数组、绕过 `_ensure_capacity`** → 漏了 `_hx/_hy`，`get_forward` 越界 **SIGABRT**。**新增列要同时改 6 处**：`setup` / `_ensure_capacity` / `spawn` / `spawn_batch` / `_swap_remove` / `behavior_batch`。
+- **构建**：`scons target=template_debug` / `template_release`（godot-cpp 已预编译）；`.so` 是 gitignore 产物、不入库。
+- **测试**：新增 `test_heading_state`（朝向=初速方向 / `accel_heading` 穿过 0 反向且数值对 / `forward()` 保持速率）。
+- **验证**：`./tools/verify.sh` 全绿 **395 / 4203**。
+
 ### 2026-09-14 — b2b：hook 名注册表 —— `on_end_call` 收名字，最后一个 kernel_port 载体拆除
 
 - **新增** `scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd`（无 class_name，preload 引用）：`register(name, fn)` / `resolve(name)` / `clear()`。名字是**唯一键**（同名不同义在注册时暴露）→ program 可只按「结构 + 名字」去重。

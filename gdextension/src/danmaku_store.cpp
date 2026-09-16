@@ -20,6 +20,8 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("behavior_batch", "count", "positions", "velocities", "life", "fx", "program", "phase", "tick", "elapsed", "slots", "delta", "player", "boss", "has_boss", "enemies", "anchor_base"), &DanmakuStore::behavior_batch, DEFVAL(PackedVector2Array()));
 	ClassDB::bind_method(D_METHOD("get_position", "id"), &DanmakuStore::get_position);
 	ClassDB::bind_method(D_METHOD("get_velocity", "id"), &DanmakuStore::get_velocity);
+	ClassDB::bind_method(D_METHOD("get_forward", "id"), &DanmakuStore::get_forward);
+	ClassDB::bind_method(D_METHOD("set_forward", "id", "fwd"), &DanmakuStore::set_forward);
 	ClassDB::bind_method(D_METHOD("get_positions"), &DanmakuStore::get_positions);
 	ClassDB::bind_method(D_METHOD("get_velocities"), &DanmakuStore::get_velocities);
 	ClassDB::bind_method(D_METHOD("get_type", "id"), &DanmakuStore::get_type);
@@ -67,6 +69,8 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_y.assign(p_capacity, 0.0f);
 	_vx.assign(p_capacity, 0.0f);
 	_vy.assign(p_capacity, 0.0f);
+	_hx.assign(p_capacity, 0.0f);
+	_hy.assign(p_capacity, 0.0f);
 	_type.assign(p_capacity, 0);
 	_faction.assign(p_capacity, 0);
 	_color.assign(p_capacity, Color(1, 1, 1, 1));
@@ -104,6 +108,7 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_y[i] = p_pos.y;
 	_vx[i] = p_vel.x;
 	_vy[i] = p_vel.y;
+	{ const Vector2 h = p_vel == Vector2() ? Vector2(0, 1) : p_vel.normalized(); _hx[i] = h.x; _hy[i] = h.y; }
 	_type[i] = p_type;
 	_faction[i] = p_faction;
 	_color[i] = p_color;
@@ -142,6 +147,7 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		_y[i] = pos.y;
 		_vx[i] = vel.x;
 		_vy[i] = vel.y;
+		{ const Vector2 h = vel == Vector2() ? Vector2(0, 1) : vel.normalized(); _hx[i] = h.x; _hy[i] = h.y; }
 		_type[i] = k < p_type.size() ? p_type[k] : 0;
 		_faction[i] = k < p_faction.size() ? p_faction[k] : 0;
 		_color[i] = k < p_color.size() ? p_color[k] : Color(1, 1, 1, 1);
@@ -174,6 +180,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	}
 	_capacity = p_n;
 	_x.resize(p_n); _y.resize(p_n); _vx.resize(p_n); _vy.resize(p_n);
+	_hx.resize(p_n); _hy.resize(p_n);
 	_type.resize(p_n); _faction.resize(p_n); _color.resize(p_n);
 	_life.resize(p_n); _fx.resize(p_n); _timer.resize(p_n);
 	_program.resize(p_n); _pphase.resize(p_n); _ptick.resize(p_n);
@@ -196,6 +203,8 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_y[p_id] = _y[last];
 	_vx[p_id] = _vx[last];
 	_vy[p_id] = _vy[last];
+	_hx[p_id] = _hx[last];
+	_hy[p_id] = _hy[last];
 	_type[p_id] = _type[last];
 	_faction[p_id] = _faction[last];
 	_color[p_id] = _color[last];
@@ -332,6 +341,12 @@ PackedVector2Array DanmakuStore::get_positions() const {
 		out[i] = Vector2(_x[i], _y[i]);
 	}
 	return out;
+}
+
+Vector2 DanmakuStore::get_forward(int p_id) const { return Vector2(_hx[p_id], _hy[p_id]); }
+void DanmakuStore::set_forward(int p_id, const Vector2 &p_fwd) {
+	const Vector2 f = p_fwd.normalized();
+	_hx[p_id] = f.x; _hy[p_id] = f.y;
 }
 
 Vector2 DanmakuStore::get_velocity(int p_id) const {
@@ -475,9 +490,12 @@ Vector2 DanmakuStore::_target_pos(int p_tg, const Vector2 &from, const Vector2 &
 	return Vector2();
 }
 
-Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies) {
+Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward) {
 	if (p_dk == 0) {
 		return Vector2(sin(angle), -cos(angle));
+	}
+	if (p_dk == 3) {   // 自身朝向（forward）旋转 angle
+		return forward.rotated(angle);
 	}
 	bool ok = false;
 	const Vector2 tp = _target_pos(p_tg, pos, player, boss, has_boss, enemies, ok);
@@ -497,8 +515,8 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			_vx[i] = v.x + a[0] * dt;
 			_vy[i] = v.y + a[1] * dt;
 			break;
-		case 2: { // accel_heading
-			const Vector2 dir = v.normalized();
+		case 2: { // accel_heading —— 沿**自身朝向**加速（与速度解耦：v=0 也不失义，可减速→反向）
+			const Vector2 dir(_hx[i], _hy[i]);
 			if (dir != Vector2()) {
 				_vx[i] = v.x + dir.x * a[0] * dt;
 				_vy[i] = v.y + dir.y * a[0] * dt;
@@ -519,6 +537,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			const Vector2 r = v.rotated(step);
 			_vx[i] = r.x;
 			_vy[i] = r.y;
+			{ const Vector2 h = Vector2(_hx[i], _hy[i]).rotated(step); _hx[i] = h.x; _hy[i] = h.y; }
 			break;
 		}
 		case 4: { // steer
@@ -564,12 +583,13 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			_vx[i] = v.x * a[0];
 			_vy[i] = v.y * a[0];
 			break;
-		case 7: { // set_heading (move)
-			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies);
+		case 7: { // set_heading (move) —— 同时改「朝向」
+			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]));
 			if (d != Vector2()) {
 				const float sp = v.length();
 				_vx[i] = d.x * sp;
 				_vy[i] = d.y * sp;
+				_hx[i] = d.x; _hy[i] = d.y;
 			}
 			break;
 		}
@@ -662,7 +682,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			if (a[5] > 0.5f && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }
 			float speed = Vector2(_vx[i], _vy[i]).length();
 			if (a[4] > 0.0f) { speed = a[4]; }
-			const Vector2 dir = _resolve_dir((int)a[1], (int)a[2], a[3], at, player, boss, has_boss, enemies);
+			const Vector2 dir = _resolve_dir((int)a[1], (int)a[2], a[3], at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]));
 			_ev_kind.push_back(0);
 			_ev_prog.push_back(prog);
 			_ev_local.push_back((int)a[0]);
@@ -683,12 +703,13 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 		case 42: // despawn
 			_tick_dead.push_back(i);
 			break;
-		case 43: { // set_heading (action)
-			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies);
+		case 43: { // set_heading (action) —— 同时改「朝向」
+			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]));
 			if (d != Vector2()) {
 				const float sp = Vector2(_vx[i], _vy[i]).length();
 				_vx[i] = d.x * sp;
 				_vy[i] = d.y * sp;
+				_hx[i] = d.x; _hy[i] = d.y;
 			}
 			break;
 		}
@@ -785,6 +806,7 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 	for (int i = 0; i < _count; ++i) {
 		_x[i] = p_pos[i].x; _y[i] = p_pos[i].y;
 		_vx[i] = p_vel[i].x; _vy[i] = p_vel[i].y;
+		{ const Vector2 h = p_vel[i] == Vector2() ? Vector2(0, 1) : p_vel[i].normalized(); _hx[i] = h.x; _hy[i] = h.y; }
 		_life[i] = i < p_life.size() ? p_life[i] : 0.0f;
 		_fx[i] = i < p_fx.size() ? p_fx[i] : 0.0f;
 		_program[i] = i < p_program.size() ? p_program[i] : -1;

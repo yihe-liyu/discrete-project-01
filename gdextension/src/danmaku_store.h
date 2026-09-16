@@ -22,6 +22,8 @@ class DanmakuStore : public RefCounted {
 	GDCLASS(DanmakuStore, RefCounted)
 
 	std::vector<float> _x, _y, _vx, _vy;
+	// 自身朝向（出生取自初速；rotate / set_heading 改；accel_heading 读）—— 与速度解耦，v=0 仍有效
+	std::vector<float> _hx, _hy;
 	std::vector<int> _type, _faction;
 	std::vector<Color> _color;
 	std::vector<float> _life, _fx, _timer;
@@ -71,6 +73,8 @@ public:
 	int get_program(int p_id) const;
 	Vector2 get_position(int p_id) const;
 	Vector2 get_velocity(int p_id) const;
+	Vector2 get_forward(int p_id) const;
+	void set_forward(int p_id, const Vector2 &p_fwd);
 	PackedVector2Array get_positions() const;
 	PackedVector2Array get_velocities() const;
 	int get_type(int p_id) const;
@@ -141,7 +145,7 @@ public:
 	// 跑一帧所有 program；返回事件（emit/sfx/call），由宿主 drain。
 	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array());
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);
-	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
+	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward);
 	void _exec_move(int i, int prog, float *slots, int ins, float dt, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const PackedVector2Array &anchor_base);
 	bool _check_until(int i, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
 	void _exec_action(int i, int prog, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);

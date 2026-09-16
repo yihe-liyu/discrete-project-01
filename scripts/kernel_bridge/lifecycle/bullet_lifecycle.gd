@@ -42,6 +42,7 @@ const T_BOSS := &"boss"
 const D_HEADING := &"heading"
 const D_TOWARD := &"toward"
 const D_AWAY := &"away"
+const D_FORWARD := &"forward"
 
 # ---- 墙位掩码 / 比较 ----
 const WALL_LEFT := 1
@@ -109,6 +110,10 @@ static func toward(target: StringName, angle: float = 0.0) -> Dictionary:
 
 static func away(target: StringName, angle: float = 0.0) -> Dictionary:
 	return {&"kind": D_AWAY, &"target": target, &"angle": angle}
+
+## 沿弹**自身朝向**（出生朝向 / set_heading 改过的）再转 angle；与 heading(世界角) 正交。
+static func forward(angle: float = 0.0) -> Dictionary:
+	return {&"kind": D_FORWARD, &"target": &"", &"angle": angle}
 
 
 # ═══ Move ═══
@@ -322,6 +327,7 @@ const TG_BOSS := 2
 const DK_HEADING := 0
 const DK_TOWARD := 1
 const DK_AWAY := 2
+const DK_FORWARD := 3   ## 沿弹自身朝向（与速度解耦）
 
 ## 编译为扁平 packed program。actions / sfx 是**程序级**表：事件回传 (program, local_id)，
 ## 由宿主查这两张表（Callable 永不进原生）。
@@ -440,6 +446,8 @@ func _dir_args(d: Dictionary) -> Array:
 		dk = DK_TOWARD
 	elif d[&"kind"] == D_AWAY:
 		dk = DK_AWAY
+	elif d[&"kind"] == D_FORWARD:
+		dk = DK_FORWARD
 	return [dk, _target_code(d[&"target"]), float(d[&"angle"])]
 
 
