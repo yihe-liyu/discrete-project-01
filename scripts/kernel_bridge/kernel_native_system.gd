@@ -389,6 +389,16 @@ func _pull_snapshot() -> void:
 	_timer = _accel.get_timers()
 
 
+## 变体发射：`src` 是模板数组时按分支号取模板（越界钳到末项）；非数组原样返回。
+static func pick_variant(src: Variant, branch: int) -> Variant:
+	if src is Array:
+		var arr: Array = src
+		if arr.is_empty():
+			return null
+		return arr[clampi(branch, 0, arr.size() - 1)]
+	return src
+
+
 func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	var kinds: PackedInt32Array = res.kind
 	if kinds.is_empty():
@@ -399,6 +409,7 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	var dxs: PackedFloat32Array = res.dx
 	var dys: PackedFloat32Array = res.dy
 	var vals: PackedFloat32Array = res.val
+	var variants: PackedInt32Array = res.get("variant", PackedInt32Array())
 	# 事件携带自己的 program（eprog）；**不能**用 per-bullet program 去反查（历史 bug）。
 	var eprog: PackedInt32Array = res.eprog
 	for k in kinds.size():
@@ -408,7 +419,8 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 		var c: Dictionary = _program_data[prog]
 		match kinds[k]:
 			0:
-				var spawn_src: Variant = c["actions"][local[k]]
+				var branch: int = variants[k] if k < variants.size() else 0
+				var spawn_src: Variant = pick_variant(c["actions"][local[k]], branch)
 				var b = spawn_src.call() if spawn_src is Callable else spawn_src
 				if b != null and behavior_host != null:
 					b.velocity = Vector2(0.0, vals[k])

@@ -35,6 +35,8 @@ class DanmakuStore : public RefCounted {
 
 	// K1：确定性 PRNG（单通道；种子由宿主 RNG 派生）。抽取顺序 = 弹行遍历顺序 → 回放可复现。
 	uint32_t _rng_state = 0x9E3779B9u;
+	// 变体发射：最近一次 _resolve_dir 走了概率分支的哪一支（0=未命中/缺省，1=命中）→ 随 emit 事件回传。
+	int _dir_branch = 0;
 
 	// L3：packed program 执行（列式；op/args 全局拼接，program 只存偏移）。
 	static const int SLOT_STRIDE = 8;
@@ -45,7 +47,7 @@ class DanmakuStore : public RefCounted {
 	std::vector<unsigned char> _pfresh, _phasend;
 	static const int OPS_ARGS = 8;
 	std::vector<int> _tick_dead;
-	std::vector<int> _ev_kind, _ev_prog, _ev_local, _ev_bullet;
+	std::vector<int> _ev_kind, _ev_prog, _ev_local, _ev_bullet, _ev_variant;
 	std::vector<float> _ev_x, _ev_y, _ev_dx, _ev_dy, _ev_val;
 	int _capacity = 0;
 	int _count = 0;

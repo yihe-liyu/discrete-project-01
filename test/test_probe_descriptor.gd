@@ -30,3 +30,16 @@ func test_probe_split_data_has_lifecycle() -> void:
 	var d: BulletData = spiral._probe_split_data()
 	assert_not_null(d, "应有分裂弹数据")
 	assert_not_null(d.lifecycle, "分裂弹应挂自己的描述符（缓慢加速）")
+
+
+func test_probe_split_has_color_variant() -> void:
+	var spiral = SPIRAL.new()
+	autofree(spiral)
+	var lc: BulletLifecycle = spiral._probe_lifecycle(true)
+	var acts: Array = lc.compile()["actions"]
+	assert_eq(acts.size(), 4, "4 次变体发射 → actions 4 项")
+	for a in acts:
+		assert_true(a is Array, "每项应是 [普通, 自机狙] 两模板")
+		assert_eq((a as Array).size(), 2, "变体发射两模板")
+	assert_eq(spiral._probe_split_data(false).tint, Color.AQUA, "普通分裂弹 AQUA")
+	assert_eq(spiral._probe_split_data(true).tint, Color.RED, "自机狙分裂弹 RED")

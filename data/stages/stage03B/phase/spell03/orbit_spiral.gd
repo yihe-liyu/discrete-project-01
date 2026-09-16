@@ -34,9 +34,9 @@ var _inited: bool = false    # 难度模式初始化（首帧按当前难度决�
 var _always_hold: bool = false  # H/L：全程外圈转（永续 hold）
 ## 复用弹型实例（M2）
 var _probe_bullet_data: BulletData
-## 探测弹描述符（按 hold 缓存）与分裂弹（共享）
+## 探测弹描述符（按 hold 缓存）与分裂弹（按是否自机狙共享两份）
 var _probe_lifecycle_by_hold: Dictionary = {}   # hold_aim: bool → BulletLifecycle
-static var _probe_split_bullet_data: BulletData
+static var _probe_split_by_aim: Dictionary = {}  # is_aim: bool → BulletData（AQUA / RED）
 
 
 func _tick(p_ctx: StageContext):
@@ -114,7 +114,7 @@ func _tick(p_ctx: StageContext):
 
 
 ## 探测弹描述符（缓存两份：hold / 非 hold）。运动 = 沿自身朝向匀减速（K2）→ 回点；
-## 回点后分裂：每颗以 aim_chance 概率精确朝自机，否则相对初方向 split_dir[i]（K1 chance_toward）。
+## 回点后分裂：每颗以 aim_chance 概率精确朝自机（RED），否则相对初方向 split_dir[i]（AQUA）（K1 chance_toward）。
 func _probe_lifecycle(hold_aim: bool) -> BulletLifecycle:
 	var cached: BulletLifecycle = _probe_lifecycle_by_hold.get(hold_aim)
 	if cached != null:
@@ -125,7 +125,7 @@ func _probe_lifecycle(hold_aim: bool) -> BulletLifecycle:
 	lc.sfx(&"kira", -8.0)
 	var aim_chance: float = PROBE_SPLIT_AIM_CHANCE if hold_aim else 0.0
 	for a in PROBE_SPLIT_DIR:
-		lc.emit(_probe_split_data(),
+		lc.emit_variant([_probe_split_data(false), _probe_split_data(true)],
 			BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, aim_chance, a),
 			PROBE_SPLIT_SPEED)
 	lc.despawn()
@@ -133,17 +133,20 @@ func _probe_lifecycle(hold_aim: bool) -> BulletLifecycle:
 	return lc
 
 
-## 分裂弹（共享）：缓慢沿自身朝向加速出屏；E/N 出界宽限 4s、H/L 0.75s
-func _probe_split_data() -> BulletData:
-	if _probe_split_bullet_data == null:
-		_probe_split_bullet_data = BulletData.new() \
+## 分裂弹（按 is_aim 共享两份）：缓慢沿自身朝向加速出屏；E/N 出界宽限 4s、H/L 0.75s。
+## 颜色是"这一发是不是自机狙"的视觉提示：普通 AQUA、命中 RED。
+func _probe_split_data(is_aim: bool = false) -> BulletData:
+	var cached: BulletData = _probe_split_by_aim.get(is_aim)
+	if cached == null:
+		cached = BulletData.new() \
 			.tex("环玉") \
-			.color(Color.AQUA) \
+			.color(Color.RED if is_aim else Color.AQUA) \
 			.blend(true) \
 			.enemy() \
 			.grace(diff_pick([4, 4, 0.75, 0.75]))
 		var slc := BulletLifecycle.new()
 		slc.accel_heading(PROBE_SPLIT_ACCEL)
 		slc.until_never()
-		_probe_split_bullet_data.trajectory(slc)
-	return _probe_split_bullet_data
+		cached.trajectory(slc)
+		_probe_split_by_aim[is_aim] = cached
+	return cached

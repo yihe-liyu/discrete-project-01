@@ -126,7 +126,7 @@ BulletLifecycle.new()\
 ```
 - **Move**：`accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift`
 - **Until**：`until_never` `until_elapsed` `until_near` `until_at_wall` `until_state` `until_turned`；`then()` 开新相位
-- **Action**：`sfx` `emit` `despawn` `on_end_heading` `on_end_call`
+- **Action**：`sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call`
 - **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)`
 
 **Canned preset**（10 个 `move` 的**类型化薄包装**，组合在 `build()`）：
@@ -274,6 +274,7 @@ bounce → phases: [
 | | `at_wall(mask)` | 夹位并输出落点（供 `emit(at_end)`） |
 | | `state(slot, cmp, v)` | 读槽（`until_turned()` 是便利封装） |
 | Action | `emit(factory, dir, speed, at_end)` | dir 表达式；at_end 用条件落点 |
+| | `emit_variant([t0, t1], dir, speed, at_end)` | 概率分支（`chance_toward`）选模板：0=未命中 t0，1=命中 t1；内核只回传分支号 |
 | | `sfx(key, db)` / `despawn` / `on_end_heading(dir)` / `on_end_call(fn)` | 内容回调（散圈）用 call |
 | 方向表达式 | `toward(t, angle)` / `away(t, angle)` / `heading(angle)` | t = player / nearest_enemy / boss |
 

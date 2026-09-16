@@ -507,6 +507,7 @@ float DanmakuStore::_rng_float() {
 float DanmakuStore::_rng_range(float a, float b) { return a + (b - a) * _rng_float(); }
 
 Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, float p_prob) {
+	_dir_branch = 0;
 	if (p_dk == 0) {
 		return Vector2(sin(angle), -cos(angle));
 	}
@@ -520,6 +521,7 @@ Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector
 		if (_rng_float() >= p_prob) {
 			return forward.rotated(angle);
 		}
+		_dir_branch = 1;   // 命中 → 变体发射取第 2 个模板
 		p_dk = 1;
 		angle = 0.0f;   // 命中概率 → 精确朝 target（angle 只服务 fallback）
 	}
@@ -716,6 +718,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_x.push_back(at.x); _ev_y.push_back(at.y);
 			_ev_dx.push_back(dir.x); _ev_dy.push_back(dir.y);
 			_ev_val.push_back(speed);
+			_ev_variant.push_back(_dir_branch);
 			break;
 		}
 		case 41: // sfx
@@ -725,6 +728,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_bullet.push_back(i);
 			_ev_x.push_back(0); _ev_y.push_back(0); _ev_dx.push_back(0); _ev_dy.push_back(0);
 			_ev_val.push_back(a[1]);
+			_ev_variant.push_back(0);
 			break;
 		case 42: // despawn
 			_tick_dead.push_back(i);
@@ -754,6 +758,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_bullet.push_back(i);
 			_ev_x.push_back(_x[i]); _ev_y.push_back(_y[i]);
 			_ev_dx.push_back(0); _ev_dy.push_back(0); _ev_val.push_back(0);
+			_ev_variant.push_back(0);
 			break;
 		default:
 			break;
@@ -764,7 +769,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 	_grid_dirty = true;
 	_tick_dead.clear();
 	_ev_kind.clear(); _ev_prog.clear(); _ev_local.clear(); _ev_bullet.clear();
-	_ev_x.clear(); _ev_y.clear(); _ev_dx.clear(); _ev_dy.clear(); _ev_val.clear();
+	_ev_x.clear(); _ev_y.clear(); _ev_dx.clear(); _ev_dy.clear(); _ev_val.clear(); _ev_variant.clear();
 	const int phase_total = _p_move_start.size();
 	for (int i = 0; i < _count; ++i) {
 		const int prog = _program[i];
@@ -800,14 +805,16 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 
 Dictionary DanmakuStore::_events_dict() const {
 	Dictionary out;
-	PackedInt32Array kind, eprog, local, bullet;
+	PackedInt32Array kind, eprog, local, bullet, variant;
 	PackedFloat32Array ex, ey, edx, edy, eval;
 	for (size_t k = 0; k < _ev_kind.size(); ++k) {
 		kind.push_back(_ev_kind[k]); eprog.push_back(_ev_prog[k]); local.push_back(_ev_local[k]); bullet.push_back(_ev_bullet[k]);
 		ex.push_back(_ev_x[k]); ey.push_back(_ev_y[k]); edx.push_back(_ev_dx[k]); edy.push_back(_ev_dy[k]); eval.push_back(_ev_val[k]);
+		variant.push_back(_ev_variant[k]);
 	}
 	out["kind"] = kind; out["eprog"] = eprog; out["local"] = local; out["bullet"] = bullet;
 	out["x"] = ex; out["y"] = ey; out["dx"] = edx; out["dy"] = edy; out["val"] = eval;
+	out["variant"] = variant;
 	return out;
 }
 

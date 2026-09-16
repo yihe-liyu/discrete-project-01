@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-15 — 变体发射：把"自机狙转红"从丢失改回可表达（emit_variant）
+
+- **背景**：orbit_probe 迁移（下一条）时丢了颜色 tell —— 旧实现里 `is_aim` 同时决定**方向**（朝自机）与**颜色**（RED/AQUA），而描述符只有方向表达能力。
+- **判断**：这**不该是"颜色原语"**。内核里的 `_color` 只是"存着喂 multimesh"，从不解释颜色；真正决定颜色的是宿主发射那一刻的 `data.tint`（`kernel_bullet_backend.gd`）。缺的是"概率分支走了哪一支"这个通用信息，不是颜色本身。
+- **做法（内核只回传分支号，模板永远留宿主）**：
+  - 原生：`_resolve_dir` 在 `dk==5` 命中时置 `_dir_branch=1`；emit 事件新增 `variant` 列（sfx/call 恒 0）。**不新增 op、不新增弹列**。
+  - 宿主：`KernelNativeSystem.pick_variant(src, branch)` —— `src` 是数组时按分支号取模板（越界钳到末项），否则原样返回；`_drain_events` 用它解析 `actions[local]`。
+  - 描述符：`BulletLifecycle.emit_variant(spawns, dir, speed, at_end)`（`emit` 的数组形态）；`content_signature` 的 `_hash_action` 递归展开模板数组，不同模板=不同 program。
+- **内容**：`orbit_spiral._probe_split_data(is_aim)` 共享两份（AQUA / RED）；分裂时 `emit_variant([普通, 自机狙], chance_toward(T_PLAYER, aim_chance, a), speed)` —— **瞄准与颜色同源同一次抽签**，与旧实现语义 1:1。
+- **为什么不给内核加 `set_color`**：内核会多懂一个概念，宿主仍要知道分支，一点没省；"变体发射"还能复用到换贴图 / 大小 / 子 pattern。
+- **验收**：`test_emit_variant`（分支号 0/1、事件含 variant 键、pick_variant 越界钳制、签名区分模板）+ `test_probe_descriptor` 变体断言；`verify.sh` 全绿。
+
 ### 2026-09-15 — orbit_probe 落地：往返探测弹迁移到原生描述符（K2 运动 + K1 随机瞄准）
 
 - **来源**：从 git 历史捞回被删的旧实现（`763dc95^:…/orbit_probe.gd`），照它逐条翻译：
@@ -25,7 +37,7 @@
   - 回点判据 `_dist <= 1`（常加速度下 ≈ t = 2v/a）≡ **`until_elapsed(2*bullet_speed/decel)`**；
   - 分裂 `_dir0.rotated(split_dir[i])` + `RNG.randf() < aim` ≡ **`emit(split_data, chance_toward(T_PLAYER, aim_chance, split_dir[i]), split_speed)`**（K1；p=0 退化为纯扇形）。
 - **落点**：`orbit_spiral.gd` 内联描述符构建（`_probe_lifecycle(hold)` 按 hold 缓存两份 / `_probe_split_data()` 共享）；**删除载体 `orbit_probe.gd`**。
-- **有意偏差**：旧实现给"自机狙弹"染 RED、普通弹 AQUA —— 描述符没有 per-emit 颜色分支，统一 AQUA（**瞄准机制保留，颜色提示丢失**）。
+- **当时偏差（已消除）**：旧实现给"自机狙弹"染 RED、普通弹 AQUA —— 当时描述符没有 per-emit 颜色分支，统一 AQUA。**已由上方「变体发射」一条补回**（瞄准与颜色同源）。
 - **连带（b 线的真实后果）**：`data/**` 已无 `*_bullet.gd` → 目录 "bullet" 组为空：
   - `test_catalog_panel` 7 → **6** 个角色组头；
   - `test_creation_station` 的"按预设路由子弹"改为空组 `pending`；立 **TODO F10 工作台弹道描述符浏览**。

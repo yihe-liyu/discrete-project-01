@@ -208,10 +208,19 @@ func sfx(key: StringName, db: float = 0.0) -> BulletLifecycle:
 	return self
 
 ## at_end = true 时用条件（at_wall）输出的落点，否则用当前弹位置。
-## spawn = **BulletData**（推荐：可序列化、跨实例共用 program）或 **Callable（）-> BulletData**（旧写法 / oracle）。
+## spawn = **BulletData**（推荐：可序列化、跨实例共用 program）／**Callable（）-> BulletData**（旧写法 / oracle）／
+## **Array**（变体发射，见 emit_variant）。
 func emit(spawn: Variant, dir: Dictionary, speed: float = 0.0, at_end: bool = false) -> BulletLifecycle:
 	_on_end.append({&"op": A_EMIT, &"spawn": spawn, &"dir": dir, &"speed": speed, &"at_end": at_end})
 	return self
+
+
+## 变体发射：`dir` 的概率分支决定用 `spawns` 里哪个模板。内核**只回传分支号**，
+## 取模板在宿主侧（Callable / BulletData 永不进原生）。目前唯一产分支的方向表达式是
+## `chance_toward`：0 = 未命中 → spawns[0]，1 = 命中 → spawns[1]。
+## 典型用途：同一发分裂弹，自机狙那发换色，玩家能一眼读出来。
+func emit_variant(spawns: Array, dir: Dictionary, speed: float = 0.0, at_end: bool = false) -> BulletLifecycle:
+	return emit(spawns, dir, speed, at_end)
 
 func despawn() -> BulletLifecycle:
 	_on_end.append({&"op": A_DESPAWN})
@@ -395,14 +404,25 @@ func content_signature() -> int:
 	h = h * 31 + int(c[&"phase_count"]) * 7 + int(c[&"slots"])
 	h = h * 31 + hash(c[&"sfx"])
 	for a in c[&"actions"]:
-		if a is Callable:
-			h = h * 31 + (a.get_object_id() if a.is_valid() else 0)
-		elif a is BulletData:
-			h = h * 31 + a.get_instance_id()
-		elif a is StringName:
-			h = h * 31 + hash(a)
+		h = h * 31 + _hash_action(a)
 	_content_sig = h if h != 0 else 1
 	return _content_sig
+
+
+## 动作表项的结构哈希（变体发射的模板数组递归展开）。
+static func _hash_action(a: Variant) -> int:
+	if a is Array:
+		var sub: int = 1
+		for item in a:
+			sub = sub * 31 + _hash_action(item)
+		return sub
+	if a is Callable:
+		return a.get_object_id() if a.is_valid() else 0
+	if a is BulletData:
+		return int(a.get_instance_id())
+	if a is StringName:
+		return hash(a)
+	return 0
 
 
 func _emit(ops: PackedInt32Array, args: PackedFloat32Array, op: int, a: Array) -> void:
