@@ -306,8 +306,11 @@ func kernel_port() -> Dictionary:
 |---|---|
 | Move | `accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift` |
 | Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_state` `until_turned`；`then()` 开新相位 |
-| Action | `sfx` `emit` `despawn` `on_end_heading` `on_end_call` |
-| 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` |
+| Action | `sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call` |
+| 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` |
+
+> `emit_variant([未命中, 命中], chance_toward(T_PLAYER, p, spread), speed)` —— 概率分支选**模板**（内核只回传分支号）；
+> `chance_toward` 命中时那发精确朝目标。典型用法：自机狙那发换色，玩家一眼能读出来。
 
 锚定激光（用了 `anchor_drift`）再带一个 `anchor`：
 
