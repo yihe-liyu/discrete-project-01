@@ -9,7 +9,7 @@ func test_hot_reload_debounce_fires_after_stability():
 	var rig = RIG.new()
 	add_child_autofree(rig)
 	await get_tree().process_frame
-	rig._cur_script_path = "res://data/stages/stage03B/phase/spell03/orbit_probe.gd"
+	rig._cur_script_path = "res://test/fixtures/bullet_preview.gd"
 	rig._watch_paths.clear()
 	rig._watch_paths.append(rig._cur_script_path)
 	rig._watch_mtimes.clear()
@@ -26,11 +26,11 @@ func test_hot_reload_debounce_fires_after_stability():
 	rig.queue_free()
 
 
-func test_param_panel_on_orbit_probe():
+func test_param_panel_lists_script_vars():
 	var rig = RIG.new()
 	add_child_autofree(rig)
 	await get_tree().process_frame
-	rig._cur_script_path = "res://data/stages/stage03B/phase/spell03/orbit_probe.gd"
+	rig._cur_script_path = "res://test/fixtures/bullet_preview.gd"
 	rig._cur_script = load(rig._cur_script_path)
 	rig._param_panel.rebuild(rig._cur_script)
 	var rows = rig._param_panel.get_rows()
@@ -54,7 +54,7 @@ func test_hot_reload_replays_and_keeps_old_on_failure():
 	await get_tree().process_frame
 
 	# ① 成功路径：选一个真实弹丸脚本 → 重载 → 自动发弹重演
-	rig._cur_script_path = "res://data/stages/stage03B/phase/spell03/orbit_probe.gd"
+	rig._cur_script_path = "res://test/fixtures/bullet_preview.gd"
 	rig._rebuild_watch()
 	assert_true(rig._watch_paths.size() >= 1, "监听集非空（%d）" % rig._watch_paths.size())
 	BulletManager.current.clear_all()

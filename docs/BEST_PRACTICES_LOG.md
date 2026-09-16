@@ -18,6 +18,20 @@
 
 ## 记录
 
+### 2026-09-15 — orbit_probe 落地：往返探测弹迁移到原生描述符（K2 运动 + K1 随机瞄准）
+
+- **来源**：从 git 历史捞回被删的旧实现（`763dc95^:…/orbit_probe.gd`），照它逐条翻译：
+  - 运动 `velocity -= _dir0*decel*dt`（沿初方向匀减速 → 停 → 反向飞回）≡ **`accel_heading(-decel)`**（K2：朝向与速度解耦，v=0 不失义）；
+  - 回点判据 `_dist <= 1`（常加速度下 ≈ t = 2v/a）≡ **`until_elapsed(2*bullet_speed/decel)`**；
+  - 分裂 `_dir0.rotated(split_dir[i])` + `RNG.randf() < aim` ≡ **`emit(split_data, chance_toward(T_PLAYER, aim_chance, split_dir[i]), split_speed)`**（K1；p=0 退化为纯扇形）。
+- **落点**：`orbit_spiral.gd` 内联描述符构建（`_probe_lifecycle(hold)` 按 hold 缓存两份 / `_probe_split_data()` 共享）；**删除载体 `orbit_probe.gd`**。
+- **有意偏差**：旧实现给"自机狙弹"染 RED、普通弹 AQUA —— 描述符没有 per-emit 颜色分支，统一 AQUA（**瞄准机制保留，颜色提示丢失**）。
+- **连带（b 线的真实后果）**：`data/**` 已无 `*_bullet.gd` → 目录 "bullet" 组为空：
+  - `test_catalog_panel` 7 → **6** 个角色组头；
+  - `test_creation_station` 的"按预设路由子弹"改为空组 `pending`；立 **TODO F10 工作台弹道描述符浏览**。
+- **测试**：新增 `test_probe_descriptor`（描述符形状 / hold 与非 hold 不同 program 且缓存 / 分裂弹自带描述符）。
+- **验证**：`./tools/verify.sh` 全绿 **402**（401 + 1 pending）/ 4237。
+
 ### 2026-09-15 — K1：内核随机（原生 PRNG + 方向随机原语；种子走宿主 RNG 单通道）
 
 - **问题**：原生 `DanmakuStore` **无 RNG**。宿主线 `RNG → BulletManager → KernelNativeSystem.set_seed` 已铺，但只设宿主侧 GDScript RNG、**没转发原生**。

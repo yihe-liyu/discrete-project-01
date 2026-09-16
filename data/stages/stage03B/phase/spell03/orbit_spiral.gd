@@ -6,7 +6,12 @@ extends CoroutineScript
 ## 弹幕：每发 probe_count 颗铺满 360°，挂往返探测弹行为（飞出→回点→分裂）
 ## auto_stop = false
 
-const PROBE := preload("res://data/stages/stage03B/phase/spell03/orbit_probe.gd")
+## 往返探测弹（原生描述符）：运动 = 沿初方向匀减速 → 回点；回点后分裂 4 颗环玉
+const PROBE_DECEL: float = 150.0        # 反向加速度（px/s²）
+const PROBE_SPLIT_SPEED: float = 60.0   # 分裂弹初速
+const PROBE_SPLIT_ACCEL: float = 40.0   # 分裂弹缓慢加速（沿自身朝向）
+const PROBE_SPLIT_DIR: Array = [TAU/4, TAU/8, TAU/12, TAU/20]  # 相对初方向的角度
+const PROBE_SPLIT_AIM_CHANCE: float = 0.1  # hold 阶段 10% 变自机狙
 
 var orbit_speed: float = 12      # 初始角速度（弧度/秒，1.5 ≈ 每秒 86°）
 var angle_accel: Array = [0.0, 0.0, 2.0, 4.0]    # 角加速度（弧度/秒²，正=加速、负=减速）
@@ -29,6 +34,9 @@ var _inited: bool = false    # 难度模式初始化（首帧按当前难度决�
 var _always_hold: bool = false  # H/L：全程外圈转（永续 hold）
 ## 复用弹型实例（M2）
 var _probe_bullet_data: BulletData
+## 探测弹描述符（按 hold 缓存）与分裂弹（共享）
+var _probe_lifecycle_by_hold: Dictionary = {}   # hold_aim: bool → BulletLifecycle
+static var _probe_split_bullet_data: BulletData
 
 
 func _tick(p_ctx: StageContext):
@@ -87,10 +95,9 @@ func _tick(p_ctx: StageContext):
 			.color(Color.BLUE_VIOLET) \
 			.blend(true) \
 			.enemy() \
-			.behavior(PROBE) \
 			.grace(4)
-	# hold 阶段（含 H/L 全程）发射的探测弹：注入标记 → 分裂时 15% 可转自机狙
-	_probe_bullet_data.params["hold_aim_probe"] = _hold_left > 0.0 and hard
+	# hold 阶段（含 H/L 全程）发射的探测弹：分裂时 10% 可转自机狙
+	_probe_bullet_data.trajectory(_probe_lifecycle(_hold_left > 0.0 and hard))
 
 	# ── 主发射：probe_count 颗铺满圆（按难度取）；hold 阶段 + hold_count_bonus ──
 	var count: int = diff_pick(probe_count)
@@ -104,3 +111,39 @@ func _tick(p_ctx: StageContext):
 			p_ctx.bullets.shoot_spread(_probe_bullet_data, 1, 0.0, dir.rotated(step * i), emit_pos)
 
 	return p_ctx.clock.wait(itv)
+
+
+## 探测弹描述符（缓存两份：hold / 非 hold）。运动 = 沿自身朝向匀减速（K2）→ 回点；
+## 回点后分裂：每颗以 aim_chance 概率精确朝自机，否则相对初方向 split_dir[i]（K1 chance_toward）。
+func _probe_lifecycle(hold_aim: bool) -> BulletLifecycle:
+	var cached: BulletLifecycle = _probe_lifecycle_by_hold.get(hold_aim)
+	if cached != null:
+		return cached
+	var lc := BulletLifecycle.new()
+	lc.accel_heading(-PROBE_DECEL)
+	lc.until_elapsed(2.0 * bullet_speed / PROBE_DECEL)   # 位移过零 = 回到出发点
+	lc.sfx(&"kira", -8.0)
+	var aim_chance: float = PROBE_SPLIT_AIM_CHANCE if hold_aim else 0.0
+	for a in PROBE_SPLIT_DIR:
+		lc.emit(_probe_split_data(),
+			BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, aim_chance, a),
+			PROBE_SPLIT_SPEED)
+	lc.despawn()
+	_probe_lifecycle_by_hold[hold_aim] = lc
+	return lc
+
+
+## 分裂弹（共享）：缓慢沿自身朝向加速出屏；E/N 出界宽限 4s、H/L 0.75s
+func _probe_split_data() -> BulletData:
+	if _probe_split_bullet_data == null:
+		_probe_split_bullet_data = BulletData.new() \
+			.tex("环玉") \
+			.color(Color.AQUA) \
+			.blend(true) \
+			.enemy() \
+			.grace(diff_pick([4, 4, 0.75, 0.75]))
+		var slc := BulletLifecycle.new()
+		slc.accel_heading(PROBE_SPLIT_ACCEL)
+		slc.until_never()
+		_probe_split_bullet_data.trajectory(slc)
+	return _probe_split_bullet_data

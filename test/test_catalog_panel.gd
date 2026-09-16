@@ -97,9 +97,10 @@ func test_panel_tree_has_role_headers_and_unique_names():
 
 	var root = panel._tree.get_root()
 	assert_not_null(root, "树根存在")
-	# 组头：stage/phase/boss_move/boss_shoot/bullet/enemy/bg（misc 空不显示）
-	assert_eq(root.get_child_count(), 7, "应有 7 个角色组头")
-	if root.get_child_count() != 7:
+	# 组头：stage/phase/boss_move/boss_shoot/enemy/bg
+	# （bullet 组已随 b 线迁移清空 —— *_bullet.gd 全变成 BulletData.trajectory 描述符；空组不显示）
+	assert_eq(root.get_child_count(), 6, "应有 6 个角色组头")
+	if root.get_child_count() != 6:
 		return
 	assert_eq(root.get_child(0).get_text(0), "关卡编排（1）", "首个组头=关卡编排")
 	assert_eq(root.get_child(0).get_child_count(), 1, "关卡编排含 1 个条目（stage 脚本）")

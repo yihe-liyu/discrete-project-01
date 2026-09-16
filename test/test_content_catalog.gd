@@ -13,7 +13,6 @@ func test_real_content_role_classification():
 		"res://data/stages/stage01/phase/non_mid01/non_mid01_move.gd": "boss_move",
 		"res://data/stages/stage01/phase/non_mid01/non_mid01_shoot.gd": "boss_shoot",
 		"res://data/stages/stage03B/phase/spell03/orbit_spiral.gd": "boss_shoot",
-		"res://data/stages/stage03B/phase/spell03/orbit_probe.gd": "bullet",
 		"res://data/stages/stage01/enemy/enemy01.gd": "enemy",
 		"res://data/stages/stage01/enemy/fly_away.gd": "enemy",
 	}
@@ -67,10 +66,6 @@ func test_real_content_boundaries():
 
 func test_real_content_refs():
 	var cat = CAT.new().scan()
-	var probe = cat.find("res://data/stages/stage03B/phase/spell03/orbit_probe.gd")
-	if probe:
-		assert_true(probe.refs_from.has("res://data/stages/stage03B/phase/spell03/orbit_spiral.gd"),
-			"orbit_probe 被 orbit_spiral 引用")
 	var enemy01 = cat.find("res://data/stages/stage01/enemy/enemy01.gd")
 	if enemy01:
 		assert_true(enemy01.refs_from.has("res://data/stages/stage01/stage_script/stage01.gd"),

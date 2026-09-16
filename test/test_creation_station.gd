@@ -47,7 +47,11 @@ func test_preset_route_switches_tab_and_assembles():
 	await get_tree().process_frame
 	await get_tree().process_frame
 	# 取目录里第一颗子弹条目 → 路由 → 应切弹幕台且装配+发射
-	var entry = cs._bench_instances[0]._catalog.by_role("bullet")[0]
+	var bullets: Array = cs._bench_instances[0]._catalog.by_role("bullet")
+	if bullets.is_empty():
+		pending("b 线后 data/ 已无 *_bullet.gd（弹道全部描述符化）—— 见 TODO F10 工作台弹道浏览")
+		return
+	var entry = bullets[0]
 	BulletManager.current.clear_all()
 	cs._route_preset(entry)
 	await get_tree().process_frame
