@@ -54,6 +54,7 @@
 | **[docs/GDEXTENSION_KERNEL_DESIGN.md](docs/GDEXTENSION_KERNEL_DESIGN.md)** | 原生弹幕内核**北极星设计**（已落地） | 内核/桥接 |
 | **[docs/N2_NATIVE_INTEGRATION_PLAN.md](docs/N2_NATIVE_INTEGRATION_PLAN.md)** | 原生内核**接入与拆除记录**（已完成） | 内核/桥接 |
 | **[docs/LIFECYCLE_MODEL.md](docs/LIFECYCLE_MODEL.md)** | 弹幕生命周期模型（已落地 L1–L4） | 行为/内容 |
+| **[docs/DANMAKU_API.md](docs/DANMAKU_API.md)** | **弹幕内核 API 参考** —— BulletData / BulletLifecycle 全词汇 + 发射 + ctx 服务 + 素材表 + 陷阱 | 弹幕创作者 |
 | **[CONTENT_GUIDE.md](CONTENT_GUIDE.md)** | 内容制作流程 —— 怎么加关卡/敌人/Boss/符卡 | 关卡设计师 |
 | **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 | 编剧 |
 | **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（剧本归档） | 编剧 |
@@ -69,6 +70,7 @@
 | 「项目现在什么状态 / 还差什么」 | docs/BEST_PRACTICES_BASELINE.md |
 | 「为什么当初这么改 / 踩过什么坑」 | docs/BEST_PRACTICES_LOG.md |
 | 「原生内核接入到哪了 / 怎么拆的」 | docs/N2_NATIVE_INTEGRATION_PLAN.md + docs/GDEXTENSION_KERNEL_DESIGN.md |
+| 「怎么写一颗弹 / 一套弹幕」 | docs/DANMAKU_API.md（参考）+ CONTENT_GUIDE.md §六（教学） |
 | 「怎么加一个新敌人 / 符卡」 | CONTENT_GUIDE.md |
 | 「某面角色说什么台词」 | docs/DIALOGUE.md |
 | 「怎么跑 / 怎么测 / 快捷键」 | README.md（本页） |

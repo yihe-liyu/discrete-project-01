@@ -18,6 +18,21 @@
 
 ## 记录
 
+### 2026-09-16 — 新增 `docs/DANMAKU_API.md`：弹幕内核接口参考
+
+- **动机**：讨论「好文档能不能让 AI 不通读项目就写弹幕」。结论：**API 正确性可以靠文档**；但可枚举值（贴图/音效 key）与**静默失败**是最大坑（`get_bullet_tex("typo")` → null + 默认 4px 判定，无警告）。
+- **做法**：新 `docs/DANMAKU_API.md`（552 行），作为**唯一权威参考**：
+  - BulletData 全字段 + 构造链 + 弹型缓存铁律；
+  - BulletLifecycle 全词汇（Move 9 / Until 5+1 / Action 6 / 方向糖 6 / 常量 / 槽 / preset 10 + 展开 / compile / 锚点）；
+  - 原生语义细则（emit 速度继承、at_wall 落点、toward 退化、chance_toward 命中、RNG 顺序）；
+  - 发射 API（shoot_spread / 激光 / 清弹）；CoroutineScript 契约（_tick 返回 / get_dt / diff_pick / Timeline）；
+  - ctx 服务总表 + StageDirector / BossHandle 动词；
+  - **素材表**（子弹 key 全表 + 音效 key）+ PhaseData + 目录接线 + @role；
+  - 12 条陷阱清单 + 3 个完整例子。
+  - 从 README 文档索引 + CONTENT_GUIDE §六 交叉链接（教学 vs 字典分工）。
+- **没做（本次）**：校验器（未知 key 响亮报错）与 headless 预览 —— 那才是让 AI 真正闭环的两件，留待后续。
+- **验收**：纯文档，`verify.sh` 不受影响（未跑，代码零改动）。
+
 ### 2026-09-16 — 抽出 BossHud：显示状态从 Boss 分离（set_boss_name 不再挂在 Boss 上）
 
 - **动机**：名字文字 / 名字显隐 / 进度点显隐 三件事都堆在 `Boss` 上（`set_boss_name` / `set_name_shown` / `set_phase_dots_shown`），而 `Boss` 是战斗实体。用户提出「`set_boss_name` 能不能分离出来」→ 抽独立显示对象。
