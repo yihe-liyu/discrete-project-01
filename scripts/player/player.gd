@@ -209,7 +209,7 @@ func _bomb() -> void:
 		return
 	if not resources.use_bomb():
 		return
-	_play_sfx(AssetRegistry.sounds["card"], -6.0)
+	_play_sfx(AssetRegistry.sounds["player_card"], -6.0)
 	# Bomb 期间短暂无敌
 	is_invincible = true
 	_invincible_timer = bomb_data.invincible_time
