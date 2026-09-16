@@ -30,13 +30,22 @@ func resolve() -> Boss:
 func exists() -> bool:
 	return resolve() != null
 
-## 揭真名（发 display_name_changed，BossUI 订阅同步）
+## 揭真名：改名 + 亮出名字节点（BossUI 订阅同步）。
 func reveal(name: String) -> BossHandle:
 	var b := resolve()
 	if b:
 		b.set_boss_name(name)
+		b.set_name_shown(true)
 	else:
 		push_warning("BossHandle.reveal: 槽位 '%s' 无 Boss" % _key)
+	return self
+
+
+## 只亮出名字节点（不改名）—— 名字节点默认隐藏，需要单独亮时用。
+func show_name() -> BossHandle:
+	var b := resolve()
+	if b:
+		b.set_name_shown(true)
 	return self
 
 ## 隐藏真名（战前开局用）
@@ -44,6 +53,7 @@ func hide_name() -> BossHandle:
 	var b := resolve()
 	if b:
 		b.set_boss_name(_hide_name)
+		b.set_name_shown(false)
 	return self
 
 ## 进场：移动到 to（起点已由 spawn 设好，重设 from 幂等无害）

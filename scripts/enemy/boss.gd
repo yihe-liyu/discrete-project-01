@@ -14,10 +14,12 @@ const INDICATOR_FADE_POW := 0.5      ## 透明度缓动指数：<1 → 越近透
 
 signal phase_cleared(captured: bool, bonus: int)
 signal display_name_changed(display_name: String)
+signal name_visibility_changed(is_shown: bool)
 signal hp_changed(hp: int, max_hp: int)
 
 var _boss_data: BossData
 var _display_name: String = ""   ## 运行时显示名覆盖（空 = 用 _boss_data.boss_name）
+var _is_name_shown: bool = false  ## 名字节点是否可见（默认隐藏：只有关底 reveal / 手动 show 才显示）
 var _hp: int = 0
 var _hitbox_radius: float
 
@@ -84,6 +86,19 @@ func set_boss_name(n: String) -> void:
 		return
 	_display_name = n
 	display_name_changed.emit(get_boss_name())   # 用有效名：清空覆盖时回退 boss_data.boss_name
+
+
+## 名字节点是否可见（BossUI 订阅）——默认 false：只在关底 reveal（或手动 show_name）时出现。
+func is_name_shown() -> bool:
+	return _is_name_shown
+
+
+## 手动开关名字节点（默认隐藏；只切可见性，不改名）。
+func set_name_shown(v: bool) -> void:
+	if _is_name_shown == v:
+		return
+	_is_name_shown = v
+	name_visibility_changed.emit(v)
 func is_in_gap() -> bool:
 	return _is_cleared
 

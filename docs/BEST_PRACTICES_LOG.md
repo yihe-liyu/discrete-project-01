@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-16 — Boss 名字节点默认隐藏（只在关底 reveal / 手动 show 时出现）
+
+- **需求**：Boss 名字节点（`BossUI/Control/BossName`）此前**每个 Boss 都显示**（道中 Boss 显示 `？？？`）。改成默认隐藏，只在关底亮出；并留手动控制。
+- **做法**：
+  - `Boss` 增 `_is_name_shown`（默认 false）+ 信号 `name_visibility_changed` + `is_name_shown()` / `set_name_shown()`。
+  - `BossHandle.reveal(name)` = 改名 + `set_name_shown(true)`；`hide_name()` = 改名 + 收起；新增 `show_name()`（只亮不改名）。
+  - `BossUI` 名字 label 默认 `visible=false`，订阅 `name_visibility_changed` 跟随。
+- **为什么等于「只在关底」**：`stage01.gd` 本来就**只对关底** `_final_boss_handle.reveal("卡摩瑞")`（道中从不 reveal）→ 默认隐藏后，效果就是只有关底亮名，且创作者可随时手动 show。
+- **副作用（待定）**：符卡练习走 `start_spell_card`，不调 reveal → 现在练习里不显示卡名（以前会显示）。要的话在练习侧加一次 `show_name()` / `reveal()` 即可 —— 先按「默认不显示」办，等确认。
+- **验收**：`verify.sh` 全绿（414 测试 / 4274 断言 / 1 pending）。
+
 ### 2026-09-16 — 修两个小问题：主菜单音效断线 + 诱导弹追未开战的 Boss
 
 - **① 主菜单音效没了**：`BasePage.sfx_*` 只发 `sfx_requested` 意图，由 `MenuNav._connect_signals`（只在 push/push_overlay 时调用）接线到 `AudioManager.play_ui_sfx`。**MainMenu 是场景根，从不走 MenuNav.push** → 信号无人接，导航/确认/取消全哑。修：`main_menu._ready()` 自接 `sfx_requested → AudioManager.play_ui_sfx`。子页面本来就正常，所以只有主菜单哑。

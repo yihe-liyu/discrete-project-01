@@ -55,3 +55,27 @@ func test_clear_name_emits_fallback():
 	b.set_boss_name("")   # 清空覆盖 → 回退 boss_data.boss_name
 	assert_eq(got.size(), 1, "清空触发一次信号")
 	assert_eq(got[0], "卡摩瑞", "信号带回退名（boss_data.boss_name）")
+
+
+func test_name_visibility_defaults_hidden_and_toggles():
+	var b := _make_boss("卡摩瑞")
+	assert_false(b.is_name_shown(), "名字节点默认隐藏")
+	var seen: Array[bool] = []
+	b.name_visibility_changed.connect(func(v): seen.append(v))
+	b.set_name_shown(true)
+	assert_true(b.is_name_shown(), "可手动显示")
+	assert_eq(seen, [true], "可见性变化发一次信号")
+	b.set_name_shown(true)
+	assert_eq(seen.size(), 1, "同值不重复发信号")
+	b.set_name_shown(false)
+	assert_false(b.is_name_shown(), "可再收起")
+
+
+func test_boss_ui_name_label_follows_visibility():
+	var ui = load("res://scenes/ui/boss_ui.tscn").instantiate()
+	add_child_autofree(ui)
+	assert_false(ui._boss_name.visible, "BossUI 名字节点默认隐藏")
+	ui._on_name_visibility_changed(true)
+	assert_true(ui._boss_name.visible, "回调应亮出名字节点")
+	ui._on_name_visibility_changed(false)
+	assert_false(ui._boss_name.visible, "回调应收起名字节点")
