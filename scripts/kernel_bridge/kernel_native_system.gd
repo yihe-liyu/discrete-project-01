@@ -22,6 +22,8 @@ const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/li
 @export var cull_margin: float = 32.0
 
 var _accel: Object = null
+## 内核 RNG 种子（宿主 RNG 派生；原生 store 建好/重播种时应用）
+var _seed: int = 0
 ## 诊断计数器：真正走了原生路径的帧数。
 var native_frames: int = 0
 
@@ -68,6 +70,7 @@ func _ensure_native() -> void:
 		_accel.set_field(GameConfig.FIELD_LEFT, GameConfig.FIELD_RIGHT, GameConfig.FIELD_TOP)
 		_accel.set_margin(cull_margin)
 		_accel.set_default_life(default_lifetime)
+		_accel.set_seed(_seed)
 
 
 func is_native_ready() -> bool:
@@ -283,7 +286,10 @@ func get_render_fade(kind: int) -> float:
 # ═══ 确定性 RNG（宿主 seed）═══
 
 func set_seed(seed_value: int) -> void:
+	_seed = seed_value
 	_random.seed = seed_value
+	if _accel != null:
+		_accel.set_seed(seed_value)   # 转发原生 store（行为随机走内核单通道）
 
 func randf() -> float:
 	return _random.randf()

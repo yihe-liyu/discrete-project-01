@@ -12,6 +12,7 @@
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <vector>
+#include <cstdint>
 
 namespace godot {
 
@@ -31,6 +32,9 @@ class DanmakuStore : public RefCounted {
 	std::vector<float> _hb_radius, _hb_offx, _hb_offy, _hb_sizex, _hb_sizey, _hb_diroff;
 	std::vector<unsigned char> _hb_follow, _grazed;
 	float _field_left = 0.0f, _field_right = 0.0f, _field_top = 0.0f;
+
+	// K1：确定性 PRNG（单通道；种子由宿主 RNG 派生）。抽取顺序 = 弹行遍历顺序 → 回放可复现。
+	uint32_t _rng_state = 0x9E3779B9u;
 
 	// L3：packed program 执行（列式；op/args 全局拼接，program 只存偏移）。
 	static const int SLOT_STRIDE = 8;
@@ -86,6 +90,7 @@ public:
 	void set_margin(float p_margin);
 	void set_default_life(float p_life);
 	void set_field(float p_left, float p_right, float p_top);
+	void set_seed(int p_seed);
 	// L3.5-1：判定（与 GDScript 内核 1:1）
 	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
 	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const;
@@ -145,7 +150,9 @@ public:
 	// 跑一帧所有 program；返回事件（emit/sfx/call），由宿主 drain。
 	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array());
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);
-	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward);
+	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, float p_prob);
+	float _rng_float();
+	float _rng_range(float a, float b);
 	void _exec_move(int i, int prog, float *slots, int ins, float dt, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const PackedVector2Array &anchor_base);
 	bool _check_until(int i, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
 	void _exec_action(int i, int prog, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);

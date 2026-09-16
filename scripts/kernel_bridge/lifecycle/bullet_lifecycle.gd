@@ -43,6 +43,8 @@ const D_HEADING := &"heading"
 const D_TOWARD := &"toward"
 const D_AWAY := &"away"
 const D_FORWARD := &"forward"
+const D_RANDOM := &"random"
+const D_CHANCE := &"chance"
 
 # ---- 墙位掩码 / 比较 ----
 const WALL_LEFT := 1
@@ -114,6 +116,16 @@ static func away(target: StringName, angle: float = 0.0) -> Dictionary:
 ## 沿弹**自身朝向**（出生朝向 / set_heading 改过的）再转 angle；与 heading(世界角) 正交。
 static func forward(angle: float = 0.0) -> Dictionary:
 	return {&"kind": D_FORWARD, &"target": &"", &"angle": angle}
+
+
+## 沿自身朝向 ± spread 内**随机**（内核确定性 RNG，单通道）。
+static func random_dir(spread: float) -> Dictionary:
+	return {&"kind": D_RANDOM, &"target": &"", &"angle": spread}
+
+
+## 以概率 p 朝 target，否则沿自身朝向再转 spread。
+static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> Dictionary:
+	return {&"kind": D_CHANCE, &"target": target, &"angle": spread, &"p": p}
 
 
 # ═══ Move ═══
@@ -328,6 +340,8 @@ const DK_HEADING := 0
 const DK_TOWARD := 1
 const DK_AWAY := 2
 const DK_FORWARD := 3   ## 沿弹自身朝向（与速度解耦）
+const DK_RANDOM := 4    ## 沿自身朝向 ± 随机
+const DK_CHANCE := 5    ## p 概率朝 target，否则自身朝向旋转
 
 ## 编译为扁平 packed program。actions / sfx 是**程序级**表：事件回传 (program, local_id)，
 ## 由宿主查这两张表（Callable 永不进原生）。
@@ -448,7 +462,11 @@ func _dir_args(d: Dictionary) -> Array:
 		dk = DK_AWAY
 	elif d[&"kind"] == D_FORWARD:
 		dk = DK_FORWARD
-	return [dk, _target_code(d[&"target"]), float(d[&"angle"])]
+	elif d[&"kind"] == D_RANDOM:
+		dk = DK_RANDOM
+	elif d[&"kind"] == D_CHANCE:
+		dk = DK_CHANCE
+	return [dk, _target_code(d[&"target"]), float(d[&"angle"]), float(d.get(&"p", 0.0))]
 
 
 func _args_move(m: Dictionary) -> Array:

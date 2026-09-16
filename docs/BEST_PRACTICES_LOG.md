@@ -18,6 +18,20 @@
 
 ## 记录
 
+### 2026-09-15 — K1：内核随机（原生 PRNG + 方向随机原语；种子走宿主 RNG 单通道）
+
+- **问题**：原生 `DanmakuStore` **无 RNG**。宿主线 `RNG → BulletManager → KernelNativeSystem.set_seed` 已铺，但只设宿主侧 GDScript RNG、**没转发原生**。
+- **改**：
+  - 原生 xorshift32 PRNG + `set_seed(int)`（种子 0 用黄金比常量兜底）；
+  - `KernelNativeSystem.set_seed` **转发原生**（并记 `_seed`，`_ensure_native` 时补种）；
+  - 方向原语：`DK_RANDOM=4` → builder **`random_dir(spread)`**（沿自身朝向 ±spread 随机）；`DK_CHANCE=5` → **`chance_toward(target, p, spread)`**（p 概率精确朝 target，否则 `forward(spread)`）。
+- **方向编码 3 参 → 4 参**（`[dk, tg, angle, p]`）：`_dir_args` 加 `p`，原生 `_resolve_dir(..., forward, p_prob)` 与 emit（`a[4]=p, a[5]=speed, a[6]=at_end`）/ set_heading（move 7 / action 43）同步。**无测试断言原始 args**，改动安全。
+- **确定性铁律**：单通道、抽取顺序 = 弹行遍历顺序、宿主/内核两个独立流 → `set_seed` 后可复现。
+- **踩坑**：`chance_toward` 命中分支一开始仍带 fallback 的 `angle`（`base.rotated(angle)`）→ 需在命中时 `angle = 0`；测试 `p=1 应朝 player` 抓出。
+- **测试**：新增 `test_kernel_random`（同种子逐位相同 / 异种子不同 / 落在 ±spread 内 / p=1 精确朝 player）。
+- **参考解释器**：不模拟朝向/随机 → 加 NOTE（这两类是原生专属，不走 parity）。
+- **验证**：`./tools/verify.sh` 全绿 **399 / 4238**。
+
 ### 2026-09-15 — K2：弹道「朝向」状态化（原生加 heading 列；首次改 C++ + 重编 .so）
 
 - **问题**：`accel_heading` 用 `v.normalized()` 当朝向 → 速度归零时 `normalize(0)=0`，弹**冻住**，无法表达"减速 → 反向飞回"（orbit_probe 卡在这，**不是随机**）。

@@ -279,6 +279,8 @@ func _dir(spec: Dictionary, pos: Vector2, ctx: BehaviorContext) -> Vector2:
 			var base2: Vector2 = (pos - tp2).normalized() if tp2 != null else Vector2.DOWN
 			return base2.rotated(angle)
 		_:
+			# NOTE：参考解释器**不模拟**"自身朝向"（K2）与随机（K1）—— 这两个是原生专属；
+			# 用到它们的组合不走 parity 测试（见 test_heading_state / test_kernel_random）。
 			return Vector2.DOWN
 
 

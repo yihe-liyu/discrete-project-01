@@ -40,6 +40,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_grazed", "id"), &DanmakuStore::is_grazed);
 	ClassDB::bind_method(D_METHOD("mark_grazed", "id"), &DanmakuStore::mark_grazed);
 	ClassDB::bind_method(D_METHOD("set_field", "left", "right", "top"), &DanmakuStore::set_field);
+	ClassDB::bind_method(D_METHOD("set_seed", "seed"), &DanmakuStore::set_seed);
 	ClassDB::bind_method(D_METHOD("register_program", "ops", "args", "move_start", "move_count", "until", "act_start", "act_count", "phase_count", "slots"), &DanmakuStore::register_program);
 	ClassDB::bind_method(D_METHOD("set_program", "id", "program"), &DanmakuStore::set_program);
 	ClassDB::bind_method(D_METHOD("get_program", "id"), &DanmakuStore::get_program);
@@ -490,12 +491,37 @@ Vector2 DanmakuStore::_target_pos(int p_tg, const Vector2 &from, const Vector2 &
 	return Vector2();
 }
 
-Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward) {
+// K1：确定性 PRNG（xorshift32）。种子 0 会退化 → 用黄金比常量兜底。
+void DanmakuStore::set_seed(int p_seed) {
+	_rng_state = (uint32_t)((uint64_t)p_seed & 0xFFFFFFFFu);
+	if (_rng_state == 0) { _rng_state = 0x9E3779B9u; }
+}
+
+float DanmakuStore::_rng_float() {
+	uint32_t x = _rng_state;
+	x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+	_rng_state = x;
+	return (float)(x >> 8) * (1.0f / 16777216.0f);   // [0,1)
+}
+
+float DanmakuStore::_rng_range(float a, float b) { return a + (b - a) * _rng_float(); }
+
+Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, float p_prob) {
 	if (p_dk == 0) {
 		return Vector2(sin(angle), -cos(angle));
 	}
 	if (p_dk == 3) {   // 自身朝向（forward）旋转 angle
 		return forward.rotated(angle);
+	}
+	if (p_dk == 4) {   // 随机：沿自身朝向 ± angle 内随机
+		return forward.rotated(_rng_range(-angle, angle));
+	}
+	if (p_dk == 5) {   // 概率瞄准：p 概率朝 target；否则自身朝向旋转 angle
+		if (_rng_float() >= p_prob) {
+			return forward.rotated(angle);
+		}
+		p_dk = 1;
+		angle = 0.0f;   // 命中概率 → 精确朝 target（angle 只服务 fallback）
 	}
 	bool ok = false;
 	const Vector2 tp = _target_pos(p_tg, pos, player, boss, has_boss, enemies, ok);
@@ -584,7 +610,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			_vy[i] = v.y * a[0];
 			break;
 		case 7: { // set_heading (move) —— 同时改「朝向」
-			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]));
+			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[3]);
 			if (d != Vector2()) {
 				const float sp = v.length();
 				_vx[i] = d.x * sp;
@@ -679,10 +705,10 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 	switch (op) {
 		case 40: { // emit
 			Vector2 at(_x[i], _y[i]);
-			if (a[5] > 0.5f && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }
+			if (a[6] > 0.5f && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }
 			float speed = Vector2(_vx[i], _vy[i]).length();
-			if (a[4] > 0.0f) { speed = a[4]; }
-			const Vector2 dir = _resolve_dir((int)a[1], (int)a[2], a[3], at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]));
+			if (a[5] > 0.0f) { speed = a[5]; }
+			const Vector2 dir = _resolve_dir((int)a[1], (int)a[2], a[3], at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[4]);
 			_ev_kind.push_back(0);
 			_ev_prog.push_back(prog);
 			_ev_local.push_back((int)a[0]);
@@ -704,7 +730,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_tick_dead.push_back(i);
 			break;
 		case 43: { // set_heading (action) —— 同时改「朝向」
-			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]));
+			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[3]);
 			if (d != Vector2()) {
 				const float sp = Vector2(_vx[i], _vy[i]).length();
 				_vx[i] = d.x * sp;
