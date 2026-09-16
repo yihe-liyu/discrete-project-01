@@ -43,7 +43,7 @@
 
 | 系统 | 责任 | 对外接口（intent） | 主要文件 |
 |---|---|---|---|
-| **Boss/敌人** | 演一段阶段 / 生成敌人 | `start_phase(phase)` / `get_boss_name` / `set_boss_name` / `current_phase` / `ctx.enemies.spawn(data)` | `scripts/enemy/boss.gd` / `enemy.gd` |
+| **Boss/敌人** | 演一段阶段 / 生成敌人 | `start_phase(phase)` / `hud`（`BossHud`：名字文字 + 名字/进度点显隐） / `current_phase` / `ctx.enemies.spawn(data)` | `scripts/enemy/boss.gd` / `boss_hud.gd` / `enemy.gd` |
 | **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread(...)` / `death_clear` | `scripts/bullet/*` / `laser/*` · **内核** `gdextension/src/danmaku_store.*` |
 | **玩家** | 移动/射击/僚机/道具 | `ctx.player` / `ctx.effects` | `scripts/player/player.gd` / `coroutine/player/*` |
 | **对话** | 纯逻辑步骤 + 渲染 | `ctx.play_dialogue_steps(steps)` / `d.event(...)` | `scripts/coroutine/services/dialogue/*` |
@@ -119,7 +119,7 @@
 2. **一知识一 owner**——身份问 `BossCatalog`、记录走 `RecordService`、引用走 `StageObjects`、状态走信号；**绝不自己算**。
 3. **系统走服务（ctx.*），不摸全局**——别 `GameState.record_*``BulletManager.` 到处摸；删 `else Global` 双路。
 4. **节点只演、只发信号**——`Boss` 不算身份/记录，`hp``boss_data` 不该裸暴露。
-5. **UI 订阅，不轮询**——`boss_ui` 不再每帧拉 `get_boss_name`。
+5. **UI 订阅，不轮询**——`boss_ui` 不再每帧拉 `hud.get_name()`。
 6. **参数 typed、可校验**——别用 `params` 反射。
 7. **关卡脚本偏“声明式”**——编排用命令/事件，别自己包 `_on_dialogue_event` 大 match + 手工 spawn+tween。
 

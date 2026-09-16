@@ -17,6 +17,7 @@ var _announce_label: AnnounceLabel
 var _bonus_label: Label
 var _capture_label: Label
 var _boss: Boss
+var _boss_hud: BossHud
 var _timer_label: Label
 
 func _ready() -> void:
@@ -40,31 +41,36 @@ func _exit_tree() -> void:
 	]:
 		if conn[0].is_connected(conn[1]):
 			conn[0].disconnect(conn[1])
-	if _boss and is_instance_valid(_boss) and _boss.display_name_changed.is_connected(_on_display_name_changed):
-		_boss.display_name_changed.disconnect(_on_display_name_changed)
-	if _boss and is_instance_valid(_boss) and _boss.name_visibility_changed.is_connected(_on_name_visibility_changed):
-		_boss.name_visibility_changed.disconnect(_on_name_visibility_changed)
-	if _boss and is_instance_valid(_boss) and _boss.phase_dots_visibility_changed.is_connected(_on_phase_dots_visibility_changed):
-		_boss.phase_dots_visibility_changed.disconnect(_on_phase_dots_visibility_changed)
+	_disconnect_hud()
+
+
+## 断开当前 BossHud 的订阅（换 Boss / 退场时）
+func _disconnect_hud() -> void:
+	if _boss_hud == null:
+		return
+	if _boss_hud.display_name_changed.is_connected(_on_display_name_changed):
+		_boss_hud.display_name_changed.disconnect(_on_display_name_changed)
+	if _boss_hud.name_visibility_changed.is_connected(_on_name_visibility_changed):
+		_boss_hud.name_visibility_changed.disconnect(_on_name_visibility_changed)
+	if _boss_hud.phase_dots_visibility_changed.is_connected(_on_phase_dots_visibility_changed):
+		_boss_hud.phase_dots_visibility_changed.disconnect(_on_phase_dots_visibility_changed)
+	_boss_hud = null
+
 
 func _on_boss_spawned(boss: Node) -> void:
-	# 断开上一只 Boss 的显示名连接（换 Boss / spawn 新 Boss 时）
-	if _boss and is_instance_valid(_boss) and _boss.display_name_changed.is_connected(_on_display_name_changed):
-		_boss.display_name_changed.disconnect(_on_display_name_changed)
-	if _boss and is_instance_valid(_boss) and _boss.name_visibility_changed.is_connected(_on_name_visibility_changed):
-		_boss.name_visibility_changed.disconnect(_on_name_visibility_changed)
-	if _boss and is_instance_valid(_boss) and _boss.phase_dots_visibility_changed.is_connected(_on_phase_dots_visibility_changed):
-		_boss.phase_dots_visibility_changed.disconnect(_on_phase_dots_visibility_changed)
+	# 断开上一只 Boss 的显示状态连接（换 Boss / spawn 新 Boss 时）
+	_disconnect_hud()
 	_boss = boss as Boss
 	var boss_data: BossData = boss.boss_data
-	# 订阅显示名变化——改名即时同步，不再每帧轮询 get_boss_name()
-	if _boss and is_instance_valid(_boss):
-		_boss.display_name_changed.connect(_on_display_name_changed)
-		_boss.name_visibility_changed.connect(_on_name_visibility_changed)
-		_boss.phase_dots_visibility_changed.connect(_on_phase_dots_visibility_changed)
-		_on_display_name_changed(_boss.get_boss_name())
-		_on_name_visibility_changed(_boss.is_name_shown())
-		_on_phase_dots_visibility_changed(_boss.is_phase_dots_shown())
+	# 订阅显示状态——改名 / 显隐即时同步，不再每帧轮询
+	_boss_hud = _boss.hud
+	if _boss_hud != null:
+		_boss_hud.display_name_changed.connect(_on_display_name_changed)
+		_boss_hud.name_visibility_changed.connect(_on_name_visibility_changed)
+		_boss_hud.phase_dots_visibility_changed.connect(_on_phase_dots_visibility_changed)
+		_on_display_name_changed(_boss_hud.get_name())
+		_on_name_visibility_changed(_boss_hud.is_name_shown())
+		_on_phase_dots_visibility_changed(_boss_hud.is_phase_dots_shown())
 
 	if not _timer_label:
 		_timer_label = Label.new()

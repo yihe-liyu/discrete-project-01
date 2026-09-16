@@ -34,10 +34,18 @@ func exists() -> bool:
 func reveal(name: String) -> BossHandle:
 	var b := resolve()
 	if b:
-		b.set_boss_name(name)
-		b.set_name_shown(true)
+		b.hud.set_name(name)
+		b.hud.set_name_shown(true)
 	else:
 		push_warning("BossHandle.reveal: 槽位 '%s' 无 Boss" % _key)
+	return self
+
+
+## 只改显示名（不动名字节点显隐；要连显隐一起亮用 reveal）。
+func set_name(name: String) -> BossHandle:
+	var b := resolve()
+	if b:
+		b.hud.set_name(name)
 	return self
 
 
@@ -45,7 +53,7 @@ func reveal(name: String) -> BossHandle:
 func show_name() -> BossHandle:
 	var b := resolve()
 	if b:
-		b.set_name_shown(true)
+		b.hud.set_name_shown(true)
 	return self
 
 
@@ -53,7 +61,7 @@ func show_name() -> BossHandle:
 func show_phase_dots() -> BossHandle:
 	var b := resolve()
 	if b:
-		b.set_phase_dots_shown(true)
+		b.hud.set_phase_dots_shown(true)
 	return self
 
 
@@ -61,15 +69,15 @@ func show_phase_dots() -> BossHandle:
 func hide_phase_dots() -> BossHandle:
 	var b := resolve()
 	if b:
-		b.set_phase_dots_shown(false)
+		b.hud.set_phase_dots_shown(false)
 	return self
 
 ## 隐藏真名（战前开局用）
 func hide_name() -> BossHandle:
 	var b := resolve()
 	if b:
-		b.set_boss_name(_hide_name)
-		b.set_name_shown(false)
+		b.hud.set_name(_hide_name)
+		b.hud.set_name_shown(false)
 	return self
 
 ## 进场：移动到 to（起点已由 spawn 设好，重设 from 幂等无害）

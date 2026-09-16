@@ -13,17 +13,14 @@ const INDICATOR_ALPHA_NEAR := 0.25   ## 最近处透明度（半透明但可见�
 const INDICATOR_FADE_POW := 0.5      ## 透明度缓动指数：<1 → 越近透明得越快（近处斜率陡）
 
 signal phase_cleared(captured: bool, bonus: int)
-signal display_name_changed(display_name: String)
-signal name_visibility_changed(is_shown: bool)
-signal phase_dots_visibility_changed(is_shown: bool)
 signal hp_changed(hp: int, max_hp: int)
 
 var _boss_data: BossData
-var _display_name: String = ""   ## 运行时显示名覆盖（空 = 用 _boss_data.boss_name）
-var _is_name_shown: bool = false  ## 名字节点是否可见（默认隐藏：只有关底 reveal / 手动 show 才显示）
-var _is_phase_dots_shown: bool = false  ## 阶段进度点是否可见（默认隐藏，手动控制）
 var _hp: int = 0
 var _hitbox_radius: float
+
+## 显示状态（名字文字 / 名字显隐 / 进度点显隐）——Boss 只管战斗，显示层在 BossHud
+var hud: BossHud = BossHud.new()
 
 ## 只读访问器：hp / boss_data / hitbox_radius 外部只读，改写只经本类方法（封装，防作弊/防割裂）
 var boss_data: BossData:
@@ -77,43 +74,6 @@ func get_elapsed() -> float: return _elapsed
 func get_phase_id() -> PhaseIdentity: return _phase_identity
 
 
-## 显示名：运行时覆盖优先，否则用 boss_data.boss_name（UI/外部系统只读这个）
-func get_boss_name() -> String:
-	return _display_name if _display_name != "" else (_boss_data.boss_name if _boss_data else "")
-
-
-## 运行时改显示名（外部系统可调用 —— 揭示真名 / 练习显示卡名 等；改名会发 display_name_changed，BossUI 订阅同步）
-func set_boss_name(n: String) -> void:
-	if _display_name == n:
-		return
-	_display_name = n
-	display_name_changed.emit(get_boss_name())   # 用有效名：清空覆盖时回退 boss_data.boss_name
-
-
-## 名字节点是否可见（BossUI 订阅）——默认 false：只在关底 reveal（或手动 show_name）时出现。
-func is_name_shown() -> bool:
-	return _is_name_shown
-
-
-## 手动开关名字节点（默认隐藏；只切可见性，不改名）。
-func set_name_shown(v: bool) -> void:
-	if _is_name_shown == v:
-		return
-	_is_name_shown = v
-	name_visibility_changed.emit(v)
-
-
-## 阶段进度点（BossUI 的 History 行）是否可见 —— 默认 false，手动控制。
-func is_phase_dots_shown() -> bool:
-	return _is_phase_dots_shown
-
-
-## 手动开关阶段进度点（默认隐藏）。
-func set_phase_dots_shown(v: bool) -> void:
-	if _is_phase_dots_shown == v:
-		return
-	_is_phase_dots_shown = v
-	phase_dots_visibility_changed.emit(v)
 func is_in_gap() -> bool:
 	return _is_cleared
 
@@ -129,6 +89,7 @@ func set_exit_controlled() -> void:
 
 func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	_boss_data = data
+	hud = BossHud.new(data)
 	_stage_context = p_ctx
 	z_index = LayerConfig.BOSS
 	if not GameEvents.player_missed.is_connected(_on_player_death):

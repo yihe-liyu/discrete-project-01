@@ -34,4 +34,5 @@ func test_boss_data_readonly():
 	d.boss_name = "测试"
 	b._boss_data = d
 	assert_eq(b.boss_data, d, "boss_data 走只读 getter")
-	assert_eq(b.get_boss_name(), "测试", "get_boss_name 读 _boss_data")
+	assert_not_null(b.hud, "Boss 持有显示状态对象 BossHud")
+	assert_eq(BossHud.new(d).get_name(), "测试", "显示名默认取 data.boss_name")

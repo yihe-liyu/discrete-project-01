@@ -18,6 +18,18 @@
 
 ## 记录
 
+### 2026-09-16 — 抽出 BossHud：显示状态从 Boss 分离（set_boss_name 不再挂在 Boss 上）
+
+- **动机**：名字文字 / 名字显隐 / 进度点显隐 三件事都堆在 `Boss` 上（`set_boss_name` / `set_name_shown` / `set_phase_dots_shown`），而 `Boss` 是战斗实体。用户提出「`set_boss_name` 能不能分离出来」→ 抽独立显示对象。
+- **做法**：
+  - 新 `scripts/enemy/boss_hud.gd`（`class_name BossHud extends RefCounted`）：持 `_boss_data` + 名字覆盖 + 两个显隐标志；信号 `display_name_changed` / `name_visibility_changed` / `phase_dots_visibility_changed`；方法 `get_name` / `set_name` / `is_name_shown` / `set_name_shown` / `is_phase_dots_shown` / `set_phase_dots_shown`。
+  - `Boss`：**删** 3 个显示信号 + 3 个显示字段 + 6 个显示方法，改为持有 `var hud: BossHud`（`setup(data)` 时 `hud = BossHud.new(data)`）；只留战斗数据。
+  - `BossHandle`：`reveal` / `set_name`（只改名）/ `hide_name` / `show_name` / `show_phase_dots` / `hide_phase_dots` 改成走 `b.hud.*`。
+  - `BossUI`：订阅 `_boss_hud`；`_disconnect_hud()` 收口断连。
+- **踩坑（必须记）**：新增 `class_name` 脚本后，`.godot/global_script_class_cache.cfg` 不会自动更新 —— `check_syntax` 只在该文件**不存在**时才 `--import`。本地要跑一次 `godot --headless --path . --import` 才认 `BossHud`，否则全项目 Could not find type "BossHud"。（CI 全新检出会 `--import`，不受影响。）
+- **命名**：`check_naming` 按契约要求私有字段 `_<类型snake>` → `BossUI._boss_hud`（不是 `_hud`）。
+- **验收**：`verify.sh` 全绿；测试 `test_boss_name.gd` → `test_boss_hud.gd`（测 `BossHud`，合并原 `test_boss_hud_visibility.gd`）。
+
 ### 2026-09-16 — Boss 阶段进度点也默认隐藏（与名字节点同一套手动控制）
 
 - **需求**：名字节点做了「默认隐藏 + 手动 show」后，BossUI 的**阶段进度点**（`Control/History` 那排点）也要同样处理。
