@@ -22,6 +22,7 @@ var _timer_label: Label
 func _ready() -> void:
 	visible = false
 	_boss_name.visible = false   # 名字节点默认隐藏（关底 reveal 时才亮）
+	_history.visible = false     # 阶段进度点默认隐藏（show_phase_dots 时才亮）
 	GameEvents.boss_spawned.connect(_on_boss_spawned)
 	GameEvents.boss_defeated.connect(_on_boss_defeated)
 	GameEvents.phase_start.connect(_on_phase_start)
@@ -43,6 +44,8 @@ func _exit_tree() -> void:
 		_boss.display_name_changed.disconnect(_on_display_name_changed)
 	if _boss and is_instance_valid(_boss) and _boss.name_visibility_changed.is_connected(_on_name_visibility_changed):
 		_boss.name_visibility_changed.disconnect(_on_name_visibility_changed)
+	if _boss and is_instance_valid(_boss) and _boss.phase_dots_visibility_changed.is_connected(_on_phase_dots_visibility_changed):
+		_boss.phase_dots_visibility_changed.disconnect(_on_phase_dots_visibility_changed)
 
 func _on_boss_spawned(boss: Node) -> void:
 	# 断开上一只 Boss 的显示名连接（换 Boss / spawn 新 Boss 时）
@@ -50,14 +53,18 @@ func _on_boss_spawned(boss: Node) -> void:
 		_boss.display_name_changed.disconnect(_on_display_name_changed)
 	if _boss and is_instance_valid(_boss) and _boss.name_visibility_changed.is_connected(_on_name_visibility_changed):
 		_boss.name_visibility_changed.disconnect(_on_name_visibility_changed)
+	if _boss and is_instance_valid(_boss) and _boss.phase_dots_visibility_changed.is_connected(_on_phase_dots_visibility_changed):
+		_boss.phase_dots_visibility_changed.disconnect(_on_phase_dots_visibility_changed)
 	_boss = boss as Boss
 	var boss_data: BossData = boss.boss_data
 	# 订阅显示名变化——改名即时同步，不再每帧轮询 get_boss_name()
 	if _boss and is_instance_valid(_boss):
 		_boss.display_name_changed.connect(_on_display_name_changed)
 		_boss.name_visibility_changed.connect(_on_name_visibility_changed)
+		_boss.phase_dots_visibility_changed.connect(_on_phase_dots_visibility_changed)
 		_on_display_name_changed(_boss.get_boss_name())
 		_on_name_visibility_changed(_boss.is_name_shown())
+		_on_phase_dots_visibility_changed(_boss.is_phase_dots_shown())
 
 	if not _timer_label:
 		_timer_label = Label.new()
@@ -87,6 +94,10 @@ func _on_display_name_changed(display_name: String) -> void:
 
 func _on_name_visibility_changed(is_shown: bool) -> void:
 	_boss_name.visible = is_shown
+
+
+func _on_phase_dots_visibility_changed(is_shown: bool) -> void:
+	_history.visible = is_shown
 
 func _process(_delta: float) -> void:
 	if not _boss or not is_instance_valid(_boss) or not visible:

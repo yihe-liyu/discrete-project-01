@@ -18,6 +18,16 @@
 
 ## 记录
 
+### 2026-09-16 — Boss 阶段进度点也默认隐藏（与名字节点同一套手动控制）
+
+- **需求**：名字节点做了「默认隐藏 + 手动 show」后，BossUI 的**阶段进度点**（`Control/History` 那排点）也要同样处理。
+- **做法（与名字节点对称）**：
+  - `Boss`：`_is_phase_dots_shown`（默认 false）+ 信号 `phase_dots_visibility_changed` + `is_phase_dots_shown()` / `set_phase_dots_shown()`。
+  - `BossHandle`：`show_phase_dots()` / `hide_phase_dots()`。
+  - `BossUI`：`_history.visible` 默认 false，订阅信号跟随。
+  - 关底内容（`stage01.gd` 的 `_on_display_name`）在 `reveal("卡摩瑞")` 旁加 `show_phase_dots()` → 与名字同框出现。
+- **验收**：`verify.sh` 全绿（416 测试 / 4284 断言 / 1 pending）。
+
 ### 2026-09-16 — Boss 名字节点默认隐藏（只在关底 reveal / 手动 show 时出现）
 
 - **需求**：Boss 名字节点（`BossUI/Control/BossName`）此前**每个 Boss 都显示**（道中 Boss 显示 `？？？`）。改成默认隐藏，只在关底亮出；并留手动控制。

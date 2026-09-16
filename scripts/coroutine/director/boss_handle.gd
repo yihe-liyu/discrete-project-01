@@ -48,6 +48,22 @@ func show_name() -> BossHandle:
 		b.set_name_shown(true)
 	return self
 
+
+## 亮出阶段进度点（默认隐藏，手动控制）。
+func show_phase_dots() -> BossHandle:
+	var b := resolve()
+	if b:
+		b.set_phase_dots_shown(true)
+	return self
+
+
+## 收起阶段进度点。
+func hide_phase_dots() -> BossHandle:
+	var b := resolve()
+	if b:
+		b.set_phase_dots_shown(false)
+	return self
+
 ## 隐藏真名（战前开局用）
 func hide_name() -> BossHandle:
 	var b := resolve()

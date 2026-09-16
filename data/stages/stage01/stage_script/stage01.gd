@@ -203,9 +203,10 @@ func _on_boss_enter() -> void:
 			Vector2(1000, 500), Vector2(GameConfig.FIELD_CENTER_X, 250))
 
 func _on_display_name() -> void:
-	# 战前对话 display_name 事件揭真名
+	# 战前对话 display_name 事件揭真名 + 亮出阶段进度点（默认都隐藏）
 	if _final_boss_handle:
 		_final_boss_handle.reveal("卡摩瑞")
+		_final_boss_handle.show_phase_dots()
 
 func _on_bgm_switch() -> void:
 	# 战前对话最后一句 → 切卡摩瑞主题曲（洞窟蝙蝠），说完即开打

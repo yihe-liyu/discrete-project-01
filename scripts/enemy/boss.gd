@@ -15,11 +15,13 @@ const INDICATOR_FADE_POW := 0.5      ## 透明度缓动指数：<1 → 越近透
 signal phase_cleared(captured: bool, bonus: int)
 signal display_name_changed(display_name: String)
 signal name_visibility_changed(is_shown: bool)
+signal phase_dots_visibility_changed(is_shown: bool)
 signal hp_changed(hp: int, max_hp: int)
 
 var _boss_data: BossData
 var _display_name: String = ""   ## 运行时显示名覆盖（空 = 用 _boss_data.boss_name）
 var _is_name_shown: bool = false  ## 名字节点是否可见（默认隐藏：只有关底 reveal / 手动 show 才显示）
+var _is_phase_dots_shown: bool = false  ## 阶段进度点是否可见（默认隐藏，手动控制）
 var _hp: int = 0
 var _hitbox_radius: float
 
@@ -99,6 +101,19 @@ func set_name_shown(v: bool) -> void:
 		return
 	_is_name_shown = v
 	name_visibility_changed.emit(v)
+
+
+## 阶段进度点（BossUI 的 History 行）是否可见 —— 默认 false，手动控制。
+func is_phase_dots_shown() -> bool:
+	return _is_phase_dots_shown
+
+
+## 手动开关阶段进度点（默认隐藏）。
+func set_phase_dots_shown(v: bool) -> void:
+	if _is_phase_dots_shown == v:
+		return
+	_is_phase_dots_shown = v
+	phase_dots_visibility_changed.emit(v)
 func is_in_gap() -> bool:
 	return _is_cleared
 
