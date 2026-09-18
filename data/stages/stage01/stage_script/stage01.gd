@@ -201,12 +201,12 @@ func _on_boss_enter() -> void:
 	if ctx and ctx.active() and not (_final_boss_handle and _final_boss_handle.exists()):
 		_final_boss_handle = _stage_director.boss("boss_final", _final_boss_data,
 			Vector2(1000, 500), Vector2(GameConfig.FIELD_CENTER_X, 250))
+		_final_boss_handle.show_name()
 
 func _on_display_name() -> void:
 	# 战前对话 display_name 事件揭真名 + 亮出阶段进度点（默认都隐藏）
 	if _final_boss_handle:
-		_final_boss_handle.reveal("卡摩瑞")
-		_final_boss_handle.show_phase_dots()
+		_final_boss_handle.set_name("卡摩瑞")
 
 func _on_bgm_switch() -> void:
 	# 战前对话最后一句 → 切卡摩瑞主题曲（洞窟蝙蝠），说完即开打
@@ -216,6 +216,7 @@ func _on_bgm_switch() -> void:
 func _on_boss_fight() -> void:
 	# 最后一句说完 → Boss 直接开战（面非符，序号 1，由完整链推导）
 	if _final_boss_handle:
+		_final_boss_handle.show_phase_dots()
 		_final_boss_handle.phase(0, true)
 
 
