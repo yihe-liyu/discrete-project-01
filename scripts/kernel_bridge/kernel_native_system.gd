@@ -43,6 +43,7 @@ var _faction := PackedByteArray()
 var _life_left := PackedFloat32Array()
 var _fx_phase := PackedFloat32Array()
 var _timer := PackedFloat32Array()
+var _render_rot := PackedFloat32Array()   # V19：逐弹渲染朝向覆盖（NAN = 用 velocity 推）
 
 # ── 宿主侧表 ──
 var _type_registry: Array[BulletType] = []
@@ -92,6 +93,7 @@ func _ensure_capacity(capacity: int) -> void:
 	_life_left.resize(n)
 	_fx_phase.resize(n)
 	_timer.resize(n)
+	_render_rot.resize(n)
 	if _accel != null:
 		_accel.reserve(n)
 
@@ -132,6 +134,7 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 	_faction[id] = bullet_data.faction
 	_life_left[id] = default_lifetime
 	_timer[id] = 0.0
+	_render_rot[id] = NAN
 	_set_row_fx(id, _spawn_fx.get(bullet_data.faction))
 	if _accel != null:
 		var nid: int = _accel.spawn(position, velocity, ti, int(bullet_data.faction), color)
@@ -163,6 +166,7 @@ func despawn(id: int) -> void:
 		_life_left[id] = _life_left[tail]
 		_fx_phase[id] = _fx_phase[tail]
 		_timer[id] = _timer[tail]
+		_render_rot[id] = _render_rot[tail]
 	_active_count -= 1
 	if _accel != null:
 		_accel.despawn(id)
@@ -271,6 +275,10 @@ func get_fx_phase(id: int) -> float:
 func get_timer(id: int) -> float:
 	return _timer[id]
 
+## V19：逐弹渲染朝向覆盖（NAN = 未设，渲染端按 velocity 推）。
+func get_render_rots() -> PackedFloat32Array:
+	return _render_rot
+
 func get_type_registry() -> Array[BulletType]:
 	return _type_registry
 
@@ -316,10 +324,14 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 		var c: Dictionary = lc.compile()
 		var expected: int = _program_data.size()
 		pid = _accel.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
-		if pid != expected:
-			push_error("[KernelNativeSystem] program 对齐失败：native pid=%d, 期望 %d" % [pid, expected])
-		_program_data.append(c)
-		_program_anchors.append(_anchor_spec_for(move, params))
+		if pid < 0:
+			# V20：槽数超上限被原生拒绝 —— 不 append，保持 _program_data 与原生 pid 对齐。
+			push_error("[KernelNativeSystem] program 注册被拒（槽数超过 SLOT_STRIDE）")
+		else:
+			if pid != expected:
+				push_error("[KernelNativeSystem] program 对齐失败：native pid=%d, 期望 %d" % [pid, expected])
+			_program_data.append(c)
+			_program_anchors.append(_anchor_spec_for(move, params))
 	_sig_to_program[sig] = pid
 	return pid
 
@@ -387,6 +399,7 @@ func _pull_snapshot() -> void:
 	_life_left = _accel.get_life_lefts()
 	_fx_phase = _accel.get_fx_phases()
 	_timer = _accel.get_timers()
+	_render_rot = _accel.get_render_rots()
 
 
 ## 变体发射：`src` 是模板数组时按分支号取模板（越界钳到末项）；非数组原样返回。

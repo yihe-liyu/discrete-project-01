@@ -43,6 +43,11 @@ func _new_state(lc) -> Dictionary:
 	var slots := []
 	slots.resize(count)
 	slots.fill(0.0)
+	# V1：fresh 是「每槽一个 bool」，不是「每弹一个 bool」——同相位的多个有状态 unit
+	# （anchor_drift / drift）各自按自己的槽判相位首帧，互不消费。
+	var fresh := []
+	fresh.resize(count)
+	fresh.fill(true)
 	return {
 		&"phase": 0,
 		&"elapsed": 0.0,
@@ -51,7 +56,7 @@ func _new_state(lc) -> Dictionary:
 		&"has_end_pos": false,
 		&"next_check": 0.0,
 		&"tick": 0,
-		&"fresh": true,
+		&"fresh": fresh,
 	}
 
 
@@ -61,10 +66,11 @@ func _enter_phase(st: Dictionary, phase: int) -> void:
 	st[&"end_pos"] = Vector2.ZERO
 	st[&"has_end_pos"] = false
 	st[&"next_check"] = 0.0
-	st[&"fresh"] = true
 	var slots: Array = st[&"slots"]
+	var fresh: Array = st[&"fresh"]
 	for i in slots.size():
 		slots[i] = 0.0
+		fresh[i] = true
 
 
 func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, dt: float, ctx: BehaviorContext) -> void:
@@ -88,7 +94,9 @@ func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, 
 					return
 				step = clampf(step, -remain, remain)
 			slots[si] = turned + absf(step)
-			system.set_velocity(id, system.get_velocity(id).rotated(step))
+			# V12：mode=2（只转朝向）参考侧无朝向可转 → 速度不动；0/1 都转速度。
+			if int(mv[&"mode"]) != BulletLifecycle.ROT_HEADING:
+				system.set_velocity(id, system.get_velocity(id).rotated(step))
 		BulletLifecycle.M_STEER:
 			var from := system.get_position(id)
 			var vel := system.get_velocity(id)
@@ -109,18 +117,15 @@ func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, 
 						dw = 1.0 + dist_weight / (dist + dist_weight)
 					var max_turn: float = float(mv[&"max_turn"]) * factor * dw * dt
 					rotated = cur.rotated(clampf(cur.angle_to(diff / dist), -max_turn, max_turn))
-				var sf: float = float(mv[&"speed_from"])
-				if is_nan(sf):
-					system.set_velocity(id, rotated * vel.length())
-				else:
-					system.set_velocity(id, rotated * lerpf(sf, float(mv[&"speed_to"]), factor))
+				# V2：steer 只转向、不改速度（速度交给 speed_lerp / set_speed）。
+				system.set_velocity(id, rotated * vel.length())
 		BulletLifecycle.M_SPEED_LERP:
 			var ramp2: float = float(mv[&"ramp"])
 			var f2: float = 1.0 if ramp2 <= 0.0 else clampf(float(st[&"elapsed"]) / ramp2, 0.0, 1.0)
 			var d2 := system.get_velocity(id).normalized()
 			if d2 != Vector2.ZERO:
 				system.set_velocity(id, d2 * lerpf(float(mv[&"from"]), float(mv[&"to"]), f2))
-		BulletLifecycle.M_SCALE_SPEED:
+		BulletLifecycle.M_SPEED_MUL:
 			system.set_velocity(id, system.get_velocity(id) * float(mv[&"f"]))
 		BulletLifecycle.M_SET_HEADING:
 			var d3 := _dir(mv[&"dir"], system.get_position(id), ctx)
@@ -128,40 +133,57 @@ func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, 
 				system.set_velocity(id, d3 * system.get_velocity(id).length())
 		BulletLifecycle.M_SET_SPEED:
 			var d4 := system.get_velocity(id).normalized()
-			if d4 != Vector2.ZERO:
-				system.set_velocity(id, d4 * float(mv[&"speed"]))
-		BulletLifecycle.M_ANCHOR_DRIFT:
-			var base := _anchor_pos(int(mv[&"anchor_id"]), Vector2(mv[&"offset"]), bool(mv[&"use_global"]), ctx)
+			if d4 == Vector2.ZERO:
+				d4 = Vector2(0, 1)   # V15：参考侧无朝向，用零速出生的默认朝向 (0,1) 近似
+			system.set_velocity(id, d4 * float(mv[&"speed"]))
+		BulletLifecycle.M_POSITION:
+			# V18：位置来源统一（mode 0=PHASE_START / 1=ANCHOR）；只有本 op 写 pos。
+			var mode: int = int(mv[&"mode"])
+			var slot: int = int(mv[&"slot"])
 			var slots2: Array = st[&"slots"]
-			var si2: int = int(mv[&"slot"])
-			if bool(st[&"fresh"]):
-				slots2[si2] = float(mv[&"initial"])   # 首帧：初始漂移，不推进（与 laser_follow 1:1）
-				st[&"fresh"] = false
+			var fresh2: Array = st[&"fresh"]
+			var base: Vector2
+			if mode == BulletLifecycle.POS_PHASE_START:
+				var bx: int = int(mv[&"sx"])
+				var by: int = int(mv[&"sy"])
+				if bool(fresh2[slot]):        # V1：按槽判 fresh
+					slots2[bx] = system.get_position(id).x   # 首帧：记下相位起点
+					slots2[by] = system.get_position(id).y
+					slots2[slot] = float(mv[&"initial"])
+					fresh2[slot] = false
+				else:
+					slots2[slot] = float(slots2[slot]) + float(mv[&"speed"]) * dt
+				base = Vector2(float(slots2[bx]), float(slots2[by]))
 			else:
-				slots2[si2] = float(slots2[si2]) + float(mv[&"speed"]) * dt
+				base = _anchor_pos(int(mv[&"anchor_id"]), Vector2(mv[&"offset"]), bool(mv[&"use_global"]), ctx)
+				if bool(fresh2[slot]):
+					slots2[slot] = float(mv[&"initial"])
+					fresh2[slot] = false
+				else:
+					slots2[slot] = float(slots2[slot]) + float(mv[&"speed"]) * dt
 			var adir := Vector2(sin(float(mv[&"angle"])), -cos(float(mv[&"angle"])))
-			system.set_position(id, base + adir * float(slots2[si2]))
-			if bool(mv[&"render_heading"]):
-				system.set_velocity(id, adir)
+			system.set_position(id, base + adir * float(slots2[slot]))
+			# V19：render_heading 不再写 velocity（原生走独立 render_rot 通道；参考侧无渲染，不模拟）。
 		_:
 			push_warning("LifecycleBehavior: 未知 move '%s'" % mv[&"op"])
 
 
 func _check_until(system: BulletSystem, id: int, st: Dictionary, cond: Dictionary, ctx: BehaviorContext) -> bool:
+	# V6：通用节流（先帧门控，再秒节流），对所有条件一致。
+	var every_ticks: int = int(cond.get(&"every_ticks", 0))
+	if every_ticks > 0 and int(st[&"tick"]) % every_ticks != 0:
+		return false
+	var every: float = float(cond.get(&"every", 0.0))
+	if every > 0.0:
+		if float(st[&"elapsed"]) < float(st[&"next_check"]):
+			return false
+		st[&"next_check"] = float(st[&"elapsed"]) + every
 	match cond[&"op"]:
 		BulletLifecycle.C_NEVER:
 			return false
 		BulletLifecycle.C_ELAPSED:
 			return float(st[&"elapsed"]) >= float(cond[&"t"])
 		BulletLifecycle.C_NEAR:
-			var every_ticks: int = int(cond[&"every_ticks"])
-			if every_ticks > 0 and int(st[&"tick"]) % every_ticks != 0:
-				return false
-			var every: float = float(cond[&"every"])
-			if every > 0.0:
-				if float(st[&"elapsed"]) < float(st[&"next_check"]):
-					return false
-				st[&"next_check"] = float(st[&"elapsed"]) + every
 			var tp = _target_pos(cond[&"target"], system.get_position(id), ctx)
 			if tp == null:
 				return false
@@ -182,7 +204,11 @@ func _check_until(system: BulletSystem, id: int, st: Dictionary, cond: Dictionar
 				return true
 			return false
 		BulletLifecycle.C_STATE:
-			var sv: float = float(st[&"slots"][int(cond[&"slot"])])
+			var si: int = int(cond[&"slot"])
+			var slots: Array = st[&"slots"]
+			if si < 0 or si >= slots.size():   # V8：slot 边界守卫
+				return false
+			var sv: float = float(slots[si])
 			return sv >= float(cond[&"value"]) if int(cond[&"cmp"]) == BulletLifecycle.CMP_GE else sv <= float(cond[&"value"])
 		_:
 			return false
@@ -196,6 +222,17 @@ func _run_actions(system: BulletSystem, id: int, st: Dictionary, actions: Array,
 					host.play_sfx(act[&"key"], float(act[&"db"]))
 			BulletLifecycle.A_EMIT:
 				_do_emit(system, id, st, act, ctx)
+			BulletLifecycle.A_EMIT_VARIANT:
+				# V9：参考侧不模拟随机/分支 → 取未命中分支 spawns[0]；方向用 forward（参考 _dir 回退 DOWN）。
+				var spawns_ref: Array = act.get(&"spawns", [])
+				if not spawns_ref.is_empty():
+					var synthetic := {
+						&"spawn": spawns_ref[0],
+						&"dir": BulletLifecycle.forward(),
+						&"speed": act.get(&"speed", 0.0),
+						&"at": act.get(&"at", 0),
+					}
+					_do_emit(system, id, st, synthetic, ctx)
 			BulletLifecycle.A_DESPAWN:
 				system.request_despawn(id)
 			BulletLifecycle.A_SET_HEADING:
@@ -204,15 +241,16 @@ func _run_actions(system: BulletSystem, id: int, st: Dictionary, actions: Array,
 					system.set_velocity(id, d * system.get_velocity(id).length())
 			BulletLifecycle.A_SET_SPEED:
 				var d2 := system.get_velocity(id).normalized()
-				if d2 != Vector2.ZERO:
-					system.set_velocity(id, d2 * float(act[&"speed"]))
+				if d2 == Vector2.ZERO:
+					d2 = Vector2(0, 1)   # V15
+				system.set_velocity(id, d2 * float(act[&"speed"]))
 			BulletLifecycle.A_CALL:
 				_call(act[&"call"], system, id, ctx)
 
 
 func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ctx: BehaviorContext) -> void:
 	var at: Vector2 = system.get_position(id)
-	if bool(act[&"at_end"]) and bool(st[&"has_end_pos"]):
+	if int(act.get(&"at", 0)) == 1 and bool(st[&"has_end_pos"]):   # V7：at = AT_PHASE_END
 		at = Vector2(st[&"end_pos"])
 	var speed: float = system.get_velocity(id).length()
 	if float(act[&"speed"]) > 0.0:
@@ -246,14 +284,11 @@ func _target_pos(target: StringName, from: Vector2, ctx: BehaviorContext) -> Var
 			var boss = _boss()
 			return boss.global_position if is_instance_valid(boss) else null
 		BulletLifecycle.T_NEAREST_ENEMY:
-			# 与 homing_behavior._nearest_enemy 1:1：跳过时符 / 未开战 Boss。
+			# V14：只取「宿主提供的候选集」里最近的一个；targetability 策略归宿主
+			# （EntityRegistry.get_targetable_enemies → Enemy.is_targetable），内核不内嵌过滤。
 			var best: Node2D = null
 			var bd := INF
 			for e in ctx.get_world().get_enemies():
-				if e is Boss:
-					var ph: PhaseData = (e as Boss).current_phase()
-					if not ph or ph.is_timeout_only:
-						continue
 				var d2: float = from.distance_squared_to(e.global_position)
 				if d2 < bd:
 					bd = d2

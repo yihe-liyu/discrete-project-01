@@ -43,8 +43,16 @@ func _step(system: BulletSystem, behavior: Behavior, ctx: BehaviorContext, frame
 			system.despawn(id)
 
 
+## eps > 0：按分量绝对容差比较。用于 homing —— V2 拆轴（steer + speed_lerp）后比融合版多一次
+## normalize，数值漂移 ~2e-4；原生↔参考的**精确** parity 由 test_native_executor::test_native_homing 保证。
+func _vec_close(a: Vector2, b: Vector2, eps: float) -> bool:
+	if eps <= 0.0:
+		return a.is_equal_approx(b)
+	return absf(a.x - b.x) <= eps and absf(a.y - b.y) <= eps
+
+
 func _parity(tag: String, beh_a: Behavior, params_a: Dictionary, lc: BulletLifecycle,
-		_host_a, host_b, ctx: BehaviorContext, spawns: Array, frames: int) -> void:
+		_host_a, host_b, ctx: BehaviorContext, spawns: Array, frames: int, eps: float = 0.0, check_vel: bool = true) -> void:
 	var bt := BulletType.new()
 	var sys_a := _system()
 	var sys_b := _system()
@@ -60,10 +68,10 @@ func _parity(tag: String, beh_a: Behavior, params_a: Dictionary, lc: BulletLifec
 			fail_test("%s 活跃数帧 %d：%d vs %d" % [tag, f, sys_a.get_active_count(), sys_b.get_active_count()])
 			return
 		for i in sys_a.get_active_count():
-			if not sys_a.get_position(i).is_equal_approx(sys_b.get_position(i)):
+			if not _vec_close(sys_a.get_position(i), sys_b.get_position(i), eps):
 				fail_test("%s 位置帧 %d 行 %d" % [tag, f, i])
 				return
-			if not sys_a.get_velocity(i).is_equal_approx(sys_b.get_velocity(i)):
+			if check_vel and not _vec_close(sys_a.get_velocity(i), sys_b.get_velocity(i), eps):
 				fail_test("%s 速度帧 %d 行 %d: A=%s B=%s" % [tag, f, i, sys_a.get_velocity(i), sys_b.get_velocity(i)])
 				return
 	pass_test("%s %d 帧逐位一致" % [tag, frames])
@@ -130,7 +138,11 @@ func test_homing_preset_parity() -> void:
 	var spawns: Array = []
 	for i in 6:
 		spawns.append([Vector2(300.0 + i * 50.0, 500.0), Vector2(0.0, -150.0).rotated((i - 3) * 0.2)])
-	_parity("homing", beh, params, lc, null, null, ctx, spawns, 150)
+	# V2：homing = steer(只转向) + speed_lerp，比旧融合版多一次 normalize。
+	# 转向是反馈环（转向→位置→角度），~1e-7 的浮点差约 80 帧后被放大成方向分叉（log 早已记录
+	# 「homing 只在加速未饱和、反馈未放大的地平线内对照」）。故 oracle 对照取 60 帧（1.0s，accel_time
+	# 刚好爬满）+ 1e-2 容差；**原生↔参考的精确 parity** 由 test_native_executor::test_native_homing 覆盖。
+	_parity("homing", beh, params, lc, null, null, ctx, spawns, 60, 0.01)
 
 
 func test_avoid_player_preset_parity() -> void:
@@ -156,7 +168,8 @@ func test_marisa_laser_preset_parity() -> void:
 	var spawns: Array = []
 	for i in 3:
 		spawns.append([Vector2(280.0 + i * 5.0, 600.0), Vector2(0.0, -200.0)])
-	_parity("marisa_laser", beh, params, lc, null, null, ctx, spawns, 30)
+	# V19：生命周期侧不再写 velocity（渲染改走独立 render_rot 通道），旧 oracle 仍写 → 只比位置。
+	_parity("marisa_laser", beh, params, lc, null, null, ctx, spawns, 30, 0.0, false)
 
 
 func test_non_mid_flee_preset_parity() -> void:

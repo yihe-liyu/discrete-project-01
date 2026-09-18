@@ -8,7 +8,7 @@ using namespace godot;
 void DanmakuRenderBridge::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_type_table", "tex_key_base", "tint_mode", "kind", "follow_dir", "dir_offset"), &DanmakuRenderBridge::set_type_table);
 	ClassDB::bind_method(D_METHOD("get_type_count"), &DanmakuRenderBridge::get_type_count);
-	ClassDB::bind_method(D_METHOD("group", "count", "positions", "velocities", "colors", "type_indices", "factions", "fade_by_kind"), &DanmakuRenderBridge::group);
+	ClassDB::bind_method(D_METHOD("group", "count", "positions", "velocities", "colors", "type_indices", "factions", "fade_by_kind", "render_rots"), &DanmakuRenderBridge::group, DEFVAL(PackedFloat32Array()));
 	ClassDB::bind_method(D_METHOD("fill", "mm", "positions", "colors", "rows", "rots", "alphas", "start", "count"), &DanmakuRenderBridge::fill);
 }
 
@@ -24,7 +24,7 @@ int DanmakuRenderBridge::get_type_count() const {
 	return _tex_key_base.size();
 }
 
-Dictionary DanmakuRenderBridge::group(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedColorArray &p_colors, const PackedInt32Array &p_type_indices, const PackedByteArray &p_factions, const PackedFloat32Array &p_fade_by_kind) {
+Dictionary DanmakuRenderBridge::group(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedColorArray &p_colors, const PackedInt32Array &p_type_indices, const PackedByteArray &p_factions, const PackedFloat32Array &p_fade_by_kind, const PackedFloat32Array &p_render_rots) {
 	_buckets.clear();
 	// 快照数组是**容量大小**，只有前 p_count 条是活跃的（GDScript 侧用 for i in count 截断）。
 	const int n = p_count < p_type_indices.size() ? p_count : p_type_indices.size();
@@ -77,10 +77,12 @@ Dictionary DanmakuRenderBridge::group(int p_count, const PackedVector2Array &p_p
 			const Vector2 v = r < p_velocities.size() ? p_velocities[r] : Vector2();
 			const bool follow = ti < _follow_dir.size() && _follow_dir[ti] != 0;
 			const float d_off = ti < _dir_offset.size() ? _dir_offset[ti] : 0.0f;
+			// V19：优先用逐弹 render_rot 覆盖（位置 op 的 render_heading）；否则回退 velocity 角。
+			const bool has_rr = r < p_render_rots.size() && !std::isnan(p_render_rots[r]);
 			float rot = 0.0f;
-			// 逐字复制 BulletType.rotation_for：仅 follow_dir 且 velocity!=0 才转
-			if (follow && v != Vector2()) {
-				rot = (float)std::atan2(v.y, v.x) + d_off;
+			if (follow && (has_rr || v != Vector2())) {
+				const float base_rot = has_rr ? p_render_rots[r] : (float)std::atan2(v.y, v.x);
+				rot = base_rot + d_off;
 			}
 			const int k = ti < _kind.size() ? _kind[ti] : 0;
 			const float fade = k < p_fade_by_kind.size() ? p_fade_by_kind[k] : 1.0f;

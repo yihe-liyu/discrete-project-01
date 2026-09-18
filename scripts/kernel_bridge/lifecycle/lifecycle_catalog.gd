@@ -29,13 +29,13 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 		&"homing":
 			var speed_min := float(params.get(&"min_speed", 500.0))
 			var speed_max := float(params.get(&"max_speed", 2000.0))
+			var accel_time := float(params.get(&"accel_time", 2.0))
 			lc.steer(BulletLifecycle.T_NEAREST_ENEMY,
 				float(params.get(&"homing_angle_per_sec", deg_to_rad(720.0))),
-				float(params.get(&"accel_time", 2.0)),
+				accel_time,
 				float(params.get(&"proximity_boost", 150.0)),
-				speed_min,
-				speed_max if speed_max > 0.0 else speed_min,
 				float(params.get(&"homing_duration", 2.0)))
+			lc.speed_lerp(speed_min, speed_max if speed_max > 0.0 else speed_min, accel_time)
 			lc.until_never()
 		&"radial_accel":
 			lc.accel_heading(float(params.get(&"accel_rate", 0.0)))
@@ -43,7 +43,7 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 			var sfx_radial := StringName(params.get(&"sfx", ""))
 			if sfx_radial != &"":
 				lc.sfx(sfx_radial, float(params.get(&"sfx_db", 0.0)))
-			lc.emit(_spawn_of(params), BulletLifecycle.heading(PI), 0.0, true)
+			lc.emit(_spawn_of(params), BulletLifecycle.heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
 			lc.despawn()
 		&"bounce":
 			lc.accel_heading(float(params.get(&"accel", 0.0)))
@@ -53,20 +53,20 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 				lc.sfx(sfx_bounce, float(params.get(&"sfx_db", -8.0)))
 			lc.emit(_spawn_of(params),
 				BulletLifecycle.toward(BulletLifecycle.T_BOSS, float(params.get(&"bounce_angle", 0.0))),
-				float(params.get(&"spawn_speed", 0.0)), true)
+				float(params.get(&"spawn_speed", 0.0)), BulletLifecycle.AT_PHASE_END)
 			lc.despawn()
 		&"avoid_player":
-			lc.until_near(BulletLifecycle.T_PLAYER, float(params.get(&"player_proximity", 150.0)), float(params.get(&"jump", 0.05)))
+			lc.until_near(BulletLifecycle.T_PLAYER, float(params.get(&"player_proximity", 150.0))).every(float(params.get(&"jump", 0.05)))
 			lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
 			lc.then()
 			lc.until_elapsed(float(params.get(&"flee_time", 2.0)))
 			lc.despawn()
 		&"non_mid_flee":
 			var radius: float = float(params.get(&"boss_radius", 150.0))   # 半径是内容调参，由内容按难度传
-			lc.until_near(BulletLifecycle.T_PLAYER, float(params.get(&"player_proximity", 150.0)), 0.0, 3)
+			lc.until_near(BulletLifecycle.T_PLAYER, float(params.get(&"player_proximity", 150.0))).every_ticks(3)
 			lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
 			lc.then()
-			lc.until_near(BulletLifecycle.T_BOSS, radius, 0.0, 3)
+			lc.until_near(BulletLifecycle.T_BOSS, radius).every_ticks(3)
 			lc.on_end_call(_hook_of(params))
 			lc.despawn()
 		&"marisa_laser":

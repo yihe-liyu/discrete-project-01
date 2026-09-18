@@ -71,19 +71,22 @@ Action    = { kind, action_id, f0..f3 }  # action_id → 宿主表（模板 / sf
 > **关键原则（让描述符封闭）**：**Move 与 Condition 必须原生**（每帧每颗）；**Action / Emit 是一次性（低频）→ 可以回调 GDScript 内容**。
 > 所以「复杂散圈 / 难度 / RNG / 多弹型」全部落在 Action，**天然不进热路径** —— 这是本模型能既封闭又精简的原因。
 
-### Move 首批（覆盖现有 10 行为）
+### Move 首批（9 个 op）
 
 | Move | 参数 | 行状态 |
 |---|---|---|
 | `accel_world` | vec | — |
 | `accel_heading` | a | — |
-| `rotate` | w, limit | turned |
-| `steer` | target, max_turn/s, ramp, dist_weight, speed_from/to, steer_until | elapsed |
-| `anchor_drift` | anchor_id, offset, angle, speed, use_global | drift |
+| `rotate` / `rotate_velocity` / `rotate_heading` | w, limit, mode | turned |
+| `steer` | target, max_turn/s, ramp, dist_weight, steer_until | elapsed |
+| `position`(ANCHOR) | anchor_id, offset, angle, speed, use_global, initial | drift |
+| `position`(PHASE_START) | angle, speed, initial | 起点 + 位移 |
 | `speed_lerp` | from, to, ramp | elapsed |
 | `set_heading` | dir | — |
 | `set_speed` | speed | — |
-| `scale_speed` | f | — |
+| `speed_mul` | f | — |
+
+> **状态槽上限 8**（原生 `SLOT_STRIDE`）：`_pslots` 固定 stride 分行；`slots > 8` 的 program 会被 `register_program` 拒绝。
 
 ### Condition 首批
 
@@ -91,9 +94,10 @@ Action    = { kind, action_id, f0..f3 }  # action_id → 宿主表（模板 / sf
 |---|---|---|
 | `never` | — | accel / 直线 |
 | `elapsed` | t | homing_duration / avoid flee_time |
-| `near` | target, r, every / every_ticks | bounce / avoid / non_mid（`near_boss(r)` 已闭合，见 §5.2） |
-| `at_wall` | mask | radial_accel / bounce（碰框时夹位并输出落点） |
-| `state` | slot, cmp, value | curve（`until_turned()` 是糖） |
+| `near` | target, r | bounce / avoid / non_mid（`near_boss(r)` 已闭合，见 §5.2） |
+| `at_wall` | mask | radial_accel / bounce（纯谓词；输出相位结束落点） |
+| `state` | slot, cmp, value | curve（不公开；`until_turned()` 是糖） |
+| （通用节流） | every / every_ticks | 任何 condition 可链式 `.every()` / `.every_ticks()`（V6） |
 
 ### Action 首批
 `emit` / `emit_variant` / `sfx` / `on_end_heading` / `despawn` / `on_end_call`。
@@ -120,8 +124,8 @@ BulletLifecycle.new()\
     .until_at_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)       # Until\
     .sfx(&"kira", -8.0).emit(_replacement, toward(T_BOSS, 0.3), 0.0, true).despawn()   # Action
 ```
-- **Move**：`accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift`
-- **Until**：`until_never` `until_elapsed` `until_near` `until_at_wall` `until_state` `until_turned`；`then()` 开新相位
+- **Move**：`accel_world` `accel_heading` `rotate` / `rotate_velocity` / `rotate_heading` `steer` `speed_lerp` `speed_mul` `set_heading` `set_speed` `position`
+- **Until**：`until_never` `until_elapsed` `until_near` `until_at_wall` `until_turned`（+ 通用 `.every` / `.every_ticks`）；`then()` 开新相位
 - **Action**：`sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call`
 - **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)` `forward(angle)` `random_dir(spread)` `chance_toward(target, p, spread)`
 
@@ -265,22 +269,24 @@ bounce → phases: [
 |---|---|---|
 | Move | `accel_world(v)` | v += v_world·dt |
 | | `accel_heading(a)` | 沿航向加速 |
-| | `rotate(w, limit=0)` | 角速度；limit>0 钳到累计转角（自带槽） |
-| | `steer(target, max_turn, ramp=0, dist_weight=0, speed_from, speed_to, steer_until=0)` | 朝目标转向；可融合速度（homing 1:1）/ 限时转向 |
+| | `rotate(w, limit=0)` / `rotate_velocity` / `rotate_heading` | 同时 / 只速度 / 只朝向转（V12）；limit>0 钳到累计转角（自带槽） |
+| | `steer(target, max_turn, ramp=0, dist_weight=0, steer_until=0)` | 朝目标转向（只转向，速度另配 `speed_lerp`）；限时转向 |
 | | `speed_lerp(from, to, ramp)` | 速度按相位 elapsed 插值 |
-| | `scale_speed(f)` / `set_speed(s)` / `set_heading(dir)` | 原语 |
-| | `anchor_drift(anchor_id, offset, angle, speed, use_global)` | 锚定 + 线性漂移（自带槽） |
+| | `speed_mul(f)` / `set_speed(s)` / `set_heading(dir)` | 速度三算子：每帧乘（复利）/ 瞬时设 / 设向 |
+| | `position(mode, anchor_id, offset, angle, speed, use_global, initial)` | **位置来源模式**：ANCHOR（外部节点）/ PHASE_START（本弹相位起点）；只写 `pos` |
 | Condition | `never` / `elapsed(t)` | — |
-| | `near(target, r, every=0, every_ticks=0)` | every>0 秒；every_ticks>0 帧门控（non_mid 的 skip%3） |
-| | `at_wall(mask)` | 夹位并输出落点（供 `emit(at_end)`） |
-| | `state(slot, cmp, v)` | 读槽（`until_turned()` 是便利封装） |
-| Action | `emit(spawn, dir, speed, at_end)` | spawn = BulletData / Callable / 数组；at_end 用条件落点 |
-| | `emit_variant([t0, t1], dir, speed, at_end)` | 概率分支（`chance_toward`）选模板：0=未命中 t0，1=命中 t1；内核只回传分支号 |
+| | `near(target, r)` | 距离；节流走通用 `.every/.every_ticks` |
+| | `at_wall(mask)` | 纯谓词；输出相位结束落点（供 `emit(at=AT_PHASE_END)`） |
+| | `state(slot, cmp, v)` | 读槽（不公开；`until_turned()` 是糖） |
+| Action | `emit(spawn, dir, speed, at)` | spawn = BulletData / Callable / 数组；at = AT_CURRENT / AT_PHASE_END |
+| | `emit_variant([t0, t1], dir, speed, at)` | 概率分支（`chance_toward`）选模板：0=未命中 t0，1=命中 t1；内核只回传分支号 |
 | | `sfx(key, db)` / `despawn` / `on_end_heading(dir)` / `on_end_call(fn)` | 内容回调（散圈）用 call |
 | 方向表达式 | `toward(t, angle)` / `away(t, angle)` / `heading(angle)` | t = player / nearest_enemy / boss |
 
 **边界**：unit 停在**语义**层（上表 ~15 个）；不下沉到微 op（否则变回 §5 大 VM）。
+**位置来源是模式（V18）**：`position` 只写 `pos`（ANCHOR / PHASE_START 二选一），不与速度 op 叠加；多个 position op 是「后写者胜」的模式切换；模式只改 `pos`，`v`/`h` 保持（释放后按速度轴飞）。要分段用 `then()`。
 
 **踩坑**：`then()` 生成的新相位 `until=never`；在其上挂 `on_end` 动作**永不触发**。
 
 **L2 实测（2026-09-13）**：10 个行为全部逐位 parity（`test_lifecycle_model` + `test_lifecycle_presets`）。为 parity 追加的语义化 unit 细节：`steer` 的 `speed_from/speed_to`（融合速度）与 `steer_until`（限时转向）、`near` 的 `every_ticks`（帧门控）、`on_end_call`（内容回调）、`T_NEAREST_ENEMY` 跳过时符 Boss。
+**更新（V2，2026-09-16）**：`speed_from/speed_to` 已从 `steer` 拆出，`homing` 改为 `steer + speed_lerp` 组合；`steer` 现在是纯角转向。

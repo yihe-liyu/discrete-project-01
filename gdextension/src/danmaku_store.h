@@ -31,12 +31,12 @@ class DanmakuStore : public RefCounted {
 	float _default_life = 20.0f;
 	std::vector<float> _hb_radius, _hb_offx, _hb_offy, _hb_sizex, _hb_sizey, _hb_diroff;
 	std::vector<unsigned char> _hb_follow, _grazed;
+	// V19：逐弹渲染朝向覆盖（NAN = 未设，渲染按 velocity 推）。位置 op 只写它，不再借道 velocity。
+	std::vector<float> _render_rot;
 	float _field_left = 0.0f, _field_right = 0.0f, _field_top = 0.0f;
 
 	// K1：确定性 PRNG（单通道；种子由宿主 RNG 派生）。抽取顺序 = 弹行遍历顺序 → 回放可复现。
 	uint32_t _rng_state = 0x9E3779B9u;
-	// 变体发射：最近一次 _resolve_dir 走了概率分支的哪一支（0=未命中/缺省，1=命中）→ 随 emit 事件回传。
-	int _dir_branch = 0;
 
 	// L3：packed program 执行（列式；op/args 全局拼接，program 只存偏移）。
 	static const int SLOT_STRIDE = 8;
@@ -44,8 +44,12 @@ class DanmakuStore : public RefCounted {
 	PackedFloat32Array _p_args;
 	std::vector<int> _program, _pphase, _ptick;
 	std::vector<float> _pelapsed, _pnext, _pendx, _pendy, _pslots;
-	std::vector<unsigned char> _pfresh, _phasend;
-	static const int OPS_ARGS = 8;
+	std::vector<unsigned char> _phasend;
+	// V1：相位首帧标志从「每弹一个 bool」改为「每槽一个 bit」——否则同相位的两个有状态
+	// 初始化 unit（anchor_drift / drift）会互相消费掉 fresh，后者用未初始化的槽（实测瞬移到原点）。
+	// bit s = 槽 s 在本相位尚未初始化。
+	std::vector<uint32_t> _pslot_fresh;
+	static const int OPS_ARGS = 12;
 	std::vector<int> _tick_dead;
 	std::vector<int> _ev_kind, _ev_prog, _ev_local, _ev_bullet, _ev_variant;
 	std::vector<float> _ev_x, _ev_y, _ev_dx, _ev_dy, _ev_val;
@@ -129,6 +133,7 @@ public:
 	PackedFloat32Array get_life_lefts() const;
 	PackedFloat32Array get_fx_phases() const;
 	PackedFloat32Array get_timers() const;
+	PackedFloat32Array get_render_rots() const;
 	int get_capacity() const;
 	void fill_multimesh(const Ref<MultiMesh> &p_mm) const;
 
@@ -152,12 +157,17 @@ public:
 	// 跑一帧所有 program；返回事件（emit/sfx/call），由宿主 drain。
 	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array());
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);
-	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, float p_prob);
+	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, float p_prob, float rnd);
 	float _rng_float();
 	float _rng_range(float a, float b);
+	// V10：方向表达式的随机消耗点显式化（RANDOM/CHANCE 各抽一次；其余 0 次）。
+	float _draw_dir_rnd(int p_dk);
 	void _exec_move(int i, int prog, float *slots, int ins, float dt, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const PackedVector2Array &anchor_base);
 	bool _check_until(int i, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
 	void _exec_action(int i, int prog, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
+	// V11：瞬时变换的单一实现（Move case 7/8 与 Action case 43/44 共用）。
+	void _apply_set_heading(int i, const float *a, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
+	void _apply_set_speed(int i, const float *a);
 
 	Dictionary integrate_batch(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedFloat32Array &p_life_left, const PackedFloat32Array &p_fx_phase, const PackedFloat32Array &p_timers, double p_delta, const Vector2 &p_cull_pos, const Vector2 &p_cull_size, float p_margin) const;
 

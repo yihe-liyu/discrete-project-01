@@ -4,6 +4,7 @@
 ##   BulletLifecycle = [Phase, Phase, ...]        有序，不可跳转
 ##   Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 ##   每帧按顺序跑 moves；until 成立 → 执行 on_end → 进下一相位；then() 开新相位。
+##   最后一个相位结束后：弹不再受 program 驱动，按当前速度自由积分（出界由 cull 回收）。
 ##
 ## 用法：
 ##   var lc := BulletLifecycle.new()
@@ -11,8 +12,10 @@
 ##   bullet_data.trajectory(lc)
 ##
 ## 设计要点：
-##   ① 状态显式化：有状态 unit 自带槽（rotate→turned / steer→elapsed / anchor_drift→drift），
-##      builder 自动分配、相位切换清零 → unit 组合互不污染。
+##   ① 状态显式化：有状态 unit 自带槽（rotate→turned / anchor_drift→drift / drift→起点+位移），
+##      builder 自动分配、相位切换清零 → 各 unit 的槽互不污染；`steer` 读相位 elapsed（不占槽）。
+##      **例外**：写位置的 unit（anchor_drift / drift）会互相覆盖位置、并覆盖速度积分结果，
+##      同相位不可叠加（见 docs/DANMAKU_API.md §9.13）。
 ##   ② unit 正交化：aim→steer(toward())；anchor+drift→anchor_drift；top_edge→at_wall；
 ##      near_player/near_boss→near(target)；emit 收方向表达式。
 ##   ③ 朝向与速度解耦：heading（朝向）出生取初速，rotate/set_heading 更新；
@@ -23,16 +26,19 @@
 class_name BulletLifecycle
 extends RefCounted
 
-# ---- Move 词汇（每帧施加的数学变换，共 9 个）----
+# ---- Move 词汇（每帧施加的数学变换，9 个 op）----
 const M_ACCEL_WORLD := &"accel_world"
 const M_ACCEL_HEADING := &"accel_heading"
 const M_ROTATE := &"rotate"
 const M_STEER := &"steer"
 const M_SPEED_LERP := &"speed_lerp"
-const M_SCALE_SPEED := &"scale_speed"
+const M_SPEED_MUL := &"speed_mul"
 const M_SET_HEADING := &"set_heading"
 const M_SET_SPEED := &"set_speed"
-const M_ANCHOR_DRIFT := &"anchor_drift"
+## V18：位置来源统一成一个 op。`anchor_drift` / `drift` 是它的 builder 糖（mode 不同）。
+const M_POSITION := &"position"
+const POS_PHASE_START := 0
+const POS_ANCHOR := 1
 
 # ---- Until 词汇（相位结束条件，5 + until_turned 糖）----
 const C_NEVER := &"never"
@@ -43,6 +49,7 @@ const C_STATE := &"state"
 
 # ---- Action 词汇（相位结束时一次性，共 6 个）----
 const A_EMIT := &"emit"
+const A_EMIT_VARIANT := &"emit_variant"   # V9：独立的概率分支发射 op
 const A_SFX := &"sfx"
 const A_DESPAWN := &"despawn"
 const A_SET_HEADING := &"set_heading"
@@ -51,7 +58,7 @@ const A_CALL := &"call"
 
 # ---- 目标 ----
 const T_PLAYER := &"player"                 ## 自机
-const T_NEAREST_ENEMY := &"nearest_enemy"   ## 最近「可追击目标」（未开战 Boss 不算）
+const T_NEAREST_ENEMY := &"nearest_enemy"   ## 宿主提供候选集里最近的一个（targetability 归宿主，V14）
 const T_BOSS := &"boss"                     ## Boss
 # ---- 方向表达式 kind ----
 const D_HEADING := &"heading"
@@ -61,13 +68,19 @@ const D_FORWARD := &"forward"
 const D_RANDOM := &"random"
 const D_CHANCE := &"chance"
 
-# ---- 墙位掩码（注意：at_wall 只夹 左/右/上，下墙穿出）/ 状态槽比较 ----
+# ---- 墙位掩码（at_wall 只支持 左/右/上；无下墙，故无 WALL_BOTTOM）/ 状态槽比较 ----
 const WALL_LEFT := 1
 const WALL_RIGHT := 2
 const WALL_TOP := 4
-const WALL_BOTTOM := 8
 const CMP_GE := 0
 const CMP_LE := 1
+# ---- 发射位置操作数（V7：与方向表达式对称的位置轴）----
+const AT_CURRENT := 0      ## 用当前弹位置（默认）
+const AT_PHASE_END := 1    ## 用 until(at_wall) 输出的相位结束落点
+# ---- rotate 模式（V12：速度 / 朝向可独立转）----
+const ROT_BOTH := 0        ## 同时转速度与朝向（rotate 默认）
+const ROT_VELOCITY := 1    ## 只转速度
+const ROT_HEADING := 2     ## 只转朝向
 
 ## 有序相位：[{moves, until, on_end}]
 var phases: Array = []
@@ -160,19 +173,29 @@ func accel_heading(a: float) -> BulletLifecycle:
 	_moves.append({&"op": M_ACCEL_HEADING, &"a": a})
 	return self
 
-## 角速度 w（弧度/秒），同时转速度与朝向；limit > 0 时累计转角钳到 limit（自带槽）。
+## 角速度 w（弧度/秒），**同时**转速度与朝向；limit > 0 时累计转角钳到 limit（自带槽）。
 func rotate(w: float, limit: float = 0.0) -> BulletLifecycle:
+	return _add_rotate(w, limit, ROT_BOTH)
+
+## 只转**速度**（朝向不变，V12）。
+func rotate_velocity(w: float, limit: float = 0.0) -> BulletLifecycle:
+	return _add_rotate(w, limit, ROT_VELOCITY)
+
+## 只转**朝向**（速度不变，V12）。
+func rotate_heading(w: float, limit: float = 0.0) -> BulletLifecycle:
+	return _add_rotate(w, limit, ROT_HEADING)
+
+func _add_rotate(w: float, limit: float, mode: int) -> BulletLifecycle:
 	var s := _alloc()
 	_last_turn_slot = s
 	_last_turn_limit = limit
-	_moves.append({&"op": M_ROTATE, &"w": w, &"limit": limit, &"slot": s})
+	_moves.append({&"op": M_ROTATE, &"w": w, &"limit": limit, &"slot": s, &"mode": mode})
 	return self
 
-## 朝 target 转向。ramp 秒内爬满转向权；dist_weight > 0 时近距离转得更快；
-## 给了 speed_from/speed_to 时同时接管速度（homing 的融合一步，避免两段组合漂移）；
-## steer_until > 0 时只在前 N 秒转。
-func steer(target: StringName, max_turn_per_sec: float, ramp: float = 0.0, dist_weight: float = 0.0, speed_from: float = NAN, speed_to: float = NAN, steer_until: float = 0.0) -> BulletLifecycle:
-	_moves.append({&"op": M_STEER, &"target": target, &"max_turn": max_turn_per_sec, &"ramp": ramp, &"dist_weight": dist_weight, &"speed_from": speed_from, &"speed_to": speed_to, &"steer_until": steer_until})
+## 朝 target 转向（**只转向、不改速度**）。ramp 秒内爬满转向权；dist_weight > 0 时近距离转得更快；
+## steer_until > 0 时只在前 N 秒转。变速是独立轴：需要时另加 speed_lerp / set_speed。
+func steer(target: StringName, max_turn_per_sec: float, ramp: float = 0.0, dist_weight: float = 0.0, steer_until: float = 0.0) -> BulletLifecycle:
+	_moves.append({&"op": M_STEER, &"target": target, &"max_turn": max_turn_per_sec, &"ramp": ramp, &"dist_weight": dist_weight, &"steer_until": steer_until})
 	return self
 
 ## 方向不变，速度按 elapsed/ramp 从 from_speed 线性插值到 to_speed。
@@ -180,9 +203,9 @@ func speed_lerp(from_speed: float, to_speed: float, ramp: float) -> BulletLifecy
 	_moves.append({&"op": M_SPEED_LERP, &"from": from_speed, &"to": to_speed, &"ramp": ramp})
 	return self
 
-## 速度乘 f。**每帧乘 → 复利**；要线性变速用 speed_lerp。
-func scale_speed(f: float) -> BulletLifecycle:
-	_moves.append({&"op": M_SCALE_SPEED, &"f": f})
+## 每帧把速度乘 f（**复利/指数算子**，不是瞬时设定）。线性变速用 speed_lerp，瞬时设定用 set_speed。
+func speed_mul(f: float) -> BulletLifecycle:
+	_moves.append({&"op": M_SPEED_MUL, &"f": f})
 	return self
 
 ## 设速度方向（保持速度大小）**并同步朝向**。
@@ -195,12 +218,27 @@ func set_speed(speed: float) -> BulletLifecycle:
 	_moves.append({&"op": M_SET_SPEED, &"speed": speed})
 	return self
 
+## V18：编译为统一 `M_POSITION`（mode=POS_PHASE_START）。
+## 从**相位起点**沿 dir(angle) 匀速平移：pos = 相位起点 + dir(angle) * 累计位移。
+## 与 anchor_drift 的区别：**不锚定任何外部对象**，基准就是本相位开始时自己的位置；同样不改速度/朝向。
+## **⚠ 位置写入原语**：直接写 pos、覆盖积分；与 anchor_drift / 速度原语同相位会互相覆盖（DANMAKU_API §9.13）。
+## 典型：整圈弹幕先「整体沿一个方向平移」一段距离（速度/朝向保留），平移结束后各自按出生方向飞出。
+func drift(angle: float, speed: float, initial: float = 0.0) -> BulletLifecycle:
+	var sx := _alloc()
+	var sy := _alloc()
+	var sd := _alloc()
+	_moves.append({&"op": M_POSITION, &"mode": POS_PHASE_START, &"angle": angle, &"speed": speed, &"sx": sx, &"sy": sy, &"initial": initial, &"slot": sd})
+	return self
+
+
+## V18：编译为统一 `M_POSITION`（mode=POS_ANCHOR）。
 ## 锚定 + 线性漂移（激光段）：pos = anchor_base + dir(angle) * drift。
-## drift 首帧 = initial，之后每帧 += speed * dt；render_heading=true 时速度也设为 dir(angle)（供渲染朝向）。
+## drift 首帧 = initial，之后每帧 += speed * dt；render_heading=true 时设置独立渲染朝向（render_rot 通道，不写 velocity）。
+## **⚠ 位置写入原语**：直接写 pos、覆盖积分；与 drift / 速度原语同相位会互相覆盖（DANMAKU_API §9.13）。
 ## **必须在 trajectory(lc, anchor) 里提供锚点 spec**，否则退回 player + offset。
 func anchor_drift(anchor_id: int, offset: Vector2, angle: float, speed: float, use_global: bool = true, initial: float = 0.0, render_heading: bool = false) -> BulletLifecycle:
 	var s := _alloc()
-	_moves.append({&"op": M_ANCHOR_DRIFT, &"anchor_id": anchor_id, &"offset": offset, &"angle": angle, &"speed": speed, &"use_global": use_global, &"initial": initial, &"render_heading": render_heading, &"slot": s})
+	_moves.append({&"op": M_POSITION, &"mode": POS_ANCHOR, &"anchor_id": anchor_id, &"offset": offset, &"angle": angle, &"speed": speed, &"use_global": use_global, &"initial": initial, &"render_heading": render_heading, &"slot": s})
 	return self
 
 
@@ -216,27 +254,43 @@ func until_elapsed(t: float) -> BulletLifecycle:
 	_set_until(C_ELAPSED, {&"t": t})
 	return self
 
-## 距 target < r 时结束。
-## every > 0：每 every 秒最多检查一次；every_ticks > 0：每 N 帧检查一次（0 = 不节流）。
-func until_near(target: StringName, r: float, every: float = 0.0, every_ticks: int = 0) -> BulletLifecycle:
-	_set_until(C_NEAR, {&"target": target, &"r": r, &"every": every, &"every_ticks": every_ticks})
+## 距 target < r 时结束。节流用链式 `.every(秒)` / `.every_ticks(帧)`（V6：对所有条件通用）。
+func until_near(target: StringName, r: float) -> BulletLifecycle:
+	_set_until(C_NEAR, {&"target": target, &"r": r})
 	return self
 
-## 碰到掩码指定的墙时结束。**只识别 左(1) / 右(2) / 上(4)**（下墙穿出）。
-## 触发时把落点夹到框上，供 emit(at_end=true) 使用。
+## 碰到掩码指定的墙（左 1 / 右 2 / 上 4）时结束。
+## 纯谓词：只在越界时把**相位结束落点**写进 Until 输出（不改弹自身位置），供 emit(..., at=AT_PHASE_END) 使用。
 func until_at_wall(mask: int) -> BulletLifecycle:
 	_set_until(C_AT_WALL, {&"mask": mask})
 	return self
 
-## 读状态槽：cmp = CMP_GE(0) 槽 >= value；CMP_LE(1) 槽 <= value。
-func until_state(slot: int, cmp: int, value: float) -> BulletLifecycle:
-	_set_until(C_STATE, {&"slot": slot, &"cmp": cmp, &"value": value})
+## 便捷：当前相位的 rotate 累计转角 >= 其 limit（curve 用法）。必须跟在同相位的 rotate 之后。
+func until_turned() -> BulletLifecycle:
+	if _last_turn_slot < 0:
+		push_warning("BulletLifecycle.until_turned(): 本相位没有前置 rotate，退化为 until_never")
+		return until_never()
+	if _last_turn_limit <= 0.0:
+		push_warning("BulletLifecycle.until_turned(): rotate limit<=0（无限转角）无「转满」定义，退化为 until_never")
+		return until_never()
+	_set_state_until(_last_turn_slot, CMP_GE, _last_turn_limit)
 	return self
 
-## 便捷：当前相位的 rotate 累计转角 >= 其 limit（curve 用法，不重复传 limit）。
-func until_turned() -> BulletLifecycle:
-	_set_until(C_STATE, {&"slot": _last_turn_slot, &"cmp": CMP_GE, &"value": _last_turn_limit})
+# ---- Until 通用修饰（V6：节流是相位级横切属性，任何条件都能套）----
+
+## 每 `sec` 秒最多检查一次该相位的 until。
+func every(sec: float) -> BulletLifecycle:
+	_until[&"every"] = sec
 	return self
+
+## 每 `n` 帧最多检查一次该相位的 until。
+func every_ticks(n: int) -> BulletLifecycle:
+	_until[&"every_ticks"] = n
+	return self
+
+## 内部：状态槽条件（slot 对创作者不可见，仅 until_turned 用；V8）。
+func _set_state_until(slot: int, cmp: int, value: float) -> void:
+	_set_until(C_STATE, {&"slot": slot, &"cmp": cmp, &"value": value})
 
 # ═══ Action（当前相位的 on_end；相位结束时一次性执行）═══
 
@@ -248,17 +302,21 @@ func sfx(key: StringName, db: float = 0.0) -> BulletLifecycle:
 ## 相位结束时生成替换弹。
 ## - spawn：**BulletData**（推荐：可序列化、跨实例共用 program）／Callable()->BulletData（旧写法 / oracle）／Array（见 emit_variant）。
 ## - speed <= 0 → 继承当前速度大小；> 0 → 用该速度。
-## - at_end = true → 用 until(at_wall) 输出的落点；否则用当前弹位置。
+## - at = AT_PHASE_END → 用 until(at_wall) 输出的相位结束落点；AT_CURRENT（默认）→ 当前弹位置。
 ## - 事件回传 (program, local) 给宿主，由宿主实例化模板 —— Callable / BulletData 永不进原生。
-func emit(spawn: Variant, dir: Dictionary, speed: float = 0.0, at_end: bool = false) -> BulletLifecycle:
-	_on_end.append({&"op": A_EMIT, &"spawn": spawn, &"dir": dir, &"speed": speed, &"at_end": at_end})
+func emit(spawn: Variant, dir: Dictionary, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
+	_on_end.append({&"op": A_EMIT, &"spawn": spawn, &"dir": dir, &"speed": speed, &"at": at})
 	return self
 
-## 变体发射：dir 的概率分支决定用 spawns 里哪个模板。内核**只回传分支号**，取模板在宿主侧。
-## 目前唯一产分支的方向表达式是 chance_toward：0 = 未命中 → spawns[0]，1 = 命中 → spawns[1]。
-## 典型用途：同一发分裂弹，自机狙那发换色 / 换贴图，玩家一眼能读出来。
-func emit_variant(spawns: Array, dir: Dictionary, speed: float = 0.0, at_end: bool = false) -> BulletLifecycle:
-	return emit(spawns, dir, speed, at_end)
+## 变体发射：内核抽一次 RNG 决定分支，宿主按分支号取 spawns 里哪个模板（0=未命中，1=命中）。
+## `dir` 必须是 `chance_toward(target, p, spread)`：命中→精确朝 target，未命中→forward 旋转 spread。
+## 分支由内核**显式**抽取（V9），不再藏在方向求值里。
+func emit_variant(spawns: Array, dir: Dictionary, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
+	if dir.get(&"kind", &"") != D_CHANCE:
+		push_warning("BulletLifecycle.emit_variant(): dir 应为 chance_toward(...)，已退化为普通 emit")
+		return emit(spawns, dir, speed, at)
+	_on_end.append({&"op": A_EMIT_VARIANT, &"spawns": spawns, &"chance": dir, &"speed": speed, &"at": at})
+	return self
 
 ## 回收自己。
 func despawn() -> BulletLifecycle:
@@ -270,7 +328,9 @@ func on_end_heading(dir: Dictionary) -> BulletLifecycle:
 	_on_end.append({&"op": A_SET_HEADING, &"dir": dir})
 	return self
 
-## 低频内容回调：fn.call(pos, boss_pos, has_boss, host)。
+## 低频内容回调（**逃逸口**，V13）：fn.call(pos, boss_pos, has_boss, host)。
+## 契约：每相位结束最多一次、宿主侧执行、**非热路径**；host 只暴露 `queue_spawn`。
+## 用了它，描述符就不再是唯一行为来源 —— 仅在「一次性散圈 / 难度分支」等极少数场合用。
 ## hook = **StringName**（推荐：注册表解析，可序列化、跨实例共用 program；需先 LIFECYCLE_HOOKS_SCRIPT.register）
 ##      或 **Callable**（旧写法 / oracle）。未注册的名字静默不调。
 func on_end_call(hook: Variant) -> BulletLifecycle:
@@ -308,6 +368,7 @@ static func accel(a: float) -> BulletLifecycle:
 
 ## 追踪最近敌机：按 angle_per_sec 转向、accel_time 秒内爬满转向权；
 ## 速度从 min_speed 升到 max_speed；proximity_boost 让近距离转得更快；持续 duration 秒。
+## 展开 = `steer(...)` + `speed_lerp(min, max, accel_time)`（转向与速度是两个独立轴）。
 static func homing(angle_per_sec := deg_to_rad(720.0), accel_time := 2.0, min_speed := 500.0,
 		max_speed := 2000.0, duration := 2.0, proximity_boost := 150.0) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"homing", {
@@ -372,17 +433,19 @@ static func anchor_base(anchor_id: int, offset: Vector2, use_global: bool, playe
 
 # ═══ L3：编译成原生可读的 packed program ═══
 # op / target / dirk / cmp 的整数编码**必须与 C++ DanmakuStore.behavior_tick 一致**。
-const ARGS := 8
+const ARGS := 12
+## V20：与原生 DanmakuStore.SLOT_STRIDE 对齐。同相位状态槽数超过它 → 原生拒绝注册。
+const MAX_SLOTS := 8
 
 const OP_M_ACCEL_WORLD := 1
 const OP_M_ACCEL_HEADING := 2
 const OP_M_ROTATE := 3
 const OP_M_STEER := 4
 const OP_M_SPEED_LERP := 5
-const OP_M_SCALE_SPEED := 6
+const OP_M_SPEED_MUL := 6
 const OP_M_SET_HEADING := 7
 const OP_M_SET_SPEED := 8
-const OP_M_ANCHOR_DRIFT := 9
+const OP_M_POSITION := 9
 const OP_C_NEVER := 20
 const OP_C_ELAPSED := 21
 const OP_C_NEAR := 22
@@ -394,6 +457,7 @@ const OP_A_DESPAWN := 42
 const OP_A_SET_HEADING := 43
 const OP_A_SET_SPEED := 44
 const OP_A_CALL := 45
+const OP_A_EMIT_VARIANT := 46   # V9：变体发射专用 op（分支不再藏在方向求值里）
 
 const TG_PLAYER := 0
 const TG_NEAREST := 1
@@ -408,6 +472,8 @@ const DK_CHANCE := 5    ## p 概率朝 target，否则自身朝向旋转
 ## 编译为扁平 packed program。actions / sfx 是**程序级**表：事件回传 (program, local_id)，
 ## 由宿主查这两张表（Callable 永不进原生）。
 func compile() -> Dictionary:
+	if slots > MAX_SLOTS:
+		push_warning("BulletLifecycle: 状态槽 %d 超过内核上限 %d（减少同相位有状态 unit；program 会被原生拒绝）" % [slots, MAX_SLOTS])
 	var ops := PackedInt32Array()
 	var args := PackedFloat32Array()
 	var move_start := PackedInt32Array()
@@ -491,10 +557,10 @@ func _op_move(op: StringName) -> int:
 		M_ROTATE: return OP_M_ROTATE
 		M_STEER: return OP_M_STEER
 		M_SPEED_LERP: return OP_M_SPEED_LERP
-		M_SCALE_SPEED: return OP_M_SCALE_SPEED
+		M_SPEED_MUL: return OP_M_SPEED_MUL
 		M_SET_HEADING: return OP_M_SET_HEADING
 		M_SET_SPEED: return OP_M_SET_SPEED
-		M_ANCHOR_DRIFT: return OP_M_ANCHOR_DRIFT
+		M_POSITION: return OP_M_POSITION
 	return 0
 
 
@@ -511,6 +577,7 @@ func _op_cond(op: StringName) -> int:
 func _op_act(op: StringName) -> int:
 	match op:
 		A_EMIT: return OP_A_EMIT
+		A_EMIT_VARIANT: return OP_A_EMIT_VARIANT
 		A_SFX: return OP_A_SFX
 		A_DESPAWN: return OP_A_DESPAWN
 		A_SET_HEADING: return OP_A_SET_HEADING
@@ -546,28 +613,33 @@ func _args_move(m: Dictionary) -> Array:
 	match m[&"op"]:
 		M_ACCEL_WORLD: return [Vector2(m[&"vec"]).x, Vector2(m[&"vec"]).y]
 		M_ACCEL_HEADING: return [float(m[&"a"])]
-		M_ROTATE: return [float(m[&"w"]), float(m[&"limit"]), float(m[&"slot"])]
-		M_STEER: return [_target_code(m[&"target"]), float(m[&"max_turn"]), float(m[&"ramp"]), float(m[&"dist_weight"]), float(m[&"speed_from"]), float(m[&"speed_to"]), float(m[&"steer_until"])]
+		M_ROTATE: return [float(m[&"w"]), float(m[&"limit"]), float(m[&"slot"]), float(m[&"mode"])]
+		M_STEER: return [_target_code(m[&"target"]), float(m[&"max_turn"]), float(m[&"ramp"]), float(m[&"dist_weight"]), float(m[&"steer_until"])]
 		M_SPEED_LERP: return [float(m[&"from"]), float(m[&"to"]), float(m[&"ramp"])]
-		M_SCALE_SPEED: return [float(m[&"f"])]
+		M_SPEED_MUL: return [float(m[&"f"])]
 		M_SET_HEADING: return _dir_args(m[&"dir"])
 		M_SET_SPEED: return [float(m[&"speed"])]
-		M_ANCHOR_DRIFT:
+		M_POSITION:
+			# V18 布局：[mode, anchor_id, off.x, off.y, angle, speed, flags, initial, slot, base_sx, base_sy]
+			if int(m[&"mode"]) == POS_PHASE_START:
+				return [0.0, 0.0, 0.0, 0.0, float(m[&"angle"]), float(m[&"speed"]), 0.0, float(m[&"initial"]), float(m[&"slot"]), float(m[&"sx"]), float(m[&"sy"])]
 			var flags := 0.0
 			if bool(m[&"use_global"]): flags += 1.0
 			if bool(m[&"render_heading"]): flags += 2.0
 			var off := Vector2(m[&"offset"])
-			return [float(m[&"anchor_id"]), off.x, off.y, float(m[&"angle"]), float(m[&"speed"]), flags, float(m[&"initial"]), float(m[&"slot"])]
+			return [1.0, float(m[&"anchor_id"]), off.x, off.y, float(m[&"angle"]), float(m[&"speed"]), flags, float(m[&"initial"]), float(m[&"slot"]), -1.0, -1.0]
 	return []
 
 
 func _args_cond(c: Dictionary) -> Array:
+	# V6：统一节流头 [every, every_ticks]（对所有条件通用），具体条件参数后移。
+	var head: Array = [float(c.get(&"every", 0.0)), float(c.get(&"every_ticks", 0))]
 	match c[&"op"]:
-		C_ELAPSED: return [float(c[&"t"])]
-		C_NEAR: return [_target_code(c[&"target"]), float(c[&"r"]), float(c[&"every"]), float(c[&"every_ticks"])]
-		C_AT_WALL: return [float(c[&"mask"])]
-		C_STATE: return [float(c[&"slot"]), float(c[&"cmp"]), float(c[&"value"])]
-	return []
+		C_ELAPSED: return head + [float(c[&"t"])]
+		C_NEAR: return head + [_target_code(c[&"target"]), float(c[&"r"])]
+		C_AT_WALL: return head + [float(c[&"mask"])]
+		C_STATE: return head + [float(c[&"slot"]), float(c[&"cmp"]), float(c[&"value"])]
+	return head
 
 
 func _args_act(a: Dictionary, actions: Array, sfx_keys: Array[StringName]) -> Array:
@@ -575,7 +647,15 @@ func _args_act(a: Dictionary, actions: Array, sfx_keys: Array[StringName]) -> Ar
 		A_EMIT:
 			var aid := actions.size()
 			actions.append(a[&"spawn"])
-			return [float(aid)] + _dir_args(a[&"dir"]) + [float(a[&"speed"]), 1.0 if bool(a[&"at_end"]) else 0.0]
+			return [float(aid)] + _dir_args(a[&"dir"]) + [float(a[&"speed"]), float(a[&"at"])]
+		A_EMIT_VARIANT:
+			# V9 布局：[aid, p, hit_dk, hit_tg, hit_angle, miss_dk, miss_tg, miss_angle, speed, at]
+			# 命中 = toward(target)（angle 0）；未命中 = forward(spread)。
+			var vid := actions.size()
+			actions.append(a[&"spawns"])
+			var ch: Dictionary = a[&"chance"]
+			return [float(vid), float(ch[&"p"]), float(DK_TOWARD), float(_target_code(ch[&"target"])), 0.0,
+				float(DK_FORWARD), -1.0, float(ch[&"angle"]), float(a[&"speed"]), float(a[&"at"])]
 		A_SFX:
 			var sid := sfx_keys.size()
 			sfx_keys.append(a[&"key"])

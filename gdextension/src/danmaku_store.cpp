@@ -1,5 +1,6 @@
 #include "danmaku_store.h"
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/core/error_macros.hpp>
 #include <godot_cpp/variant/transform2d.hpp>
 #include <cmath>
 #include <algorithm>
@@ -58,6 +59,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_life_lefts"), &DanmakuStore::get_life_lefts);
 	ClassDB::bind_method(D_METHOD("get_fx_phases"), &DanmakuStore::get_fx_phases);
 	ClassDB::bind_method(D_METHOD("get_timers"), &DanmakuStore::get_timers);
+	ClassDB::bind_method(D_METHOD("get_render_rots"), &DanmakuStore::get_render_rots);
 	ClassDB::bind_method(D_METHOD("get_capacity"), &DanmakuStore::get_capacity);
 	ClassDB::bind_method(D_METHOD("integrate_batch", "count", "positions", "velocities", "life_left", "fx_phase", "timers", "delta", "cull_pos", "cull_size", "margin"), &DanmakuStore::integrate_batch);
 }
@@ -86,7 +88,7 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_pendx.assign(p_capacity, 0.0f);
 	_pendy.assign(p_capacity, 0.0f);
 	_pslots.assign(p_capacity * SLOT_STRIDE, 0.0f);
-	_pfresh.assign(p_capacity, 1);
+	_pslot_fresh.assign(p_capacity, 0xFFFFFFFFu);
 	_phasend.assign(p_capacity, 0);
 	_hb_radius.assign(p_capacity, 0.0f);
 	_hb_offx.assign(p_capacity, 0.0f);
@@ -96,6 +98,7 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_hb_diroff.assign(p_capacity, 0.0f);
 	_hb_follow.assign(p_capacity, 0);
 	_grazed.assign(p_capacity, 0);
+	_render_rot.assign(p_capacity, (float)NAN);
 	_count = 0;
 }
 
@@ -124,12 +127,13 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_pnext[i] = 0.0f;
 	_pendx[i] = 0.0f;
 	_pendy[i] = 0.0f;
-	_pfresh[i] = 1;
+	_pslot_fresh[i] = 0xFFFFFFFFu;
 	_phasend[i] = 0;
 	for (int s = 0; s < SLOT_STRIDE; ++s) { _pslots[i * SLOT_STRIDE + s] = 0.0f; }
 	_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 	_grazed[i] = 0;
+	_render_rot[i] = (float)NAN;
 	return _count++;
 }
 
@@ -162,12 +166,13 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		_pnext[i] = 0.0f;
 		_pendx[i] = 0.0f;
 		_pendy[i] = 0.0f;
-		_pfresh[i] = 1;
+		_pslot_fresh[i] = 0xFFFFFFFFu;
 		_phasend[i] = 0;
 		for (int s = 0; s < SLOT_STRIDE; ++s) { _pslots[i * SLOT_STRIDE + s] = 0.0f; }
 		_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
 		_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 		_grazed[i] = 0;
+		_render_rot[i] = (float)NAN;
 		++_count;
 		++added;
 	}
@@ -187,10 +192,10 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_program.resize(p_n); _pphase.resize(p_n); _ptick.resize(p_n);
 	_pelapsed.resize(p_n); _pnext.resize(p_n); _pendx.resize(p_n); _pendy.resize(p_n);
 	_pslots.resize(p_n * SLOT_STRIDE);
-	_pfresh.resize(p_n); _phasend.resize(p_n);
+	_pslot_fresh.resize(p_n); _phasend.resize(p_n);
 	_hb_radius.resize(p_n); _hb_offx.resize(p_n); _hb_offy.resize(p_n);
 	_hb_sizex.resize(p_n); _hb_sizey.resize(p_n); _hb_diroff.resize(p_n);
-	_hb_follow.resize(p_n); _grazed.resize(p_n);
+	_hb_follow.resize(p_n); _grazed.resize(p_n); _render_rot.resize(p_n);
 }
 
 // swap-with-last 回收：把尾行整行搬进空槽（新增字段必须在这里同步）。
@@ -219,7 +224,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_pnext[p_id] = _pnext[last];
 	_pendx[p_id] = _pendx[last];
 	_pendy[p_id] = _pendy[last];
-	_pfresh[p_id] = _pfresh[last];
+	_pslot_fresh[p_id] = _pslot_fresh[last];
 	_phasend[p_id] = _phasend[last];
 	for (int s = 0; s < SLOT_STRIDE; ++s) {
 		_pslots[p_id * SLOT_STRIDE + s] = _pslots[last * SLOT_STRIDE + s];
@@ -232,6 +237,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_hb_diroff[p_id] = _hb_diroff[last];
 	_hb_follow[p_id] = _hb_follow[last];
 	_grazed[p_id] = _grazed[last];
+	_render_rot[p_id] = _render_rot[last];
 }
 
 // 完整积分循环：寿命 / 出生相位 / 位移 / 计时 / 剔除 —— 与 scripts/kernel/bullet_system.gd 1:1。
@@ -323,6 +329,16 @@ PackedFloat32Array DanmakuStore::get_timers() const {
 	out.resize(_count);
 	for (int i = 0; i < _count; ++i) {
 		out[i] = _timer[i];
+	}
+	return out;
+}
+
+// V19：逐弹渲染朝向覆盖（NAN = 未设，渲染端回退到 velocity 角）。
+PackedFloat32Array DanmakuStore::get_render_rots() const {
+	PackedFloat32Array out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) {
+		out[i] = _render_rot[i];
 	}
 	return out;
 }
@@ -434,6 +450,12 @@ int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFl
 		const PackedInt32Array &p_move_start, const PackedInt32Array &p_move_count,
 		const PackedInt32Array &p_until, const PackedInt32Array &p_act_start,
 		const PackedInt32Array &p_act_count, int p_phase_count, int p_slots) {
+	// V20：`_pslots` 按固定 SLOT_STRIDE 分行索引；p_slots 超行宽会越界写进下一颗弹的行。
+	// 显式拒绝（返回 -1），由宿主跳过注册并报错——不再静默串行。
+	// 注意：这里**不发引擎消息**（原生 warning/error 会被 GUT 记为 Unexpected Errors）； 由调用方按返回值 -1 报告。
+	if (p_slots > SLOT_STRIDE) {
+		return -1;
+	}
 	const int pid = _p_phase_base.size();
 	const int ops_base = _p_ops.size();
 	_p_phase_base.append(_p_move_start.size());
@@ -465,7 +487,7 @@ void DanmakuStore::set_program(int p_id, int p_program) {
 	_ptick[p_id] = 0;
 	_pelapsed[p_id] = 0.0f;
 	_pnext[p_id] = 0.0f;
-	_pfresh[p_id] = 1;
+	_pslot_fresh[p_id] = 0xFFFFFFFFu;
 	_phasend[p_id] = 0;
 	for (int s = 0; s < SLOT_STRIDE; ++s) {
 		_pslots[p_id * SLOT_STRIDE + s] = 0.0f;
@@ -506,24 +528,23 @@ float DanmakuStore::_rng_float() {
 
 float DanmakuStore::_rng_range(float a, float b) { return a + (b - a) * _rng_float(); }
 
-Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, float p_prob) {
-	_dir_branch = 0;
+// V9/V10：纯方向解析——不消耗 RNG、不写隐藏分支；随机量 rnd 由调用方显式预抽。
+Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, float p_prob, float rnd) {
 	if (p_dk == 0) {
 		return Vector2(sin(angle), -cos(angle));
 	}
 	if (p_dk == 3) {   // 自身朝向（forward）旋转 angle
 		return forward.rotated(angle);
 	}
-	if (p_dk == 4) {   // 随机：沿自身朝向 ± angle 内随机
-		return forward.rotated(_rng_range(-angle, angle));
+	if (p_dk == 4) {   // 随机：沿自身朝向 ± angle 内随机（rnd ∈ [0,1)）
+		return forward.rotated(-angle + 2.0f * angle * rnd);
 	}
-	if (p_dk == 5) {   // 概率瞄准：p 概率朝 target；否则自身朝向旋转 angle
-		if (_rng_float() >= p_prob) {
+	if (p_dk == 5) {   // 概率瞄准：rnd < p → 精确朝 target；否则自身朝向旋转 angle
+		if (rnd >= p_prob) {
 			return forward.rotated(angle);
 		}
-		_dir_branch = 1;   // 命中 → 变体发射取第 2 个模板
 		p_dk = 1;
-		angle = 0.0f;   // 命中概率 → 精确朝 target（angle 只服务 fallback）
+		angle = 0.0f;
 	}
 	bool ok = false;
 	const Vector2 tp = _target_pos(p_tg, pos, player, boss, has_boss, enemies, ok);
@@ -532,6 +553,35 @@ Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector
 		base = (p_dk == 1 ? (tp - pos) : (pos - tp)).normalized();
 	}
 	return base.rotated(angle);
+}
+
+// V10：方向表达式的随机消耗点显式化（RANDOM(4)/CHANCE(5) 各抽一次；其余 0 次）。
+float DanmakuStore::_draw_dir_rnd(int p_dk) {
+	return (p_dk == 4 || p_dk == 5) ? _rng_float() : 0.0f;
+}
+
+// V11：set_heading 的单一实现（Move case 7 / Action case 43 共用）。
+void DanmakuStore::_apply_set_heading(int i, const float *a, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies) {
+	const int dk = (int)a[0];
+	const Vector2 d = _resolve_dir(dk, (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[3], _draw_dir_rnd(dk));
+	if (d != Vector2()) {
+		const float sp = Vector2(_vx[i], _vy[i]).length();
+		_vx[i] = d.x * sp;
+		_vy[i] = d.y * sp;
+		_hx[i] = d.x; _hy[i] = d.y;
+	}
+}
+
+// V11：set_speed 的单一实现（Move case 8 / Action case 44 共用）。
+void DanmakuStore::_apply_set_speed(int i, const float *a) {
+	const Vector2 vv(_vx[i], _vy[i]);
+	const float len = vv.length();
+	// V15：v=0 时用「朝向」定方向（与 set_heading 对称），不再静默 no-op。
+	const Vector2 d = (len > 0.0f) ? vv / len : Vector2(_hx[i], _hy[i]);
+	if (d != Vector2()) {
+		_vx[i] = d.x * a[0];
+		_vy[i] = d.y * a[0];
+	}
 }
 
 void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const PackedVector2Array &p_anchor_base) {
@@ -551,7 +601,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			}
 			break;
 		}
-		case 3: { // rotate
+		case 3: { // rotate（mode：0=both / 1=velocity only / 2=heading only，V12）
 			const int si = (int)a[2];
 			const float turned = slots[si];
 			float step = a[0] * dt;
@@ -562,10 +612,9 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 				step = CLAMP(step, -remain, remain);
 			}
 			slots[si] = turned + ABS(step);
-			const Vector2 r = v.rotated(step);
-			_vx[i] = r.x;
-			_vy[i] = r.y;
-			{ const Vector2 h = Vector2(_hx[i], _hy[i]).rotated(step); _hx[i] = h.x; _hy[i] = h.y; }
+			const int mode = (int)a[3];
+			if (mode != 2) { const Vector2 r = v.rotated(step); _vx[i] = r.x; _vy[i] = r.y; }
+			if (mode != 1) { const Vector2 h = Vector2(_hx[i], _hy[i]).rotated(step); _hx[i] = h.x; _hy[i] = h.y; }
 			break;
 		}
 		case 4: { // steer
@@ -574,7 +623,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			const float ramp = a[2];
 			const float factor = ramp <= 0.0f ? 1.0f : CLAMP(_pelapsed[i] / ramp, 0.0f, 1.0f);
 			Vector2 rotated = cur;
-			const float su = a[6];
+			const float su = a[4];
 			const bool can_steer = su <= 0.0f || _pelapsed[i] <= su;
 			if (can_steer) {
 				bool ok = false;
@@ -589,9 +638,8 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 					rotated = cur.rotated(CLAMP(cur.angle_to(diff / dist), -max_turn, max_turn));
 				}
 			}
-			const float sf = a[4];
-			const float sp2 = sf + (a[5] - sf) * factor;
-			const Vector2 nv = std::isnan(sf) ? rotated * v.length() : rotated * sp2;
+			// V2：steer 只转向、不改速度（速度是独立轴，交给 speed_lerp / set_speed）。
+			const Vector2 nv = rotated * v.length();
 			_vx[i] = nv.x;
 			_vy[i] = nv.y;
 			break;
@@ -607,47 +655,53 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			}
 			break;
 		}
-		case 6: // scale_speed
+		case 6: // speed_mul（每帧乘 → 复利/指数）
 			_vx[i] = v.x * a[0];
 			_vy[i] = v.y * a[0];
 			break;
-		case 7: { // set_heading (move) —— 同时改「朝向」
-			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[3]);
-			if (d != Vector2()) {
-				const float sp = v.length();
-				_vx[i] = d.x * sp;
-				_vy[i] = d.y * sp;
-				_hx[i] = d.x; _hy[i] = d.y;
-			}
+		case 7: // set_heading (move) —— 同时改「朝向」
+			_apply_set_heading(i, a, player, boss, has_boss, enemies);
 			break;
-		}
-		case 8: { // set_speed
-			const Vector2 d = v.normalized();
-			if (d != Vector2()) {
-				_vx[i] = d.x * a[0];
-				_vy[i] = d.y * a[0];
-			}
+		case 8: // set_speed
+			_apply_set_speed(i, a);
 			break;
-		}
-		case 9: { // anchor_drift
-			const int si = (int)a[7];
-			// 锚点（anchor_id/use_global/offset）由桥接侧解析成 program 级 base 传入；
-			// 缺省回退 player + offset（anchor_id=0 语义），保证旧调用不回归。
-			Vector2 base = player + Vector2(a[1], a[2]);
-			if (prog >= 0 && prog < p_anchor_base.size()) { base = p_anchor_base[prog]; }
-			const float adir_x = sin(a[3]);
-			const float adir_y = -cos(a[3]);
-			if (_pfresh[i]) {
-				slots[si] = a[6];
-				_pfresh[i] = 0;
-			} else {
-				slots[si] = slots[si] + a[4] * dt;
+		case 9: { // V18 position —— 位置来源统一 op（mode 0=PHASE_START / 1=ANCHOR）
+			// 布局：[mode, anchor_id, off.x, off.y, angle, speed, flags, initial, slot, base_sx, base_sy]
+			const int mode = (int)a[0];
+			const int slot = (int)a[8];
+			const float angle = a[4];
+			const float speed = a[5];
+			const uint32_t bit = 1u << (slot & 31);
+			Vector2 base;
+			if (mode == 0) { // PHASE_START：基准 = 本弹相位起点（row 级；记进 base 槽）
+				const int bx = (int)a[9];
+				const int by = (int)a[10];
+				if (_pslot_fresh[i] & bit) {
+					slots[bx] = _x[i];
+					slots[by] = _y[i];
+					slots[slot] = a[7];
+					_pslot_fresh[i] &= ~bit;
+				} else {
+					slots[slot] = slots[slot] + speed * dt;
+				}
+				base = Vector2(slots[bx], slots[by]);
+			} else { // ANCHOR：基准由宿主解析成 program 级 base（缺省退回 player + offset）
+				base = player + Vector2(a[2], a[3]);
+				if (prog >= 0 && prog < p_anchor_base.size()) { base = p_anchor_base[prog]; }
+				if (_pslot_fresh[i] & bit) {
+					slots[slot] = a[7];
+					_pslot_fresh[i] &= ~bit;
+				} else {
+					slots[slot] = slots[slot] + speed * dt;
+				}
 			}
-			_x[i] = base.x + adir_x * slots[si];
-			_y[i] = base.y + adir_y * slots[si];
-			if (((int)a[5] & 2) != 0) {
-				_vx[i] = adir_x;
-				_vy[i] = adir_y;
+			const float adir_x = sin(angle);
+			const float adir_y = -cos(angle);
+			_x[i] = base.x + adir_x * slots[slot];
+			_y[i] = base.y + adir_y * slots[slot];
+			// V19：位置 op 只写位置；render_heading 走独立渲染朝向通道，不再借道 velocity。
+			if (mode == 1 && (((int)a[6] & 2) != 0)) {
+				_render_rot[i] = std::atan2(adir_y, adir_x);
 			}
 			break;
 		}
@@ -659,26 +713,27 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 bool DanmakuStore::_check_until(int i, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies) {
 	const int op = _p_ops[ins];
 	const float *a = &_p_args[ins * OPS_ARGS];
+	// V6：通用节流头 [every, every_ticks]（所有条件一致；先帧门控，再秒节流）。
+	const int et = (int)a[1];
+	if (et > 0 && _ptick[i] % et != 0) { return false; }
+	if (a[0] > 0.0f) {
+		if (_pelapsed[i] < _pnext[i]) { return false; }
+		_pnext[i] = _pelapsed[i] + a[0];
+	}
 	switch (op) {
 		case 20: // never
 			return false;
 		case 21: // elapsed
-			return _pelapsed[i] >= a[0];
+			return _pelapsed[i] >= a[2];
 		case 22: { // near
-			const int et = (int)a[3];
-			if (et > 0 && _ptick[i] % et != 0) { return false; }
-			if (a[2] > 0.0f) {
-				if (_pelapsed[i] < _pnext[i]) { return false; }
-				_pnext[i] = _pelapsed[i] + a[2];
-			}
 			bool ok = false;
 			const Vector2 from(_x[i], _y[i]);
-			const Vector2 tp = _target_pos((int)a[0], from, player, boss, has_boss, enemies, ok);
+			const Vector2 tp = _target_pos((int)a[2], from, player, boss, has_boss, enemies, ok);
 			if (!ok) { return false; }
-			return from.distance_to(tp) < a[1];
+			return from.distance_to(tp) < a[3];
 		}
-		case 23: { // at_wall
-			const int mask = (int)a[0];
+		case 23: { // at_wall（纯谓词：只输出相位结束落点，不改弹自身位置）
+			const int mask = (int)a[2];
 			const Vector2 pos(_x[i], _y[i]);
 			Vector2 cl = pos;
 			if ((mask & 1) && pos.x <= _field_left) { cl.x = _field_left; }
@@ -693,8 +748,10 @@ bool DanmakuStore::_check_until(int i, float *slots, int ins, const Vector2 &pla
 			return false;
 		}
 		case 24: { // state
-			const float sv = slots[(int)a[0]];
-			return (int)a[1] == 0 ? sv >= a[2] : sv <= a[2];
+			const int si = (int)a[2];
+			if (si < 0 || si >= SLOT_STRIDE) { return false; }   // V8：slot 边界守卫
+			const float sv = slots[si];
+			return (int)a[3] == 0 ? sv >= a[4] : sv <= a[4];
 		}
 		default:
 			return false;
@@ -707,10 +764,11 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 	switch (op) {
 		case 40: { // emit
 			Vector2 at(_x[i], _y[i]);
-			if (a[6] > 0.5f && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }
+			if ((int)a[6] == 1 && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }   // V7：at = AT_PHASE_END
 			float speed = Vector2(_vx[i], _vy[i]).length();
 			if (a[5] > 0.0f) { speed = a[5]; }
-			const Vector2 dir = _resolve_dir((int)a[1], (int)a[2], a[3], at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[4]);
+			const int dk = (int)a[1];
+			const Vector2 dir = _resolve_dir(dk, (int)a[2], a[3], at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[4], _draw_dir_rnd(dk));
 			_ev_kind.push_back(0);
 			_ev_prog.push_back(prog);
 			_ev_local.push_back((int)a[0]);
@@ -718,7 +776,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_x.push_back(at.x); _ev_y.push_back(at.y);
 			_ev_dx.push_back(dir.x); _ev_dy.push_back(dir.y);
 			_ev_val.push_back(speed);
-			_ev_variant.push_back(_dir_branch);
+			_ev_variant.push_back(0);
 			break;
 		}
 		case 41: // sfx
@@ -733,24 +791,12 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 		case 42: // despawn
 			_tick_dead.push_back(i);
 			break;
-		case 43: { // set_heading (action) —— 同时改「朝向」
-			const Vector2 d = _resolve_dir((int)a[0], (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[3]);
-			if (d != Vector2()) {
-				const float sp = Vector2(_vx[i], _vy[i]).length();
-				_vx[i] = d.x * sp;
-				_vy[i] = d.y * sp;
-				_hx[i] = d.x; _hy[i] = d.y;
-			}
+		case 43: // set_heading (action) —— 同时改「朝向」（与 move case 7 同一实现）
+			_apply_set_heading(i, a, player, boss, has_boss, enemies);
 			break;
-		}
-		case 44: { // set_speed (action)
-			const Vector2 d = Vector2(_vx[i], _vy[i]).normalized();
-			if (d != Vector2()) {
-				_vx[i] = d.x * a[0];
-				_vy[i] = d.y * a[0];
-			}
+		case 44: // set_speed (action)（与 move case 8 同一实现）
+			_apply_set_speed(i, a);
 			break;
-		}
 		case 45: // call
 			_ev_kind.push_back(2);
 			_ev_prog.push_back(prog);
@@ -760,6 +806,26 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_dx.push_back(0); _ev_dy.push_back(0); _ev_val.push_back(0);
 			_ev_variant.push_back(0);
 			break;
+		case 46: { // V9：变体发射（显式抽一次定分支；两套方向各自解析）
+			Vector2 at(_x[i], _y[i]);
+			if ((int)a[9] == 1 && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }
+			float speed = Vector2(_vx[i], _vy[i]).length();
+			if (a[8] > 0.0f) { speed = a[8]; }
+			const bool hit = _rng_float() < a[1];   // 显式一次抽取
+			const int dk = (int)(hit ? a[2] : a[5]);
+			const int tg = (int)(hit ? a[3] : a[6]);
+			const float angle = hit ? a[4] : a[7];
+			const Vector2 dir = _resolve_dir(dk, tg, angle, at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), 0.0f, _draw_dir_rnd(dk));
+			_ev_kind.push_back(0);
+			_ev_prog.push_back(prog);
+			_ev_local.push_back((int)a[0]);
+			_ev_bullet.push_back(i);
+			_ev_x.push_back(at.x); _ev_y.push_back(at.y);
+			_ev_dx.push_back(dir.x); _ev_dy.push_back(dir.y);
+			_ev_val.push_back(speed);
+			_ev_variant.push_back(hit ? 1 : 0);
+			break;
+		}
 		default:
 			break;
 	}
@@ -772,6 +838,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 	_ev_x.clear(); _ev_y.clear(); _ev_dx.clear(); _ev_dy.clear(); _ev_val.clear(); _ev_variant.clear();
 	const int phase_total = _p_move_start.size();
 	for (int i = 0; i < _count; ++i) {
+		_render_rot[i] = (float)NAN;   // V19：每帧重置；只有 position(render_heading) 会设它
 		const int prog = _program[i];
 		if (prog < 0) { continue; }
 		const int base = _p_phase_base[prog];
@@ -796,7 +863,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 			_pphase[i] = ph + 1;
 			_pelapsed[i] = 0.0f;
 			_pnext[i] = 0.0f;
-			_pfresh[i] = 1;
+			_pslot_fresh[i] = 0xFFFFFFFFu;
 			_phasend[i] = 0;
 			for (int s = 0; s < SLOT_STRIDE; ++s) { slots[s] = 0.0f; }
 		}
@@ -850,7 +917,7 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 		// 内部状态初始化成 set_program 同款，否则会残留上一颗弹的值（anchor_drift 首帧漂移错、
 		// near 节流错、at_wall 落点残留）。
 		if (_ptick[i] == 0 && _pphase[i] == 0) {
-			_pnext[i] = 0.0f; _pfresh[i] = 1; _phasend[i] = 0;
+			_pnext[i] = 0.0f; _pslot_fresh[i] = 0xFFFFFFFFu; _phasend[i] = 0;
 			_pendx[i] = 0.0f; _pendy[i] = 0.0f;
 		}
 		for (int s = 0; s < SLOT_STRIDE; ++s) {
@@ -860,17 +927,19 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 	}
 	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
 	PackedVector2Array opos, ovel;
-	PackedFloat32Array olife, ofx, oelapsed, oslots;
+	PackedFloat32Array olife, ofx, oelapsed, oslots, orender;
 	PackedInt32Array oprog, ophase, otick, odead;
 	opos.resize(_count); ovel.resize(_count);
 	olife.resize(_count); ofx.resize(_count); oelapsed.resize(_count);
 	oprog.resize(_count); ophase.resize(_count); otick.resize(_count);
 	oslots.resize(_count * SLOT_STRIDE);
+	orender.resize(_count);
 	for (int i = 0; i < _count; ++i) {
 		opos[i] = Vector2(_x[i], _y[i]);
 		ovel[i] = Vector2(_vx[i], _vy[i]);
 		olife[i] = _life[i]; ofx[i] = _fx[i]; oelapsed[i] = _pelapsed[i];
 		oprog[i] = _program[i]; ophase[i] = _pphase[i]; otick[i] = _ptick[i];
+		orender[i] = _render_rot[i];
 		for (int s = 0; s < SLOT_STRIDE; ++s) {
 			oslots[i * SLOT_STRIDE + s] = _pslots[i * SLOT_STRIDE + s];
 		}
@@ -881,6 +950,7 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 	out["life"] = olife; out["fx"] = ofx; out["elapsed"] = oelapsed;
 	out["program"] = oprog; out["oprogram"] = oprog;
 	out["phase"] = ophase; out["tick"] = otick; out["slots"] = oslots;
+	out["render_rot"] = orender;
 	out["dead"] = odead;
 	return out;
 }

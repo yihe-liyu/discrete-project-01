@@ -67,3 +67,28 @@ func test_chance_toward_bounds() -> void:
 	s.set_program(id, pid)
 	s.behavior_tick(DT, player, Vector2.ZERO, false, PackedVector2Array())
 	assert_true(s.get_velocity(id).is_equal_approx(Vector2(100, 0)), "p=1 应朝 player（右）")
+
+
+## 同一帧两个 random_dir：RNG 是单通道，消耗顺序即语义。
+func _two_random_heads(seed_value: int, spread_a: float, spread_b: float) -> Vector2:
+	var s = _store(seed_value)
+	var lc := BulletLifecycle.new()
+	lc.set_heading(BulletLifecycle.random_dir(spread_a))
+	lc.set_heading(BulletLifecycle.random_dir(spread_b))
+	lc.until_never()
+	var pid: int = _reg(s, lc)
+	var id: int = s.spawn(Vector2.ZERO, Vector2(0, -100), 0, 0, Color.WHITE)
+	s.set_program(id, pid)
+	s.behavior_tick(DT, Vector2.ZERO, Vector2.ZERO, false, PackedVector2Array())
+	return s.get_velocity(id)
+
+
+func test_multiple_random_dir_order_is_consumption_order() -> void:
+	if not _available(): pending("无扩展"); return
+	# A：先 spread=0（抽取但不改向），再 spread=1 → 结果由第 2 个 draw 决定。
+	# B：反过来 → 结果由第 1 个 draw 决定。同种子下两者不同 = 顺序敏感。
+	var a: Vector2 = _two_random_heads(7, 0.0, 1.0)
+	var b: Vector2 = _two_random_heads(7, 1.0, 0.0)
+	assert_false(a.is_equal_approx(b), "交换两个 random_dir 的顺序应改变结果")
+	assert_true(a.is_equal_approx(_two_random_heads(7, 0.0, 1.0)), "同程序同种子应逐位一致")
+	pass_test("多 random_dir 消耗顺序敏感")

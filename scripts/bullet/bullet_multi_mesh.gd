@@ -74,6 +74,7 @@ func _sync_native() -> void:
 		_build_type_table(registry)
 	var positions := system.get_positions()
 	var velocities := system.get_velocities()
+	var render_rots := system.get_render_rots()
 	var colors := system.get_colors()
 	var type_indices := system.get_type_indices()
 	var factions := system.get_factions()
@@ -81,7 +82,7 @@ func _sync_native() -> void:
 		system.get_render_fade(BulletType.Kind.POINT),
 		system.get_render_fade(BulletType.Kind.LASER),
 	])
-	var groups: Dictionary = _bridge.group(count, positions, velocities, colors, type_indices, factions, fade)
+	var groups: Dictionary = _bridge.group(count, positions, velocities, colors, type_indices, factions, fade, render_rots)
 	var keys: PackedInt64Array = groups["keys"]
 	var starts: PackedInt32Array = groups["starts"]
 	var rows: PackedInt32Array = groups["rows"]

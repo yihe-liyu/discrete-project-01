@@ -18,6 +18,154 @@
 
 ## 记录
 
+### 2026-09-18 — 落 V13+V14：on_end_call 契约 + host 收窄；target 策略归宿主（V 线收官）
+
+- **V13 `on_end_call` 逃逸口契约化**：
+  - `KernelBehaviorHost.backend` 私有化为 `_backend`（全仓 0 处外部访问）→ 内容回调只能经 `host.queue_spawn()` 入队，拿不到整个后端。
+  - `bullet_lifecycle.on_end_call` 注释 + `DANMAKU_API §3.4/§9.16` 明确契约：每相位结束最多一次、宿主侧、非热路径；签名 `(pos, boss_pos, has_boss, host)`；用了它描述符不再是唯一行为来源。
+- **V14 targetability 策略归宿主**：
+  - 参考解释器 `_target_pos(T_NEAREST_ENEMY)` 删除内嵌的「跳过时符 / 未开战 Boss」逻辑，改为对**宿主提供的候选集**取最近；targetability 由 `EntityRegistry.get_targetable_enemies()` → `Enemy.is_targetable()` 决定（已有 `test_boss_targeting` 覆盖），内核不再内嵌过滤。
+  - `bullet_lifecycle.T_NEAREST_ENEMY` 注释 + `DANMAKU_API §3.6/§9.17` 写清目标契约：target 是固定枚举，候选集由宿主给。
+- **测试**：`test_boss_targeting` 3/3、`test_lifecycle_hooks` 3/3、`test_lifecycle_presets` 8/8、`test_native_executor` 9/9、`test_lifecycle_primitives` 39/39 全过。
+- **验收**：`./tools/verify.sh` 全绿（**436 pass + 1 pending / 437 测试 / 4354 断言**）。
+- **状态**：V 线（弹幕 VM 原语正交性审查）**全部完成**（V1–V20；V4 被 V18 吸收、V5 先行文档化）。
+
+### 2026-09-18 — 落 V9+V10：emit_variant 独立 op（去掉隐藏分支通道）；RNG 消耗点显式化
+
+- **V9 `_dir_branch` 移除**：`emit_variant` 现在是独立 action op（`OP_A_EMIT_VARIANT=46`），参数 `[action_id, p, hit_dk, hit_tg, hit_angle, miss_dk, miss_tg, miss_angle, speed, at]`；命中 = `toward(target)`、未命中 = `forward(spread)`。内核抽一次定分支、只回传分支号；方向由 op 参数直接算，`_resolve_dir` 不再写隐藏状态。`chance_toward` 仍是 creator 语法，且**只允许**作 `emit_variant` 的 dir（否则 warn + 退化为普通 emit）。
+- **V10 RNG 消耗点显式化**：`_resolve_dir` 改为纯函数（多一个 `rnd` 参数，不抽 RNG、无副作用）；新增 `_draw_dir_rnd(dk)`，只有 `RANDOM` / `CHANCE` 方向表达式各抽一次，`emit_variant` 显式抽一次定分支。消耗点与次数写死在 op 语义里，不再藏在方向求值内部。
+- **参考解释器**：`A_EMIT_VARIANT` 取未命中分支（参考不模拟随机/分支）；`random_dir` 的原生↔参考 parity 不变。
+- **测试（复用既有）**：`test_emit_variant` 6/6、`test_kernel_random` 5/5（多 random_dir 顺序敏感）、`test_probe_descriptor` 4/4、`test_lifecycle_primitives` 39/39、`test_native_executor` 9/9 全过。
+- **文档**：`DANMAKU_API §3.4/§3.5/§9.15` 同步（RNG 消耗点、emit_variant 独立 op）。
+- **验收**：`./tools/verify.sh` 全绿（**436 pass + 1 pending / 437 测试 / 4354 断言**）。
+
+### 2026-09-18 — 落 V12 + V15：rotate 三模式；set_speed 在 v=0 用朝向
+
+- **V12 `rotate` 拆轴（同一 op 内加 mode）**：
+  - `rotate(w, limit=0)` = 同时转速度与朝向（原语义）；`rotate_velocity(w, limit=0)` = 只转速度；`rotate_heading(w, limit=0)` = 只转朝向。三者共用 `M_ROTATE` op（`mode`=ROT_BOTH/VELOCITY/HEADING），参数 `[w, limit, slot, mode]`；都分配 turned 槽，`until_turned()` 对三者通用。
+  - 原生 case 3 按 mode 条件转 `v` / `h`；参考解释器无朝向 → mode=2 时速度不动（与原生 heading-only 的「速度不变」一致，parity 保住）。
+- **V15 `set_speed` 的 v=0 边界**：`_apply_set_speed` 在 `|v|=0` 时改用**朝向**定方向（零速出生朝向 = (0,1)），不再静默 no-op，与 `set_heading` 对称。参考侧无朝向，用 (0,1) 近似（零速出生一致）。
+- **测试（+5）**：`rotate_velocity` / `rotate_heading` parity；`rotate_velocity` 保朝向、`rotate_heading` 保速度的行为测试；`set_speed` 静止弹沿 (0,1) 给速度。`test_lifecycle_primitives` 34→39。
+- **文档**：`DANMAKU_API §3.2/§3.6`、`LIFECYCLE_MODEL §3/§11` 同步。
+- **验收**：`test_lifecycle_primitives` **39/39（127 断言）**、presets 8/8、native_executor 9/9、heading_state 4/4；`./tools/verify.sh` 全绿（**436 pass + 1 pending / 437 测试 / 4354 断言**）。
+
+### 2026-09-18 — 落 V6+V7+V8：Until 层重整（通用节流 / at_wall 纯谓词 / at 操作数 / 收掉 until_state）
+
+- **V6 通用节流**：条件 op 参数统一为 `[every, every_ticks, p0, p1, …]`；`_check_until` 先做节流（先帧门控 `_ptick % n`，再秒节流 `_pnext`）再分派。builder 加链式 `.every(sec)` / `.every_ticks(n)`，任何 Until 可套；`until_near(target, r)` 去掉 `every/every_ticks` 参数（preset 改用链式）。语义与旧 `near` 节流 1:1（`_ptick` 仍是每弹全局帧计数）。
+- **V7 位置操作数 + 纯谓词**：`emit/emit_variant` 第 4 参由 `at_end: bool` 改为 `at: AT_CURRENT|AT_PHASE_END`（与方向表达式对称的位置轴）；`until_at_wall` 只做越界检测并输出「相位结束落点」，`emit(..., at=AT_PHASE_END)` 显式读它。删除未被实现、也没有下墙的 `WALL_BOTTOM` 常量。
+- **V8 收掉裸槽 API**：移除公开的 `until_state(slot, cmp, value)`（slot 对创作者不可见，全仓只有 primitive 测试在用）；`until_turned()` 改为健壮——无前置 `rotate` 或 `limit<=0` 时 `push_warning` + 退化为 `until_never`；native/reference 的 `state` 条件加 slot 边界守卫（`slot=-1` 不再读上一颗弹的槽）。
+- **测试**：移除 `test_primitive_until_state`（API 已删）；`test_primitive_action_emit` 显式用 `AT_CURRENT`；新增 `test_action_emit_at_phase_end_uses_wall_point`（`AT_PHASE_END` 落点 = 夹到 `FIELD_TOP`）。
+- **文档**：`DANMAKU_API §3.3/§3.4/§3.6/§3.7/§3.8/§9.6`、`LIFECYCLE_MODEL §3/§11` 全部同步。
+- **验收**：7 套相关测试全过（primitives 34/34、presets 8/8、native_executor 9/9、behavior_batch 3/3、heading_state 4/4、kernel_random 5/5、emit_variant 6/6）；`./tools/verify.sh` 全绿（**431 pass + 1 pending / 432 测试 / 4340 断言**）。
+
+### 2026-09-18 — 落 V11 + V17：Move/Action 瞬时变换去重；RNG 顺序陷阱入档
+
+- **V11（去重）**：原生 `_exec_move` 的 `set_heading`(case 7) / `set_speed`(case 8) 与 `_exec_action` 的 case 43/44 原本**各有一份实现**，语义相同、易漂移。抽出 `DanmakuStore::_apply_set_heading(...)` 与 `_apply_set_speed(...)`，四个 case 都调用；**纯重构、零行为变化**（case 8 从局部 `v` 改为重取 `_vx/_vy`，两者在该点等值）。参考解释器保持不动（冻结 oracle，本次无语义变化）。
+- **V17（文档）**：`DANMAKU_API §9` 新增陷阱 15「**RNG 是单通道、按「op 顺序 + 弹行遍历顺序」消耗**：`random_dir` / `chance_toward` 每求值一次抽一次；加/删/重排方向表达式或改发射顺序都会平移之后所有随机序列（回放可复现，但结果会变）」；顺带把陷阱 14 的 `drift` 命名更新为 `position`(PHASE_START)。
+- **验收**：`./tools/verify.sh` 全绿 —— check_syntax 301 脚本 0 失败 / check_naming 0 条 / 启动零错误 / GUT **431 pass + 1 pending（432 测试 / 4340 断言）**。
+
+### 2026-09-18 — 落 V19：`render_heading` 拆出独立渲染朝向通道（位置 op 不再写 velocity）
+
+- **来源**：弹幕 VM 原语正交性审查 V19。V18 后唯一残留的「位置 → 速度」泄漏：`position` op 在 `render_heading=true` 时写 `_vx/_vy`（为渲染朝向），却**不写 `_hx/_hy`** → 锚定期 velocity 与 heading 分离（`accel_heading`/`forward` 读旧朝向，渲染读 velocity）。
+- **改（独立通道）**：
+  - 原生 `DanmakuStore` 新增逐弹 `_render_rot` 列（NAN = 未设）；position op 的 render_heading 改设 `_render_rot = atan2(adir_y, adir_x)`，**不再写 velocity**；`_run_behavior_pass` 每帧重置，只有当前帧的 position op 会设。新增列按「6 处纪律」同步：`setup / _ensure_capacity / spawn / spawn_batch / _swap_remove / behavior_batch`（+ `get_render_rots`）。
+  - `DanmakuRenderBridge::group` 增可选 `render_rots`：`follow_dir` 时优先用它，NAN 回退 velocity 角；`dir_offset` 逻辑不变。
+  - `KernelNativeSystem` 快照加 `_render_rot`（容量 / swap / pull / getter）；`BulletMultiMesh._sync_native` 透传。
+  - 参考解释器 `M_POSITION` 不再写 velocity（无渲染通道，不模拟）。`test_lifecycle_presets._parity` 加 `check_vel`；`marisa_laser` oracle（旧 behavior 仍写 velocity）改为只比位置。
+- **视觉等价性**：override 值 = 旧路径 `atan2(v.y,v.x)`（v=dir(angle) 单位向量）→ 渲染 rot 等价；`follow_dir=false` 或未设 override 时完全走旧路径。
+- **测试**：新增 `test_position_render_heading_uses_render_channel`（velocity 保持 + `render_rot = -PI/2`）。
+- **验收**：相关 6 套件全过（primitives 34/34、presets 8/8、native_executor 9/9、laser_anchor 1/1、behavior_batch 3/3、heading_state 4/4）；`./tools/verify.sh` 全绿（**431 pass + 1 pending / 432 测试 / 4340 断言**）。
+- **⚠ 待人工验收**：渲染朝向链路只有人眼能兜（2026-09-13 N4-real 教训）。上线前需实机确认**魔理沙激光段朝向**（render_heading override）与其它 `follow_dir` 弹旋转未变。
+
+### 2026-09-18 — 落 V18：位置来源统一为 `position` op（模式派 + 显式过渡语义）
+
+- **来源**：弹幕 VM 原语正交性审查 V18（上位吸收 V4/V5）。原 `anchor_drift`(op 9) / `drift`(op 10) 是两个 op 表达同一件事，且都以绝对写 `pos` 的方式与速度 op 混在一条轴上。
+- **改（模式派）**：
+  - 词汇：`drift` / `anchor_drift` 仍是 builder 糖，但都编译成**同一个** `M_POSITION`(op 9)，用 `mode` 区分 `POS_PHASE_START` / `POS_ANCHOR`；**删 op 10**。
+  - `OPS_ARGS` / `ARGS` 8 → 12；position 参数 `[mode, anchor_id, off.x, off.y, angle, speed, flags, initial, slot, base_sx, base_sy]`（ANCHOR 用 1 槽；PHASE_START 用 3 槽记起点 + 位移）。加宽对其它 op 只是 padding，无行为变化。
+  - 原生 case 9 统一；参考解释器 `M_POSITION` 同步。
+- **显式过渡语义（文档化 + 测试）**：
+  - 进入 / 切换：首帧 `pos = base + dir(angle)·initial`（位置立即被模式接管）。
+  - 模式**只写 `pos`**，`v` / `h` 不受影响 → 释放后按速度轴自由飞（`drift` 后能按出生方向飞出）。
+  - 离开模式：`pos` 留在模式最后结果，积分从该点接力。
+  - 同相位多个 position op = **模式切换、后写者胜**（不是叠加）；与速度 op 混用会让速度变化在位置上看不见。
+- **未做（明确留给 V19）**：`render_heading=true` 仍借道 velocity（渲染用），是唯一残留的「位置 → 速度」泄漏。**本轮不动**：渲染朝向链路（`DanmakuRenderBridge` 用 velocity 算 rot）只有人眼能验收（见 2026-09-13 N4-real 教训），需独立一轮加「per-row render 朝向通道」。
+- **测试**：新增 `test_position_op_is_unified`（两种糖 → 同一 op）与 `test_combo_position_mode_preserves_velocity`（模式不碰 v）；既有 drift/anchor_drift/parity/heading 测试全过。
+- **验收**：`test_lifecycle_primitives` **33/33（110 断言）**；`./tools/verify.sh` 全绿（**430 pass + 1 pending / 431 测试 / 4337 断言**）。
+
+### 2026-09-18 — 修 V20：状态槽越界守卫（`slots > SLOT_STRIDE` 拒绝注册）
+
+- **来源**：弹幕 VM 原语正交性审查 V20。`_pslots` 按固定 `SLOT_STRIDE=8` 分行索引，`register_program` 的 `slots` 无守卫；`drift` 每实例占 3 槽 → 同相位 3 个 `drift` 即 `slots=9`，`slots[8]` 会**写进下一颗弹的行**（末行真 OOB），静默串行。
+- **改（拒绝式守卫）**：
+  - 原生 `DanmakuStore::register_program`：`p_slots > SLOT_STRIDE` → `return -1`（**不发引擎消息**）。
+  - `BulletLifecycle.compile()`：`slots > MAX_SLOTS(8)` → `push_warning` 早提示；新增 `const MAX_SLOTS := 8` 与原生 `SLOT_STRIDE` 对齐。
+  - `KernelNativeSystem._program_for`：`pid < 0` 时**不 append** `_program_data`（否则 native pid 与 `_program_data` 索引错位），报错并缓存 -1。
+  - 文档：`DANMAKU_API §3.7 / §9.14`、`LIFECYCLE_MODEL §3` 写明「同相位槽 ≤ 8，超限 program 被拒绝」。
+- **测试**：`test_lifecycle_primitives.gd` 新增 `test_combo_slot_budget_overflow_rejected`（3 drift=9 槽 → pid=-1）与 `test_combo_slot_budget_at_limit_ok`（8 rotate=8 槽 → 接受）。
+- **踩坑（重要）**：第一版用 `ERR_PRINT` / `push_error` → GUT 报 `Unexpected Errors`；**原生 `WARN_PRINT` 也被 GUT 记为 engine error**。改为原生**静默返回 -1** + GDScript `push_warning` 后通过。
+- **验收**：`test_lifecycle_primitives` **31/31（104 断言）**；`./tools/verify.sh` 全绿（**428 pass + 1 pending / 429 测试 / 4331 断言**）。
+
+### 2026-09-16 — 落 V3：`scale_speed` → `speed_mul`（速度三算子语义显式化）
+
+- **来源**：弹幕 VM 原语正交性审查 V3。`set_speed`（瞬时）/ `speed_lerp`（线性）/ `scale_speed`（每帧乘→复利）三个速度算子代数不同，而 `scale_speed` 的名字像「设速度」、实际是每帧复利，是已挂牌陷阱（`DANMAKU_API §9.5`）。
+- **改（纯改名，opcode=6 不变、零语义改动）**：
+  - `BulletLifecycle.scale_speed(f)` → `speed_mul(f)`；常量 `M_SCALE_SPEED` / `OP_M_SCALE_SPEED` → `M_SPEED_MUL` / `OP_M_SPEED_MUL`。
+  - 原生 `danmaku_store.cpp` case 6 注释、参考解释器 `lifecycle_behavior.gd` 常量同步（C++ 仅注释，**无需重编**）。
+  - 文档：`DANMAKU_API §3.2`（改成三算子对照）/ `§9.5`、`LIFECYCLE_MODEL §3 / §11`。
+  - 测试 `test_lifecycle_primitives.gd` 函数名 + 调用 + tag 更新。
+- **为什么改名而不是删除**：`speed_mul` 是唯一的「每帧乘」算子（可做摩擦 / 阻力），能力有保留价值；改名消除「听起来像设速度」的误导 —— 三算子现在自明：`speed_mul` 每帧乘（复利）/ `set_speed` 瞬时设 / `speed_lerp` 线性插值。
+- **验收**：`./tools/verify.sh` 全绿 —— check_syntax 301 脚本 0 失败 / check_naming 0 条 / 启动零错误 / GUT **426 pass + 1 pending（427 测试 / 4325 断言）**。
+
+### 2026-09-16 — 拆 V2：`steer` 只转向，速度交给 `speed_lerp`（homing 两步组合）
+
+- **来源**：弹幕 VM 原语正交性审查 V2。`steer` 原来融合「转向 + 速度插值 + ramp + dist_weight + steer_until」，与 `rotate` / `speed_lerp` / `set_speed` 重叠。
+- **改（原语层）**：
+  - `BulletLifecycle.steer(target, max_turn, ramp=0, dist_weight=0, steer_until=0)`：删掉 `speed_from/speed_to`，只做角转向（保持速度大小）。
+  - 原生 `danmaku_store.cpp` case 4 / 参考解释器 `lifecycle_behavior.gd M_STEER` 同步删除速度接管；`steer` 的 arg 布局 7 → 5（`steer_until` 由 `a[6]` → `a[4]`）。
+  - `LifecycleCatalog.build("homing")` 展开改为 `steer(...) + speed_lerp(min, max, accel_time)`（转向与速度两个独立轴）。
+  - 文档：`DANMAKU_API §3.2 / §3.8`、`LIFECYCLE_MODEL §3 / §11` 同步。
+- **回归**：`test_lifecycle_primitives.gd` 新增 `test_combo_steer_is_angle_only`（单独 steer 必须保持速度大小）；更新所有 steer 调用签名。
+- **代价（重要，需知情）**：`homing` 从「一步融合」变「两步组合」，比原来多一次 `normalize`。转向是反馈环（转向→位置→角度），~1e-7 的浮点差约 **80 帧后被放大成方向分叉** —— 旧 oracle `test/reference/behavior/homing_behavior.gd` 只在前 ~60 帧有意义。故 `test_homing_preset_parity` 对照窗口 150 → **60 帧 + 1e-2 容差**；**当前正确性契约 = 原生↔参考精确 parity**（`test_native_executor::test_native_homing` 45 帧逐位通过）。
+  - 生产只有一套实现（原生），分叉不影响游戏内确定性/手感，只影响「与历史 GDScript 行为逐位对照」。
+- **验收**：`test_lifecycle_presets` **8/8**、`test_native_executor` **9/9（55 断言）**、`test_lifecycle_primitives` **29/29（98 断言）**；`./tools/verify.sh` 全绿（**426 pass + 1 pending / 427 测试 / 4325 断言**）。
+
+### 2026-09-16 — 落 V5：位置原语互斥写进文档（DANMAKU_API / bullet_lifecycle / LIFECYCLE_MODEL）
+
+- **来源**：弹幕 VM 原语正交性审查 V5。`anchor_drift` / `drift` 直接写 `pos`（位置原语），其余 move 改 `velocity`；同相位混用会**位置覆盖积分、速度变化不可见**，两个位置原语**后写者胜**。此前只由实现隐含，文档没写。
+- **落点（纯文档 / 注释，零行为改动）**：
+  - `docs/DANMAKU_API.md` §3.2：Move 表后补「位置写入 vs 速度写入」——哪些是位置原语、混用后果、要分段用 `then()`。
+  - `docs/DANMAKU_API.md` §3.7：槽列表补 `drift`→起点+位移；顺带修正 `steer` **不占独立槽**（读相位 elapsed）。
+  - `docs/DANMAKU_API.md` §9：新增陷阱 **13. 位置原语不可叠加**。
+  - `scripts/kernel_bridge/lifecycle/bullet_lifecycle.gd`：头注释设计要点 ① 补位置原语例外；`drift` / `anchor_drift` 方法注释各加「⚠ 位置写入原语」。
+  - `docs/LIFECYCLE_MODEL.md` §11：新增「位置原语互斥」边界行。
+- **验收**：`./tools/verify.sh` 全绿 —— check_syntax 301 脚本 0 失败 / check_naming 0 条 / 启动零错误 / GUT **425 pass + 1 pending（426 测试 / 4322 断言）**。
+
+### 2026-09-16 — 补 V16：多原语组合用例（drift+anchor_drift / steer+speed_lerp / random 顺序 / 跨相位清槽）
+
+- **来源**：V1 修复时发现原语测试只覆盖「单原语」，组合面漏网（V16）。
+- **新增用例（`test/test_lifecycle_primitives.gd`）**：
+  - `test_combo_drift_plus_anchor_drift`（行为）：同相位 drift + anchor_drift，anchor_drift 首帧必须正好落在锚点（旧共享 fresh 会多漂 50·dt）。
+  - `test_combo_drift_anchor_drift_parity_native_reference`（原生↔参考 60 帧）。
+  - `test_combo_steer_speed_lerp`（行为）：steer 转向、speed_lerp 管速度；30 帧后 |v|=200（100→300 中点）、方向对齐自机。
+  - `test_combo_steer_speed_lerp_parity_native_reference`（45 帧）。
+  - `test_combo_cross_phase_slots_reset_parity`（90 帧）：两段 rotate 各自独立槽 + 相位切换清槽；limit 取 `0.62` 避开 k/60 帧边界（否则原生 32 位与参考 64 位在「刚好到 limit」那帧各差一帧）。
+  - `test/test_kernel_random.gd::test_multiple_random_dir_order_is_consumption_order`：同帧两个 random_dir 交换顺序 → 同种子结果不同，锁定「RNG 消耗顺序即语义」。
+- **顺带**：`test_lifecycle_primitives._run_behavior` 拆出 `_run_behavior_full`（返回 pos+vel，带 player 参数），供组合用例复用。
+- **暴露的坑**：测试阈值不能压在 `k·dt` 上——第一版 limit=1.0/w=2.0 正好 30 帧，原生与参考在边界处速度差 ~5，改用 0.62 后 90 帧逐位一致。
+- **验收**：`test_lifecycle_primitives` **28/28（95 断言）**、`test_kernel_random` **5/5（38 断言）**；`./tools/verify.sh` 全绿（**425 pass + 1 pending / 426 测试 / 4322 断言**）。
+
+### 2026-09-16 — 修 V1：`fresh` 改「每槽一位」，修复同相位多个初始化 unit 互踩
+
+- **来源**：弹幕 VM 原语正交性审查（`TODO_TEMP.md` V 线 V1）。
+- **bug**：原生 `DanmakuStore` 与参考解释器 `LifecycleBehavior` 都用**每弹一个** `_pfresh` / `st["fresh"]` 表示「相位首帧」。`anchor_drift` 与 `drift` 都消费它 → 同相位出现两个有状态初始化 unit 时，第一个消费掉 fresh，第二个的槽得不到初始化（相位切换时槽被清零）→ 用 0 值。
+- **症状（实测）**：`drift(up)+drift(down)` 首帧弹体瞬移到原点附近 `(0,1.67)` 再从原点漂；单 `drift` 正常。文档 `bullet_lifecycle.gd:16-17` / `LIFECYCLE_MODEL.md:262` 宣称的「unit 组合互不污染」不成立。
+- **修**：fresh 从 per-bullet bool 改为 **per-slot bit**：
+  - 原生 `danmaku_store.h`：`_pfresh` → `_pslot_fresh`（每弹一个 `uint32`，bit s = 槽 s 本相位尚未初始化）；`setup` / `spawn` / `spawn_batch` / `set_program` / 相位切换 / `behavior_batch` 首帧置 `0xFFFFFFFF`；`anchor_drift` 判槽 `si`、`drift` 判槽 `sd` 各自的 bit。
+  - 参考解释器 `lifecycle_behavior.gd`：`st["fresh"]` 由 bool 改为 `Array[bool]`（每槽一个），`_new_state` / `_enter_phase` / 两个 move 同步。
+- **回归（`test/test_lifecycle_primitives.gd`）**：`test_combo_two_drifts_do_not_collide`（行为：首帧留在相位起点、次帧由后写者从自己的相位起点推进）+ `test_combo_drift_drift_parity_native_reference`（原生↔参考 60 帧 parity）。补上了此前「每原语单测 → 组合漏网」的缺口。
+- **双向证明**：修复前 headless 探针 `drift(up)+drift(down)` 首帧 = `(0, 1.67)`；修复后 = 相位起点。新用例在旧实现下必红（瞬移断言），修复后绿。
+- **验收**：`./tools/verify.sh` 全绿 —— check_syntax / check_naming / 启动零错误 / **GUT 419 pass + 1 pending（420 测试 / 4303 断言）**；单跑 `test_lifecycle_primitives` **23/23（79 断言）**。
+
 ### 2026-09-16 — BulletLifecycle 文件内注释补全（与 DANMAKU_API.md 对齐）
 
 - **动机**：§DANMAKU_API.md§ 是外部参考，但读代码时最需要的还是**就地注释**。

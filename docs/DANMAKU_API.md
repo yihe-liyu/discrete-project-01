@@ -122,51 +122,63 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 - 每帧按顺序跑 moves，直到 `until` 成立 → 执行 `on_end` → 进下一相位。
 - `then()` 开新相位（线性，只能往下）。
 - 相位切换会**清零所有状态槽**。
+- **最后一个相位结束后**：弹不再受 program 驱动，按当前速度自由积分（出界由 cull 回收）。
 - **陷阱**：`then()` 生成的新相位 `until = never`；在它上面挂 `on_end` 永不触发。
 
-### 3.2 Move（每帧施加，9 个）
+### 3.2 Move（每帧施加，9 个 op；`anchor_drift` / `drift` 是 `position` 的糖）
 
 | Move | 签名 | 语义 |
 |---|---|---|
 | accel_world | `accel_world(v: Vector2)` | `velocity += v * dt`（世界坐标恒定加速度） |
 | accel_heading | `accel_heading(a: float)` | 沿**自身朝向**加速：`velocity += heading * a * dt`（与速度解耦，v=0 也有效 → 可减速/反向） |
-| rotate | `rotate(w: float, limit: float = 0)` | 角速度 w 弧度/秒；limit>0 时累计转角钳到 limit（自带槽，`until_turned()` 用） |
-| steer | `steer(target, max_turn, ramp=0, dist_weight=0, speed_from=NAN, speed_to=NAN, steer_until=0)` | 朝目标转向；ramp 秒内爬满转向权；dist_weight>0 时近距离转得更快；给了 speed_from/to 时同时接管速度；steer_until>0 时只在前 N 秒转 |
+| rotate | `rotate(w, limit=0)` | **同时**转速度与朝向；limit>0 时累计转角钳到 limit（自带槽，`until_turned()` 用） |
+| rotate_velocity | `rotate_velocity(w, limit=0)` | **只转速度**（朝向不变，V12） |
+| rotate_heading | `rotate_heading(w, limit=0)` | **只转朝向**（速度不变，V12） |
+| steer | `steer(target, max_turn, ramp=0, dist_weight=0, steer_until=0)` | 朝目标**只转向、不改速度**；ramp 秒内爬满转向权；dist_weight>0 时近距离转得更快；steer_until>0 时只在前 N 秒转。变速另配 `speed_lerp` |
 | speed_lerp | `speed_lerp(from, to, ramp)` | 方向不变，速度按 elapsed/ramp 从 from 插值到 to |
-| scale_speed | `scale_speed(f: float)` | `velocity *= f`（**每帧乘 → 复利**） |
+| speed_mul | `speed_mul(f: float)` | 每帧 `velocity *= f`（**复利/指数算子**，不是瞬时设定；线性变速用 `speed_lerp`、瞬时用 `set_speed`） |
 | set_heading | `set_heading(dir: Dictionary)` | 设速度方向（保速度大小）**并同步朝向** |
-| set_speed | `set_speed(speed: float)` | 设速度大小（方向不变） |
-| anchor_drift | `anchor_drift(anchor_id, offset, angle, speed, use_global=true, initial=0, render_heading=false)` | 锚定 + 线性漂移：`pos = anchor_base + dir(angle) * drift`；drift 首帧=initial，之后 += speed*dt；render_heading=true 时速度也设为 dir(angle)。**需 `trajectory(lc, anchor)` 提供锚点** |
+| set_speed | `set_speed(speed: float)` | 设速度大小；方向不变，**v=0 时用「朝向」定方向**（V15，不再静默 no-op） |
+| anchor_drift | `anchor_drift(anchor_id, offset, angle, speed, use_global=true, initial=0, render_heading=false)` | **`position`(mode=ANCHOR) 的糖**：`pos = anchor_base + dir(angle)·drift`；drift 首帧=initial，之后 += speed·dt；render_heading=true 时设置**独立渲染朝向**（逐弹 `render_rot` 通道，不写 velocity）。**需 `trajectory(lc, anchor)` 提供锚点** |
+| drift | `drift(angle, speed, initial=0)` | **`position`(mode=PHASE_START) 的糖**：从**本弹相位起点**沿 dir(angle) 匀速平移（不锚定外部对象）；不改速度/朝向 → 整圈可刚性平移后自由飞出 |
 
 > `heading`（朝向）出生时取自初速；`rotate` / `set_heading` 会更新它；`accel_heading` / `forward` / `random_dir` / `chance_toward` 读它。
+>
+> **⚠ 位置来源（V18「模式派」）**：位置由**一个** `position` op 设置的**来源模式**决定 —— `ANCHOR`（外部节点，激光）或 `PHASE_START`（本弹相位起点，刚性平移）；缺省 `FREE`（自由积分）。`anchor_drift(...)` / `drift(...)` 是两种模式的 builder 糖。
+> - **进入 / 切换模式**：首帧 `pos = base + dir(angle)·initial`（位置立即由模式接管），之后每帧 `drift += speed·dt`。
+> - **模式只写 `pos`**：`v` / `h` 完全不受影响；`render_heading=true` 走**独立的逐弹渲染朝向通道**（V19，不再写 velocity）。
+> - **离开模式**（相位结束、下一相位无 position op）：`pos` 留在模式最后一次结果，积分从该点接力；弹按速度轴的状态自由飞（所以 `drift` 后能按出生方向飞出）。
+> - **同相位多个 position op**：按顺序执行、**最后一个写 `pos`（last-wins）** —— 这是「模式切换」，不是叠加。位置模式与速度 op 混用会让速度变化在位置上看不见（见 §9.13）。
 
-### 3.3 Until（相位结束条件，5+1）
+### 3.3 Until（相位结束条件，4 + until_turned 糖 + 通用节流）
 
 | Until | 签名 | 语义 |
 |---|---|---|
 | never | `until_never()` | 永不结束（靠 emit/despawn 手动结束） |
 | elapsed | `until_elapsed(t)` | 相位经过 t 秒 |
-| near | `until_near(target, r, every=0, every_ticks=0)` | 距 target < r；every 秒节流 / every_ticks 帧门控（0=不节流） |
-| at_wall | `until_at_wall(mask)` | 碰到掩码指定的墙；**并把落点夹到框上**（供 `emit(at_end=true)`） |
-| state | `until_state(slot, cmp, value)` | 读状态槽：cmp=`CMP_GE`(0) 槽≥value，`CMP_LE`(1) 槽≤value |
-| turned（糖） | `until_turned()` | 当前相位 rotate 的累计转角 ≥ 其 limit |
+| near | `until_near(target, r)` | 距 target < r |
+| at_wall | `until_at_wall(mask)` | 越界检测（左 1 / 右 2 / 上 4）；**纯谓词**：只输出「相位结束落点」（不改弹自身位置），供 `emit(..., at=AT_PHASE_END)` |
+| turned（糖） | `until_turned()` | 当前相位 `rotate` 的累计转角 ≥ 其 limit；**必须跟在同相位 rotate 之后**（否则 warn + 退化 never） |
+
+> **通用节流（V6）**：任何 Until 都可链式 `.every(sec)` / `.every_ticks(n)`，例如 `until_near(T_PLAYER, r).every(0.05)`、`until_elapsed(2.0).every_ticks(3)`。
+> **state 条件不再公开（V8）**：状态槽对创作者不可见，裸 slot 的 `until_state(slot, ...)` 已移除；读取状态只经 `until_turned()`。
 
 ### 3.4 Action（相位结束时一次性，6 个）
 
 | Action | 签名 | 语义 |
 |---|---|---|
 | sfx | `sfx(key: StringName, db: float = 0)` | 播音效（key 见 `7.2） |
-| emit | `emit(spawn, dir, speed=0, at_end=false)` | 生成替换弹；`spawn` = BulletData / Callable()->BulletData / 数组（见 emit_variant） |
-| emit_variant | `emit_variant(spawns: Array, dir, speed=0, at_end=false)` | **变体发射**：按 dir 的概率分支选模板（0=未中→spawns[0]，1=命中→spawns[1]） |
+| emit | `emit(spawn, dir, speed=0, at=AT_CURRENT)` | 生成替换弹；`spawn` = BulletData / Callable()->BulletData / 数组；`at` 是**位置操作数**（`AT_CURRENT` / `AT_PHASE_END`） |
+| emit_variant | `emit_variant(spawns: Array, dir, speed=0, at=AT_CURRENT)` | **变体发射**：内核**显式抽一次 RNG**定分支（0=未中→spawns[0]，1=命中→spawns[1]）；`dir` 必须是 `chance_toward(...)` |
 | despawn | `despawn()` | 回收自己 |
 | on_end_heading | `on_end_heading(dir)` | 转向（保速度大小） |
-| on_end_call | `on_end_call(hook)` | 低频内容回调；`hook` = StringName（注册表名）或 Callable |
+| on_end_call | `on_end_call(hook)` | **逃逸口（V13）**：每相位结束最多一次、宿主侧、非热路径。`hook` = StringName（注册表名，推荐）或 Callable；`host` 只暴露 `queue_spawn`。用了它描述符就不再是唯一行为来源 |
 
 **emit 细则**：
 - `speed <= 0` → 继承当前速度大小；`speed > 0` → 用该速度。
-- `at_end=true` → 用 until（at_wall）输出的落点，否则用当前弹位置。
+- `at=AT_PHASE_END` → 用 until（at_wall）输出的相位结束落点；`AT_CURRENT`（默认）→ 当前弹位置。
 - 事件回传 (program, local) 给宿主，宿主把模板实例化成新弹 —— **Callable / BulletData 永不进原生**。
-- **变体发射**：内核只回传概率分支号；模板永远留宿主 → 可换色 / 换贴图 / 换大小。例：
+- **变体发射（V9）**：独立 op，内核显式抽一次 RNG 定分支、只回传分支号；模板永远留宿主 → 可换色 / 换贴图 / 换大小。方向不再借隐藏通道：命中走 `toward(target)`、未命中走 `forward(spread)`，由 op 参数直接携带。例：
   ```gdscript
   lc.emit_variant([_青玉, _红玉], BulletLifecycle.chance_toward(T_PLAYER, 0.1, a), 60.0)
   ```
@@ -179,8 +191,8 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | toward | `toward(target, angle=0)` | 朝 target 方向再转 angle；**target 不可用时退化为向下 (0,1)** 再转 angle |
 | away | `away(target, angle=0)` | 背对 target 再转 angle |
 | forward | `forward(angle=0)` | 沿**自身朝向**再转 angle（与速度解耦） |
-| random_dir | `random_dir(spread)` | 沿自身朝向 ±spread 内随机（内核确定性 RNG） |
-| chance_toward | `chance_toward(target, p, spread=0)` | p 概率**精确朝** target（angle 被忽略）；否则沿自身朝向转 spread |
+| random_dir | `random_dir(spread)` | 沿自身朝向 ±spread 内随机（内核确定性 RNG；**每次求值抽 1 次**，V10） |
+| chance_toward | `chance_toward(target, p, spread=0)` | p 概率**精确朝** target（angle 被忽略）；否则沿自身朝向转 spread。**仅作 `emit_variant` 的 dir**（V9：分支由该 op 显式抽） |
 
 > **RNG**：内核单通道 PRNG，种子由宿主 `RNG` 派生；抽取顺序 = 弹行遍历顺序 → 回放可复现。
 
@@ -188,13 +200,23 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 
 ```gdscript
 BulletLifecycle.T_PLAYER          # 0  自机
-BulletLifecycle.T_NEAREST_ENEMY   # 1  最近敌机（从"可追击目标"里选，未开战 Boss 不算）
+BulletLifecycle.T_NEAREST_ENEMY   # 1  宿主候选集里最近的一个（targetability 由宿主决定，V14）
 BulletLifecycle.T_BOSS            # 2  Boss
+```
 
+> **目标契约（V14）**：target 是固定枚举（自机 / Boss / 宿主候选集最近）。`T_NEAREST_ENEMY` 只在**宿主提供的候选集**里取最近；targetability 策略归宿主：`EntityRegistry.get_targetable_enemies()` → `Enemy.is_targetable()`（未开战 / 对话中的 Boss 不是目标）。内核不内嵌过滤。
+
+```gdscript
 BulletLifecycle.WALL_LEFT   # 1
 BulletLifecycle.WALL_RIGHT  # 2
-BulletLifecycle.WALL_TOP    # 4
-BulletLifecycle.WALL_BOTTOM # 8   # 注意：at_wall 只夹 左/右/上
+BulletLifecycle.WALL_TOP    # 4   # at_wall 只支持 左/右/上（无下墙，故无 WALL_BOTTOM）
+
+BulletLifecycle.AT_CURRENT    # 0  emit 用当前弹位置（默认）
+BulletLifecycle.AT_PHASE_END  # 1  emit 用 until 输出的相位结束落点
+
+BulletLifecycle.ROT_BOTH      # 0  rotate：同时转速度与朝向
+BulletLifecycle.ROT_VELOCITY  # 1  rotate：只转速度
+BulletLifecycle.ROT_HEADING   # 2  rotate：只转朝向
 
 BulletLifecycle.CMP_GE  # 0  槽 >= value
 BulletLifecycle.CMP_LE  # 1  槽 <= value
@@ -202,9 +224,10 @@ BulletLifecycle.CMP_LE  # 1  槽 <= value
 
 ### 3.7 状态槽（slots）
 
-- 有状态 unit 自动分配槽：`rotate`→turned、`steer`→elapsed、`anchor_drift`→drift。
-- 相位切换清零；`until_state` / `until_turned` 读它。
+- 有状态 unit 自动分配槽：`rotate`→turned、`position`(ANCHOR)→drift（1 槽）、`position`(PHASE_START)→起点+位移（3 槽）；`steer` 读相位 elapsed（**不占独立槽**）。
+- 相位切换清零；只有 `until_turned` 读它（`state` 条件不公开，V8）。
 - 创作者**看不到槽**（builder 自动分配）。
+- **同相位状态槽上限 = 8**（内核 `SLOT_STRIDE`）：`position`(PHASE_START) 占 3，`position`(ANCHOR) / `rotate` 各占 1。**超过上限的 program 会被内核拒绝注册**（该弹退化为直线，不执行行为）。
 
 ### 3.8 preset（10 个类型化薄包装；组合定义在 `LifecycleCatalog.build()`）
 
@@ -228,9 +251,9 @@ BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drif
 | world_accel | `[accel_world(v)]`，until never |
 | accel | `[accel_heading(a)]`，until never |
 | curve | 相位1 `[rotate(w, limit)]` until turned → 相位2 空 |
-| homing | `[steer(T_NEAREST_ENEMY, angle_per_sec, accel_time, proximity_boost, min_speed, max_speed, duration)]`，until never |
-| bounce | `[accel_heading(accel)]`，until at_wall(LEFT\|RIGHT\|TOP)，on_end [sfx(kira,-8), emit(spawn, toward(T_BOSS, bounce_angle), spawn_speed, at_end=true), despawn] |
-| radial_accel | `[accel_heading(rate)]`，until at_wall(TOP)，on_end [sfx?, emit(spawn, heading(PI), 0, at_end=true)（向下）, despawn] |
+| homing | `[steer(T_NEAREST_ENEMY, angle_per_sec, accel_time, proximity_boost, duration), speed_lerp(min_speed, max_speed, accel_time)]`，until never |
+| bounce | `[accel_heading(accel)]`，until at_wall(LEFT\|RIGHT\|TOP)，on_end [sfx(kira,-8), emit(spawn, toward(T_BOSS, bounce_angle), spawn_speed, at=AT_PHASE_END), despawn] |
+| radial_accel | `[accel_heading(rate)]`，until at_wall(TOP)，on_end [sfx?, emit(spawn, heading(PI), 0, at=AT_PHASE_END)（向下）, despawn] |
 | avoid_player | 相位1 until near(T_PLAYER, proximity, every=jump)，on_end 背对自机 → 相位2 until elapsed(flee_time)，despawn |
 | non_mid_flee | 相位1 until near(T_PLAYER, proximity, every_ticks=3)，on_end 背对自机 → 相位2 until near(T_BOSS, boss_radius, every_ticks=3)，on_end [call(hook), despawn] |
 | laser_follow | `[anchor_drift(..., use_global=false, render_heading=false)]`，until never |
@@ -483,14 +506,19 @@ extends CoroutineScript
 2. **tex key 拼错是静默的**（null + 默认 4px 判定）→ 只从 `7.1 表取。
 3. **速度来自 `data.velocity.length()`，方向来自发射参数** —— 别指望 `data.velocity` 的方向。
 4. **`then()` 的新相位 `until=never`**，挂 `on_end` 永不触发。
-5. **`scale_speed` 是每帧乘**（复利），想线性变速用 `speed_lerp`。
-6. **`at_wall` 只夹 左/右/上**（下墙穿出）；`emit(at_end=true)` 用夹过的落点。
+5. **`speed_mul` 是每帧乘**（复利/指数），想线性变速用 `speed_lerp`、瞬时设定用 `set_speed`。
+6. **`at_wall` 只支持 左/右/上**（无下墙，`WALL_BOTTOM` 已移除）；`emit(..., at=AT_PHASE_END)` 用其输出的落点。
 7. **`toward` / `away` 目标不可用时退化为向下**（不是不动）。
 8. **`chance_toward` 命中时 angle 被忽略**（精确朝目标），angle 只服务 fallback。
 9. **`on_end_call` 的 hook 名要先注册**：`LIFECYCLE_HOOKS_SCRIPT.register(&"名字", Callable(obj, "方法"))`；否则静默不调。
 10. **变体发射的模板要与分支数对齐**：`chance_toward` 只有 0/1 两支。
 11. **自机弹 tint 会被记忆值往红 lerp**（`prepare_shot`），内容设的 tint 只是基底。
 12. **改类型级字段后要 `invalidate_bullet_type()`**，否则沿用旧弹型。
+13. **位置来源是模式、不是可叠加项**：`position`（`anchor_drift` / `drift`）直接写 `pos`、覆盖积分；同相位与速度 op 混用会让速度变化在位置上看不见，多个 position op 是「模式切换、后写者胜」。要分段用 `then()`。模式只写 `pos`，`v` / `h` 保持（释放后按速度轴飞）。
+14. **同相位状态槽 ≤ 8**（`position`(PHASE_START) 占 3，`position`(ANCHOR) / `rotate` 各占 1）；超出会被内核拒绝注册，该弹按直线飞。
+15. **RNG 是单通道、按「op 顺序 + 弹行遍历顺序」消耗（V10：消耗点显式化）**：只有 `random_dir`（每求值抽 1）、`emit_variant`（每次抽 1 定分支）会消耗随机；`_resolve_dir` 本身不再抽。加/删/重排这些表达式、或改变弹的发射顺序，都会平移之后所有随机序列（回放仍可复现，但结果会变）。
+16. **`on_end_call` 是逃逸口（V13）**：每相位结束最多一次、宿主侧、**非热路径**；回调拿 `(pos, boss_pos, has_boss, host)`，`host` 只暴露 `queue_spawn`。用了它，描述符不再是唯一行为来源——别把它当 per-frame 逻辑或状态存储。
+17. **target 枚举固定、候选集由宿主给（V14）**：`T_NEAREST_ENEMY` = 宿主候选集最近；targetability（未开战 Boss 排除）在 `EntityRegistry.get_targetable_enemies` / `Enemy.is_targetable`，不在内核。
 
 ---
 
