@@ -80,6 +80,7 @@
 > - **不会（只靠枚举或被数据引用） → 内容槽 → 中文可读标签 OK**。
 > - **机制层代码（`scripts/**`）引用内容 → 只能走三种落点**：数据资源 `@export` / 场景装配（`.tscn` 给 `@export` 赋值）/ 内容脚本（`data/**`），不得写死路径/key。
 > - **跨层字符串 key**（数据里存、代码表里查）：默认归标识符 → ASCII；除非其定义表本身已迁为内容资源。
+> - **明确豁免 · `AssetRegistry`（2026-09-18 立）**：`scripts/asset_registry.gd` 是**内容槽的代码侧索引表**（`bullet_configs` / `enemy_visuals` / `sounds` / `FOG_TEXTURE` / `BGM_PATHS`），其 `res://` 与中文 key 属**内容槽引用**、非机制标识符 → 当前**合规豁免**。**退役条件**：随 S13 图集 + 数据化（`F7`：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁入 `data/**`；迁完一表即**移除该表豁免**，全表迁完豁免终止。
 
 > 原项目现状（K0 实测）：`scripts/**` 中文 `.gd` 文件名 **0**（内容槽中文属合规）。余 **PascalCase 目录段**（`assets/Textures`/`assets/Music`/`assets/Sound`）+ `diffculty` 拼写 **5 处**（`game_ui.gd` 4 + `game_scene.tscn` 1）。
 

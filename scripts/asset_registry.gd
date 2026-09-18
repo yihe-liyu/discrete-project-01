@@ -1,6 +1,7 @@
-## AssetRegistry — 全项目资源注册表，改一处全局生效。
+## AssetRegistry — 全项目资源注册表（**内容槽的代码侧索引表**），改一处全局生效。
 ## 不再是 autoload（R9）—— 改 `class_name` 静态表（R8）；调用方 `AssetRegistry.xxx` 语法不变。
-## 续（与图集一起）：`bullet_configs` / `sounds` / `enemy_visuals` 逐项迁 `data/*.tres`（R17）。
+## **契约**：本表的 `res://` 与中文 key 属内容槽引用，按基线「命名边界契约」**明确豁免**（非机制标识符）。
+## **退役条件**：随 S13 图集 + 数据化（F7：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁 `data/*.tres`（R17）；迁完一表移除一表豁免。
 class_name AssetRegistry
 
 const enemy_visuals := {
