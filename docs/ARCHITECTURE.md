@@ -60,7 +60,7 @@
 ```
 内容弹丸脚本 *_bullet.gd
   └─ kernel_port() → {move, params}
-       └─ KernelBulletBackend.prepare_shot()        ← _port_for() 缓存端口
+       └─ KernelBulletHost.prepare_shot()        ← _port_for() 缓存端口
             └─ KernelNativeSystem.spawn()           ← 原生 DanmakuStore.spawn + set_hitbox + set_program
                  └─ [每物理帧] DanmakuStore.integrate() + behavior_tick()    ← 积分 + 行为，全原生
                       └─ KernelNativeSystem._pull_snapshot()                 ← 原生 → GDScript 只读快照
@@ -160,7 +160,7 @@
 
 ### 新增自机 bomb
 - 数据是 **`BombData` 家族**：基类 `BombData`（外观 / 编队 / 无敌）+ 子类 `RingBombData`（环绕炸）/ `MistBombData`（分阶段展开）；`.tres` 例：`data/player_data/bomb_ring.tres` / `marisa_bomb.tres`，经 `PlayerData.bomb` 挂到角色。
-- **宿主实体按数据实际类型分派**（`KernelBulletBackend.spawn_bomb`）：`MistBombData` → `KernelMistBomb`；其余/基类 → `KernelBomb`。**调参别写回引擎代码**。
+- **宿主实体按数据实际类型分派**（`KernelBulletHost.spawn_bomb`）：`MistBombData` → `KernelMistBomb`；其余/基类 → `KernelBomb`。**调参别写回引擎代码**。
 - 加新 bomb = 一个 `XxxBombData extends BombData` + 一个 `KernelXxxBomb extends BombEntity` + `spawn_bomb` 一条分派；不需要动内核。
 
 ### 新增弹幕行为（`move`）

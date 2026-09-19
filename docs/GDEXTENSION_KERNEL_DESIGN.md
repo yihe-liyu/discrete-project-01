@@ -267,7 +267,7 @@ for e in world.drain_events():                  # 帧末一次
         GRAZE: ...
 ```
 
-对比今天：`ctx.bullets.shoot_spread` → `BulletManager` → `KernelBulletBackend` → `KernelNativeSystem`（原生 store）的链路（宿主 rules + 原生机制，不再是两个内核）。
+对比今天：`ctx.bullets.shoot_spread` → `BulletManager` → `KernelBulletHost` → `KernelNativeSystem`（原生 store）的链路（宿主 rules + 原生机制，不再是两个内核）。
 
 ---
 

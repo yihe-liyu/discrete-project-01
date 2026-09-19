@@ -30,7 +30,7 @@ func test_game_scene_refreshes_kernel_player() -> void:
 	add_child_autofree(inst)
 	await get_tree().process_frame
 	var player: Node2D = inst.get_node("World/Player")
-	var ctx = BulletManager.current._kernel_bullet_backend.behavior_ctx
+	var ctx = BulletManager.current._kernel_bullet_host.behavior_ctx
 	assert_eq(ctx.get_player_position(), player.global_position,
 		"内核行为管道应拿到场景自机（回归：非默认内核时 autoload._ready 早于自机）")
 

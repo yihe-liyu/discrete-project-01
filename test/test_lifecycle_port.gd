@@ -24,7 +24,7 @@ func _composed() -> BulletLifecycle:
 
 ## 端口层：内容 kernel_port() 返回 {lifecycle} → prepare_shot 认出并透传。
 func test_port_accepts_prebuilt_lifecycle() -> void:
-	var backend: KernelBulletBackend = autofree(KernelBulletBackend.new())
+	var backend: KernelBulletHost = autofree(KernelBulletHost.new())
 	var data := BulletData.new()
 	data.coroutine_script = preload("res://test/fixtures/lifecycle_port_behavior.gd")
 	data.params = {&"turn_limit": 0.5}

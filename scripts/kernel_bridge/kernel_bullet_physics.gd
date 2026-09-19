@@ -15,14 +15,14 @@ const HIT_SFX_VOLUME := {
 	"marisa_damage": -10.0,
 }
 
-var backend: KernelBulletBackend
+var backend: KernelBulletHost
 ## 组合根注入的特效层（空则静默）
 var fx_pool: FxPool
 ## 实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
 var entity_registry: EntityRegistry
 
 
-func setup(p_backend: KernelBulletBackend) -> void:
+func setup(p_backend: KernelBulletHost) -> void:
 	backend = p_backend
 
 

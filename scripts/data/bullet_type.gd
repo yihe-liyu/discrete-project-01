@@ -50,7 +50,7 @@ enum TintMode { MULTIPLY, BLEND }
 
 @export_group("Host payload（内核只存不解释）")
 ## 伤害：命中结算由**宿主**读它，内核本体不解释。
-## M1（原项目融合）：从宿主侧表搬进来 —— 原先内核无 damage，靠 `KernelBulletBackend._damage_by_index`。
+## M1（原项目融合）：从宿主侧表搬进来 —— 原先内核无 damage，靠 `KernelBulletHost._damage_by_index`。
 @export var damage: float = 1.0
 ## 命中音效 key：宿主读；内核本体不解释。空 = 宿主默认规则。
 @export var hit_sfx: StringName = &""

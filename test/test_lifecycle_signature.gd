@@ -57,7 +57,7 @@ func test_identical_lifecycles_share_one_program() -> void:
 
 ## b0：BulletData.lifecycle 走 {lifecycle} 入口（优先于 coroutine_script）
 func test_bullet_data_lifecycle_preferred() -> void:
-	var backend: KernelBulletBackend = autofree(KernelBulletBackend.new())
+	var backend: KernelBulletHost = autofree(KernelBulletHost.new())
 	var data := BulletData.new()
 	data.lifecycle = BulletLifecycle.world_accel(Vector2(0, 200))
 	var spec: Dictionary = backend.prepare_shot(data, Vector2(300.0, 400.0), Vector2.UP)

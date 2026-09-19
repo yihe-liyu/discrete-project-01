@@ -1,12 +1,12 @@
 ## KernelBehaviorHost—— 桥接行为的「延后动作」队列。
 ##
 ## 内核契约：行为循环中途禁止 spawn/despawn（swap-with-last 会搬行）。
-## 故行为只 request_despawn + 入队新弹；循环结束后由 KernelBulletBackend._physics_process(-4) 统一 flush。
-## 无 class_name（避免新增全局类需要 --import 重建缓存）；由 KernelBulletBackend preload。
+## 故行为只 request_despawn + 入队新弹；循环结束后由 KernelBulletHost._physics_process(-4) 统一 flush。
+## 无 class_name（避免新增全局类需要 --import 重建缓存）；由 KernelBulletHost preload。
 extends RefCounted
 
 ## V13：backend 私有化 —— on_end_call 内容回调只能经 queue_spawn 入队，拿不到整个后端。
-var _backend   # KernelBulletBackend
+var _backend   # KernelBulletHost
 var _spawns: Array[Dictionary] = []
 
 

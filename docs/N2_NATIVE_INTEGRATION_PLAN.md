@@ -8,7 +8,7 @@
 
 ## 目标（历史——已达成）
 
-把 `KernelBulletBackend.system` 从 GDScript `BulletSystem`（vendor 快照）换成**原生系统**，
+把 `KernelBulletHost.system` 从 GDScript `BulletSystem`（vendor 快照）换成**原生系统**，
 同时**保持桥接 / 渲染 / 物理看到的 API 不变**，可开关、可回退。
 
 ## 为什么不能一步到位
@@ -34,7 +34,7 @@
   出生相位 / 剔除 → 返回新数组 + `dead`），由桥接子类
   `scripts/kernel_bridge/kernel_native_system.gd`（**继承 vendored `BulletSystem`，只覆写 `_physics_process`**）
   同序重放 despawn。**不碰 vendor 内核 → 不触发 re-vendor**；行为 / 碰撞 / 渲染看到的仍是 `BulletSystem`。
-  `KernelBulletBackend.use_native` 开关 + 无扩展自动回退。**实测 6000 弹 0.699 → 0.118ms/帧（5.9×）**；
+  `KernelBulletHost.use_native` 开关 + 无扩展自动回退。**实测 6000 弹 0.699 → 0.118ms/帧（5.9×）**；
   parity `test_native_integrate` 2/2（含 `native_frames` 覆盖断言）。
 - **边界铁律（N2.2 实测）**：原生逐次 `get_position(i)` **110ns** vs GDScript `Packed[i]` **13ns**；
   批量 `get_positions()` 快照 15ns。→ **搬存储必须配套批量快照 / 写回**，逐次转发反而更慢。

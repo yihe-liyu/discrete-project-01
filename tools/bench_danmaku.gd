@@ -31,7 +31,7 @@ func _ready() -> void:
 
 
 func _run(n: int, with_behavior: bool) -> void:
-	var backend := KernelBulletBackend.new()
+	var backend := KernelBulletHost.new()
 	add_child(backend)
 	backend.setup_behaviors(null, Callable())
 	backend.system.cull_rect = Rect2(-100000, -100000, 200000, 200000)   # 不剔除 → N 恒定

@@ -13,7 +13,7 @@ class FakeEnemy extends Node2D:
 	func take_damage(d: float) -> void:
 		damage_taken += d
 
-var _kernel_bullet_backend: KernelBulletBackend
+var _kernel_bullet_host: KernelBulletHost
 var _kernel_bullet_physics: KernelBulletPhysics
 var _player: Player
 var _entity_registry: EntityRegistry
@@ -23,10 +23,10 @@ var _prev_lives: int
 
 
 func before_each() -> void:
-	_kernel_bullet_backend = KernelBulletBackend.new()
-	add_child_autofree(_kernel_bullet_backend)
+	_kernel_bullet_host = KernelBulletHost.new()
+	add_child_autofree(_kernel_bullet_host)
 	_kernel_bullet_physics = KernelBulletPhysics.new()
-	_kernel_bullet_physics.setup(_kernel_bullet_backend)
+	_kernel_bullet_physics.setup(_kernel_bullet_host)
 	_player = PLAYER_SCENE.instantiate()
 	_player.player_data = REIMU_DATA
 	add_child_autofree(_player)
@@ -51,13 +51,13 @@ func after_each() -> void:
 func _enemy_bullet_at(pos: Vector2) -> int:
 	var d := BulletData.new().enemy().tex("小玉")
 	d.velocity = Vector2.UP * 100.0
-	return _kernel_bullet_backend.shoot(d, pos, Vector2.RIGHT)
+	return _kernel_bullet_host.shoot(d, pos, Vector2.RIGHT)
 
 
 func test_bullet_on_player_is_hit() -> void:
 	_enemy_bullet_at(_player.global_position)
 	_kernel_bullet_physics.process()
-	assert_eq(_kernel_bullet_backend.system.get_active_count(), 0, "命中后该弹应被回收")
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 0, "命中后该弹应被回收")
 	assert_true(_player.is_invincible, "miss() 应进入无敌")
 
 
@@ -66,8 +66,8 @@ func test_bullet_within_graze_is_grazed() -> void:
 	var id := _enemy_bullet_at(_player.global_position + Vector2(30, 0))
 	_kernel_bullet_physics.process()
 	assert_eq(_player.resources.graze_count, 1, "应计 1 次擦弹")
-	assert_eq(_kernel_bullet_backend.system.get_active_count(), 1, "擦弹不回收该弹（随机清弹已关）")
-	assert_true(_kernel_bullet_backend.system.is_grazed(id), "应标记为已擦弹")
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "擦弹不回收该弹（随机清弹已关）")
+	assert_true(_kernel_bullet_host.system.is_grazed(id), "应标记为已擦弹")
 
 
 func test_graze_not_counted_twice() -> void:
@@ -81,7 +81,7 @@ func test_invincible_player_ignores_bullets() -> void:
 	_player.is_invincible = true
 	_enemy_bullet_at(_player.global_position)
 	_kernel_bullet_physics.process()
-	assert_eq(_kernel_bullet_backend.system.get_active_count(), 1, "无敌时弹应穿过")
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "无敌时弹应穿过")
 
 
 func test_player_bullet_damages_enemy_via_bullet_type() -> void:
@@ -93,10 +93,10 @@ func test_player_bullet_damages_enemy_via_bullet_type() -> void:
 	var d := BulletData.new().player().tex("reimu_main")
 	d.velocity = Vector2.UP * 100.0
 	d.damage = 10.0
-	_kernel_bullet_backend.shoot(d, Vector2(200, 200), Vector2.UP)
+	_kernel_bullet_host.shoot(d, Vector2(200, 200), Vector2.UP)
 	_kernel_bullet_physics.process()
 	assert_almost_eq(fake.damage_taken, 10.0, 0.01, "伤害应来自 BulletType.damage（内核自带）")
-	assert_eq(_kernel_bullet_backend.system.get_active_count(), 0, "命中后应回收该弹")
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 0, "命中后应回收该弹")
 	_entity_registry.unregister_enemy(fake)
 
 
@@ -105,16 +105,16 @@ func test_sweep_enemy_bullets_clears_only_in_radius() -> void:
 	_enemy_bullet_at(Vector2(200, 200))
 	_enemy_bullet_at(Vector2(900, 900))
 	_kernel_bullet_physics.sweep_enemy_bullets(Vector2(200, 200), 100.0)
-	assert_eq(_kernel_bullet_backend.system.get_active_count(), 1, "死亡清弹应只清圆内的敌弹")
-	assert_eq(_kernel_bullet_backend.system.get_position(0), Vector2(900, 900), "圆外弹应保留（swap-with-last 后落 0 槽）")
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "死亡清弹应只清圆内的敌弹")
+	assert_eq(_kernel_bullet_host.system.get_position(0), Vector2(900, 900), "圆外弹应保留（swap-with-last 后落 0 槽）")
 
 
 ## 死亡清弹不应误伤自机弹。
 func test_sweep_enemy_bullets_spares_player_bullets() -> void:
 	var d := BulletData.new().player().tex("reimu_main")
 	d.velocity = Vector2.UP * 100.0
-	_kernel_bullet_backend.shoot(d, Vector2(200, 200), Vector2.UP)
+	_kernel_bullet_host.shoot(d, Vector2(200, 200), Vector2.UP)
 	_enemy_bullet_at(Vector2(200, 200))
 	_kernel_bullet_physics.sweep_enemy_bullets(Vector2(200, 200), 100.0)
-	assert_eq(_kernel_bullet_backend.system.get_active_count(), 1, "死亡清弹不应清自机弹")
-	assert_eq(_kernel_bullet_backend.system.get_type(0).faction, BulletType.Faction.PLAYER, "留下的应是自机弹")
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "死亡清弹不应清自机弹")
+	assert_eq(_kernel_bullet_host.system.get_type(0).faction, BulletType.Faction.PLAYER, "留下的应是自机弹")

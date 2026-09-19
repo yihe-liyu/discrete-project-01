@@ -2,7 +2,7 @@ class_name BulletMultiMesh
 extends Node2D
 ## BulletMultiMesh — 用 MultiMeshInstance2D 批量渲染子弹
 ## 所有子弹合并为 1 次 draw call（按纹理 × 阵营 × tint_mode 分组）
-## 数据源：KernelBulletBackend 的内核 SoA 快照（backend.system）；set_backend() 注入后生效。
+## 数据源：KernelBulletHost 的内核 SoA 快照（backend.system）；set_backend() 注入后生效。
 
 
 ## 宿主阵营常量（顺序与内核 BulletType.Faction 不同，渲染时显式映射）
@@ -14,7 +14,7 @@ const _FACTION_BOMB := 2
 @export var is_enabled: bool = true
 
 ## 内核后端（唯一数据源）。
-var backend: KernelBulletBackend
+var backend: KernelBulletHost
 
 var _groups: Dictionary = {}  # key → {mmi, mm, mesh}
 
@@ -34,7 +34,7 @@ func _process(_delta):
 
 
 ## 注入内核后端；null = 无可渲染数据源（不画）。
-func set_backend(b: KernelBulletBackend) -> void:
+func set_backend(b: KernelBulletHost) -> void:
 	backend = b
 	_type_table_count = -1   # 后端换 → 类型表失效
 

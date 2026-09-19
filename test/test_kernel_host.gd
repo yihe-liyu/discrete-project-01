@@ -1,10 +1,10 @@
 extends GutTest
-## KernelBulletBackend —— BulletData→BulletType 映射 / 内容签名复用 / 纹理旁表 / 速度语义。
+## KernelBulletHost —— BulletData→BulletType 映射 / 内容签名复用 / 纹理旁表 / 速度语义。
 ## 目的：证明「原项目内容 API」能被内核驱动，而不改原项目任何现有路径（纯增量）。
 
 
-func _make_backend() -> KernelBulletBackend:
-	var b := KernelBulletBackend.new()
+func _make_backend() -> KernelBulletHost:
+	var b := KernelBulletHost.new()
 	add_child_autofree(b)
 	return b
 

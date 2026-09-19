@@ -89,7 +89,7 @@ func test_native_integrate_matches_gdscript() -> void:
 
 
 func test_backend_picks_native_when_available() -> void:
-	var backend: KernelBulletBackend = autofree(KernelBulletBackend.new())
+	var backend: KernelBulletHost = autofree(KernelBulletHost.new())
 	backend._ensure_system()
 	assert_true(backend.system is KernelNativeSystem, "扩展为必需：弹池应装配原生内核")
 	assert_true(backend.system != null, "弹池应建立")

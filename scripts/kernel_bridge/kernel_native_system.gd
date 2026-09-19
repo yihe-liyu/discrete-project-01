@@ -27,7 +27,7 @@ var _seed: int = 0
 ## 诊断计数器：真正走了原生路径的帧数。
 var native_frames: int = 0
 
-# ── 原生行为执行（由 KernelBulletBackend 装配）──
+# ── 原生行为执行（由 KernelBulletHost 装配）──
 var enable_native_behaviors: bool = false
 var behavior_ctx: BehaviorContext
 var behavior_host          # KernelBehaviorHost

@@ -3,13 +3,13 @@
 class_name BombEntity
 extends Node2D
 
-## 内容数据（KernelBulletBackend 注入）
+## 内容数据（KernelBulletHost 注入）
 var data: BombData
-## 实体注册表（自机 / 敌机 / Boss；KernelBulletBackend 注入）
+## 实体注册表（自机 / 敌机 / Boss；KernelBulletHost 注入）
 var entity_registry: EntityRegistry
-## 弹幕世界（KernelBulletBackend 注入）——清弹 / 视觉用
+## 弹幕世界（KernelBulletHost 注入）——清弹 / 视觉用
 var bullet_manager: BulletManager
-## 爆炸贴图父节点（KernelBulletBackend 注入 World；空则挂自身父级）
+## 爆炸贴图父节点（KernelBulletHost 注入 World；空则挂自身父级）
 var fx_parent: Node2D
 
 

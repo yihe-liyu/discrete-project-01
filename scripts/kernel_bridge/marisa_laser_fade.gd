@@ -1,12 +1,12 @@
 ## MarisaLaserFade—— 魔理沙非 focus 激光「整批渐隐」控制器。
 ## 对应重建版的 LaserShot：漂移由内核 LaserFollowBehavior 管，本类只管
 ##   「按住射击 = 满亮；松手 / 切 focus = 整批 set_render_fade 到 0 后清掉 LASER 行」。
-## 无 class_name；由 KernelBulletBackend preload。
+## 无 class_name；由 KernelBulletHost preload。
 extends RefCounted
 
 const FADE_TIME: float = 0.2
 
-var backend   # KernelBulletBackend
+var backend   # KernelBulletHost
 var _is_fading: bool = false
 var _fade_t: float = 0.0
 var _is_spawned: bool = false   # 自上次淡完后是否又生成过激光段
@@ -16,7 +16,7 @@ func setup(p_backend) -> void:
 	backend = p_backend
 
 
-## 每帧（由 KernelBulletBackend._physics_process 驱动）。
+## 每帧（由 KernelBulletHost._physics_process 驱动）。
 func process(delta: float) -> void:
 	var system = backend.system
 	if system == null:

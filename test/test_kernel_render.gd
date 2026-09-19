@@ -5,7 +5,7 @@ extends GutTest
 
 
 func _setup() -> Array:
-	var backend := KernelBulletBackend.new()
+	var backend := KernelBulletHost.new()
 	add_child_autofree(backend)
 	var renderer := BulletMultiMesh.new()
 	add_child_autofree(renderer)
@@ -27,7 +27,7 @@ func _player_data() -> BulletData:
 
 func test_kernel_snapshot_renders_one_batch() -> void:
 	var s := _setup()
-	var backend: KernelBulletBackend = s[0]
+	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
 	for i in 3:
 		backend.shoot(_enemy_data(), Vector2(10 + i * 20, 50), Vector2.RIGHT)
@@ -39,7 +39,7 @@ func test_kernel_snapshot_renders_one_batch() -> void:
 
 func test_tint_mode_splits_batches() -> void:
 	var s := _setup()
-	var backend: KernelBulletBackend = s[0]
+	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
 	backend.shoot(_enemy_data(true), Vector2.ZERO, Vector2.RIGHT)
 	backend.shoot(_enemy_data(false), Vector2.ZERO, Vector2.RIGHT)
@@ -49,7 +49,7 @@ func test_tint_mode_splits_batches() -> void:
 
 func test_despawn_clears_instances() -> void:
 	var s := _setup()
-	var backend: KernelBulletBackend = s[0]
+	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
 	var id := backend.shoot(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
 	renderer._sync()
@@ -62,7 +62,7 @@ func test_despawn_clears_instances() -> void:
 func test_faction_maps_to_z() -> void:
 	# 内核阵营(ENEMY=0/PLAYER=1) → 宿主阵营(PLAYER=0/ENEMY=1) → z_index；两处枚举顺序不同，必须显式映射。
 	var s := _setup()
-	var backend: KernelBulletBackend = s[0]
+	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
 	backend.shoot(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
 	backend.shoot(_player_data(), Vector2.ZERO, Vector2.RIGHT)
@@ -76,7 +76,7 @@ func test_faction_maps_to_z() -> void:
 
 func test_material_and_mesh_come_from_type() -> void:
 	var s := _setup()
-	var backend: KernelBulletBackend = s[0]
+	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
 	backend.shoot(_enemy_data(true), Vector2.ZERO, Vector2.RIGHT)   # blend(true) → BLEND
 	renderer._sync()

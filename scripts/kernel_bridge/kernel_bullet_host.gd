@@ -1,4 +1,4 @@
-## KernelBulletBackend——宿主侧适配：BulletData → BulletType。
+## KernelBulletHost——宿主侧适配：BulletData → BulletType。
 ##
 ## 边界：内核不认识 BulletData；弹型由 `BulletData.to_bullet_type()` 在
 ## **内容侧**产出并缓存（内容须复用 BulletData 实例；每发 new 会让内核弹型表每发长一个）。
@@ -6,7 +6,7 @@
 ## `BulletData.lifecycle` 直接挂描述符（b0/b1，优先）；旧路 `coroutine_script` 走 duck-typed
 ## `kernel_port()` 端口映射到内核行为。未映射（无 lifecycle / 无端口）仍按直线发射并计入 unmapped。
 ## 渲染不在本类：纹理走**渲染插座**（纹理句柄表 `texture_for_index`，M3 ③），喂给原项目 BulletMultiMesh。
-class_name KernelBulletBackend
+class_name KernelBulletHost
 extends Node
 
 const MARISA_LASER_FADE_SCRIPT = preload("res://scripts/kernel_bridge/marisa_laser_fade.gd")
@@ -90,7 +90,7 @@ func _ensure_system() -> void:
 	system = KernelNativeSystem.new()
 	system.name = "KernelBulletSystem"
 	if not system.is_native_ready():
-		push_error("[KernelBulletBackend] 原生扩展未加载：本项目已要求 GDExtension（见 docs/N2_NATIVE_INTEGRATION_PLAN.md §63）")
+		push_error("[KernelBulletHost] 原生扩展未加载：本项目已要求 GDExtension（见 docs/N2_NATIVE_INTEGRATION_PLAN.md §63）")
 	add_child(system)
 
 

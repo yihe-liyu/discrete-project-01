@@ -15,7 +15,7 @@ var _multi_mesh: Node2D
 var _is_processing_paused: bool = false
 
 ## 内核弹幕后端（唯一后端）
-var _kernel_bullet_backend: KernelBulletBackend
+var _kernel_bullet_host: KernelBulletHost
 var _kernel_bullet_physics: KernelBulletPhysics
 
 ## 组合根注入的特效层（空则静默）。**只读** —— 唯一写入口是 `inject_fx_pool()`。
@@ -41,7 +41,7 @@ var _stage_context: StageContext
 
 ## 当前活跃弹数（统计/断言用）
 func active_count() -> int:
-	return _kernel_bullet_backend.system.get_active_count() if _kernel_bullet_backend != null else 0
+	return _kernel_bullet_host.system.get_active_count() if _kernel_bullet_host != null else 0
 
 
 ## 子弹协程共享 ctx
@@ -95,11 +95,11 @@ func _physics_process(_delta: float) -> void:
 
 ## 发射一颗弹。阵营由 `data.faction` 决定（自机弹 / 敌弹同一条路）；返回内核行 id（data 为空 = -1）。
 func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
-	return _kernel_bullet_backend.shoot(data, pos, direction)
+	return _kernel_bullet_host.shoot(data, pos, direction)
 
 ## 炸弹：返回宿主节点（KernelBomb，不进内核池）。data 是 BombData。
 func shoot_bomb_bullet(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0) -> Node:
-	return _kernel_bullet_backend.spawn_bomb(data, pos, direction, tint, spawn_delay)
+	return _kernel_bullet_host.spawn_bomb(data, pos, direction, tint, spawn_delay)
 
 
 # ═══ 激光 API ═══
@@ -152,9 +152,9 @@ func _on_laser_graze() -> void:
 # ═══ 全局清理 ═══
 
 func clear_all():
-	if _kernel_bullet_backend != null:
-		_kernel_bullet_backend.system.clear()
-		_kernel_bullet_backend.clear_bombs()
+	if _kernel_bullet_host != null:
+		_kernel_bullet_host.system.clear()
+		_kernel_bullet_host.clear_bombs()
 	_laser_engine.clear()
 	_death_clear.clear_all()
 	if fx_pool:
@@ -163,19 +163,19 @@ func clear_all():
 		_multi_mesh.clear()
 
 func clear_bullets():
-	if _kernel_bullet_backend != null:
-		_kernel_bullet_backend.system.clear()
-		_kernel_bullet_backend.clear_bombs()
+	if _kernel_bullet_host != null:
+		_kernel_bullet_host.system.clear()
+		_kernel_bullet_host.clear_bombs()
 
 func pause_processing() -> void:
 	_is_processing_paused = true
-	if _kernel_bullet_backend != null:
-		_kernel_bullet_backend.system.set_physics_process(false)
+	if _kernel_bullet_host != null:
+		_kernel_bullet_host.system.set_physics_process(false)
 
 func resume_processing() -> void:
 	_is_processing_paused = false
-	if _kernel_bullet_backend != null:
-		_kernel_bullet_backend.system.set_physics_process(true)
+	if _kernel_bullet_host != null:
+		_kernel_bullet_host.system.set_physics_process(true)
 
 
 # ═══ 内核后端装配 ═══
@@ -194,34 +194,34 @@ func inject_stage_runtime(stage: StageRuntime) -> void:
 
 ## 宿主 RNG 是唯一随机真源；任一处 set_seed/randomize 都同步内核 RNG 的 seed。
 func _on_rng_seed_changed(seed_value: int) -> void:
-	if _kernel_bullet_backend != null and _kernel_bullet_backend.system != null:
-		_kernel_bullet_backend.system.set_seed(seed_value)
+	if _kernel_bullet_host != null and _kernel_bullet_host.system != null:
+		_kernel_bullet_host.system.set_seed(seed_value)
 
 
 ## 当前内核弹池（未装配 = null）
 func kernel_system() -> KernelNativeSystem:
-	return _kernel_bullet_backend.system if _kernel_bullet_backend != null else null
+	return _kernel_bullet_host.system if _kernel_bullet_host != null else null
 
 
 ## 建内核后端（幂等）：帧序 / 剔除范围 / 渲染数据源 / 行为管道
 func _enable_kernel() -> void:
-	if _kernel_bullet_backend == null:
-		_kernel_bullet_backend = KernelBulletBackend.new()
-		_kernel_bullet_backend.name = "KernelBulletBackend"
-		add_child(_kernel_bullet_backend)
+	if _kernel_bullet_host == null:
+		_kernel_bullet_host = KernelBulletHost.new()
+		_kernel_bullet_host.name = "KernelBulletHost"
+		add_child(_kernel_bullet_host)
 		_kernel_bullet_physics = KernelBulletPhysics.new()
-		_kernel_bullet_physics.setup(_kernel_bullet_backend)
+		_kernel_bullet_physics.setup(_kernel_bullet_host)
 		_kernel_bullet_physics.fx_pool = fx_pool
-		_kernel_bullet_backend.system.process_physics_priority = -10
-		_kernel_bullet_backend.system.cull_rect = Rect2(
+		_kernel_bullet_host.system.process_physics_priority = -10
+		_kernel_bullet_host.system.cull_rect = Rect2(
 			GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
 			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
-		_kernel_bullet_backend.system.cull_margin = 90.0
-		_kernel_bullet_backend.system.set_seed(RNG.get_seed())   # 内核 RNG 从宿主 seed 派生
+		_kernel_bullet_host.system.cull_margin = 90.0
+		_kernel_bullet_host.system.set_seed(RNG.get_seed())   # 内核 RNG 从宿主 seed 派生
 	# 只认注入，不回退全局
-	if _kernel_bullet_backend != null:
-		_kernel_bullet_backend.entity_registry = entity_registry
-		_kernel_bullet_backend.bullet_manager = self
+	if _kernel_bullet_host != null:
+		_kernel_bullet_host.entity_registry = entity_registry
+		_kernel_bullet_host.bullet_manager = self
 	if _kernel_bullet_physics != null:
 		_kernel_bullet_physics.entity_registry = entity_registry
 	if _laser_engine != null:
@@ -232,6 +232,6 @@ func _enable_kernel() -> void:
 		if is_instance_valid(entity_registry.player):
 			p = entity_registry.player
 		enemy_provider = Callable(entity_registry, "get_targetable_enemies")   # 只喂可选目标（未开战 Boss 不算）
-	_kernel_bullet_backend.setup_behaviors(p, enemy_provider)
+	_kernel_bullet_host.setup_behaviors(p, enemy_provider)
 	if _multi_mesh != null:
-		_multi_mesh.set_backend(_kernel_bullet_backend)
+		_multi_mesh.set_backend(_kernel_bullet_host)
