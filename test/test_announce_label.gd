@@ -45,11 +45,17 @@ func test_background_is_behind_label_and_matches_size() -> void:
 	var bg := label.get_node_or_null("Background") as TextureRect
 	assert_not_null(bg, "给了底衬就挂 Background 子节点")
 	assert_true(bg.show_behind_parent, "底衬画在文字之后（背后）")
-	# 夹具贴图 400×63 → 等比缩放，不被名字框拉伸变形
-	var tex_aspect := 400.0 / 63.0
-	assert_almost_eq(bg.size.x / bg.size.y, tex_aspect, 0.001, "底衬等比缩放，不拉伸")
-	assert_almost_eq(bg.position.x + bg.size.x, label.size.x, 0.001, "底衬右缘贴名字布局框右缘")
-	assert_true(bg.size.y <= label.size.y, "底衬内接在名字框内（垂直居中）")
+	# 贴图原尺寸，大小不动；靠子 scale = 1/SHRINK 抵消父节点最终缩放
+	assert_eq(bg.size, Vector2(400.0, 63.0), "底衬保持贴图原尺寸")
+	var rendered := bg.size * bg.scale * AnnounceLabel.SHRINK
+	assert_almost_eq(rendered.x, 400.0, 0.001, "静止时渲染宽 = 原宽（无缩放）")
+	assert_almost_eq(rendered.y, 63.0, 0.001, "静止时渲染高 = 原高（无缩放）")
+	# 视觉右缘 = 名字视觉右缘（父节点缩到 SHRINK 时右缘贴边）
+	var local_right := bg.position.x + bg.size.x * bg.scale.x
+	var pivot_x := label.size.x / 2.0
+	var bg_visual_right := label.position.x + pivot_x + (local_right - pivot_x) * AnnounceLabel.SHRINK
+	var name_visual_right := label.position.x + label.size.x * (1.0 + AnnounceLabel.SHRINK) / 2.0
+	assert_almost_eq(bg_visual_right, name_visual_right, 0.001, "底衬右缘 = 名字视觉右缘")
 	assert_eq(bg.modulate.a, 0.0, "初始透明，缩回正常后再渐显")
 
 

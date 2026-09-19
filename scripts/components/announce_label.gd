@@ -71,8 +71,10 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) 
 	_tween.tween_callback(finished.emit)
 
 
-## 底衬设定：作为子节点，随名字的 position / scale / pivot 一起动（路径与右缘天然一致）。
-## 贴图**等比**缩放到名字宽度（不拉伸），右缘对齐、垂直居中；初始透明，缩回正常后渐显。
+## 底衬设定：作为子节点，**随名字一起滑（路径一致）**，但保持**贴图原尺寸**不缩放。
+## 做法：子 scale = 1/SHRINK 抵消父节点最终的 0.6 缩放；再反推子节点的局部位置
+## （pivot=0），使父节点缩到 SHRINK 时底衬正好是原尺寸、右缘贴父容器右缘、垂直居中。
+## 初始透明，名字缩回正常后渐显。
 func _setup_background(p_background: Texture2D) -> void:
 	if p_background == null:
 		if _background and is_instance_valid(_background):
@@ -88,13 +90,12 @@ func _setup_background(p_background: Texture2D) -> void:
 		_background.show_behind_parent = true
 		add_child(_background)
 	_background.texture = p_background
-	# 不拉伸：按贴图原始纵横比等比缩放到名字宽（必要时受高限制内接），右缘对齐、垂直居中。
-	var tex_size := p_background.get_size()
-	var tex_aspect := tex_size.x / tex_size.y
-	var bg_w := minf(size.x, size.y * tex_aspect)
-	var bg_h := bg_w / tex_aspect
-	_background.size = Vector2(bg_w, bg_h)
-	_background.position = Vector2(size.x - bg_w, (size.y - bg_h) / 2.0)
+	# 贴图原尺寸，不缩放：子 scale 抵消父节点最终的 SHRINK；局部位置反推成"缩到 SHRINK 时右缘贴边"。
+	var bg_size := p_background.get_size()
+	var inv := 1.0 / SHRINK
+	_background.size = bg_size
+	_background.scale = Vector2(inv, inv)
+	_background.position = Vector2(size.x - bg_size.x * inv, size.y / 2.0 - bg_size.y * inv / 2.0)
 	_background.modulate.a = 0.0
 
 
