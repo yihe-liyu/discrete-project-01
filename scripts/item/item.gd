@@ -5,6 +5,8 @@ enum Type { POWER, POINT, LIFE_FRAGMENT, BOMB_FRAGMENT, LIFE_FULL, BOMB_FULL }
 
 ## P 点吃下给的分（东方规则：+1 火力并 +10 分）
 const POWER_SCORE: int = 10
+## 点被**非金色**收取时的最低分（越靠近框底越接近它；收点线附近 = max_point）
+const MIN_POINT_SCORE: int = 5000
 
 var item_type: Type = Type.POINT
 ## 吃下时给的分数（POWER 用；POINT 的分是动态 max_point，不吃这个字段）
@@ -119,7 +121,8 @@ func collect() -> void:
 				gained = value
 				res.add_score(gained)
 			Type.POINT:
-				gained = res.add_max_point()
+				var pts := res.max_point
+				gained = res.add_max_point(pts if _is_highlight else _point_score_at(pts))
 			Type.LIFE_FRAGMENT:
 				res.collect_life_fragment()
 			Type.BOMB_FRAGMENT:
@@ -131,6 +134,16 @@ func collect() -> void:
 	if gained > 0:
 		GameEvents.item_score.emit(gained, global_position, _is_highlight)
 	_recycle()
+
+
+## 非金色的点：拾取点越远离收点线（越靠近框底）分越少。
+## 收点线处 = max_point，框底 = MIN_POINT_SCORE（max_point 恒 >= 10000 > 5000）。
+func _point_score_at(pts: int) -> int:
+	var span: float = GameConfig.FIELD_BOTTOM - _auto_collect_line
+	if span <= 0.0:
+		return pts
+	var t: float = clampf((global_position.y - _auto_collect_line) / span, 0.0, 1.0)
+	return roundi(lerpf(float(pts), float(MIN_POINT_SCORE), t))
 
 
 func _on_area_entered(area: Area2D) -> void:

@@ -135,6 +135,7 @@ script = ExtResource("15_fx")
 [node name="ScorePopupLayer" type="Node2D" parent="World" unique_id=2025091106]
 unique_name_in_owner = true
 script = ExtResource("19_popup")
+font_scale = 0.8
 
 [node name="StageRuntime" type="Node" parent="World" unique_id=2025091104]
 unique_name_in_owner = true

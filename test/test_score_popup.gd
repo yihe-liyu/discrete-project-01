@@ -56,6 +56,28 @@ func test_point_item_grants_max_point_value() -> void:
 	assert_eq(got[0][0], 10000, "浮字数值 = max_point")
 
 
+func test_point_score_scales_with_depth() -> void:
+	var near: Dictionary = _pickup(Item.Type.POINT, 700.0)
+	near.item.global_position = Vector2(448.0, LINE)                       # 收点线 → 满分
+	assert_eq(_collect(near.item)[0][0], 10000, "线处 = max_point")
+	var mid: Dictionary = _pickup(Item.Type.POINT, 700.0)
+	mid.item.global_position = Vector2(448.0, (LINE + GameConfig.FIELD_BOTTOM) * 0.5)
+	assert_eq(_collect(mid.item)[0][0], 7500, "中点 = lerp(max_point, 5000, 0.5)")
+	var low: Dictionary = _pickup(Item.Type.POINT, 700.0)
+	low.item.global_position = Vector2(448.0, GameConfig.FIELD_BOTTOM)      # 框底 → 最少
+	assert_eq(_collect(low.item)[0][0], Item.MIN_POINT_SCORE, "框底 = MIN_POINT_SCORE")
+	assert_eq(low.resources.max_point, 10010, "无论多少分，max_point 仍 +10")
+
+
+func test_highlight_point_keeps_full_score() -> void:
+	var r: Dictionary = _pickup(Item.Type.POINT, 700.0)
+	r.item.global_position = Vector2(448.0, GameConfig.FIELD_BOTTOM)
+	r.item.force_collect()
+	var got: Array = _collect(r.item)
+	assert_eq(got[0][0], 10000, "金色收取即使贴框底也满分")
+	assert_true(got[0][2], "且金色")
+
+
 func test_force_collect_is_highlight() -> void:
 	var r: Dictionary = _pickup(Item.Type.POWER)
 	r.item.force_collect()

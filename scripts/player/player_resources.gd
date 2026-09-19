@@ -45,12 +45,15 @@ func on_miss_power_penalty() -> void:
 	changed.emit()
 
 
-func add_max_point() -> int:
+## 捡点：max_point 恒 +10；分数默认入账当前 max_point，可传 score 覆盖（深位捡点递减）。
+## 返回**实际入账**的分数（弹浮字用）。
+func add_max_point(score: int = -1) -> int:
 	var pts := max_point
 	max_point += 10
-	current_score += pts
+	var credited := pts if score < 0 else score
+	current_score += credited
 	changed.emit()
-	return pts
+	return credited
 
 
 func add_score(amount: int) -> void:

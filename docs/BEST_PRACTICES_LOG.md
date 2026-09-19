@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-19 — 深位捡点递减：非金色收取的「点」按离收点线距离降分
+
+- **需求**：点（不含 P 点）若**未被金色收取**（没过收点线、没被记忆释放强收），按拾取位置离收点线的距离降分：收点线附近 = 当前 `max_point`，越靠近游戏框底部越少，**最少 5000**；`max_point` 照常 +10。
+- **做法**：
+  - `Item.MIN_POINT_SCORE := 5000`；`_point_score_at(pts)` = `roundi(lerpf(pts, 5000, t))`，`t = clamp((y - line) / (FIELD_BOTTOM - line), 0, 1)`。
+  - `PlayerResources.add_max_point(score := -1)`：可传入账分（覆盖），仍 `max_point += 10`，返回**实际入账**分（弹浮字用它）。
+  - `Item.collect()` POINT：`_is_highlight` 满分，否则按深度递减。
+- **验收**：verify 全绿；`test_score_popup` 加「线/中点/框底三档 + 金色贴框底仍满分 + max_point 恒 +10」。
+
 ### 2026-09-19 — 修池复用残留：道具金色标记未在 setup() 重置
 
 - **现象**：普通击败敌人掉落的道具也显示金色。
