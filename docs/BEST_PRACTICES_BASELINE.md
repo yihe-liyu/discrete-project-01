@@ -147,6 +147,27 @@
 
 ---
 
+## 反复踩的坑 / 铁律（改动前扫一眼）
+
+> 从滚动日志（已 120+ 条）蒸馏出的**跨子系统高频教训**，与上面的 R/契约互补；原始过程见 `docs/archive/LOG_*`。
+
+- **池化对象加字段 → 必须在 `setup()`/`reset()` 归零**：`Item` 漏了 `_is_highlight`，回池复用后普通掉落误金色；原生行 `spawn/_swap_remove`、`BulletData` 快照同理。跨帧复用的行/节点新增列，一律进 reset 路径。
+- **遍历中 `despawn` 必须倒序**：销毁是 swap-with-last；正序会漏判/错位被换进来的行。内核 dead 重放也必须**降序**（升序会丢大 id）。
+- **重生/冻结状态要有独立的行为闸**：原生行为循环 `if (_fx[i] > 0) continue;`（出生相位只画特效）。漏了 → 冻结期行为照跑、速度被改、提前 emit。
+- **原生权威 + 参考解释器逐位 parity**：GDExtension 是必需路径，`test/reference/**` 只作冻结参照（不适用命名契约）。改内核 C++ 后**必须** `./tools/build_gdextension.sh` 重编；`.so` / `.gdextension` 不入库。
+- **改 `class_name` / 删脚本·场景后刷新 `.godot` 缓存**：跑 `godot --headless --import`（或删 `global_script_class_cache.cfg`），否则 stale class/uid 直接加载失败；`.tres` 的 `uid` 也别手改。
+- **RNG 消耗点显式化 + 固定遍历顺序**：方向表达式 RANDOM/CHANCE 各抽一次、其余 0 次；抽取顺序 = 行遍历顺序 → 同 seed 可复现。热路径不随手 `randf()`。
+- **状态槽按相位自动分配；槽数越界拒绝注册**：`fresh` 标志要「每槽一位」（整行一个 bool 会让同相位多个初始化 unit 互踩）；注册 program 时 `slots > SLOT_STRIDE` 直接拒。
+- **写位置的原语同相位互斥**：`anchor_drift` / `drift` 不可叠加（互相覆盖）；写位置也会盖掉速度积分结果。
+- **preset / builder 不覆写显式开关**：`.enemy()` 别再设 `is_spawn_fog` —— 否则「先 `.no_spawn_fog()` 再 `.enemy()`」被静默翻回去。开关归字段默认或显式 setter，preset 只设它自己的事。
+- **特效是「短命行」不是节点**：批量效果走 SoA + MultiMesh；绝不逐弹 `instantiate + create_tween`（一次清几百颗 = 几百节点 + tween）。
+- **缩放 Node2D 父层会连子节点 `position` 一起缩放**：改尺寸（如 `NumberSprite` 字号）缩**每个实例**，别缩容器层，否则位置跑偏。
+- **GDScript 警告 = 错误**：`project.godot [debug]` 37 条 `=2`，`check_syntax` 全扫 `scripts/data/scenes/test/tools`；警告即失败，别用 `@warning_ignore` 掩盖真问题。
+- **原生 `WARN_PRINT` / `ERR_PRINT` 会被 GUT 记为 Unexpected Errors**：内核遇到可恢复情况**静默返回**（如 `-1`），宿主侧用 GDScript `push_warning`；不要在原生里打日志。
+- **场景期依赖用 `@tool` + `_get_configuration_warnings()`**（运行时注入豁免）；`@tool` 不被子类继承，`_ready` 里的编辑器副作用要 `Engine.is_editor_hint()` 守卫。
+
+---
+
 # STG 品质需求（主轴：做一款好玩的东方弹幕游戏）
 
 > 图例：`[x]` 已落地且有代码证据；`[~]` 部分落地 / 待核；`[ ]` 未做。
