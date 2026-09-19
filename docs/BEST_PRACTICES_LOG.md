@@ -19,6 +19,16 @@
 
 ## 记录
 
+### 2026-09-19 — 练习菜单难度槽解耦：MENU_DIFFS 常量（恢复 4 槽）
+
+- **问题**：`phases → phases_normal` 去回退后，练习菜单的 Easy/Hard/Lunatic 槽消失了 —— 因为 `_candidate_diffs` 拿 `phases_for_difficulty(diff)` 非空来**筛槽位**，旧回退只是掩盖了这层耦合。
+- **做法**：菜单难度槽与「该难度有没有阶段」解耦：
+  - `const MENU_DIFFS: Array[int] = [0, 1, 2, 3]`（普通面标准集合；未来 EX 面只有 Extra → 按 stage 分支 `[4]`）；
+  - 锁定判据 = `无记录 OR 该难度无阶段`（不会出现「解锁了却打不开」）；
+  - `_candidate_diffs` 更名 `_configured_diffs`，只服务「全收变蓝」：全部**已配置**难度收齐才算。
+- **测试**：`test_spell_practice_menu` 原「只定义 Normal → 1 槽」改为「固定 4 槽，其余因无阶段锁定」。
+- **验收**：verify 全绿（458 / 457 pass + 1 pending，4590 asserts）。
+
 ### 2026-09-19 — BossData 难度阶段去回退：phases → phases_normal
 
 - **需求**：`phases` 不再充当各难度的默认回退；改名 `phases_normal`。

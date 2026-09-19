@@ -21,6 +21,11 @@ const CHAR_NAMES = SpellRecord.CHAR_NAMES
 # 练习收取进度色（与符卡记录页同色）：全收正蓝（无中间态，未全收保持灰）
 const CAPTURE_FULL := Color(0.4, 0.7, 1.0)
 
+## 菜单难度槽的**标准集合**（普通面 Easy~Lunatic）。
+## 与 `phases_for_difficulty` 解耦：某难度没配阶段 → 槽仍在，但锁定 `?`、不可选。
+## 未来 EX 面只有 Extra → 按 stage 分支（`MENU_DIFFS_EXTRA = [4]`）。
+const MENU_DIFFS: Array[int] = [0, 1, 2, 3]
+
 
 func diff_name(v: int) -> String:
 	var idx := DIFF_VALUES.find(v)
@@ -187,14 +192,10 @@ func _build_diff_list() -> void:
 	var rec: SpellRecord = info["rec"]
 	var boss: BossData = _boss_for(info)
 
-	# 候选难度 = 花名册里该 Boss 实际配置的难度档（Easy~Lunatic；Extra 是独立一面，暂不列）
-	var candidate := _candidate_diffs(boss)
-	if candidate.is_empty():
-		candidate = info["diffs"].keys()  # 花名册未收录的旧记录 → 回退到已有难度
-		candidate.sort()
-
-	for difficulty in candidate:
-		var is_locked: bool = not info["diffs"].has(difficulty)
+	var configured := _configured_diffs(boss)
+	# 难度槽 = 标准集合（MENU_DIFFS）；「有记录 **且** 该难度有阶段」才可选，否则锁定 ?。
+	for difficulty in MENU_DIFFS:
+		var is_locked: bool = not info["diffs"].has(difficulty) or not configured.has(difficulty)
 		_diff_entries.append({diff = difficulty, is_locked = is_locked})
 
 		# 渲染：锁定 → "?" + 更深灰；解锁 → 名字 + 战绩
@@ -267,7 +268,7 @@ func _make_label(text: String) -> Label:
 ## 全部收 → 2；部分 → 1；无 → 0。锁定 "?" 槽计 0 收取（该难度也收齐才整条蓝）
 func _phase_capture_all(stage: int, boss: int, phase_idx: int, boss_override: BossData = null) -> int:
 	var boss_data: BossData = boss_override if boss_override != null else BossCatalog.boss_of_phase(stage, phase_idx)
-	var candidate: Array = _candidate_diffs(boss_data)
+	var candidate: Array = _configured_diffs(boss_data)
 	if candidate.is_empty():
 		return 0  # 花名册未收录，无法判定
 	var captured := 0
@@ -454,8 +455,8 @@ func _boss_for(info: Dictionary) -> BossData:
 	return BossCatalog.boss_of_phase(info["rec"].stage, info["rec"].phase_index)
 
 
-## 该 Boss 实际配置的难度档（Easy~Lunatic；**不回退**：未配置的难度不出现；Extra 是独立一面，暂不列）
-func _candidate_diffs(boss: BossData) -> Array[int]:
+## 该 Boss **实际配置**的难度档（有阶段的那些；全收判定用；不回退）。
+func _configured_diffs(boss: BossData) -> Array[int]:
 	var out: Array[int] = []
 	for difficulty in [0, 1, 2, 3]:
 		if boss and not boss.phases_for_difficulty(difficulty).is_empty():

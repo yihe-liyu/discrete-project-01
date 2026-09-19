@@ -58,14 +58,17 @@ func test_build_diff_list_shows_configured_slots_locks_unseen():
 	assert_eq(menu._diff_index, 1, "初始索引跳到第一个解锁难度(Normal)")
 
 
-## Boss 只定义 Normal → 只 1 个槽（未配置难度**不回退**）
-func test_build_diff_list_no_unconfigured_slots():
+## 槽位是固定 MENU_DIFFS（4）；Boss 只定义 Normal → 其余因「无阶段」锁定（不回退）
+func test_menu_slots_fixed_unconfigured_locked():
 	var menu = _mk_menu()
 	menu._phases = _mk_phases({1: SpellRecord.new()}, _mk_boss([1]))
 	menu._phase_index = 0
 	menu._build_diff_list()
-	assert_eq(menu._diff_entries.size(), 1, "未配置的难度不出槽")
-	assert_eq(menu._diff_entries[0].diff, 1, "只剩 Normal")
+	assert_eq(menu._diff_entries.size(), 4, "槽位是固定 MENU_DIFFS（4）")
+	assert_eq(menu._diff_entries[1].is_locked, false, "Normal 有阶段且有记录 → 可选")
+	assert_eq(menu._diff_entries[0].is_locked, true, "Easy 无阶段 → 锁定")
+	assert_eq(menu._diff_entries[2].is_locked, true, "Hard 无阶段 → 锁定")
+	assert_eq(menu._diff_entries[3].is_locked, true, "Lunatic 无阶段 → 锁定")
 
 
 ## 锁定槽的名字显示 "?"
