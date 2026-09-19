@@ -20,6 +20,10 @@ const VISUAL_HALF := (1.0 + SHRINK) / 2.0
 ## Capture 相对名字宽度的落点比例。
 const CAPTURE_X_RATIO := 0.6
 
+## 底衬手动微调（单位：屏幕像素；+x 右移 / +y 下移）。
+## 自动位 = 右缘贴父容器右缘 + 在名字上垂直居中；这里只叠加人工偏移（可在 announce_label.tscn 根节点 Inspector 调）。
+@export var background_offset: Vector2 = Vector2.ZERO
+
 var _tween: Tween
 
 @onready var _background: TextureRect = $Background
@@ -104,7 +108,9 @@ func _setup_background(p_background: Texture2D) -> void:
 	var inv := 1.0 / SHRINK
 	_background.size = bg_size
 	_background.scale = Vector2(inv, inv)
-	_background.position = Vector2(size.x - bg_size.x * inv, size.y / 2.0 - bg_size.y * inv / 2.0)
+	# 局部偏移会被父节点 0.6 缩放，所以把"屏幕像素"偏移先除以 SHRINK，保证 1:1 直观。
+	_background.position = Vector2(size.x - bg_size.x * inv, size.y / 2.0 - bg_size.y * inv / 2.0) \
+		+ background_offset / SHRINK
 	_background.modulate.a = 0.0
 
 

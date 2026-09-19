@@ -19,6 +19,13 @@
 
 ## 记录
 
+### 2026-09-19 — BossUI 场景化收尾（R21）+ 底衬位置可手动微调
+
+- **R21 收尾**：`boss_ui.tscn` 声明 `Control/TimerLabel`(Label) + `Control/DotTemplate`(ColorRect)；`boss_ui.gd` 改用 `@onready` 取，阶段点改成 `_dot_template.duplicate()`（数量随 Boss 阶段数变，模板留在场景里），删 `DOT_SIZE`。至此 `boss_ui.gd` 不再有 `.new()` 建树。
+- **底衬手动调**：`AnnounceLabel` 加 `@export var background_offset: Vector2`（单位屏幕像素；+x 右 / +y 下）；`_setup_background` 里 `自动位 + background_offset / SHRINK`（局部偏移会被父节点 0.6 缩放，先除回 1:1）。在 `announce_label.tscn` 根节点 Inspector 调。
+- **测试**：新增 `test_boss_ui.gd`（+2：TimerLabel/DotTemplate 声明在场景、模板隐藏且 16×16）；`test_announce_label.gd` +1（offset 位移 = offset/SHRINK）。
+- **验收**：`./tools/verify.sh` 全绿（**471 / 470 pass + 1 pending，4637 asserts**）。
+
 ### 2026-09-19 — AnnounceLabel 场景化（R21）：子节点挂进 .tscn，不再 new()+add_child
 
 - **来源**：符卡名底衬用代码建 `TextureRect`，被问"为啥节点不是挂 tscn 里的" —— 违反 **R21（声明式建树）**。查历史：`boss_ui.gd` 的 `AnnounceLabel` / `_timer_label` / 阶段点 / 子标签本来就都是 `.new()`，我顺着旧模式做，是错的。
@@ -28,7 +35,7 @@
   - `boss_ui.gd` 用 `ANNOUNCE_SCENE.instantiate()` 替代 `AnnounceLabel.new()`；删 `_add_info_labels`/`_make_sub_label`。
 - **测试**：`test_announce_label.gd` 改为实例化场景；+1 条（子节点声明在场景、播报中隐藏、setter 生效）。渲染探针：名字 + 红底衬 + 金 `59273` + 绿 `00/01` 全部就位。
 - **验收**：`./tools/verify.sh` 全绿（**468 / 467 pass + 1 pending，4630 asserts**）。
-- **余**：`boss_ui.gd` 的 `_timer_label` / 阶段点 `ColorRect` 仍是 `.new()`（数量随 Boss 变，另议）。
+- **余**：`boss_ui.gd` 的 `_timer_label` / 阶段点 `ColorRect` 仍是 `.new()`（后续已在「BossUI 场景化收尾」条目收掉）。
 
 ### 2026-09-19 — 符卡名底衬（AnnounceLabel 可选背景）：同一套 transform，缩回正常后再渐显
 

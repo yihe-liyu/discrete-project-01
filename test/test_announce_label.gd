@@ -76,6 +76,17 @@ func test_background_hidden_when_not_provided() -> void:
 	assert_false(bg.visible, "没传底衬就不显示")
 
 
+func test_background_offset_shifts_position_by_screen_pixels() -> void:
+	var label := _make_label()
+	label.play("音符「定点扩散」", Vector2(768, 896), _make_bg())
+	var bg := label.get_node("Background") as TextureRect
+	var base := bg.position
+	label.background_offset = Vector2(10.0, -6.0)
+	label.play("音符「定点扩散」", Vector2(768, 896), _make_bg())
+	assert_almost_eq(bg.position.x - base.x, 10.0 / AnnounceLabel.SHRINK, 0.001, "x 偏移按屏幕像素（除以 SHRINK）")
+	assert_almost_eq(bg.position.y - base.y, -6.0 / AnnounceLabel.SHRINK, 0.001, "y 偏移按屏幕像素（除以 SHRINK）")
+
+
 func test_info_labels_declared_and_hidden_until_finished() -> void:
 	var label := _make_label()
 	label.play("音符「定点扩散」", Vector2(768, 896))

@@ -6,7 +6,6 @@ const GREEN := Color(0.098, 0.7, 0.198, 1.0)
 const GOLD := Color(0.95, 0.839, 0.475, 1.0)
 const RED := Color(1.0, 0.0, 0.0, 1.0)
 const PURPLE := Color(0.858, 0.5, 1.0, 1.0)
-const DOT_SIZE := 16.0
 ## 符卡名大字报（场景声明式：Label 根 + Background/BonusLabel/CaptureLabel 子节点）。
 const ANNOUNCE_SCENE := preload("res://scenes/ui/announce_label.tscn")
 ## 符卡名底衬（敌方 = 红）。玩家符卡（Bomb 名）用 player_spell_name_background。
@@ -14,13 +13,15 @@ const ENEMY_SPELL_NAME_BG := preload("res://assets/Textures/ascii/enemy_spell_na
 
 @onready var _boss_name: Label = $Control/BossName
 @onready var _history: HBoxContainer = $Control/History
+@onready var _timer_label: Label = $Control/TimerLabel
+## 阶段点模板（场景声明，按下标复制；数量随 Boss 阶段数变化）。
+@onready var _dot_template: ColorRect = $Control/DotTemplate
 
 var _dots: Array[ColorRect] = []
 var _phase_idx: int = 0
 var _announce_label: AnnounceLabel
 var _boss: Boss
 var _boss_hud: BossHud
-var _timer_label: Label
 
 func _ready() -> void:
 	visible = false
@@ -74,11 +75,6 @@ func _on_boss_spawned(boss: Node) -> void:
 		_on_name_visibility_changed(_boss_hud.is_name_shown())
 		_on_phase_dots_visibility_changed(_boss_hud.is_phase_dots_shown())
 
-	if not _timer_label:
-		_timer_label = Label.new()
-		_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_timer_label.add_theme_font_size_override("font_size", 32)
-		$Control.add_child(_timer_label)
 	_timer_label.position = Vector2($Control.size.x / 2.0 - 16, 16)
 	_timer_label.visible = false
 
@@ -86,11 +82,11 @@ func _on_boss_spawned(boss: Node) -> void:
 	_dots.clear()
 	_phase_idx = 0
 
-	for i in range(boss_data.phases_for_difficulty(SaveData.selected_difficulty).size() - 1, -1, -1):
-		var phase: PhaseData = boss_data.phases_for_difficulty(SaveData.selected_difficulty)[i]
-		var dot := ColorRect.new()
-		dot.custom_minimum_size = Vector2(DOT_SIZE, DOT_SIZE)
-		dot.color = GRAY if phase.uid == 0 else GREEN
+	var phases := boss_data.phases_for_difficulty(SaveData.selected_difficulty)
+	for i in range(phases.size() - 1, -1, -1):
+		var dot := _dot_template.duplicate() as ColorRect
+		dot.visible = true
+		dot.color = GRAY if phases[i].uid == 0 else GREEN
 		_history.add_child(dot)
 		_dots.append(dot)
 
