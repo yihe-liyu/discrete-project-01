@@ -19,6 +19,14 @@
 
 ## 记录
 
+### 2026-09-19 — 练习菜单：无可用难度时不落在锁定项（(II) 严格语义收口）
+
+- **确认语义（(II)）**：每个难度必须自己配阶段（`phases_for_difficulty` 不回退）；未配置的难度在菜单里显示为锁定 `?`，不可练。
+- **修 UX**：四个难度槽全锁时（无记录 或 无阶段），`_build_diff_list` 原来把 `_diff_index` 留在 0（Easy 锁定项），按 Z 会在锁定项上警告。改为全锁时 `_diff_index = -1`；`_start_practice` 守卫改成 `_diff_index < 0` → 明确警告「没有任何可用难度」且不开始。
+- **测试**：`test_spell_practice_menu` 加「全锁 → `_diff_index = -1`、按 Z 不开始 / 不改选择」。
+- **内容提醒**：当前只有 `phases_normal` 有阶段 → 只能练 Normal。要练 Easy/Hard/Lunatic 得在 Boss `.tres` 的 `phases_easy/hard/lunatic` 里填阶段。
+- **验收**：verify 全绿（459 / 458 pass + 1 pending，4596 asserts）。
+
 ### 2026-09-19 — 练习菜单难度槽解耦：MENU_DIFFS 常量（恢复 4 槽）
 
 - **问题**：`phases → phases_normal` 去回退后，练习菜单的 Easy/Hard/Lunatic 槽消失了 —— 因为 `_candidate_diffs` 拿 `phases_for_difficulty(diff)` 非空来**筛槽位**，旧回退只是掩盖了这层耦合。

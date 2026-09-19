@@ -138,6 +138,20 @@ func test_phase_capture_all_requires_all_configured_slots():
 	SaveData.spell_book = original_book  # 还原
 
 
+## 四个槽全锁（无记录 或 无阶段）→ 无可选难度（_diff_index = -1），按 Z 不开始
+func test_all_locked_has_no_selectable_diff():
+	SaveData.selected_difficulty = 1
+	var menu = _mk_menu()
+	# 只有 Normal 有阶段，且没有任何记录 → 全锁
+	menu._phases = _mk_phases({}, _mk_boss([1]))
+	menu._phase_index = 0
+	menu._build_diff_list()
+	assert_eq(menu._diff_entries.size(), 4, "固定 4 槽")
+	assert_eq(menu._diff_index, -1, "全锁 → 无可选难度")
+	menu._start_practice()
+	assert_eq(SaveData.selected_difficulty, 1, "全锁时按 Z 不应开始/改选择")
+
+
 ## 锁定难度不可开始练习
 func test_start_practice_guard_locked():
 	SaveData.selected_difficulty = 1

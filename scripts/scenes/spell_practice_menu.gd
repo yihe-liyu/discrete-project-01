@@ -185,6 +185,7 @@ func _build_phase_list() -> void:
 func _build_diff_list() -> void:
 	_clear(_diff_box)
 	_diff_entries.clear()
+	_diff_index = -1   # 无可用难度时保持 -1（不可开始）
 	if _phase_index >= _phases.size():
 		return
 
@@ -573,8 +574,8 @@ func _start_practice() -> void:
 	if _phase_index >= _phases.size():
 		push_warning("SpellPractice: 未选中阶段（_phases=%d）——练习未开始" % _phases.size())
 		return
-	if _diff_entries.is_empty() or _diff_index >= _diff_entries.size():
-		push_warning("SpellPractice: 难度表为空或索引越界（entries=%d index=%d）——练习未开始" % [_diff_entries.size(), _diff_index])
+	if _diff_index < 0 or _diff_index >= _diff_entries.size():
+		push_warning("SpellPractice: 该阶段没有任何可用难度（未解锁或未配置阶段）——练习未开始")
 		return
 	var entry: Dictionary = _diff_entries[_diff_index]
 	if entry.is_locked:
