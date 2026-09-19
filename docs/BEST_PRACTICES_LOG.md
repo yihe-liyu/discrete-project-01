@@ -19,6 +19,16 @@
 
 ## 记录
 
+### 2026-09-19 — 符卡名底衬（AnnounceLabel 可选背景）：同一套 transform，缩回正常后再渐显
+
+- **需求**：符卡名背后加底衬；底衬从名字的大小缩放至正常，**路径与名字一致**（同缩放 / 同轨迹），右缘贴边，之后再渐显。
+- **做法（`scripts/components/announce_label.gd`）**：`play(text, parent_size, background := null)` 加可选底衬。底衬 = `TextureRect` **子节点**（`show_behind_parent = true`、尺寸 = 名字布局框）—— 随父节点的 position/scale/pivot 一起动，**路径与右缘天然一致**，不用复制一套 tween。`modulate.a` 初始 0，在 `HOLD` 之后与第一段滑出并行渐显（`BG_FADE = 0.35s`）。
+- **接线（`scripts/scenes/boss_ui.gd`）**：`ENEMY_SPELL_NAME_BG = preload(.../enemy_spell_name_background.png)`；玩家符卡（Bomb 名）以后用 `player_spell_name_background.png`（本次只入库，未接线）。
+- **素材**：`assets/Textures/ascii/{enemy,player}_spell_name_background.png`（各 400×63 RGBA；敌方红 / 玩家青）。
+- **测试**：`test/test_announce_label.gd` +2（夹具 `PlaceholderTexture2D`）：有底衬 → 挂 `Background` 子节点 + `show_behind_parent` + 尺寸 = 名字布局框 + 初始 alpha 0；无底衬 → 不挂。
+- **验收**：`./tools/verify.sh` 全绿（**467 / 466 pass + 1 pending，4619 asserts**）。
+- **⚠ 待人工验收**：实机看底衬渐显时机 / 尺寸；不合适先调 `BG_FADE` 或换底衬贴图。
+
 ### 2026-09-19 — 修符卡名右缘越界（AnnounceLabel 绕中心 pivot 缩放）
 
 - **现象**：符卡名「音符「定点扩散」」右侧被齐刷刷切掉，收取数只露 `00`。

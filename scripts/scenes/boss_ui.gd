@@ -7,6 +7,8 @@ const GOLD := Color(0.95, 0.839, 0.475, 1.0)
 const RED := Color(1.0, 0.0, 0.0, 1.0)
 const PURPLE := Color(0.858, 0.5, 1.0, 1.0)
 const DOT_SIZE := 16.0
+## 符卡名底衬（敌方 = 红）。玩家符卡（Bomb 名）用 player_spell_name_background。
+const ENEMY_SPELL_NAME_BG := preload("res://assets/Textures/ascii/enemy_spell_name_background.png")
 
 @onready var _boss_name: Label = $Control/BossName
 @onready var _history: HBoxContainer = $Control/History
@@ -155,7 +157,7 @@ func _play_spell_announce(spell_name: String) -> void:
 	_announce_label = AnnounceLabel.new()
 	$Control.add_child(_announce_label)
 	_announce_label.finished.connect(_add_info_labels, CONNECT_ONE_SHOT)
-	_announce_label.play(spell_name, $Control.size)
+	_announce_label.play(spell_name, $Control.size, ENEMY_SPELL_NAME_BG)
 
 
 func _add_info_labels() -> void:

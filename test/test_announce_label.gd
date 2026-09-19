@@ -29,3 +29,28 @@ func test_rest_x_moves_left_as_label_grows() -> void:
 	var long_x := AnnounceLabel.rest_x(parent_w, 384.0)
 	assert_true(long_x < short_x, "名字越长落点越靠左（右缘固定）")
 	assert_almost_eq(short_x - long_x, 192.0 * AnnounceLabel.VISUAL_HALF, 0.001)
+
+
+## 底衬夹具：400×63 占位纹理（不碰真实素材）。
+func _make_bg() -> Texture2D:
+	var tex := PlaceholderTexture2D.new()
+	tex.size = Vector2(400.0, 63.0)
+	return tex
+
+
+func test_background_is_behind_label_and_matches_size() -> void:
+	var label := AnnounceLabel.new()
+	add_child_autofree(label)
+	label.play("音符「定点扩散」", Vector2(768, 896), _make_bg())
+	var bg := label.get_node_or_null("Background") as TextureRect
+	assert_not_null(bg, "给了底衬就挂 Background 子节点")
+	assert_true(bg.show_behind_parent, "底衬画在文字之后（背后）")
+	assert_eq(bg.size, label.size, "底衬尺寸 = 名字布局框，随名字缩放/路径一起动")
+	assert_eq(bg.modulate.a, 0.0, "初始透明，缩回正常后再渐显")
+
+
+func test_no_background_node_when_not_provided() -> void:
+	var label := AnnounceLabel.new()
+	add_child_autofree(label)
+	label.play("音符「定点扩散」", Vector2(768, 896))
+	assert_null(label.get_node_or_null("Background"), "没给底衬就不挂子节点")
