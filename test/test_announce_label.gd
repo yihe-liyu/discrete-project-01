@@ -45,7 +45,11 @@ func test_background_is_behind_label_and_matches_size() -> void:
 	var bg := label.get_node_or_null("Background") as TextureRect
 	assert_not_null(bg, "给了底衬就挂 Background 子节点")
 	assert_true(bg.show_behind_parent, "底衬画在文字之后（背后）")
-	assert_eq(bg.size, label.size, "底衬尺寸 = 名字布局框，随名字缩放/路径一起动")
+	# 夹具贴图 400×63 → 等比缩放，不被名字框拉伸变形
+	var tex_aspect := 400.0 / 63.0
+	assert_almost_eq(bg.size.x / bg.size.y, tex_aspect, 0.001, "底衬等比缩放，不拉伸")
+	assert_almost_eq(bg.position.x + bg.size.x, label.size.x, 0.001, "底衬右缘贴名字布局框右缘")
+	assert_true(bg.size.y <= label.size.y, "底衬内接在名字框内（垂直居中）")
 	assert_eq(bg.modulate.a, 0.0, "初始透明，缩回正常后再渐显")
 
 

@@ -71,8 +71,8 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) 
 	_tween.tween_callback(finished.emit)
 
 
-## 底衬设定：作为子节点，随名字的 position / scale / pivot 一起动（路径与右缘天然一致），
-## 尺寸 = 名字布局框；初始透明，等名字缩回正常后由 play() 的 tween 渐显。
+## 底衬设定：作为子节点，随名字的 position / scale / pivot 一起动（路径与右缘天然一致）。
+## 贴图**等比**缩放到名字宽度（不拉伸），右缘对齐、垂直居中；初始透明，缩回正常后渐显。
 func _setup_background(p_background: Texture2D) -> void:
 	if p_background == null:
 		if _background and is_instance_valid(_background):
@@ -88,8 +88,13 @@ func _setup_background(p_background: Texture2D) -> void:
 		_background.show_behind_parent = true
 		add_child(_background)
 	_background.texture = p_background
-	_background.position = Vector2.ZERO
-	_background.size = size
+	# 不拉伸：按贴图原始纵横比等比缩放到名字宽（必要时受高限制内接），右缘对齐、垂直居中。
+	var tex_size := p_background.get_size()
+	var tex_aspect := tex_size.x / tex_size.y
+	var bg_w := minf(size.x, size.y * tex_aspect)
+	var bg_h := bg_w / tex_aspect
+	_background.size = Vector2(bg_w, bg_h)
+	_background.position = Vector2(size.x - bg_w, (size.y - bg_h) / 2.0)
 	_background.modulate.a = 0.0
 
 
