@@ -1,13 +1,16 @@
-[gd_resource type="Resource" script_class="BossData" format=3]
+[gd_resource type="Resource" script_class="BossData" format=3 uid="uid://dq2g8i0mi74ps"]
 
-[ext_resource type="Script" path="res://scripts/data/phase_data.gd" id="1_bcyec"]
-[ext_resource type="Resource" path="res://data/stages/stage01/phase/non_mid01/non_mid01.tres" id="2_6yhxn"]
-[ext_resource type="Script" path="res://scripts/data/boss_data.gd" id="3_lyeae"]
-[ext_resource type="PackedScene" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="4_a0au4"]
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_bcyec"]
+[ext_resource type="Resource" uid="uid://c3x1nl4wb0g4t" path="res://data/stages/stage01/phase/non_mid01/non_mid01.tres" id="2_6yhxn"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="3_lyeae"]
+[ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="4_a0au4"]
 
 [resource]
 script = ExtResource("3_lyeae")
 boss_name = "卡摩瑞"
 visual = ExtResource("4_a0au4")
+phases_easy = Array[ExtResource("1_bcyec")]([ExtResource("2_6yhxn")])
 phases_normal = Array[ExtResource("1_bcyec")]([ExtResource("2_6yhxn")])
+phases_hard = Array[ExtResource("1_bcyec")]([ExtResource("2_6yhxn")])
+phases_lunatic = Array[ExtResource("1_bcyec")]([ExtResource("2_6yhxn")])
 stage_id = 1

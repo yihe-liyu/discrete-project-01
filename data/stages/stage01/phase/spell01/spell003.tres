@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://dd0pjxy0pqyia"]
+
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="1_m1xia"]
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="2_q4n8o"]
+[ext_resource type="Script" uid="uid://b34glmw1ck5oe" path="res://data/stages/stage01/phase/spell01/spell001_shoot.gd" id="3_ugqt8"]
+
+[resource]
+script = ExtResource("2_q4n8o")
+name = "递符「定向传播」"
+uid = 3
+bonus = 100000
+time_limit = 40.0
+hp = 4000
+move_script = ExtResource("1_m1xia")
+shoot_script = ExtResource("3_ugqt8")
+item_power = 25
+item_point = 25
+item_life = 1
+item_bomb = 1
+open_reduce_time = 3.0
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

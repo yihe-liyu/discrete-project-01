@@ -1,14 +1,21 @@
-[gd_resource type="Resource" script_class="BossData" format=3]
+[gd_resource type="Resource" script_class="BossData" format=3 uid="uid://gneeoatjau0d"]
 
-[ext_resource type="Script" path="res://scripts/data/phase_data.gd" id="1_c5a1y"]
-[ext_resource type="Resource" path="res://data/stages/stage01/phase/non01/non01.tres" id="2_qq83s"]
-[ext_resource type="Script" path="res://scripts/data/boss_data.gd" id="3_5omdd"]
-[ext_resource type="PackedScene" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="4_xogok"]
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_c5a1y"]
+[ext_resource type="Resource" uid="uid://dkrc5pv86snk1" path="res://data/stages/stage01/phase/non01/non01.tres" id="2_qq83s"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="3_5omdd"]
+[ext_resource type="Resource" uid="uid://u2yvwos7wamo" path="res://data/stages/stage01/phase/spell01/spell001.tres" id="3_bljwk"]
+[ext_resource type="Resource" uid="uid://dd0pjxy0pqyia" path="res://data/stages/stage01/phase/spell01/spell003.tres" id="4_puh73"]
+[ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="4_xogok"]
+[ext_resource type="Resource" uid="uid://dq20re3h68ysf" path="res://data/stages/stage01/phase/spell01/spell004.tres" id="5_3jgpc"]
+[ext_resource type="Resource" uid="uid://cok8dc7atvl2w" path="res://data/stages/stage01/phase/spell01/spell002.tres" id="6_0p2ar"]
 
 [resource]
 script = ExtResource("3_5omdd")
 boss_name = "卡摩瑞"
 visual = ExtResource("4_xogok")
-phases_normal = Array[ExtResource("1_c5a1y")]([ExtResource("2_qq83s")])
+phases_easy = Array[ExtResource("1_c5a1y")]([ExtResource("2_qq83s"), ExtResource("3_bljwk")])
+phases_normal = Array[ExtResource("1_c5a1y")]([ExtResource("2_qq83s"), ExtResource("6_0p2ar")])
+phases_hard = Array[ExtResource("1_c5a1y")]([ExtResource("2_qq83s"), ExtResource("4_puh73")])
+phases_lunatic = Array[ExtResource("1_c5a1y")]([ExtResource("2_qq83s"), ExtResource("5_3jgpc")])
 stage_id = 1
 order = 1

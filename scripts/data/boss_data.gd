@@ -6,8 +6,8 @@ class_name BossData
 @export var visual: PackedScene
 ## 阶段列表：各难度**独立数组，互不回退**（某难度空 = 该难度无阶段）。
 ## 难度档：0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra（对应 SpellRecord.Difficulty）
-@export var phases_normal: Array[PhaseData] = []
 @export var phases_easy: Array[PhaseData] = []
+@export var phases_normal: Array[PhaseData] = []
 @export var phases_hard: Array[PhaseData] = []
 @export var phases_lunatic: Array[PhaseData] = []
 @export var phases_extra: Array[PhaseData] = []

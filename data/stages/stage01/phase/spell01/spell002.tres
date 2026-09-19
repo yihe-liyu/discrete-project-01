@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://cok8dc7atvl2w"]
+
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="1_u2reh"]
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="2_liyt6"]
+[ext_resource type="Script" uid="uid://b34glmw1ck5oe" path="res://data/stages/stage01/phase/spell01/spell001_shoot.gd" id="3_gmon3"]
+
+[resource]
+script = ExtResource("2_liyt6")
+name = "音符「定点扩散」"
+uid = 2
+bonus = 100000
+time_limit = 40.0
+hp = 4000
+move_script = ExtResource("1_u2reh")
+shoot_script = ExtResource("3_gmon3")
+item_power = 25
+item_point = 25
+item_life = 1
+item_bomb = 1
+open_reduce_time = 3.0
+metadata/_custom_type_script = "uid://70htyyc4o2hu"
