@@ -18,6 +18,24 @@
 
 ## 记录
 
+### 2026-09-19 — 弹雾回归 + 特效统一（A2）：EffectType / 逐行 fx_type / 纯特效行
+
+- **背景**：参考内核（重建版）里「发弹预告」与「消弹消散」本是**同一套** —— `EffectType` + 逐行 `_fx_type` + `spawn_fx()` 纯特效行 + 一个渲染器。主项目原生迁移只搬了 `_fx` 相位（冻结），丢了 `_fx_type` + 纯特效行 + 特效渲染 → 弹雾整个消失，消弹退回宿主 `EnemyBulletClear` 节点 + `create_tween`。
+- **判据**：特效是**短命行**不是节点；同一份描述符要能同时表达出生雾与消散；效果必须走 SoA + MultiMesh 批量，不能逐弹 `instantiate + create_tween`。
+- **做法**：
+  - C++ `DanmakuStore`：加逐行 `_fx_type` 列（`set_fx_type/get_fx_type_indices`）+ `spawn_fx(fx_type, pos, color, faction, life)` —— 纯特效行 `_type=-1`、无速度、寿命=相位；`setup/spawn/spawn_batch/_ensure_capacity/_swap_remove` 同步。
+  - C++ `_run_behavior_pass`：补 `if (_fx[i] > 0) continue;` —— **相位内的弹不跑行为**（与参照 `behavior_processor.gd` 一致）。此前 `_fx` 恒 0，该缺口从没暴露；出生雾一开就现形（冻结期行为照跑、速度被改、还会提前 emit）。
+  - C++ `DanmakuRenderBridge`：加特效表 `set_fx_table(tex_key/duration/scale_from/to/alpha_from/to/tint_mode)`；`group()` 按行 `fx_type` + 相位把弹与特效**分流**（特效键置高位命名空间，与弹键永不相撞）；新增 `fill_fx()`（带缩放 + alpha 淡出）。
+  - `EffectType`：`key`(atlas) → `texture`；加 `alpha_from/alpha_to`。落 `data/fx/enemy_spawn_fx.tres`（弹雾.png，2.0→0.5 / 0.3s）、`data/fx/enemy_clear_fx.tres`（消弹.png，1.0→0.2 / 0.2s）。
+  - `BulletType`：加 `is_spawn_fog`（逐弹型开关，默认 true）+ `spawn_fx`（逐弹型覆盖）；`BulletData` 加 `.with_spawn_fog()` / `.no_spawn_fog()`，删死字段 `fog_texture`。
+  - `KernelNativeSystem`：`_fx_registry` + `spawn_fx()` + 快照 `_fx_type_index`；`BulletManager._enable_kernel` 里 `set_spawn_fx(ENEMY, 发弹特效)`（阵营默认，改一处全变）。
+  - `KernelBulletPhysics`：`_play_clear` 从 `fx_pool.play(EnemyBulletClear)` 改为 `system.spawn_fx(消弹特效)`（提亮 1.5x 保留）；`sweep_enemy_bullets` 改成「先收集 / 回收，再统一发消散」——`spawn_fx` 向池尾追加，边遍历边追加会打乱 swap-with-last 的倒序前提。**雾中的弹同样进清场**（直接从发弹特效切成消散）。
+  - `BulletMultiMesh`：弹 / 特效两路建组，共用 `bullet_batch.gdshader`（BLEND 分支的灰度混合 `mix(COLOR.rgb, white, gray)` 就是原雾 shader 的算法，无需新 shader）；特效组 z=`LayerConfig.EFFECT`。
+- **删**：`scripts/effect/enemy_bullet_clear.gd`(+.uid)、`scenes/effect/enemy_bullet_clear.tscn`、`gdshader/bullet_fog_blend.gdshader`(+.uid)（`bullet_batch` BLEND 已覆盖）、`BulletData.fog_texture`、`AssetRegistry.FOG_TEXTURE`（纹理改由 `.tres` 直接引用）。
+- **语义变化（重要）**：阵营默认打开后 **所有敌弹出生冻结 0.3s**（= 旧项目 `.enemy()` 即 `is_spawn_fog=true` 的原始语义）。不想给某型弹预告就 `is_spawn_fog=false` / `.no_spawn_fog()`。
+- **测试影响**：清弹类测试改为统计「真弹」（按 `get_type_indices() >= 0` 排除纯特效行）；`test_native_laser_anchor` 的激光段加 `.no_spawn_fog()`（该用例只验锚点）。新增 `test/test_spawn_fx.gd`（原生冻结/到期、阵营默认 + 逐弹开关、清弹切特效、渲染桥分流）。
+- **验收**：`./tools/verify.sh` → check_syntax 301 / check_naming 0 / 启动零错 / GUT 全绿。
+
 ### 2026-09-18 — 关 E1（R3）：场景期依赖自文档（@tool + _get_configuration_warnings）
 
 - **判据**：R3 只覆盖**场景期外部依赖**（运行时注入豁免）。全项目真正的场景期 `@export` 引用只有 2 处：`nav_page.container_path`（空/无效 → 导航静默 no-op）、`game_over_menu.title_label`（null → 标题静默不更新）。

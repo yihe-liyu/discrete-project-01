@@ -50,6 +50,10 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("despawn", "id"), &DanmakuStore::despawn);
 	ClassDB::bind_method(D_METHOD("set_life", "id", "life"), &DanmakuStore::set_life);
 	ClassDB::bind_method(D_METHOD("set_fx", "id", "fx"), &DanmakuStore::set_fx);
+	ClassDB::bind_method(D_METHOD("set_fx_type", "id", "fx_type"), &DanmakuStore::set_fx_type);
+	ClassDB::bind_method(D_METHOD("get_fx_type", "id"), &DanmakuStore::get_fx_type);
+	ClassDB::bind_method(D_METHOD("get_fx_type_indices"), &DanmakuStore::get_fx_type_indices);
+	ClassDB::bind_method(D_METHOD("spawn_fx", "fx_type", "pos", "color", "faction", "life"), &DanmakuStore::spawn_fx);
 	ClassDB::bind_method(D_METHOD("set_timer", "id", "timer"), &DanmakuStore::set_timer);
 	ClassDB::bind_method(D_METHOD("set_velocity", "id", "vel"), &DanmakuStore::set_velocity);
 	ClassDB::bind_method(D_METHOD("set_position", "id", "pos"), &DanmakuStore::set_position);
@@ -76,6 +80,7 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_hy.assign(p_capacity, 0.0f);
 	_type.assign(p_capacity, 0);
 	_faction.assign(p_capacity, 0);
+	_fx_type.assign(p_capacity, -1);
 	_color.assign(p_capacity, Color(1, 1, 1, 1));
 	_life.assign(p_capacity, 0.0f);
 	_fx.assign(p_capacity, 0.0f);
@@ -115,6 +120,7 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	{ const Vector2 h = p_vel == Vector2() ? Vector2(0, 1) : p_vel.normalized(); _hx[i] = h.x; _hy[i] = h.y; }
 	_type[i] = p_type;
 	_faction[i] = p_faction;
+	_fx_type[i] = -1;
 	_color[i] = p_color;
 	_life[i] = _default_life;
 	_fx[i] = 0.0f;
@@ -155,6 +161,7 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		{ const Vector2 h = vel == Vector2() ? Vector2(0, 1) : vel.normalized(); _hx[i] = h.x; _hy[i] = h.y; }
 		_type[i] = k < p_type.size() ? p_type[k] : 0;
 		_faction[i] = k < p_faction.size() ? p_faction[k] : 0;
+		_fx_type[i] = -1;
 		_color[i] = k < p_color.size() ? p_color[k] : Color(1, 1, 1, 1);
 		_life[i] = _default_life;
 		_fx[i] = 0.0f;
@@ -179,6 +186,44 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 	return added;
 }
 
+// 纯特效行：无弹型（_type=-1）、无速度、无碰撞；寿命 = 相位 = p_life，到期由 integrate 回收。
+// faction 只用于渲染分批（特效行没有弹型，阵营只能由调用方给）。
+int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_color, int p_faction, float p_life) {
+	_grid_dirty = true;
+	if (_count >= _capacity) {
+		_ensure_capacity(_count + 1);
+	}
+	const int i = _count;
+	_x[i] = p_pos.x;
+	_y[i] = p_pos.y;
+	_vx[i] = 0.0f;
+	_vy[i] = 0.0f;
+	_hx[i] = 0.0f;
+	_hy[i] = 1.0f;
+	_type[i] = -1;
+	_faction[i] = p_faction;
+	_fx_type[i] = p_fx_type;
+	_color[i] = p_color;
+	_life[i] = p_life;
+	_fx[i] = p_life;
+	_timer[i] = 0.0f;
+	_program[i] = -1;
+	_pphase[i] = 0;
+	_ptick[i] = 0;
+	_pelapsed[i] = 0.0f;
+	_pnext[i] = 0.0f;
+	_pendx[i] = 0.0f;
+	_pendy[i] = 0.0f;
+	_pslot_fresh[i] = 0xFFFFFFFFu;
+	_phasend[i] = 0;
+	for (int s = 0; s < SLOT_STRIDE; ++s) { _pslots[i * SLOT_STRIDE + s] = 0.0f; }
+	_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
+	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
+	_grazed[i] = 0;
+	_render_rot[i] = (float)NAN;
+	return _count++;
+}
+
 // 按需扩容内部向量（behavior_batch 无状态入口用：桥接侧不调 setup，_capacity 可能为 0）。
 void DanmakuStore::_ensure_capacity(int p_n) {
 	if (p_n <= _capacity) {
@@ -187,7 +232,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_capacity = p_n;
 	_x.resize(p_n); _y.resize(p_n); _vx.resize(p_n); _vy.resize(p_n);
 	_hx.resize(p_n); _hy.resize(p_n);
-	_type.resize(p_n); _faction.resize(p_n); _color.resize(p_n);
+	_type.resize(p_n); _faction.resize(p_n); _fx_type.resize(p_n); _color.resize(p_n);
 	_life.resize(p_n); _fx.resize(p_n); _timer.resize(p_n);
 	_program.resize(p_n); _pphase.resize(p_n); _ptick.resize(p_n);
 	_pelapsed.resize(p_n); _pnext.resize(p_n); _pendx.resize(p_n); _pendy.resize(p_n);
@@ -213,6 +258,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_hy[p_id] = _hy[last];
 	_type[p_id] = _type[last];
 	_faction[p_id] = _faction[last];
+	_fx_type[p_id] = _fx_type[last];
 	_color[p_id] = _color[last];
 	_life[p_id] = _life[last];
 	_fx[p_id] = _fx[last];
@@ -296,6 +342,14 @@ int DanmakuStore::despawn(int p_id) {
 
 void DanmakuStore::set_life(int p_id, float p_life) { _life[p_id] = p_life; }
 void DanmakuStore::set_fx(int p_id, float p_fx) { _fx[p_id] = p_fx; }
+void DanmakuStore::set_fx_type(int p_id, int p_fx_type) { _fx_type[p_id] = p_fx_type; }
+int DanmakuStore::get_fx_type(int p_id) const { return _fx_type[p_id]; }
+PackedInt32Array DanmakuStore::get_fx_type_indices() const {
+	PackedInt32Array out;
+	out.resize(_count);
+	for (int i = 0; i < _count; ++i) { out[i] = _fx_type[i]; }
+	return out;
+}
 void DanmakuStore::set_timer(int p_id, float p_timer) { _timer[p_id] = p_timer; }
 void DanmakuStore::set_velocity(int p_id, const Vector2 &p_vel) { _vx[p_id] = p_vel.x; _vy[p_id] = p_vel.y; }
 void DanmakuStore::set_position(int p_id, const Vector2 &p_pos) {
@@ -839,6 +893,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 	const int phase_total = _p_move_start.size();
 	for (int i = 0; i < _count; ++i) {
 		_render_rot[i] = (float)NAN;   // V19：每帧重置；只有 position(render_heading) 会设它
+		if (_fx[i] > 0.0f) { continue; }   // 出生相位：只画特效，不跑行为（与参照 behavior_processor 一致）
 		const int prog = _program[i];
 		if (prog < 0) { continue; }
 		const int base = _p_phase_base[prog];

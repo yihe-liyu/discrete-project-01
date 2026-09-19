@@ -28,7 +28,17 @@ class DanmakuRenderBridge : public RefCounted {
 	PackedByteArray _follow_dir;
 	PackedFloat32Array _dir_offset;
 
+	// 特效表（发弹/消弹共用；行 fx_type 指向它）
+	PackedInt64Array _fx_tex_key;      // 特效贴图 RID id；-1 = 不画
+	PackedFloat32Array _fx_duration;
+	PackedFloat32Array _fx_scale_from;
+	PackedFloat32Array _fx_scale_to;
+	PackedFloat32Array _fx_alpha_from;
+	PackedFloat32Array _fx_alpha_to;
+	PackedInt32Array _fx_tint_mode;
+
 	std::unordered_map<int64_t, std::vector<int>> _buckets;
+	std::unordered_map<int64_t, std::vector<int>> _fx_buckets;
 
 protected:
 	static void _bind_methods();
@@ -36,9 +46,12 @@ protected:
 public:
 	void set_type_table(const PackedInt64Array &p_tex_key_base, const PackedInt32Array &p_tint_mode, const PackedInt32Array &p_kind, const PackedByteArray &p_follow_dir, const PackedFloat32Array &p_dir_offset);
 	int get_type_count() const;
-	// 返回 {keys:PackedInt64Array, starts:PackedInt32Array, rows/rots/alphas: Packed*}
-	Dictionary group(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedColorArray &p_colors, const PackedInt32Array &p_type_indices, const PackedByteArray &p_factions, const PackedFloat32Array &p_fade_by_kind, const PackedFloat32Array &p_render_rots = PackedFloat32Array());
+	void set_fx_table(const PackedInt64Array &p_tex_key, const PackedFloat32Array &p_duration, const PackedFloat32Array &p_scale_from, const PackedFloat32Array &p_scale_to, const PackedFloat32Array &p_alpha_from, const PackedFloat32Array &p_alpha_to, const PackedInt32Array &p_tint_mode);
+	int get_fx_type_count() const;
+	// 返回 {keys/starts/rows/rots/alphas: 弹} + {fx_keys/fx_starts/fx_rows/fx_rots/fx_alphas/fx_scales: 特效}
+	Dictionary group(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedColorArray &p_colors, const PackedInt32Array &p_type_indices, const PackedByteArray &p_factions, const PackedFloat32Array &p_fade_by_kind, const PackedFloat32Array &p_render_rots = PackedFloat32Array(), const PackedFloat32Array &p_fx_phases = PackedFloat32Array(), const PackedInt32Array &p_fx_type_indices = PackedInt32Array());
 	void fill(const Ref<MultiMesh> &p_mm, const PackedVector2Array &p_positions, const PackedColorArray &p_colors, const PackedInt32Array &p_rows, const PackedFloat32Array &p_rots, const PackedFloat32Array &p_alphas, int p_start, int p_count) const;
+	void fill_fx(const Ref<MultiMesh> &p_mm, const PackedVector2Array &p_positions, const PackedColorArray &p_colors, const PackedInt32Array &p_rows, const PackedFloat32Array &p_rots, const PackedFloat32Array &p_alphas, const PackedFloat32Array &p_scales, int p_start, int p_count) const;
 
 	DanmakuRenderBridge();
 	~DanmakuRenderBridge();

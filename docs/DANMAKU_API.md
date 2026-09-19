@@ -71,8 +71,8 @@ func _tick(p_ctx: StageContext) -> Variant:
 | hitbox_rotation | float | 0.0 | 矩形判定旋转（弧度） |
 | hit_effect | PackedScene | null | 命中特效场景 |
 | hit_sfx | String | "" | 命中音效 key（`AssetRegistry.sounds`；空=normal_damage） |
-| is_spawn_fog | bool | false | 是否播弹雾 |
-| fog_texture | Texture2D | null | 弹雾贴图（`tex()` 自动填） |
+| is_spawn_fog | bool | false | 是否播出生雾（`.enemy()` 置真；`.no_spawn_fog()` 关） |
+| spawn_fx | EffectType | null | 这型的出生特效（null=用阵营默认） |
 | out_grace | float | 0.0 | 出界宽限秒（出界后仍活这么久；0=立即回收） |
 | lifecycle | BulletLifecycle | null | 弹道描述符（**推荐主路**） |
 | lifecycle_anchor | Variant | null | per-shot 锚点 `{id, offset, use_global}`（激光用） |
@@ -85,13 +85,15 @@ func _tick(p_ctx: StageContext) -> Variant:
 
 | 方法 | 作用 |
 |---|---|
-| `.tex(key)` | 设贴图 + **自动按 `bullet_configs` 配判定** + 弹雾贴图。**key 必须来自 `7.1 表** |
+| `.tex(key)` | 设贴图 + **自动按 `bullet_configs` 配判定**。**key 必须来自 `7.1 表** |
 | `.speed(v)` | 速度大小（`velocity.y = v`，长度 = v） |
 | `.dir(x, y)` | 直接设 velocity（方向+速度）—— 只在 `shoot_spread` 传 `ZERO` 方向时才用得上 |
 | `.color(c)` | 染色 |
 | `.blend(true)` | 用 BLEND 混合（敌弹换色用；默认 MULTIPLY） |
-| `.enemy()` | 敌弹：faction=ENEMY、可被清、出弹雾 |
+| `.enemy()` | 敌弹：faction=ENEMY、可被清、出弹雾（可用 `.no_spawn_fog()` 关） |
 | `.player()` | 自机弹：faction=PLAYER、damage=10 |
+| `.with_spawn_fog(effect)` | 打开/换出生雾（effect 空 = 阵营默认） |
+| `.no_spawn_fog()` | 关掉出生雾：这型弹直接出现 |
 | `.bomb()` | 炸弹弹（走宿主节点） |
 | `.trajectory(lc, anchor)` | **挂描述符**（主路） |
 | `.grace(v)` | out_grace |

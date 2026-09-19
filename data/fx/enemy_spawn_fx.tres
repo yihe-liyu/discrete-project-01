@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EffectType" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_type.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/Textures/bullet/弹雾.png" id="2_texture"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"enemy_spawn_fx"
+texture = ExtResource("2_texture")
+duration = 0.3
+scale_from = 2.0
+scale_to = 0.5
+alpha_from = 1.0
+alpha_to = 0.0
+tint_mode = 1

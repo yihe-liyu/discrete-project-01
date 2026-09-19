@@ -80,7 +80,7 @@
 > - **不会（只靠枚举或被数据引用） → 内容槽 → 中文可读标签 OK**。
 > - **机制层代码（`scripts/**`）引用内容 → 只能走三种落点**：数据资源 `@export` / 场景装配（`.tscn` 给 `@export` 赋值）/ 内容脚本（`data/**`），不得写死路径/key。
 > - **跨层字符串 key**（数据里存、代码表里查）：默认归标识符 → ASCII；除非其定义表本身已迁为内容资源。
-> - **明确豁免 · `AssetRegistry`（2026-09-18 立）**：`scripts/asset_registry.gd` 是**内容槽的代码侧索引表**（`bullet_configs` / `enemy_visuals` / `sounds` / `FOG_TEXTURE` / `BGM_PATHS`），其 `res://` 与中文 key 属**内容槽引用**、非机制标识符 → 当前**合规豁免**。**退役条件**：随 S13 图集 + 数据化（`F7`：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁入 `data/**`；迁完一表即**移除该表豁免**，全表迁完豁免终止。
+> - **明确豁免 · `AssetRegistry`（2026-09-18 立）**：`scripts/asset_registry.gd` 是**内容槽的代码侧索引表**（`bullet_configs` / `enemy_visuals` / `sounds` / `BGM_PATHS`），其 `res://` 与中文 key 属**内容槽引用**、非机制标识符 → 当前**合规豁免**。**退役条件**：随 S13 图集 + 数据化（`F7`：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁入 `data/**`；迁完一表即**移除该表豁免**，全表迁完豁免终止。
 
 > - **明确豁免 · `assets/` 素材根目录（2026-09-18 立）**：`assets/Textures` / `assets/Music` / `assets/Sound` 三个**内容素材根目录**保留 PascalCase —— 改名 = 3 目录 + ~236 处路径（含 137 条 `.import`）+ 全量重导入，收益仅「字面合规」；与「`AssetRegistry` 内容槽索引表」同源。
 
@@ -176,7 +176,7 @@
 ## S4. 弹幕可读性与公平（readability & fairness）
 状态：🚧 ｜ 适用红线：R2, R10, R17
 - [x] 弹型/颜色语义一致（敌弹颜色 vs 自机弹），背景/雾不吞弹 —— `BulletData.tint_mode`（MULTIPLY/BLEND）+ `bullet_batch` shader 分模式
-- [~] 弹幕有"预告/起手"（telegraph），不存在无解弹幕 —— `BulletData.spawn_fog` + `ScreenFogFX` + `bullet_fog_blend.gdshader`；无解性仍靠人工试玩
+- [~] 弹幕有"预告/起手"（telegraph），不存在无解弹幕 —— 出生雾 = 内核逐行 `_fx` 相位（冻结 / 不判定 / 不跑行为）+ `EffectType`（`data/fx/enemy_spawn_fx.tres`）+ `bullet_batch.gdshader`(BLEND)；逐弹型开关 `BulletType.is_spawn_fog`；无解性仍靠人工试玩
 - [~] 弹幕密度、速度、命中点可读，玩家能瞬间判断下一步 —— `background/*` + `screen_fog_fx.gd` 已有；需人工调校
 - [x] 每颗子弹命中判定精确（hitbox 形状/偏移，测到像素级）—— `BulletData.hitbox_shape/offset/rotation` + 内核 `hit_geometry.gd`
 
@@ -203,8 +203,9 @@
 ## S8. 反馈与演出（feedback / fx / sound / fog）
 状态：✔（机制闭环） ｜ 适用红线：R2, R7, R20
 - [x] 受击/消除/擦弹/Boss 阶段有即时视觉+音效反馈 —— `scripts/effect/*` + `AudioManager`
-- [x] 弹雾/背景与弹幕对比度足够，不吞弹、不刺眼 —— `screen_fog_fx.gd` + `bullet_fog_blend.gdshader` + `background/*` + `decor_manager.gd`
+- [x] 弹雾/背景与弹幕对比度足够，不吞弹、不刺眼 —— `screen_fog_fx.gd` + `bullet_batch.gdshader`(BLEND 特效应) + `background/*` + `decor_manager.gd`
 - [x] 特效走服务/对象池（hit_effect / miss_effect），不再频繁 instantiate —— `FxPool`（精灵特效池，世界坐标/节点池）+ `MissCircleLayer`（全屏反色圈，屏幕空间 shader）；均组合根注入，非 autoload
+- [x] 发弹雾 / 消弹消散**共用一套特效模型**（`EffectType` + 逐行 `fx_type` + 纯特效行）—— 消弹把被清弹原地换成一条纯特效行（`KernelNativeSystem.spawn_fx`），雾中的弹同样可消（直接切成消散）；渲染桥按行分流、`BulletMultiMesh` 用同一 `bullet_batch.gdshader` 批量画 —— `data/fx/*.tres`，不再逐弹 `EnemyBulletClear` 节点 + tween
 - [x] 演出（入场/放 logo/BGM/对话）用 Timeline，可复现、可暂停 —— `coroutine/timeline/*` + `dialogue_runner.gd`
 
 ## S9. 性能（几千发子弹下的帧率余量）

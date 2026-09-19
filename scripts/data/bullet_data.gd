@@ -19,8 +19,8 @@ var hitbox_offset: Vector2 = Vector2.ZERO            ## 判定偏移
 var hitbox_rotation: float = 0.0                     ## 判定旋转（弧度）
 var hitbox_radius: float = 4.0                       ## 判定半径
 var hitbox_size: Vector2 = Vector2(8, 8)             ## 矩形判定尺寸
-var is_spawn_fog: bool = false                          ## 是否播弹雾特效
-var fog_texture: Texture2D                           ## 弹雾贴图
+var is_spawn_fog: bool = false                          ## 是否播出生雾（由 .enemy() 置真；.no_spawn_fog() 可关）
+var spawn_fx: EffectType                             ## 出生特效（null = 用阵营默认）
 var coroutine_script: Script                         ## 移动协程脚本（如诱导跟踪）
 var params: Dictionary = {}                          ## 注入给移动协程脚本的参数（行为脚本同名 var 覆盖）
 ## 生命周期描述符（b0）：设定后**优先于** coroutine_script。
@@ -46,7 +46,6 @@ func tex(key: String) -> BulletData:
 		hitbox_rotation = rect.get("rotation", 0.0)
 	var off: Dictionary = hb.get("offset", {"x": 0, "y": 0})
 	hitbox_offset = Vector2(off.get("x", 0), off.get("y", 0))
-	fog_texture = AssetRegistry.FOG_TEXTURE
 	return self
 
 func speed(v: float) -> BulletData:
@@ -76,6 +75,19 @@ func enemy() -> BulletData:
 	can_be_canceled = true
 	is_spawn_fog = true
 	return self
+
+## 打开/换出生雾：effect 为空 = 用阵营默认特效。
+func with_spawn_fog(effect: EffectType = null) -> BulletData:
+	is_spawn_fog = true
+	spawn_fx = effect
+	return self
+
+
+## 关掉出生雾：这型弹直接出现，不给预告。
+func no_spawn_fog() -> BulletData:
+	is_spawn_fog = false
+	return self
+
 
 func player() -> BulletData:
 	faction = Faction.PLAYER
@@ -134,6 +146,8 @@ func _build_bullet_type() -> BulletType:
 	bt.hitbox_size = hitbox_size if hitbox_shape == HitboxShape.RECTANGLE else Vector2.ZERO
 	bt.follow_dir = true
 	bt.hit_fx = hit_effect
+	bt.is_spawn_fog = is_spawn_fog
+	bt.spawn_fx = spawn_fx
 	# 宿主专有字段进弹型（内核只存不解释）
 	bt.damage = damage
 	bt.hit_sfx = StringName(hit_sfx)

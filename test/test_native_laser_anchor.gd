@@ -20,7 +20,8 @@ func test_marisa_laser_segments_track_anchor() -> void:
 		pending("无原生行为管道"); return
 	var anchor: Node2D = add_child_autofree(Node2D.new())
 	anchor.global_position = Vector2(340.0, 560.0)
-	var d := BulletData.new().enemy().blend(true).tex("小玉")
+	# no_spawn_fog：本用例只验锚点漂移，别被出生雾冻结 0.3s 干扰
+	var d := BulletData.new().enemy().no_spawn_fog().blend(true).tex("小玉")
 	d.velocity = Vector2.UP * 100.0
 	d.trajectory(BulletLifecycle.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 0.0),
 		{&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})

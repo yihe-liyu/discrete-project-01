@@ -170,6 +170,14 @@ func texture_for_index(index: int) -> Texture2D:
 	return _texture_by_index[index]
 
 
+## 特效下标 → 贴图（渲染插座；出生雾/消弹共用同一特效表）。
+func fx_texture_for_index(index: int) -> Texture2D:
+	var fx: Array[EffectType] = system.get_fx_registry() if system != null else []
+	if index < 0 or index >= fx.size():
+		return null
+	return fx[index].texture
+
+
 ## 装配内核行为管道（幂等；可重复调以刷新自机引用）。
 ## 优先级：内核积分 -10 → 行为 -5 → 宿主碰撞 0（靠显式 process_physics_priority 定序）。
 func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:

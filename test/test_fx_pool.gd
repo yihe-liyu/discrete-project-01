@@ -1,7 +1,7 @@
 extends GutTest
 ## FxPool 池化语义（取代 HitEffectPool autoload）。无场景依赖，直接实例化挂树。
 
-const CLEAR_FX = preload("res://scenes/effect/enemy_bullet_clear.tscn")
+const CLEAR_FX = preload("res://scenes/effect/hit_effect_marisa_option01.tscn")
 
 var _fx_pool: FxPool
 

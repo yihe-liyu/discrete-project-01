@@ -26,6 +26,8 @@ class DanmakuStore : public RefCounted {
 	// 自身朝向（出生取自初速；rotate / set_heading 改；accel_heading 读）—— 与速度解耦，v=0 仍有效
 	std::vector<float> _hx, _hy;
 	std::vector<int> _type, _faction;
+	// 逐行特效型下标（发弹/消弹共用；-1 = 无特效）。相位内该行只画特效，不动不判定。
+	std::vector<int> _fx_type;
 	std::vector<Color> _color;
 	std::vector<float> _life, _fx, _timer;
 	float _default_life = 20.0f;
@@ -124,6 +126,11 @@ public:
 	int despawn(int p_id);
 	void set_life(int p_id, float p_life);
 	void set_fx(int p_id, float p_fx);
+	void set_fx_type(int p_id, int p_fx_type);
+	int get_fx_type(int p_id) const;
+	PackedInt32Array get_fx_type_indices() const;
+	// 纯特效行：_type=-1、无速度/碰撞，寿命=相位=p_life（到期 integrate 回收）。faction 只定渲染分批。
+	int spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_color, int p_faction, float p_life);
 	void set_timer(int p_id, float p_timer);
 	void set_velocity(int p_id, const Vector2 &p_vel);
 	void set_position(int p_id, const Vector2 &p_pos);

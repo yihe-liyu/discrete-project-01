@@ -59,6 +59,17 @@ func test_behavior_pipeline_wired() -> void:
 		"原生行为随内核积分先于宿主碰撞")
 
 
+## 活跃真弹数：排除出生雾 / 消弹留下的纯特效行（_type_index < 0）。
+func _live_bullets() -> int:
+	var sys := BulletManager.current.kernel_system()
+	var types: PackedInt32Array = sys.get_type_indices()
+	var live := 0
+	for i in sys.get_active_count():
+		if types[i] >= 0:
+			live += 1
+	return live
+
+
 func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	var player := PLAYER_SCENE.instantiate()
 	player.player_data = REIMU_DATA
@@ -74,7 +85,7 @@ func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	var bomb_data := RingBombData.new()
 	var bomb = BulletManager.current.shoot_bomb_bullet(bomb_data, Vector2(448, 700), Vector2.RIGHT)
 	bomb._physics_process(1.0 / 60.0)
-	assert_eq(BulletManager.current.kernel_system().get_active_count(), 0, "bomb 周围敌弹应被持续清")
+	assert_eq(_live_bullets(), 0, "bomb 周围敌弹应被持续清")
 
 
 func test_bomb_spawns_host_node() -> void:
@@ -91,7 +102,7 @@ func test_radial_accel_via_manager() -> void:
 	d.velocity = Vector2.UP * 300.0
 	d.lifecycle = BulletLifecycle.radial_accel(150.0, BulletData.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA), &"kira", -6.0)
 	BulletManager.current.shoot_bullet(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
-	for i in 10:
+	for i in 30:
 		await get_tree().physics_frame
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "旧弹回收 + 新弹生成")
 	assert_gt(BulletManager.current.kernel_system().get_velocity(0).y, 0.0, "换成了向下弹")
@@ -102,4 +113,4 @@ func test_death_clear_sweeps_kernel_bullets() -> void:
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "先有 1 颗内核敌弹")
 	BulletManager.current.start_death_clear(Vector2(200, 200), 100.0, 1.0, 30.0)
 	BulletManager.current._death_clear.process(0.5)
-	assert_eq(BulletManager.current.kernel_system().get_active_count(), 0, "展开清弹圈应清掉内核敌弹")
+	assert_eq(_live_bullets(), 0, "展开清弹圈应清掉内核敌弹")

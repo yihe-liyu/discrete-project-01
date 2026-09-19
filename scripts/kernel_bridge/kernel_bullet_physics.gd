@@ -8,7 +8,8 @@
 class_name KernelBulletPhysics
 extends RefCounted
 
-const _CLEAR_EFFECT = preload("res://scenes/effect/enemy_bullet_clear.tscn")
+## 消弹消散特效（与出生雾同一套 EffectType 模型）。
+const _clear_effect_type: EffectType = preload("res://data/fx/enemy_clear_fx.tres")
 
 ## 命中音效音量表（key → dB；未列出的默认 -14）：与旧 BulletPhysics.HIT_SFX_VOLUME 一致。
 const HIT_SFX_VOLUME := {
@@ -31,10 +32,17 @@ func _player_res() -> PlayerResources:
 	return entity_registry.get_player_resources() if entity_registry != null else null
 
 
-## 消弹特效（同色）：未注入特效层时静默。
+## 消弹特效（同色，提亮 1.5x）：纯特效行进内核池（与出生雾共用一套 EffectType），无节点/tween 分配。
 func _play_clear(pos: Vector2, tint: Color) -> void:
-	if fx_pool:
-		fx_pool.play(_CLEAR_EFFECT, pos, Vector2.ZERO, tint)
+	if backend == null or backend.system == null:
+		return
+	var bright := Color(
+		minf(tint.r * 1.5, 1.0),
+		minf(tint.g * 1.5, 1.0),
+		minf(tint.b * 1.5, 1.0),
+		tint.a
+	)
+	backend.system.spawn_fx(_clear_effect_type, pos, bright, BulletType.Faction.ENEMY)
 
 
 ## 每帧碰撞派发（由 BulletManager._physics_process 在内核积分之后调用）。
@@ -113,6 +121,9 @@ func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Ca
 	if system == null:
 		return
 	var r2: float = radius * radius
+	# 先收集再统一回收 + 发消散：spawn_fx 向池尾追加，边遍历边追加会打乱倒序前提。
+	var spots := PackedVector2Array()
+	var tints := PackedColorArray()
 	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收
 	for i in range(system.get_active_count() - 1, -1, -1):
 		var bt: BulletType = system.get_type(i)
@@ -123,10 +134,14 @@ func sweep_enemy_bullets(center: Vector2, radius: float, on_clear: Callable = Ca
 			continue
 		if inside.is_valid() and not inside.call(pos):
 			continue
-		if on_clear.is_valid():
-			on_clear.call(pos)
-		_play_clear(pos, system.get_color(i))
+		# 雾中的弹同样可消 —— 语义：直接从发弹特效切成消弹特效
+		spots.append(pos)
+		tints.append(system.get_color(i))
 		system.despawn(i)
+	for k in spots.size():
+		if on_clear.is_valid():
+			on_clear.call(spots[k])
+		_play_clear(spots[k], tints[k])
 
 
 ## 记忆 <50 时的伤害加成（与旧 BulletPhysics 同式）。

@@ -7,6 +7,9 @@ extends Node2D
 ## **仅供测试 / 调试 / 工作台** 使用；游戏运行时路径一律走组合根注入，不读本静态。
 static var current: BulletManager
 
+## 敌弹出生雾（阵营默认；按弹型 is_spawn_fog 开关）。
+const ENEMY_SPAWN_FX: EffectType = preload("res://data/fx/enemy_spawn_fx.tres")
+
 # ═══ 子模块 ───
 
 var _laser_engine: LaserEngine
@@ -218,6 +221,7 @@ func _enable_kernel() -> void:
 			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 		_kernel_bullet_host.system.cull_margin = 90.0
 		_kernel_bullet_host.system.set_seed(RNG.get_seed())   # 内核 RNG 从宿主 seed 派生
+		_kernel_bullet_host.system.set_spawn_fx(BulletType.Faction.ENEMY, ENEMY_SPAWN_FX)
 	# 只认注入，不回退全局
 	if _kernel_bullet_host != null:
 		_kernel_bullet_host.entity_registry = entity_registry

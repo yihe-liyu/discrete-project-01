@@ -42,7 +42,7 @@ func _run(n: int, with_behavior: bool) -> void:
 	mm.set_backend(backend)
 
 	_data = BulletData.new().enemy().tex("小玉").speed(200.0).blend(true)
-	_data.spawn_fog = false
+	_data.is_spawn_fog = false
 	if with_behavior:
 		_data.lifecycle = BulletLifecycle.world_accel(Vector2(0.0, 60.0))   # world_accel 行为路径
 

@@ -21,7 +21,6 @@ const enemy_visuals := {
 	"death":  preload("res://data/enemy_visual/death_effect.tscn"),
 }
 
-const FOG_TEXTURE: Texture2D = preload("res://assets/Textures/bullet/弹雾.png")
 
 const bullet_configs := {
 	# 微型弹

@@ -48,6 +48,12 @@ enum TintMode { MULTIPLY, BLEND }
 ## 颜色由命中方传"该弹当前的颜色"（含记忆调制），场景只决定形状/动画。
 @export var hit_fx: PackedScene
 
+@export_group("Spawn effect（可选：出生雾/预告）")
+## 是否播出生特效（弹雾）：关掉 = 这型弹直接出现，不给玩家预告。
+@export var is_spawn_fog: bool = true
+## 出生特效；null = 用阵营默认（KernelNativeSystem.set_spawn_fx）。
+@export var spawn_fx: EffectType
+
 @export_group("Host payload（内核只存不解释）")
 ## 伤害：命中结算由**宿主**读它，内核本体不解释。
 ## M1（原项目融合）：从宿主侧表搬进来 —— 原先内核无 damage，靠 `KernelBulletHost._damage_by_index`。

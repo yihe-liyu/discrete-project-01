@@ -42,6 +42,7 @@ var _type_index := PackedInt32Array()      # 行 → _type_registry 下标
 var _faction := PackedByteArray()
 var _life_left := PackedFloat32Array()
 var _fx_phase := PackedFloat32Array()
+var _fx_type_index := PackedInt32Array()   # 行 → _fx_registry 下标（-1 = 无特效）
 var _timer := PackedFloat32Array()
 var _render_rot := PackedFloat32Array()   # V19：逐弹渲染朝向覆盖（NAN = 用 velocity 推）
 
@@ -49,6 +50,7 @@ var _render_rot := PackedFloat32Array()   # V19：逐弹渲染朝向覆盖（NAN
 var _type_registry: Array[BulletType] = []
 var _render_fade: Dictionary = {}          # Kind → 整批淡出 0..1
 var _spawn_fx: Dictionary = {}             # Faction → 出生特效 EffectType
+var _fx_registry: Array[EffectType] = []   # 特效表（发弹/消弹共用；行按下标引用）
 
 ## 确定性 RNG（宿主 seed；N3 后行为已原生，仅保留宿主接口）。
 var _random := RandomNumberGenerator.new()
@@ -92,6 +94,7 @@ func _ensure_capacity(capacity: int) -> void:
 	_faction.resize(n)
 	_life_left.resize(n)
 	_fx_phase.resize(n)
+	_fx_type_index.resize(n)
 	_timer.resize(n)
 	_render_rot.resize(n)
 	if _accel != null:
@@ -109,16 +112,29 @@ func _type_registry_index_of(bullet_type: BulletType) -> int:
 	return idx
 
 
-## 某阵营的出生特效（改一处全变）。
+## 某阵营的出生特效（改一处全变）。注册进特效表，渲染端按行下标取贴图/参数。
 func set_spawn_fx(faction: BulletType.Faction, effect: EffectType) -> void:
 	_spawn_fx[faction] = effect
+	if effect != null:
+		_fx_registry_index_of(effect)
+
+
+## 特效懒注册（find or append），返回下标；渲染端经 get_fx_registry() 取下标的贴图。
+func _fx_registry_index_of(effect: EffectType) -> int:
+	var idx := _fx_registry.find(effect)
+	if idx == -1:
+		idx = _fx_registry.size()
+		_fx_registry.append(effect)
+	return idx
 
 
 func _set_row_fx(id: int, effect: EffectType) -> void:
 	if effect != null and effect.duration > 0.0:
 		_fx_phase[id] = effect.duration
+		_fx_type_index[id] = _fx_registry_index_of(effect)
 	else:
 		_fx_phase[id] = 0.0
+		_fx_type_index[id] = -1
 
 
 ## 发射（写快照行 + 原生权威行）。
@@ -135,7 +151,10 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 	_life_left[id] = default_lifetime
 	_timer[id] = 0.0
 	_render_rot[id] = NAN
-	_set_row_fx(id, _spawn_fx.get(bullet_data.faction))
+	var effect: EffectType = null
+	if bullet_data.is_spawn_fog:
+		effect = bullet_data.spawn_fx if bullet_data.spawn_fx != null else _spawn_fx.get(bullet_data.faction)
+	_set_row_fx(id, effect)
 	if _accel != null:
 		var nid: int = _accel.spawn(position, velocity, ti, int(bullet_data.faction), color)
 		if nid < 0:
@@ -144,11 +163,36 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 		_accel.set_hitbox(nid, bullet_data.hitbox_radius, bullet_data.hitbox_offset, bullet_data.hitbox_size, bullet_data.follow_dir, bullet_data.dir_offset)
 		_accel.set_life(nid, _life_left[id])
 		_accel.set_fx(nid, _fx_phase[id])
+		_accel.set_fx_type(nid, _fx_type_index[id])
 		_accel.set_timer(nid, _timer[id])
 		# program 在发射时就绑定（与 enable_native_behaviors 是否执行无关）；未映射 move → -1。
 		var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
 		var prog: int = _program_for(move, params)
 		_accel.set_program(nid, prog)
+	return id
+
+
+## 播一条纯特效行（消弹/爆发）：无弹型、无碰撞，寿命 = effect.duration（原生 integrate 到期回收）。
+## 返回行 id；effect 为空或时长为 0 → -1（静默）。
+func spawn_fx(effect: EffectType, position: Vector2, color: Color = Color.WHITE, faction: BulletType.Faction = BulletType.Faction.ENEMY) -> int:
+	if effect == null or effect.duration <= 0.0:
+		return -1
+	var fi := _fx_registry_index_of(effect)
+	var id := _active_count
+	_ensure_capacity(id + 1)
+	_active_count += 1
+	_positions[id] = position
+	_velocities[id] = Vector2.ZERO
+	_color[id] = color
+	_type_index[id] = -1
+	_faction[id] = faction
+	_life_left[id] = effect.duration
+	_fx_phase[id] = effect.duration
+	_fx_type_index[id] = fi
+	_timer[id] = 0.0
+	_render_rot[id] = NAN
+	if _accel != null:
+		_accel.spawn_fx(fi, position, color, int(faction), effect.duration)
 	return id
 
 
@@ -165,6 +209,7 @@ func despawn(id: int) -> void:
 		_faction[id] = _faction[tail]
 		_life_left[id] = _life_left[tail]
 		_fx_phase[id] = _fx_phase[tail]
+		_fx_type_index[id] = _fx_type_index[tail]
 		_timer[id] = _timer[tail]
 		_render_rot[id] = _render_rot[tail]
 	_active_count -= 1
@@ -283,6 +328,19 @@ func get_type_registry() -> Array[BulletType]:
 	return _type_registry
 
 
+## 每帧快照：相位中的弹/纯特效行（渲染桥读它算缩放/淡出）。
+func get_fx_phases() -> PackedFloat32Array:
+	return _fx_phase
+
+
+func get_fx_type_indices() -> PackedInt32Array:
+	return _fx_type_index
+
+
+func get_fx_registry() -> Array[EffectType]:
+	return _fx_registry
+
+
 ## 按弹型类别（Kind）设/取整批渲染淡出（0..1）。
 func set_render_fade(kind: int, value: float) -> void:
 	_render_fade[kind] = clampf(value, 0.0, 1.0)
@@ -398,6 +456,7 @@ func _pull_snapshot() -> void:
 	_faction = _accel.get_factions_bytes()
 	_life_left = _accel.get_life_lefts()
 	_fx_phase = _accel.get_fx_phases()
+	_fx_type_index = _accel.get_fx_type_indices()
 	_timer = _accel.get_timers()
 	_render_rot = _accel.get_render_rots()
 

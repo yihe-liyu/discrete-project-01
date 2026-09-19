@@ -21,7 +21,7 @@ func _run(n: int) -> void:
 	backend.system.cull_rect = Rect2(-100000, -100000, 200000, 200000)
 
 	var data := BulletData.new().enemy().tex("小玉").speed(200.0).blend(true)
-	data.spawn_fog = false
+	data.is_spawn_fog = false
 	for i in n:
 		var dir := Vector2.RIGHT.rotated(randf() * TAU)
 		backend.shoot(data, CENTER + dir * sqrt(randf()) * 300.0, dir)

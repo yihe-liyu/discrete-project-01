@@ -85,6 +85,17 @@ func test_mist_damage_can_start_at_width_stage() -> void:
 	bomb.queue_free()
 
 
+## 活跃真弹数：排除出生雾 / 消弹留下的纯特效行（_type_index < 0）。
+func _live_bullets() -> int:
+	var sys := BulletManager.current.kernel_system()
+	var types: PackedInt32Array = sys.get_type_indices()
+	var live := 0
+	for i in sys.get_active_count():
+		if types[i] >= 0:
+			live += 1
+	return live
+
+
 func test_mist_clear_shape_is_exact_ellipse() -> void:
 	# 满尺寸椭圆（贴图 256×128 → 半轴 128/64）。椭圆中心在本地 c（pivot 造成的偏移），
 	# 两颗敌弹都落在**外接圆(半径 128)内**：
@@ -108,7 +119,7 @@ func test_mist_clear_shape_is_exact_ellipse() -> void:
 		BulletManager.current.shoot_bullet(ed, p, Vector2.UP)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 2, "先有 2 颗敌弹")
 	bomb._physics_process(1.0 / 60.0)
-	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "只清椭圆内的那颗")
+	assert_eq(_live_bullets(), 1, "只清椭圆内的那颗")
 	var survivor: Vector2 = BulletManager.current.kernel_system().get_position(0)
 	assert_almost_eq(survivor.distance_to(corner_pt), 0.0, 0.5, "留下的是椭圆四角外那颗")
 	bomb.queue_free()
@@ -161,7 +172,7 @@ func test_mist_bomb_stages_grow_follow_and_expire() -> void:
 	assert_gt(bomb.width_now(), 0.0, "宽应已展开")
 	assert_gt(near_enemy.taken, 0.0, "椭圆内（长轴上）敌机应持续受伤")
 	assert_eq(far_enemy.taken, 0.0, "长轴外敌机不应受伤")
-	assert_eq(BulletManager.current.kernel_system().get_active_count(), 0, "范围内敌弹应被清")
+	assert_eq(_live_bullets(), 0, "范围内敌弹应被清")
 
 	# 生命周期：淡出后回收
 	for _f in 120:

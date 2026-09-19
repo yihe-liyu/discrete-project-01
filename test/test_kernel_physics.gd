@@ -100,12 +100,24 @@ func test_player_bullet_damages_enemy_via_bullet_type() -> void:
 	_entity_registry.unregister_enemy(fake)
 
 
+## 活跃真弹数：排除出生雾 / 消弹留下的纯特效行（_type_index < 0）。
+func _live_bullets() -> int:
+	var sys := _kernel_bullet_host.system
+	var types: PackedInt32Array = sys.get_type_indices()
+	var live := 0
+	for i in sys.get_active_count():
+		if types[i] >= 0:
+			live += 1
+	return live
+
+
 ## 死亡清弹扫掠只清圆内敌弹（与旧 DeathClear 逐弹循环 1:1）。
 func test_sweep_enemy_bullets_clears_only_in_radius() -> void:
 	_enemy_bullet_at(Vector2(200, 200))
 	_enemy_bullet_at(Vector2(900, 900))
 	_kernel_bullet_physics.sweep_enemy_bullets(Vector2(200, 200), 100.0)
-	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "死亡清弹应只清圆内的敌弹")
+	assert_eq(_live_bullets(), 1, "死亡清弹应只清圆内的敌弹")
+	assert_gt(_kernel_bullet_host.system.get_active_count(), _live_bullets(), "原地应留一条消散特效行")
 	assert_eq(_kernel_bullet_host.system.get_position(0), Vector2(900, 900), "圆外弹应保留（swap-with-last 后落 0 槽）")
 
 
@@ -116,5 +128,5 @@ func test_sweep_enemy_bullets_spares_player_bullets() -> void:
 	_kernel_bullet_host.shoot(d, Vector2(200, 200), Vector2.UP)
 	_enemy_bullet_at(Vector2(200, 200))
 	_kernel_bullet_physics.sweep_enemy_bullets(Vector2(200, 200), 100.0)
-	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "死亡清弹不应清自机弹")
+	assert_eq(_live_bullets(), 1, "死亡清弹不应清自机弹")
 	assert_eq(_kernel_bullet_host.system.get_type(0).faction, BulletType.Faction.PLAYER, "留下的应是自机弹")
