@@ -159,6 +159,7 @@
 - **缩放 Node2D 父层会连带子节点 `position`**：改尺寸缩**每个实例**，别缩容器层（`NumberSprite` 字号即此）。
 - **GDScript 警告 = 错误**（`check_syntax` 全扫）；原生 `WARN/ERR_PRINT` 被 GUT 记 Unexpected Errors → 内核静默返回、宿主 `push_warning`。
 - **场景期依赖用 `@tool` + `_get_configuration_warnings()`**（同 R3；运行时注入豁免）。
+- **测试用夹具，别拿真实内容当断言标准**：目录扫描类（`ContentCatalog` / `CatalogPanel`）一律 `scan(夹具根)` / 注入 `catalog_root`；真实内容只做「不数数量、不写具体路径」的结构冒烟——否则加一张符卡就红。
 
 ---
 

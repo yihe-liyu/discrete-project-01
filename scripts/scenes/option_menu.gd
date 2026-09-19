@@ -58,16 +58,17 @@ func _build_items() -> void:
 func _refresh_values() -> void:
 	for i in ITEMS.size():
 		var item := ITEMS[i]
+		if item["type"] == "action":   # 动作项无设置值（也没有 def），只显示确认/结果态
+			_values[i].text = "确定？" if _confirm_index == i else ("已清空" if _cleared else "")
+			continue
 		var value: Variant = SaveData.save_mgr.get_setting(item["key"], item["def"])
 		if item["type"] == "range":
 			_values[i].text = TextAlign.pad_cn(TextAlign.full(str(int(round(value * 100.0)))), 3) + "％"
 		elif item["type"] == "choice":
 			var txt: String = "自动" if int(value) == 0 else TextAlign.full(str(int(value)))
 			_values[i].text = TextAlign.pad_cn(txt, 3)
-		elif item["type"] == "toggle":
+		else:   # toggle
 			_values[i].text = TextAlign.pad_cn(("开" if value else "关"), 3)
-		else:   # action（清空数据）
-			_values[i].text = "确定？" if _confirm_index == i else ("已清空" if _cleared else "")
 
 
 func _apply_nav() -> void:

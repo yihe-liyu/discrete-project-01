@@ -21,6 +21,8 @@ var _info_path: Label
 var _info_desc: Label
 var _info_refs: Label
 var _catalog: Variant
+## 扫描根（组合根 / 测试可注入；默认 res://data）—— 测试不拿真实内容当标准。
+var catalog_root: String = CAT.DEFAULT_ROOT
 var _info_panel: PanelContainer
 var _split_area: Control
 var _sep_divider: ColorRect
@@ -138,7 +140,7 @@ func _ready() -> void:
 
 ## 重新扫描 + 重建目录树
 func refresh() -> void:
-	_catalog = CAT.new().scan()
+	_catalog = CAT.new().scan(catalog_root)
 	_rebuild_tree()
 	_update_stats()
 	_clear_info()

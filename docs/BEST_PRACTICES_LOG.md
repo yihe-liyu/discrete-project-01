@@ -19,6 +19,12 @@
 
 ## 记录
 
+### 2026-09-19 — 修「清空数据」崩溃 + workbench 测试去内容耦合
+
+- **bug**：`option_menu._refresh_values()` 先读 `item["def"]` 再判类型；动作项「清空数据」没有 `def` → 一进设置菜单就报错。改为 action 先分支（动作项无设置值）。
+- **测试解耦**：`CatalogPanel` 内部写死 `CAT.new().scan()`，而 `test_catalog_panel` / `test_content_catalog` 拿**真实内容**断数量（`阶段（7）`）→ 加一张符卡就红。给面板加**可注入** `catalog_root`（默认 `res://data`）；两个测试全部改用**夹具目录**，真实内容只留「不数数量、不写具体路径」的结构冒烟。
+- **验收**：用户未入库的新符卡 `spell002.tres` 在场时 verify 仍全绿（454 / 453 pass + 1 pending，4552 asserts）。
+
 > 2026-09-13 ~ 2026-09-16 的内核迁移条目已归档：`docs/archive/LOG_2026-09_kernel_migration.md`。
 
 ### 2026-09-19 — 吃道具得分浮字（Item.collect → GameEvents.item_score → ScorePopupLayer）
