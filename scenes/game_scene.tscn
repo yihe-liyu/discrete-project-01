@@ -19,6 +19,7 @@
 [ext_resource type="Script" uid="uid://r1cevfo2ay7l" path="res://scripts/bullet/bullet_manager.gd" id="18_bullets"]
 [ext_resource type="Script" uid="uid://bnelos8uxmg5q" path="res://scripts/effect/score_popup_layer.gd" id="19_popup"]
 [ext_resource type="PackedScene" path="res://scenes/ui/player_spell_ui.tscn" id="20_player_spell"]
+[ext_resource type="Script" path="res://scripts/effect/screen_shake.gd" id="21_shake"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
 atlas = ExtResource("6_mw25s")
@@ -151,6 +152,7 @@ limit_left = 0
 limit_top = 0
 limit_right = 1280
 limit_bottom = 960
+script = ExtResource("21_shake")
 
 [node name="GameUI" type="CanvasLayer" parent="." unique_id=323031526]
 layer = 32

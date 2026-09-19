@@ -22,6 +22,8 @@ var _fade: float = 0.25
 var _damage_from: int = Stage.LENGTH
 var _dps: float = 200.0
 var _clear_scale: float = 1.0
+## 持续震屏强度（>0 时本 bomb 存活期间一直持有；exit 时归零）。
+var _shake_sustain: float = 0.0
 
 
 func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Color.WHITE, _spawn_delay: float = 0.0) -> void:
@@ -31,6 +33,10 @@ func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Co
 		push_error("[KernelMistBomb] setup 需要 MistBombData")
 		return
 	data = d
+	# 整个 bomb 期间持续震屏（魔理沙）；结束时（_exit_tree）归零。
+	_shake_sustain = d.shake_sustain
+	if _shake_sustain > 0.0:
+		GameEvents.screen_shake_sustain.emit(_shake_sustain)
 	_is_follow = d.follow_player
 	_anchor_offset = d.anchor_offset
 	_length = d.length_range
@@ -53,6 +59,11 @@ func setup(p_data: BombData, pos: Vector2, _direction: Vector2, tint: Color = Co
 	_sprite.scale = Vector2.ZERO
 	add_child(_sprite)
 	z_index = d.z_index
+
+
+func _exit_tree() -> void:
+	if _shake_sustain > 0.0:
+		GameEvents.screen_shake_sustain.emit(0.0)
 
 
 ## 当前展开的"长" / "宽"（贴图对应维的全长；测试/调试用）。

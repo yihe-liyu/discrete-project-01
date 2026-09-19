@@ -19,6 +19,19 @@
 
 ## 记录
 
+### 2026-09-19 — 震屏（ScreenShake）+ 自机 Bomb 接线（灵梦击中 / 魔理沙全程）
+
+- **需求**：加震屏；实际触发 = 灵梦 bomb **击中时**（一次性冲击）、魔理沙 bomb **整个期间**（持续）。
+- **做法**：
+  - 新增 `scripts/effect/screen_shake.gd`（`class_name ScreenShake extends Camera2D`，挂 `game_scene` 的 `Camera2D`）：trauma 模型 —— `add_trauma(x)` 叠加后按 `DECAY` 衰减（冲击）；`set_sustain(x)` 按住不衰减（持续，传 0 停）；`_process` 里 `offset = rand·MAX_OFFSET·amount²`。只晃 World（2D）；HUD / 背景是 CanvasLayer，不受 Camera2D 影响。
+  - `GameEvents` 加 `screen_shake(amount)` / `screen_shake_sustain(amount)`。
+  - `BombData` 加 `shake_impulse` / `shake_sustain`（0..1，.tres 可调）。
+  - `KernelBomb._explode()`（击中/引爆）emit 冲击；`KernelMistBomb.setup()` emit 持续，`_exit_tree()` 归零。
+  - `.tres`：`bomb_ring` shake_impulse=0.8；`marisa_bomb` shake_sustain=0.5。
+- **测试**：新增 `test_screen_shake.gd`（+4：冲击封顶 / 衰减归零 / 持续保持 / 默认不震）+ mist bomb 持有并归零。顺手把 `test_bomb_data` 里锁死 `explode_damage=150` / `count=8` 的**内容耦合**改成结构断言（夹具原则）——内容改了不该红。
+- **验收**：`./tools/verify.sh` 全绿（**481 / 480 pass + 1 pending，4656 asserts**）。
+- **注**：HUD / 3D 背景是 CanvasLayer，不跟 Camera2D 晃；要把背景一起晃需另接（3D 相机或 CanvasLayer offset）。
+
 ### 2026-09-19 — 自机 Bomb 符卡名大字报（PLAYER 样式：左上 → 左下 → 停顿渐隐）
 
 - **需求**：自机放 Bomb 时也播符卡名，位置与 Boss 反过来——先滑到左上角，再停在左下角，等一会儿渐隐。

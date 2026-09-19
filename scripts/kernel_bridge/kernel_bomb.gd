@@ -127,6 +127,9 @@ func _is_outside_field(pos: Vector2) -> bool:
 
 
 func _explode() -> void:
+	# 击中/引爆：一次性冲击震屏（灵梦 bomb）
+	if data != null and data.shake_impulse > 0.0:
+		GameEvents.screen_shake.emit(data.shake_impulse)
 	var pos := global_position
 	AudioManager.play_sfx(AssetRegistry.sounds["shoot"], -6.0)
 	_spawn_explosion_visual(pos)

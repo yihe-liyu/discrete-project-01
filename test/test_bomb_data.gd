@@ -7,9 +7,10 @@ func test_ring_tres_loads_as_ring() -> void:
 	var bd := load("res://data/player_data/bomb_ring.tres") as RingBombData
 	assert_not_null(bd, "bomb_ring.tres 应加载为 RingBombData")
 	assert_true(bd is BombData, "子类应满足基类契约")
-	assert_eq(bd.count, 8, "8 颗")
-	assert_almost_eq(bd.explode_damage, 150.0, 0.001, "爆炸伤害")
-	assert_almost_eq(bd.clear_radius, 90.0, 0.001, "持续清弹半径")
+	# 数值都属内容（.tres 可调），这里只锁结构：数量非空、伤害/清弹为正、有贴图。
+	assert_true(bd.count >= 1, "至少 1 颗")
+	assert_true(bd.explode_damage > 0.0, "爆炸伤害 > 0")
+	assert_true(bd.clear_radius > 0.0, "持续清弹半径 > 0")
 	assert_not_null(bd.texture, "应有贴图")
 
 
@@ -18,7 +19,7 @@ func test_mist_tres_loads_as_mist() -> void:
 	assert_not_null(bd, "marisa_bomb.tres 应加载为 MistBombData")
 	assert_true(bd is BombData, "子类应满足基类契约")
 	assert_false(bd is RingBombData, "mist 不应被当成 ring（否则会被分派成 KernelBomb）")
-	assert_eq(bd.count, 1, "单颗")
+	assert_true(bd.count >= 1, "至少 1 颗（数量属内容）")
 	assert_not_null(bd.texture, "应有贴图")
 
 

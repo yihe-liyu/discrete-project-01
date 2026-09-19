@@ -5,16 +5,17 @@
 
 [resource]
 script = ExtResource("2_script")
-name = "恋符「マスタースパーク」"
+shake_sustain = 0.5
 length_range = Vector2(0, 4)
 width_range = Vector2(0.05, 4)
 grow_length_time = 0.3
 hold_length_time = 0.6
 grow_width_time = 0.3
-hold_width_time = 3.0
-fade_time = 0.8
+hold_width_time = 3.5
+fade_time = 0.3
 damage_from_stage = 2
-dps = 500.0
+dps = 400.0
+name = "恋符「极限火花」"
 texture = ExtResource("1_tex")
 count = 1
 interval = 0.0
