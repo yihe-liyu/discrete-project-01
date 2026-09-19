@@ -344,14 +344,14 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 1. MainMenu → Start → 选难度 → 选角色 → `GameManager.change_scene("game_scene")`
 2. `GameScene._ready()` → `_resolve_stage_data()` → `StageRuntime.load_stage(data)`
    （`data/registry/stage_registry.tres`：Stage 1 → `stage01.tres` 协程版）
-3. 练习模式：从符卡记录（`spell_records.tres` 解锁后内联存的 phase_data + boss_scene）构建单 phase Boss，
+3. 练习模式：从符卡记录（`user://spell_records.tres` 解锁后内联存的 phase_data + boss_scene）构建单 phase Boss，
    走 `SaveData.start_practice()` → `_start_practice_game()`
 
 ---
 
 ## 九、符卡练习 / 菜单 / 对话
 
-- **符卡簿**：`data/registry/spell_records.tres`，见到即记（unlock_spell），自动按 UID 记录尝试/捕获/最佳
+- **符卡簿**：`user://spell_records.tres`（R14 运行期档；res:// 已无出厂种子，首启空簿），见到即记（unlock_spell），自动按 UID 记录尝试/捕获/最佳
 - **符卡练习（单驱动）**：练习菜单 = 符卡簿记录决定"能练哪张"，记录里**内联存战斗配置**
   （phase_data + boss_scene，见 `spell_record.gd` 注释"无需 CardDef"）。已解锁的符卡可选任意难度进入。
   `CardDef` / `spell_registry.tres` 早已移除（2026-08，放弃"双驱动"）。练习入口默认锁定：

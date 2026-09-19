@@ -7,6 +7,7 @@ const ITEMS: Array[Dictionary] = [
 	{"key": "volume_sfx", "zh": "ＳＥ音量",  "type": "range", "min": 0.0, "max": 1.0, "step": 0.1, "def": 0.7},
 	{"key": "fullscreen", "zh": "全屏",     "type": "toggle", "def": false},
 	{"key": "max_fps", "zh": "渲染帧率", "type": "choice", "choices": [0, 60, 120, 144], "def": 0},
+	{"key": "clear_data", "zh": "清空数据", "type": "action"},
 ]
 
 const HIGHLIGHT := Color.WHITE
@@ -17,6 +18,9 @@ var _items: Array[HBoxContainer] = []
 var _values: Array[Label] = []
 var _nav_index: int = 0
 var _pulse: Tween
+## 正在二次确认的项（-1 = 无）；清空数据需按两次 Z
+var _confirm_index: int = -1
+var _cleared: bool = false
 
 
 func _ready() -> void:
@@ -60,8 +64,10 @@ func _refresh_values() -> void:
 		elif item["type"] == "choice":
 			var txt: String = "自动" if int(value) == 0 else TextAlign.full(str(int(value)))
 			_values[i].text = TextAlign.pad_cn(txt, 3)
-		else:
+		elif item["type"] == "toggle":
 			_values[i].text = TextAlign.pad_cn(("开" if value else "关"), 3)
+		else:   # action（清空数据）
+			_values[i].text = "确定？" if _confirm_index == i else ("已清空" if _cleared else "")
 
 
 func _apply_nav() -> void:
@@ -85,30 +91,42 @@ func _start_pulse() -> void:
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
+		# 二次确认中：X = 取消确认（不退菜单）
+		if _confirm_index >= 0:
+			_cancel_confirm()
+			sfx_back()
+			return
 		sfx_back()
 		go_back()
 		return
 	if event.is_action_pressed("ui_up"):
 		get_viewport().set_input_as_handled()
+		_cancel_confirm()
 		_nav_index = wrapi(_nav_index - 1, 0, ITEMS.size())
 		_apply_nav()
 		sfx_nav()
 	elif event.is_action_pressed("ui_down"):
 		get_viewport().set_input_as_handled()
+		_cancel_confirm()
 		_nav_index = wrapi(_nav_index + 1, 0, ITEMS.size())
 		_apply_nav()
 		sfx_nav()
 	elif event.is_action_pressed("ui_left"):
 		get_viewport().set_input_as_handled()
+		_cancel_confirm()
 		_adjust(-1)
 		sfx_nav()
 	elif event.is_action_pressed("ui_right"):
 		get_viewport().set_input_as_handled()
+		_cancel_confirm()
 		_adjust(1)
 		sfx_nav()
 	elif event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()
-		_toggle()
+		if ITEMS[_nav_index]["type"] == "action":
+			_activate_action()
+		else:
+			_toggle()
 
 
 func _adjust(dir: int) -> void:
@@ -141,6 +159,28 @@ func _toggle() -> void:
 	_apply_setting(item["key"], value)
 	_refresh_values()
 	sfx_confirm()
+
+
+## 取消二次确认（移动/返回时）。
+func _cancel_confirm() -> void:
+	if _confirm_index >= 0 or _cleared:
+		_confirm_index = -1
+		_cleared = false
+		_refresh_values()
+
+
+## 清空数据需二次确认：第一次 Z 进入确认态，第二次 Z 才真清。
+func _activate_action() -> void:
+	if _confirm_index == _nav_index:
+		_confirm_index = -1
+		SaveData.clear_player_data()
+		_cleared = true
+		sfx_confirm()
+	else:
+		_confirm_index = _nav_index
+		_cleared = false
+		sfx_nav()
+	_refresh_values()
 
 
 ## 应用设置到运行时

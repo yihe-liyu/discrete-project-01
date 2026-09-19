@@ -25,8 +25,7 @@ func _ready() -> void:
 	# 锁定项
 	_container.get_node("Extra Start").set_meta("is_locked", true)
 
-	if SaveData.spell_book.records.is_empty():
-		_container.get_node("Spell Practice").set_meta("is_locked", true)
+	_refresh_spell_lock()
 
 	refresh_colors()
 
@@ -156,11 +155,21 @@ func _activate_title() -> void:
 	tw.tween_property(_logo.material, "shader_parameter/alpha_mult", 1.0, 0.25)
 	tw.tween_property(_particles, "modulate:a", 0.0, 0.25)
 	tw.tween_callback(func():
+		_refresh_spell_lock()   # 清空数据后回主菜单应立刻重新锁上符卡练习
 		refresh_colors()
 		_is_nav_enabled = true
 		if _nav_index >= 0 and _nav_index < _nav_items.size():
 			_start_pulse(_nav_items[_nav_index])
 	).set_delay(0.25)
+
+
+## 符卡练习锁定 = 符卡簿为空（进入主菜单 / 从子页返回时刷新）。
+func _refresh_spell_lock() -> void:
+	var node := _container.get_node("Spell Practice")
+	if SaveData.spell_book.records.is_empty():
+		node.set_meta("is_locked", true)
+	elif node.has_meta("is_locked"):
+		node.remove_meta("is_locked")
 
 
 # ═══ 调试（F1 全开符卡） ═══

@@ -77,6 +77,14 @@ static func get_high_score(stage_id: int) -> int:
 	return save_mgr.get_high_score(stage_id)
 
 
+## 清空玩家数据（设置菜单「清空数据」）：符卡记录 + 高分归零、关卡进度回第 1 面；**设置保留**。
+static func clear_player_data() -> void:
+	spell_book_mgr.clear_player_data()
+	spell_book = spell_book_mgr.spell_book
+	save_mgr.clear_player_data()
+	current_stage_id = 1
+
+
 # ═══ 会话生命周期 ═══
 
 ## 重置一局：清练习载荷 + 自机资源（资源真源在 Player；注册表由组合根显式传入，去全局）

@@ -12,9 +12,6 @@ node_modules/
 package-lock.json
 package.json
 
-# 运行时玩家数据（符卡记录，解锁/收取进度；不入库）
-data/registry/spell_records.tres
-
 # 本地恢复备份（勿提交）
 .recovery_backup/
 

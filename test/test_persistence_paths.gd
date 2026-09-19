@@ -1,6 +1,6 @@
 extends GutTest
 ## R14 守卫：运行期代码不得用 ResourceSaver.save 写 res://（导出包只读必失败）。
-## 只允许写 user://；出厂默认留在 res://，运行时覆盖写 user://。
+## 只允许写 user://（符卡簿 / 音乐解锁等运行期档；res:// 不再有出厂种子档）。
 
 const SCAN_DIRS: Array[String] = ["res://scripts", "res://data"]
 

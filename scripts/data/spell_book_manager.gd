@@ -2,21 +2,18 @@ class_name SpellBookManager
 extends RefCounted
 ## 符卡簿管理：加载/保存/解锁/记录（从 SaveData 拆出，职责单一）
 
-const SPELL_BOOK_PATH := "res://data/registry/spell_records.tres"   # 出厂默认（只读）
-## 运行期档（R14：不写 res://，导出包只读）
+## 运行期档（R14：不写 res://，导出包只读）。首启无文件 = 空簿。
 const SPELL_BOOK_USER_PATH := "user://spell_records.tres"
 
 var spell_book: SpellRecordBook
 
 
 func load() -> void:
-	# R14：运行期档写 user://；res:// 只是出厂默认（导出包只读，不能写）。
-	var path := SPELL_BOOK_USER_PATH if FileAccess.file_exists(SPELL_BOOK_USER_PATH) else SPELL_BOOK_PATH
-	# 全新检出/首启时文件可能不存在：ResourceLoader.load 会打 ERROR，先 exists 避免
-	if not ResourceLoader.exists(path):
-		spell_book = SpellRecordBook.new()  # 首启无记录文件：空簿，解锁时 save 自建
+	# 只有 user:// 一份档；全新检出/首启时不存在 → 空簿，解锁时 save 自建。
+	if not FileAccess.file_exists(SPELL_BOOK_USER_PATH):
+		spell_book = SpellRecordBook.new()
 		return
-	spell_book = ResourceLoader.load(path)
+	spell_book = ResourceLoader.load(SPELL_BOOK_USER_PATH)
 	if not spell_book:
 		spell_book = SpellRecordBook.new()  # 加载失败也回退空簿
 		return
@@ -31,6 +28,13 @@ func save() -> void:
 	if spell_book:
 		spell_book.prune_empty()
 	ResourceSaver.save(spell_book, SPELL_BOOK_USER_PATH)
+
+
+## 清空玩家数据：符卡记录归零（删 user:// 档 + 换空簿）。设置不归本层管。
+func clear_player_data() -> void:
+	spell_book = SpellRecordBook.new()
+	if FileAccess.file_exists(SPELL_BOOK_USER_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SPELL_BOOK_USER_PATH))
 
 
 ## 注册一张符卡（见到即记，不计 attempt；配置随解锁自动存入记录）

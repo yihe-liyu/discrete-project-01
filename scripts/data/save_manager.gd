@@ -49,3 +49,11 @@ func save_high_score(stage_id: int, score: int):
 
 func get_high_score(stage_id: int) -> int:
 	return high_scores.get(stage_id, 0)
+
+
+## 清空玩家数据：高分归零（**设置保留**）。
+func clear_player_data() -> void:
+	high_scores.clear()
+	if _config:
+		_config.erase_section("high_scores")
+		_config.save(SAVE_PATH)
