@@ -20,6 +20,7 @@
 [ext_resource type="Script" uid="uid://bnelos8uxmg5q" path="res://scripts/effect/score_popup_layer.gd" id="19_popup"]
 [ext_resource type="PackedScene" path="res://scenes/ui/player_spell_ui.tscn" id="20_player_spell"]
 [ext_resource type="Script" uid="uid://7b3tfc32hhho" path="res://scripts/effect/screen_shake.gd" id="21_shake"]
+[ext_resource type="PackedScene" path="res://scenes/effect/field_filter_layer.tscn" id="22_field_filter"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
 atlas = ExtResource("6_mw25s")
@@ -242,6 +243,8 @@ script = ExtResource("7_kk2rg")
 [node name="BossUI" parent="." unique_id=1480836394 instance=ExtResource("8_boss_ui")]
 
 [node name="PlayerSpellUI" parent="." unique_id=70302065 instance=ExtResource("20_player_spell")]
+
+[node name="FieldFilterLayer" parent="." instance=ExtResource("22_field_filter")]
 
 [node name="MissCircleLayer" type="CanvasLayer" parent="." unique_id=2025091103]
 unique_name_in_owner = true

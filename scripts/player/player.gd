@@ -211,6 +211,7 @@ func _bomb() -> void:
 		return
 	_play_sfx(AssetRegistry.sounds["player_card"], -6.0)
 	GameEvents.player_bomb.emit(bomb_data.name)
+	GameEvents.field_filter.emit(bomb_data.field_filter_color)
 	# Bomb 期间短暂无敌
 	is_invincible = true
 	_invincible_timer = bomb_data.invincible_time

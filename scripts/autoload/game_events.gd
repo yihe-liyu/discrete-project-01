@@ -32,3 +32,7 @@ signal player_bomb(spell_name: String)
 signal screen_shake(amount: float)
 @warning_ignore("unused_signal")
 signal screen_shake_sustain(amount: float)
+
+## 自机 Bomb 的场地颜色滤镜（a <= 0 = 不启用）——FieldFilterLayer 订阅。
+@warning_ignore("unused_signal")
+signal field_filter(color: Color)

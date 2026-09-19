@@ -10,6 +10,7 @@ explode_radius = 250.0
 name = "灵符「梦想封印 · 散」"
 shake_impulse = 0.8
 shake_sustain = 0.3
+field_filter_color = Color(1, 0.35, 0.45, 0.35)
 texture = ExtResource("2_nqkjf")
 interval = 0.15
 metadata/_custom_type_script = "uid://vmbryrfk4srf"

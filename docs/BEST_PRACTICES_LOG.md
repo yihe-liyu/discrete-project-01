@@ -19,6 +19,17 @@
 
 ## 记录
 
+### 2026-09-19 — 场地颜色滤镜（FieldFilterLayer）：从游戏框中心扩圆 → 停留 → 渐隐
+
+- **需求**：加一层颜色滤镜，范围只在**游戏框内**；放 bomb 时从框中心生成逐渐扩大的滤镜圆，持续一段再渐隐。
+- **做法**：
+  - 新 shader `gdshader/field_filter.gdshader`：`rect_size / center_uv / radius / softness / filter_color / alpha`；圆内铺色、`smoothstep` 羽化边缘；只作用在挂它的 ColorRect（= 游戏框）内。
+  - 新 `scripts/effect/field_filter_layer.gd`（`class_name FieldFilterLayer extends CanvasLayer`；场景 `scenes/effect/field_filter_layer.tscn` = CanvasLayer(layer 0) + 场地 ColorRect + ShaderMaterial）。订阅 `GameEvents.field_filter(color)`：`radius 0 → 对角线/2`（`expand_time`）→ `hold_time` → `alpha 1 → 0`（`fade_time`）；三个时长 + `edge_softness` 都是 @export；`color.a <= 0` 直接忽略。
+  - `BombData` 加 `field_filter_color`（a=0 = 不启用）；`player._bomb()` 扣弹成功后 emit。`.tres`：灵梦 `Color(1,0.35,0.45,0.35)`、魔理沙 `Color(0.85,0.9,1,0.4)`。
+  - `game_scene.tscn` 实例化；滤镜在游戏框内，HUD（layer 32）在其上、不被染色。
+- **测试**：新增 `test_field_filter_layer.gd`（+3）：矩形位置/尺寸锁游戏框、透明色不播、有色时圆心=框中心 + 从半径 0 起 + 颜色来自数据。渲染探针：扩圆→铺满（radius 590）→渐隐，圆被框边界裁掉。
+- **验收**：`./tools/verify.sh` 全绿（**485 / 484 pass + 1 pending，4666 asserts**）。
+
 ### 2026-09-19 — 震屏（ScreenShake）+ 自机 Bomb 接线（灵梦击中 / 魔理沙全程）
 
 - **需求**：加震屏；实际触发 = 灵梦 bomb **击中时**（一次性冲击）、魔理沙 bomb **整个期间**（持续）。
