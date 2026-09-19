@@ -1,6 +1,6 @@
 extends GutTest
 ## 吃道具得分浮字：Item.collect 发 GameEvents.item_score，ScorePopupLayer 在吃掉位置
-## 显示本次得分 + 上浮渐隐后回池。
+## 显示本次得分 + 上浮渐隐后回池；自动收取（过收点线/吸附）时金色。
 
 const ITEM_SCENE = preload("res://scenes/item.tscn")
 
@@ -21,7 +21,7 @@ func _pickup(type: int) -> Dictionary:
 	item.entity_registry = reg
 	item.setup(type, Vector2(10, 20))
 	var got: Array = []
-	var cb := func(score: int, pos: Vector2) -> void: got.append([score, pos])
+	var cb := func(score: int, pos: Vector2, is_auto: bool) -> void: got.append([score, pos, is_auto])
 	GameEvents.item_score.connect(cb)
 	item.collect()
 	GameEvents.item_score.disconnect(cb)
@@ -36,6 +36,7 @@ func test_power_item_grants_power_and_score() -> void:
 	assert_eq(r.got.size(), 1, "应发射一次 item_score")
 	assert_eq(r.got[0][0], Item.POWER_SCORE, "浮字数值 = POWER_SCORE")
 	assert_eq(r.got[0][1], Vector2(10, 20), "浮字位置 = 吃掉位置")
+	assert_false(r.got[0][2], "直接撞上吃 = 非自动收取")
 
 
 func test_point_item_grants_max_point_value() -> void:
@@ -49,7 +50,7 @@ func test_point_item_grants_max_point_value() -> void:
 func test_popup_layer_shows_and_recycles() -> void:
 	var layer := ScorePopupLayer.new()
 	add_child_autofree(layer)
-	GameEvents.item_score.emit(1234, Vector2(50, 60))
+	GameEvents.item_score.emit(1234, Vector2(50, 60), false)
 	assert_eq(layer._pool.size(), 1, "应取到一个浮字实例")
 	var ns: NumberSprite = layer._pool[0]
 	assert_eq(ns.value, 1234, "浮字数值")
@@ -57,5 +58,25 @@ func test_popup_layer_shows_and_recycles() -> void:
 	assert_true(ns.visible, "播放中应可见")
 	await get_tree().create_timer(ScorePopupLayer.FADE_TIME + 0.15).timeout
 	assert_false(ns.visible, "渐隐结束后应隐藏（回池）")
-	GameEvents.item_score.emit(5, Vector2.ZERO)
+	GameEvents.item_score.emit(5, Vector2.ZERO, false)
 	assert_same(ns, layer._pool[0], "应复用同一实例，不新建")
+
+
+func test_auto_collect_is_gold_and_manual_is_white() -> void:
+	var layer := ScorePopupLayer.new()
+	add_child_autofree(layer)
+	layer.show_score(100, Vector2(1, 2), true)
+	assert_eq(layer._pool[0].modulate, ScorePopupLayer.AUTO_COLLECT_COLOR, "自动收取应金色")
+	# 等金色那条回池，再复用同一实例验证手动吃是白色
+	await get_tree().create_timer(ScorePopupLayer.FADE_TIME + 0.15).timeout
+	layer.show_score(100, Vector2(3, 4), false)
+	assert_eq(layer._pool[0].modulate, Color.WHITE, "手动吃应白色")
+
+
+func test_font_scale_scales_popup() -> void:
+	var layer := ScorePopupLayer.new()
+	add_child_autofree(layer)
+	layer.font_scale = 2.0
+	layer.show_score(10, Vector2.ZERO, false)
+	var ns: NumberSprite = layer._pool[0]
+	assert_eq(ns.scale, Vector2(2.0, 2.0), "字号倍率应作用在浮字上")

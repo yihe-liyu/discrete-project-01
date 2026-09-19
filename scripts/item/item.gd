@@ -121,7 +121,7 @@ func collect() -> void:
 			Type.BOMB_FULL:
 				res.collect_bomb_full()
 	if gained > 0:
-		GameEvents.item_score.emit(gained, global_position)
+		GameEvents.item_score.emit(gained, global_position, _auto_collect)
 	_recycle()
 
 

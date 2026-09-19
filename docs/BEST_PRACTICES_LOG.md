@@ -18,6 +18,12 @@
 
 ## 记录
 
+### 2026-09-19 — 得分浮字：字号可调 + 自动收取金色
+
+- **字号**：`NumberSprite` 按贴图像素逐位画，没有「字号」参数。改大小要缩**每个浮字实例**（`ns.scale`），**不能**缩 `ScorePopupLayer` 节点——那会把 `position` 一起缩放、位置跑偏。新增 `@export var font_scale: float = 1.0`（Inspector 可调；上浮距离也按倍率走）。
+- **金色**：`Item` 现成的 `_auto_collect`（过收点线 / 靠近吸附为真）随 `GameEvents.item_score(score, position, is_auto_collect)` 传出；`ScorePopupLayer` 自动收取用 `AUTO_COLLECT_COLOR`，手动撞上白色。
+- **验收**：`./tools/verify.sh` 全绿（447 / 446 pass + 1 pending）；`test_score_popup` 加金色/白色 + 字号断言。
+
 ### 2026-09-19 — 吃道具得分浮字（Item.collect → GameEvents.item_score → ScorePopupLayer）
 
 - **需求**：P 点 / 点被自机吃掉时，在吃掉位置显示本次得分并渐隐。
