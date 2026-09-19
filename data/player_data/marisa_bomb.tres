@@ -5,6 +5,7 @@
 
 [resource]
 script = ExtResource("2_script")
+name = "恋符「マスタースパーク」"
 length_range = Vector2(0, 4)
 width_range = Vector2(0.05, 4)
 grow_length_time = 0.3

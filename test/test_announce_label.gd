@@ -47,6 +47,25 @@ func test_rest_x_moves_left_as_label_grows() -> void:
 	assert_almost_eq(short_x - long_x, 192.0 * AnnounceLabel.VISUAL_HALF, 0.001)
 
 
+func test_rest_x_left_aligns_visual_left_to_parent_edge() -> void:
+	var label_w := 384.0             # 夹具：8 个全角字
+	var stop_x := AnnounceLabel.rest_x_left(label_w)
+	var visual_left := stop_x + label_w * AnnounceLabel.EDGE_HALF
+	assert_almost_eq(visual_left, 0.0, 0.001, "自机符卡名视觉左缘贴场地左缘")
+
+
+func test_player_style_background_left_aligned() -> void:
+	var label := _make_label()
+	label.play("梦想封印", Vector2(768, 896), _make_bg(), AnnounceLabel.Style.PLAYER)
+	var bg := label.get_node("Background") as TextureRect
+	assert_almost_eq(bg.position.x, 0.0, 0.001, "自机样式底衬局部 x=0")
+	# 底衬视觉左缘 = 名字视觉左缘
+	var pivot_x := label.size.x / 2.0
+	var bg_visual_left := label.position.x + pivot_x + (bg.position.x - pivot_x) * AnnounceLabel.SHRINK
+	var name_visual_left := label.position.x + label.size.x * (1.0 - AnnounceLabel.SHRINK) / 2.0
+	assert_almost_eq(bg_visual_left, name_visual_left, 0.001, "底衬左缘 = 名字视觉左缘")
+
+
 func test_background_is_behind_label_and_keeps_source_size() -> void:
 	var label := _make_label()
 	label.play("音符「定点扩散」", Vector2(768, 896), _make_bg())
@@ -78,6 +97,7 @@ func test_background_hidden_when_not_provided() -> void:
 
 func test_background_offset_shifts_position_by_screen_pixels() -> void:
 	var label := _make_label()
+	label.background_offset = Vector2.ZERO   # 夹具起点，避开场景里的人工调值
 	label.play("音符「定点扩散」", Vector2(768, 896), _make_bg())
 	var bg := label.get_node("Background") as TextureRect
 	var base := bg.position

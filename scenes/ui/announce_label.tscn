@@ -6,6 +6,7 @@
 horizontal_alignment = 1
 vertical_alignment = 1
 script = ExtResource("1_script")
+background_offset = Vector2(0, 20)
 
 [node name="Background" type="TextureRect" parent="." unique_id=1134515097]
 show_behind_parent = true

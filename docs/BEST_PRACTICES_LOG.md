@@ -19,6 +19,18 @@
 
 ## 记录
 
+### 2026-09-19 — 自机 Bomb 符卡名大字报（PLAYER 样式：左上 → 左下 → 停顿渐隐）
+
+- **需求**：自机放 Bomb 时也播符卡名，位置与 Boss 反过来——先滑到左上角，再停在左下角，等一会儿渐隐。
+- **做法**：
+  - `BombData` 加 `@export var name: String`（符卡名；空串不播报）；`bomb_ring.tres` = 「梦想封印」、`marisa_bomb.tres` = 「恋符「マスタースパーク」」（**占位名，待定**）。
+  - `GameEvents` 加 `player_bomb(spell_name)`；`player.gd _bomb()` 扣弹成功后 emit。
+  - `AnnounceLabel` 加 `enum Style { BOSS, PLAYER }`：BOSS = 先右下再右上（原样）；PLAYER = 先左上（`rest_x_left` 让视觉左缘贴父容器左缘）再左下，停 `PLAYER_HOLD(1.0s)` 后 `FADE_OUT(0.6s)` 渐隐；底衬 PLAYER 贴左缘（局部 x=0）；Bonus/Capture 只给 BOSS。
+  - 新增 `scenes/ui/player_spell_ui.tscn` + `scripts/scenes/player_spell_ui.gd`（订阅 `player_bomb`，用玩家青底衬）；`game_scene.tscn` 实例化。
+- **测试**：`test_announce_label.gd` +2（左缘落点、PLAYER 底衬左对齐）；新增 `test_player_spell_ui.gd`（+2：bomb 触发大字报、空名不播）。渲染探针：左上 / 左下 / 渐隐 / 清场四段都对。
+- **验收**：`./tools/verify.sh` 全绿（**475 / 474 pass + 1 pending，4643 asserts**）。
+- **注**：`announce_label.tscn` 的 `background_offset = (0,20)` 与玩家青底衬是手动调的，已一并保留入库。
+
 ### 2026-09-19 — BossUI 场景化收尾（R21）+ 底衬位置可手动微调
 
 - **R21 收尾**：`boss_ui.tscn` 声明 `Control/TimerLabel`(Label) + `Control/DotTemplate`(ColorRect)；`boss_ui.gd` 改用 `@onready` 取，阶段点改成 `_dot_template.duplicate()`（数量随 Boss 阶段数变，模板留在场景里），删 `DOT_SIZE`。至此 `boss_ui.gd` 不再有 `.new()` 建树。

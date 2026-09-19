@@ -22,3 +22,7 @@ signal phase_end(captured: bool, bonus: int)
 signal phase_bonus_tick(bonus: int)
 @warning_ignore("unused_signal")
 signal dialogue_event(event: String)
+
+## 自机释放 Bomb（符卡名，空串 = 不播报）——PlayerSpellUI 订阅播大字报。
+@warning_ignore("unused_signal")
+signal player_bomb(spell_name: String)

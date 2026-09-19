@@ -18,6 +18,7 @@
 [ext_resource type="Script" uid="uid://bplx0vte3g86s" path="res://scripts/stage/stage_runtime.gd" id="17_stage"]
 [ext_resource type="Script" uid="uid://r1cevfo2ay7l" path="res://scripts/bullet/bullet_manager.gd" id="18_bullets"]
 [ext_resource type="Script" uid="uid://bnelos8uxmg5q" path="res://scripts/effect/score_popup_layer.gd" id="19_popup"]
+[ext_resource type="PackedScene" path="res://scenes/ui/player_spell_ui.tscn" id="20_player_spell"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
 atlas = ExtResource("6_mw25s")
@@ -237,6 +238,8 @@ script = ExtResource("7_kk2rg")
 [node name="BgmHint" parent="." unique_id=1015514766 instance=ExtResource("11_bgm_hint")]
 
 [node name="BossUI" parent="." unique_id=1480836394 instance=ExtResource("8_boss_ui")]
+
+[node name="PlayerSpellUI" parent="." instance=ExtResource("20_player_spell")]
 
 [node name="MissCircleLayer" type="CanvasLayer" parent="." unique_id=2025091103]
 unique_name_in_owner = true

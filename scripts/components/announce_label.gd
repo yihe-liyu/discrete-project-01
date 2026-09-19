@@ -1,5 +1,5 @@
-## 通用大标题入场动画：放大淡入 → 缩回 → 停留 → 滑出
-## 用于符卡名 / Bomb 名等需要“大字报”演出的地方。
+## 通用大标题入场动画：放大淡入 → 缩回 → 停留 → 滑出。
+## BOSS 样式 = BossUI 符卡名（右上收尾）；PLAYER 样式 = 自机 Bomb 符卡名（左上 → 左下 + 停顿渐隐）。
 ## 结构声明在 scenes/ui/announce_label.tscn（R21）：Label 根 + Background / BonusLabel / CaptureLabel。
 class_name AnnounceLabel
 extends Label
@@ -19,12 +19,21 @@ const BG_FADE := 0.35
 const VISUAL_HALF := (1.0 + SHRINK) / 2.0
 ## Capture 相对名字宽度的落点比例。
 const CAPTURE_X_RATIO := 0.6
+## 视觉盒贴左缘时布局框要往左挪的量：(1-SHRINK)/2。
+const EDGE_HALF := (1.0 - SHRINK) / 2.0
+## 自机样式：左下停住后的停留 / 渐隐时长（秒）。
+const PLAYER_HOLD := 1.0
+const FADE_OUT := 0.6
+
+## 大字报样式。
+enum Style { BOSS, PLAYER }
 
 ## 底衬手动微调（单位：屏幕像素；+x 右移 / +y 下移）。
 ## 自动位 = 右缘贴父容器右缘 + 在名字上垂直居中；这里只叠加人工偏移（可在 announce_label.tscn 根节点 Inspector 调）。
 @export var background_offset: Vector2 = Vector2.ZERO
 
 var _tween: Tween
+var _style: Style = Style.BOSS
 
 @onready var _background: TextureRect = $Background
 @onready var _bonus_label: Label = $BonusLabel
@@ -41,9 +50,17 @@ static func rest_x(parent_size_x: float, label_size_x: float) -> float:
 	return parent_size_x - label_size_x * VISUAL_HALF
 
 
+## 左停落点的布局框 x：让「缩放后的视觉左缘」贴父容器左缘。
+## 视觉左缘 = 布局框 x + size.x*EDGE_HALF。
+static func rest_x_left(label_size_x: float) -> float:
+	return -label_size_x * EDGE_HALF
+
+
 ## 播放动画。parent_size 用于居中；p_background 可选（贴图原尺寸显示，随名字同一路径）。
-func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) -> void:
+## p_style = BOSS（先右下再右上，定住）或 PLAYER（先左上再左下，停一会儿渐隐）。
+func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null, p_style: Style = Style.BOSS) -> void:
 	_kill_tween()
+	_style = p_style
 	self.text = p_text
 	add_theme_font_size_override("font_size", DEFAULT_FONT_SIZE)
 
@@ -60,8 +77,13 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) 
 	scale = Vector2(INITIAL_SCALE, INITIAL_SCALE)
 	modulate.a = 0.0
 
+	# 收尾落点：BOSS = 先右下再右上；PLAYER = 先左上再左下（贴另一侧边、垂直顺序相反）。
+	var bottom_y := parent_size.y - size.y * VISUAL_HALF
+	var edge_x := rest_x(parent_size.x, size.x) if p_style == Style.BOSS else rest_x_left(size.x)
+	var first_y := bottom_y if p_style == Style.BOSS else 0.0
+	var second_y := 0.0 if p_style == Style.BOSS else bottom_y
+
 	var center := position
-	var stop_x := rest_x(parent_size.x, size.x)
 	_tween = create_tween()
 	_tween.set_parallel(true)
 	_tween.tween_property(self, "modulate:a", 1.0, FADE)
@@ -73,11 +95,15 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) 
 	if _background.visible:
 		_tween.set_parallel(true)
 		_tween.tween_property(_background, "modulate:a", 1.0, BG_FADE)
-		_tween.tween_property(self, "position", Vector2(stop_x, parent_size.y - size.y * VISUAL_HALF), SLIDE).set_trans(Tween.TRANS_QUAD)
+		_tween.tween_property(self, "position", Vector2(edge_x, first_y), SLIDE).set_trans(Tween.TRANS_QUAD)
 		_tween.set_parallel(false)
 	else:
-		_tween.tween_property(self, "position", Vector2(stop_x, parent_size.y - size.y * VISUAL_HALF), SLIDE).set_trans(Tween.TRANS_QUAD)
-	_tween.tween_property(self, "position", Vector2(stop_x, 0), SLIDE).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		_tween.tween_property(self, "position", Vector2(edge_x, first_y), SLIDE).set_trans(Tween.TRANS_QUAD)
+	_tween.tween_property(self, "position", Vector2(edge_x, second_y), SLIDE).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	if p_style == Style.PLAYER:
+		# 自机符卡：左下停一会儿再渐隐
+		_tween.tween_interval(PLAYER_HOLD)
+		_tween.tween_property(self, "modulate:a", 0.0, FADE_OUT).set_trans(Tween.TRANS_QUAD)
 	_tween.tween_callback(_on_finished)
 
 
@@ -92,12 +118,14 @@ func set_capture_text(p_text: String) -> void:
 
 
 func _on_finished() -> void:
-	_show_info_labels()
+	# Bonus / Capture 是 Boss 符卡计分信息，只给 BOSS 样式。
+	if _style == Style.BOSS:
+		_show_info_labels()
 	finished.emit()
 
 
 ## 底衬：贴图原尺寸显示（不缩放），随名字的 position 一起滑。
-## 子 scale = 1/SHRINK 抵消父节点最终的 0.6 缩放；局部位置反推成「缩到 SHRINK 时右缘贴父容器右缘、垂直居中」。
+## 子 scale = 1/SHRINK 抵消父节点最终的 0.6 缩放；局部位置反推成「缩到 SHRINK 时贴对应侧边、垂直居中」。
 func _setup_background(p_background: Texture2D) -> void:
 	if p_background == null:
 		_background.visible = false
@@ -109,8 +137,9 @@ func _setup_background(p_background: Texture2D) -> void:
 	_background.size = bg_size
 	_background.scale = Vector2(inv, inv)
 	# 局部偏移会被父节点 0.6 缩放，所以把"屏幕像素"偏移先除以 SHRINK，保证 1:1 直观。
-	_background.position = Vector2(size.x - bg_size.x * inv, size.y / 2.0 - bg_size.y * inv / 2.0) \
-		+ background_offset / SHRINK
+	# BOSS 贴右缘（局部右 = size.x）；PLAYER 贴左缘（局部左 = 0）。
+	var bg_x := (size.x - bg_size.x * inv) if _style == Style.BOSS else 0.0
+	_background.position = Vector2(bg_x, size.y / 2.0 - bg_size.y * inv / 2.0) + background_offset / SHRINK
 	_background.modulate.a = 0.0
 
 

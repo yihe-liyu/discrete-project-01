@@ -4,6 +4,10 @@
 extends Resource
 class_name BombData
 
+@export_group("符卡名")
+## 释放时的大字报名字（自机 Bomb 符卡名；空串 = 不播报）。
+@export var name: String = ""
+
 @export_group("外观")
 @export var texture: Texture2D                              ## 炸弹贴图（单帧）
 @export var z_index: int = LayerConfig.BOMB                 ## 渲染层
