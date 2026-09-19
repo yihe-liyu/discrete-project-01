@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="BossRegistry" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/boss_data.gd" id="1_u1om2"]
+[ext_resource type="Resource" path="res://data/stages/stage01/boss/kamorui_mid.tres" id="2_b4u0v"]
+[ext_resource type="Resource" path="res://data/stages/stage01/boss/kamorui_final.tres" id="3_l0tw0"]
+[ext_resource type="Script" path="res://scripts/data/boss_registry.gd" id="4_3jupf"]
+
+[resource]
+script = ExtResource("4_3jupf")
+bosses = Array[ExtResource("1_u1om2")]([ExtResource("2_b4u0v"), ExtResource("3_l0tw0")])

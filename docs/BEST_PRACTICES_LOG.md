@@ -19,6 +19,19 @@
 
 ## 记录
 
+### 2026-09-19 — BossCatalog 名册数据化（A）：BossData/.tres + BossRegistry
+
+- **问题**：`BossCatalog.all()` 是手写 GDScript 名册（每阶段一个 `const preload` + 一句 `.phase()`），符卡多了会堆成 80+ const + 一大坨嵌套构造；而 `BossData` 本就是 `@export` Resource。
+- **做法**（与 `StageCatalog` 同构）：
+  - `BossData` 加 `@export stage_id` / `order`（boss_index = 同面 order 升序）；
+  - 每个 Boss 落 `data/stages/<stage>/boss/*.tres`；新 `BossRegistry`（`@export bosses: Array[BossData]`）+ `data/registry/boss_registry.tres`；
+  - `BossCatalog.all()` 读注册表（空则扫 `data/stages/**/boss/*.tres`），按 stage_id 分组、order 排序、缓存；删掉 `KAMORUI/NON_MID01/NON01` 三个 const。
+  → **加符卡 = 加 `PhaseData.tres` + 在 Boss 的 `.tres` 里 add 一项，零 GDScript**。
+- **测试解耦**：`test_boss_catalog` 去掉「阶段数 = 2 / 具体卡名」，改成名册**自洽**断言（规范序 = phases 扁平拼接、phase_at 与规范序一致、boss_index 在范围）。
+- **坑**：一次性 `godot -s` 生成器会把 `.godot/global_script_class_cache.cfg` 写坏（连带后续 GUT 报 `game_events.gd` 编译失败）→ `--import` 重建即恢复；生成 `.tres` 时 BossData 必须**先存后 load**，注册表才会「引用」而不是「内联」。
+- **未做（另开）**：`Timeline.wait` 的多阶段连打语义不成立（一次 `phase_cleared` 会同时武装所有 wait 事件）——`stage01.gd` 时间线仍只打 `phases[0]`，多符卡编排需要 Timeline 自己的 `sequence_phases`。
+- **验收**：verify 全绿（457 / 456 pass + 1 pending，4583 asserts）。
+
 ### 2026-09-19 — 修「清空数据」崩溃 + workbench 测试去内容耦合
 
 - **bug**：`option_menu._refresh_values()` 先读 `item["def"]` 再判类型；动作项「清空数据」没有 `def` → 一进设置菜单就报错。改为 action 先分支（动作项无设置值）。

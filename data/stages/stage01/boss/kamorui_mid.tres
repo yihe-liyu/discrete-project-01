@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BossData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phase_data.gd" id="1_bcyec"]
+[ext_resource type="Resource" path="res://data/stages/stage01/phase/non_mid01/non_mid01.tres" id="2_6yhxn"]
+[ext_resource type="Script" path="res://scripts/data/boss_data.gd" id="3_lyeae"]
+[ext_resource type="PackedScene" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="4_a0au4"]
+
+[resource]
+script = ExtResource("3_lyeae")
+boss_name = "卡摩瑞"
+visual = ExtResource("4_a0au4")
+phases = Array[ExtResource("1_bcyec")]([ExtResource("2_6yhxn")])
+stage_id = 1

@@ -8,26 +8,62 @@ class_name BossCatalog
 ##
 ## 自机差分（换卡 = 换 uid）暂未落地；未来在"取 Boss"这层按 selected_character 路由即可。
 
-const KAMORUI = preload("res://data/enemy_visual/boss/stage01/kamorui.tscn")
-const NON_MID01 = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
-const NON01 = preload("res://data/stages/stage01/phase/non01/non01.tres")
+const REGISTRY_PATH := "res://data/registry/boss_registry.tres"
+const BOSS_SCAN_ROOT := "res://data/stages"
 
 static var _cache: Dictionary = {}
 
 
 ## 全部 Boss 谱（惰性构建，缓存）：stage -> Array[BossData]（boss_index = 数组下标）
+## 数据源：boss_registry.tres（回退：扫 data/stages/**/boss/*.tres）；按 stage_id 分组、order 排序。
 ## 注意：拆分"道中 / 关底"只影响"谁登场、ui 点数分段"，不影响阶段编号。
 static func all() -> Dictionary:
 	if _cache.is_empty():
-		_cache = {
-			1: [
-				BossData.new().name("卡摩瑞").look(KAMORUI)
-					.phase(NON_MID01),  # boss 0：道中，只打道中非符1
-				BossData.new().name("卡摩瑞").look(KAMORUI)
-					.phase(NON01),     # boss 1：关底，只打面非符2
-			],
-		}
+		_cache = _build_all()
 	return _cache
+
+
+static func _build_all() -> Dictionary:
+	var grouped := {}
+	for b: BossData in _load_bosses():
+		if b == null:
+			continue
+		if not grouped.has(b.stage_id):
+			grouped[b.stage_id] = []
+		grouped[b.stage_id].append(b)
+	for stage in grouped:
+		grouped[stage].sort_custom(func(a: BossData, c: BossData) -> bool: return a.order < c.order)
+	return grouped
+
+
+## 名册加载：注册表优先，空则扫描 data/stages/**/boss/*.tres。
+static func _load_bosses() -> Array[BossData]:
+	if ResourceLoader.exists(REGISTRY_PATH):
+		var reg: BossRegistry = ResourceLoader.load(REGISTRY_PATH)
+		if reg and not reg.bosses.is_empty():
+			return reg.bosses.duplicate()
+	return _scan_bosses(BOSS_SCAN_ROOT)
+
+
+## 扫 <stage>/boss/*.tres（约定目录）；非 BossData 的 .tres 自动跳过。
+static func _scan_bosses(dir_path: String) -> Array[BossData]:
+	var out: Array[BossData] = []
+	var da := DirAccess.open(dir_path)
+	if not da:
+		return out
+	da.list_dir_begin()
+	var entry := da.get_next()
+	while entry != "":
+		if da.current_is_dir():
+			if not entry.begins_with("."):
+				out.append_array(_scan_bosses(dir_path.path_join(entry)))
+		elif entry.ends_with(".tres") and dir_path.get_file() == "boss":
+			var res := ResourceLoader.load(dir_path.path_join(entry))
+			if res is BossData:
+				out.append(res)
+		entry = da.get_next()
+	da.list_dir_end()
+	return out
 
 
 ## 取某面某 Boss（boss_index = 数组下标）；越界返回 null

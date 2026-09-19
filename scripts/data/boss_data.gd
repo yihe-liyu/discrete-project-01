@@ -13,6 +13,10 @@ class_name BossData
 @export var phases_extra: Array[PhaseData] = []
 @export var score_value: int = 10000
 @export var hitbox_radius: float = 36.0
+## 所在关卡面（BossCatalog 按它分组）
+@export var stage_id: int = 0
+## 同面内排序（升序 = boss_index）
+@export var order: int = 0
 ## 入场/退场演出脚本（可选；无则默认顶部飞入/直接退场）
 @export var enter_script: Script
 @export var exit_script: Script
@@ -28,6 +32,8 @@ func lunatic_phase(v: PhaseData) -> BossData:  phases_lunatic.append(v); return 
 func extra_phase(v: PhaseData) -> BossData:    phases_extra.append(v); return self
 func score(v: int) -> BossData:         score_value = v; return self
 func hitbox(v: float) -> BossData:       hitbox_radius = v; return self
+func in_stage(v: int) -> BossData:       stage_id = v; return self
+func at_order(v: int) -> BossData:       order = v; return self
 
 ## 按难度取阶段（0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra；空难度组回退 Normal/phases）
 func phases_for_difficulty(diff: int) -> Array[PhaseData]:

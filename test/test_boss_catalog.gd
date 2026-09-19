@@ -15,19 +15,19 @@ func _mk_spell(p_uid: int, p_name: String) -> PhaseData:
 	return p
 
 
-## 真实内容：stage 1 拆成两个 Boss（道中 + 关底）；规范阶段顺序（C）跨 boss 共 2 个阶段
-func test_stage1_boss_has_two_phases():
-	var mid := BossCatalog.boss(1, 0)
-	var final := BossCatalog.boss(1, 1)
-	assert_not_null(mid, "道中 boss 0 存在")
-	assert_not_null(final, "关底 boss 1 存在")
-	if mid: assert_eq(mid.phases.size(), 1, "道中只打 1 个阶段")
-	if final: assert_eq(final.phases.size(), 1, "关底只打 1 个阶段")
-	# 规范顺序（C：阶段身份与 Boss 拆分无关）
-	assert_eq(BossCatalog.stage_phase_order(1).size(), 2, "规范顺序共 2 个阶段")
-	if final:
-		assert_eq(BossCatalog.phase_canonical_index(1, final.phases[0]), 1, "面非符规范序位置 1")
-		assert_eq(BossCatalog.boss_index_of_phase(1, 1), 1, "规范序 1 属于关底 boss")
+## 真实内容：stage 1 名册**自洽**（不数具体阶段数、不绑卡名 —— 加符卡不应红）
+func test_stage1_roster_is_self_consistent():
+	var bosses: Array = BossCatalog.all().get(1, [])
+	assert_gt(bosses.size(), 0, "stage 1 应有 Boss")
+	for b: BossData in bosses:
+		assert_gt(b.phases.size(), 0, "每个 Boss 至少一个阶段（%s）" % b.boss_name)
+	var order := BossCatalog.stage_phase_order(1)
+	assert_gt(order.size(), 0, "规范阶段顺序非空")
+	for i in order.size():
+		assert_eq(BossCatalog.phase_canonical_index(1, order[i]), i, "规范序自查（%d）" % i)
+		assert_eq(BossCatalog.phase_at(1, i, 1), order[i], "phase_at 取规范序第 i 个")
+		var bi := BossCatalog.boss_index_of_phase(1, i)
+		assert_true(bi >= 0 and bi < bosses.size(), "boss_index 在范围内（%d）" % i)
 
 
 ## 越界取 Boss → null
@@ -38,15 +38,14 @@ func test_boss_out_of_range_is_null():
 
 ## 按规范顺序 + 难度取阶段（C 方案练习接线原语）；兼容 card() 旧入口
 func test_card_lookup_by_position_and_difficulty():
-	var p0 := BossCatalog.phase_at(1, 0, 1)  # Normal 难度，规范序 0（道中非符1）
-	var p1 := BossCatalog.phase_at(1, 1, 1)  # Normal 难度，规范序 1（面非符2）
+	var order := BossCatalog.stage_phase_order(1)
+	assert_gt(order.size(), 0, "规范顺序非空")
+	var p0 := BossCatalog.phase_at(1, 0, 1)  # Normal 难度，规范序 0
 	assert_not_null(p0, "规范序 0 应存在")
-	assert_not_null(p1, "规范序 1 应存在")
-	if p0: assert_eq(p0.name, "卡摩瑞的道中非符1")
-	if p1: assert_eq(p1.name, "卡摩瑞的非符1")
+	assert_eq(p0, order[0], "phase_at 与规范序一致")
 	# 兼容旧入口 card() 仍可用（boss 内下标）
-	assert_not_null(BossCatalog.card(1, 0, 0, 1), "card 旧入口 boss0 phase0 仍在")
-	assert_not_null(BossCatalog.card(1, 1, 0, 1), "card 旧入口 boss1 phase0 仍在")
+	for bi in BossCatalog.all().get(1, []).size():
+		assert_not_null(BossCatalog.card(1, bi, 0, 1), "card 旧入口 boss%d phase0 仍在" % bi)
 	# 越界 / 不存在
 	assert_null(BossCatalog.phase_at(1, 99, 1), "越界 phase_index 返回 null")
 	assert_null(BossCatalog.phase_at(999, 0, 1), "不存在 stage 返回 null")
