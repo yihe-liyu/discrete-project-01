@@ -159,7 +159,7 @@
 - `EnemyData` 资源 + 行为脚本；**别在关卡脚本现场捏 `ctx.enemies.spawn(EnemyData.new()...)`**，做成资源引用。
 
 ### 新增自机 bomb
-- 数据是 **`BombData` 家族**：基类 `BombData`（外观 / 编队 / 无敌）+ 子类 `RingBombData`（环绕炸）/ `MistBombData`（分阶段展开）；`.tres` 例：`data/player_data/bomb_ring.tres` / `marisa_bomb.tres`，经 `PlayerData.bomb` 挂到角色。
+- 数据是 **`BombData` 家族**：基类 `BombData`（外观 / 编队 / 无敌）+ 子类 `RingBombData`（环绕炸）/ `MistBombData`（分阶段展开）；`.tres` 例：`data/player_data/reimu_bomb.tres` / `marisa_bomb.tres`，经 `PlayerData.bomb` 挂到角色。
 - **宿主实体按数据实际类型分派**（`KernelBulletHost.spawn_bomb`）：`MistBombData` → `KernelMistBomb`；其余/基类 → `KernelBomb`。**调参别写回引擎代码**。
 - 加新 bomb = 一个 `XxxBombData extends BombData` + 一个 `KernelXxxBomb extends BombEntity` + `spawn_bomb` 一条分派；不需要动内核。
 

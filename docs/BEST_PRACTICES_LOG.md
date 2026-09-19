@@ -27,7 +27,7 @@
   - `GameEvents` 加 `screen_shake(amount)` / `screen_shake_sustain(amount)`。
   - `BombData` 加 `shake_impulse` / `shake_sustain`（0..1，.tres 可调）。
   - 冲击：`KernelBomb._explode()`（击中/引爆）emit。持续：**基类** `BombEntity._hold_shake_sustain()`（子类 setup 读完 data 后调用）+ `_exit_tree()` 归零——所有 bomb 通用。
-  - `.tres`：`bomb_ring` impulse 0.8 + sustain 0.3；`marisa_bomb` sustain 1.0。
+  - `.tres`：`reimu_bomb` impulse 0.8 + sustain 0.3；`marisa_bomb` sustain 1.0。
 - **测试**：新增 `test_screen_shake.gd`（+4：冲击封顶 / 衰减归零 / 持续保持 / 默认不震）+ mist bomb 持有并归零。顺手把 `test_bomb_data` 里锁死 `explode_damage=150` / `count=8` 的**内容耦合**改成结构断言（夹具原则）——内容改了不该红。
 - **验收**：`./tools/verify.sh` 全绿（**481 / 480 pass + 1 pending，4656 asserts**）。
 - **3D 背景一起晃**：`ScreenShake.bind_layer(CanvasLayer)`（组合根 `game_scene.gd` 绑 `$Background`）；层 `offset` 取**负号**与 World 同向（Camera2D.offset 让 World 反向位移）。`Background/SubViewportContainer` over-scan 16px（`64,32~832,928` → `48,16~848,944`），晃到 ±14px 也不露边——超出场地的部分被 `false_front` 相框盖住。HUD 仍不晃。
@@ -36,7 +36,7 @@
 
 - **需求**：自机放 Bomb 时也播符卡名，位置与 Boss 反过来——先滑到左上角，再停在左下角，等一会儿渐隐。
 - **做法**：
-  - `BombData` 加 `@export var name: String`（符卡名；空串不播报）；`bomb_ring.tres` = 「梦想封印」、`marisa_bomb.tres` = 「恋符「マスタースパーク」」（**占位名，待定**）。
+  - `BombData` 加 `@export var name: String`（符卡名；空串不播报）；`reimu_bomb.tres` / `marisa_bomb.tres` 已填真名（灵符「梦想封印 · 散」/ 恋符「极限火花」）。
   - `GameEvents` 加 `player_bomb(spell_name)`；`player.gd _bomb()` 扣弹成功后 emit。
   - `AnnounceLabel` 加 `enum Style { BOSS, PLAYER }`：BOSS = 先右下再右上（原样）；PLAYER = 先左上（`rest_x_left` 让视觉左缘贴父容器左缘）再左下，停 `PLAYER_HOLD(1.0s)` 后 `FADE_OUT(0.6s)` 渐隐；底衬 PLAYER 贴左缘（局部 x=0）；Bonus/Capture 只给 BOSS。
   - 自机最终落点可调：`@export var player_rest_offset: Vector2`（屏幕像素，**要偏上填负 y**），经 `player_rest_pos()` 叠加；Boss 样式不受影响。

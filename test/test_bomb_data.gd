@@ -4,8 +4,8 @@ extends GutTest
 
 
 func test_ring_tres_loads_as_ring() -> void:
-	var bd := load("res://data/player_data/bomb_ring.tres") as RingBombData
-	assert_not_null(bd, "bomb_ring.tres 应加载为 RingBombData")
+	var bd := load("res://data/player_data/reimu_bomb.tres") as RingBombData
+	assert_not_null(bd, "reimu_bomb.tres 应加载为 RingBombData")
 	assert_true(bd is BombData, "子类应满足基类契约")
 	# 数值都属内容（.tres 可调），这里只锁结构：数量非空、伤害/清弹为正、有贴图。
 	assert_true(bd.count >= 1, "至少 1 颗")
