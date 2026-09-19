@@ -19,6 +19,17 @@
 
 ## 记录
 
+### 2026-09-19 — Timeline.sequence_phases：Boss 阶段按序连打
+
+- **要解决的问题**：`wait` 的一次性 `phase_cleared` 会**同时武装所有** wait 事件，表达不了「P0 打完 → gap → P1 → 打完 → P2」；`stage01.gd` 因此只能打 `phases[0]`。
+- **做法**：`Timeline` 加 `sequence_phases(getter, phases, gap)`（排时间点）与 `start_sequence_now(...)`（事件驱动立即起）：
+  - 起 `phases[0]`；每次 `phase_cleared`，非最后一张 → `next_at = _elapsed + gap`（`tick` 到点进下一张），最后一张 → 记 `_cursor` + 武装 wait；
+  - 空表 → 视作「已打完」，立即武装 wait（避免后续 wait 永不触发）；
+  - `start_phase` 抽出 `_arm_waits()`；`reset()` 清序列。
+- **接线**：`stage01.gd` 道中 Boss → `sequence_phases(..., phases_for_difficulty(selected), 1.0)`；最终 Boss 在对话 `boss_fight` → `start_sequence_now(...)`（替代只打 `phase(0)`）。不再需要 `SPELL01` const。
+- **测试**：`test_timeline_sequence.gd`（合成假 Boss）：按序 + gap、**只有最后一张击破后才武装 wait**、空表立即武装。
+- **验收**：verify 全绿（462 / 461 pass + 1 pending，4609 asserts）。
+
 ### 2026-09-19 — 练习菜单：无可用难度时不落在锁定项（(II) 严格语义收口）
 
 - **确认语义（(II)）**：每个难度必须自己配阶段（`phases_for_difficulty` 不回退）；未配置的难度在菜单里显示为锁定 `?`，不可练。

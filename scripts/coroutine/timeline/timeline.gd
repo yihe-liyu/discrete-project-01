@@ -13,6 +13,8 @@ extends RefCounted
 ##   func _on_step(_ctx): return timeline.tick(get_dt())
 
 var _events: Array[TimelineEvent] = []
+## 阶段序列（sequence_phases）：{getter, phases, gap, index, next_at}
+var _sequences: Array[Dictionary] = []
 var _elapsed: float = 0.0
 var _loop_start: float = -1.0
 var _cursor: float = 0.0   # wait() 的参考点，phase_cleared 后更新
@@ -59,19 +61,64 @@ func wait(n: float) -> Timeline:
 ## 注意：与 BossData.normal_phase()（静态声明 Boss 有哪些阶段）区分——这里是运行驱动"此刻进入该阶段"
 func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 	return do(func():
-		var boss := boss_getter.call() as Boss
+		var boss = boss_getter.call()
+		if boss == null:
+			return
 		boss.start_phase(data)
-		# 旧行为：_is_paused = true 冻结整个时间轴直到击破（Boss 战期间后续 tl 事件全部失效）
-		# 现改为：仅 wait 事件等待 phase_cleared 激活，绝对时间事件（at/t）战斗期间照常触发
+		# 击破后：记 _cursor + 武装 wait（Boss 战期间绝对时间事件照常触发）
 		boss.phase_cleared.connect(func(_captured: bool, _bonus: int):
 			_cursor = _elapsed
-			# 激活全部未触发的 wait 事件（多个 wait 各自按 _cursor + offset 触发，
-			# 支持 Boss 击破后编排多段相对波次/演出）
-			for ev in _events:
-				if ev.wait_offset >= 0 and not ev.is_wait_armed and not ev.is_fired:
-					ev.is_wait_armed = true
+			_arm_waits()
 		, CONNECT_ONE_SHOT)
 	)
+
+
+## 按序连打一串阶段：phases[0] 起手；每张击破后 gap 秒进下一张；
+## **最后一张**击破后才记 _cursor + 武装 wait —— 所以紧随其后的 wait(n).do(...) 是「全部打完后 n 秒」。
+## 空表 → 视作「已打完」，立即武装 wait（避免后续 wait 永不触发）。
+func sequence_phases(boss_getter: Callable, phases: Array[PhaseData], gap: float = 0.0) -> Timeline:
+	return do(func(): _start_sequence(boss_getter, phases, gap))
+
+
+## 立即起一个序列（不排时间点；事件驱动开战用，如对话 boss_fight）。
+func start_sequence_now(boss_getter: Callable, phases: Array[PhaseData], gap: float = 0.0) -> void:
+	_start_sequence(boss_getter, phases, gap)
+
+
+func _start_sequence(boss_getter: Callable, phases: Array[PhaseData], gap: float) -> void:
+	if phases.is_empty():
+		_cursor = _elapsed
+		_arm_waits()
+		return
+	_sequences.append({getter = boss_getter, phases = phases, gap = gap, index = 0, next_at = _elapsed})
+
+
+## 起序列里的下一张；非最后一张击破后设 next_at（tick 到点再进），最后一张击破后武装 wait。
+func _advance_sequence(seq: Dictionary) -> void:
+	if seq.index >= seq.phases.size():
+		return
+	var data: PhaseData = seq.phases[seq.index]
+	var is_last: bool = seq.index == seq.phases.size() - 1
+	seq.index += 1
+	seq.next_at = INF   # 等本张击破后再定下一张时刻
+	var boss = seq.getter.call()
+	if boss == null:
+		return
+	boss.start_phase(data)
+	boss.phase_cleared.connect(func(_captured: bool, _bonus: int):
+		if is_last:
+			_cursor = _elapsed
+			_arm_waits()
+		else:
+			seq.next_at = _elapsed + seq.gap
+	, CONNECT_ONE_SHOT)
+
+
+## 激活全部未触发的 wait 事件（各自按 _cursor + offset 触发）。
+func _arm_waits() -> void:
+	for ev in _events:
+		if ev.wait_offset >= 0 and not ev.is_wait_armed and not ev.is_fired:
+			ev.is_wait_armed = true
 
 
 # ═══ 内部 ═══
@@ -107,6 +154,17 @@ func tick(delta: float) -> bool:
 			else:
 				ev.is_fired = true
 
+	# 阶段序列：上一张击破后到点进下一张
+	var seq_i := 0
+	while seq_i < _sequences.size():
+		var seq: Dictionary = _sequences[seq_i]
+		if seq.index < seq.phases.size() and _elapsed >= seq.next_at:
+			_advance_sequence(seq)
+		if seq.index >= seq.phases.size():
+			_sequences.remove_at(seq_i)   # 最后一张已起手 → 出列
+		else:
+			seq_i += 1
+
 	if _loop_start >= 0 and _elapsed >= _loop_start and _all_onetime_fired():
 		_reset_onetime()
 		_elapsed = _loop_start
@@ -137,6 +195,7 @@ func _reset_onetime() -> void:
 
 func reset() -> void:
 	_elapsed = 0.0
+	_sequences.clear()
 	for ev in _events:
 		ev.is_fired = false
 

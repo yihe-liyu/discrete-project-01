@@ -10,11 +10,6 @@ const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 
 const STAGE01_INTRO = preload("res://data/dialogue/stage01/intro.gd")
 
-#const SPELL01 = [preload("res://data/stages/stage01/phase/spell01/spell001.tres"),\
-				 #preload("res://data/stages/stage01/phase/spell01/spell002.tres"),\
-				 #preload("res://data/stages/stage01/phase/spell01/spell003.tres"),\
-				 #preload("res://data/stages/stage01/phase/spell01/spell004.tres")]
-
 ## 最终 Boss（战前对话中进场）：对话事件回调（_on_dialogue_event）用到——用 StageObjects 按名取，不闭包捕获
 var _mid_boss_data: BossData = BossCatalog.boss(1, 0)
 var _final_boss_data: BossData = BossCatalog.boss(1, 1)
@@ -111,11 +106,12 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 			Vector2(-50, 500), Vector2(GameConfig.FIELD_CENTER_X, 250))
 	)
 
-	# 非符 1
-	timeline.at(38.0).start_phase(func(): return _mid_boss_handle.resolve(), _mid_boss_data.phases_normal[0])
-	# ← 非符 被击破后 1s → 符卡（phase 继承 wait 偏移，击破后激活）
-	#timeline.wait(1.0).start_phase(func(): return _mid_boss_handle.resolve(), diff_pick(SPELL03))
-	# ← 符卡被击破后 2s → 退场
+	# 道中 Boss：按难度取阶段表，逐张连打（击破后 1s 进下一张）
+	timeline.at(38.0).sequence_phases(
+		func(): return _mid_boss_handle.resolve(),
+		_mid_boss_data.phases_for_difficulty(SaveData.selected_difficulty),
+		1.0)
+	# ← 全部阶段击破后 2s → 退场
 	timeline.wait(2.0).do(func(): _mid_boss_handle.retreat(Vector2(GameConfig.FIELD_CENTER_X, -150)))
 
 	# Boss 后增援波次（设计：提前击破 Boss → 固定时刻增援趁 Boss 已死触发，
@@ -214,10 +210,14 @@ func _on_bgm_switch() -> void:
 		_stage_director.bgm("music_3")
 
 func _on_boss_fight() -> void:
-	# 最后一句说完 → Boss 直接开战（面非符，序号 1，由完整链推导）
-	if _final_boss_handle:
+	# 最后一句说完 → 最终 Boss 开战：按难度取阶段表连打（未开战才起，防重入）
+	var fb: Boss = _final_boss_handle.resolve() if _final_boss_handle else null
+	if fb != null and fb.current_phase() == null and _timeline != null:
 		_final_boss_handle.show_phase_dots()
-		_final_boss_handle.phase(0, true)
+		_timeline.start_sequence_now(
+			func(): return _final_boss_handle.resolve(),
+			_final_boss_data.phases_for_difficulty(SaveData.selected_difficulty),
+			1.0)
 
 
 ## Boss 后横穿增援：side 0=右→左，1=左→右（i 决定颜色/位置随机偏移）
