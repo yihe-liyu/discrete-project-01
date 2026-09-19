@@ -78,6 +78,7 @@ func setup(type: Type, pos: Vector2) -> void:
 	global_position = pos
 	_velocity = Vector2(0, -180)  # 上抛初速
 	_auto_collect = false
+	_is_highlight = false   # 池复用：必须清掉上一轮的金色标记
 
 	match type:
 		Type.POWER:

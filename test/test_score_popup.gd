@@ -78,6 +78,15 @@ func test_proximity_is_not_highlight() -> void:
 	assert_false(got[0][2], "靠近吸附 → 白色")
 
 
+func test_reused_item_does_not_inherit_highlight() -> void:
+	var r: Dictionary = _pickup(Item.Type.POWER)
+	r.item.force_collect()
+	_collect(r.item)                                  # 金色收掉
+	r.item.setup(Item.Type.POINT, Vector2(10, 20))    # 池复用（ItemPool.spawn 走的入口）
+	var got: Array = _collect(r.item)
+	assert_false(got[0][2], "池复用的道具不应继承上一轮的金色标记")
+
+
 func test_popup_layer_shows_and_recycles() -> void:
 	var layer := ScorePopupLayer.new()
 	add_child_autofree(layer)
