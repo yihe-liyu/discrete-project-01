@@ -19,6 +19,17 @@
 
 ## 记录
 
+### 2026-09-19 — AnnounceLabel 场景化（R21）：子节点挂进 .tscn，不再 new()+add_child
+
+- **来源**：符卡名底衬用代码建 `TextureRect`，被问"为啥节点不是挂 tscn 里的" —— 违反 **R21（声明式建树）**。查历史：`boss_ui.gd` 的 `AnnounceLabel` / `_timer_label` / 阶段点 / 子标签本来就都是 `.new()`，我顺着旧模式做，是错的。
+- **做法**：
+  - 新增 `scenes/ui/announce_label.tscn`：`Label` 根（挂脚本）+ `Background`(TextureRect) + `BonusLabel`/`CaptureLabel`(Label)；对齐/字体/颜色/`show_behind_parent`/`expand_mode` 全在场景里声明。
+  - `announce_label.gd` 改成 `$Background`/`$BonusLabel`/`$CaptureLabel` 自引用（`@onready`），新增 `set_bonus_text`/`set_capture_text`，`_on_finished` 统一亮出子标签；删掉建树代码。
+  - `boss_ui.gd` 用 `ANNOUNCE_SCENE.instantiate()` 替代 `AnnounceLabel.new()`；删 `_add_info_labels`/`_make_sub_label`。
+- **测试**：`test_announce_label.gd` 改为实例化场景；+1 条（子节点声明在场景、播报中隐藏、setter 生效）。渲染探针：名字 + 红底衬 + 金 `59273` + 绿 `00/01` 全部就位。
+- **验收**：`./tools/verify.sh` 全绿（**468 / 467 pass + 1 pending，4630 asserts**）。
+- **余**：`boss_ui.gd` 的 `_timer_label` / 阶段点 `ColorRect` 仍是 `.new()`（数量随 Boss 变，另议）。
+
 ### 2026-09-19 — 符卡名底衬（AnnounceLabel 可选背景）：同一套 transform，缩回正常后再渐显
 
 - **需求**：符卡名背后加底衬；底衬**保持贴图原尺寸**（不拉伸也不缩放），随名字**一起滑（同路径）**，右缘贴边；名字缩回正常后再渐显。

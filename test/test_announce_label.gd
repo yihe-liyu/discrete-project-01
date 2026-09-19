@@ -1,10 +1,26 @@
 extends GutTest
-## AnnounceLabel 右停落点：缩放绕中心 pivot，视觉包围盒每侧比布局框多 size*(1-SHRINK)/2。
-## 不变量：停靠后「视觉右缘」贴父容器右缘——越界会被上层 HUD 相框（false_front）盖掉。
+## AnnounceLabel：右停落点（视觉盒贴边）+ 场景声明的底衬 / Bonus / Capture 子节点。
+
+const ANNOUNCE_SCENE := preload("res://scenes/ui/announce_label.tscn")
+
 
 ## 视觉右缘 = 布局框 x + size.x*(1+SHRINK)/2。按 pivot 语义独立推导，不复用实现常量。
 func _visual_right(label_size_x: float, stop_x: float) -> float:
 	return stop_x + label_size_x * (1.0 + AnnounceLabel.SHRINK) / 2.0
+
+
+## 实例化组件场景（子节点声明在 .tscn 里）。
+func _make_label() -> AnnounceLabel:
+	var label := ANNOUNCE_SCENE.instantiate() as AnnounceLabel
+	add_child_autofree(label)
+	return label
+
+
+## 底衬夹具：400×63 占位纹理（不碰真实素材）。
+func _make_bg() -> Texture2D:
+	var tex := PlaceholderTexture2D.new()
+	tex.size = Vector2(400.0, 63.0)
+	return tex
 
 
 func test_rest_x_aligns_visual_right_to_parent_edge() -> void:
@@ -31,20 +47,13 @@ func test_rest_x_moves_left_as_label_grows() -> void:
 	assert_almost_eq(short_x - long_x, 192.0 * AnnounceLabel.VISUAL_HALF, 0.001)
 
 
-## 底衬夹具：400×63 占位纹理（不碰真实素材）。
-func _make_bg() -> Texture2D:
-	var tex := PlaceholderTexture2D.new()
-	tex.size = Vector2(400.0, 63.0)
-	return tex
-
-
-func test_background_is_behind_label_and_matches_size() -> void:
-	var label := AnnounceLabel.new()
-	add_child_autofree(label)
+func test_background_is_behind_label_and_keeps_source_size() -> void:
+	var label := _make_label()
 	label.play("音符「定点扩散」", Vector2(768, 896), _make_bg())
 	var bg := label.get_node_or_null("Background") as TextureRect
-	assert_not_null(bg, "给了底衬就挂 Background 子节点")
+	assert_not_null(bg, "底衬节点声明在场景里")
 	assert_true(bg.show_behind_parent, "底衬画在文字之后（背后）")
+	assert_true(bg.visible, "传了底衬就显示")
 	# 贴图原尺寸，大小不动；靠子 scale = 1/SHRINK 抵消父节点最终缩放
 	assert_eq(bg.size, Vector2(400.0, 63.0), "底衬保持贴图原尺寸")
 	var rendered := bg.size * bg.scale * AnnounceLabel.SHRINK
@@ -59,8 +68,24 @@ func test_background_is_behind_label_and_matches_size() -> void:
 	assert_eq(bg.modulate.a, 0.0, "初始透明，缩回正常后再渐显")
 
 
-func test_no_background_node_when_not_provided() -> void:
-	var label := AnnounceLabel.new()
-	add_child_autofree(label)
+func test_background_hidden_when_not_provided() -> void:
+	var label := _make_label()
 	label.play("音符「定点扩散」", Vector2(768, 896))
-	assert_null(label.get_node_or_null("Background"), "没给底衬就不挂子节点")
+	var bg := label.get_node_or_null("Background") as TextureRect
+	assert_not_null(bg, "底衬节点始终在场景里")
+	assert_false(bg.visible, "没传底衬就不显示")
+
+
+func test_info_labels_declared_and_hidden_until_finished() -> void:
+	var label := _make_label()
+	label.play("音符「定点扩散」", Vector2(768, 896))
+	var bonus := label.get_node_or_null("BonusLabel") as Label
+	var capture := label.get_node_or_null("CaptureLabel") as Label
+	assert_not_null(bonus, "Bonus 声明在场景里")
+	assert_not_null(capture, "Capture 声明在场景里")
+	assert_false(bonus.visible, "播报中先隐藏")
+	assert_false(capture.visible, "播报中先隐藏")
+	label.set_bonus_text("59273")
+	label.set_capture_text("00/01")
+	assert_eq(bonus.text, "59273", "Bonus 文本走 setter")
+	assert_eq(capture.text, "00/01", "Capture 文本走 setter")

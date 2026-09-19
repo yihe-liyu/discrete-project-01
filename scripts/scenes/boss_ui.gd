@@ -7,6 +7,8 @@ const GOLD := Color(0.95, 0.839, 0.475, 1.0)
 const RED := Color(1.0, 0.0, 0.0, 1.0)
 const PURPLE := Color(0.858, 0.5, 1.0, 1.0)
 const DOT_SIZE := 16.0
+## 符卡名大字报（场景声明式：Label 根 + Background/BonusLabel/CaptureLabel 子节点）。
+const ANNOUNCE_SCENE := preload("res://scenes/ui/announce_label.tscn")
 ## 符卡名底衬（敌方 = 红）。玩家符卡（Bomb 名）用 player_spell_name_background。
 const ENEMY_SPELL_NAME_BG := preload("res://assets/Textures/ascii/enemy_spell_name_background.png")
 
@@ -16,8 +18,6 @@ const ENEMY_SPELL_NAME_BG := preload("res://assets/Textures/ascii/enemy_spell_na
 var _dots: Array[ColorRect] = []
 var _phase_idx: int = 0
 var _announce_label: AnnounceLabel
-var _bonus_label: Label
-var _capture_label: Label
 var _boss: Boss
 var _boss_hud: BossHud
 var _timer_label: Label
@@ -133,8 +133,8 @@ func _on_phase_start(phase: PhaseData) -> void:
 		_dots[vis_idx].color = PURPLE
 
 func _on_tick(bonus: int) -> void:
-	if _bonus_label and is_instance_valid(_bonus_label):
-		_bonus_label.text = str(bonus)
+	if _announce_label and is_instance_valid(_announce_label):
+		_announce_label.set_bonus_text(str(bonus))
 
 func _on_phase_end(captured: bool, _bonus: int) -> void:
 	_clear_announce()
@@ -147,50 +147,26 @@ func _clear_announce() -> void:
 	if _announce_label and is_instance_valid(_announce_label):
 		_announce_label.clear()
 		_announce_label = null
-	_bonus_label = null
-	_capture_label = null
-
 
 
 func _play_spell_announce(spell_name: String) -> void:
 	_clear_announce()
-	_announce_label = AnnounceLabel.new()
+	_announce_label = ANNOUNCE_SCENE.instantiate() as AnnounceLabel
 	$Control.add_child(_announce_label)
-	_announce_label.finished.connect(_add_info_labels, CONNECT_ONE_SHOT)
+	_announce_label.finished.connect(_update_capture_text, CONNECT_ONE_SHOT)
 	_announce_label.play(spell_name, $Control.size, ENEMY_SPELL_NAME_BG)
 
 
-func _add_info_labels() -> void:
-	if not _announce_label:
-		return
-	var parent := _announce_label
-	var label_h := parent.get_minimum_size().y
-
-	_bonus_label = _make_sub_label(HORIZONTAL_ALIGNMENT_LEFT, Color(1, 0.9, 0.3))
-	_bonus_label.position = Vector2(0, label_h)
-	parent.add_child(_bonus_label)
-
-	_capture_label = _make_sub_label(HORIZONTAL_ALIGNMENT_RIGHT, Color(0.5, 0.8, 0.5))
-	_capture_label.position = Vector2(parent.get_minimum_size().x * 0.6, label_h)
-	parent.add_child(_capture_label)
-	_update_capture_text()
-
-
-func _make_sub_label(align: HorizontalAlignment, color: Color) -> Label:
-	var label := Label.new()
-	label.horizontal_alignment = align
-	label.add_theme_font_size_override("font_size", 32)
-	label.add_theme_color_override("font_color", color)
-	return label
-
 func _update_capture_text() -> void:
-	if not _capture_label or not _boss: return
+	if not _announce_label or not is_instance_valid(_announce_label) or not _boss:
+		return
 	var pid := _boss.get_phase_id()
-	if not pid: return
+	if not pid:
+		return
 	var book: SpellRecordBook = SaveData.spell_book
 	var rec: SpellRecord = book.get_record(pid.stage_id, pid.phase_index, pid.boss_index, pid.character, pid.difficulty)
 	if rec:
 		if PracticeSession.is_practice_mode:
-			_capture_label.text = "%02d/%02d" % [rec.practice_captures, rec.practice_attempts]
+			_announce_label.set_capture_text("%02d/%02d" % [rec.practice_captures, rec.practice_attempts])
 		else:
-			_capture_label.text = "%02d/%02d" % [rec.captures, rec.attempts]
+			_announce_label.set_capture_text("%02d/%02d" % [rec.captures, rec.attempts])

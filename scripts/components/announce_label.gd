@@ -1,6 +1,6 @@
 ## 通用大标题入场动画：放大淡入 → 缩回 → 停留 → 滑出
 ## 用于符卡名 / Bomb 名等需要“大字报”演出的地方。
-## 使用锚点/实际尺寸定位，避免手动摆位置歪掉。
+## 结构声明在 scenes/ui/announce_label.tscn（R21）：Label 根 + Background / BonusLabel / CaptureLabel。
 class_name AnnounceLabel
 extends Label
 
@@ -17,10 +17,18 @@ const BG_FADE := 0.35
 ## 缩放绕中心 pivot：视觉包围盒每侧比布局框多出 size*(1-SHRINK)/2。
 ## 贴父容器右缘时布局框要按此内缩，否则缩放后的视觉右缘会越界。
 const VISUAL_HALF := (1.0 + SHRINK) / 2.0
+## Capture 相对名字宽度的落点比例。
+const CAPTURE_X_RATIO := 0.6
 
 var _tween: Tween
-## 名字底衬（可选）：子节点，随名字同一套 transform 运动。
-var _background: TextureRect
+
+@onready var _background: TextureRect = $Background
+@onready var _bonus_label: Label = $BonusLabel
+@onready var _capture_label: Label = $CaptureLabel
+
+
+func _ready() -> void:
+	_hide_info_labels()
 
 
 ## 右停落点的布局框 x：让「缩放后的视觉右缘」贴父容器右缘。
@@ -29,13 +37,10 @@ static func rest_x(parent_size_x: float, label_size_x: float) -> float:
 	return parent_size_x - label_size_x * VISUAL_HALF
 
 
-## 播放动画。
-## parent_size 用于居中；on_finished 可选（也可连接 finished 信号）。
+## 播放动画。parent_size 用于居中；p_background 可选（贴图原尺寸显示，随名字同一路径）。
 func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) -> void:
 	_kill_tween()
 	self.text = p_text
-	horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	add_theme_font_size_override("font_size", DEFAULT_FONT_SIZE)
 
 	# 真正把尺寸撑起来，避免 0×0 导致文字/缩放基准错乱
@@ -44,6 +49,7 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) 
 	size = min_size
 	pivot_offset = size / 2.0
 	_setup_background(p_background)
+	_hide_info_labels()
 
 	# 居中定位（基于父节点实际尺寸，不再依赖硬编码 center）
 	position = (parent_size - size) / 2.0
@@ -60,7 +66,7 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) 
 	_tween.set_parallel(false)
 	_tween.tween_interval(HOLD)
 	# 底衬：名字缩回正常后再渐显（与第一段滑出并行）
-	if _background:
+	if _background.visible:
 		_tween.set_parallel(true)
 		_tween.tween_property(_background, "modulate:a", 1.0, BG_FADE)
 		_tween.tween_property(self, "position", Vector2(stop_x, parent_size.y - size.y * VISUAL_HALF), SLIDE).set_trans(Tween.TRANS_QUAD)
@@ -68,35 +74,54 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null) 
 	else:
 		_tween.tween_property(self, "position", Vector2(stop_x, parent_size.y - size.y * VISUAL_HALF), SLIDE).set_trans(Tween.TRANS_QUAD)
 	_tween.tween_property(self, "position", Vector2(stop_x, 0), SLIDE).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	_tween.tween_callback(finished.emit)
+	_tween.tween_callback(_on_finished)
 
 
-## 底衬设定：作为子节点，**随名字一起滑（路径一致）**，但保持**贴图原尺寸**不缩放。
-## 做法：子 scale = 1/SHRINK 抵消父节点最终的 0.6 缩放；再反推子节点的局部位置
-## （pivot=0），使父节点缩到 SHRINK 时底衬正好是原尺寸、右缘贴父容器右缘、垂直居中。
-## 初始透明，名字缩回正常后渐显。
+## 设置底部分数（Bonus）。
+func set_bonus_text(p_text: String) -> void:
+	_bonus_label.text = p_text
+
+
+## 设置底部收取数。
+func set_capture_text(p_text: String) -> void:
+	_capture_label.text = p_text
+
+
+func _on_finished() -> void:
+	_show_info_labels()
+	finished.emit()
+
+
+## 底衬：贴图原尺寸显示（不缩放），随名字的 position 一起滑。
+## 子 scale = 1/SHRINK 抵消父节点最终的 0.6 缩放；局部位置反推成「缩到 SHRINK 时右缘贴父容器右缘、垂直居中」。
 func _setup_background(p_background: Texture2D) -> void:
 	if p_background == null:
-		if _background and is_instance_valid(_background):
-			_background.queue_free()
-		_background = null
+		_background.visible = false
 		return
-	if _background == null or not is_instance_valid(_background):
-		_background = TextureRect.new()
-		_background.name = "Background"
-		_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		_background.stretch_mode = TextureRect.STRETCH_SCALE
-		_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_background.show_behind_parent = true
-		add_child(_background)
+	_background.visible = true
 	_background.texture = p_background
-	# 贴图原尺寸，不缩放：子 scale 抵消父节点最终的 SHRINK；局部位置反推成"缩到 SHRINK 时右缘贴边"。
 	var bg_size := p_background.get_size()
 	var inv := 1.0 / SHRINK
 	_background.size = bg_size
 	_background.scale = Vector2(inv, inv)
 	_background.position = Vector2(size.x - bg_size.x * inv, size.y / 2.0 - bg_size.y * inv / 2.0)
 	_background.modulate.a = 0.0
+
+
+## 底衬渐显后亮出 Bonus / Capture（位置按名字布局框算，随名字缩放）。
+func _show_info_labels() -> void:
+	var label_h := size.y
+	_bonus_label.position = Vector2(0.0, label_h)
+	_capture_label.position = Vector2(size.x * CAPTURE_X_RATIO, label_h)
+	_bonus_label.visible = true
+	_capture_label.visible = true
+
+
+func _hide_info_labels() -> void:
+	_bonus_label.visible = false
+	_capture_label.visible = false
+	_bonus_label.text = ""
+	_capture_label.text = ""
 
 
 ## 停止动画并释放（用于切换/退场时清理）
