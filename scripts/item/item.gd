@@ -3,8 +3,12 @@ extends Area2D
 
 enum Type { POWER, POINT, LIFE_FRAGMENT, BOMB_FRAGMENT, LIFE_FULL, BOMB_FULL }
 
+## P 点吃下给的分（东方规则：+1 火力并 +10 分）
+const POWER_SCORE: int = 10
+
 var item_type: Type = Type.POINT
-var value: int = 100
+## 吃下时给的分数（POWER 用；POINT 的分是动态 max_point，不吃这个字段）
+var value: int = 0
 ## 实体注册表（ItemPool 注入）——取自机与单局资源
 var entity_registry: EntityRegistry
 ## 吸附半径（像素）
@@ -65,6 +69,7 @@ func _physics_process(delta: float) -> void:
 func setup(type: Type, pos: Vector2) -> void:
 	_is_dead = false
 	item_type = type
+	value = POWER_SCORE if type == Type.POWER else 0
 	global_position = pos
 	_velocity = Vector2(0, -180)  # 上抛初速
 	_auto_collect = false
@@ -97,12 +102,16 @@ func collect() -> void:
 	visible = false
 	set_physics_process(false)
 	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
+	# 本次吃到的分（P 点 = value，点 = 当前 max_point）；>0 才弹浮字。
+	var gained := 0
 	if res != null:
 		match item_type:
 			Type.POWER:
 				res.add_power(1)
+				gained = value
+				res.add_score(gained)
 			Type.POINT:
-				res.add_max_point()
+				gained = res.add_max_point()
 			Type.LIFE_FRAGMENT:
 				res.collect_life_fragment()
 			Type.BOMB_FRAGMENT:
@@ -111,6 +120,8 @@ func collect() -> void:
 				res.collect_life_full()
 			Type.BOMB_FULL:
 				res.collect_bomb_full()
+	if gained > 0:
+		GameEvents.item_score.emit(gained, global_position)
 	_recycle()
 
 

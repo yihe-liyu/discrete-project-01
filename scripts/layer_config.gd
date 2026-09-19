@@ -13,6 +13,7 @@ const ENEMY_BULLET  := 10   ## 敌弹
 const BOSS          := 15   ## Boss
 const BOSS_HP_RING  := 20   ## Boss 血量环
 const EFFECT        := 50   ## 击中/消弹等特效（弹幕之上）
+const SCORE_POPUP   := 55   ## 吃道具得分浮字（特效之上）
 const BOMB          := 100  ## 炸弹特效
 
 # ── UI（CanvasLayer layer=32，内部 z 用 UI_* 相对排序）──

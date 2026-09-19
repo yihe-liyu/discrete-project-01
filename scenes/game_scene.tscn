@@ -17,6 +17,7 @@
 [ext_resource type="Script" uid="uid://cbi6gxu3r06q4" path="res://scripts/effect/miss_circle_layer.gd" id="16_miss"]
 [ext_resource type="Script" uid="uid://bplx0vte3g86s" path="res://scripts/stage/stage_runtime.gd" id="17_stage"]
 [ext_resource type="Script" uid="uid://r1cevfo2ay7l" path="res://scripts/bullet/bullet_manager.gd" id="18_bullets"]
+[ext_resource type="Script" uid="uid://bnelos8uxmg5q" path="res://scripts/effect/score_popup_layer.gd" id="19_popup"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
 atlas = ExtResource("6_mw25s")
@@ -130,6 +131,10 @@ script = ExtResource("14_pool")
 [node name="FxPool" type="Node2D" parent="World" unique_id=2025091102]
 unique_name_in_owner = true
 script = ExtResource("15_fx")
+
+[node name="ScorePopupLayer" type="Node2D" parent="World" unique_id=2025091106]
+unique_name_in_owner = true
+script = ExtResource("19_popup")
 
 [node name="StageRuntime" type="Node" parent="World" unique_id=2025091104]
 unique_name_in_owner = true

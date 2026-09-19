@@ -18,6 +18,17 @@
 
 ## 记录
 
+### 2026-09-19 — 吃道具得分浮字（Item.collect → GameEvents.item_score → ScorePopupLayer）
+
+- **需求**：P 点 / 点被自机吃掉时，在吃掉位置显示本次得分并渐隐。
+- **判据**：数字用项目现成的 `NumberSprite`（`ascii.png`），不引入 Label + 新字体；展示层不塞进 Item（R2/R7），走既有信号总线（与 `enemy_killed(score, position)` 同构）；池化复用，不每次 `new`。
+- **做法**：
+  - `Item.collect()`：统一算 `gained`（POWER = `value`；POINT = `add_max_point()` 返回的当前 `max_point`），`>0` 时 `GameEvents.item_score.emit(gained, global_position)`。
+  - `Item.value` 死字段转正 = 吃下给的分；`const POWER_SCORE := 10`（P 点 +1 火力 +10 分）。`setup()` 按型填 `value`。
+  - 新 `ScorePopupLayer`（`Node2D`，`game_scene.tscn` 的 `World` 下声明）：池化 `NumberSprite`（ascii.png，`is_left_align`、5 位），`show_score()` 上浮 24px + alpha 1→0（0.6s）后回池。
+  - `LayerConfig.SCORE_POPUP := 55`（在 `EFFECT=50` 之上）；`GameEvents.item_score(score, position)`。
+- **验收**：`./tools/verify.sh` 全绿（445 / 444 pass + 1 pending，4393 asserts）；新增 `test/test_score_popup.gd`（P 点加分+发信号、点取 max_point、浮字复用渐隐回池）。
+
 ### 2026-09-19 — 修 `.enemy()` 覆写 `.no_spawn_fog()`（顺序陷阱）
 
 - **现象**：`non_mid01_shoot.gd` 写了 `.no_spawn_fog()` 却仍出雾。

@@ -4,6 +4,8 @@ extends Node
 @warning_ignore("unused_signal")
 signal enemy_killed(score: int, position: Vector2)
 @warning_ignore("unused_signal")
+signal item_score(score: int, position: Vector2)
+@warning_ignore("unused_signal")
 signal player_death()
 @warning_ignore("unused_signal")
 signal player_missed()  ## 每次 miss（中弹掉残机）都发——boss 记录东方规则用
