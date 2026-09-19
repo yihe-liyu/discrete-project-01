@@ -19,6 +19,14 @@
 
 ## 记录
 
+### 2026-09-19 — BossData 难度阶段去回退：phases → phases_normal
+
+- **需求**：`phases` 不再充当各难度的默认回退；改名 `phases_normal`。
+- **做法**：`BossData.phases` → `phases_normal`（builder `phase()` → `normal_phase()`）；`phases_for_difficulty(diff)` 各难度**直接返回自己的数组**（空即空），只有 `_`（Normal/未知）返回 `phases_normal`。调用点跟进：`BossCatalog`（规范序/归属/收集）、`boss_handle.phase(index)`、`stage_runtime.start_spell_card`、`stage01.gd` 时间线、两个 Boss `.tres` 的 `phases_normal`。
+- **测试**：`test_boss_phase` 的「空回落 Normal」反转为「空即空」；`test_spell_practice_menu` 原本断「4 个难度槽」编码的正是旧回退 → 菜单加**可注入 boss**（`info["boss"]`，同 `catalog_root` 思路），5 条改用例改用**合成 Boss**（定义 4 难度 / 只定义 Normal），不再绑真实内容。
+- **行为影响（重要）**：现在只有 `phases_normal` 有内容 → **Easy/Hard/Lunatic 的练习菜单只列 Normal、BossUI 难度点数为 0**（实战仍走 `phases_normal`）。要给某难度出卡就往 `phases_<diff>` 填。
+- **验收**：verify 全绿（458 / 457 pass + 1 pending，4587 asserts）。
+
 ### 2026-09-19 — BossCatalog 名册数据化（A）：BossData/.tres + BossRegistry
 
 - **问题**：`BossCatalog.all()` 是手写 GDScript 名册（每阶段一个 `const preload` + 一句 `.phase()`），符卡多了会堆成 80+ const + 一大坨嵌套构造；而 `BossData` 本就是 `@export` Resource。

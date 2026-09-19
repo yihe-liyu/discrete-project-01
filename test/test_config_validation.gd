@@ -61,6 +61,6 @@ func test_boss_data_validates_phases():
 	bad.time_limit = 0.0
 	bad.hp = 500
 	bad.shoot_script = load("res://scripts/coroutine/timeline/timeline.gd")
-	bd.phases = [bad]
+	bd.phases_normal = [bad]
 	var errs := bd.validate()
 	assert_true(not errs.is_empty(), "含非法 phase 的 Boss 应报错")

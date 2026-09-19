@@ -56,7 +56,7 @@ func wait(n: float) -> Timeline:
 
 
 ## 启动 Boss 阶段（战斗不冻结时间轴：绝对时间事件照常推进，仅 wait() 等待阶段击破）
-## 注意：与 BossData.phase()（静态声明 Boss 有哪些阶段）区分——这里是运行驱动"此刻进入该阶段"
+## 注意：与 BossData.normal_phase()（静态声明 Boss 有哪些阶段）区分——这里是运行驱动"此刻进入该阶段"
 func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 	return do(func():
 		var boss := boss_getter.call() as Boss

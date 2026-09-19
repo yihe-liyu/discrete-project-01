@@ -9,5 +9,5 @@
 script = ExtResource("3_lyeae")
 boss_name = "卡摩瑞"
 visual = ExtResource("4_a0au4")
-phases = Array[ExtResource("1_bcyec")]([ExtResource("2_6yhxn")])
+phases_normal = Array[ExtResource("1_bcyec")]([ExtResource("2_6yhxn")])
 stage_id = 1

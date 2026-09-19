@@ -158,7 +158,7 @@ func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: St
 	var single := BossData.new()
 	single.boss_name = boss_name
 	single.visual = boss_scene
-	single.phases = [p_phase]
+	single.phases_normal = [p_phase]
 	var boss := spawn_boss(single, position, ctx) as Boss
 	if boss:
 		boss.get_parent().add_child(runner)  # 把时钟放进场景树（Boss 所在 World），随场景一起释放

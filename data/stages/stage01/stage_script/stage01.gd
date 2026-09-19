@@ -112,7 +112,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	)
 
 	# 非符 1
-	timeline.at(38.0).start_phase(func(): return _mid_boss_handle.resolve(), _mid_boss_data.phases[0])
+	timeline.at(38.0).start_phase(func(): return _mid_boss_handle.resolve(), _mid_boss_data.phases_normal[0])
 	# ← 非符 被击破后 1s → 符卡（phase 继承 wait 偏移，击破后激活）
 	#timeline.wait(1.0).start_phase(func(): return _mid_boss_handle.resolve(), diff_pick(SPELL03))
 	# ← 符卡被击破后 2s → 退场

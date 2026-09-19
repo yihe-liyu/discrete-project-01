@@ -20,7 +20,7 @@ func test_stage1_roster_is_self_consistent():
 	var bosses: Array = BossCatalog.all().get(1, [])
 	assert_gt(bosses.size(), 0, "stage 1 应有 Boss")
 	for b: BossData in bosses:
-		assert_gt(b.phases.size(), 0, "每个 Boss 至少一个阶段（%s）" % b.boss_name)
+		assert_gt(b.phases_normal.size(), 0, "每个 Boss 至少一个阶段（%s）" % b.boss_name)
 	var order := BossCatalog.stage_phase_order(1)
 	assert_gt(order.size(), 0, "规范阶段顺序非空")
 	for i in order.size():
@@ -55,7 +55,7 @@ func test_card_lookup_by_position_and_difficulty():
 func test_collect_spells_finds_unique_uids():
 	var bosses := {
 		99: [
-			BossData.new().phase(_mk_phase("非符")).phase(_mk_spell(55, "符A")).phase(_mk_spell(56, "符B")),
+			BossData.new().normal_phase(_mk_phase("非符")).normal_phase(_mk_spell(55, "符A")).normal_phase(_mk_spell(56, "符B")),
 		],
 	}
 	var spells := BossCatalog.collect_spells_from(bosses)
@@ -69,7 +69,7 @@ func test_collect_spells_dedups_same_object_across_difficulties():
 	var shared := _mk_spell(55, "符A")
 	var bosses := {
 		99: [
-			BossData.new().phase(shared).lunatic_phase(shared),
+			BossData.new().normal_phase(shared).lunatic_phase(shared),
 		],
 	}
 	var spells := BossCatalog.collect_spells_from(bosses)

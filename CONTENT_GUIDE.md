@@ -57,7 +57,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		_mid = _dir.boss("boss_mid", CAMORUI_MID, Vector2(-50, 500), Vector2(FIELD_CENTER_X, 250))
 	)
 	# 时轴驱动的阶段（保留 start_phase 的 wait 偏移继承）
-	timeline.at(38.0).start_phase(func(): return _mid.resolve(), CAMORUI_MID.phases[0])  # 非符1
+	timeline.at(38.0).start_phase(func(): return _mid.resolve(), CAMORUI_MID.phases_normal[0])  # 非符1
 	# 战前对话事件路由（取代 _on_dialogue_event 大 match）：只调动词
 	_dir.on("boss_enter",   func(): _final = _dir.boss("boss_final", CAMORUI, Vector2(1000, 500), Vector2(FIELD_CENTER_X, 250)))
 	_dir.on("display_name", func(): _final.reveal("卡摩瑞"))
@@ -96,7 +96,7 @@ Timeline 只保留 `at/every/times/wait/do` + `start_phase`（相对时间 wait 
 
 ### BossData / PhaseData（.tres）
 
-- `BossData`（`data/stages/stage01/phase/` 参照）：`boss_name` / `visual` / `phases`（Normal 组）/ `phases_easy/hard/lunatic` / `enter_script` / `exit_script` / `score_value`
+- `BossData`（`data/stages/stage01/phase/` 参照）：`boss_name` / `visual` / `phases_normal`（Normal 组）/ `phases_easy/hard/lunatic/extra`（各难度独立、不回退） / `enter_script` / `exit_script` / `score_value`
 - `PhaseData`：`name`（空串 = 非符）、`uid`（0 = 非符不记；真符卡全局唯一）、`hp` / `time_limit` / `bonus`、`is_timeout_only`、`move_script` / `shoot_script`、掉落 item 系列、`params`
 
 阶段示例（`data/stages/stage03B/phase/spell03/spell055.tres`——黄粱「不可测之梦」）：

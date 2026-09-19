@@ -217,22 +217,23 @@ func _mk_phase(p_name: String) -> PhaseData:
 
 func test_phases_for_difficulty_groups():
 	var bd := BossData.new()
-	bd.phase(_mk_phase("N1")).easy_phase(_mk_phase("E1")).hard_phase(_mk_phase("H1")).lunatic_phase(_mk_phase("L1")).extra_phase(_mk_phase("X1"))
-	assert_eq(bd.phases_for_difficulty(1)[0].name, "N1", "Normal 取 phases")
+	bd.normal_phase(_mk_phase("N1")).easy_phase(_mk_phase("E1")).hard_phase(_mk_phase("H1")).lunatic_phase(_mk_phase("L1")).extra_phase(_mk_phase("X1"))
+	assert_eq(bd.phases_for_difficulty(1)[0].name, "N1", "Normal 取 phases_normal")
 	assert_eq(bd.phases_for_difficulty(0)[0].name, "E1", "Easy 取 phases_easy")
 	assert_eq(bd.phases_for_difficulty(2)[0].name, "H1", "Hard 取 phases_hard")
 	assert_eq(bd.phases_for_difficulty(3)[0].name, "L1", "Lunatic 取 phases_lunatic")
 	assert_eq(bd.phases_for_difficulty(4)[0].name, "X1", "Extra 取 phases_extra")
 
-func test_phases_for_difficulty_fallback():
+func test_phases_for_difficulty_no_fallback():
 	var bd := BossData.new()
-	bd.phase(_mk_phase("N1"))
-	# 其他难度未配置 → 回退 Normal/phases
-	assert_eq(bd.phases_for_difficulty(0)[0].name, "N1", "Easy 空回退 Normal")
-	assert_eq(bd.phases_for_difficulty(2)[0].name, "N1", "Hard 空回退 Normal")
-	assert_eq(bd.phases_for_difficulty(3)[0].name, "N1", "Lunatic 空回退 Normal")
-	assert_eq(bd.phases_for_difficulty(99)[0].name, "N1", "未知难度回退 Normal")
-	assert_eq(bd.phases_for_difficulty(4)[0].name, "N1", "Extra 空回退 Normal")
+	bd.normal_phase(_mk_phase("N1"))
+	# 其他难度未配置 → 空，**不回落 Normal**
+	assert_true(bd.phases_for_difficulty(0).is_empty(), "Easy 未配置应为空")
+	assert_true(bd.phases_for_difficulty(2).is_empty(), "Hard 未配置应为空")
+	assert_true(bd.phases_for_difficulty(3).is_empty(), "Lunatic 未配置应为空")
+	assert_true(bd.phases_for_difficulty(4).is_empty(), "Extra 未配置应为空")
+	assert_eq(bd.phases_for_difficulty(1)[0].name, "N1", "Normal 取 phases_normal")
+	assert_eq(bd.phases_for_difficulty(99)[0].name, "N1", "未知难度按 Normal 处理")
 
 func test_difficulty_name_extra():
 	assert_eq(BossData.difficulty_name(4), "Extra", "难度 4 应叫 Extra")
@@ -240,7 +241,7 @@ func test_difficulty_name_extra():
 
 func test_validate_checks_all_difficulty_groups():
 	var bd := BossData.new()
-	bd.phase(_mk_phase("N1"))
+	bd.normal_phase(_mk_phase("N1"))
 	var bad := PhaseData.new()
 	bad.name = "坏符"
 	bad.time_limit = 0.0  # 非法时限 → 校验应报错
@@ -269,7 +270,7 @@ func test_same_boss_continued_phases_are_separate_records():
 	var non01: PhaseData = preload("res://data/stages/stage01/phase/non01/non01.tres")
 
 	# 道中 Boss：完整链 → 规范顺序定位 (phase_index 0, 非符1)
-	var bd := BossData.new().name("卡摩瑞").phase(non_mid).phase(non01)
+	var bd := BossData.new().name("卡摩瑞").normal_phase(non_mid).normal_phase(non01)
 	var boss1: Boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss1)
 	boss1.setup(bd, null)

@@ -81,7 +81,7 @@ static func boss(stage: int, boss_index: int) -> BossData:
 static func stage_phase_order(stage: int) -> Array[PhaseData]:
 	var order: Array[PhaseData] = []
 	for b: BossData in all().get(stage, []):
-		for p: PhaseData in b.phases:
+		for p: PhaseData in b.phases_normal:
 			order.append(p)
 	return order
 
@@ -100,7 +100,7 @@ static func phase_at(stage: int, phase_index: int, difficulty: int) -> PhaseData
 		return null
 	var acc := 0
 	for b: BossData in all().get(stage, []):
-		var sz: int = b.phases.size()
+		var sz: int = b.phases_normal.size()
 		if phase_index < acc + sz:
 			var off := phase_index - acc
 			var arr := b.phases_for_difficulty(difficulty)
@@ -118,7 +118,7 @@ static func boss_index_of_phase(stage: int, phase_index: int) -> int:
 		return -1
 	var acc := 0
 	for bi in all().get(stage, []).size():
-		var sz: int = all().get(stage, [])[bi].phases.size()
+		var sz: int = all().get(stage, [])[bi].phases_normal.size()
 		if phase_index < acc + sz:
 			return bi
 		acc += sz
@@ -187,7 +187,7 @@ static func collect_spells_from(bosses: Dictionary) -> Dictionary:
 	var seen_objects := {}  # 同一 PhaseData 对象跨难度列出现 → 去重
 	for stage in bosses:
 		for b: BossData in bosses[stage]:
-			for arr in [b.phases, b.phases_easy, b.phases_hard, b.phases_lunatic, b.phases_extra]:
+			for arr in [b.phases_normal, b.phases_easy, b.phases_hard, b.phases_lunatic, b.phases_extra]:
 				for p: PhaseData in arr:
 					if p == null or seen_objects.has(p):
 						continue

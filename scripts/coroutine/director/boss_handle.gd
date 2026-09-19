@@ -102,10 +102,10 @@ func phase(index: int = 0, idle_only: bool = false) -> BossHandle:
 	if data == null:
 		push_warning("BossHandle.phase: 槽位 '%s' 无 BossData" % _key)
 		return self
-	if index < 0 or index >= data.phases.size():
-		push_warning("BossHandle.phase: 槽位 '%s' 的 BossData 只有 %d 个阶段，要求第 %d 个" % [_key, data.phases.size(), index])
+	if index < 0 or index >= data.phases_normal.size():
+		push_warning("BossHandle.phase: 槽位 '%s' 的 BossData 只有 %d 个阶段，要求第 %d 个" % [_key, data.phases_normal.size(), index])
 		return self
-	boss.start_phase(data.phases[index])
+	boss.start_phase(data.phases_normal[index])
 	return self
 
 ## 退场：受控退出 + 仆街 + 飞出，播完清 ref（外部停 _process，指示器跟随照常）

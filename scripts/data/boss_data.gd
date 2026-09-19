@@ -4,9 +4,9 @@ class_name BossData
 
 @export var boss_name: String = ""
 @export var visual: PackedScene
-## 阶段列表：phases = Normal（默认难度）；其他难度独立数组（空 = 回退 Normal）
+## 阶段列表：各难度**独立数组，互不回退**（某难度空 = 该难度无阶段）。
 ## 难度档：0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra（对应 SpellRecord.Difficulty）
-@export var phases: Array[PhaseData] = []
+@export var phases_normal: Array[PhaseData] = []
 @export var phases_easy: Array[PhaseData] = []
 @export var phases_hard: Array[PhaseData] = []
 @export var phases_lunatic: Array[PhaseData] = []
@@ -25,7 +25,7 @@ class_name BossData
 
 func name(v: String) -> BossData:       boss_name = v; return self
 func look(v: PackedScene) -> BossData:  visual = v; return self
-func phase(v: PhaseData) -> BossData:   phases.append(v); return self
+func normal_phase(v: PhaseData) -> BossData:  phases_normal.append(v); return self
 func easy_phase(v: PhaseData) -> BossData:  phases_easy.append(v); return self
 func hard_phase(v: PhaseData) -> BossData:  phases_hard.append(v); return self
 func lunatic_phase(v: PhaseData) -> BossData:  phases_lunatic.append(v); return self
@@ -35,14 +35,14 @@ func hitbox(v: float) -> BossData:       hitbox_radius = v; return self
 func in_stage(v: int) -> BossData:       stage_id = v; return self
 func at_order(v: int) -> BossData:       order = v; return self
 
-## 按难度取阶段（0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra；空难度组回退 Normal/phases）
+## 按难度取阶段（0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra）。**不回退**：该难度数组空即返回空。
 func phases_for_difficulty(diff: int) -> Array[PhaseData]:
 	match diff:
-		0: return phases_easy if not phases_easy.is_empty() else phases
-		2: return phases_hard if not phases_hard.is_empty() else phases
-		3: return phases_lunatic if not phases_lunatic.is_empty() else phases
-		4: return phases_extra if not phases_extra.is_empty() else phases
-		_: return phases  # Normal / 未知难度
+		0: return phases_easy
+		2: return phases_hard
+		3: return phases_lunatic
+		4: return phases_extra
+		_: return phases_normal  # Normal / 未知难度
 
 ## 难度名（工作台/日志用）
 static func difficulty_name(diff: int) -> String:
@@ -58,12 +58,12 @@ static func difficulty_name(diff: int) -> String:
 ## 配置校验：校验默认 + 各难度阶段。返回错误列表（空 = 合法）
 func validate() -> Array[String]:
 	var errs: Array[String] = []
-	_validate_group(errs, "Normal", phases)
+	_validate_group(errs, "Normal", phases_normal)
 	_validate_group(errs, "Easy", phases_easy)
 	_validate_group(errs, "Hard", phases_hard)
 	_validate_group(errs, "Lunatic", phases_lunatic)
 	_validate_group(errs, "Extra", phases_extra)
-	if phases.is_empty() and phases_easy.is_empty() and phases_hard.is_empty() and phases_lunatic.is_empty() and phases_extra.is_empty():
+	if phases_normal.is_empty() and phases_easy.is_empty() and phases_hard.is_empty() and phases_lunatic.is_empty() and phases_extra.is_empty():
 		errs.append("BossData[%s] 没有任何难度阶段（空 Boss）" % boss_name)
 	return errs
 
