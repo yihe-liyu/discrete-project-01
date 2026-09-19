@@ -32,6 +32,18 @@ func test_sustain_holds_until_cleared() -> void:
 	assert_almost_eq(s.amount(), 0.0, 0.001, "清零后停止")
 
 
+func test_bound_layer_follows_camera_offset_negated() -> void:
+	var s := ScreenShake.new()
+	var layer := CanvasLayer.new()
+	s.bind_layer(layer)
+	s.add_trauma(1.0)
+	s._process(0.0)
+	assert_eq(layer.offset, -s.offset, "背景层与 Camera2D 反向同步（屏幕上同向）")
+	assert_almost_eq(s.amount(), 1.0, 0.001, "此时震幅仍为 1")
+	s._process(10.0)
+	assert_eq(layer.offset, Vector2.ZERO, "停震后背景层归零")
+
+
 func test_bomb_data_shake_defaults_off() -> void:
 	var d := BombData.new()
 	assert_eq(d.shake_impulse, 0.0, "默认不震（冲击）")

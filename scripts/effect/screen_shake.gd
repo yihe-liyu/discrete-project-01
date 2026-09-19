@@ -10,6 +10,8 @@ const DECAY := 2.0         ## trauma 每秒衰减量
 
 var _trauma: float = 0.0
 var _sustain: float = 0.0
+## 额外一起晃的 CanvasLayer（如 3D 背景层）；只存引用，不接管生命周期。
+var _layers: Array[CanvasLayer] = []
 
 
 func _ready() -> void:
@@ -39,11 +41,26 @@ func amount() -> float:
 	return maxf(_trauma, _sustain)
 
 
+## 绑定额外一起晃的 CanvasLayer（如 3D 背景层）。组合根注入。
+func bind_layer(p_layer: CanvasLayer) -> void:
+	if p_layer != null and not _layers.has(p_layer):
+		_layers.append(p_layer)
+
+
 func _process(p_delta: float) -> void:
 	_trauma = maxf(_trauma - DECAY * p_delta, 0.0)
 	var mag := amount()
 	if mag <= 0.0:
 		offset = Vector2.ZERO
+		_sync_layers(Vector2.ZERO)
 		return
 	# mag²：弱震更细、强震更猛
 	offset = Vector2(RNG.randf_range(-1.0, 1.0), RNG.randf_range(-1.0, 1.0)) * MAX_OFFSET * mag * mag
+	# Camera2D.offset 让 World 反向位移；层 offset 取负号，让绑定的背景与 World 同向。
+	_sync_layers(-offset)
+
+
+func _sync_layers(p_offset: Vector2) -> void:
+	for layer in _layers:
+		if is_instance_valid(layer):
+			layer.offset = p_offset

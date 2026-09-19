@@ -5,7 +5,6 @@
 
 [resource]
 script = ExtResource("2_script")
-shake_sustain = 0.5
 length_range = Vector2(0, 4)
 width_range = Vector2(0.05, 4)
 grow_length_time = 0.3
@@ -16,6 +15,7 @@ fade_time = 0.3
 damage_from_stage = 2
 dps = 400.0
 name = "恋符「极限火花」"
+shake_sustain = 1.0
 texture = ExtResource("1_tex")
 count = 1
 interval = 0.0

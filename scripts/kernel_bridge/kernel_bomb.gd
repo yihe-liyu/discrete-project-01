@@ -39,6 +39,7 @@ func setup(p_data: BombData, pos: Vector2, direction: Vector2, tint: Color = Col
 		push_error("[KernelBomb] setup 需要 RingBombData")
 		return
 	data = d
+	_hold_shake_sustain()
 	spawn_delay = p_spawn_delay
 	_hitbox_radius = d.hitbox_radius
 	orbit_speed = deg_to_rad(d.orbit_speed_deg)

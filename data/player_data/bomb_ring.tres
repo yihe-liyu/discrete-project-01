@@ -5,10 +5,11 @@
 
 [resource]
 script = ExtResource("2_script")
-shake_impulse = 0.8
 explode_damage = 200.0
 explode_radius = 250.0
 name = "灵符「梦想封印 · 散」"
+shake_impulse = 0.8
+shake_sustain = 0.3
 texture = ExtResource("2_nqkjf")
 interval = 0.15
 metadata/_custom_type_script = "uid://vmbryrfk4srf"

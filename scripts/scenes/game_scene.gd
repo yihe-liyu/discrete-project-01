@@ -14,6 +14,7 @@ var _background_instance: Node  # StageBackground 或测试 Node3D
 @onready var _item_pool: ItemPool = %ItemPool
 @onready var _bullet_manager: BulletManager = %BulletManager   # R21：弹幕世界（game_scene.tscn 声明）
 @onready var _miss_circle_layer: MissCircleLayer = %MissCircleLayer
+@onready var _screen_shake: ScreenShake = $ScreenShake
 
 
 func _ready():
@@ -34,6 +35,9 @@ func _ready():
 	GameManager.register_world(_bullet_manager, _stage_runtime.entity_registry)   # 切场由壳显式操作，不读 .current
 
 	_item_pool.entity_registry = _stage_runtime.entity_registry   # 道具经注册表取自机/资源
+
+	# 震屏：3D 背景层（CanvasLayer）跟着 World 一起晃（SubViewportContainer 已 over-scan，不露边）。
+	_screen_shake.bind_layer($Background)
 
 	GameEvents.player_death.connect(_on_player_death)
 	GameManager.game_state_changed.connect(_on_game_state_changed)
