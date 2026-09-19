@@ -32,6 +32,10 @@ enum Style { BOSS, PLAYER }
 ## 自动位 = 右缘贴父容器右缘 + 在名字上垂直居中；这里只叠加人工偏移（可在 announce_label.tscn 根节点 Inspector 调）。
 @export var background_offset: Vector2 = Vector2.ZERO
 
+## 自机样式最终（左下）落点的人工偏移（屏幕像素；+x 右移 / +y 下移）。
+## 要"偏上"就填负 y（如 Vector2(0, -120)）。Boss 样式不受影响。
+@export var player_rest_offset: Vector2 = Vector2.ZERO
+
 var _tween: Tween
 var _style: Style = Style.BOSS
 
@@ -56,6 +60,12 @@ static func rest_x_left(label_size_x: float) -> float:
 	return -label_size_x * EDGE_HALF
 
 
+## 自机样式最终（左下）落点：贴左缘 + 贴底边，再叠加人工偏移（屏幕像素）。
+static func player_rest_pos(parent_size: Vector2, label_size: Vector2, offset: Vector2) -> Vector2:
+	var bottom_left := Vector2(rest_x_left(label_size.x), parent_size.y - label_size.y * VISUAL_HALF)
+	return bottom_left + offset / SHRINK
+
+
 ## 播放动画。parent_size 用于居中；p_background 可选（贴图原尺寸显示，随名字同一路径）。
 ## p_style = BOSS（先右下再右上，定住）或 PLAYER（先左上再左下，停一会儿渐隐）。
 func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null, p_style: Style = Style.BOSS) -> void:
@@ -78,10 +88,9 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null, 
 	modulate.a = 0.0
 
 	# 收尾落点：BOSS = 先右下再右上；PLAYER = 先左上再左下（贴另一侧边、垂直顺序相反）。
-	var bottom_y := parent_size.y - size.y * VISUAL_HALF
 	var edge_x := rest_x(parent_size.x, size.x) if p_style == Style.BOSS else rest_x_left(size.x)
-	var first_y := bottom_y if p_style == Style.BOSS else 0.0
-	var second_y := 0.0 if p_style == Style.BOSS else bottom_y
+	var first_pos := Vector2(edge_x, parent_size.y - size.y * VISUAL_HALF) if p_style == Style.BOSS else Vector2(edge_x, 0.0)
+	var second_pos := Vector2(edge_x, 0.0) if p_style == Style.BOSS else player_rest_pos(parent_size, size, player_rest_offset)
 
 	var center := position
 	_tween = create_tween()
@@ -95,11 +104,11 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null, 
 	if _background.visible:
 		_tween.set_parallel(true)
 		_tween.tween_property(_background, "modulate:a", 1.0, BG_FADE)
-		_tween.tween_property(self, "position", Vector2(edge_x, first_y), SLIDE).set_trans(Tween.TRANS_QUAD)
+		_tween.tween_property(self, "position", first_pos, SLIDE).set_trans(Tween.TRANS_QUAD)
 		_tween.set_parallel(false)
 	else:
-		_tween.tween_property(self, "position", Vector2(edge_x, first_y), SLIDE).set_trans(Tween.TRANS_QUAD)
-	_tween.tween_property(self, "position", Vector2(edge_x, second_y), SLIDE).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		_tween.tween_property(self, "position", first_pos, SLIDE).set_trans(Tween.TRANS_QUAD)
+	_tween.tween_property(self, "position", second_pos, SLIDE).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 	if p_style == Style.PLAYER:
 		# 自机符卡：左下停一会儿再渐隐
 		_tween.tween_interval(PLAYER_HOLD)

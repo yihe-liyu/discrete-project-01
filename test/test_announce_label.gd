@@ -54,6 +54,15 @@ func test_rest_x_left_aligns_visual_left_to_parent_edge() -> void:
 	assert_almost_eq(visual_left, 0.0, 0.001, "自机符卡名视觉左缘贴场地左缘")
 
 
+func test_player_rest_offset_lifts_final_position() -> void:
+	var parent := Vector2(768.0, 896.0)
+	var label_size := Vector2(384.0, 70.0)
+	var base := AnnounceLabel.player_rest_pos(parent, label_size, Vector2.ZERO)
+	var lifted := AnnounceLabel.player_rest_pos(parent, label_size, Vector2(0.0, -120.0))
+	assert_almost_eq(base.y - lifted.y, 120.0 / AnnounceLabel.SHRINK, 0.001, "负 y 偏移把最终位置抬高")
+	assert_almost_eq(lifted.x, base.x, 0.001, "x 不受 y 偏移影响")
+
+
 func test_player_style_background_left_aligned() -> void:
 	var label := _make_label()
 	label.play("梦想封印", Vector2(768, 896), _make_bg(), AnnounceLabel.Style.PLAYER)

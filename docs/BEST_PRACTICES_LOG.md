@@ -26,6 +26,7 @@
   - `BombData` 加 `@export var name: String`（符卡名；空串不播报）；`bomb_ring.tres` = 「梦想封印」、`marisa_bomb.tres` = 「恋符「マスタースパーク」」（**占位名，待定**）。
   - `GameEvents` 加 `player_bomb(spell_name)`；`player.gd _bomb()` 扣弹成功后 emit。
   - `AnnounceLabel` 加 `enum Style { BOSS, PLAYER }`：BOSS = 先右下再右上（原样）；PLAYER = 先左上（`rest_x_left` 让视觉左缘贴父容器左缘）再左下，停 `PLAYER_HOLD(1.0s)` 后 `FADE_OUT(0.6s)` 渐隐；底衬 PLAYER 贴左缘（局部 x=0）；Bonus/Capture 只给 BOSS。
+  - 自机最终落点可调：`@export var player_rest_offset: Vector2`（屏幕像素，**要偏上填负 y**），经 `player_rest_pos()` 叠加；Boss 样式不受影响。
   - 新增 `scenes/ui/player_spell_ui.tscn` + `scripts/scenes/player_spell_ui.gd`（订阅 `player_bomb`，用玩家青底衬）；`game_scene.tscn` 实例化。
 - **测试**：`test_announce_label.gd` +2（左缘落点、PLAYER 底衬左对齐）；新增 `test_player_spell_ui.gd`（+2：bomb 触发大字报、空名不播）。渲染探针：左上 / 左下 / 渐隐 / 清场四段都对。
 - **验收**：`./tools/verify.sh` 全绿（**475 / 474 pass + 1 pending，4643 asserts**）。
