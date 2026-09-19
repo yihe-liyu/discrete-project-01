@@ -82,7 +82,9 @@
 > - **跨层字符串 key**（数据里存、代码表里查）：默认归标识符 → ASCII；除非其定义表本身已迁为内容资源。
 > - **明确豁免 · `AssetRegistry`（2026-09-18 立）**：`scripts/asset_registry.gd` 是**内容槽的代码侧索引表**（`bullet_configs` / `enemy_visuals` / `sounds` / `FOG_TEXTURE` / `BGM_PATHS`），其 `res://` 与中文 key 属**内容槽引用**、非机制标识符 → 当前**合规豁免**。**退役条件**：随 S13 图集 + 数据化（`F7`：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁入 `data/**`；迁完一表即**移除该表豁免**，全表迁完豁免终止。
 
-> 原项目现状（K0 实测）：`scripts/**` 中文 `.gd` 文件名 **0**（内容槽中文属合规）。余 **PascalCase 目录段**（`assets/Textures`/`assets/Music`/`assets/Sound`）+ `diffculty` 拼写 **5 处**（`game_ui.gd` 4 + `game_scene.tscn` 1）。
+> - **明确豁免 · `assets/` 素材根目录（2026-09-18 立）**：`assets/Textures` / `assets/Music` / `assets/Sound` 三个**内容素材根目录**保留 PascalCase —— 改名 = 3 目录 + ~236 处路径（含 137 条 `.import`）+ 全量重导入，收益仅「字面合规」；与「`AssetRegistry` 内容槽索引表」同源。
+
+> 原项目现状（2026-09-18 复核）：`scripts/**` 中文 `.gd` 文件名 **0**（内容槽中文属合规）。**PascalCase 目录段**已立**明确豁免**；**文件层已清**（`FalseFront`/`TrueFront`/font/`*_YY_jade` → snake）；**节点层已清**（`diffculty`/`front`/`debug`/`jude`/`bar`/`content`/`root` → PascalCase）。`stage03B` 大写按拍板**保留**。
 
 ---
 
@@ -126,7 +128,7 @@
 > **门面动词（2026-09-18 拍板，关 N14）**：`ctx.*` 门面 + `StageContext` + 导演句柄 `BossHandle` 的**方法名**允许域动词（只说意图、避免 stutter，如 `ctx.boss.get_boss()`），受**封闭清单**约束，新增须登记：`active` / `current` / `exists` / `picked` / `at_least`；**机制类**（`EntityRegistry` / `PlayerService` / …）仍严格 `get_*`（取值）/ `is_*`·`has_*`（判定）/ 动作动词。
 > **形参遮蔽成员** → 加 `p_` 前缀（`p_ctx` 遮蔽 `CoroutineScript.ctx`）；**真的不用** → 单 `_`（`_ctx`）；**禁止叠加** `_p_`。
 > **单字母 / 极短名（2026-09-18 严格化，关 N8）**：只允许三种作用域 —— ① 循环索引 `i`/`j`/`k`；② **单行表达式**内的临时量 / 链式 DSL·构建器形参（整个生命周期不跨行）；③ **热路径**模块（`kernel_bridge/` · `laser/` · `bullet/` · `effect/` · `background/screen_fog_fx.gd` · `background/background_sun.gd` · `background/decor_manager.gd`）内的循环/数学临时量。**其余一律全名**：任何**跨行**存活、**跨函数**传递、或作为**类字段**（`check_naming` ⑥ 守卫）的单字母都要改名。存量分批清理见 `TODO_TEMP` N8。
-> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI；`verify.sh` 第 2 步已启用 `--fail`）。**当前 0 条**（2026-09-13 收敛）；覆盖 ① 私有字段名 / ② 同类型多私名 / ③ `@onready` 节点名 / ④ 节点名 PascalCase 四类，**外加 ⑤ 形参·局部·循环变量遮蔽类成员**（2026-09-13 补，对应上条 `p_` 规则；静态扫描，不依赖 Godot reload；**2026-09-18 补：同时校验形参「禁止叠加 `_p_`」**）——**公开字段与局部缩写仍需人工守**（本表 + 白名单）；`test/reference/**` 是冻结的 vendor 参照实现（原 `scripts/kernel`，不在生产），不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
+> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI；`verify.sh` 第 2 步已启用 `--fail`）。**当前 0 条**（2026-09-13 收敛）；覆盖 ① 私有字段名 / ② 同类型多私名 / ③ `@onready` 节点名 / ④ 节点名 PascalCase 四类，**外加 ⑤ 形参·局部·循环变量遮蔽类成员**（2026-09-13 补，对应上条 `p_` 规则；静态扫描，不依赖 Godot reload；**2026-09-18 补：⑤ 校验形参「禁止叠加 `_p_`」+ ⑥ 类字段不得单字母 + ⑦ 目录/文件名不得 PascalCase·含 ASCII 大写**（⑦ 豁免：`assets/Textures|Music|Sound` · `data/stages/stage03B` · `assets/Music/**` 内容槽））——**公开字段与局部缩写仍需人工守**（本表 + 白名单）；`test/reference/**` 是冻结的 vendor 参照实现（原 `scripts/kernel`，不在生产），不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
 
 ### 会话状态契约（per-run static）
 
@@ -244,9 +246,6 @@
 
 # 🔴 待改进（达标后清空）
 > 这里是"当前版本"尚未达标的项（工程红线与 STG 需求均可能命中）。每修一条删一条，最终清空。
-- [ ] R3：`@tool` 仅 3 个、`_get_configuration_warnings` 零实现（场景期依赖未自文档）
-- [ ] R12：`@export var x = preload(...)`（`enemy_data.gd:9`）
-- [ ] R15：PascalCase 目录段（`assets/Textures`/`assets/Music`/`assets/Sound`）+ `diffculty` 拼写 5 处
 - [ ] R16：47MB 二进制未配 Git LFS（`.gitattributes` 仅 EOL 规范化）
 - [ ] R18/R19：`workbench.gd`(692) / `spell_practice_menu.gd`(592) 上帝对象 + 3 个超长 `_build_ui`（三台热更新复制已收口，K5）
 - [ ] R21：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
@@ -256,7 +255,7 @@
 
 > **S1–S13 重审（2026-09-11，K0 完成）**：S / 红线状态已按代码实测刷新。
 > - **R14（2026-09-13 A1 更正）**：`save_manager.gd` 走 `user://save_data.cfg`；但**内容侧**符卡簿 / 音乐解锁曾直接 `ResourceSaver.save` 到 `res://`（4 处，导出包只读必失败）→ 已迁「res:// 出厂默认 + user:// 覆盖」，并加 `test_persistence_paths` 守卫。
-> - **R15 中文文件名**：`scripts/**` 中文 `.gd` **0**；真正待办是 **PascalCase 目录段 + `diffculty` 拼写**。
+> - **R15 命名**：`scripts/**` 中文 `.gd` **0**；PascalCase 目录段已立豁免、**文件层 + 节点层已清**；`stage03B` 大写按拍板保留。
 > - **过时引用清理**：`bullet_physics.gd`/`bullet.gd`/`bullet_fog.gd`/`SpatialHash` 均已随 W4a-2 删除，S 小节证据已改指内核 / `ScreenFogFX`。
 
 ## 外壳工程红线审计（2026-09-11，K0 实测）
@@ -272,10 +271,10 @@
 | R5 字符串 get_node | **29 个调用点**（生产 14 / 测试 15，含 `get_node_or_null`；A3 更正：原「19」是生产侧文本出现数、漏了测试） | 非全树搜，接受 |
 | 层序契约 | 26 处设 `z_index`，**20 处走 `LayerConfig`**，裸数字 5 | 接近达标，余 5 处可收 |
 | 帧序契约 | 无显式 `FrameOrder`；内核走 `process_physics_priority`（-10/-5/-4/0） | 仍可引入 `FrameOrder` |
-| R14/R15 | res:// 运行期写档 **0**（A1：符卡簿 / 音乐解锁改 user:// 覆盖，`test_persistence_paths` 守卫）；中文 `.gd` 文件名 **0**；PascalCase 目录 + `diffculty` 5 处 | 目录/拼写见 TODO |
+| R14/R15 | res:// 运行期写档 **0**（A1：符卡簿 / 音乐解锁改 user:// 覆盖，`test_persistence_paths` 守卫）；中文 `.gd` 文件名 **0**；PascalCase 目录已立豁免、文件层 + 节点层已清 | ✅ |
 | R16 | assets **47MB**（最大 11.2MB 字体），无 LFS | 待配 LFS |
-| R3 | `@tool` **3**、`_get_configuration_warnings` **0** | 待补 |
-| R12 | `@export=preload` **1**（`enemy_data.gd:9`） | 待改 |
+| R3 | `@tool` **11**、`_get_configuration_warnings` **2**（NavPage/GameOverMenu，覆盖 7 个菜单页的场景期 `container_path`） | ✅ |
+| R12 | `@export=preload` **0** | ✅ |
 | R10/R13/R17/R20/R22 | 内核 SoA / `_physics_process` / 数据资源 / 独立子场景 / `##` 注释 | 无系统性违规 |
 
 > **轨道 B（外壳红线对齐）已完成**：autoload **12 → 4**（`GameEvents / GameManager / RNG / AudioManager`）；`grep GameState` **0**；R6 / R4 / R2 收口见上表。逐波记录（W1–W4c / K1–K14）见 **[BEST_PRACTICES_LOG.md](BEST_PRACTICES_LOG.md)**、方案与决策见 `docs/archive/NEW_KERNEL_REFACTOR_PLAN.md`。

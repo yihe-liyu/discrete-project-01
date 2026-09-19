@@ -1,19 +1,19 @@
-[gd_scene format=3 uid="uid://b87260shxmoxu"]
+[gd_scene format=3 uid="uid://b67ddvvnbc8ax"]
 
-[ext_resource type="Script" uid="uid://d4gcbd2batumh" path="res://scripts/enemy/yy_jude_visual.gd" id="1_x2kjw"]
-[ext_resource type="Texture2D" uid="uid://bgn5feo55byah" path="res://assets/Textures/enemy/enemy.png" id="2_td8lx"]
+[ext_resource type="Texture2D" uid="uid://bgn5feo55byah" path="res://assets/Textures/enemy/enemy.png" id="1_mk78v"]
+[ext_resource type="Script" uid="uid://d4gcbd2batumh" path="res://scripts/enemy/yy_jude_visual.gd" id="2_mk78v"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_yv88f"]
-atlas = ExtResource("2_td8lx")
-region = Rect2(192, 288, 32, 32)
+atlas = ExtResource("1_mk78v")
+region = Rect2(128, 288, 32, 32)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_ffk51"]
-atlas = ExtResource("2_td8lx")
-region = Rect2(192, 256, 32, 32)
+atlas = ExtResource("1_mk78v")
+region = Rect2(128, 256, 32, 32)
 
 [node name="Node2D" type="Node2D" unique_id=1964600134]
 scale = Vector2(1.5, 1.5)
-script = ExtResource("1_x2kjw")
+script = ExtResource("2_mk78v")
 
 [node name="Roll2" type="Sprite2D" parent="." unique_id=1454448460]
 modulate = Color(2.9996202, 2.9996202, 2.9996202, 0.8)
@@ -24,6 +24,6 @@ texture = SubResource("AtlasTexture_yv88f")
 scale = Vector2(0.5, 0.5)
 texture = SubResource("AtlasTexture_yv88f")
 
-[node name="jude" type="Sprite2D" parent="." unique_id=24095825]
+[node name="Judge" type="Sprite2D" parent="." unique_id=24095825]
 scale = Vector2(0.5, 0.5)
 texture = SubResource("AtlasTexture_ffk51")

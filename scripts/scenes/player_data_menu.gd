@@ -1,6 +1,7 @@
 # PlayerDataMenu.gd — 玩家数据菜单（场景内视图切换）
 # 选项视图：三个竖排选项（中文主名+英文小标题，NavPage 导航：未选中暗/选中白+闪烁）
 # 符卡记录视图：只显示符卡(uid!=0)，每行符卡名+普通模式收取 n/m；顶部角色(←→)×难度(↑↓)；多页 Z 翻页
+@tool
 extends NavPage
 
 enum View { OPTIONS, RECORD }
@@ -27,6 +28,8 @@ var _page: int = 0
 # ═══ 选项视图构建 ═══
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	_build_options()
 	_char_index = clampi(SaveData.selected_character, 0, CHAR_NAMES.size() - 1)
 	_diff_index = clampi(SaveData.selected_difficulty, 0, DIFF_NAMES.size() - 1)
@@ -210,6 +213,8 @@ func _make_row(card: Dictionary) -> HBoxContainer:
 # ═══ 输入 ═══
 
 func _input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
 	if _view != View.RECORD:
 		return  # 选项视图交给 NavPage._process 导航
 	if event.is_action_pressed("ui_cancel"):

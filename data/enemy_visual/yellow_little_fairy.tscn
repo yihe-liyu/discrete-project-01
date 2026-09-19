@@ -105,7 +105,7 @@ animations = [{
 "speed": 10.0
 }]
 
-[node name="root" type="AnimatedSprite2D" unique_id=1835439820]
+[node name="Root" type="AnimatedSprite2D" unique_id=1835439820]
 sprite_frames = SubResource("frames")
 animation = &"right"
 autoplay = "idle"

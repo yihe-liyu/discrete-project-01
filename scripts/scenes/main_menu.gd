@@ -1,3 +1,4 @@
+@tool
 extends NavPage
 # MainMenu.gd — 标题画面 + 子页面导航中枢
 #
@@ -13,6 +14,8 @@ var _logo_tween: Tween
 
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	# 导航初始化（不走 NavPage.on_enter，因为 MainMenu 是场景根）
 	_setup_nav()
 	_is_nav_enabled = false  # 等 Logo 播完再启用
@@ -46,6 +49,8 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		return
 	GameManager.set_page_host(null)  # 解除注入（防 MenuNav 持悬空 host）
 
 
@@ -170,6 +175,8 @@ func _skip_logo() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
 	if event.is_action_pressed("shoot"):
 		_skip_logo()
 		skip_entrance()

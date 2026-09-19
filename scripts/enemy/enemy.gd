@@ -52,7 +52,7 @@ func _process(_delta: float) -> void:
 func _apply_enemy_data(data: EnemyData):
 	max_hp = data.max_hp
 	score_value = data.score_value
-	death_effect = data.death_effect
+	death_effect = data.death_effect if data.death_effect else AssetRegistry.enemy_visuals.get("death")
 	hp = max_hp
 
 	# 外观：直接实例化 visual_scene

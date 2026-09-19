@@ -12,7 +12,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_cs")
 
-[node name="root" type="VBoxContainer" parent="." unique_id=1359645600]
+[node name="Root" type="VBoxContainer" parent="." unique_id=1359645600]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -21,11 +21,11 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="bar" type="HBoxContainer" parent="root" unique_id=1335930980]
+[node name="Bar" type="HBoxContainer" parent="Root" unique_id=1335930980]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="content" type="Control" parent="root" unique_id=1177330428]
+[node name="Content" type="Control" parent="Root" unique_id=1177330428]
 layout_mode = 2
 size_flags_vertical = 3

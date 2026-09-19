@@ -14,10 +14,10 @@ const enemy_visuals := {
 	"red_big_fairy":  preload("res://data/enemy_visual/red_big_fairy.tscn"),
 	"blue_big_fairy":  preload("res://data/enemy_visual/blue_big_fairy.tscn"),
 	"white_huge_fairy":  preload("res://data/enemy_visual/white_huge_fairy.tscn"),
-	"red_YY_jade":  preload("res://data/enemy_visual/red_YY_jade.tscn"),
-	"green_YY_jade":  preload("res://data/enemy_visual/green_YY_jade.tscn"),
-	"blue_YY_jade":  preload("res://data/enemy_visual/blue_YY_jade.tscn"),
-	"purple_YY_jade":  preload("res://data/enemy_visual/purple_YY_jade.tscn"),
+	"red_yin_yang_jade":  preload("res://data/enemy_visual/red_yin_yang_jade.tscn"),
+	"green_yin_yang_jade":  preload("res://data/enemy_visual/green_yin_yang_jade.tscn"),
+	"blue_yin_yang_jade":  preload("res://data/enemy_visual/blue_yin_yang_jade.tscn"),
+	"purple_yin_yang_jade":  preload("res://data/enemy_visual/purple_yin_yang_jade.tscn"),
 	"death":  preload("res://data/enemy_visual/death_effect.tscn"),
 }
 

@@ -24,6 +24,6 @@ texture = SubResource("AtlasTexture_yv88f")
 scale = Vector2(0.5, 0.5)
 texture = SubResource("AtlasTexture_yv88f")
 
-[node name="jude" type="Sprite2D" parent="." unique_id=24095825]
+[node name="Judge" type="Sprite2D" parent="." unique_id=24095825]
 scale = Vector2(0.5, 0.5)
 texture = SubResource("AtlasTexture_ffk51")

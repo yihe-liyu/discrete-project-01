@@ -6,6 +6,7 @@
 ##   - 选中脉冲高亮 + 确认闪烁特效
 ##   - 入场动画（元素依次滑入）
 
+@tool
 class_name NavPage
 extends BasePage
 
@@ -55,11 +56,23 @@ func on_leave() -> void:
 	queue_free()
 
 
+## R3：场景期依赖自文档（编辑器场景停靠栏）
+func _get_configuration_warnings() -> PackedStringArray:
+	var warnings := PackedStringArray()
+	if container_path.is_empty():
+		warnings.append("NavPage：container_path 未设置（选项容器）——导航不会工作。")
+	elif get_node_or_null(container_path) == null:
+		warnings.append("NavPage：container_path 指向的节点不存在：%s" % container_path)
+	return warnings
+
+
 func _setup_nav() -> void:
 	if not container_path:
+		push_warning("NavPage：container_path 未设置，导航不工作。")
 		return
 	_container = get_node_or_null(container_path)
 	if not _container:
+		push_warning("NavPage：container_path 无效：%s" % container_path)
 		return
 
 	_nav_items.clear()

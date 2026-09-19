@@ -33,7 +33,7 @@ func _ready() -> void:
 func _build_ui() -> void:
 	# 布局用场景里挂好的 root(VBoxContainer) 节点（作者在编辑器建的）——填充式，
 	# 和整关预览同为"tscn 挂节点 + 代码填内容"
-	var bar: HBoxContainer = $root/bar
+	var bar: HBoxContainer = $Root/Bar
 	for i in SLOTS.size():
 		var button := Button.new()
 		button.text = SLOTS[i]
@@ -62,7 +62,7 @@ func _on_slot(i: int) -> void:
 	_view.process_mode = Node.PROCESS_MODE_INHERIT  # 恢复运转（连发状态保留，只是不再后台跑）
 	if _view.get_parent():
 		_view.get_parent().remove_child(_view)  # 常驻实例：切换前先脱离旧父
-	var content: Control = $root/content
+	var content: Control = $Root/Content
 	content.add_child(_view)
 	# 目录双击 → 组合台直达（整关页内目录）
 	if i == 0:

@@ -1,4 +1,5 @@
 # DifficultyScreen.gd — 难度选择子页面（横排贴图 + 滑动切换 + 黑白未选中）
+@tool
 extends NavPage
 
 const ITEM_SIZE := Vector2(256, 156)

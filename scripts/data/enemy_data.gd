@@ -6,7 +6,7 @@ class_name EnemyData
 @export var max_hp: int = 100           ## 最大生命
 @export var hitbox_radius: float = 8.0  ## 判定半径（像素）
 @export var score_value: int = 100      ## 击破分数
-@export var death_effect: PackedScene = preload("res://data/enemy_visual/death_effect.tscn")  ## 死亡特效
+@export var death_effect: PackedScene   ## 死亡特效（留空 → 用 AssetRegistry.enemy_visuals["death"]）
 var boss_data: BossData         ## Boss 数据
 
 @export var item_power: int = 0         ## 掉落P道具数
@@ -100,18 +100,18 @@ func white_huge_fairy() -> EnemyData:
 	self.visual("white_huge_fairy").hbox(56).hp(840).power(20).point(20)
 	return self
 
-func red_YY_jade() -> EnemyData:
-	self.visual("red_YY_jade").hbox(40).hp(150).power(5)
+func red_yin_yang_jade() -> EnemyData:
+	self.visual("red_yin_yang_jade").hbox(40).hp(150).power(5)
 	return self
 
-func green_YY_jade() -> EnemyData:
-	self.visual("green_YY_jade").hbox(40).hp(150).power(2).point(3)
+func green_yin_yang_jade() -> EnemyData:
+	self.visual("green_yin_yang_jade").hbox(40).hp(150).power(2).point(3)
 	return self
 
-func blue_YY_jade() -> EnemyData:
-	self.visual("blue_YY_jade").hbox(40).hp(150).point(5)
+func blue_yin_yang_jade() -> EnemyData:
+	self.visual("blue_yin_yang_jade").hbox(40).hp(150).point(5)
 	return self
 
-func purple_YY_jade() -> EnemyData:
-	self.visual("purple_YY_jade").hbox(40).hp(150).power(3).point(2)
+func purple_yin_yang_jade() -> EnemyData:
+	self.visual("purple_yin_yang_jade").hbox(40).hp(150).power(3).point(2)
 	return self

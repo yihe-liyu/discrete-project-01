@@ -133,6 +133,27 @@ for root in ROOTS:
             else:
                 i += 1
 
+# ⑦ R15 目录/文件名：目录不得 PascalCase（素材根豁免）；文件名不得含 ASCII 大写
+DIR_EXEMPT = {"Textures", "Music", "Sound", "stage03B"}
+FILE_EXEMPT = {"README-OFL.txt"}
+name_bad = []
+for root in ["assets", "data", "scenes", "scripts", "test"]:
+    if not os.path.isdir(root):
+        continue
+    for dp, dn, fn in os.walk(root):
+        if ".godot" in dp or (os.sep + "reference") in (dp + os.sep):
+            continue
+        for d in dn:
+            if d[:1].isupper() and d not in DIR_EXEMPT:
+                name_bad.append((os.path.join(dp, d), 0, "目录", d))
+        for n in fn:
+            # 内容槽豁免：素材库保留源文件名（曲目 THq01_* 等）
+            if n in FILE_EXEMPT or dp.startswith(os.path.join("assets", "Music")):
+                continue
+            stem = n.rsplit(".", 1)[0] if "." in n else n
+            if any(c.isupper() for c in stem):
+                name_bad.append((os.path.join(dp, n), 0, "文件", n))
+
 def _typed_ok(n, t):
     e = "_" + snake(t)
     return n == e or (n.endswith(e) and len(n) > len(e))
@@ -160,8 +181,11 @@ for p, i, n in sorted(overlay_bad):
 print(f"\n[⑥ 类字段单字母]（{len(field_letter_bad)}）")
 for p, i, n in sorted(field_letter_bad):
     print(f"  {p}:{i}  {n}  → 类字段必须全名")
+print(f"\n[⑦ R15 目录/文件名（大写）]（{len(name_bad)}）")
+for p, _i, kind, n in sorted(name_bad):
+    print(f"  {p}  {kind} '{n}'")
 print(f"\n[信息] 公开字段/属性（角色名，允许）：{public_cnt}")
-tot = len(priv_bad) + len(multi) + len(node_bad) + len(set(node_case)) + len(shadow_bad) + len(overlay_bad) + len(field_letter_bad)
-print(f"==> 应改：{tot} 条（私有字段 {len(priv_bad)} / 多名称类型 {len(multi)} / 节点引用 {len(node_bad)} / 节点名 {len(set(node_case))} / 遮蔽成员 {len(shadow_bad)} / _p_ 叠加 {len(overlay_bad)} / 字段单字母 {len(field_letter_bad)}）")
+tot = len(priv_bad) + len(multi) + len(node_bad) + len(set(node_case)) + len(shadow_bad) + len(overlay_bad) + len(field_letter_bad) + len(name_bad)
+print(f"==> 应改：{tot} 条（私有字段 {len(priv_bad)} / 多名称类型 {len(multi)} / 节点引用 {len(node_bad)} / 节点名 {len(set(node_case))} / 遮蔽成员 {len(shadow_bad)} / _p_ 叠加 {len(overlay_bad)} / 字段单字母 {len(field_letter_bad)} / 目录文件名 {len(name_bad)}）")
 sys.exit(1 if (should_fail and tot) else 0)
 PY

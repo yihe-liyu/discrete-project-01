@@ -1,8 +1,16 @@
 # GameOverMenu.gd — Game Over 覆盖层
+@tool
 extends NavPage
 
 @export var title_label: Label
 @export var title_text: String = "Game Over"
+
+
+func _get_configuration_warnings() -> PackedStringArray:
+	var warnings := super()
+	if title_label == null:
+		warnings.append("GameOverMenu：title_label 未设置（Game Over 标题不会更新）。")
+	return warnings
 
 
 func on_enter() -> void:

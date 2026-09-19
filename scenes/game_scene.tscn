@@ -4,7 +4,7 @@
 [ext_resource type="Resource" uid="uid://dpfnytduqm40y" path="res://data/player_data/reimu_data.tres" id="6_b5spy"]
 [ext_resource type="Texture2D" uid="uid://c55c2cfyu20ec" path="res://assets/Textures/title/title.png" id="6_kk2rg"]
 [ext_resource type="Texture2D" uid="uid://dtv267387tbw0" path="res://assets/Textures/front/front02.png" id="6_mw25s"]
-[ext_resource type="Texture2D" uid="uid://btj64lam67h1f" path="res://assets/Textures/front/FalseFront.png" id="6_tcjrq"]
+[ext_resource type="Texture2D" uid="uid://btj64lam67h1f" path="res://assets/Textures/front/false_front.png" id="6_tcjrq"]
 [ext_resource type="Script" uid="uid://dhu7jsdutwmto" path="res://scripts/debug/debug_drawer.gd" id="7_kk2rg"]
 [ext_resource type="PackedScene" uid="uid://bumtdee0t8gel" path="res://scenes/ui/boss_ui.tscn" id="8_boss_ui"]
 [ext_resource type="Script" uid="uid://cn71kcmk1m6le" path="res://scripts/scenes/game_scene.gd" id="9_script"]
@@ -150,12 +150,12 @@ layer = 32
 script = ExtResource("10_ui")
 difficulty_textures = Array[Texture2D]([SubResource("AtlasTexture_mwyo0"), SubResource("AtlasTexture_s76x2"), SubResource("AtlasTexture_77hjl"), SubResource("AtlasTexture_6aqbo"), SubResource("AtlasTexture_ro0ie")])
 
-[node name="front" type="Sprite2D" parent="GameUI" unique_id=1281612929]
+[node name="Front" type="Sprite2D" parent="GameUI" unique_id=1281612929]
 z_index = 128
 texture = ExtResource("6_tcjrq")
 offset = Vector2(640, 480)
 
-[node name="diffculty" type="Sprite2D" parent="GameUI" unique_id=1428832846]
+[node name="Difficulty" type="Sprite2D" parent="GameUI" unique_id=1428832846]
 z_index = 128
 position = Vector2(1056, 64)
 texture = SubResource("AtlasTexture_b5spy")
@@ -224,7 +224,7 @@ position = Vector2(1056, 791.99994)
 scale = Vector2(0.69, 0.69)
 texture = ExtResource("6_kk2rg")
 
-[node name="debug" type="Node2D" parent="GameUI" unique_id=711685194]
+[node name="Debug" type="Node2D" parent="GameUI" unique_id=711685194]
 z_index = 127
 script = ExtResource("7_kk2rg")
 

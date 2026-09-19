@@ -1,4 +1,5 @@
 # PauseMenu.gd — 暂停菜单覆盖层
+@tool
 extends NavPage
 
 ## true 表示 GameOver 模式（禁用「继续」）

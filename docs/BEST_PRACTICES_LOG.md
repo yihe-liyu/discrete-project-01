@@ -18,6 +18,52 @@
 
 ## 记录
 
+### 2026-09-18 — 关 E1（R3）：场景期依赖自文档（@tool + _get_configuration_warnings）
+
+- **判据**：R3 只覆盖**场景期外部依赖**（运行时注入豁免）。全项目真正的场景期 `@export` 引用只有 2 处：`nav_page.container_path`（空/无效 → 导航静默 no-op）、`game_over_menu.title_label`（null → 标题静默不更新）。
+- **硬约束**：`_get_configuration_warnings` **必须 `@tool`** 才在场景停靠栏显示（Godot PR #75591）；`@tool` **不被子类继承**；且 `base_page._ready()` 会在编辑器里 `add_child(Overlay)` 污染 .tscn。
+- **改**：
+  - `base_page._ready()` 加 `Engine.is_editor_hint()` 守卫。
+  - `nav_page.gd`：`@tool` + `_get_configuration_warnings()`（`container_path` 空/解析失败 → 警告）+ `_setup_nav()` 运行时 `push_warning` 响亮兜底。
+  - `game_over_menu.gd`：`@tool` + 覆写 `_get_configuration_warnings()`（`title_label == null`）。
+  - `character_screen` / `difficulty_screen` / `pause_menu`：仅 `@tool`（无 `_ready` 覆盖）。
+  - `main_menu` / `player_data_menu` / `music_room_menu`：`@tool` + 给 `_ready`（及 `main_menu`/`player_data_menu` 的 `_input`、`main_menu`/`music_room_menu` 的 `_exit_tree`）加 `Engine.is_editor_hint()` 守卫，避免编辑器副作用。
+- **计数**：`@tool` **3 → 11**；`_get_configuration_warnings` **0 → 2**。基线「🔴」删除 R3 行；审计表 R3 → ✅。
+- **验收**：`./tools/verify.sh` 全绿（436 pass + 1 pending / 437 测试 / 4354 断言）。
+- **待人工**：编辑器里打开 `main_menu.tscn` / 缺 `container_path` 的页面应看到相应警告（`@tool` 行为只有编辑器可见）。
+### 2026-09-18 — 关 E2（R12）：唯一 `@export = preload` 拆成 export + 运行时兜底
+
+- **现状**：`scripts/data/enemy_data.gd:9` 是全项目**唯一** `@export … preload`（R12 禁止）。它让「常量 preload」伪装成导出值（永不释放，又暗示可覆盖），且默认特效与 `AssetRegistry.enemy_visuals["death"]` 是**两份同源 preload**。
+- **改（方案 A）**：
+  - `@export var death_effect: PackedScene`（**无 preload 默认**，可置 null 释放）。
+  - `enemy.gd`：`death_effect = data.death_effect if data.death_effect else AssetRegistry.enemy_visuals.get("death")` —— per-data 覆盖保留，**默认单源**收敛到 `AssetRegistry`。
+  - 行为不变（无 `.tres` 覆盖该字段；`enemy.gd` 的 `if death_effect:` 兜底照旧）。
+- **落点**：基线「🔴 待改进」删除 R12 行；外壳审计表 R12 由「1，待改」→「0，✅」。
+- **验收**：`./tools/verify.sh` 全绿（436 pass + 1 pending / 437 测试 / 4354 断言）。
+### 2026-09-18 — R15/E3 收尾：节点层 PascalCase（diffculty / jude / bar / content + root）
+
+- **节点改名**（`.tscn` 节点名 + 代码引用 + `parent=` 路径）：
+  - `scenes/game_scene.tscn`：`front`→`Front`、`diffculty`→`Difficulty`（拼写 + 大小写）、`debug`→`Debug`；`game_ui.gd` 4 处 `$"diffculty"` / `node.name == "diffculty"` 连带。
+  - `data/enemy_visual/*_yin_yang_jade.tscn`：`jude`→`Judge`（×4）。
+  - `scenes/workbench/creation_station.tscn`：`bar`→`Bar`、`content`→`Content`、`root`→`Root`；`creation_station.gd` 的 `$root/…` 连带。
+  - 敌机外观场景根节点 `root`→`Root`（10 场景 + `kamorui`）。
+- **结果**：非 addon 场景已无小写节点（`[node name="[a-z]` 归零）。
+- **R15 收口**：目录段（`assets/Textures|Music|Sound`）立豁免、`stage03B` 大写保留（拍板）；**文件层 + 节点层已清**；基线「🔴 待改进」删除 R15 行。
+- **验收**：`./tools/verify.sh` 全绿（436 pass + 1 pending / 437 测试 / 4354 断言）。
+### 2026-09-18 — R15（E3）部分落地：文件层 snake_case + assets/* 目录立豁免
+
+- **用户拍板边界**：`stage03B` 大写**保留**；**只改文件名**、**不碰 `.uid`**（Godot 自行刷新）；`YY_jade` = 阴阳玉。
+- **文件改名（9 源文件 + 5 个 `.import` 侧车）**：
+  - `assets/Textures/front/{False,True}Front{,2}.png` → `false_front{,2}.png` / `true_front{,2}.png`
+  - `assets/fonts/SourceHanSerifCN-Medium.otf` → `source_han_serif_cn_medium.otf`
+  - `data/enemy_visual/{red,green,blue,purple}_YY_jade.tscn` → `*_yin_yang_jade.tscn`
+- **引用连带**：`scenes/game_scene.tscn`（FalseFront 路径）、`themes/ui_theme.tres` + `scripts/workbench/workbench_theme.gd`（字体）、`scripts/asset_registry.gd`（4 视觉 key + preload）、`scripts/data/enemy_data.gd`（4 预设方法 + key）。
+- **契约**：`assets/Textures|Music|Sound` 三素材根目录立**明确豁免**（改名 = 3 目录 + ~236 路径 + 全量重导入，收益仅字面；与 `AssetRegistry` 豁免同源）。
+- **`.uid` 值未动**；`.import` 的 `path`/`source_file`/`dest_files` 由 `godot --headless --import` 刷新为新文件名（`uid` 行不变）。
+- **未做（用户指示「只改文件名」）**：小写节点 `diffculty` / `front` / `debug` / `jude` / `bar` / `content`（R15 节点层待办）。
+- **守卫**：`check_naming` 新增 **⑦ 目录/文件名** —— 目录不得 PascalCase（豁免 `assets/Textures|Music|Sound` + `data/stages/stage03B`），文件名不得含 ASCII 大写（豁免 `README-OFL.txt` + `assets/Music/**` 内容槽曲目名）；当前 0。
+- **踩坑**：改名后 `verify.sh` 先报 `ui_theme.tres` 找不到字体 —— 根因是 **Godot `uid_cache` 仍把 uid 映射到旧路径**；跑 `--import` 重建缓存后全绿。
+- **验收**：`./tools/verify.sh` 全绿（436 pass + 1 pending / 437 测试 / 4354 断言）。
 ### 2026-09-18 — N8 执行（批次 2+3）：清 scripts/data · coroutine · components · enemy · autoload · player · replay · debug · asset_registry · ui_theme
 
 - **批次 2（scripts/data）**：`r`→`record`、`e`→`entry`、`f`→`file_name`、`n`/`d`→`name_value`/`desc_value`、`s`→`text`、`q`→`quote_index`、`p`/`k`→`prop`/`key`、`t`→`type_id`；`bullet_data` 的 `r`→`rect`；`save_data` 的 `s`→`settings`。**保留**：`boss_data`/`enemy_data`/`bullet_data` 的链式 DSL 形参（`v`/`x`/`y`/`c`/`b`/`s`/`p`/`k`，单行）。

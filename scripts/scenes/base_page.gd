@@ -36,6 +36,9 @@ func _init() -> void:
 	pass
 
 func _ready() -> void:
+	# 编辑器守卫：BasePage 有 @tool 子类，_create_overlay 会 add_child(Overlay) 污染 .tscn
+	if Engine.is_editor_hint():
+		return
 	_create_overlay()
 
 func _create_overlay() -> void:

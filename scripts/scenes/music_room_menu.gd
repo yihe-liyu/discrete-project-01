@@ -1,4 +1,5 @@
 # MusicRoomMenu.gd — 音乐室（左右分栏：列表 + 评语）
+@tool
 extends NavPage
 
 const GOLD_COLOR := Color(1.0, 0.85, 0.2)
@@ -22,6 +23,8 @@ var _list_labels: Array[Label] = []
 
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	super._ready()  # BasePage._create_overlay() 需要先执行
 	# 进入音乐室时停掉外部 BGM
 	AudioManager.stop_bgm()
@@ -244,6 +247,8 @@ func _find_bus(bus_name: String) -> StringName:
 
 
 func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		return
 	_stop_preview()
 	if _preview_player and is_instance_valid(_preview_player):
 		_preview_player.queue_free()

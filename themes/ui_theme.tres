@@ -1,6 +1,6 @@
 [gd_resource type="Theme" format=3 uid="uid://0d6j3oefl555"]
 
-[ext_resource type="FontFile" uid="uid://2enc5j4xm7" path="res://assets/fonts/SourceHanSerifCN-Medium.otf" id="1_font"]
+[ext_resource type="FontFile" uid="uid://2enc5j4xm7" path="res://assets/fonts/source_han_serif_cn_medium.otf" id="1_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxPanel"]
 content_margin_left = 8.0

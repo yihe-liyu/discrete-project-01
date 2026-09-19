@@ -1,4 +1,5 @@
 # CharacterScreen.gd — 角色选择子页面
+@tool
 extends NavPage
 
 @onready var _difficulty_badge: TextureRect = $DifficultyBadge

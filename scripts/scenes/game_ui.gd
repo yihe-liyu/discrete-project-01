@@ -42,7 +42,7 @@ func _ready() -> void:
 	_entry_queue.push_front(title)
 
 	# 难度 UI → 入队，单独处理入场动画
-	var diff := $"diffculty"
+	var diff := $"Difficulty"
 	_entry_queue.append(diff)
 
 	# 文字标签先入队（先出现）
@@ -126,7 +126,7 @@ func _reset_entry_node(node: Node) -> void:
 	elif node is UISeparator:
 		node.progress = 0.0
 		node.modulate.a = 0.0
-	elif node.name == "diffculty":
+	elif node.name == "Difficulty":
 		node.position = Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_CENTER_Y)
 		node.scale = Vector2(0.01, 0.01)
 		node.modulate.a = 0.0
@@ -153,7 +153,7 @@ func _play_entry_tween(node: Node) -> void:
 		tween.tween_property(node.material, "shader_parameter/progress", 1.0, 1.5)
 		tween.tween_property(node.material, "shader_parameter/alpha_mult", 1.0, 0.8)
 
-	elif node.name == "diffculty":
+	elif node.name == "Difficulty":
 		node.modulate.a = 1.0
 		var pop := create_tween().set_parallel(true)
 		pop.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -302,7 +302,7 @@ func _update_fragments() -> void:
 
 ## 根据 selected_difficulty 切换难度标签贴图
 func _update_difficulty_texture() -> void:
-	var diff := $"diffculty"
+	var diff := $"Difficulty"
 	if not diff:
 		return
 	var idx := clampi(SaveData.selected_difficulty, 0, difficulty_textures.size() - 1)

@@ -4,7 +4,7 @@ extends RefCounted
 ##
 ## 设计（完全对齐 themes/ui_theme.tres 与菜单面板 StyleBox）：
 ##   · 面板：底 (0,0,0,0.32) + 1px 金边 (0.62,0.52,0.28,0.55) + 圆角 6（主菜单/音乐室/设置同款）
-##   · 字体：SourceHanSerifCN-Medium.otf（项目全局字体）+ 黑描边/投影（ui_theme Label 同款）
+##   · 字体：source_han_serif_cn_medium.otf（项目全局字体）+ 黑描边/投影（ui_theme Label 同款）
 ##   · 工作台是密集工具：默认字号 14（游戏页面文字 22~36，走大字号覆盖）
 ##   · 强调一律金色（东方风），弱化文字用中性灰（不再蓝灰）
 ##
@@ -33,7 +33,7 @@ static func build() -> Theme:
 	# 【重要】不配 fallbacks！本引擎会把回退字体里"主字体也有的字形"再画一遍 →
 	# 所有文字双绘重影（曾误认成乱码）。UI 符号一律用宋体自带字形
 	# （▾▸ 用 ▼▶；emoji 用 ★◆×＊！⚠ 等代替，Scripts 内已统一）
-	var font: FontFile = (load("res://assets/fonts/SourceHanSerifCN-Medium.otf") as FontFile).duplicate() as FontFile
+	var font: FontFile = (load("res://assets/fonts/source_han_serif_cn_medium.otf") as FontFile).duplicate() as FontFile
 	t.default_font = font
 	t.default_font_size = 18  # 控件默认字号；标签阶梯见 rig_common（SECTION/LABEL/HINT_SIZE）
 	# 顶部切换按钮用硬编码 16 保持紧凑（creation_station._slot_buttons）
