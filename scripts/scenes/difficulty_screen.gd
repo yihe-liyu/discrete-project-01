@@ -86,13 +86,13 @@ func _target_y(i: int) -> float:
 	return _center_y + (_target_x(i) - _center_x) * tan(SKEW_ANGLE)
 
 
-func _target_global(item: Control, x: float, y: float) -> void:
+func _target_global(item: Control, target_x: float, target_y: float) -> void:
 	# 用 global_position 绕过容器坐标系统
 	var tw := item.create_tween()
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.set_parallel(true)
-	tw.tween_property(item, "global_position:x", x - ITEM_SIZE.x / 2.0, SLIDE_DURATION)
-	tw.tween_property(item, "global_position:y", y - ITEM_SIZE.y / 2.0, SLIDE_DURATION)
+	tw.tween_property(item, "global_position:x", target_x - ITEM_SIZE.x / 2.0, SLIDE_DURATION)
+	tw.tween_property(item, "global_position:y", target_y - ITEM_SIZE.y / 2.0, SLIDE_DURATION)
 
 
 ## 根据选中索引更新黑遮罩倾斜角度

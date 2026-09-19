@@ -111,10 +111,10 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 ## 把长贴图切成第 i 段（AtlasTexture 切片）—— 切片缓存复用（省每段 new）
 func _make_laser_segment(i: int) -> AtlasTexture:
 	if _segment_textures.is_empty():
-		for s in _seg_count():
+		for segment in _seg_count():
 			var at := AtlasTexture.new()
 			at.atlas = LASER_TEX
-			at.region = Rect2(s * SEG_W, 0, SEG_W, SEG_H)
+			at.region = Rect2(segment * SEG_W, 0, SEG_W, SEG_H)
 			_segment_textures.append(at)
 	return _segment_textures[i % _seg_count()]
 
@@ -138,15 +138,15 @@ func _get_laser_bullet(frame: int) -> BulletData:
 	var i: int = frame % _seg_count()
 	while _laser_bullets.size() < _seg_count():
 		var k: int = _laser_bullets.size()
-		var b := BulletData.new().player()
-		b.texture = _make_laser_segment(k)
-		b.color(Color(1, 1, 1, 0.5))
-		b.damage = LASER_DAMAGE
-		b.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option01.tscn")  # 激光专用击中特效
+		var bullet_data := BulletData.new().player()
+		bullet_data.texture = _make_laser_segment(k)
+		bullet_data.color(Color(1, 1, 1, 0.5))
+		bullet_data.damage = LASER_DAMAGE
+		bullet_data.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option01.tscn")  # 激光专用击中特效
 		# 矩形判定覆盖整段（贴视觉：64x32，旋转后 32x64 竖条）
-		b.hitbox_shape = BulletData.HitboxShape.RECTANGLE
-		b.hitbox_size = Vector2(SEG_W, SEG_H)
-		_laser_bullets.append(b)
+		bullet_data.hitbox_shape = BulletData.HitboxShape.RECTANGLE
+		bullet_data.hitbox_size = Vector2(SEG_W, SEG_H)
+		_laser_bullets.append(bullet_data)
 	return _laser_bullets[i]
 
 
@@ -157,7 +157,7 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 		source = player
 
 	# 本轮共享帧：同轮所有子机图案一致，轮间变换 → 整齐且流动
-	var b := _get_laser_bullet(frame)
+	var bullet_data := _get_laser_bullet(frame)
 
 	# 按火力 + 子机索引查发射角度（LASER_ANGLES 表）——旧池/内核共用
 	var opt_idx: int = _options.find(source)
@@ -168,8 +168,8 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	var angle_rad: float = deg_to_rad(angles[opt_idx] if opt_idx < angles.size() else 0.0)
 
 	# 弹道 = 每角度一个描述符（缓存）；锚点是 per-shot（同角度、不同子机各一份 program）
-	b.trajectory(_laser_trajectory(angle_rad), _laser_anchor(source))
+	bullet_data.trajectory(_laser_trajectory(angle_rad), _laser_anchor(source))
 
 	# 段在发射口生成（offset=0），drift 从 0 独立累积 → 根部永远在子机
-	# 段参数已走 b.trajectory（每角度一个描述符 + per-shot 锚点）
-	ctx.bullets.shoot_spread(b, 1, 0.0, Vector2.UP, source.global_position)
+	# 段参数已走 bullet_data.trajectory（每角度一个描述符 + per-shot 锚点）
+	ctx.bullets.shoot_spread(bullet_data, 1, 0.0, Vector2.UP, source.global_position)

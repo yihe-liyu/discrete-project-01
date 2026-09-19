@@ -42,15 +42,15 @@ static func boot() -> void:
 
 ## 应用存档设置（音量 / 全屏 / 帧率）
 static func apply_settings() -> void:
-	var s: Dictionary = save_mgr.settings
-	if s.has("volume_bgm"):
-		AudioManager.bgm_volume = float(s["volume_bgm"])
-	if s.has("volume_sfx"):
-		AudioManager.sfx_volume = float(s["volume_sfx"])
-	if s.has("fullscreen"):
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if s["fullscreen"] else DisplayServer.WINDOW_MODE_WINDOWED)
-	if s.has("max_fps"):
-		var mf: int = int(s["max_fps"])
+	var settings: Dictionary = save_mgr.settings
+	if settings.has("volume_bgm"):
+		AudioManager.bgm_volume = float(settings["volume_bgm"])
+	if settings.has("volume_sfx"):
+		AudioManager.sfx_volume = float(settings["volume_sfx"])
+	if settings.has("fullscreen"):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if settings["fullscreen"] else DisplayServer.WINDOW_MODE_WINDOWED)
+	if settings.has("max_fps"):
+		var mf: int = int(settings["max_fps"])
 		# 0 = 自动：跟显示器刷新率；读不到则无上限(0)
 		if mf == 0:
 			var rate := DisplayServer.screen_get_refresh_rate(0)

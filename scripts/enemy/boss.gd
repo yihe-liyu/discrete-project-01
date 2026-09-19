@@ -156,17 +156,17 @@ func _free_pos_indicator() -> void:
 
 ## 指示器透明度随 |boss.x - 自机.x| 变化：越远越清晰
 func _update_indicator_alpha() -> void:
-	var r = _refs()
-	var raw = r.player if r else null
+	var entity_registry = _refs()
+	var raw = entity_registry.player if entity_registry else null
 	var player: Player = raw if is_instance_valid(raw) else null
 	if player == null or not is_instance_valid(player):
 		_pos_indicator.modulate.a = 1.0
 		return
 	var dx := absf(global_position.x - player.global_position.x)
-	var t := clampf((dx - INDICATOR_FADE_NEAR) / maxf(INDICATOR_FADE_FAR - INDICATOR_FADE_NEAR, 1.0), 0.0, 1.0)
-	# 缓动：pow<1 → 低 t 区间（Boss 靠近）斜率陡，透明得越快；远处保持清晰
-	t = pow(t, INDICATOR_FADE_POW)
-	_pos_indicator.modulate.a = lerpf(INDICATOR_ALPHA_NEAR, 1.0, t)
+	var fade_ratio := clampf((dx - INDICATOR_FADE_NEAR) / maxf(INDICATOR_FADE_FAR - INDICATOR_FADE_NEAR, 1.0), 0.0, 1.0)
+	# 缓动：pow<1 → 低 ratio 区间（Boss 靠近）斜率陡，透明得越快；远处保持清晰
+	fade_ratio = pow(fade_ratio, INDICATOR_FADE_POW)
+	_pos_indicator.modulate.a = lerpf(INDICATOR_ALPHA_NEAR, 1.0, fade_ratio)
 
 
 func start_phase(data: PhaseData) -> void:
@@ -229,8 +229,8 @@ func _process(delta: float) -> void:
 
 	if _bonus > 0:
 		# maxf 防御：time_limit 非法为 0 时优雅降级（正常配置由 validate 拦截）
-		var t := maxf(_phase_data.time_limit, 0.001)
-		var tick := maxi(1, int(float(_phase_data.bonus) / t * delta))
+		var time_limit := maxf(_phase_data.time_limit, 0.001)
+		var tick := maxi(1, int(float(_phase_data.bonus) / time_limit * delta))
 		_bonus = maxi(0, _bonus - tick)
 
 	GameEvents.phase_bonus_tick.emit(_bonus)
@@ -285,8 +285,8 @@ func clear_phase(captured: bool) -> void:
 
 	GameEvents.phase_end.emit(captured, _bonus)
 	if captured and _bonus > 0:
-		var r = _refs()
-		var res: PlayerResources = r.get_player_resources() if r else null
+		var entity_registry = _refs()
+		var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
 		if res != null:
 			res.add_score(_bonus)
 
@@ -342,9 +342,9 @@ func _drop_items() -> void:
 	for _i in range(phase.item_life_full): drops.append(Item.Type.LIFE_FULL)
 	for _i in range(phase.item_bomb_full): drops.append(Item.Type.BOMB_FULL)
 
-	for t in drops:
+	for item_type in drops:
 		var offset := Vector2(RNG.randf_range(-scatter, scatter), RNG.randf_range(-scatter, scatter))
-		if _stage_context: _stage_context.spawn_item(t, pos + offset)
+		if _stage_context: _stage_context.spawn_item(item_type, pos + offset)
 
 
 ## 阶段脚本参数注入（工作台编辑的 PhaseData.params → 脚本同名属性）

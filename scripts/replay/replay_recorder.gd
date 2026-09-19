@@ -66,21 +66,21 @@ func to_dict() -> Dictionary:
 
 ## 存盘（user:// 或绝对路径）
 func save(path: String) -> bool:
-	var f := FileAccess.open(path, FileAccess.WRITE)
-	if f == null:
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
 		push_error("ReplayRecorder: 无法写入 " + path)
 		return false
-	f.store_string(JSON.stringify(to_dict()))
+	file.store_string(JSON.stringify(to_dict()))
 	return true
 
 
 ## 从字典加载（版本/帧数校验；失败静默返回 false，由调用方决定日志）
-func load_dict(d: Dictionary) -> bool:
-	if d.get("version", 0) != FORMAT_VERSION:
+func load_dict(data: Dictionary) -> bool:
+	if data.get("version", 0) != FORMAT_VERSION:
 		return false
-	rng_seed = int(d.get("seed", "0"))  # 兼容字符串存储（JSON 键仍叫 seed）
-	duration_frames = d.get("duration", 0)
-	frames = (d.get("frames_hex", "") as String).hex_decode()
+	rng_seed = int(data.get("seed", "0"))  # 兼容字符串存储（JSON 键仍叫 seed）
+	duration_frames = data.get("duration", 0)
+	frames = (data.get("frames_hex", "") as String).hex_decode()
 	if frames.size() != duration_frames:
 		return false
 	return true
@@ -90,10 +90,10 @@ func load_dict(d: Dictionary) -> bool:
 func load_file(path: String) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
 		return false
-	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if parsed is not Dictionary:
 		return false
 	return load_dict(parsed)

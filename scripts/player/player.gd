@@ -276,19 +276,19 @@ func _spawn_one_item(at: Vector2, limits: Dictionary) -> void:
 	if not pool:
 		return
 
-	var r := RNG.randf()
+	var roll := RNG.randf()
 	var item_type: int
 
 	# 碎片有上限，超限降级为跳过
-	if r < 0.05 and limits.life < MAX_LIFE:
+	if roll < 0.05 and limits.life < MAX_LIFE:
 		item_type = Item.Type.LIFE_FRAGMENT
 		limits.life += 1
-	elif r < 0.1 and limits.bomb < MAX_BOMB:
+	elif roll < 0.1 and limits.bomb < MAX_BOMB:
 		item_type = Item.Type.BOMB_FRAGMENT
 		limits.bomb += 1
-	elif r < 0.4:
+	elif roll < 0.4:
 		item_type = Item.Type.POWER
-	elif r < 0.7:
+	elif roll < 0.7:
 		item_type = Item.Type.POINT
 	else:
 		return

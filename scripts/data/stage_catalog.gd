@@ -38,8 +38,8 @@ static func all() -> Array[StageData]:
 
 ## 某关卡的背景场景（练习用）
 static func background(stage_id: int) -> PackedScene:
-	var d := find(stage_id)
-	return d.background_scene if d else null
+	var stage_data := find(stage_id)
+	return stage_data.background_scene if stage_data else null
 
 
 static func _load_all() -> Array[StageData]:

@@ -35,18 +35,18 @@ func _ready() -> void:
 
 
 func _setup_digits() -> void:
-	var w: float = digit_texture.get_width() / float(char_count)
-	var h: float = digit_texture.get_height()
+	var frame_w: float = digit_texture.get_width() / float(char_count)
+	var frame_h: float = digit_texture.get_height()
 	for i in range(digit_count):
-		var s: Sprite2D = Sprite2D.new()
-		s.texture = digit_texture
-		s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		s.region_enabled = true
-		s.region_rect = Rect2(0, 0, w, h)
-		s.position.x = i * digit_spacing
-		s.visible = false
-		add_child(s)
-		_digits.append(s)
+		var sprite: Sprite2D = Sprite2D.new()
+		sprite.texture = digit_texture
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0, 0, frame_w, frame_h)
+		sprite.position.x = i * digit_spacing
+		sprite.visible = false
+		add_child(sprite)
+		_digits.append(sprite)
 
 
 func _process(_delta: float) -> void:

@@ -32,18 +32,18 @@ func has(char_name: String) -> bool:
 ## 返回说话者列表（text 非空的气泡）。
 func apply_line(line: DialogueLine) -> Array[String]:
 	var speakers_list: Array[String] = []
-	for b in line.bubbles:
-		if b.speaker == null:
+	for bubble in line.bubbles:
+		if bubble.speaker == null:
 			continue
-		var a := ensure(b.speaker)
-		a.is_visible = true
+		var actor_state := ensure(bubble.speaker)
+		actor_state.is_visible = true
 		# 表情是内容属性：这句里该角色什么表情（含沉默者，与旧模型一致）
-		if not b.emotion.is_empty():
-			a.emotion = b.emotion
-		if not b.text.is_empty():
-			a.light = 1.0
-			if not speakers_list.has(a.char_name):
-				speakers_list.append(a.char_name)
+		if not bubble.emotion.is_empty():
+			actor_state.emotion = bubble.emotion
+		if not bubble.text.is_empty():
+			actor_state.light = 1.0
+			if not speakers_list.has(actor_state.char_name):
+				speakers_list.append(actor_state.char_name)
 	# 沉默在场者变暗
 	for name_key in actors:
 		if not speakers_list.has(name_key):

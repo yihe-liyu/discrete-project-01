@@ -11,13 +11,13 @@ class_name SpellRecordBook
 ## 正常记录 stage>=1；空壳 = stage<1 或 无 uid/统计的空对象。
 func prune_empty() -> void:
 	var kept: Array[SpellRecord] = []
-	for r in records:
-		if r.stage < 1:
+	for record in records:
+		if record.stage < 1:
 			continue
-		if r.uid == 0 and r.attempts == 0 and r.captures == 0 \
-				and r.practice_attempts == 0 and r.practice_captures == 0:
+		if record.uid == 0 and record.attempts == 0 and record.captures == 0 \
+				and record.practice_attempts == 0 and record.practice_captures == 0:
 			continue
-		kept.append(r)
+		kept.append(record)
 	records = kept
 
 
@@ -25,77 +25,77 @@ func prune_empty() -> void:
 ## 注意：boss_index **不参与主键**（阶段身份由规范 phase_index 唯一确定；boss_index 只作归属/展示）。
 ## 参数仍保留 boss_index 以兼容调用方，但查找时忽略它。
 func get_record(stage: int, phase_index: int, _boss_index: int, character: int, difficulty: int) -> SpellRecord:
-	for r in records:
-		if r.stage == stage and r.phase_index == phase_index \
-				and r.character == character and r.difficulty == difficulty:
-			return r
+	for record in records:
+		if record.stage == stage and record.phase_index == phase_index \
+				and record.character == character and record.difficulty == difficulty:
+			return record
 	return null
 
 
 func get_or_create(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
 		uid: int = 0, phase_type: int = 0, phase_number: int = 1) -> SpellRecord:
-	var r := get_record(stage, phase_index, boss_index, character, difficulty)
+	var record := get_record(stage, phase_index, boss_index, character, difficulty)
 	# 命中时仍写 boss_index（归属/展示用）—— 但主键不含它，不会因此新建/拆分记录
-	if r:
-		return r
-	r = SpellRecord.new()
-	r.stage = stage
-	r.phase_index = phase_index
-	r.boss_index = boss_index
-	r.character = character
-	r.difficulty = difficulty
-	if uid > 0: r.uid = uid
-	r.phase_type = phase_type
-	r.phase_number = phase_number
-	records.append(r)
-	return r
+	if record:
+		return record
+	record = SpellRecord.new()
+	record.stage = stage
+	record.phase_index = phase_index
+	record.boss_index = boss_index
+	record.character = character
+	record.difficulty = difficulty
+	if uid > 0: record.uid = uid
+	record.phase_type = phase_type
+	record.phase_number = phase_number
+	records.append(record)
+	return record
 
 
 func record_attempt(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
 		captured: bool, score: int, elapsed: float, extra: Dictionary = {}) -> void:
-	var r := get_or_create(stage, phase_index, boss_index, character, difficulty,
+	var record := get_or_create(stage, phase_index, boss_index, character, difficulty,
 		extra.get("uid", 0), extra.get("phase_type", 0),
 		extra.get("phase_number", 1))
-	r.attempts += 1
+	record.attempts += 1
 	if captured:
-		r.captures += 1
-		if score > r.best_score:
-			r.best_score = score
+		record.captures += 1
+		if score > record.best_score:
+			record.best_score = score
 		if elapsed > 0:
-			if r.best_time == 0 or elapsed < r.best_time:
-				r.best_time = elapsed
+			if record.best_time == 0 or elapsed < record.best_time:
+				record.best_time = elapsed
 
 
 ## 补记一次收取（attempts 已在进入阶段时记过——只加 captures + 更新最佳成绩）
 func record_capture(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
 		score: int, elapsed: float) -> void:
-	var r := get_record(stage, phase_index, boss_index, character, difficulty)
-	if not r:
+	var record := get_record(stage, phase_index, boss_index, character, difficulty)
+	if not record:
 		return
-	r.captures += 1
-	if score > r.best_score:
-		r.best_score = score
+	record.captures += 1
+	if score > record.best_score:
+		record.best_score = score
 	if elapsed > 0:
-		if r.best_time == 0 or elapsed < r.best_time:
-			r.best_time = elapsed
+		if record.best_time == 0 or elapsed < record.best_time:
+			record.best_time = elapsed
 
 
 func record_practice(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
 		captured: bool) -> void:
-	var r := get_record(stage, phase_index, boss_index, character, difficulty)
-	if not r:
+	var record := get_record(stage, phase_index, boss_index, character, difficulty)
+	if not record:
 		return  # 练习只更新已有记录，首次记录由普通模式生成
-	r.practice_attempts += 1
+	record.practice_attempts += 1
 	if captured:
-		r.practice_captures += 1
+		record.practice_captures += 1
 
 
 ## 练习收取补记：只 +capture（attempt 已在开始练习时记过，防重复）
 func record_practice_capture(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int) -> void:
-	var r := get_record(stage, phase_index, boss_index, character, difficulty)
-	if not r:
+	var record := get_record(stage, phase_index, boss_index, character, difficulty)
+	if not record:
 		return
-	r.practice_captures += 1
+	record.practice_captures += 1
 
 
 

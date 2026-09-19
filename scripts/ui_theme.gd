@@ -9,16 +9,16 @@ static func apply() -> void:
 	if not ui:
 		return
 	var def: Theme = ThemeDB.get_default_theme()
-	for t in ui.get_type_list():
-		for n in ui.get_constant_list(t):
-			def.set_constant(n, t, ui.get_constant(n, t))
-		for n in ui.get_color_list(t):
-			def.set_color(n, t, ui.get_color(n, t))
-		for n in ui.get_stylebox_list(t):
-			def.set_stylebox(n, t, ui.get_stylebox(n, t))
-		for n in ui.get_font_list(t):
-			def.set_font(n, t, ui.get_font(n, t))
-		for n in ui.get_font_size_list(t):
-			def.set_font_size(n, t, ui.get_font_size(n, t))
-		for n in ui.get_icon_list(t):
-			def.set_icon(n, t, ui.get_icon(n, t))
+	for type_name in ui.get_type_list():
+		for entry_name in ui.get_constant_list(type_name):
+			def.set_constant(entry_name, type_name, ui.get_constant(entry_name, type_name))
+		for entry_name in ui.get_color_list(type_name):
+			def.set_color(entry_name, type_name, ui.get_color(entry_name, type_name))
+		for entry_name in ui.get_stylebox_list(type_name):
+			def.set_stylebox(entry_name, type_name, ui.get_stylebox(entry_name, type_name))
+		for entry_name in ui.get_font_list(type_name):
+			def.set_font(entry_name, type_name, ui.get_font(entry_name, type_name))
+		for entry_name in ui.get_font_size_list(type_name):
+			def.set_font_size(entry_name, type_name, ui.get_font_size(entry_name, type_name))
+		for entry_name in ui.get_icon_list(type_name):
+			def.set_icon(entry_name, type_name, ui.get_icon(entry_name, type_name))

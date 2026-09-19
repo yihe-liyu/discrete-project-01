@@ -76,9 +76,9 @@ func get_entries() -> Array:
 
 func by_role(role: String) -> Array:
 	var out: Array = []
-	for e in _entries:
-		if (e as Entry).role == role:
-			out.append(e)
+	for entry in _entries:
+		if (entry as Entry).role == role:
+			out.append(entry)
 	return out
 
 
@@ -94,8 +94,8 @@ func get_stats() -> Dictionary:
 	var role_counts := {}
 	for role in ROLE_ORDER:
 		role_counts[role] = 0
-	for e in _entries:
-		role_counts[(e as Entry).role] = role_counts.get((e as Entry).role, 0) + 1
+	for entry in _entries:
+		role_counts[(entry as Entry).role] = role_counts.get((entry as Entry).role, 0) + 1
 	return {
 		"total": _entries.size(),
 		"by_role": role_counts,
@@ -112,14 +112,14 @@ func _walk(dir: String) -> Array[String]:
 		_warnings.append("目录不可打开：" + dir)
 		return out
 	da.list_dir_begin()
-	var f := da.get_next()
-	while f != "":
+	var file_name := da.get_next()
+	while file_name != "":
 		if da.current_is_dir():
-			if not f.begins_with("."):
-				out.append_array(_walk(dir.path_join(f)))
-		elif f.ends_with(".gd") or f.ends_with(".tres"):
-			out.append(dir.path_join(f))
-		f = da.get_next()
+			if not file_name.begins_with("."):
+				out.append_array(_walk(dir.path_join(file_name)))
+		elif file_name.ends_with(".gd") or file_name.ends_with(".tres"):
+			out.append(dir.path_join(file_name))
+		file_name = da.get_next()
 	da.list_dir_end()
 	return out
 
@@ -143,34 +143,34 @@ func _scan_script(path: String) -> void:
 			_warnings.append(
 				"角色分类冲突 [%s]：约定=%s 注解=%s（注解优先）"
 				% [path.get_file(), convention, role])
-	var e := Entry.new()
-	e.role = role
-	e.path = path
-	e.annotations = ann
-	e.stage_key = _stage_key(path)
-	_apply_meta(e, ann, path, text)
-	_add(e)
+	var entry := Entry.new()
+	entry.role = role
+	entry.path = path
+	entry.annotations = ann
+	entry.stage_key = _stage_key(path)
+	_apply_meta(entry, ann, path, text)
+	_add(entry)
 
 
 ## const META 优先；缺 name 或加载失败 → 回退 @name/@desc 注解/注释块（不静默）
-func _apply_meta(e: Entry, ann: Dictionary, path: String, text: String) -> void:
+func _apply_meta(entry: Entry, ann: Dictionary, path: String, text: String) -> void:
 	if text.contains("const META"):
 		var meta: Dictionary = _read_meta(path)
 		if not meta.is_empty():
-			var n: Variant = meta.get("name", "")
-			if n is String and n.strip_edges() != "":
-				var name: String = n.strip_edges()
-				e.name = _truncate(name, 18)
-				e.extra["full_title"] = name
-				var d: Variant = meta.get("desc", "")
-				e.description = (d as String).strip_edges() if d is String else ""
+			var name_value: Variant = meta.get("name", "")
+			if name_value is String and name_value.strip_edges() != "":
+				var name: String = name_value.strip_edges()
+				entry.name = _truncate(name, 18)
+				entry.extra["full_title"] = name
+				var desc_value: Variant = meta.get("desc", "")
+				entry.description = (desc_value as String).strip_edges() if desc_value is String else ""
 				return
 			_warnings.append("META 缺 name [%s]：回退注解" % path.get_file())
 	# 回退：注解 / 注释块
 	var raw_name: String = ann.get("name", ann.get("_default_name", path.get_file().get_basename()))
-	e.name = _short_name(raw_name)
-	e.extra["full_title"] = raw_name
-	e.description = ann.get("desc",
+	entry.name = _short_name(raw_name)
+	entry.extra["full_title"] = raw_name
+	entry.description = ann.get("desc",
 		" ".join(ann.get("_comments", [])) if ann.has("name") else ann.get("_desc", ""))
 
 
@@ -185,10 +185,10 @@ func _read_meta(path: String) -> Dictionary:
 
 
 ## 仅按长度截断（不再砍"："之后 —— 那是旧 _short_name 的坑）
-func _truncate(s: String, limit: int) -> String:
-	if s.length() > limit:
-		return s.substr(0, limit) + "…"
-	return s
+func _truncate(text: String, limit: int) -> String:
+	if text.length() > limit:
+		return text.substr(0, limit) + "…"
+	return text
 
 
 func _scan_tres(path: String) -> void:
@@ -202,13 +202,13 @@ func _scan_tres(path: String) -> void:
 	if not (res is PhaseData):
 		return
 	var phase := res as PhaseData
-	var e := Entry.new()
-	e.role = ROLE_PHASE
-	e.path = path
-	e.name = phase.name if phase.name != "" else path.get_file().get_basename()
-	e.description = "uid=%d · hp=%d · 时限=%.1fs" % [phase.uid, phase.hp, phase.time_limit]
-	e.stage_key = _stage_key(path)
-	e.extra = {
+	var entry := Entry.new()
+	entry.role = ROLE_PHASE
+	entry.path = path
+	entry.name = phase.name if phase.name != "" else path.get_file().get_basename()
+	entry.description = "uid=%d · hp=%d · 时限=%.1fs" % [phase.uid, phase.hp, phase.time_limit]
+	entry.stage_key = _stage_key(path)
+	entry.extra = {
 		"uid": phase.uid,
 		"hp": phase.hp,
 		"time_limit": phase.time_limit,
@@ -217,28 +217,28 @@ func _scan_tres(path: String) -> void:
 		"move_script": phase.move_script.resource_path if phase.move_script else "",
 		"shoot_script": phase.shoot_script.resource_path if phase.shoot_script else "",
 	}
-	_add(e)
+	_add(entry)
 
 
 ## 脚本→脚本/资源 引用扫描（preload/load("res://...")），生成 refs_from（信息列）
 ## 注：不用正则字符串（GDScript 对 \s 等转义不友好），手工扫描 "res://" 出现点
 func _build_refs_from() -> void:
-	for e in _entries:
-		if not (e as Entry).path.ends_with(".gd"):
+	for entry in _entries:
+		if not (entry as Entry).path.ends_with(".gd"):
 			continue
-		var text: String = FileAccess.get_file_as_string((e as Entry).path)
-		var src_path := (e as Entry).path
+		var text: String = FileAccess.get_file_as_string((entry as Entry).path)
+		var src_path := (entry as Entry).path
 		var idx := 0
 		while true:
 			var pos := text.find("res://", idx)
 			if pos < 0:
 				break
 			# 前一个非空白字符必须是 "，且句首是 preload(/load(
-			var q := pos - 1
-			while q >= 0 and (text[q] == " " or text[q] == "\t"):
-				q -= 1
-			if q >= 0 and text[q] == "\"":
-				var head := text.substr(maxi(q - 9, 0), q - maxi(q - 9, 0)).strip_edges()
+			var quote_index := pos - 1
+			while quote_index >= 0 and (text[quote_index] == " " or text[quote_index] == "\t"):
+				quote_index -= 1
+			if quote_index >= 0 and text[quote_index] == "\"":
+				var head := text.substr(maxi(quote_index - 9, 0), quote_index - maxi(quote_index - 9, 0)).strip_edges()
 				if head.ends_with("load("):
 					var end := text.find("\"", pos + 6)
 					if end >= 0:
@@ -247,8 +247,8 @@ func _build_refs_from() -> void:
 						if te:
 							if not te.refs_from.has(src_path):
 								te.refs_from.append(src_path)
-							if not (e as Entry).refs_to.has(target):
-								(e as Entry).refs_to.append(target)
+							if not (entry as Entry).refs_to.has(target):
+								(entry as Entry).refs_to.append(target)
 			idx = pos + 6
 
 
@@ -258,14 +258,14 @@ func _build_refs_from() -> void:
 ## ① 阶段 .tres 的 move_script/shoot_script 字段 → boss_move / boss_shoot
 ## ② boss_shoot 脚本 preload 的 misc 脚本 → bullet 行为（如 orbit_probe）
 func _apply_reference_fixes() -> void:
-	for e in _entries:
-		var ent := e as Entry
+	for entry in _entries:
+		var ent := entry as Entry
 		if ent.role != ROLE_PHASE:
 			continue
 		_assign_if_misc(ent.extra.get("move_script", ""), ROLE_BOSS_MOVE)
 		_assign_if_misc(ent.extra.get("shoot_script", ""), ROLE_BOSS_SHOOT)
-	for e in _entries:
-		var ent := e as Entry
+	for entry in _entries:
+		var ent := entry as Entry
 		if ent.role != ROLE_BOSS_SHOOT:
 			continue
 		for tpath in ent.refs_to:
@@ -275,23 +275,23 @@ func _apply_reference_fixes() -> void:
 ## 目录显示名：优先取"："之后的内容（角色标签不重复），超长截断
 ## 有冒号 → 18 字符；无冒号 → 24 字符（保持短名完整）
 func _short_name(raw: String) -> String:
-	var s := raw.strip_edges()
+	var text := raw.strip_edges()
 	var limit := 24
-	var idx := s.find("：")
+	var idx := text.find("：")
 	if idx >= 0:
-		s = s.substr(idx + 1).strip_edges()
+		text = text.substr(idx + 1).strip_edges()
 		limit = 18
-	if s.length() > limit:
-		s = s.substr(0, limit) + "…"
-	return s
+	if text.length() > limit:
+		text = text.substr(0, limit) + "…"
+	return text
 
 
 func _assign_if_misc(path: String, role: String) -> void:
 	if path == "":
 		return
-	var t := find(path)
-	if t and t.role == ROLE_MISC:
-		t.role = role
+	var entry := find(path)
+	if entry and entry.role == ROLE_MISC:
+		entry.role = role
 
 func _convention_role(path: String) -> String:
 	# 文件名后缀优先（显式命名约定），其次目录，最后未分类
@@ -330,10 +330,10 @@ func _parse_header(text: String) -> Dictionary:
 	var lines := text.substr(first).split("\n")
 	var comments: Array[String] = []
 	for line in lines:
-		var s := line.strip_edges()
-		if not s.begins_with("##"):
+		var line_text := line.strip_edges()
+		if not line_text.begins_with("##"):
 			break
-		var body := s.substr(2).strip_edges()
+		var body := line_text.substr(2).strip_edges()
 		if body.begins_with("@"):
 			var parts := body.split(":", true, 1)
 			if parts.size() == 2:
@@ -353,9 +353,9 @@ func _parse_header(text: String) -> Dictionary:
 
 # ── 内部 ──
 
-func _add(e: Entry) -> void:
-	_entries.append(e)
-	_by_path[e.path] = e
+func _add(entry: Entry) -> void:
+	_entries.append(entry)
+	_by_path[entry.path] = entry
 
 
 func _stage_key(path: String) -> String:

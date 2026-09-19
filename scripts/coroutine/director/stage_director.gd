@@ -30,13 +30,13 @@ func boss(key: String, data: BossData, from: Vector2, to: Vector2,
 	if ctx.stage == null:
 		push_warning("StageDirector.boss: ctx.stage 未装配（由 StageRuntime 回填）")
 		return BossHandle.new(key, data, hide, ctx.objects)
-	var b := ctx.stage.spawn_boss(data, from, ctx) as Boss
-	ctx.objects.register(key, b, Boss)
-	var h := BossHandle.new(key, data, hide, ctx.objects)
+	var boss_node := ctx.stage.spawn_boss(data, from, ctx) as Boss
+	ctx.objects.register(key, boss_node, Boss)
+	var handle := BossHandle.new(key, data, hide, ctx.objects)
 	if hide != "":
-		h.hide_name()
-	h.enter(to, from)
-	return h
+		handle.hide_name()
+	handle.enter(to, from)
+	return handle
 
 ## 播对话（steps 版 DSL，台词内联）
 func dialogue(steps: Array) -> StageDirector:
@@ -52,9 +52,9 @@ func on(event_name: String, handler: Callable) -> StageDirector:
 	return self
 
 func _route(event_name: String) -> void:
-	var h: Callable = _handlers.get(event_name, Callable())
-	if h.is_valid():
-		h.call()
+	var handler: Callable = _handlers.get(event_name, Callable())
+	if handler.is_valid():
+		handler.call()
 
 ## 断开事件连接 + 清空本关命名槽位（关卡 _exit_tree 调用）
 func dispose() -> void:

@@ -148,10 +148,10 @@ func _play_entry_tween(node: Node) -> void:
 		return
 
 	if node.name == "Title":
-		var t := create_tween().set_parallel(true)
-		t.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		t.tween_property(node.material, "shader_parameter/progress", 1.0, 1.5)
-		t.tween_property(node.material, "shader_parameter/alpha_mult", 1.0, 0.8)
+		var tween := create_tween().set_parallel(true)
+		tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tween.tween_property(node.material, "shader_parameter/progress", 1.0, 1.5)
+		tween.tween_property(node.material, "shader_parameter/alpha_mult", 1.0, 0.8)
 
 	elif node.name == "diffculty":
 		node.modulate.a = 1.0
@@ -161,37 +161,37 @@ func _play_entry_tween(node: Node) -> void:
 		pop.tween_callback(_play_diff_move.bind(node)).set_delay(0.5)
 
 	elif node is UISeparator:
-		var t := create_tween().set_parallel(true)
-		t.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		t.tween_property(node, "progress", 1.0, ENTRY_DURATION)
-		t.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
+		var tween := create_tween().set_parallel(true)
+		tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tween.tween_property(node, "progress", 1.0, ENTRY_DURATION)
+		tween.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
 
 	elif node.name in ["MemoryValue", "MemoryNumber"]:
-		var t := create_tween()
-		t.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
+		var tween := create_tween()
+		tween.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
 
 	elif node == _memory_rect:
-		var t := create_tween()
-		t.tween_property(node.material, "shader_parameter/alpha_mult", 1.0, ENTRY_DURATION * 0.7)
+		var tween := create_tween()
+		tween.tween_property(node.material, "shader_parameter/alpha_mult", 1.0, ENTRY_DURATION * 0.7)
 
 	elif node.has_meta("is_fragment"):
-		var t := create_tween()
-		t.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
+		var tween := create_tween()
+		tween.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
 
 	else:
 		# 普通标签：左滑 + 渐显
-		var t := create_tween().set_parallel(true)
-		t.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		t.tween_property(node, "position:x", node.position.x - 30, ENTRY_DURATION)
-		t.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
+		var tween := create_tween().set_parallel(true)
+		tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tween.tween_property(node, "position:x", node.position.x - 30, ENTRY_DURATION)
+		tween.tween_property(node, "modulate:a", 1.0, ENTRY_DURATION * 0.7)
 
 
 ## 难度入场第二阶段：弹跳后移动到右上角并缩回
 func _play_diff_move(node: Node) -> void:
-	var t := create_tween().set_parallel(true)
-	t.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	t.tween_property(node, "position", Vector2(1056, 64), 0.5)
-	t.tween_property(node, "scale", Vector2(1, 1), 0.5)
+	var tween := create_tween().set_parallel(true)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(node, "position", Vector2(1056, 64), 0.5)
+	tween.tween_property(node, "scale", Vector2(1, 1), 0.5)
 
 
 func _make_number_sprite_on(p_name: String, parent: Node, pos: Vector2, tex: Texture2D = null, dcount: int = 8) -> Node2D:
@@ -213,36 +213,36 @@ func _fragment_init() -> void:
 
 	# 残机碎片：在 Player 标签右侧
 	for i in 8:
-		var s := Sprite2D.new()
-		s.texture = _make_fragment_region(life_tex, 5)
-		s.position = Vector2(1018 + i * 32, 232)
-		s.z_index = LayerConfig.UI_TOP
-		s.modulate.a = 0.0
-		s.set_meta("is_fragment", true)
-		add_child(s)
-		_life_fragments[i] = s
-		_entry_queue.append(s)
+		var sprite := Sprite2D.new()
+		sprite.texture = _make_fragment_region(life_tex, 5)
+		sprite.position = Vector2(1018 + i * 32, 232)
+		sprite.z_index = LayerConfig.UI_TOP
+		sprite.modulate.a = 0.0
+		sprite.set_meta("is_fragment", true)
+		add_child(sprite)
+		_life_fragments[i] = sprite
+		_entry_queue.append(sprite)
 
 	# Spell 碎片：在 Bomb 标签右侧
 	for i in 8:
-		var s := Sprite2D.new()
-		s.texture = _make_fragment_region(spell_tex, 5)
-		s.position = Vector2(1018 + i * 32, 304)
-		s.z_index = LayerConfig.UI_TOP
-		s.modulate.a = 0.0
-		s.set_meta("is_fragment", true)
-		add_child(s)
-		_bomb_fragments[i] = s
-		_entry_queue.append(s)
+		var sprite := Sprite2D.new()
+		sprite.texture = _make_fragment_region(spell_tex, 5)
+		sprite.position = Vector2(1018 + i * 32, 304)
+		sprite.z_index = LayerConfig.UI_TOP
+		sprite.modulate.a = 0.0
+		sprite.set_meta("is_fragment", true)
+		add_child(sprite)
+		_bomb_fragments[i] = sprite
+		_entry_queue.append(sprite)
 
 
 ## 从 6 帧横排贴图中切出第 index 帧
 func _make_fragment_region(tex: Texture2D, index: int) -> AtlasTexture:
 	var frame_w := tex.get_width() / 6.0
-	var h := tex.get_height()
+	var height := tex.get_height()
 	var at := AtlasTexture.new()
 	at.atlas = tex
-	at.region = Rect2(index * frame_w, 0, frame_w, h)
+	at.region = Rect2(index * frame_w, 0, frame_w, height)
 	at.filter_clip = true
 	return at
 

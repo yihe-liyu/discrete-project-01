@@ -89,48 +89,48 @@ func _exec(step: DialogueStep) -> void:
 			is_waiting_line = true
 
 		DialogueStep.Type.ENTER:
-			var a := state.ensure(step.profile)
-			a.is_visible = true
-			a.position = step.pos
-			a.is_flip_h = step.is_flip
-			a.light = step.light
-			a.emotion = step.emotion
+			var actor := state.ensure(step.profile)
+			actor.is_visible = true
+			actor.position = step.pos
+			actor.is_flip_h = step.is_flip
+			actor.light = step.light
+			actor.emotion = step.emotion
 			state_changed.emit(state, 0.0)
 			_advance()
 
 		DialogueStep.Type.EXIT:
-			var a := state.actor(step.char_name)
-			if a: a.is_visible = false
+			var actor := state.actor(step.char_name)
+			if actor: actor.is_visible = false
 			state_changed.emit(state, 0.0)
 			_advance()
 
 		DialogueStep.Type.MOVE:
-			var a := state.actor(step.char_name)
-			if a: a.position = step.pos
+			var actor := state.actor(step.char_name)
+			if actor: actor.position = step.pos
 			state_changed.emit(state, step.duration)
 			_advance()
 
 		DialogueStep.Type.FLIP:
-			var a := state.actor(step.char_name)
-			if a: a.is_flip_h = step.is_flip
+			var actor := state.actor(step.char_name)
+			if actor: actor.is_flip_h = step.is_flip
 			state_changed.emit(state, 0.0)
 			_advance()
 
 		DialogueStep.Type.DIM:
-			var a := state.actor(step.char_name)
-			if a: a.light = step.light
+			var actor := state.actor(step.char_name)
+			if actor: actor.light = step.light
 			state_changed.emit(state, 0.0)
 			_advance()
 
 		DialogueStep.Type.PORTRAIT:
-			var a := state.actor(step.char_name)
-			if a: a.emotion = step.emotion
+			var actor := state.actor(step.char_name)
+			if actor: actor.emotion = step.emotion
 			state_changed.emit(state, 0.0)
 			_advance()
 
 		DialogueStep.Type.BUBBLE:
-			var a := state.actor(step.char_name)
-			if a: a.bubble_offset = step.bubble_offset
+			var actor := state.actor(step.char_name)
+			if actor: actor.bubble_offset = step.bubble_offset
 			state_changed.emit(state, 0.0)
 			_advance()
 

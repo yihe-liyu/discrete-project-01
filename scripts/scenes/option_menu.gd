@@ -54,14 +54,14 @@ func _build_items() -> void:
 func _refresh_values() -> void:
 	for i in ITEMS.size():
 		var item := ITEMS[i]
-		var v: Variant = SaveData.save_mgr.get_setting(item["key"], item["def"])
+		var value: Variant = SaveData.save_mgr.get_setting(item["key"], item["def"])
 		if item["type"] == "range":
-			_values[i].text = TextAlign.pad_cn(TextAlign.full(str(int(round(v * 100.0)))), 3) + "％"
+			_values[i].text = TextAlign.pad_cn(TextAlign.full(str(int(round(value * 100.0)))), 3) + "％"
 		elif item["type"] == "choice":
-			var txt: String = "自动" if int(v) == 0 else TextAlign.full(str(int(v)))
+			var txt: String = "自动" if int(value) == 0 else TextAlign.full(str(int(value)))
 			_values[i].text = TextAlign.pad_cn(txt, 3)
 		else:
-			_values[i].text = TextAlign.pad_cn(("开" if v else "关"), 3)
+			_values[i].text = TextAlign.pad_cn(("开" if value else "关"), 3)
 
 
 func _apply_nav() -> void:
@@ -115,9 +115,9 @@ func _adjust(dir: int) -> void:
 	var item := ITEMS[_nav_index]
 	if item["type"] == "range":
 		var cur: float = float(SaveData.save_mgr.get_setting(item["key"], item["def"]))
-		var v := clampf(cur + dir * item["step"], item["min"], item["max"])
-		SaveData.save_mgr.set_setting(item["key"], v)
-		_apply_setting(item["key"], v)
+		var value := clampf(cur + dir * item["step"], item["min"], item["max"])
+		SaveData.save_mgr.set_setting(item["key"], value)
+		_apply_setting(item["key"], value)
 	elif item["type"] == "choice":
 		var choices: Array = item["choices"]
 		var idx: int = choices.find(SaveData.save_mgr.get_setting(item["key"], item["def"]))
@@ -136,24 +136,24 @@ func _toggle() -> void:
 	if item["type"] != "toggle":
 		return
 	var cur: bool = bool(SaveData.save_mgr.get_setting(item["key"], item["def"]))
-	var v: bool = not cur
-	SaveData.save_mgr.set_setting(item["key"], v)
-	_apply_setting(item["key"], v)
+	var value: bool = not cur
+	SaveData.save_mgr.set_setting(item["key"], value)
+	_apply_setting(item["key"], value)
 	_refresh_values()
 	sfx_confirm()
 
 
 ## 应用设置到运行时
-func _apply_setting(key: String, v: Variant) -> void:
+func _apply_setting(key: String, value: Variant) -> void:
 	match key:
 		"volume_bgm":
-			AudioManager.bgm_volume = float(v)
+			AudioManager.bgm_volume = float(value)
 		"volume_sfx":
-			AudioManager.sfx_volume = float(v)
+			AudioManager.sfx_volume = float(value)
 		"fullscreen":
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if bool(v) else DisplayServer.WINDOW_MODE_WINDOWED)
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if bool(value) else DisplayServer.WINDOW_MODE_WINDOWED)
 		"max_fps":
-			Engine.max_fps = _auto_fps() if int(v) == 0 else int(v)
+			Engine.max_fps = _auto_fps() if int(value) == 0 else int(value)
 
 
 ## 自动帧率：跟显示器刷新率（读系统配置）；读不到则无上限(0)

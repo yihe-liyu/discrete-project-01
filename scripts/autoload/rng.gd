@@ -9,9 +9,9 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 func _ready():
 	randomize_seed()   # 走方法以广播 seed（启动期通常无监听者，安全）
 
-func set_seed(s: int) -> void:
-	_rng.seed = s
-	seed_changed.emit(s)
+func set_seed(seed_value: int) -> void:
+	_rng.seed = seed_value
+	seed_changed.emit(seed_value)
 
 ## 重新随机化种子（工作台关闭"固定种子"时调用）
 func randomize_seed() -> void:

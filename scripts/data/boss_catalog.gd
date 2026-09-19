@@ -131,10 +131,10 @@ static func resolve_identity(stage: int, phase: PhaseData, prefer_phase_index: i
 ## 旧语义：boss 内 phase_index。新语义统一走 stage_phase_order（见 phase_at）。
 ## 保留仅供测试/调用方过渡，新代码请用 phase_at。
 static func card(stage: int, boss_index: int, phase_index: int, difficulty: int) -> PhaseData:
-	var b: BossData = boss(stage, boss_index)
-	if not b:
+	var boss_data: BossData = boss(stage, boss_index)
+	if not boss_data:
 		return null
-	var arr := b.phases_for_difficulty(difficulty)
+	var arr := boss_data.phases_for_difficulty(difficulty)
 	if phase_index < 0 or phase_index >= arr.size():
 		return null
 	return arr[phase_index]

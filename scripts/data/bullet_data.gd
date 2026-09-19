@@ -41,9 +41,9 @@ func tex(key: String) -> BulletData:
 		hitbox_radius = hb["circle"]
 	elif hb.has("rect"):
 		hitbox_shape = HitboxShape.RECTANGLE
-		var r: Dictionary = hb["rect"]
-		hitbox_size = Vector2(r.get("w", 48), r.get("h", 24))
-		hitbox_rotation = r.get("rotation", 0.0)
+		var rect: Dictionary = hb["rect"]
+		hitbox_size = Vector2(rect.get("w", 48), rect.get("h", 24))
+		hitbox_rotation = rect.get("rotation", 0.0)
 	var off: Dictionary = hb.get("offset", {"x": 0, "y": 0})
 	hitbox_offset = Vector2(off.get("x", 0), off.get("y", 0))
 	fog_texture = AssetRegistry.FOG_TEXTURE

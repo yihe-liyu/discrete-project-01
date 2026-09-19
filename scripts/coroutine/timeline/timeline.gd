@@ -91,12 +91,12 @@ func tick(delta: float) -> bool:
 	for ev in _events:
 		if ev.is_fired and ev.repeat_every < 0:
 			continue
-		var t := ev.time
+		var event_time := ev.time
 		if ev.wait_offset >= 0:
 			if not ev.is_wait_armed:
 				continue  # 还没被 phase 激活
-			t = _cursor + ev.wait_offset
-		if _elapsed >= t:
+			event_time = _cursor + ev.wait_offset
+		if _elapsed >= event_time:
 			ev.execute()
 			if ev.repeat_every >= 0:
 				ev.time += ev.repeat_every

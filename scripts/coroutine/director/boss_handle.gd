@@ -32,10 +32,10 @@ func exists() -> bool:
 
 ## 揭真名：改名 + 亮出名字节点（BossUI 订阅同步）。
 func reveal(name: String) -> BossHandle:
-	var b := resolve()
-	if b:
-		b.hud.set_name(name)
-		b.hud.set_name_shown(true)
+	var boss := resolve()
+	if boss:
+		boss.hud.set_name(name)
+		boss.hud.set_name_shown(true)
 	else:
 		push_warning("BossHandle.reveal: 槽位 '%s' 无 Boss" % _key)
 	return self
@@ -43,61 +43,61 @@ func reveal(name: String) -> BossHandle:
 
 ## 只改显示名（不动名字节点显隐；要连显隐一起亮用 reveal）。
 func set_name(name: String) -> BossHandle:
-	var b := resolve()
-	if b:
-		b.hud.set_name(name)
+	var boss := resolve()
+	if boss:
+		boss.hud.set_name(name)
 	return self
 
 
 ## 只亮出名字节点（不改名）—— 名字节点默认隐藏，需要单独亮时用。
 func show_name() -> BossHandle:
-	var b := resolve()
-	if b:
-		b.hud.set_name_shown(true)
+	var boss := resolve()
+	if boss:
+		boss.hud.set_name_shown(true)
 	return self
 
 
 ## 亮出阶段进度点（默认隐藏，手动控制）。
 func show_phase_dots() -> BossHandle:
-	var b := resolve()
-	if b:
-		b.hud.set_phase_dots_shown(true)
+	var boss := resolve()
+	if boss:
+		boss.hud.set_phase_dots_shown(true)
 	return self
 
 
 ## 收起阶段进度点。
 func hide_phase_dots() -> BossHandle:
-	var b := resolve()
-	if b:
-		b.hud.set_phase_dots_shown(false)
+	var boss := resolve()
+	if boss:
+		boss.hud.set_phase_dots_shown(false)
 	return self
 
 ## 隐藏真名（战前开局用）
 func hide_name() -> BossHandle:
-	var b := resolve()
-	if b:
-		b.hud.set_name(_hide_name)
-		b.hud.set_name_shown(false)
+	var boss := resolve()
+	if boss:
+		boss.hud.set_name(_hide_name)
+		boss.hud.set_name_shown(false)
 	return self
 
 ## 进场：移动到 to（起点已由 spawn 设好，重设 from 幂等无害）
 func enter(to: Vector2, from: Vector2, dur: float = 1.5) -> BossHandle:
-	var b := resolve()
-	if not b:
+	var boss := resolve()
+	if not boss:
 		return self
-	b.global_position = from
-	var tw := b.create_tween()
+	boss.global_position = from
+	var tw := boss.create_tween()
 	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(b, "global_position", to, dur)
+	tw.tween_property(boss, "global_position", to, dur)
 	return self
 
 ## 进入阶段。idle_only=true 时只在未开战才进入（对话 boss_fight 用，防重入）
 func phase(index: int = 0, idle_only: bool = false) -> BossHandle:
-	var b := resolve()
-	if not b:
+	var boss := resolve()
+	if not boss:
 		return self
-	if idle_only and b.current_phase() != null:
+	if idle_only and boss.current_phase() != null:
 		return self
 	if data == null:
 		push_warning("BossHandle.phase: 槽位 '%s' 无 BossData" % _key)
@@ -105,19 +105,19 @@ func phase(index: int = 0, idle_only: bool = false) -> BossHandle:
 	if index < 0 or index >= data.phases.size():
 		push_warning("BossHandle.phase: 槽位 '%s' 的 BossData 只有 %d 个阶段，要求第 %d 个" % [_key, data.phases.size(), index])
 		return self
-	b.start_phase(data.phases[index])
+	boss.start_phase(data.phases[index])
 	return self
 
 ## 退场：受控退出 + 仆街 + 飞出，播完清 ref（外部停 _process，指示器跟随照常）
 func retreat(to: Vector2, dur: float = 2.0) -> BossHandle:
-	var b := resolve()
-	if not b:
+	var boss := resolve()
+	if not boss:
 		return self
-	b.set_exit_controlled()
-	b.die()
-	var tw := b.create_tween()
+	boss.set_exit_controlled()
+	boss.die()
+	var tw := boss.create_tween()
 	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(b, "global_position", to, dur)
-	tw.tween_callback(b.queue_free)
+	tw.tween_property(boss, "global_position", to, dur)
+	tw.tween_callback(boss.queue_free)
 	return self

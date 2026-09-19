@@ -32,11 +32,11 @@ func line(text: String, opts: Dictionary = {}) -> DialogueSteps:
 	var speaker: CharacterProfile = opts.get("speaker", _character_profile)
 	assert(speaker != null, "DialogueSteps.line: 需要说话者——首句请用 say(profile, text) 或传 opts.speaker")
 	var line_data := _build_line(speaker, text, opts)
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.LINE
-	s.line_data = line_data
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.LINE
+	step.line_data = line_data
 	_character_profile = speaker
-	return _add(s)
+	return _add(step)
 
 
 ## 指定说话者的台词（换人/首句用）
@@ -57,25 +57,25 @@ func screen(specs: Array, opts: Dictionary = {}) -> DialogueSteps:
 	line_data.auto_advance = opts.get("auto_advance", 0.0)
 	var has_spoke := false
 	for spec in specs:
-		var b := DialogueBubble.new()
+		var bubble_data := DialogueBubble.new()
 		if spec is Array:
-			if spec.size() > 0: b.speaker = spec[0]
-			if spec.size() > 1: b.emotion = spec[1]
-			if spec.size() > 2: b.text = spec[2]
+			if spec.size() > 0: bubble_data.speaker = spec[0]
+			if spec.size() > 1: bubble_data.emotion = spec[1]
+			if spec.size() > 2: bubble_data.text = spec[2]
 		else:
-			b.speaker = spec.get("speaker")
-			b.emotion = spec.get("emotion", "通常")
-			b.text = spec.get("text", "")
-		if b.emotion.is_empty(): b.emotion = "通常"
-		line_data.bubbles.append(b)
-		if b.speaker and not b.text.is_empty():
-			_character_profile = b.speaker
+			bubble_data.speaker = spec.get("speaker")
+			bubble_data.emotion = spec.get("emotion", "通常")
+			bubble_data.text = spec.get("text", "")
+		if bubble_data.emotion.is_empty(): bubble_data.emotion = "通常"
+		line_data.bubbles.append(bubble_data)
+		if bubble_data.speaker and not bubble_data.text.is_empty():
+			_character_profile = bubble_data.speaker
 			has_spoke = true
 	assert(has_spoke, "DialogueSteps.screen: 每屏至少需一个真正开口的角色（text 非空）；纯沉默转场请用 wait()")
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.LINE
-	s.line_data = line_data
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.LINE
+	step.line_data = line_data
+	return _add(step)
 
 
 func _build_line(speaker: CharacterProfile, text: String, opts: Dictionary) -> DialogueLine:
@@ -92,84 +92,84 @@ func _build_line(speaker: CharacterProfile, text: String, opts: Dictionary) -> D
 
 ## 登场：profile 决定立绘/表情集；opts 可带 flip/dim/emotion
 func enter(profile: CharacterProfile, pos: Vector2, opts: Dictionary = {}) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.ENTER
-	s.profile = profile
-	s.char_name = profile.char_name
-	s.pos = pos
-	s.is_flip = opts.get("flip", false)
-	s.light = opts.get("dim", 1.0)
-	s.emotion = opts.get("emotion", "通常")
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.ENTER
+	step.profile = profile
+	step.char_name = profile.char_name
+	step.pos = pos
+	step.is_flip = opts.get("flip", false)
+	step.light = opts.get("dim", 1.0)
+	step.emotion = opts.get("emotion", "通常")
 	# 新角色进场后通常是他说下一句 → 更新延续者
 	_character_profile = profile
-	return _add(s)
+	return _add(step)
 
 
 ## 退场
 func exit(char_name: String) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.EXIT
-	s.char_name = char_name
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.EXIT
+	step.char_name = char_name
+	return _add(step)
 
 
 ## 移动立绘（可选时长，秒）
 func move(char_name: String, pos: Vector2, duration: float = 0.0) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.MOVE
-	s.char_name = char_name
-	s.pos = pos
-	s.duration = duration
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.MOVE
+	step.char_name = char_name
+	step.pos = pos
+	step.duration = duration
+	return _add(step)
 
 
 ## 水平翻转
 func flip(char_name: String, flipped: bool) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.FLIP
-	s.char_name = char_name
-	s.is_flip = flipped
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.FLIP
+	step.char_name = char_name
+	step.is_flip = flipped
+	return _add(step)
 
 
 ## 手动明暗（0~1）
 func dim(char_name: String, value: float) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.DIM
-	s.char_name = char_name
-	s.light = value
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.DIM
+	step.char_name = char_name
+	step.light = value
+	return _add(step)
 
 
 ## 换表情（立绘 key）
 func portrait(char_name: String, emotion_key: String) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.PORTRAIT
-	s.char_name = char_name
-	s.emotion = emotion_key
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.PORTRAIT
+	step.char_name = char_name
+	step.emotion = emotion_key
+	return _add(step)
 
 
 ## 调气泡偏移
 func bubble(char_name: String, offset: Vector2) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.BUBBLE
-	s.char_name = char_name
-	s.bubble_offset = offset
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.BUBBLE
+	step.char_name = char_name
+	step.bubble_offset = offset
+	return _add(step)
 
 
 ## 行间事件（时机精确：出现在步骤序列的任意位置）
 func event(event_key: String) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.EVENT
-	s.event_key = event_key
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.EVENT
+	step.event_key = event_key
+	return _add(step)
 
 
 ## 停顿（秒）——行间等待演出
 func wait(seconds: float) -> DialogueSteps:
-	var s := DialogueStep.new()
-	s.type = DialogueStep.Type.WAIT
-	s.duration = seconds
-	return _add(s)
+	var step := DialogueStep.new()
+	step.type = DialogueStep.Type.WAIT
+	step.duration = seconds
+	return _add(step)

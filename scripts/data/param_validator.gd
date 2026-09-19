@@ -15,12 +15,12 @@ static func validate(target: Object, params: Dictionary) -> Array[String]:
 	if target == null:
 		return errs
 	var types := {}
-	for p in target.get_property_list():
-		types[p.name] = p.type
-	for k in params:
-		if not types.has(k):
+	for prop in target.get_property_list():
+		types[prop.name] = prop.type
+	for key in params:
+		if not types.has(key):
 			continue  # 未知键归入 warning（validate_unknown_keys）
-		_check_type(errs, str(k), params[k], types[k], target.get_class())
+		_check_type(errs, str(key), params[key], types[key], target.get_class())
 	return errs
 
 
@@ -30,11 +30,11 @@ static func validate_unknown_keys(target: Object, params: Dictionary) -> Array[S
 	if target == null:
 		return warns
 	var types := {}
-	for p in target.get_property_list():
-		types[p.name] = p.type
-	for k in params:
-		if not types.has(k):
-			warns.append("参数 '%s' 不是 %s 的属性（共享字典跨脚本属正常；若确实打错请检查）" % [str(k), target.get_class()])
+	for prop in target.get_property_list():
+		types[prop.name] = prop.type
+	for key in params:
+		if not types.has(key):
+			warns.append("参数 '%s' 不是 %s 的属性（共享字典跨脚本属正常；若确实打错请检查）" % [str(key), target.get_class()])
 	return warns
 
 
@@ -42,11 +42,11 @@ static func validate_unknown_keys(target: Object, params: Dictionary) -> Array[S
 static func apply(target: Object, params: Dictionary) -> void:
 	if target == null:
 		return
-	for e in validate(target, params):
-		push_error("ParamValidator: " + e)
-	for k in params:
-		if k in target:
-			target.set(k, params[k])
+	for err in validate(target, params):
+		push_error("ParamValidator: " + err)
+	for key in params:
+		if key in target:
+			target.set(key, params[key])
 
 
 
@@ -62,8 +62,8 @@ static func _check_type(errs: Array[String], key: String, val, prop_type: int, o
 		return
 	# String → 数字：仅当字符串本身是合法数字才放过（"fast" 这类非数字串要报错）
 	if vt == TYPE_STRING and _is_numeric(prop_type):
-		var s: String = val
-		if s.is_valid_float() or s.is_valid_int():
+		var text: String = val
+		if text.is_valid_float() or text.is_valid_int():
 			return
 	# 数字 → String：Godot 能转，放过
 	if _is_numeric(vt) and prop_type == TYPE_STRING:
@@ -72,12 +72,12 @@ static func _check_type(errs: Array[String], key: String, val, prop_type: int, o
 		key, owner, key, _type_name(prop_type), _type_name(vt)])
 
 
-static func _is_numeric(t: int) -> bool:
-	return t == TYPE_FLOAT or t == TYPE_INT
+static func _is_numeric(type_id: int) -> bool:
+	return type_id == TYPE_FLOAT or type_id == TYPE_INT
 
 
-static func _type_name(t: int) -> String:
-	match t:
+static func _type_name(type_id: int) -> String:
+	match type_id:
 		TYPE_FLOAT: return "float"
 		TYPE_INT: return "int"
 		TYPE_STRING: return "String"
@@ -89,4 +89,4 @@ static func _type_name(t: int) -> String:
 		TYPE_VECTOR3: return "Vector3"
 		TYPE_COLOR: return "Color"
 		TYPE_NIL: return "null"
-		_: return "type_" + str(t)
+		_: return "type_" + str(type_id)

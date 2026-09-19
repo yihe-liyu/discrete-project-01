@@ -18,6 +18,51 @@
 
 ## 记录
 
+### 2026-09-18 — N8 执行（批次 2+3）：清 scripts/data · coroutine · components · enemy · autoload · player · replay · debug · asset_registry · ui_theme
+
+- **批次 2（scripts/data）**：`r`→`record`、`e`→`entry`、`f`→`file_name`、`n`/`d`→`name_value`/`desc_value`、`s`→`text`、`q`→`quote_index`、`p`/`k`→`prop`/`key`、`t`→`type_id`；`bullet_data` 的 `r`→`rect`；`save_data` 的 `s`→`settings`。**保留**：`boss_data`/`enemy_data`/`bullet_data` 的链式 DSL 形参（`v`/`x`/`y`/`c`/`b`/`s`/`p`/`k`，单行）。
+- **批次 2c**：`autoload`（`p`→`player`、`s`→`seed_value`）、`player`（`r`→`roll`）、`replay`（`f`→`file`、`d`→`data`）、`debug`（`r`→`radius`）。
+- **批次 3**：`components`（`w`/`h`/`s`→`frame_w`/`frame_h`/`sprite`、`t`/`c`→`ratio`/`color`）、`enemy`（`r`→`entity_registry`、`t`→`fade_ratio`/`time_limit`、`e`/`t`→`item_type`、`n`→`new_name`、`v`→`shown`）、`coroutine`（`stage_director` `b`/`h`→`boss_node`/`handle`/`handler`；`boss_handle` 9 处 `b`→`boss`；`marisa_shoot` `s`→`segment`、`b`→`bullet_data`；`timeline` `t`→`event_time`；`player_service`/`stage_objects`/`bullet_service`/`stage_state`/`dialogue_runner`/`dialogue_steps` 全部改名）、`asset_registry`（`r`→`record`、`o`→`override_record`）、`ui_theme`（`t`→`type_name`、`n`→`entry_name`）。
+- **踩坑 1**：`content_catalog._apply_meta` 首处替换只覆盖早退分支，回退分支仍用 `e` → 解析失败；补改。
+- **踩坑 2**：`content_catalog` 里 `var text := ...` 遮蔽函数形参 `text` → 改 `line_text`。
+- **踩坑 3**：`boss.gd` 局部 `registry` 遮蔽类成员 `registry`（warning-as-error）→ 改 `entity_registry`。
+- **验收**：`./tools/verify.sh` 全绿（436 pass + 1 pending / 437 测试 / 4354 断言）。
+- **唯一待续**：`workbench`（152）。
+### 2026-09-18 — N8 执行（批次 1）：单字母严格化规则 + check_naming ⑥；清 scripts/scenes
+
+- **规则（入基线）**：单字母只允许 ① 循环索引 `i`/`j`/`k` ② **单行表达式** / 链式 DSL·构建器形参（生命周期不跨行） ③ **热路径**模块（`kernel_bridge/` · `laser/` · `bullet/` · `effect/` · `background/screen_fog_fx|background_sun|decor_manager`）。其余跨行 / 跨函数 / 字段一律全名。消除了旧 §123「除 i/j/k 全禁」与 §128「单行·热循环可用」的矛盾，并换掉过期例子 `bullet_system`（已 vendor）。
+- **守卫**：`check_naming` 新增 **⑥ 类字段不得单字母**（当前 0），把「字段一律全名」锁成机械规则。
+- **批次 1（`scripts/scenes/`，37 处改名）**：`t`→`tween`、`s`→`sprite`/`text`、`v`→`value`、`r`→`record`、`c`→`child`/`children`、`o`→`option`、`b`→`bubble`、`d`→`difficulty`、`n`→`count`、`k`→`key`、`x`/`y`→`target_x`/`target_y`。保留：索引 `i`、单行循环（`boss_ui` 的 `for d in _dots: ...`）、单语句形参（`diff_name(v)` / `_pad_cn(v)`）。
+- **踩坑（重要）**：`for` 循环体比 grep 命中窗口长 —— `game_ui` 的 `s` 还用在 220–224 / 232–236，首轮漏改 → `check_syntax` 报 8 处 `Identifier "s" not declared`。**循环变量的改名必须读完整循环体，不能只看声明行。**
+- **验收**：`./tools/verify.sh` 全绿（436 pass + 1 pending / 437 测试 / 4354 断言）。
+- **待续（批次 2+）**：`workbench`(152) / `scripts/data`(74) / `coroutine`(61) / `components`(15) / `enemy`(11) / `autoload`(7) / `ui_theme`(7) / `debug`(4) / `asset_registry`(4) / `replay`(4) / `player`(3) / `stage`(2) / `item`(1)，约 350 处。
+### 2026-09-18 — 关 N14 + N17：门面动词封闭清单；KernelBulletBackend → KernelBulletHost
+
+- **N14 函数动词不统一**：
+  - 现状：机制类严格守 `get_*`/`is_*`/`has_*`（`EntityRegistry.get_boss`、`PlayerService.get_player`、`Enemy.is_targetable`…）；偏差全在意图层 —— `ctx.active()`、`ctx.boss.current()/exists()`、`ctx.diff.picked()/at_least()`、`BossHandle.exists()`。
+  - 拍板（A）：不强制改机械 `get_`，而是把「**`ctx.*` 门面 + `StageContext` + `BossHandle` 的方法名可用域动词**」写进基线，受**封闭清单**约束（`active`/`current`/`exists`/`picked`/`at_least`），新增须登记。零改名。理由：门面只说意图，且避免 stutter（`ctx.boss.get_boss()`）。
+- **N17 `KernelBulletBackend` 命名**：
+  - 融合已定（设计 §11「翻译层已删；宿主耦合永久保留」），它不是 bridge，而是**宿主侧内核后端**（持有原生 `KernelNativeSystem`、bomb、behavior host、laser fade、纹理插座）。「暂缓待形状」条件已满足。
+  - 拍板（B）：改名 **`KernelBulletBackend` → `KernelBulletHost`**（与 `KernelBehaviorHost` 同族）。连带：类文件 `kernel_bullet_backend.gd` → `kernel_bullet_host.gd`（+`.uid`）、测试 `test_kernel_backend.gd` → `test_kernel_host.gd`（+`.uid`）、字段 `_kernel_bullet_backend` → `_kernel_bullet_host`、节点名字符串、18 个 `.gd` + 4 个当前态文档。
+  - **历史不篡改**：`docs/archive/**` 与既有 `BEST_PRACTICES_LOG` 条目里的旧名保留（记录当时状态）。
+- **验收**：删除 `.godot/global_script_class_cache.cfg` 触发 `--import` 重建全局类缓存后，`./tools/verify.sh` 全绿（436 pass + 1 pending / 437 测试 / 4354 断言）。
+### 2026-09-18 — 关 N4：`StageContext` 形参前缀统一（修 `_p_ctx`）+ check_naming 补 `_p_` 检测
+
+- **来源**：`TODO_TEMP` N 组 N4。规则「遮蔽成员用 `p_` / 真不用只用 `_` / 禁止叠加 `_p_`」**早已在基线「标识符命名契约」**；本轮只剩执行。
+- **现状核对**：`p_ctx` **19** 个形参声明、`_ctx` **34** 行；唯一叠加违规 `_p_ctx` 在 `scripts/coroutine/player/linear_move.gd:5`（`_tick` 函数体完全不用 ctx）→ 改为 `_ctx`，与基类 `CoroutineScript._tick(_ctx: StageContext)` 对齐。
+- **check_naming 补洞**：⑤ 原本只检测「形参名 == 成员名」，`p_ctx`/`_p_ctx` 都不等于 `ctx`，所以注释里写的「禁止叠加 `_p_`」**没被执行**。⑤ 新增 `_p_` 前缀检测 + 独立输出段 + 计入总数（`p_x` 或 `_x` 两种正解都提示）。
+- **未做**：`p_ctx` / `_ctx` 的既有分工不动（前者用 ctx、后者只透传/忽略），这两类合规。
+- **验收**：`check_naming` 0 条（含新 `_p_` 段）；`./tools/verify.sh` 全绿。
+### 2026-09-18 — 关 N2：`ctx.*` 门面命名规律写死（保留 `ctx.bullets`，不改 `bullet_service`）
+
+- **来源**：`TODO_TEMP` N 组 N2（`ctx.bullets` 是否改 `ctx.bullet_service`，待拍板）。
+- **判据**：门面 → 类型的实际对应是「**门面=域名词，类型=`<Domain>Service`**」——`ctx.bullets`→`BulletService` 与 `ctx.enemies`→`EnemyService`、`ctx.items`→`ItemService`、`ctx.effects`→`EffectService` 同构。改名 `bullet_service` 会让它成为**唯一带 `_service` 后缀的门面**，反而破坏一致性。
+- **既有拍板**：2026-09-13 A2b「`ctx.*` 意图门面是唯一豁免、故意不动」+ A2c「拍板：`ctx.*` 门面不动」；`ctx.bullets` 是 A2b 把 `StageRuntime.bullets` / `BulletService.world` → `bullet_manager` 后**有意保留**的门面名，非漏网。
+- **落点**：基线「标识符命名契约」新增一行门面命名规律（含映射示例），把口头拍板变成契约。
+- **未做**：不改名（零代码改动）；`test_boss_phase` 的「门面是 `ctx.bullets` 不是 `ctx.bullet_manager`」回归断言继续有效。
+- **TODO**：删除 N2。
+- **验收**：`./tools/verify.sh` 全绿（纯文档改动）。
+
 ### 2026-09-18 — 关 A6：`AssetRegistry` 立「内容槽索引表」契约豁免；E11 迁移绑 F7/S13
 
 - **来源**：`TODO_TEMP` A · 融合审查新增最后一条 A6（替换性瓶颈标注）。A6 本质是**优先级依据**、无独立代码交付物，实体是 E11（+F7/S13）；其「替换性快照」已在 2026-09-14 复核时产出。

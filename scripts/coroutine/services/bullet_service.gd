@@ -74,7 +74,7 @@ func _bezier_curve(p0: Vector2, p1: Vector2, p2: Vector2) -> Curve2D:
 	const SAMPLES := 60
 	var curve := Curve2D.new()
 	for i in SAMPLES + 1:
-		var t := float(i) / SAMPLES
-		var u := 1.0 - t
-		curve.add_point(u * u * p0 + 2 * u * t * p1 + t * t * p2)
+		var ratio := float(i) / SAMPLES
+		var inv_ratio := 1.0 - ratio
+		curve.add_point(inv_ratio * inv_ratio * p0 + 2 * inv_ratio * ratio * p1 + ratio * ratio * p2)
 	return curve

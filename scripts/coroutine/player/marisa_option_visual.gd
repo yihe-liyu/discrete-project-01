@@ -17,8 +17,8 @@ func _process(delta: float):
 	if get_tree().paused or not is_instance_valid(sprite):
 		return
 	_timer += delta
-	var s := 2.0 + sin(_timer * 10.0) * 0.2  # 1.8 ~ 2.2 之间脉动
-	sprite.scale = Vector2(s, s)
+	var pulse := 2.0 + sin(_timer * 10.0) * 0.2  # 1.8 ~ 2.2 之间脉动
+	sprite.scale = Vector2(pulse, pulse)
 
 func update_visual(_ctx: StageContext, _leader: Node2D) -> void:
 	pass

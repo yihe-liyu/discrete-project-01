@@ -115,14 +115,14 @@ func _on_line_shown(line: DialogueLine, speakers: Array, state: StageState) -> v
 	_render_state(state, speakers)
 
 	# 创建气泡（仅说话者）
-	for b in line.bubbles:
-		if b.text.is_empty():
+	for bubble in line.bubbles:
+		if bubble.text.is_empty():
 			continue
-		if not state.has(b.speaker.char_name):
+		if not state.has(bubble.speaker.char_name):
 			continue
-		var info: Dictionary = _portrait_map[b.speaker.char_name]
-		var actor: ActorState = state.actor(b.speaker.char_name)
-		var panel := BubblePanel.create(b.text)
+		var info: Dictionary = _portrait_map[bubble.speaker.char_name]
+		var actor: ActorState = state.actor(bubble.speaker.char_name)
+		var panel := BubblePanel.create(bubble.text)
 		info.node.add_child(panel)
 		panel.position = Vector2(info.node.size.x, 0) + actor.bubble_offset
 		if panel._shake_dur > 0.0:

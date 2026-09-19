@@ -35,10 +35,10 @@ func _draw() -> void:
 			draw_circle(center, hitbox_radius, Color(1, 0, 0, 0.25), true)
 			draw_circle(center, hitbox_radius, Color(1, 0, 0, 1), false, 1.5)
 			draw_circle(center, 2.0, Color(1, 1, 0, 1))
-			var r := hitbox_radius
-			if r > 8:
-				draw_line(center, center + Vector2(0, -r), Color(1, 1, 0, 0.7), 1, true)
-				draw_string(ThemeDB.fallback_font, center + Vector2(4, -r - 4), "r=%.1f" % r, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 1, 0))
+			var radius := hitbox_radius
+			if radius > 8:
+				draw_line(center, center + Vector2(0, -radius), Color(1, 1, 0, 0.7), 1, true)
+				draw_string(ThemeDB.fallback_font, center + Vector2(4, -radius - 4), "r=%.1f" % radius, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 1, 0))
 
 		Mode.RECTANGLE:
 			var half := hitbox_size / 2.0

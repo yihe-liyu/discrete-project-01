@@ -76,21 +76,21 @@ func _draw_gradient_line(from_x: float, to_x: float, fade_out: bool) -> void:
 	var seg_len := (to_x - from_x) / float(steps)
 
 	for i in range(steps):
-		var t := float(i) / float(steps - 1) if steps > 1 else 0.0
-		var alpha: float = t if not fade_out else (1.0 - t)
+		var ratio := float(i) / float(steps - 1) if steps > 1 else 0.0
+		var alpha: float = ratio if not fade_out else (1.0 - ratio)
 
 		# 使用 ease 让渐变更自然
 		alpha = _ease_quad(alpha)
 
-		var c := Color(line_color.r, line_color.g, line_color.b, line_color.a * alpha)
+		var color := Color(line_color.r, line_color.g, line_color.b, line_color.a * alpha)
 		var x1 := from_x + seg_len * float(i)
 		var x2 := x1 + seg_len
-		draw_line(Vector2(x1, 0), Vector2(x2, 0), c, line_width, false)
+		draw_line(Vector2(x1, 0), Vector2(x2, 0), color, line_width, false)
 
 
 ## 二次缓动，让两端渐变更平滑
-static func _ease_quad(t: float) -> float:
-	if t < 0.5:
-		return 2.0 * t * t
+static func _ease_quad(ratio: float) -> float:
+	if ratio < 0.5:
+		return 2.0 * ratio * ratio
 	else:
-		return -1.0 + (4.0 - 2.0 * t) * t
+		return -1.0 + (4.0 - 2.0 * ratio) * ratio

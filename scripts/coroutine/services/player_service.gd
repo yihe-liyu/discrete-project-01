@@ -8,10 +8,10 @@ var ctx: StageContext
 func get_player() -> Player:
 	if ctx == null or ctx.entity_registry == null:
 		return null
-	var p = ctx.entity_registry.player
-	return p if is_instance_valid(p) else null
+	var player = ctx.entity_registry.player
+	return player if is_instance_valid(player) else null
 
 
 func get_position() -> Vector2:
-	var p := get_player()
-	return p.global_position if p else Vector2.ZERO
+	var player := get_player()
+	return player.global_position if player else Vector2.ZERO

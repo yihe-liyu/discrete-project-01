@@ -7,9 +7,9 @@ class_name StageRegistry
 
 ## 按 stage_id 查找
 func find(stage_id: int) -> StageData:
-	for s in stages:
-		if s.stage_id == stage_id:
-			return s
+	for stage in stages:
+		if stage.stage_id == stage_id:
+			return stage
 	return null
 
 

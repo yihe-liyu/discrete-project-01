@@ -15,18 +15,18 @@ func register(slot: String, node: Node, type: Script = null) -> void:
 
 ## 按名字取对象；对象已亡/未注册返回 null
 func resolve(slot: String) -> Node:
-	var s = _slots.get(slot)
-	if s == null:
+	var entry = _slots.get(slot)
+	if entry == null:
 		return null
-	var n: Node = s.node
-	return n if is_instance_valid(n) else null
+	var node: Node = entry.node
+	return node if is_instance_valid(node) else null
 
 
 ## 按名字取对象，且校验脚本类型（不匹配返回 null）
 func resolve_as(slot: String, type: Script) -> Node:
-	var n := resolve(slot)
-	if n and (type == null or n.get_script() == type):
-		return n
+	var node := resolve(slot)
+	if node and (type == null or node.get_script() == type):
+		return node
 	return null
 
 

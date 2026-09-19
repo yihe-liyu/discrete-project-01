@@ -121,10 +121,10 @@ static func load_music_registry() -> MusicRegistry:
 	var override: MusicRegistry = ResourceLoader.load(MUSIC_REGISTRY_USER_PATH)
 	if override == null:
 		return registry
-	for r in registry.records:
-		var o: MusicRecord = override.get_by_id(r.music_id)
-		if o != null:
-			r.is_unlocked = o.is_unlocked
+	for record in registry.records:
+		var override_record: MusicRecord = override.get_by_id(record.music_id)
+		if override_record != null:
+			record.is_unlocked = override_record.is_unlocked
 	return registry
 
 

@@ -52,10 +52,10 @@ func _init_players() -> void:
 	if _sfx_players.is_empty():
 		var sfx_bus := _find_bus("SFX")
 		for i in range(SFX_POOL_SIZE):
-			var p := AudioStreamPlayer.new()
-			p.bus = sfx_bus
-			add_child(p)
-			_sfx_players.append(p)
+			var player := AudioStreamPlayer.new()
+			player.bus = sfx_bus
+			add_child(player)
+			_sfx_players.append(player)
 
 
 # ═══ BGM ═══
@@ -151,19 +151,19 @@ func play_ui_sfx(kind: String) -> void:
 ## 优先空闲；全忙时先踢不受保护的（最老的），全被保护才踢最老——重要音效不被挤掉。
 func _pick_sfx_player() -> AudioStreamPlayer:
 	# 1) 有空闲 → 用它
-	for p in _sfx_players:
-		if not p.playing:
-			return p
+	for player in _sfx_players:
+		if not player.playing:
+			return player
 
 	# 2) 全忙 → 先踢不受保护的（最早开始播放的那个）
 	var oldest_free: AudioStreamPlayer = null
 	var oldest_tick := -INF
-	for p in _sfx_players:
-		if p.get_meta("protected", false):
+	for player in _sfx_players:
+		if player.get_meta("protected", false):
 			continue
-		var tick := p.get_playback_position()
+		var tick := player.get_playback_position()
 		if tick > oldest_tick:
-			oldest_free = p
+			oldest_free = player
 			oldest_tick = tick
 	if oldest_free:
 		oldest_free.stop()
@@ -173,10 +173,10 @@ func _pick_sfx_player() -> AudioStreamPlayer:
 	var oldest := _sfx_players[0]
 	oldest_tick = oldest.get_playback_position()
 	for i in range(1, _sfx_players.size()):
-		var p := _sfx_players[i]
-		var tick := p.get_playback_position()
+		var player := _sfx_players[i]
+		var tick := player.get_playback_position()
 		if tick > oldest_tick:
-			oldest = p
+			oldest = player
 			oldest_tick = tick
 	oldest.stop()
 	return oldest

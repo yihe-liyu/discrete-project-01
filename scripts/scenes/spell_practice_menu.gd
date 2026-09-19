@@ -84,8 +84,8 @@ func _build_data() -> void:
 			phase_keys.append({stage = rec.stage, boss_index = rec.boss_index, phase_index = rec.phase_index})
 		seen_stages[rec.stage] = true
 
-	for s in seen_stages.keys():
-		_stages.append(s)
+	for stage in seen_stages.keys():
+		_stages.append(stage)
 	_stages.sort()
 
 	if _stages.is_empty():
@@ -193,9 +193,9 @@ func _build_diff_list() -> void:
 		candidate = info["diffs"].keys()  # 花名册未收录的旧记录 → 回退到已有难度
 		candidate.sort()
 
-	for d in candidate:
-		var is_locked: bool = not info["diffs"].has(d)
-		_diff_entries.append({diff = d, is_locked = is_locked})
+	for difficulty in candidate:
+		var is_locked: bool = not info["diffs"].has(difficulty)
+		_diff_entries.append({diff = difficulty, is_locked = is_locked})
 
 		# 渲染：锁定 → "?" + 更深灰；解锁 → 名字 + 战绩
 		var vbox := VBoxContainer.new()
@@ -203,12 +203,12 @@ func _build_diff_list() -> void:
 		if is_locked:
 			nl.text = "?"
 		else:
-			var card := BossCatalog.phase_at(rec.stage, rec.phase_index, d)
+			var card := BossCatalog.phase_at(rec.stage, rec.phase_index, difficulty)
 			nl.text = card.name if (card and card.name != "") else "-"
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nl.add_theme_font_size_override("font_size", 30)
-		var r: SpellRecord = info["diffs"].get(d, null)
-		if r and r.practice_captures > 0 and not is_locked:
+		var record: SpellRecord = info["diffs"].get(difficulty, null)
+		if record and record.practice_captures > 0 and not is_locked:
 			nl.add_theme_color_override("font_color", Color(0.4, 0.7, 1.0))
 		vbox.add_child(nl)
 
@@ -217,12 +217,12 @@ func _build_diff_list() -> void:
 
 		var hl := Label.new()
 		if is_locked:
-			hl.text = DIFF_NAMES[d]
+			hl.text = DIFF_NAMES[difficulty]
 		else:
 			var uid_str := ""
-			if r.uid > 0:
-				uid_str = "No.%03d  " % r.uid
-			hl.text = uid_str + DIFF_NAMES[d]
+			if record.uid > 0:
+				uid_str = "No.%03d  " % record.uid
+			hl.text = uid_str + DIFF_NAMES[difficulty]
 		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		hl.add_theme_font_size_override("font_size", 22)
 		hl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
@@ -231,7 +231,7 @@ func _build_diff_list() -> void:
 		hrow.add_child(hl)
 
 		var sl := Label.new()
-		sl.text = "--/--" if is_locked else "%02d/%02d" % [r.practice_captures, r.practice_attempts]
+		sl.text = "--/--" if is_locked else "%02d/%02d" % [record.practice_captures, record.practice_attempts]
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		sl.add_theme_font_size_override("font_size", 22)
 		sl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
@@ -270,9 +270,9 @@ func _phase_capture_all(stage: int, boss: int, phase_idx: int) -> int:
 	if candidate.is_empty():
 		return 0  # 花名册未收录，无法判定
 	var captured := 0
-	for d in candidate:
-		var r: SpellRecord = SaveData.spell_book.get_record(stage, phase_idx, boss, _char_index, d)
-		if r and r.practice_captures > 0:
+	for difficulty in candidate:
+		var record: SpellRecord = SaveData.spell_book.get_record(stage, phase_idx, boss, _char_index, difficulty)
+		if record and record.practice_captures > 0:
 			captured += 1
 	if captured == candidate.size():
 		return 2
@@ -297,9 +297,9 @@ func _stage_capture_state(stage: int) -> int:
 		return 0
 	var total := 0
 	var done_count := 0
-	for k in keys:
+	for key in keys:
 		total += 1
-		if _phase_capture_all(stage, k.boss, k.phase) == 2:
+		if _phase_capture_all(stage, key.boss, key.phase) == 2:
 			done_count += 1
 	if done_count == total:
 		return 2
@@ -426,20 +426,20 @@ func _get_idx() -> int:
 	return 0
 
 
-func _set_idx(v: int) -> void:
+func _set_idx(index: int) -> void:
 	match _section:
-		Section.STAGE: _stage_index = v; _change_stage(v)
-		Section.PHASE: _phase_index = v
-		Section.DIFF:  _diff_index = v
+		Section.STAGE: _stage_index = index; _change_stage(index)
+		Section.PHASE: _phase_index = index
+		Section.DIFF:  _diff_index = index
 
 
 ## 在难度选项间移动，跳过锁定（"?"）项
 func _move_diff(dir: int) -> void:
-	var n := _diff_entries.size()
-	if n == 0: return
+	var count := _diff_entries.size()
+	if count == 0: return
 	var i := _diff_index
-	for _step in range(n):
-		i = wrapi(i + dir, 0, n)
+	for _step in range(count):
+		i = wrapi(i + dir, 0, count)
 		if not _diff_entries[i].is_locked:
 			_diff_index = i
 			return
@@ -448,9 +448,9 @@ func _move_diff(dir: int) -> void:
 ## 该 Boss 在花名册里实际配置的难度档（Easy~Lunatic；Extra 是独立一面，暂不列）
 func _candidate_diffs(boss: BossData) -> Array[int]:
 	var out: Array[int] = []
-	for d in [0, 1, 2, 3]:
-		if boss and not boss.phases_for_difficulty(d).is_empty():
-			out.append(d)
+	for difficulty in [0, 1, 2, 3]:
+		if boss and not boss.phases_for_difficulty(difficulty).is_empty():
+			out.append(difficulty)
 	return out
 
 
@@ -546,14 +546,14 @@ func _do_accept_transition() -> void:
 func _get_highlighted_item() -> Control:
 	match _section:
 		Section.STAGE:
-			var c := _stage_box.get_children()
-			return c[_stage_index] if _stage_index < c.size() else null
+			var children := _stage_box.get_children()
+			return children[_stage_index] if _stage_index < children.size() else null
 		Section.PHASE:
-			var c := _phase_box.get_children()
-			return c[_phase_index] if _phase_index < c.size() else null
+			var children := _phase_box.get_children()
+			return children[_phase_index] if _phase_index < children.size() else null
 		Section.DIFF:
-			var c := _diff_box.get_children()
-			return c[_diff_index] if _diff_index < c.size() else null
+			var children := _diff_box.get_children()
+			return children[_diff_index] if _diff_index < children.size() else null
 	return null
 
 

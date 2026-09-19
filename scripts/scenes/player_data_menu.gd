@@ -37,8 +37,8 @@ func _build_options() -> void:
 	var box: VBoxContainer = $"LeftPanel/ListContainer"
 	box.add_theme_constant_override("separation", 30)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	for o in OPTIONS:
-		box.add_child(_make_item(o["zh"], o["en"]))
+	for option in OPTIONS:
+		box.add_child(_make_item(option["zh"], option["en"]))
 
 
 func _make_item(zh: String, en: String) -> VBoxContainer:
@@ -90,16 +90,16 @@ func _collect_cards() -> void:
 	var seen := {}
 	_cards.clear()
 	var book: SpellRecordBook = SaveData.spell_book
-	for r in book.records:
-		if r.uid == 0 or r.phase_type != SpellRecord.PhaseType.SPELL:
+	for record in book.records:
+		if record.uid == 0 or record.phase_type != SpellRecord.PhaseType.SPELL:
 			continue
-		var key := "%d_%d_%d_%d" % [r.stage, r.phase_index, r.boss_index, r.uid]
+		var key := "%d_%d_%d_%d" % [record.stage, record.phase_index, record.boss_index, record.uid]
 		if seen.has(key):
 			continue
 		seen[key] = true
 		_cards.append({
-			"stage": r.stage, "phase_index": r.phase_index, "boss_index": r.boss_index,
-			"uid": r.uid, "name": r.name,
+			"stage": record.stage, "phase_index": record.phase_index, "boss_index": record.boss_index,
+			"uid": record.uid, "name": record.name,
 		})
 	_cards.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return a["stage"] < b["stage"] or (a["stage"] == b["stage"] and a["phase_index"] < b["phase_index"]))
@@ -107,10 +107,10 @@ func _collect_cards() -> void:
 
 func _record_of(card: Dictionary) -> SpellRecord:
 	# 记录键不含 uid（同阶段可挂不同 uid 的难度卡）——必须校验记录 uid 与卡一致
-	var r := SaveData.spell_book.get_record(card["stage"], card["phase_index"], card["boss_index"],
+	var record := SaveData.spell_book.get_record(card["stage"], card["phase_index"], card["boss_index"],
 		_char_index, _diff_index)
-	if r and r.uid == card["uid"]:
-		return r
+	if record and record.uid == card["uid"]:
+		return record
 	return null
 
 
@@ -125,14 +125,14 @@ func _update_header() -> void:
 
 func _render() -> void:
 	var box: VBoxContainer = $"RecordView/RecordPanel/ListBox"
-	for c in box.get_children():
-		c.queue_free()
+	for child in box.get_children():
+		child.queue_free()
 
 	# 只显示当前角色+难度下有记录的符卡（如 Extra 没打过黄粱 → 不显示）
 	_visible.clear()
-	for c in _cards:
-		if _record_of(c):
-			_visible.append(c)
+	for card in _cards:
+		if _record_of(card):
+			_visible.append(card)
 
 	if _visible.is_empty():
 		var empty := Label.new()
@@ -148,10 +148,10 @@ func _render() -> void:
 
 
 ## 半角字母数字转全角（０-９／Ａ-Ｚ／ａ-ｚ）；全角字符等宽 1em，全角空格补位可精确对齐
-func _to_full(s: String) -> String:
+func _to_full(text: String) -> String:
 	var out := ""
-	for i in s.length():
-		var code := s[i].unicode_at(0)
+	for i in text.length():
+		var code := text[i].unicode_at(0)
 		if code >= 48 and code <= 57:
 			out += char(code - 48 + 0xFF10)      # 0-9 → ０-９
 		elif code >= 65 and code <= 90:
@@ -163,16 +163,16 @@ func _to_full(s: String) -> String:
 		elif code == 47:
 			out += "／"                          # / → ／(U+FF0F)
 		else:
-			out += s[i]
+			out += text[i]
 	return out
 
 
 ## 全角空格（U+3000）左补到 width 字符宽（不补前导零；对齐靠全角空格，不硬调 Label 宽度）
 func _pad_cn(v: Variant, width: int) -> String:
-	var s := str(v)
-	while s.length() < width:
-		s = "　" + s
-	return s
+	var text := str(v)
+	while text.length() < width:
+		text = "　" + text
+	return text
 
 
 func _make_row(card: Dictionary) -> HBoxContainer:

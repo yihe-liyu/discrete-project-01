@@ -84,6 +84,8 @@ FUNC = re.compile(r"^func\s+\w+\s*\(")
 LOCAL = re.compile(r"^\s+var\s+(\w+)")
 FORLOOP = re.compile(r"^\s+for\s+(\w+)\s+in\b")
 shadow_bad = []
+overlay_bad = []
+field_letter_bad = []
 for root in ROOTS:
     for p in files(root):
         lines = open(p, encoding="utf-8").read().splitlines()
@@ -92,6 +94,8 @@ for root in ROOTS:
             m = MEMBER.match(ln)
             if m:
                 members[m.group(1)] = i + 1
+                if re.fullmatch(r"[a-z]", m.group(1)):
+                    field_letter_bad.append((p, i + 1, m.group(1)))
         i = 0
         while i < len(lines):
             ln = lines[i]
@@ -110,6 +114,9 @@ for root in ROOTS:
                 for prm in params:
                     if prm in members:
                         shadow_bad.append((p, i + 1, "形参", prm, members[prm]))
+                    # 契约禁止「叠加前缀」_p_：要么 p_x（用过），要么 _x（不用）
+                    if prm.startswith("_p_"):
+                        overlay_bad.append((p, i + 1, prm))
                 k = j + 1
                 while k < len(lines):
                     bl = lines[k]
@@ -147,8 +154,14 @@ for p, i, s in sorted(set(node_case)):
 print(f"\n[⑤ 形参/局部/循环变量遮蔽类成员]（{len(shadow_bad)}）")
 for p, i, kind, n, ml in sorted(shadow_bad):
     print(f"  {p}:{i}  {kind} {n} 遮蔽成员（声明于 {ml}）")
+print(f"\n[⑤ 形参叠加前缀 _p_]（{len(overlay_bad)}）")
+for p, i, n in sorted(overlay_bad):
+    print(f"  {p}:{i}  {n}  → p_{n[3:]} 或 _{n[3:]}")
+print(f"\n[⑥ 类字段单字母]（{len(field_letter_bad)}）")
+for p, i, n in sorted(field_letter_bad):
+    print(f"  {p}:{i}  {n}  → 类字段必须全名")
 print(f"\n[信息] 公开字段/属性（角色名，允许）：{public_cnt}")
-tot = len(priv_bad) + len(multi) + len(node_bad) + len(set(node_case)) + len(shadow_bad)
-print(f"==> 应改：{tot} 条（私有字段 {len(priv_bad)} / 多名称类型 {len(multi)} / 节点引用 {len(node_bad)} / 节点名 {len(set(node_case))} / 遮蔽成员 {len(shadow_bad)}）")
+tot = len(priv_bad) + len(multi) + len(node_bad) + len(set(node_case)) + len(shadow_bad) + len(overlay_bad) + len(field_letter_bad)
+print(f"==> 应改：{tot} 条（私有字段 {len(priv_bad)} / 多名称类型 {len(multi)} / 节点引用 {len(node_bad)} / 节点名 {len(set(node_case))} / 遮蔽成员 {len(shadow_bad)} / _p_ 叠加 {len(overlay_bad)} / 字段单字母 {len(field_letter_bad)}）")
 sys.exit(1 if (should_fail and tot) else 0)
 PY

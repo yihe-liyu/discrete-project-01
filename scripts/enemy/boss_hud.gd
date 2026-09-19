@@ -23,10 +23,10 @@ func get_name() -> String:
 
 
 ## 运行时改显示名（发 display_name_changed）
-func set_name(n: String) -> void:
-	if _display_name == n:
+func set_name(new_name: String) -> void:
+	if _display_name == new_name:
 		return
-	_display_name = n
+	_display_name = new_name
 	display_name_changed.emit(get_name())   # 用有效名：清空覆盖时回退 data.boss_name
 
 
@@ -36,11 +36,11 @@ func is_name_shown() -> bool:
 
 
 ## 手动开关名字节点（默认隐藏；只切可见性，不改名）。
-func set_name_shown(v: bool) -> void:
-	if _is_name_shown == v:
+func set_name_shown(shown: bool) -> void:
+	if _is_name_shown == shown:
 		return
-	_is_name_shown = v
-	name_visibility_changed.emit(v)
+	_is_name_shown = shown
+	name_visibility_changed.emit(shown)
 
 
 ## 阶段进度点（BossUI 的 History 行）是否可见 —— 默认 false，手动控制。
@@ -49,8 +49,8 @@ func is_phase_dots_shown() -> bool:
 
 
 ## 手动开关阶段进度点（默认隐藏）。
-func set_phase_dots_shown(v: bool) -> void:
-	if _is_phase_dots_shown == v:
+func set_phase_dots_shown(shown: bool) -> void:
+	if _is_phase_dots_shown == shown:
 		return
-	_is_phase_dots_shown = v
-	phase_dots_visibility_changed.emit(v)
+	_is_phase_dots_shown = shown
+	phase_dots_visibility_changed.emit(shown)

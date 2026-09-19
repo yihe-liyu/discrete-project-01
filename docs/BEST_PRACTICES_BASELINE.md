@@ -48,7 +48,7 @@
 | 优先级 | 谁 | 做什么 |
 |---|---|---|
 | `-10` | `KernelNativeSystem`（原生 `DanmakuStore` 权威） | `integrate`（积分/寿命/相位/剔除）+ `behavior_tick`（行为）+ 每帧 pull 只读快照 |
-| `-4` | `KernelBulletBackend` | 延后动作 flush（emit/call 队列）+ 激光整批渐隐 |
+| `-4` | `KernelBulletHost` | 延后动作 flush（emit/call 队列）+ 激光整批渐隐 |
 | `0` | `BulletManager` / World / 敌机 / 自机 / 子机 | 碰撞规则（`KernelBulletPhysics`：命中/擦弹/伤害/清弹，几何走原生网格）+ 移动、发弹 |
 
 > 原项目现状：无显式 `FrameOrder`，顺序依赖 autoload 的 `_physics_process`（见轨道 B / B5）。
@@ -108,7 +108,7 @@
 
 | 对象 | 规则 |
 |---|---|
-| **私有字段**（`_x`，实现细节） | `_` + **类型名 snake**：`EntityRegistry` → `_entity_registry`；`KernelBulletBackend` → `_kernel_bullet_backend`；`LaserEngine` → `_laser_engine` |
+| **私有字段**（`_x`，实现细节） | `_` + **类型名 snake**：`EntityRegistry` → `_entity_registry`；`KernelBulletHost` → `_kernel_bullet_host`；`LaserEngine` → `_laser_engine` |
 | **公开字段 / 属性**（对外状态） | **同样类型派生、不缩写**（2026-09-13 拍板）：`refs` → `entity_registry`；`world` / `bullets` → `bullet_manager`。**唯一豁免 = `ctx.*` 意图门面**（见 §3：`ctx.bullets` / `ctx.player` / `ctx.audio`… 是设计好的动词域，不是随手缩写） |
 | **场景节点引用**（`@onready`） | 节点名 snake + `_`：`%FxPool` → `_fx_pool`。**节点名与变量名不符 = 有一方错**：变量错就改变量；节点名太弱（`UI`）或不具体就先改节点 |
 | **类型是内置基类**（`Node2D`/`Control`/`Sprite2D`…） | 节点名赢：`muzzle: Marker2D = $Muzzle` ✅ |
@@ -120,11 +120,13 @@
 | **preload 常量** | 场景 `*_SCENE`；脚本 `*_SCRIPT`；已有 `class_name` 的别再起别名 |
 | **函数** | 取值 `get_*`；判定 `is_*` / `has_*`；动作动词开头；事件处理 `_on_*` |
 
-> **缩写白名单（封闭）**：`ctx`（`StageContext`）+ 索引 `i`/`j`/`k`。其余一律不缩写 —— `refs` / `world` / `bullets` / `sys` / `sd` / `st` / `bm` / `bg` / `nav` / `tl` 都算违规。
+> **缩写白名单（封闭）**：`ctx`（`StageContext`）+ 循环索引 `i`/`j`/`k`（索引专用）。其余**整词**缩写一律不缩写 —— `refs` / `world` / `bullets` / `sys` / `sd` / `st` / `bm` / `bg` / `nav` / `tl` 都算违规。**单字母**另受下一条约束。
 > **适用范围**：私有字段、公开状态字段、局部变量都适用；仅 `ctx.*` 门面豁免（2026-09-13 拍板）。**状态字段已收敛**（`refs`→`entity_registry`、`world`/`bullets`→`bullet_manager`）；**局部极短名已清**（`sd`→`stage_data`、`st`→`stage`/`behavior_state`、`bm`→`bullet_manager`/`bookmarks`、`bg`→`background`/`stage_background`、`tl`→`timeline`）；工作台自身本地名按决定不动。`tl` 改名连带 `bookmark_extractor` 正则 → `timeline\.at(`。
+> **门面命名（2026-09-18 拍板，关 N2）**：`ctx.*` 门面一律用**域名词**（可数集合用复数），**不跟类型名、不加 `_service`**；类型名才带 `Service`。例：`ctx.bullets`→`BulletService`、`ctx.enemies`→`EnemyService`、`ctx.items`→`ItemService`、`ctx.effects`→`EffectService`。`ctx.bullets` 是 A2b/A2c 改名后**有意保留**的门面名，非漏网。
+> **门面动词（2026-09-18 拍板，关 N14）**：`ctx.*` 门面 + `StageContext` + 导演句柄 `BossHandle` 的**方法名**允许域动词（只说意图、避免 stutter，如 `ctx.boss.get_boss()`），受**封闭清单**约束，新增须登记：`active` / `current` / `exists` / `picked` / `at_least`；**机制类**（`EntityRegistry` / `PlayerService` / …）仍严格 `get_*`（取值）/ `is_*`·`has_*`（判定）/ 动作动词。
 > **形参遮蔽成员** → 加 `p_` 前缀（`p_ctx` 遮蔽 `CoroutineScript.ctx`）；**真的不用** → 单 `_`（`_ctx`）；**禁止叠加** `_p_`。
-> **单字母 / 极短名**：只允许「单行表达式 / 热路径循环」作用域（`bullet_system` 的 `p`/`r`/`s`）；跨行、跨函数、字段一律全名。
-> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI；`verify.sh` 第 2 步已启用 `--fail`）。**当前 0 条**（2026-09-13 收敛）；覆盖 ① 私有字段名 / ② 同类型多私名 / ③ `@onready` 节点名 / ④ 节点名 PascalCase 四类，**外加 ⑤ 形参·局部·循环变量遮蔽类成员**（2026-09-13 补，对应上条 `p_` 规则；静态扫描，不依赖 Godot reload）——**公开字段与局部缩写仍需人工守**（本表 + 白名单）；`test/reference/**` 是冻结的 vendor 参照实现（原 `scripts/kernel`，不在生产），不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
+> **单字母 / 极短名（2026-09-18 严格化，关 N8）**：只允许三种作用域 —— ① 循环索引 `i`/`j`/`k`；② **单行表达式**内的临时量 / 链式 DSL·构建器形参（整个生命周期不跨行）；③ **热路径**模块（`kernel_bridge/` · `laser/` · `bullet/` · `effect/` · `background/screen_fog_fx.gd` · `background/background_sun.gd` · `background/decor_manager.gd`）内的循环/数学临时量。**其余一律全名**：任何**跨行**存活、**跨函数**传递、或作为**类字段**（`check_naming` ⑥ 守卫）的单字母都要改名。存量分批清理见 `TODO_TEMP` N8。
+> **校验**：`bash tools/check_naming.sh`（默认只报告；`--fail` 交 CI；`verify.sh` 第 2 步已启用 `--fail`）。**当前 0 条**（2026-09-13 收敛）；覆盖 ① 私有字段名 / ② 同类型多私名 / ③ `@onready` 节点名 / ④ 节点名 PascalCase 四类，**外加 ⑤ 形参·局部·循环变量遮蔽类成员**（2026-09-13 补，对应上条 `p_` 规则；静态扫描，不依赖 Godot reload；**2026-09-18 补：同时校验形参「禁止叠加 `_p_`」**）——**公开字段与局部缩写仍需人工守**（本表 + 白名单）；`test/reference/**` 是冻结的 vendor 参照实现（原 `scripts/kernel`，不在生产），不适用本契约（豁免）；私有字段接受 `_<类型snake>` 与 `_<限定词>_<类型snake>`（同类型多实例）。
 
 ### 会话状态契约（per-run static）
 

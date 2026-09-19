@@ -48,10 +48,10 @@ func _draw():
 	if entity_registry:
 		var player = entity_registry.player
 		if is_instance_valid(player):
-			var r: float = player.get("hitbox_radius") if "hitbox_radius" in player else 2.0
+			var radius: float = player.get("hitbox_radius") if "hitbox_radius" in player else 2.0
 			var gr: float = player.get("graze_radius") if "graze_radius" in player else 24.0
 			draw_arc(player.global_position, gr, 0, TAU, 24, Color(0.3, 0.6, 1.0, 0.6), 1.0)
-			draw_arc(player.global_position, r, 0, TAU, 12, Color.CYAN, 2.0)
+			draw_arc(player.global_position, radius, 0, TAU, 12, Color.CYAN, 2.0)
 			draw_circle(player.global_position, 2.0, Color.CYAN)
 
 	# 左上角显示弹幕计数
