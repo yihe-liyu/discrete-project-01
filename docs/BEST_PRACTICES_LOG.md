@@ -18,6 +18,15 @@
 
 ## 记录
 
+### 2026-09-19 — 得分浮字金色收紧：只给「过收点线」与「记忆释放强收」
+
+- **需求修正**：金色 ≠ 所有自动收取 —— 只有**过收点线**和**记忆释放技能**（含它炸出的道具）金色；**靠近吸附**与撞上都是白。
+- **做法**：`Item` 把原来合并的 `_auto_collect`（线 or 靠近）拆出 `_is_highlight`：
+  - `_physics_process`：过线 → `_auto_collect + _is_highlight`；靠近 → 只 `_auto_collect`。
+  - `force_collect()`（记忆释放全收 + 它掉的道具）→ 两者都置真。
+  - 信号参数 `is_auto_collect` → `is_highlight`；`ScorePopupLayer.HIGHLIGHT_COLOR`。
+- **验收**：verify 全绿；`test_score_popup` 加 4 条（撞上/靠近 → 白；过线/强收 → 金）。
+
 ### 2026-09-19 — 得分浮字：字号可调 + 自动收取金色
 
 - **字号**：`NumberSprite` 按贴图像素逐位画，没有「字号」参数。改大小要缩**每个浮字实例**（`ns.scale`），**不能**缩 `ScorePopupLayer` 节点——那会把 `position` 一起缩放、位置跑偏。新增 `@export var font_scale: float = 1.0`（Inspector 可调；上浮距离也按倍率走）。

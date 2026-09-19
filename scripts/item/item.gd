@@ -19,6 +19,8 @@ var _gravity: float = 240.0
 var _max_fall_speed: float = 180.0
 var _collect_speed: float = 800.0
 var _auto_collect: bool = false
+## 收取是否该金色：**过收点线** 或 **记忆释放技能强收**（靠近吸附不算）
+var _is_highlight: bool = false
 var _auto_collect_line: float = 256.0
 var _proximity_range: float = 128.0  # 靠近自机即吸
 var _is_dead: bool = false
@@ -41,10 +43,13 @@ func _physics_process(delta: float) -> void:
 	var player: Node2D = entity_registry.player if entity_registry else null
 	var to_player: Vector2 = player.global_position - global_position if player and is_instance_valid(player) else Vector2.ZERO
 
-	# 玩家过收点线 或 靠近自机 → 自动吸附（focus 时范围翻倍）
+	# 自动吸附两起因：过收点线（金色）/ 靠近自机（白色；focus 时范围翻倍）
 	if player and is_instance_valid(player):
 		var prox: float = _proximity_range * 1.5 if player.is_focused else _proximity_range
-		if player.global_position.y < _auto_collect_line or to_player.length() < prox:
+		if player.global_position.y < _auto_collect_line:
+			_auto_collect = true
+			_is_highlight = true
+		elif to_player.length() < prox:
 			_auto_collect = true
 
 	if _auto_collect and player and is_instance_valid(player):
@@ -90,8 +95,10 @@ func setup(type: Type, pos: Vector2) -> void:
 	_sprite.modulate = Color.WHITE
 
 
+## 强制收取（记忆释放技能 / 它炸出的道具）：金色。
 func force_collect() -> void:
 	_auto_collect = true
+	_is_highlight = true
 
 
 func collect() -> void:
@@ -121,7 +128,7 @@ func collect() -> void:
 			Type.BOMB_FULL:
 				res.collect_bomb_full()
 	if gained > 0:
-		GameEvents.item_score.emit(gained, global_position, _auto_collect)
+		GameEvents.item_score.emit(gained, global_position, _is_highlight)
 	_recycle()
 
 

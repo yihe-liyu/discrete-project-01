@@ -4,7 +4,7 @@ extends Node
 @warning_ignore("unused_signal")
 signal enemy_killed(score: int, position: Vector2)
 @warning_ignore("unused_signal")
-signal item_score(score: int, position: Vector2, is_auto_collect: bool)
+signal item_score(score: int, position: Vector2, is_highlight: bool)
 @warning_ignore("unused_signal")
 signal player_death()
 @warning_ignore("unused_signal")
