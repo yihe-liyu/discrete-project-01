@@ -19,6 +19,15 @@
 
 ## 记录
 
+### 2026-09-19 — 修符卡名右缘越界（AnnounceLabel 绕中心 pivot 缩放）
+
+- **现象**：符卡名「音符「定点扩散」」右侧被齐刷刷切掉，收取数只露 `00`。
+- **根因**：`AnnounceLabel.play()` 的滑出目标是 `parent_size - size*SHRINK`，但 `SHRINK` 是**绕中心 pivot 缩放**——视觉盒右缘 = 布局框 x + `size.x*(1+SHRINK)/2`，比场地右缘多出名字宽度的 20%（8 个全角字 = 77px）。越界部分被上层不透明 HUD 相框 `assets/Textures/front/false_front.png`（`GameUI` layer 32 的 `Front`，场地内 alpha=0 / HUD 区 alpha=255）盖住 → 看起来像"字被切"。
+- **做法**：加 `const VISUAL_HALF := (1.0+SHRINK)/2.0` 与纯函数 `AnnounceLabel.rest_x(parent_w, label_w) = parent_w - label_w*VISUAL_HALF`（让**视觉右缘**贴父容器右缘）；两个滑出目标（右下 → 右上）都改用它，y 同理用 `VISUAL_HALF`。
+- **测试**：新增 `test/test_announce_label.gd`（夹具 384×70 / 192×70，不碰真实内容）：视觉右缘贴边、短名不越左、名字越长落点越左。复现探针（真实 `game_scene.tscn` + `false_front`）：`stop=(460.8,0)`、`visual_right=768.0`，名字完整显示到相框边。
+- **验收**：`./tools/verify.sh` 全绿（**465 / 464 pass + 1 pending，4614 asserts**）。
+- **⚠ 待人工验收**：进游戏打关底符卡，确认名字完整贴住场地右缘、收取数不再被切。
+
 ### 2026-09-19 — Timeline.sequence_phases：Boss 阶段按序连打
 
 - **要解决的问题**：`wait` 的一次性 `phase_cleared` 会**同时武装所有** wait 事件，表达不了「P0 打完 → gap → P1 → 打完 → P2」；`stage01.gd` 因此只能打 `phases[0]`。

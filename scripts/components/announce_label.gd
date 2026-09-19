@@ -12,8 +12,17 @@ const INITIAL_SCALE := 3.0
 const SHRINK := 0.6
 const HOLD := 0.2
 const SLIDE := 1.0
+## 缩放绕中心 pivot：视觉包围盒每侧比布局框多出 size*(1-SHRINK)/2。
+## 贴父容器右缘时布局框要按此内缩，否则缩放后的视觉右缘会越界。
+const VISUAL_HALF := (1.0 + SHRINK) / 2.0
 
 var _tween: Tween
+
+
+## 右停落点的布局框 x：让「缩放后的视觉右缘」贴父容器右缘。
+## 视觉右缘 = 布局框 x + size.x*VISUAL_HALF。
+static func rest_x(parent_size_x: float, label_size_x: float) -> float:
+	return parent_size_x - label_size_x * VISUAL_HALF
 
 
 ## 播放动画。
@@ -37,6 +46,7 @@ func play(p_text: String, parent_size: Vector2) -> void:
 	modulate.a = 0.0
 
 	var center := position
+	var stop_x := rest_x(parent_size.x, size.x)
 	_tween = create_tween()
 	_tween.set_parallel(true)
 	_tween.tween_property(self, "modulate:a", 1.0, FADE)
@@ -44,8 +54,8 @@ func play(p_text: String, parent_size: Vector2) -> void:
 	_tween.tween_property(self, "position", center, FADE).set_trans(Tween.TRANS_QUAD)
 	_tween.set_parallel(false)
 	_tween.tween_interval(HOLD)
-	_tween.tween_property(self, "position", parent_size - size * SHRINK, SLIDE).set_trans(Tween.TRANS_QUAD)
-	_tween.tween_property(self, "position", Vector2(parent_size.x - (size * SHRINK).x, 0), SLIDE).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	_tween.tween_property(self, "position", Vector2(stop_x, parent_size.y - size.y * VISUAL_HALF), SLIDE).set_trans(Tween.TRANS_QUAD)
+	_tween.tween_property(self, "position", Vector2(stop_x, 0), SLIDE).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 	_tween.tween_callback(finished.emit)
 
 

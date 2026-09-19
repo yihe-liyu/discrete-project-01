@@ -157,6 +157,7 @@
 - **改 `class_name` / 删脚本·场景后 → `godot --headless --import` 刷 `.godot` 缓存**（否则 stale class/uid 加载失败）。
 - **preset/builder 不覆写显式开关**（`.enemy()` 别设 `is_spawn_fog`，否则静默翻回显式关闭）。
 - **缩放 Node2D 父层会连带子节点 `position`**：改尺寸缩**每个实例**，别缩容器层（`NumberSprite` 字号即此）。
+- **绕中心 pivot 缩放 → 视觉盒 ≠ 布局框**：视觉盒每侧比布局框多 `size*(1-scale)/2`；贴边落点要按**视觉右缘**算，否则布局框贴边、文字越界被上层不透明 HUD 相框盖掉（符卡名 `AnnounceLabel.rest_x`；`false_front.png` 在 GameUI layer 32，场地外不透明）。
 - **GDScript 警告 = 错误**（`check_syntax` 全扫）；原生 `WARN/ERR_PRINT` 被 GUT 记 Unexpected Errors → 内核静默返回、宿主 `push_warning`。
 - **场景期依赖用 `@tool` + `_get_configuration_warnings()`**（同 R3；运行时注入豁免）。
 - **Godot 的 `erase_section` / `remove_*` 对「不存在」目标会 `ERR_FAIL`（不是 no-op）**：先 `has_section` / `file_exists` 守卫；GUT 会把它记成 Unexpected Errors。
