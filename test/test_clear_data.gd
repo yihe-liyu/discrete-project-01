@@ -12,6 +12,16 @@ func test_spell_book_clear_wipes_records_and_user_file() -> void:
 	assert_false(FileAccess.file_exists(SpellBookManager.SPELL_BOOK_USER_PATH), "清空后应删掉 user:// 档")
 
 
+func test_save_manager_clear_is_safe_without_saved_file() -> void:
+	# 全新档：user://save_data.cfg 不存在 → 无任何段；清空不应报错（曾 erase 不存在的段）
+	if FileAccess.file_exists(SaveManager.SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.SAVE_PATH))
+	var mgr := SaveManager.new()
+	mgr.load()
+	mgr.clear_player_data()
+	assert_true(mgr.high_scores.is_empty(), "无档时清空也应安全")
+
+
 func test_save_manager_clear_wipes_scores_keeps_settings() -> void:
 	var mgr := SaveManager.new()
 	mgr.load()

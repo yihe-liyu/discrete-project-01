@@ -54,6 +54,7 @@ func get_high_score(stage_id: int) -> int:
 ## 清空玩家数据：高分归零（**设置保留**）。
 func clear_player_data() -> void:
 	high_scores.clear()
-	if _config:
+	# ConfigFile.erase_section 对不存在的段会 ERR_FAIL（不是 no-op）→ 先守卫。
+	if _config and _config.has_section("high_scores"):
 		_config.erase_section("high_scores")
 		_config.save(SAVE_PATH)
