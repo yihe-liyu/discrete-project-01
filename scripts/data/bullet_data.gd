@@ -19,7 +19,7 @@ var hitbox_offset: Vector2 = Vector2.ZERO            ## 判定偏移
 var hitbox_rotation: float = 0.0                     ## 判定旋转（弧度）
 var hitbox_radius: float = 4.0                       ## 判定半径
 var hitbox_size: Vector2 = Vector2(8, 8)             ## 矩形判定尺寸
-var is_spawn_fog: bool = false                          ## 是否播出生雾（由 .enemy() 置真；.no_spawn_fog() 可关）
+var is_spawn_fog: bool = true                           ## 是否跟随阵营出生雾（.no_spawn_fog() 逐型关掉，与调用顺序无关）
 var spawn_fx: EffectType                             ## 出生特效（null = 用阵营默认）
 var coroutine_script: Script                         ## 移动协程脚本（如诱导跟踪）
 var params: Dictionary = {}                          ## 注入给移动协程脚本的参数（行为脚本同名 var 覆盖）
@@ -73,7 +73,8 @@ func blend(b: bool) -> BulletData:
 func enemy() -> BulletData:
 	faction = Faction.ENEMY
 	can_be_canceled = true
-	is_spawn_fog = true
+	# 不碰 is_spawn_fog：出生雾归阵营默认，逐型开关由 no_spawn_fog()/with_spawn_fog() 定，
+	# 否则「先 no_spawn_fog 再 enemy」会被静默覆写。
 	return self
 
 ## 打开/换出生雾：effect 为空 = 用阵营默认特效。

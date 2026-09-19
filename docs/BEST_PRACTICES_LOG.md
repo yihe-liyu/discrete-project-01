@@ -18,6 +18,14 @@
 
 ## 记录
 
+### 2026-09-19 — 修 `.enemy()` 覆写 `.no_spawn_fog()`（顺序陷阱）
+
+- **现象**：`non_mid01_shoot.gd` 写了 `.no_spawn_fog()` 却仍出雾。
+- **根因**：链是 `.no_spawn_fog() … .enemy()` —— `.enemy()` 里 `is_spawn_fog = true` 把前面的显式关闭静默覆写。
+- **做法**：把「敌弹默认出雾」从 `.enemy()` 挪到字段默认（`BulletData.is_spawn_fog = true`），`.enemy()` 不再碰它 → 开关与调用顺序无关；内容链顺手理成 `.enemy().no_spawn_fog()`。
+- **守卫**：`test_spawn_fx` 加「先 `no_spawn_fog` 再 `enemy` 仍无雾」断言。
+- **验收**：`./tools/verify.sh` 全绿（442 / 441 pass + 1 pending，4379 asserts）。
+
 ### 2026-09-19 — 弹雾回归 + 特效统一（A2）：EffectType / 逐行 fx_type / 纯特效行
 
 - **背景**：参考内核（重建版）里「发弹预告」与「消弹消散」本是**同一套** —— `EffectType` + 逐行 `_fx_type` + `spawn_fx()` 纯特效行 + 一个渲染器。主项目原生迁移只搬了 `_fx` 相位（冻结），丢了 `_fx_type` + 纯特效行 + 特效渲染 → 弹雾整个消失，消弹退回宿主 `EnemyBulletClear` 节点 + `create_tween`。

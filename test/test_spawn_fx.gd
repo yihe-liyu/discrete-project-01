@@ -49,6 +49,11 @@ func test_faction_default_and_per_type_switch() -> void:
 	enemy.invalidate_bullet_type()
 	var oid: int = sys.spawn(enemy.to_bullet_type(), Vector2.ZERO, Vector2.UP, Color.WHITE)
 	assert_eq(sys.get_fx_phase(oid), 0.0, "逐弹开关关掉后无雾")
+	# 开关与 .enemy() 的调用顺序无关（历史 bug：.enemy() 覆写 no_spawn_fog）
+	var reversed := BulletData.new().no_spawn_fog().enemy().tex("小玉")
+	assert_false(reversed.is_spawn_fog, "先 no_spawn_fog 再 enemy 也应保持关闭")
+	var rid: int = sys.spawn(reversed.to_bullet_type(), Vector2.ZERO, Vector2.UP, Color.WHITE)
+	assert_eq(sys.get_fx_phase(rid), 0.0, "顺序反转后仍无雾")
 
 
 func test_frozen_bullet_does_not_move() -> void:

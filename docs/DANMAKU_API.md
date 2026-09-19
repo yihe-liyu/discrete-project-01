@@ -71,7 +71,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 | hitbox_rotation | float | 0.0 | 矩形判定旋转（弧度） |
 | hit_effect | PackedScene | null | 命中特效场景 |
 | hit_sfx | String | "" | 命中音效 key（`AssetRegistry.sounds`；空=normal_damage） |
-| is_spawn_fog | bool | false | 是否播出生雾（`.enemy()` 置真；`.no_spawn_fog()` 关） |
+| is_spawn_fog | bool | true | 是否跟随阵营出生雾；`.no_spawn_fog()` 逐型关（与 `.enemy()` 顺序无关） |
 | spawn_fx | EffectType | null | 这型的出生特效（null=用阵营默认） |
 | out_grace | float | 0.0 | 出界宽限秒（出界后仍活这么久；0=立即回收） |
 | lifecycle | BulletLifecycle | null | 弹道描述符（**推荐主路**） |
@@ -90,7 +90,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 | `.dir(x, y)` | 直接设 velocity（方向+速度）—— 只在 `shoot_spread` 传 `ZERO` 方向时才用得上 |
 | `.color(c)` | 染色 |
 | `.blend(true)` | 用 BLEND 混合（敌弹换色用；默认 MULTIPLY） |
-| `.enemy()` | 敌弹：faction=ENEMY、可被清、出弹雾（可用 `.no_spawn_fog()` 关） |
+| `.enemy()` | 敌弹：faction=ENEMY、可被清（出生雾归阵营默认；`.no_spawn_fog()` 逐型关） |
 | `.player()` | 自机弹：faction=PLAYER、damage=10 |
 | `.with_spawn_fog(effect)` | 打开/换出生雾（effect 空 = 阵营默认） |
 | `.no_spawn_fog()` | 关掉出生雾：这型弹直接出现 |

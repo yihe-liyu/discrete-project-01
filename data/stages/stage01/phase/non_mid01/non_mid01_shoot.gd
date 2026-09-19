@@ -24,8 +24,8 @@ func _tick(p_ctx: StageContext):
 
 	if _bullet_data == null:
 		_bullet_data = BulletData.new().tex("小玉").speed(1000)\
-			.color(Color(0.0, 0.906, 1.353, 0.25)).blend(true).enemy()
-		_bullet_data.trajectory(BulletLifecycle.non_mid_flee(
+			.color(Color(0.0, 0.906, 1.353, 0.25)).blend(true).enemy().no_spawn_fog()\
+			.trajectory(BulletLifecycle.non_mid_flee(
 			150.0, diff_pick(FLEE_HOOK_SCRIPT.BOSS_RADIUS), FLEE_HOOK))
 
 	# 射一圈，随机初始旋转
