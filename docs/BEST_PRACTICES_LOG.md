@@ -18,56 +18,20 @@
 
 ## 记录
 
-### 2026-09-19 — 深位捡点递减：非金色收取的「点」按离收点线距离降分
-
-- **需求**：点（不含 P 点）若**未被金色收取**（没过收点线、没被记忆释放强收），按拾取位置离收点线的距离降分：收点线附近 = 当前 `max_point`，越靠近游戏框底部越少，**最少 5000**；`max_point` 照常 +10。
-- **做法**：
-  - `Item.MIN_POINT_SCORE := 5000`；`_point_score_at(pts)` = `roundi(lerpf(pts, 5000, t))`，`t = clamp((y - line) / (FIELD_BOTTOM - line), 0, 1)`。
-  - `PlayerResources.add_max_point(score := -1)`：可传入账分（覆盖），仍 `max_point += 10`，返回**实际入账**分（弹浮字用它）。
-  - `Item.collect()` POINT：`_is_highlight` 满分，否则按深度递减。
-- **验收**：verify 全绿；`test_score_popup` 加「线/中点/框底三档 + 金色贴框底仍满分 + max_point 恒 +10」。
-
-### 2026-09-19 — 修池复用残留：道具金色标记未在 setup() 重置
-
-- **现象**：普通击败敌人掉落的道具也显示金色。
-- **根因**：`Item` 是**对象池**复用实例，`setup()` 会重置 `_is_dead/_auto_collect/_velocity`，但这次新加的 `_is_highlight` **漏了** —— 曾被「记忆释放 / 过收点线」金色收掉的实例回池后，再被普通掉落复用就带着旧标记。
-- **做法**：`setup()` 重置 `_is_highlight = false`；`test_score_popup` 加「金色收掉 → `setup()` 复用 → 应为白」回归断言。
-- **教训**：给池化对象加字段，**必须在 `setup()` 归零**（与 `BulletData`/原生行的 reset 同规矩）。
-- **验收**：verify 全绿。
-
-### 2026-09-19 — 得分浮字金色收紧：只给「过收点线」与「记忆释放强收」
-
-- **需求修正**：金色 ≠ 所有自动收取 —— 只有**过收点线**和**记忆释放技能**（含它炸出的道具）金色；**靠近吸附**与撞上都是白。
-- **做法**：`Item` 把原来合并的 `_auto_collect`（线 or 靠近）拆出 `_is_highlight`：
-  - `_physics_process`：过线 → `_auto_collect + _is_highlight`；靠近 → 只 `_auto_collect`。
-  - `force_collect()`（记忆释放全收 + 它掉的道具）→ 两者都置真。
-  - 信号参数 `is_auto_collect` → `is_highlight`；`ScorePopupLayer.HIGHLIGHT_COLOR`。
-- **验收**：verify 全绿；`test_score_popup` 加 4 条（撞上/靠近 → 白；过线/强收 → 金）。
-
-### 2026-09-19 — 得分浮字：字号可调 + 自动收取金色
-
-- **字号**：`NumberSprite` 按贴图像素逐位画，没有「字号」参数。改大小要缩**每个浮字实例**（`ns.scale`），**不能**缩 `ScorePopupLayer` 节点——那会把 `position` 一起缩放、位置跑偏。新增 `@export var font_scale: float = 1.0`（Inspector 可调；上浮距离也按倍率走）。
-- **金色**：`Item` 现成的 `_auto_collect`（过收点线 / 靠近吸附为真）随 `GameEvents.item_score(score, position, is_auto_collect)` 传出；`ScorePopupLayer` 自动收取用 `AUTO_COLLECT_COLOR`，手动撞上白色。
-- **验收**：`./tools/verify.sh` 全绿（447 / 446 pass + 1 pending）；`test_score_popup` 加金色/白色 + 字号断言。
-
 ### 2026-09-19 — 吃道具得分浮字（Item.collect → GameEvents.item_score → ScorePopupLayer）
 
-- **需求**：P 点 / 点被自机吃掉时，在吃掉位置显示本次得分并渐隐。
+- **需求**：P 点 / 点被自机吃掉时，在被吃掉位置显示本次得分并渐隐；后续细化到「金色只给过收点线/记忆释放」「点的分随深度递减」。
 - **判据**：数字用项目现成的 `NumberSprite`（`ascii.png`），不引入 Label + 新字体；展示层不塞进 Item（R2/R7），走既有信号总线（与 `enemy_killed(score, position)` 同构）；池化复用，不每次 `new`。
 - **做法**：
-  - `Item.collect()`：统一算 `gained`（POWER = `value`；POINT = `add_max_point()` 返回的当前 `max_point`），`>0` 时 `GameEvents.item_score.emit(gained, global_position)`。
-  - `Item.value` 死字段转正 = 吃下给的分；`const POWER_SCORE := 10`（P 点 +1 火力 +10 分）。`setup()` 按型填 `value`。
-  - 新 `ScorePopupLayer`（`Node2D`，`game_scene.tscn` 的 `World` 下声明）：池化 `NumberSprite`（ascii.png，`is_left_align`、5 位），`show_score()` 上浮 24px + alpha 1→0（0.6s）后回池。
-  - `LayerConfig.SCORE_POPUP := 55`（在 `EFFECT=50` 之上）；`GameEvents.item_score(score, position)`。
-- **验收**：`./tools/verify.sh` 全绿（445 / 444 pass + 1 pending，4393 asserts）；新增 `test/test_score_popup.gd`（P 点加分+发信号、点取 max_point、浮字复用渐隐回池）。
-
-### 2026-09-19 — 修 `.enemy()` 覆写 `.no_spawn_fog()`（顺序陷阱）
-
-- **现象**：`non_mid01_shoot.gd` 写了 `.no_spawn_fog()` 却仍出雾。
-- **根因**：链是 `.no_spawn_fog() … .enemy()` —— `.enemy()` 里 `is_spawn_fog = true` 把前面的显式关闭静默覆写。
-- **做法**：把「敌弹默认出雾」从 `.enemy()` 挪到字段默认（`BulletData.is_spawn_fog = true`），`.enemy()` 不再碰它 → 开关与调用顺序无关；内容链顺手理成 `.enemy().no_spawn_fog()`。
-- **守卫**：`test_spawn_fx` 加「先 `no_spawn_fog` 再 `enemy` 仍无雾」断言。
-- **验收**：`./tools/verify.sh` 全绿（442 / 441 pass + 1 pending，4379 asserts）。
+  - **触发**：`Item.collect()` 统一算 `gained`（POWER = `value`；POINT = 深度分），`>0` 时 `GameEvents.item_score.emit(gained, global_position, is_highlight)`。`Item.value` 死字段转正 = P 点吃下给的分（`POWER_SCORE := 10`，+1 火力 +10 分）。
+  - **展示**：新 `ScorePopupLayer`（`Node2D`，`game_scene.tscn` 的 `World` 下声明）：池化 `NumberSprite`（ascii.png，`is_left_align`、5 位），`show_score()` 在被吃位置设值、上浮 `RISE` + alpha 1→0（`FADE_TIME`）后回池。`LayerConfig.SCORE_POPUP := 55`（EFFECT=50 之上）。
+  - **点的分（深位递减）**：非金色收取时 `roundi(lerpf(max_point, MIN_POINT_SCORE=5000, t))`，`t = clamp((y - 收点线256) / (FIELD_BOTTOM 928 - 256), 0, 1)`；金色收取满分。`PlayerResources.add_max_point(score := -1)` 可传入账分并返回实际入账值，**max_point 恒 +10**。
+  - **金色规则**：只给「过收点线」与「记忆释放强收（`force_collect()`，含它炸出的道具）」。`Item` 把合并的 `_auto_collect`（线 or 靠近）拆出 `_is_highlight`：过线 → 两者；靠近吸附/撞上 → 只 `_auto_collect`。`ScorePopupLayer.HIGHLIGHT_COLOR`。
+  - **字号**：`NumberSprite` 按贴图像素逐位画、没有字号参数 → 新增 `@export var font_scale` 缩**每个浮字实例**（`ns.scale`），上浮距离同倍率。
+- **踩坑**：
+  - **别缩 `ScorePopupLayer` 节点**：那会把 `ns.position` 一起缩放、浮字位置跑偏。要改大小只动 `font_scale`。
+  - **池复用必须在 `setup()` 归零**：新加的 `_is_highlight` 忘了重置，曾金色收掉的实例回池后被普通掉落复用 → 普通掉落误金色。给池化对象加字段一律在 `setup()` 清零。
+- **验收**：`./tools/verify.sh` 全绿（453 / 452 pass + 1 pending，4406 asserts）；`test/test_score_popup.gd` 覆盖：P 点加分+发信号、点按线/中点/框底三档递减、金色贴框底仍满分、撞上/靠近白、过线/强收金、字号倍率、池复用不继承金色。
 
 ### 2026-09-19 — 弹雾回归 + 特效统一（A2）：EffectType / 逐行 fx_type / 纯特效行
 
@@ -84,8 +48,9 @@
   - `BulletMultiMesh`：弹 / 特效两路建组，共用 `bullet_batch.gdshader`（BLEND 分支的灰度混合 `mix(COLOR.rgb, white, gray)` 就是原雾 shader 的算法，无需新 shader）；特效组 z=`LayerConfig.EFFECT`。
 - **删**：`scripts/effect/enemy_bullet_clear.gd`(+.uid)、`scenes/effect/enemy_bullet_clear.tscn`、`gdshader/bullet_fog_blend.gdshader`(+.uid)（`bullet_batch` BLEND 已覆盖）、`BulletData.fog_texture`、`AssetRegistry.FOG_TEXTURE`（纹理改由 `.tres` 直接引用）。
 - **语义变化（重要）**：阵营默认打开后 **所有敌弹出生冻结 0.3s**（= 旧项目 `.enemy()` 即 `is_spawn_fog=true` 的原始语义）。不想给某型弹预告就 `is_spawn_fog=false` / `.no_spawn_fog()`。
+- **踩坑 · `.enemy()` 覆写开关**：`non_mid01_shoot.gd` 写了 `.no_spawn_fog()` 却仍出雾 —— 链是 `.no_spawn_fog() … .enemy()`，`.enemy()` 里 `is_spawn_fog = true` 静默覆写。修法：把「敌弹默认出雾」从 `.enemy()` 挪到字段默认（`BulletData.is_spawn_fog = true`），`.enemy()` 不再碰它 → 开关与顺序无关；`test_spawn_fx` 加顺序反转守卫。
 - **测试影响**：清弹类测试改为统计「真弹」（按 `get_type_indices() >= 0` 排除纯特效行）；`test_native_laser_anchor` 的激光段加 `.no_spawn_fog()`（该用例只验锚点）。新增 `test/test_spawn_fx.gd`（原生冻结/到期、阵营默认 + 逐弹开关、清弹切特效、渲染桥分流）。
-- **验收**：`./tools/verify.sh` → check_syntax 301 / check_naming 0 / 启动零错 / GUT 全绿。
+- **验收**：`./tools/verify.sh` 全绿（check_syntax 301 / naming 0 / 启动零错；GUT 442 / 441 pass + 1 pending）。
 
 ### 2026-09-18 — 关 E1（R3）：场景期依赖自文档（@tool + _get_configuration_warnings）
 
