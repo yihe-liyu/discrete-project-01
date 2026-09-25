@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="BossData" format=3 uid="uid://gneeoatjau0d"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_rqhbj"]
+[ext_resource type="Resource" uid="uid://dkrc5pv86snk1" path="res://data/stages/stage01/phase/卡摩瑞一非/卡摩瑞一非.tres" id="2_4fp0r"]
+[ext_resource type="Resource" uid="uid://u2yvwos7wamo" path="res://data/stages/stage01/phase/卡摩瑞一符/符卡001.tres" id="3_u3ho8"]
+[ext_resource type="Resource" uid="uid://dxudmet86qurj" path="res://data/stages/stage01/phase/卡摩瑞二非/卡摩瑞二非.tres" id="4_4yngo"]
+[ext_resource type="Resource" uid="uid://dd0pjxy0pqyia" path="res://data/stages/stage01/phase/卡摩瑞一符/符卡003.tres" id="4_hsdc8"]
+[ext_resource type="Resource" uid="uid://dq20re3h68ysf" path="res://data/stages/stage01/phase/卡摩瑞一符/符卡004.tres" id="5_4yngo"]
+[ext_resource type="Resource" uid="uid://cok8dc7atvl2w" path="res://data/stages/stage01/phase/卡摩瑞一符/符卡002.tres" id="6_pyupe"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="7_34vd7"]
+[ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="8_47frn"]
+[ext_resource type="Texture2D" uid="uid://br8vr3n284kcl" path="res://assets/Textures/character/kamorui/kamorui1.png" id="9_portrait"]
+[ext_resource type="Texture2D" uid="uid://cb5n52jpgy3ex" path="res://assets/Textures/character/kamorui/卡摩瑞符卡背景.png" id="9_sbg"]
+
+[resource]
+script = ExtResource("7_34vd7")
+boss_name = "卡摩瑞"
+visual = ExtResource("8_47frn")
+spell_background = ExtResource("9_sbg")
+portrait = ExtResource("9_portrait")
+phases_easy = Array[ExtResource("1_rqhbj")]([ExtResource("2_4fp0r"), ExtResource("3_u3ho8"), ExtResource("4_4yngo")])
+phases_normal = Array[ExtResource("1_rqhbj")]([ExtResource("2_4fp0r"), ExtResource("6_pyupe"), ExtResource("4_4yngo")])
+phases_hard = Array[ExtResource("1_rqhbj")]([ExtResource("2_4fp0r"), ExtResource("4_hsdc8"), ExtResource("4_4yngo")])
+phases_lunatic = Array[ExtResource("1_rqhbj")]([ExtResource("2_4fp0r"), ExtResource("5_4yngo"), ExtResource("4_4yngo")])
+stage_id = 1
+order = 1

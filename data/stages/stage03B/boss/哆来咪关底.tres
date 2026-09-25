@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="BossData" format=3 uid="uid://bdrun4vtsmvba"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_rooi5"]
+[ext_resource type="Resource" uid="uid://b5s10bfw3s86a" path="res://data/stages/stage03B/phase/哆来咪三符/符卡053.tres" id="2_feed6"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="2_gdoqd"]
+[ext_resource type="Resource" uid="uid://cumk8u5otxocy" path="res://data/stages/stage03B/phase/哆来咪三符/符卡055.tres" id="3_8ac4r"]
+[ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="3_gdoqd"]
+[ext_resource type="Resource" uid="uid://bdwv3xpxkygbb" path="res://data/stages/stage03B/phase/哆来咪三符/符卡056.tres" id="4_2wcjb"]
+[ext_resource type="Resource" uid="uid://bnhkuxbs53yl6" path="res://data/stages/stage03B/phase/哆来咪三符/符卡054.tres" id="5_xv4fe"]
+
+[resource]
+script = ExtResource("2_gdoqd")
+boss_name = "哆来咪"
+visual = ExtResource("3_gdoqd")
+phases_easy = Array[ExtResource("1_rooi5")]([ExtResource("2_feed6")])
+phases_normal = Array[ExtResource("1_rooi5")]([ExtResource("5_xv4fe")])
+phases_hard = Array[ExtResource("1_rooi5")]([ExtResource("3_8ac4r")])
+phases_lunatic = Array[ExtResource("1_rooi5")]([ExtResource("4_2wcjb")])
+stage_id = 4
+metadata/_custom_type_script = "uid://be7pe6gf4etpl"

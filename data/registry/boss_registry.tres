@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="BossRegistry" format=3]
+[gd_resource type="Resource" script_class="BossRegistry" format=3 uid="uid://cw0rc8e0b74in"]
 
-[ext_resource type="Script" path="res://scripts/data/boss_data.gd" id="1_u1om2"]
-[ext_resource type="Resource" path="res://data/stages/stage01/boss/kamorui_mid.tres" id="2_b4u0v"]
-[ext_resource type="Resource" path="res://data/stages/stage01/boss/kamorui_final.tres" id="3_l0tw0"]
-[ext_resource type="Script" path="res://scripts/data/boss_registry.gd" id="4_3jupf"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="1_u1om2"]
+[ext_resource type="Resource" uid="uid://dq2g8i0mi74ps" path="res://data/stages/stage01/boss/卡摩瑞道中.tres" id="2_u1om2"]
+[ext_resource type="Resource" uid="uid://gneeoatjau0d" path="res://data/stages/stage01/boss/卡摩瑞关底.tres" id="3_b4u0v"]
+[ext_resource type="Script" uid="uid://rswgyqyal30g" path="res://scripts/data/boss_registry.gd" id="4_3jupf"]
+[ext_resource type="Resource" uid="uid://bdrun4vtsmvba" path="res://data/stages/stage03B/boss/哆来咪关底.tres" id="4_b4u0v"]
 
 [resource]
 script = ExtResource("4_3jupf")
-bosses = Array[ExtResource("1_u1om2")]([ExtResource("2_b4u0v"), ExtResource("3_l0tw0")])
+bosses = Array[ExtResource("1_u1om2")]([ExtResource("2_u1om2"), ExtResource("3_b4u0v"), ExtResource("4_b4u0v")])

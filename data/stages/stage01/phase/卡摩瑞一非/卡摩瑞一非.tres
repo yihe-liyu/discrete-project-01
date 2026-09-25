@@ -2,12 +2,10 @@
 
 [ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="1_8axke"]
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_ngo1e"]
-[ext_resource type="Script" uid="uid://b1dujgiwvq6sc" path="res://data/stages/stage01/phase/non01/non01_shoot.gd" id="3_8axke"]
+[ext_resource type="Script" uid="uid://b1dujgiwvq6sc" path="res://data/stages/stage01/phase/卡摩瑞一非/卡摩瑞一非.gd" id="3_8axke"]
 
 [resource]
 script = ExtResource("1_ngo1e")
-name = "卡摩瑞的非符1"
-hp = 3500
 move_script = ExtResource("1_8axke")
 shoot_script = ExtResource("3_8axke")
 item_power = 25

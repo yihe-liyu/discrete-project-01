@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bdwv3xpxkygbb"]
+
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="1_8jio1"]
+[ext_resource type="Script" uid="uid://b2tfxq8rr8ygg" path="res://data/boss_scripts/move/move_to_point.gd" id="2_pxeax"]
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="2_qklgp"]
+[ext_resource type="Script" uid="uid://dbcpq7bf5jo43" path="res://data/stages/stage03B/phase/哆来咪三符/哆来咪三符.gd" id="3_pxeax"]
+
+[resource]
+script = ExtResource("2_qklgp")
+name = "黄粱「不可测之梦」"
+uid = 56
+bonus = 100000
+time_limit = 40.0
+hp = 4500
+move_script = ExtResource("1_8jio1")
+shoot_script = ExtResource("3_pxeax")
+pre_move_script = ExtResource("2_pxeax")
+item_power = 25
+item_point = 25
+item_life = 1
+params = {
+"dest": Vector2(448, 360)
+}
+open_reduce_time = 5.0

@@ -1,12 +1,11 @@
 [gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://c3x1nl4wb0g4t"]
 
-[ext_resource type="Script" uid="uid://hq1hjwsv1oiq" path="res://data/stages/stage01/phase/non_mid01/non_mid01_move.gd" id="1_ya4oi"]
+[ext_resource type="Script" uid="uid://hq1hjwsv1oiq" path="res://data/stages/stage01/phase/卡摩瑞道中一非/卡摩瑞道中一非移动.gd" id="1_ya4oi"]
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="2_o022f"]
-[ext_resource type="Script" uid="uid://wwi0l8jow64v" path="res://data/stages/stage01/phase/non_mid01/non_mid01_shoot.gd" id="3_o022f"]
+[ext_resource type="Script" uid="uid://wwi0l8jow64v" path="res://data/stages/stage01/phase/卡摩瑞道中一非/卡摩瑞道中一非.gd" id="3_o022f"]
 
 [resource]
 script = ExtResource("2_o022f")
-name = "卡摩瑞的道中非符1"
 time_limit = 25.0
 hp = 2500
 move_script = ExtResource("1_ya4oi")

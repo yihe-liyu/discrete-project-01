@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bnhkuxbs53yl6"]
+
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="1_icsjk"]
+[ext_resource type="Script" uid="uid://b2tfxq8rr8ygg" path="res://data/boss_scripts/move/move_to_point.gd" id="2_p8q2q"]
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="2_qep5b"]
+[ext_resource type="Script" uid="uid://dbcpq7bf5jo43" path="res://data/stages/stage03B/phase/哆来咪三符/哆来咪三符.gd" id="3_p8q2q"]
+
+[resource]
+script = ExtResource("2_qep5b")
+name = "试符「梦外之见」"
+uid = 54
+bonus = 100000
+time_limit = 42.0
+hp = 4500
+move_script = ExtResource("1_icsjk")
+shoot_script = ExtResource("3_p8q2q")
+pre_move_script = ExtResource("2_p8q2q")
+item_power = 25
+item_point = 25
+item_life = 1
+open_reduce_time = 5.0

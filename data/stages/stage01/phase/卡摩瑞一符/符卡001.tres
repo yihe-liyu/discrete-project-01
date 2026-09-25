@@ -2,7 +2,8 @@
 
 [ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="1_6ep8w"]
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_o3sb8"]
-[ext_resource type="Script" uid="uid://b34glmw1ck5oe" path="res://data/stages/stage01/phase/spell01/spell001_shoot.gd" id="3_6ep8w"]
+[ext_resource type="Script" uid="uid://b2tfxq8rr8ygg" path="res://data/boss_scripts/move/move_to_point.gd" id="2_27v6v"]
+[ext_resource type="Script" uid="uid://b34glmw1ck5oe" path="res://data/stages/stage01/phase/卡摩瑞一符/卡摩瑞一符.gd" id="3_6ep8w"]
 
 [resource]
 script = ExtResource("1_o3sb8")
@@ -10,9 +11,10 @@ name = "音符「定点扩散」"
 uid = 1
 bonus = 100000
 time_limit = 40.0
-hp = 4000
+hp = 5000
 move_script = ExtResource("1_6ep8w")
 shoot_script = ExtResource("3_6ep8w")
+pre_move_script = ExtResource("2_27v6v")
 item_power = 25
 item_point = 25
 item_life = 1

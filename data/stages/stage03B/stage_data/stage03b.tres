@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="StageData" format=3 uid="uid://b8h4hxxbr7w6m"]
+
+[ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+stage_id = 4
+display_name = "Stage３Ｂ"
+
+bgm_key = "stage3B"
