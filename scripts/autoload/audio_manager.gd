@@ -109,7 +109,7 @@ func _bgm_sync_volume() -> void:
 
 ## 播一次音效，返回播放器（返回值通常不用）。
 ## 同帧同一流不重复；min_interval > 0 时限制该流最小播放间隔（秒，高频音效防挤兑用）
-func play_sfx(stream: AudioStream, volume_db: float = 0.0, min_interval: float = 0.0) -> void:
+func play_sfx(stream: AudioStream, volume_db: float = SFX_LEVEL_DB, min_interval: float = 0.0) -> void:
 	if _sfx_players.is_empty():
 		_init_players()
 
@@ -132,7 +132,7 @@ func play_sfx(stream: AudioStream, volume_db: float = 0.0, min_interval: float =
 
 	player.set_meta("protected", stream in _protected_streams)
 	player.stream = stream
-	player.volume_db = clampf(volume_db + _to_db(sfx_volume), -80.0, 24.0)
+	player.volume_db = clampf(volume_db + _base_db(stream) + sfx_trim_db + _to_db(sfx_volume), -80.0, 24.0)
 	player.play()
 
 
@@ -145,6 +145,38 @@ func play_ui_sfx(kind: String) -> void:
 	if key == "":
 		return
 	play_sfx(AssetRegistry.sounds[key])
+
+
+## 需要节流的高频音（擦弹/命中）：总电平走默认，只传最小间隔
+func play_sfx_throttled(stream: AudioStream, min_interval: float) -> void:
+	play_sfx(stream, SFX_LEVEL_DB, min_interval)
+
+
+## 每个音效的**基准音量**（dB）：由 `AssetRegistry.SFX_DB` 按 key 给出，首次用时反查成 stream → dB。
+## 总电平现在有名字（`SFX_LEVEL_DB`）且是默认值 —— 调用点**不用再写**，均衡关系全由表决定（R17）。
+static var _base_db_cache: Dictionary = {}
+
+
+func _base_db(stream: AudioStream) -> float:
+	if _base_db_cache.is_empty():
+		for key in AssetRegistry.sounds:
+			_base_db_cache[AssetRegistry.sounds[key]] = AssetRegistry.SFX_DB.get(key, 0.0)
+	return _base_db_cache.get(stream, 0.0)
+
+
+## 音效**总电平**（dB）。相对关系由 `AssetRegistry.SFX_DB` 决定，这里只管整体大小。
+## 曾因 `lc.sfx()` 的 db 默认 0.0（满音量）误压到 -15.0；真凶修好后已回到原值 -12.0。
+## ⚠️ 觉得**所有**音效整体偏大/偏小 → 动这一个数（3 dB ≈ 明显一档）；只嫌某一个吵 → 改 `SFX_DB` 里那一行。
+## ⚠️ 觉得**所有**音效整体偏大/偏小就动这一个数（3 dB ≈ 明显一档）；只嫌某一个吵就去改 `SFX_DB`。
+## 调用点**不用再写**它 —— 不传就是它。
+const SFX_LEVEL_DB := -12.0
+## 弹幕音效的**最小间隔**（秒）。弹幕是"每颗子弹一次"的高频源，只靠同帧去重仍可到 ~60 次/秒 ——
+## 同一个音连打就是机关枪，听感上"格外大"。节流后最多 ~12 次/秒。
+## ⚠️ 还嫌吵就继续调大（0.15 ≈ 6.7 次/秒），或直接压 `SFX_DB` 里那个音。
+const BULLET_SFX_MIN_INTERVAL := 0.08
+## **额外**压低（dB，<=0）。给"某些场景该更安静"用（当前：符卡练习）。
+## 正常流程保持 0.0 —— 不改动你已经调好的那套值。
+var sfx_trim_db: float = 0.0
 
 
 ## 从池中挑一个可用的播放器。

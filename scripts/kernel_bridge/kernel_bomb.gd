@@ -132,7 +132,7 @@ func _explode() -> void:
 	if data != null and data.shake_impulse > 0.0:
 		GameEvents.screen_shake.emit(data.shake_impulse)
 	var pos := global_position
-	AudioManager.play_sfx(AssetRegistry.sounds["shoot"], -6.0)
+	AudioManager.play_sfx(AssetRegistry.sounds["shoot"])
 	_spawn_explosion_visual(pos)
 	if bullet_manager:
 		bullet_manager.start_death_clear(pos, explode_radius, explode_duration, explode_start_radius)

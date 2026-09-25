@@ -92,7 +92,7 @@ func take_damage(damage: float):
 func die():
 	# 系统操作统一走 ctx 服务；ctx 为 null 时跳过（不回退全局）
 	if ctx:
-		ctx.audio.play_sfx(AssetRegistry.sounds["enemy_die"], -6.0)
+		ctx.audio.play_sfx(AssetRegistry.sounds["enemy_die"])
 		if death_effect:
 			ctx.effects.play_hit_effect(death_effect, global_position)
 	if registry:

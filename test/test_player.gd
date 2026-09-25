@@ -1,10 +1,23 @@
 extends GutTest
 ## Player 测试：移动/focus 低速/被弹/数据应用
+## 机体数据用**自建夹具**（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）。
+
+const FIXTURES = preload("res://test/fixtures/fixture_lib.gd")
+
+
+## 夹具机体 A / B：**两个不同实例** —— 「换机体要重建 shoot」验的是新实例（脚本可同）。
+func _mech_a() -> PlayerData:
+	return FIXTURES.player_data(6, 2)
+
+
+func _mech_b() -> PlayerData:
+	return FIXTURES.player_data(10, 4)
+
 
 func _make_player() -> Player:
 	var player = preload("res://scenes/player.tscn").instantiate()
 	autofree(player)
-	player.player_data = load("res://data/player_data/reimu_data.tres")
+	player.player_data = _mech_a()
 	add_child(player)
 	player.reinit_shoot()
 	player.global_position = Vector2(448, 800)
@@ -29,9 +42,11 @@ func test_setup_character_same_is_idempotent():
 func test_setup_character_switches_rebuilds_shoot():
 	var player := _make_player()
 	var shoot := player._player_shoot_script
-	player.setup_character(load("res://data/player_data/marisa_data.tres"))
+	var other := _mech_b()
+	player.setup_character(other)
 	assert_ne(player._player_shoot_script, shoot, "换机体应重建射击脚本")
-	assert_eq(player.player_data.resource_path, "res://data/player_data/marisa_data.tres", "player_data 应切到新机体")
+	# 身份断言，不写死资源路径（路径是内容的易变属性）
+	assert_eq(player.player_data, other, "player_data 应切到新机体")
 
 func test_move_left():
 	var player := _make_player()

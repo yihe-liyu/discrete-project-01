@@ -108,7 +108,7 @@ func collect() -> void:
 	if _is_dead:
 		return
 	_is_dead = true
-	AudioManager.play_sfx(AssetRegistry.sounds["item"], -6.0)
+	AudioManager.play_sfx(AssetRegistry.sounds["item"])
 	visible = false
 	set_physics_process(false)
 	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null

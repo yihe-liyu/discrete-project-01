@@ -8,7 +8,7 @@
 ##
 ## 用法：
 ##   var lc := BulletLifecycle.new()
-##   lc.accel_heading(-150.0).until_elapsed(2.0).sfx(&"kira", -8.0).despawn()
+##   lc.accel_heading(-150.0).until_elapsed(2.0).sfx(&"kira").despawn()
 ##   bullet_data.trajectory(lc)
 ##
 ## 设计要点：
@@ -40,14 +40,15 @@ const M_POSITION := &"position"
 const POS_PHASE_START := 0
 const POS_ANCHOR := 1
 
-# ---- Until 词汇（相位结束条件，5 + until_turned 糖）----
+# ---- Until 词汇（相位结束条件，6 + until_turned 糖）----
 const C_NEVER := &"never"
 const C_ELAPSED := &"elapsed"
 const C_NEAR := &"near"
 const C_AT_WALL := &"at_wall"
 const C_STATE := &"state"
+const C_SPEED := &"speed"    # V21：|v| 与 value 比较（CMP_GE / CMP_LE）
 
-# ---- Action 词汇（相位结束时一次性，共 6 个）----
+# ---- Action 词汇（相位结束时一次性，共 8 个 op；`despawn_clear()` 是组合糖不算 op）----
 const A_EMIT := &"emit"
 const A_EMIT_VARIANT := &"emit_variant"   # V9：独立的概率分支发射 op
 const A_SFX := &"sfx"
@@ -55,6 +56,7 @@ const A_DESPAWN := &"despawn"
 const A_SET_HEADING := &"set_heading"
 const A_SET_SPEED := &"set_speed"
 const A_CALL := &"call"
+const A_CLEAR_FX := &"clear_fx"   # 纯 action：回传「此刻位置 + 弹色」给宿主播消散特效，**不改状态**
 
 # ---- 目标 ----
 const T_PLAYER := &"player"                 ## 自机
@@ -265,6 +267,13 @@ func until_at_wall(mask: int) -> BulletLifecycle:
 	_set_until(C_AT_WALL, {&"mask": mask})
 	return self
 
+## V21：速度大小满足比较时结束（|v| cmp value；cmp = CMP_GE / CMP_LE）。
+## 典型：撞墙后 `accel_heading(-b)` 减速，`until_speed(CMP_LE, v_min)` 降到 v_min 即停。
+func until_speed(cmp: int, value: float) -> BulletLifecycle:
+	_set_until(C_SPEED, {&"cmp": cmp, &"value": value})
+	return self
+
+
 ## 便捷：当前相位的 rotate 累计转角 >= 其 limit（curve 用法）。必须跟在同相位的 rotate 之后。
 func until_turned() -> BulletLifecycle:
 	if _last_turn_slot < 0:
@@ -295,7 +304,9 @@ func _set_state_until(slot: int, cmp: int, value: float) -> void:
 # ═══ Action（当前相位的 on_end；相位结束时一次性执行）═══
 
 ## 播音效。key 见 docs/DANMAKU_API.md §7.2（如 &"kira" / &"shoot"）。
-func sfx(key: StringName, db: float = 0.0) -> BulletLifecycle:
+## ⚠️ `db` 默认必须是**总电平**，不能是 0.0 —— `0.0 dB` 是"满音量"，会让这个音比其它响约 15 dB
+## （内容里普遍写 `lc.sfx(&"kira")` 不传 db）。
+func sfx(key: StringName, db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecycle:
 	_on_end.append({&"op": A_SFX, &"key": key, &"db": db})
 	return self
 
@@ -318,10 +329,26 @@ func emit_variant(spawns: Array, dir: Dictionary, speed: float = 0.0, at: int = 
 	_on_end.append({&"op": A_EMIT_VARIANT, &"spawns": spawns, &"chance": dir, &"speed": speed, &"at": at})
 	return self
 
-## 回收自己。
+## 回收自己。**静默** —— 不播任何特效（这是默认语义：多数 despawn 发生在屏外或做超时清理）。
+## 想让人看见"这颗弹消散了"，用 `despawn_clear()`。
 func despawn() -> BulletLifecycle:
 	_on_end.append({&"op": A_DESPAWN})
 	return self
+
+
+## 播一次「消弹消散」特效（宿主的 `play_clear_fx`：位置 = 弹此刻位置，颜色 = 该弹当前色提亮 1.5×）。
+## **纯 action：不改变任何状态** —— 弹继续飞。要"消散并消失"用 `despawn_clear()`。
+func clear_fx() -> BulletLifecycle:
+	_on_end.append({&"op": A_CLEAR_FX})
+	return self
+
+
+## 消散特效 + 回收自己（= `clear_fx().despawn()`）。
+## 用于**显式**想让人看见"这颗弹消失了"的场合（时间到 / 主动湮灭）。
+## ⚠️ 别把普通 `despawn()` 一律换成它：`bounce`/`radial_accel` 在**撞墙时**回收、
+## `avoid_player` 相位2 在**屏外**回收 —— 那些地方播消散 = 屏外闪光 + 特效风暴。
+func despawn_clear() -> BulletLifecycle:
+	return clear_fx().despawn()
 
 ## 转向（保持速度大小）—— avoid / non_mid 的「逃离自机」。
 func on_end_heading(dir: Dictionary) -> BulletLifecycle:
@@ -338,13 +365,13 @@ func on_end_call(hook: Variant) -> BulletLifecycle:
 	return self
 
 
-# ═══ Canned preset（10 个 move 的类型化薄包装）═══
+# ═══ Canned preset（9 个 move 的类型化薄包装）═══
 # 组合定义在 LifecycleCatalog.build()（唯一真相）；这里只把类型化参数转成 params 字典。
 # 每个 preset 的完整展开见 docs/DANMAKU_API.md §3.8。
 
 ## 沿初速方向加速 accel_rate；碰 左/右/上 框朝 Boss 转 bounce_angle 后发射替换弹 spawn 并自灭。
 static func bounce(accel_rate: float, bounce_angle: float, spawn_speed: float, spawn: Variant,
-		sfx_key: StringName = &"kira", sfx_db: float = -8.0) -> BulletLifecycle:
+		sfx_key: StringName = &"kira", sfx_db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"bounce", {
 		&"accel": accel_rate, &"bounce_angle": bounce_angle, &"spawn_speed": spawn_speed,
 		&"spawn": spawn, &"sfx": sfx_key, &"sfx_db": sfx_db,
@@ -389,14 +416,6 @@ static func radial_accel(accel_rate: float, spawn: Variant, sfx_key: StringName 
 static func avoid_player(proximity: float, jump: float, flee_time: float) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"avoid_player", {
 		&"player_proximity": proximity, &"jump": jump, &"flee_time": flee_time,
-	})
-
-
-## 逃开自机（每 3 帧判定）→ 近 Boss boss_radius 时回调 burst 散圈并自灭。
-## burst = hook 名（StringName，需先注册）或 Callable。
-static func non_mid_flee(proximity: float, boss_radius: float, burst: Variant) -> BulletLifecycle:
-	return LifecycleCatalog.build(&"non_mid_flee", {
-		&"player_proximity": proximity, &"boss_radius": boss_radius, &"hook": burst,
 	})
 
 
@@ -451,6 +470,7 @@ const OP_C_ELAPSED := 21
 const OP_C_NEAR := 22
 const OP_C_AT_WALL := 23
 const OP_C_STATE := 24
+const OP_C_SPEED := 25
 const OP_A_EMIT := 40
 const OP_A_SFX := 41
 const OP_A_DESPAWN := 42
@@ -458,6 +478,7 @@ const OP_A_SET_HEADING := 43
 const OP_A_SET_SPEED := 44
 const OP_A_CALL := 45
 const OP_A_EMIT_VARIANT := 46   # V9：变体发射专用 op（分支不再藏在方向求值里）
+const OP_A_CLEAR_FX := 47       # 纯 action：回传位置 + 弹色（宿主播消散特效）；不改任何列式状态
 
 const TG_PLAYER := 0
 const TG_NEAREST := 1
@@ -571,6 +592,7 @@ func _op_cond(op: StringName) -> int:
 		C_NEAR: return OP_C_NEAR
 		C_AT_WALL: return OP_C_AT_WALL
 		C_STATE: return OP_C_STATE
+		C_SPEED: return OP_C_SPEED
 	return 0
 
 
@@ -583,6 +605,7 @@ func _op_act(op: StringName) -> int:
 		A_SET_HEADING: return OP_A_SET_HEADING
 		A_SET_SPEED: return OP_A_SET_SPEED
 		A_CALL: return OP_A_CALL
+		A_CLEAR_FX: return OP_A_CLEAR_FX
 	return 0
 
 
@@ -639,6 +662,7 @@ func _args_cond(c: Dictionary) -> Array:
 		C_NEAR: return head + [_target_code(c[&"target"]), float(c[&"r"])]
 		C_AT_WALL: return head + [float(c[&"mask"])]
 		C_STATE: return head + [float(c[&"slot"]), float(c[&"cmp"]), float(c[&"value"])]
+		C_SPEED: return head + [float(c[&"cmp"]), float(c[&"value"])]
 	return head
 
 

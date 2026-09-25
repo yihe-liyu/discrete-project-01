@@ -9,6 +9,9 @@
 class_name KernelNativeSystem
 extends Node
 const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
+## 消弹消散特效（与出生雾同一套 EffectType 模型）——「消弹消散」的唯一来源：
+## 死亡清弹圈扫掠（KernelBulletPhysics）与生命周期 `clear_fx()` / `despawn_clear()` 都走 play_clear_fx。
+const CLEAR_FX: EffectType = preload("res://data/fx/enemy_clear_fx.tres")
 
 @export_group("Pool")
 @export var initial_capacity: int = 1024
@@ -45,6 +48,7 @@ var _fx_phase := PackedFloat32Array()
 var _fx_type_index := PackedInt32Array()   # 行 → _fx_registry 下标（-1 = 无特效）
 var _timer := PackedFloat32Array()
 var _render_rot := PackedFloat32Array()   # V19：逐弹渲染朝向覆盖（NAN = 用 velocity 推）
+var _out_grace := PackedFloat32Array()    # 逐弹出界宽限（秒；0 = 出界立即剔除）
 
 # ── 宿主侧表 ──
 var _type_registry: Array[BulletType] = []
@@ -97,6 +101,7 @@ func _ensure_capacity(capacity: int) -> void:
 	_fx_type_index.resize(n)
 	_timer.resize(n)
 	_render_rot.resize(n)
+	_out_grace.resize(n)
 	if _accel != null:
 		_accel.reserve(n)
 
@@ -151,6 +156,7 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 	_life_left[id] = default_lifetime
 	_timer[id] = 0.0
 	_render_rot[id] = NAN
+	_out_grace[id] = bullet_data.out_grace
 	var effect: EffectType = null
 	if bullet_data.is_spawn_fog:
 		effect = bullet_data.spawn_fx if bullet_data.spawn_fx != null else _spawn_fx.get(bullet_data.faction)
@@ -165,6 +171,7 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 		_accel.set_fx(nid, _fx_phase[id])
 		_accel.set_fx_type(nid, _fx_type_index[id])
 		_accel.set_timer(nid, _timer[id])
+		_accel.set_out_grace(nid, _out_grace[id])
 		# program 在发射时就绑定（与 enable_native_behaviors 是否执行无关）；未映射 move → -1。
 		var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
 		var prog: int = _program_for(move, params)
@@ -191,9 +198,22 @@ func spawn_fx(effect: EffectType, position: Vector2, color: Color = Color.WHITE,
 	_fx_type_index[id] = fi
 	_timer[id] = 0.0
 	_render_rot[id] = NAN
+	_out_grace[id] = 0.0   # 纯特效行不参与出界宽限
 	if _accel != null:
 		_accel.spawn_fx(fi, position, color, int(faction), effect.duration)
 	return id
+
+
+## 播一次「消弹消散」：**同色提亮 1.5×**（与死亡清弹圈扫掠完全一致）。
+## 纯特效行，无节点/tween 分配。调用方：KernelBulletPhysics 的 sweep，以及生命周期 op 47（`clear_fx`）。
+func play_clear_fx(pos: Vector2, tint: Color) -> void:
+	var bright := Color(
+		minf(tint.r * 1.5, 1.0),
+		minf(tint.g * 1.5, 1.0),
+		minf(tint.b * 1.5, 1.0),
+		tint.a
+	)
+	spawn_fx(CLEAR_FX, pos, bright, BulletType.Faction.ENEMY)
 
 
 ## 回收：快照 swap-with-last（供帧内一致性）+ 原生权威 swap。
@@ -212,15 +232,49 @@ func despawn(id: int) -> void:
 		_fx_type_index[id] = _fx_type_index[tail]
 		_timer[id] = _timer[tail]
 		_render_rot[id] = _render_rot[tail]
+		_out_grace[id] = _out_grace[tail]
 	_active_count -= 1
 	if _accel != null:
 		_accel.despawn(id)
+
+
+## 逐弹出界宽限（秒）—— 与原生 `DanmakuStore.set_out_grace` 同名同义。
+## 常规发射路径不需要它（grace 随 `BulletType.out_grace` 在 spawn 时推下去）；
+## 本方法供 parity / 调试在发射后改。
+func set_out_grace(id: int, grace: float) -> void:
+	if id < 0 or id >= _active_count:
+		return
+	_out_grace[id] = grace
+	if _accel != null:
+		_accel.set_out_grace(id, grace)
+
+
+## 读**原生行**的出界宽限（测试/调试用；无原生或越界 → -1）。
+func get_out_grace(id: int) -> float:
+	if id < 0 or id >= _active_count or _accel == null:
+		return -1.0
+	return _accel.get_out_grace(id)
 
 
 func clear() -> void:
 	_active_count = 0
 	if _accel != null:
 		_accel.clear()
+
+
+## 重置内核注册表：丢弃全部已注册 program / 弹型 / 特效，并重建原生 store。
+## **只在清场后（无弹）调用** —— 原生 store 的 program 表只增不减，工作台/工具反复重来会积累
+## （每次重建内容脚本 → 新 BulletData 实例 → 新签名）；正常游戏靠换 scene 重建 BulletManager 天然重置。
+func reset_registries() -> void:
+	_active_count = 0
+	_accel = null            # 丢旧 store：program / SoA 一并释放，下次 _ensure_native 新建
+	_program_data.clear()
+	_program_anchors.clear()
+	_sig_to_program.clear()
+	_type_registry.clear()
+	_fx_registry.clear()
+	_catalog = LifecycleCatalog.new()
+	_ensure_native()
 
 
 # ═══ 写访问器（工具 / 回退 / 测试）═══
@@ -501,9 +555,16 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 				var key: StringName = c["sfx"][local[k]]
 				var stream = AssetRegistry.sounds.get(String(key), null)
 				if stream != null:
-					AudioManager.play_sfx(stream, vals[k])
+					# 节流：弹幕音效"每颗子弹一次"，不节流会变成同音机关枪（见 BULLET_SFX_MIN_INTERVAL）
+					AudioManager.play_sfx(stream, vals[k], AudioManager.BULLET_SFX_MIN_INTERVAL)
 			2:
 				var hook: Variant = c["actions"][local[k]]
 				var fn: Callable = hook if hook is Callable else LIFECYCLE_HOOKS_SCRIPT.resolve(hook)
 				if fn.is_valid():
 					fn.call(Vector2(xs[k], ys[k]), boss_pos, has_boss, behavior_host)
+			3:
+				# op 47（clear_fx / despawn_clear）：原地播消散，颜色用**该弹自己的色**（原生随事件回传）。
+				# 行此刻可能已被 swap-remove，所以颜色只能来自事件载荷 —— 不能用 res.bullet[k] 回查。
+				var colors: PackedColorArray = res.get("color", PackedColorArray())
+				var tint: Color = colors[k] if k < colors.size() else Color.WHITE
+				play_clear_fx(Vector2(xs[k], ys[k]), tint)

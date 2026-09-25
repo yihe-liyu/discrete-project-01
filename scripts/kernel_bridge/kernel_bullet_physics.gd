@@ -4,17 +4,10 @@
 ## 几何唯一实现归内核（query_circle / hit_test），本层只做"规则"（命中 / 擦弹 / 伤害 / 特效）。
 ## 覆盖：敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹）；自机弹 ↔ 敌人
 ## （damage 侧表 + 记忆加成 + 音效/特效）；死亡清弹扫掠（sweep_enemy_bullets）。
-## 待补：bomb（X）+ 出界宽限（out_grace）。
+## 待补：bomb（X）。
 class_name KernelBulletPhysics
 extends RefCounted
 
-## 消弹消散特效（与出生雾同一套 EffectType 模型）。
-const _clear_effect_type: EffectType = preload("res://data/fx/enemy_clear_fx.tres")
-
-## 命中音效音量表（key → dB；未列出的默认 -14）：与旧 BulletPhysics.HIT_SFX_VOLUME 一致。
-const HIT_SFX_VOLUME := {
-	"marisa_damage": -10.0,
-}
 
 var backend: KernelBulletHost
 ## 组合根注入的特效层（空则静默）
@@ -32,17 +25,13 @@ func _player_res() -> PlayerResources:
 	return entity_registry.get_player_resources() if entity_registry != null else null
 
 
-## 消弹特效（同色，提亮 1.5x）：纯特效行进内核池（与出生雾共用一套 EffectType），无节点/tween 分配。
+## 消弹消散特效的实现已上移 `KernelNativeSystem.play_clear_fx()`（单一真相）——
+## 因为生命周期 `clear_fx()` / `despawn_clear()` 也要用同一套「同色提亮 1.5×」。
+## 保留本薄包装只为不改 sweep 的两个调用点。
 func _play_clear(pos: Vector2, tint: Color) -> void:
 	if backend == null or backend.system == null:
 		return
-	var bright := Color(
-		minf(tint.r * 1.5, 1.0),
-		minf(tint.g * 1.5, 1.0),
-		minf(tint.b * 1.5, 1.0),
-		tint.a
-	)
-	backend.system.spawn_fx(_clear_effect_type, pos, bright, BulletType.Faction.ENEMY)
+	backend.system.play_clear_fx(pos, tint)
 
 
 ## 每帧碰撞派发（由 BulletManager._physics_process 在内核积分之后调用）。
@@ -157,13 +146,13 @@ func _play_hit_sfx(sfx_key: StringName, enemy) -> void:
 	var key: String = String(sfx_key)
 	if key == "":
 		if enemy is Boss and (enemy as Boss).is_low_hp():
-			AudioManager.play_sfx(AssetRegistry.sounds["normal_damage"], -14.0, 0.05)
+			AudioManager.play_sfx_throttled(AssetRegistry.sounds["normal_damage"], 0.05)
 		return
 	var sfx: AudioStream = AssetRegistry.sounds.get(key, null)
 	if sfx == null:
 		push_warning("KernelBulletPhysics: 未知命中音效 key '%s'（回退 normal_damage）" % key)
 		sfx = AssetRegistry.sounds["normal_damage"]
-	AudioManager.play_sfx(sfx, HIT_SFX_VOLUME.get(key, -14.0), 0.05)
+	AudioManager.play_sfx_throttled(sfx, 0.05)
 
 
 ## 命中特效：场景在 BulletType.hit_fx，颜色取该弹当前色（与旧 _spawn_effect 1:1）。
@@ -192,4 +181,4 @@ func on_graze() -> void:
 		res.graze_count += 1
 		res.add_score(10)
 		res.add_memory(PlayerResources.MEMORY_GRAZE)
-	AudioManager.play_sfx(AssetRegistry.sounds["graze"], -2.0, 0.03)
+	AudioManager.play_sfx_throttled(AssetRegistry.sounds["graze"], 0.03)

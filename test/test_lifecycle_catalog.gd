@@ -10,7 +10,6 @@ func test_build_all_moves() -> void:
 		&"radial_accel": {&"accel_rate": 120.0, &"spawn_factory": Callable(), &"sfx": "kira", &"sfx_db": -6.0},
 		&"bounce": {&"accel": 100.0, &"bounce_angle": 0.3, &"spawn_factory": Callable(), &"spawn_speed": 0.0, &"sfx": "kira", &"sfx_db": -8.0},
 		&"avoid_player": {},
-		&"non_mid_flee": {&"player_proximity": 150.0, &"on_flee_burst": Callable()},
 		&"marisa_laser": {&"anchor_id": 0, &"anchor_offset": Vector2(1, 0), &"drift_speed": 800.0, &"angle": 0.3},
 		&"laser_follow": {&"anchor_id": 0, &"anchor_offset": Vector2(1, 0), &"drift_speed": 1000.0, &"angle": 0.0, &"initial_drift": 5.0},
 	}
@@ -28,8 +27,6 @@ func test_build_structure() -> void:
 	assert_eq(h.phases[0][&"moves"][0][&"op"], BulletLifecycle.M_STEER, "homing 首 move")
 	var cv := LifecycleCatalog.build(&"curve", {&"curve": 2.0, &"curve_limit": 1.0})
 	assert_eq(cv.phases.size(), 2, "curve 两相位")
-	var nm := LifecycleCatalog.build(&"non_mid_flee", {&"player_proximity": 150.0})
-	assert_eq(nm.phases.size(), 2, "non_mid 两相位")
 
 
 func test_unknown_move_returns_null() -> void:

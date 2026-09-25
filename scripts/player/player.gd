@@ -209,7 +209,7 @@ func _bomb() -> void:
 		return
 	if not resources.use_bomb():
 		return
-	_play_sfx(AssetRegistry.sounds["player_card"], -6.0)
+	_play_sfx(AssetRegistry.sounds["player_card"])
 	GameEvents.player_bomb.emit(bomb_data.name)
 	GameEvents.field_filter.emit(bomb_data.field_filter_color)
 	# Bomb 期间短暂无敌
@@ -229,7 +229,7 @@ func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
 	var count := maxi(bomb_data.count, 1)
 	var dir := Vector2.RIGHT.rotated(TAU * float(i) / float(count))
 	var tint := bomb_data.tint_for(i, base_hue)
-	_play_sfx(AssetRegistry.sounds["shoot"], -6.0)
+	_play_sfx(AssetRegistry.sounds["shoot"])
 	if ctx:
 		ctx.bullets.shoot_bomb(bomb_data, global_position, dir, tint, float(i) * bomb_data.interval)
 
@@ -248,7 +248,7 @@ func _memory_release() -> void:
 
 	# 视觉特效：反色圈（走服务）
 	_miss_circle(pos, MEM_RELEASE_DURATION, MEM_RELEASE_RANGE, 30, 0.0, 0.25)
-	_play_sfx(AssetRegistry.sounds["kira"], -6.0)
+	_play_sfx(AssetRegistry.sounds["kira"])
 
 	# 消弹 + 每颗弹原地掉道具（碎片有上限）
 	var limits := {life = 0, bomb = 0}
@@ -311,7 +311,7 @@ func miss() -> void:
 	if is_invincible:
 		return
 
-	_play_sfx(AssetRegistry.sounds["player_die"], -6.0)
+	_play_sfx(AssetRegistry.sounds["player_die"])
 	var pos: Vector2 = global_position
 	_miss_circle(pos, 2.5, 1280)
 	_miss_circle(pos + Vector2(100, 0), 2.5, 1280)
@@ -348,7 +348,7 @@ func _miss_circle(world_pos: Vector2, duration: float, max_radius: float,
 		ctx.effects.add_miss_circle(world_pos, duration, max_radius, start_radius, start_delay, fade_out)
 
 
-func _play_sfx(stream: AudioStream, volume_db: float = 0.0) -> void:
+func _play_sfx(stream: AudioStream, volume_db: float = AudioManager.SFX_LEVEL_DB) -> void:
 	if ctx:
 		ctx.audio.play_sfx(stream, volume_db)
 

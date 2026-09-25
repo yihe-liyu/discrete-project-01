@@ -2,8 +2,8 @@ extends PlayerShootScript
 class_name MarisaShoot
 
 const OPTION_VISUAL = preload("res://scripts/coroutine/player/marisa_option_visual.gd")
-## 激光贴图：从注册器取（与 bullet_configs marisa_opt1 同源）
-var LASER_TEX: Texture2D = AssetRegistry.get_bullet_tex("marisa_opt1")
+## 激光条 = 图集合体格 `魔理沙子机高速弹`（512×32，8 段 ×64）；切片直接取自**原始图集**。
+const LASER_SHAPE := &"魔理沙子机高速弹"
 
 const MAIN_INTERVAL: int = 3
 const OPTION_INTERVAL: int = 6
@@ -40,7 +40,7 @@ var _laser_trajectories: Dictionary = {}
 
 func _seg_count() -> int:
 	if _segments < 0:
-		_segments = maxi(1, int(LASER_TEX.get_size().x / SEG_W))
+		_segments = maxi(1, int(BulletShapes.pixel_rect(LASER_SHAPE).size.x / SEG_W))
 	return _segments
 
 
@@ -85,7 +85,7 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 			_focus_bullet_data.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
 			_focus_bullet_data.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option02.tscn")
 		_shoot_options(ctx, _focus_bullet_data, 1, 0.0, Vector2.UP, Vector2.ZERO)
-		ctx.audio.play_sfx(AssetRegistry.sounds["msl"], -8.0)
+		ctx.audio.play_sfx(AssetRegistry.sounds["msl"])
 		return ctx.clock.wait_frames(5)
 	else:
 		# 非 focus：流水激光（按间距喷段，频率自动跟随漂移速度 → 任何速度都无缝）
@@ -113,8 +113,8 @@ func _make_laser_segment(i: int) -> AtlasTexture:
 	if _segment_textures.is_empty():
 		for segment in _seg_count():
 			var at := AtlasTexture.new()
-			at.atlas = LASER_TEX
-			at.region = Rect2(segment * SEG_W, 0, SEG_W, SEG_H)
+			at.atlas = BulletShapes.BULLET_ATLAS_TEXTURE
+			at.region = Rect2(BulletShapes.pixel_rect(LASER_SHAPE).position + Vector2(segment * SEG_W, 0.0), Vector2(SEG_W, SEG_H))
 			_segment_textures.append(at)
 	return _segment_textures[i % _seg_count()]
 

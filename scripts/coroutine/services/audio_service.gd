@@ -12,6 +12,6 @@ func stop_bgm() -> void:
 	if not is_active: return
 	AudioManager.stop_bgm()
 
-func play_sfx(stream: AudioStream, volume_db: float = 0.0) -> void:
+func play_sfx(stream: AudioStream, volume_db: float = AudioManager.SFX_LEVEL_DB) -> void:
 	if not is_active: return
 	AudioManager.play_sfx(stream, volume_db)

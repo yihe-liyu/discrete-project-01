@@ -42,7 +42,7 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 			lc.until_at_wall(BulletLifecycle.WALL_TOP)
 			var sfx_radial := StringName(params.get(&"sfx", ""))
 			if sfx_radial != &"":
-				lc.sfx(sfx_radial, float(params.get(&"sfx_db", 0.0)))
+				lc.sfx(sfx_radial, float(params.get(&"sfx_db", AudioManager.SFX_LEVEL_DB)))
 			lc.emit(_spawn_of(params), BulletLifecycle.heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
 			lc.despawn()
 		&"bounce":
@@ -50,7 +50,7 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 			lc.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
 			var sfx_bounce := StringName(params.get(&"sfx", "kira"))
 			if sfx_bounce != &"":
-				lc.sfx(sfx_bounce, float(params.get(&"sfx_db", -8.0)))
+				lc.sfx(sfx_bounce, float(params.get(&"sfx_db", AudioManager.SFX_LEVEL_DB)))
 			lc.emit(_spawn_of(params),
 				BulletLifecycle.toward(BulletLifecycle.T_BOSS, float(params.get(&"bounce_angle", 0.0))),
 				float(params.get(&"spawn_speed", 0.0)), BulletLifecycle.AT_PHASE_END)
@@ -60,14 +60,6 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 			lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
 			lc.then()
 			lc.until_elapsed(float(params.get(&"flee_time", 2.0)))
-			lc.despawn()
-		&"non_mid_flee":
-			var radius: float = float(params.get(&"boss_radius", 150.0))   # 半径是内容调参，由内容按难度传
-			lc.until_near(BulletLifecycle.T_PLAYER, float(params.get(&"player_proximity", 150.0))).every_ticks(3)
-			lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
-			lc.then()
-			lc.until_near(BulletLifecycle.T_BOSS, radius).every_ticks(3)
-			lc.on_end_call(_hook_of(params))
 			lc.despawn()
 		&"marisa_laser":
 			lc.anchor_drift(int(params.get(&"anchor_id", 0)), params.get(&"anchor_offset", Vector2.ZERO),
@@ -87,11 +79,6 @@ static func build(move: StringName, params: Dictionary) -> BulletLifecycle:
 ## 替换弹来源：新写法 `spawn`（BulletData）优先，兼容旧 `spawn_factory`（Callable）。
 static func _spawn_of(params: Dictionary) -> Variant:
 	return params.get(&"spawn", params.get(&"spawn_factory", null))
-
-
-## 内容回调来源：新写法 `hook`（StringName）优先，兼容旧 `on_flee_burst`（Callable）。
-static func _hook_of(params: Dictionary) -> Variant:
-	return params.get(&"hook", params.get(&"on_flee_burst", null))
 
 
 ## 签名：同 (move, params) 只编译一次。难度相关值（如 non_mid 半径）由内容放进 params，故无需额外入签名。

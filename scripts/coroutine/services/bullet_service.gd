@@ -13,7 +13,7 @@ func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base
 	if not is_active or count <= 0 or bullet_manager == null:
 		return
 	if sfx:
-		AudioManager.play_sfx(sfx, -8.0)
+		AudioManager.play_sfx(sfx)
 	if count == 1:
 		bullet_manager.shoot_bullet(bullet_data, at, base_dir)
 		return
