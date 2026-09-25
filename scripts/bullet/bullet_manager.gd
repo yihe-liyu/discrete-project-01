@@ -170,6 +170,15 @@ func clear_bullets():
 		_kernel_bullet_host.system.clear()
 		_kernel_bullet_host.clear_bombs()
 
+
+## 清场 + 回收内核注册表（program / 弹型 / 纹理句柄）。**仅工具 / 工作台**用：
+## 原生 store 的 program 表只增不减，反复重开演（每次重建内容脚本 → 新 BulletData）会积累；
+## 正常游戏靠换 scene 重建 BulletManager 天然重置，不需要它。
+func reset_world() -> void:
+	clear_all()
+	if _kernel_bullet_host != null:
+		_kernel_bullet_host.reset_registries()
+
 func pause_processing() -> void:
 	_is_processing_paused = true
 	if _kernel_bullet_host != null:

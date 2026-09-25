@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="BulletDef" format=3 uid="uid://1ox0gqg3ajin"]
+
+[ext_resource type="Script" uid="uid://cqb7pnjafn5nk" path="res://scripts/data/bullet_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"中玉"
+texture_key = &"中玉"
+hitbox_radius = 24.0

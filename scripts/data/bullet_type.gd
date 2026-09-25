@@ -1,8 +1,9 @@
-## 弹型定义（纯数据，R17）：形状 | 判定 | 阵营 | 可选特效。
-## 运行时每颗弹是 BulletSystem 池里的一行，绝不实例化成节点；同型弹共享这里的参数。
-## 速度/方向不在这里——由射击方在 spawn() 时传入。
-## 存成 .tres 用 Inspector 编辑（data/bullets/*.tres），也可代码构造（测试用）。
-## @tool：编辑器里 .tres 才是真实例——@tool 工具脚本（弹型查看器）要调 rotation_for 等方法，
+## 弹型（**运行时内核类型**，纯数据）：形状 | 判定 | 阵营 | 可选特效。
+## 运行时每颗弹是内核 SoA 里的一行，绝不实例化成节点；同型弹共享这里的参数。
+## 速度 / 颜色 / 弹道不在这里 —— 由 `BulletData`（内容构造助手）逐发传入。
+## **本类不落 .tres**：内容资源是 `BulletDef`（`data/bullets/*.tres`，只外观+碰撞+朝向）；
+## `BulletData.to_bullet_type()` 首次发射时把类型级字段快照成本类并缓存（同实例 → 同弹型）。
+## @tool：编辑器里 @tool 工具脚本（弹型查看器）要调 rotation_for 等方法，
 ## 没有 @tool 的话加载出来是 placeholder，会报 "Attempt to call a method on a placeholder instance"。
 @tool
 class_name BulletType
@@ -23,8 +24,6 @@ enum TintMode { MULTIPLY, BLEND }
 @export var faction: Faction = Faction.ENEMY
 
 @export_group("Visual | Collision")
-## atlas 形状 key（渲染器经 BulletShapes 解析成 UV）；视觉尺寸由贴图决定。
-@export var texture_key: StringName = &""
 ## 染色模式（默认 BLEND：我们的图集是彩图，靠亮度换色；自机弹用 MULTIPLY 保原色）。
 @export var tint_mode: TintMode = TintMode.BLEND
 ## 受击判定半径（很小，S2），与视觉尺寸独立。擦弹半径不属弹型——由自机定义。
@@ -39,9 +38,10 @@ enum TintMode { MULTIPLY, BLEND }
 @export var follow_dir: bool = true
 ## 贴图朝向补偿（仅在 follow_dir 时生效）：素材朝右 = 0；朝上 = +PI/2；朝下 = -PI/2；朝左 = PI。
 @export var dir_offset: float = 0.0
-## 帧数（>1 = 多帧弹型）：帧在 atlas 里**从 texture_key 那格向右连续排列**，每帧宽 = 该格宽。
-## 子弹行存当前帧（BulletSystem.set_frame），渲染时按帧号平移 UV。
-@export var frame_count: int = 1
+## 出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
+## 与 `hitbox_*` 同规格：类型级字段 → 发射时逐行 `set_out_grace` 推给内核（内核**解释**它）。
+## 用于「出界再回来」的弹（往返探针）；bounce / radial_accel 在界内撞墙回收，不需要它。
+@export var out_grace: float = 0.0
 
 @export_group("Hit effect（可选：命中的那一方播）")
 ## 击中特效场景（自机弹用）：命中时在命中点播一次（FxPool 池化节点，支持帧动画）。
@@ -60,10 +60,6 @@ enum TintMode { MULTIPLY, BLEND }
 @export var damage: float = 1.0
 ## 命中音效 key：宿主读；内核本体不解释。空 = 宿主默认规则。
 @export var hit_sfx: StringName = &""
-
-@export_group("Laser (reserved) — 现在不画，先留字段")
-@export var laser_width: float = 0.0
-@export var laser_grow_time: float = 0.0
 
 
 ## 该弹在给定速度下的朝向（弧度）：跟随飞行方向时 = 速度角 + dir_offset；关闭跟随或零速度 = 轴对齐。

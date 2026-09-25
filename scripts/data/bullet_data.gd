@@ -13,12 +13,12 @@ var damage: float = 10.0                              ## 基础伤害（支持�
 var velocity: Vector2 = Vector2.UP                   ## 速度向量
 var hit_effect: PackedScene                          ## 击中特效
 var faction: Faction = Faction.PLAYER                ## 阵营
-var can_be_canceled: bool = false                    ## 是否可被 Bomb 消除
 var hitbox_shape: HitboxShape = HitboxShape.CIRCLE   ## 判定形状
 var hitbox_offset: Vector2 = Vector2.ZERO            ## 判定偏移
-var hitbox_rotation: float = 0.0                     ## 判定旋转（弧度）
 var hitbox_radius: float = 4.0                       ## 判定半径
 var hitbox_size: Vector2 = Vector2(8, 8)             ## 矩形判定尺寸
+var follow_dir: bool = true                          ## 贴图/判定随飞行方向旋转（默认开；圆弹无所谓，有朝向的弹要开）
+var dir_offset: float = 0.0                          ## 朝向补偿（弧度，仅 follow_dir 时生效；素材朝右=0、朝上=+PI/2、朝下=-PI/2、朝左=PI）
 var is_spawn_fog: bool = true                           ## 是否跟随阵营出生雾（.no_spawn_fog() 逐型关掉，与调用顺序无关）
 var spawn_fx: EffectType                             ## 出生特效（null = 用阵营默认）
 var coroutine_script: Script                         ## 移动协程脚本（如诱导跟踪）
@@ -32,21 +32,30 @@ var hit_sfx: String = ""                             ## 命中音效注册器 ke
 var out_grace: float = 0.0                           ## 出界宽限（秒）：出界后仍存活这段时间再回收；0 = 出界立即回收
 
 ## ---- 构造链方法 ----
-func tex(key: String) -> BulletData:
-	texture = AssetRegistry.get_bullet_tex(key)
-	var cfg: Dictionary = AssetRegistry.bullet_configs.get(key, {})
-	var hb: Dictionary = cfg.get("hitbox", {})
-	if hb.has("circle"):
+
+## 从弹型定义（`data/bullets/*.tres`）载入**外形 + 碰撞 + 朝向**。
+## 只覆盖外观/判定/朝向；阵营 / 染色 / 特效 / 伤害仍由构造链设（构造链就是为了少新建资源）。
+## 未知 key → `BulletCatalog` 告警 + 保持现状（**不静默回退**）。
+func def(d: BulletDef) -> BulletData:
+	if d == null:
+		return self
+	texture = BulletShapes.atlas_texture(d.texture_key) if d.texture_key != &"" else null
+	hitbox_radius = d.hitbox_radius
+	hitbox_offset = d.hitbox_offset
+	if d.hitbox_size == Vector2.ZERO:
 		hitbox_shape = HitboxShape.CIRCLE
-		hitbox_radius = hb["circle"]
-	elif hb.has("rect"):
+		hitbox_size = Vector2(8, 8)
+	else:
 		hitbox_shape = HitboxShape.RECTANGLE
-		var rect: Dictionary = hb["rect"]
-		hitbox_size = Vector2(rect.get("w", 48), rect.get("h", 24))
-		hitbox_rotation = rect.get("rotation", 0.0)
-	var off: Dictionary = hb.get("offset", {"x": 0, "y": 0})
-	hitbox_offset = Vector2(off.get("x", 0), off.get("y", 0))
+		hitbox_size = d.hitbox_size
+	follow_dir = d.follow_dir
+	dir_offset = d.dir_offset
 	return self
+
+
+## 按 key 取弹型定义并载入（= `def(BulletCatalog.find(key))`）。**key 必须来自 `7.1 表**。
+func tex(key: String) -> BulletData:
+	return def(BulletCatalog.find(key))
 
 func speed(v: float) -> BulletData:
 	velocity.y = v
@@ -72,7 +81,6 @@ func blend(b: bool) -> BulletData:
 
 func enemy() -> BulletData:
 	faction = Faction.ENEMY
-	can_be_canceled = true
 	# 不碰 is_spawn_fog：出生雾归阵营默认，逐型开关由 no_spawn_fog()/with_spawn_fog() 定，
 	# 否则「先 no_spawn_fog 再 enemy」会被静默覆写。
 	return self
@@ -92,13 +100,11 @@ func no_spawn_fog() -> BulletData:
 
 func player() -> BulletData:
 	faction = Faction.PLAYER
-	can_be_canceled = false
 	damage = 10
 	return self
 
 func bomb() -> BulletData:
 	faction = Faction.BOMB
-	can_be_canceled = false
 	damage = 50
 	hitbox_shape = HitboxShape.CIRCLE
 	hitbox_radius = 45.0
@@ -145,7 +151,9 @@ func _build_bullet_type() -> BulletType:
 	bt.hitbox_offset = hitbox_offset
 	# 内核语义：非零 hitbox_size = 矩形；本类默认 size(8,8) 但 shape=CIRCLE，必须归零。
 	bt.hitbox_size = hitbox_size if hitbox_shape == HitboxShape.RECTANGLE else Vector2.ZERO
-	bt.follow_dir = true
+	bt.follow_dir = follow_dir
+	bt.dir_offset = dir_offset
+	bt.out_grace = out_grace
 	bt.hit_fx = hit_effect
 	bt.is_spawn_fog = is_spawn_fog
 	bt.spawn_fx = spawn_fx

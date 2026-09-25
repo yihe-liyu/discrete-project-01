@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="BulletDef" format=3 uid="uid://c81efc4gj8sxi"]
+
+[ext_resource type="Script" uid="uid://cqb7pnjafn5nk" path="res://scripts/data/bullet_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"reimu_main"
+texture_key = &"灵梦自机主弹"
+hitbox_size = Vector2(48, 24)
