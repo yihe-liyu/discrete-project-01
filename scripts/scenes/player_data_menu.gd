@@ -100,9 +100,12 @@ func _collect_cards() -> void:
 		if seen.has(key):
 			continue
 		seen[key] = true
+		# 名字**现从花名册取**（`SpellRecord` 不存名字 —— 快照会锁死首次遇到的难度卡名）：
+		# 用记录自己的难度，取到的是玩家当时打的那张卡。
+		var phase: PhaseData = BossCatalog.phase_at(record.stage, record.phase_index, record.difficulty)
 		_cards.append({
 			"stage": record.stage, "phase_index": record.phase_index, "boss_index": record.boss_index,
-			"uid": record.uid, "name": record.name,
+			"uid": record.uid, "name": phase.name if (phase and phase.name != "") else "-",
 		})
 	_cards.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return a["stage"] < b["stage"] or (a["stage"] == b["stage"] and a["phase_index"] < b["phase_index"]))

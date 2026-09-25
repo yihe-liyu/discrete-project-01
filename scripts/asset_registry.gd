@@ -2,6 +2,9 @@
 ## 不再是 autoload（R9）—— 改 `class_name` 静态表（R8）；调用方 `AssetRegistry.xxx` 语法不变。
 ## **契约**：本表的 `res://` 与中文 key 属内容槽引用，按基线「命名边界契约」**明确豁免**（非机制标识符）。
 ## **退役条件**：随 S13 图集 + 数据化（F7：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁 `data/*.tres`（R17）；迁完一表移除一表豁免。
+## **F7 进度（2026-09-20）**：A = 弹幕贴图全部进图集（`data/atlas/bullet_shapes.tres` + `assets/Textures/bullet/bullet.png`）；
+## ② = 弹型内容表从代码 `bullet_configs` 迁到 `data/bullets/*.tres`（`BulletCatalog` 读取）→ **`bullet_configs` 表已退役**。
+## 本表仅余 `enemy_visuals` / `sounds` / `BGM_PATHS` / `LASER_TEXTURE`（内容槽引用豁免范围相应收窄）。
 class_name AssetRegistry
 
 const enemy_visuals := {
@@ -22,37 +25,38 @@ const enemy_visuals := {
 }
 
 
-const bullet_configs := {
-	# 微型弹
-	"点弹":   {"tex": preload("res://assets/Textures/bullet/点弹.png"),   "hitbox": {"circle": 4.0, "offset": {"x": 0, "y": 0}}},
-	"点棱弹":   {"tex": preload("res://assets/Textures/bullet/点棱弹.png"),   "hitbox": {"circle": 4.0, "offset": {"x": 0, "y": 0}}},
-	"菌弹":   {"tex": preload("res://assets/Textures/bullet/菌弹.png"),   "hitbox": {"circle": 4.0, "offset": {"x": 0, "y": 0}}},
-	# 小型弹
-	"小玉":   {"tex": preload("res://assets/Textures/bullet/小玉.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"星弹":   {"tex": preload("res://assets/Textures/bullet/星弹.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"枪弹":   {"tex": preload("res://assets/Textures/bullet/枪弹.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"棱弹":   {"tex": preload("res://assets/Textures/bullet/棱弹.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"滴弹":   {"tex": preload("res://assets/Textures/bullet/滴弹.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"环玉":   {"tex": preload("res://assets/Textures/bullet/环玉.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"符札":   {"tex": preload("res://assets/Textures/bullet/符札.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"米弹":   {"tex": preload("res://assets/Textures/bullet/米弹.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"苦无":   {"tex": preload("res://assets/Textures/bullet/苦无.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"长菌弹":   {"tex": preload("res://assets/Textures/bullet/长菌弹.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	"鳞弹":   {"tex": preload("res://assets/Textures/bullet/鳞弹.png"),   "hitbox": {"circle": 6.0, "offset": {"x": 0, "y": 0}}},
-	# 中型弹
-	"小光玉": {"tex": preload("res://assets/Textures/bullet/小光玉.png"), "hitbox": {"circle": 12.0, "offset": {"x": 0, "y": 0}}},
+## 激光贴图（碰撞由激光系统自行处理，这里只提供贴图）。
+## 弹幕的**贴图引用 / 判定 / 朝向**已迁到 `data/bullets/*.tres`（`BulletCatalog` 读取）：
+## 见 `scripts/data/bullet_catalog.gd` + `scripts/data/bullet_type.gd`；本表不再承载弹型内容。
+const LASER_TEXTURE := preload("res://assets/Textures/bullet/laser.png")
 
-	# 自机弹
-	"reimu_main":     {"tex": preload("res://assets/Textures/player/reimu_main_bullet.png"),    "hitbox": {"rect": {"w": 48, "h": 24}, "offset": {"x": 0, "y": 0}}},
-	"reimu_opt1":     {"tex": preload("res://assets/Textures/player/reimu_option_bullet1.png"), "hitbox": {"circle": 12.0, "offset": {"x": 0, "y": 0}}},
-	"reimu_opt2":     {"tex": preload("res://assets/Textures/player/reimu_option_bullet2.png"), "hitbox": {"rect": {"w": 120, "h": 24}, "offset": {"x": 0, "y": 0}}},
-	"marisa_main":    {"tex": preload("res://assets/Textures/player/marisa_main_bullet.png"),   "hitbox": {"rect": {"w": 48, "h": 24}, "offset": {"x": 0, "y": 0}}},
-	"marisa_opt1":    {"tex": preload("res://assets/Textures/player/marisa_option_bullet1.png"), "hitbox": {"rect": {"w": 32, "h": 32}, "offset": {"x": 0, "y": 0}}},
-	"marisa_opt2":    {"tex": preload("res://assets/Textures/player/marisa_option_bullet2.png"), "hitbox": {"rect": {"w": 48, "h": 24}, "offset": {"x": 0, "y": 0}}},
-	"reimu_bomb01":   {"tex": preload("res://assets/Textures/player/reimu_bomb01.png"), "hitbox": {"circle": 45.0, "offset": {"x": 0, "y": 0}}},
-	# 激光贴图（碰撞由激光系统自行处理，这里只提供贴图）
-	"laser":    {"tex": preload("res://assets/Textures/bullet/laser.png"), "hitbox": {"circle": 0.0, "offset": {"x": 0, "y": 0}}},
+## 音效**均衡表**（dB，已中心化：整表均值 ≈ 0）。
+## 来源：量各 wav 的 RMS，向 -20 dBFS 对齐后减去均值 —— 所以**总电平**（`AudioManager.SFX_LEVEL_DB`）不受影响，
+## 这里只表达**相对**关系（谁该响一点、谁该轻一点）。
+## ⚠️ 觉得哪个音不对，**只改这里**就行，不用去动播放代码。
+## 定位：**RMS 只是起点，耳朵才是终局** —— 它负责把源文件之间 ~13 dB 的电平差拉平；
+## 短促/高频音的听感偏差（`kira` 偏响、菜单点击偏小）RMS 无法建模，只能手调（下面标 `## 手调` 的就是）。
+## 新加音效时用 `python3 tools/sfx_db_baseline.py` 算起点，并看哪些是手调过的。
+const SFX_DB := {
+	"cancel": 0.0,   ## 手调：菜单返回音，同上
+	"card": -1.7,
+	"enemy_die": +1.2,
+	"graze": +4.1,
+	"item": +3.9,
+	"kira": -6.0,   ## 手调（作者反馈两次）：弹幕每颗子弹都发它，密度+高频 ⇒ 必须比 RMS 值再低一截
+	"lazer": -4.7,
+	"marisa_damage": +5.9,
+	"msl": +1.2,
+	"normal_damage": -4.7,
+	"ok": +2.9,
+	"pause": +2.9,
+	"player_card": +1.9,   ## 手调：Bomb 宣言是关键时刻音，该亮出来
+	"player_die": -4.7,
+	"player_shoot": -5.8,   ## 手调：自机射击是持续音，连打时疲劳；作者两次反馈偏大
+	"select": -1.7,   ## 手调：菜单导航音。短促点击，RMS 高估了它的响度 ⇒ 表里被压过头，作者反馈偏小
+	"shoot": +0.6,   ## 手调：作者要求更突出
 }
+
 
 const sounds := {
 	"shoot":        preload("res://assets/Sound/shoot.wav"),
@@ -183,7 +187,3 @@ static func _unlock_music_by_key(bgm_key: String) -> void:
 			changed = true
 	if changed:
 		save_music_registry(registry)
-
-static func get_bullet_tex(key: String) -> Texture2D:
-	var cfg: Dictionary = bullet_configs.get(key, {})
-	return cfg.get("tex")

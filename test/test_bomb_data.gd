@@ -1,6 +1,10 @@
 extends GutTest
 ## BombData 家族：基类（外观 / 编队 / 无敌）+ 子类。
 ## RingBombData → KernelBomb（环绕炸）；MistBombData → KernelMistBomb（分阶段展开）。
+##
+## ⚠️ 前三条（`*_tres_loads_as_*` / `player_data_has_bomb`）**故意绑真实内容** —— 它们验的是
+## 「**已出货**的 bomb 资源类型/结构对不对」（换错子类会让 `spawn_bomb` 按实际类型分派时静默变质）。
+## 属**内容校验**，内容改名时**该红**（契约见 docs/TEST_INDEX.md「内容绑定契约」）。后两条是纯机制。
 
 
 func test_ring_tres_loads_as_ring() -> void:

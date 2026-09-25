@@ -48,6 +48,7 @@ func on_enter() -> void:
 	_char_name.text = "← %s →" % CHAR_NAMES[_char_index]
 	_build_data()
 	_build_lists()
+	_restore_return_state()   # 从练习返回时还原层级/选中项（无状态则不动）
 	_highlight()
 
 	var overlay: ColorRect = $"Overlay"
@@ -147,6 +148,10 @@ func _change_stage(idx: int) -> void:
 		_phases.append(info)
 
 	_phase_index = 0
+	# ⚠️ `_phases` 是二级列表的唯一数据源 —— 必须在这里同步重建二级 UI。
+	# 曾经只有 `_build_lists()` 会建它，于是「第一级切 stage」只换了数据、二级仍显示上一个 stage 的行，
+	# 且与三级（按新 `_phases` 建）自相矛盾（2026-09-23 修，回归见 test_stage_nav_rebuilds_phase_list）。
+	_build_phase_list()
 
 
 # ═══ 构建列表 ═══
@@ -163,7 +168,9 @@ func _build_lists() -> void:
 		return
 
 	for stage in _stages:
-		var lbl := _make_label("Stage %d" % stage)
+		# 名字走 StageCatalog（内容侧 display_name）→ 回落 "Stage %d"。
+		# 别在这里拼 "Stage %d"：B 线这类 id 与名字对不上的舞台就没法显示。
+		var lbl := _make_label(StageCatalog.display_name_of(stage))
 		# 级联：该 stage 所有 phase 全收 → 正蓝（部分完成不显示中间色）
 		if _stage_capture_state(stage) == 2:
 			lbl.add_theme_color_override("font_color", CAPTURE_FULL)
@@ -199,17 +206,21 @@ func _build_diff_list() -> void:
 		var is_locked: bool = not info["diffs"].has(difficulty) or not configured.has(difficulty)
 		_diff_entries.append({diff = difficulty, is_locked = is_locked})
 
-		# 渲染：锁定 → "?" + 更深灰；解锁 → 名字 + 战绩
+		var record: SpellRecord = info["diffs"].get(difficulty, null)
 		var vbox := VBoxContainer.new()
+		# 名字行**始终占位**（两种状态下选项高度一致）：锁定 → "?"；符卡 → 卡名；非符 → 空串。
+		# 非符不是符卡、没有「卡名」可言（二级已写「非符N」，重复 4 遍是噪音），**但不能省掉这一行** ——
+		# 省了选项就从 81 变 33，三级在「非符 / 符卡」两种状态下高度会跳。
 		var nl := Label.new()
 		if is_locked:
 			nl.text = "?"
-		else:
+		elif rec.uid != 0:
 			var card := BossCatalog.phase_at(rec.stage, rec.phase_index, difficulty)
 			nl.text = card.name if (card and card.name != "") else "-"
+		else:
+			nl.text = ""   # 占位空行：空 Label(font 30) 最小高仍是 44，与有名字时同高
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nl.add_theme_font_size_override("font_size", 30)
-		var record: SpellRecord = info["diffs"].get(difficulty, null)
 		if record and record.practice_captures > 0 and not is_locked:
 			nl.add_theme_color_override("font_color", Color(0.4, 0.7, 1.0))
 		vbox.add_child(nl)
@@ -465,6 +476,26 @@ func _configured_diffs(boss: BossData) -> Array[int]:
 	return out
 
 
+## 从练习返回：还原到上次离开时的层级与选中项（消费后清空，避免影响下次正常进入）
+func _restore_return_state() -> void:
+	var st: Dictionary = PracticeSession.return_menu_state
+	var authorized: bool = PracticeSession.restore_menu_on_enter and not st.is_empty()
+	# ⚠️ 无论这次是否真的还原，**两者都要消费** —— 否则残留状态会让下次正常进入也跳级（曾出此 bug）
+	PracticeSession.restore_menu_on_enter = false
+	PracticeSession.return_menu_state = {}
+	if not authorized:
+		return
+	_char_index = int(st.get("char", _char_index))
+	# ⚠️ 必须用 `_change_stage()`（而不是只赋 `_stage_index`）—— 它会**重建 `_phases`** 再建第二级；
+	#    只赋值的话第二级还留着上一个 stage 的列表（与"切 stage 不重建二级"是同一个病）。
+	_change_stage(clampi(int(st.get("stage", 0)), 0, maxi(_stages.size() - 1, 0)))
+	_phase_index = clampi(int(st.get("phase", 0)), 0, maxi(_phases.size() - 1, 0))
+	_build_diff_list()
+	_diff_index = clampi(int(st.get("diff", 0)), 0, maxi(_diff_entries.size() - 1, 0))
+	_section = int(st.get("section", Section.STAGE))
+	_highlight()
+
+
 func _refresh_char() -> void:
 	_char_name.text = "← %s →" % CHAR_NAMES[_char_index]
 	_section = Section.STAGE
@@ -602,7 +633,13 @@ func _start_practice() -> void:
 	print("练习: %s 难度: %s" % [card_name, diff_name(diff)])
 	var boss_scene: PackedScene = boss.visual
 	var boss_label: String = boss.boss_name if boss.boss_name != "" else card_name
-	PracticeSession.start(phase, boss_scene, boss_label, rec.stage, rec.phase_index)
+	# 记下"从练习返回时要回到哪一层"（第三级 = DIFF，连同三个选中项）
+	PracticeSession.return_menu_state = {
+		"section": Section.DIFF, "stage": _stage_index,
+		"phase": _phase_index, "diff": _diff_index, "char": _char_index,
+	}
+	# 符卡背景随载荷带一张（练习模式自建 BossData 会丢 spell_background）
+	PracticeSession.start(phase, boss_scene, boss_label, rec.stage, rec.phase_index, boss.spell_background)
 	AudioManager.stop_bgm()
 	on_leave()
 	GameManager.change_scene("res://scenes/game_scene.tscn")

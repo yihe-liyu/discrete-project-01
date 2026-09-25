@@ -6,10 +6,9 @@ const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const PHASE_SHELL := preload("res://scripts/workbench/phase_shell.gd")
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
-const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 
 const FIXED_SEED := 20260801
-const VERSION_TAG := "v1.4-param"
+const VERSION_TAG := "v1.5"
 
 var _shell: Variant
 var _catalog: Variant
@@ -21,8 +20,6 @@ var _boss: Node = null          # 当前 Boss（开演/清场管理）
 var _phase_sel: OptionButton
 var _move_sel: OptionButton
 var _shoot_sel: OptionButton
-var _move_params: VBoxContainer
-var _shoot_params: VBoxContainer
 var _hp_spin: SpinBox
 var _time_spin: SpinBox
 var _diff_sel: OptionButton
@@ -44,7 +41,6 @@ func _ready() -> void:
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
 	get_window().size = Vector2i(1280, 960)
-	sync_world_offset()  # 见 rig_base：页面偏移记入（游戏坐标换算用）
 	_shell = PHASE_SHELL.new()
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()
@@ -102,8 +98,6 @@ func _build_ui() -> void:
 	box.add_child(_move_sel)
 	_move_desc = _desc_label()
 	box.add_child(_move_desc)
-	_move_params = PARAM_PANEL.new()
-	box.add_child(_move_params)
 	_move_sel.item_selected.connect(_on_slots_changed)
 	box.add_child(_hint("弹幕脚本"))
 	_shoot_sel = OptionButton.new()
@@ -112,8 +106,6 @@ func _build_ui() -> void:
 	box.add_child(_shoot_sel)
 	_shoot_desc = _desc_label()
 	box.add_child(_shoot_desc)
-	_shoot_params = PARAM_PANEL.new()
-	box.add_child(_shoot_params)
 	_shoot_sel.item_selected.connect(_on_slots_changed)
 
 	box.add_child(RIG_COMMON.section_label("阶段数值"))
@@ -211,7 +203,6 @@ func _select_phase(idx: int) -> void:
 	_move_path = p.move_script.resource_path if p.move_script else ""
 	_shoot_path = p.shoot_script.resource_path if p.shoot_script else ""
 	_rebuild_watch()
-	_rebuild_param_panels()
 	_update_slot_desc()
 
 
@@ -225,21 +216,14 @@ func _script_index(role: String, script: Script) -> int:
 	return 0
 
 
-## 槽位手动变更：刷新监听 + 参数面板
+## 槽位手动变更：刷新监听 + 刷新描述
 func _on_slots_changed(_i: int) -> void:
 	var mv: Script = _resolve_slot(_move_sel, "boss_move")
 	var sh: Script = _resolve_slot(_shoot_sel, "boss_shoot")
 	_move_path = mv.resource_path if mv else ""
 	_shoot_path = sh.resource_path if sh else ""
 	_rebuild_watch()
-	_rebuild_param_panels()
 	_update_slot_desc()
-
-
-## 按当前槽位重建两个参数面板
-func _rebuild_param_panels() -> void:
-	_move_params.rebuild(_resolve_slot(_move_sel, "boss_move"))
-	_shoot_params.rebuild(_resolve_slot(_shoot_sel, "boss_shoot"))
 
 
 ## 描述 Label：16 号（同字段标签）+ 弱化金色，与可交互项区分
@@ -340,11 +324,7 @@ func _play() -> void:
 	_clear_all()  # 防叠
 	var phase: PhaseData = _shell.build_copy(base, _resolve_slot(_move_sel, "boss_move"),
 		_resolve_slot(_shoot_sel, "boss_shoot"), _hp_spin.value, _time_spin.value)
-	# 参数合并：基础 + 槽位面板（同键 shoot 覆盖；Boss 把同一字典灌给双脚本）
-	var merged := phase.params
-	merged.merge(_move_params.collect())
-	merged.merge(_shoot_params.collect())
-	phase.params = merged
+	# 参数：直接用阶段 .tres 自带 params（Boss 把同一字典灌给 move/shoot 两个脚本）
 	_move_path = phase.move_script.resource_path if phase.move_script else ""
 	_shoot_path = phase.shoot_script.resource_path if phase.shoot_script else ""
 	_rebuild_watch()
@@ -358,7 +338,7 @@ func _clear_all() -> void:
 	if _boss and is_instance_valid(_boss):
 		_boss.queue_free()
 		_boss = null
-	_bullet_manager.clear_all()
+	_bullet_manager.reset_world()  # 清场 + 回收内核 program/弹型（反复开演会积累）
 	_update_stats()
 
 
@@ -401,7 +381,7 @@ func _on_click(game_pos: Vector2) -> void:
 
 ## Boss 落点标记（紫十字；rig_base 已画金框）
 func _draw_marker() -> void:
-	var p := from_game(_boss_pos)
+	var p := _boss_pos
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(0.7, 0.5, 0.95), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(0.7, 0.5, 0.95), 2.0)
 
@@ -413,6 +393,5 @@ func _collect_watch_paths() -> Array[String]:
 
 
 func _on_hot_reloaded(_main_new: Script) -> void:
-	_rebuild_param_panels()
 	_play()  # 重建演出
 	_toast.show_msg("＊ 已重载并重开演", Color(0.5, 0.95, 0.6))

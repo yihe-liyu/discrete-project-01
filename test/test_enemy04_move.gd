@@ -1,5 +1,8 @@
 extends GutTest
 ## enemy04 移动测试：匀速下移直到离开屏幕（弹幕结束后移动不中断）
+##
+## ⚠️ **内容行为测试**：验的就是「enemy04 这个内容脚本的移动语义」—— **故意绑内容**，
+## 内容改名/改行为时**该红**。别把它当机制测试去夹具化（契约见 docs/TEST_INDEX.md「内容绑定契约」）。
 
 const ENEMY04 = preload("res://data/stages/stage01/enemy/enemy04.gd")
 

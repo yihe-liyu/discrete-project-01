@@ -49,7 +49,6 @@ func _ready() -> void:
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
 	get_window().size = Vector2i(1280, 960)
-	sync_world_offset()  # 见 rig_base：页面偏移记入（游戏坐标换算用）
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
 	# 关键：用工作台同款主题——项目全局 ui_theme 字体大，面板会被内容撑爆（513>432）
@@ -122,14 +121,13 @@ func _build_ui() -> void:
 	box.add_child(_label("贴图（含判定）"))
 	_tex_sel = OptionButton.new()
 	var tex_idx := 0
-	for key in AssetRegistry.bullet_configs:
+	for key in BulletCatalog.keys():
 		_tex_sel.add_item(key)
-		var hb: Dictionary = AssetRegistry.bullet_configs[key].get("hitbox", {})
-		if hb.has("circle"):
-			_tex_sel.set_item_tooltip(tex_idx, "判定：圆 %s px" % str(hb["circle"]))
-		elif hb.has("rect"):
-			var rr: Dictionary = hb["rect"]
-			_tex_sel.set_item_tooltip(tex_idx, "判定：矩形 %s×%s" % [str(rr.get("w", 0)), str(rr.get("h", 0))])
+		var bt: BulletDef = BulletCatalog.find(key)
+		if bt.hitbox_size == Vector2.ZERO:
+			_tex_sel.set_item_tooltip(tex_idx, "判定：圆 %s px" % str(bt.hitbox_radius))
+		else:
+			_tex_sel.set_item_tooltip(tex_idx, "判定：矩形 %s×%s" % [str(bt.hitbox_size.x), str(bt.hitbox_size.y)])
 		tex_idx += 1
 	box.add_child(_tex_sel)
 
@@ -277,7 +275,7 @@ func _fire() -> void:
 
 
 func _clear_all() -> void:
-	_bullet_manager.clear_all()
+	_bullet_manager.reset_world()  # 清场 + 回收内核 program/弹型（反复发射/改配置会积累）
 	_update_stats()
 
 
@@ -330,7 +328,7 @@ func _on_diff_changed(idx: int) -> void:
 
 func _on_field_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		var pos := (event as InputEventMouseButton).position + _world_offset  # 场地局部 → 游戏坐标
+		var pos := (event as InputEventMouseButton).position  # 场地局部即游戏坐标
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			_emitter_pos = pos
 			_field.queue_redraw()
@@ -358,10 +356,10 @@ func _refresh_dir_label() -> void:
 
 
 func _on_field_draw() -> void:
-	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - _world_offset.y,
+	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 	_field.draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
-	var p := _emitter_pos - _world_offset
+	var p := _emitter_pos
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.85, 0.3), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.85, 0.3), 2.0)
 	# 发射方向箭头（绿色，从发射点指向）
@@ -387,7 +385,7 @@ func _main_watch_path() -> String:
 func _on_hot_reloaded(main_new: Script) -> void:
 	_cur_script = main_new
 	_param_panel.rebuild(_cur_script)  # 脚本参数变更同步
-	_bullet_manager.clear_all()
+	_bullet_manager.reset_world()
 	RNG.set_seed(_seed)
 	_fire()
 	_toast.show_msg("＊ 已重载：%s" % _cur_script_path.get_file(), Color(0.5, 0.95, 0.6))

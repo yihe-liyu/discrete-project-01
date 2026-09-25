@@ -44,7 +44,6 @@ func _ready() -> void:
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
 	get_window().size = Vector2i(1280, 960)
-	sync_world_offset()  # 见 rig_base：页面偏移记入（游戏坐标换算用）
 	_shell = SHELL.new()
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()
@@ -252,7 +251,7 @@ func _clear_all() -> void:
 	for e in _stage_runtime.entity_registry.get_active_enemies():
 		if is_instance_valid(e):
 			e.queue_free()
-	_bullet_manager.clear_all()
+	_bullet_manager.reset_world()  # 清场 + 回收内核 program/弹型（反复刷怪会积累）
 	_update_stats()
 
 
@@ -308,7 +307,7 @@ func _on_click(game_pos: Vector2) -> void:
 
 ## 出生点标记（橙十字；rig_base 已画金框）
 func _draw_marker() -> void:
-	var p := from_game(_spawn_pos)
+	var p := _spawn_pos
 	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.6, 0.2), 2.0)
 	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.6, 0.2), 2.0)
 

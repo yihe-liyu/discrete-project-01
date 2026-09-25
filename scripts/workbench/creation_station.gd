@@ -140,11 +140,11 @@ func _clear_view() -> void:
 	var bullet_manager: BulletManager = _view.get("_bullet_manager")   # 整关/试验台都有 _bullet_manager（不读 .current）
 	if _current_slot == 0:
 		_view.stop_stage()
-		if bullet_manager: bullet_manager.clear_all()
+		if bullet_manager: bullet_manager.reset_world()
 		AudioManager.stop_bgm()
 		_view.queue_free()
 	else:
-		if bullet_manager: bullet_manager.clear_all()
+		if bullet_manager: bullet_manager.reset_world()
 		var rt: StageRuntime = _view.get("_stage_runtime")
 		var entity_registry: EntityRegistry = rt.entity_registry if rt else null
 		for enemy in (entity_registry.get_active_enemies() if entity_registry else []):

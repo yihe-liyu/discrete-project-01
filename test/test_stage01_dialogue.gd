@@ -1,6 +1,9 @@
 extends GutTest
 ## 第一面战前对话构建函数测试：验证抽出的 _build_stage01_intro() 内容（台词/说话者/表情/事件顺序）
 ## 纯逻辑（.new() 无树），不改游戏运行时；顺带校验 stage01.gd 能正常解析。
+##
+## ⚠️ **内容测试**：验的就是「stage01 这段剧本写了什么」—— **故意绑内容**，改台词/改名时**该红**。
+## 机制层（DSL / 播放器）在 test_dialogue_steps 里用自建夹具测（契约见 docs/TEST_INDEX.md）。
 
 const STAGE01_INTRO = preload("res://data/dialogue/stage01/intro.gd")
 

@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://bgh32t8me0k46"]
 
 [ext_resource type="Script" uid="uid://ct3ls64vfs0n5" path="res://scripts/debug/hitbox_visualizer.gd" id="1_2yxms"]
-[ext_resource type="Texture2D" uid="uid://ctrxg8aehv7lw" path="res://assets/Textures/player/bomb01_white.png" id="2_uxhlu"]
 
 [node name="HitboxVisualizer" type="Node2D" unique_id=1039914008]
 z_index = 1
@@ -11,4 +10,3 @@ hitbox_radius = 45.0
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=99798813]
 z_as_relative = false
-texture = ExtResource("2_uxhlu")

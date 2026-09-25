@@ -1,5 +1,5 @@
 extends GutTest
-## 最小原语覆盖（9 Move op / 5 Until / 5 Action）—— 每个原语一条最小 lifecycle，
+## 最小原语覆盖（9 Move op / 6 Until / 5 Action）—— 每个原语一条最小 lifecycle，
 ## 与参考解释器 LifecycleBehavior 逐位对照。它同时是「原语能干什么」的活文档。
 ##
 ## 为什么单独一份：预设级 parity 只覆盖"被 preset 用到"的原语。实测 9 个 Move 里有 4 个
@@ -17,10 +17,12 @@ class FakeHost extends RefCounted:
 	var boss: Node2D = null
 	var spawns: Array = []
 	var sfx: Array = []
+	var clears: Array = []
 	func get_boss() -> Node2D: return boss
 	func queue_spawn(data, pos: Vector2, dir: Vector2) -> void:
 		spawns.append({&"pos": pos, &"dir": dir, &"vel": data.velocity if data != null else Vector2.ZERO})
 	func play_sfx(key: StringName, _db: float) -> void: sfx.append(key)
+	func play_clear_fx(pos: Vector2, color: Color) -> void: clears.append({&"pos": pos, &"color": color})
 
 
 func _available() -> bool:
@@ -47,6 +49,7 @@ func _apply_events(ev: Dictionary, compiled: Dictionary, host: FakeHost, boss: N
 	var dxs: PackedFloat32Array = ev["dx"]
 	var dys: PackedFloat32Array = ev["dy"]
 	var vals: PackedFloat32Array = ev["val"]
+	var colors: PackedColorArray = ev.get("color", PackedColorArray())
 	var acts: Array = compiled["actions"]
 	var sfx: Array = compiled["sfx"]
 	for k in kinds.size():
@@ -62,24 +65,33 @@ func _apply_events(ev: Dictionary, compiled: Dictionary, host: FakeHost, boss: N
 			2:
 				var boss_pos: Vector2 = boss.global_position if has_boss else Vector2.ZERO
 				(acts[local[k]] as Callable).call(Vector2(xs[k], ys[k]), boss_pos, has_boss, host)
+			3:
+				host.play_clear_fx(Vector2(xs[k], ys[k]), colors[k] if k < colors.size() else Color.WHITE)
 
 
 ## 一条原语的 parity：同一份 lc 分别喂 原生 behavior_tick 与 参考解释器，逐帧对照位置/速度/事件。
+## `opts`：`cull`(Rect2) / `margin`(float) / `grace`(float) —— 默认 `CULL`（巨大框 = 不剔除）。
+## 返回落帧后的存活数：`{nat_active, ref_active}`（供 out_grace 这类「该不该被剔除」的断言用）。
 func _parity(tag: String, lc: BulletLifecycle, frames: int, spawns: Array, ctx: BehaviorContext,
 		player: Vector2 = Vector2.ZERO, boss: Node2D = null, has_boss: bool = false,
-		enemies: Array = []) -> void:
+		enemies: Array = [], tint: Color = Color.WHITE, opts: Dictionary = {}) -> Dictionary:
 	if not _available():
 		pending("未构建原生扩展")
-		return
+		return {}
+	var cull: Rect2 = opts.get("cull", CULL)
+	var margin: float = opts.get("margin", 0.0)
+	var grace: float = opts.get("grace", 0.0)
 	var store = ClassDB.instantiate("DanmakuStore")
-	store.setup(1024, CULL)
-	store.set_margin(0.0)
+	store.setup(1024, cull)
+	store.set_margin(margin)
 	store.set_default_life(100.0)
 	store.set_field(GameConfig.FIELD_LEFT, GameConfig.FIELD_RIGHT, GameConfig.FIELD_TOP)
 	var compiled: Dictionary = lc.compile()
 	var pid: int = store.register_program(compiled["ops"], compiled["args"], compiled["move_start"], compiled["move_count"], compiled["until_idx"], compiled["act_start"], compiled["act_count"], compiled["phase_count"], compiled["slots"])
 
 	var gs := _gs()
+	gs.cull_rect = cull
+	gs.cull_margin = margin
 	var beh := LifecycleBehavior.new()
 	var host_ref := FakeHost.new()
 	host_ref.boss = boss
@@ -87,13 +99,16 @@ func _parity(tag: String, lc: BulletLifecycle, frames: int, spawns: Array, ctx: 
 	var host_nat := FakeHost.new()
 	host_nat.boss = boss
 	var bt := BulletType.new()
+	bt.out_grace = grace
 	var enemy_pos := PackedVector2Array()
 	for e in enemies:
 		enemy_pos.append(e.global_position)
 	var boss_pos: Vector2 = boss.global_position if has_boss else Vector2.ZERO
 	for s in spawns:
-		gs.spawn(bt, s[0], s[1], Color.WHITE, &"lifecycle", {&"lifecycle": lc})
-		var id: int = store.spawn(s[0], s[1], 0, 0, Color.WHITE)
+		gs.spawn(bt, s[0], s[1], tint, &"lifecycle", {&"lifecycle": lc})
+		var id: int = store.spawn(s[0], s[1], 0, 0, tint)
+		# 与生产同路：参考侧经 BulletType.out_grace，原生侧经 set_out_grace 推进行。
+		store.set_out_grace(id, grace)
 		store.set_program(id, pid)
 
 	for f in frames:
@@ -109,18 +124,24 @@ func _parity(tag: String, lc: BulletLifecycle, frames: int, spawns: Array, ctx: 
 		store.integrate(DT)
 		_apply_events(store.behavior_tick(DT, player, boss_pos, has_boss, enemy_pos, PackedVector2Array()), compiled, host_nat, boss, has_boss)
 		if gs.get_active_count() != store.get_active_count():
-			fail_test("%s 活跃数帧 %d：%d vs %d" % [tag, f, gs.get_active_count(), store.get_active_count()]); return
+			fail_test("%s 活跃数帧 %d：%d vs %d" % [tag, f, gs.get_active_count(), store.get_active_count()]); return {}
 		for i in gs.get_active_count():
 			if not _close(gs.get_position(i), store.get_position(i)):
-				fail_test("%s 位置帧 %d 行 %d：A=%s B=%s" % [tag, f, i, gs.get_position(i), store.get_position(i)]); return
+				fail_test("%s 位置帧 %d 行 %d：A=%s B=%s" % [tag, f, i, gs.get_position(i), store.get_position(i)]); return {}
 			if not _close(gs.get_velocity(i), store.get_velocity(i)):
-				fail_test("%s 速度帧 %d 行 %d：A=%s B=%s" % [tag, f, i, gs.get_velocity(i), store.get_velocity(i)]); return
+				fail_test("%s 速度帧 %d 行 %d：A=%s B=%s" % [tag, f, i, gs.get_velocity(i), store.get_velocity(i)]); return {}
 	assert_eq(host_nat.spawns.size(), host_ref.spawns.size(), "%s 发射事件数 nat=%d ref=%d" % [tag, host_nat.spawns.size(), host_ref.spawns.size()])
 	for k in host_ref.spawns.size():
 		assert_true(host_nat.spawns[k].pos.is_equal_approx(host_ref.spawns[k].pos), "%s 发射位置 #%d" % [tag, k])
 		assert_true(host_nat.spawns[k].dir.is_equal_approx(host_ref.spawns[k].dir), "%s 发射方向 #%d" % [tag, k])
 	assert_eq(host_nat.sfx.size(), host_ref.sfx.size(), "%s sfx 事件数" % tag)
+	assert_eq(host_nat.clears.size(), host_ref.clears.size(),
+		"%s 消散事件数 nat=%d ref=%d" % [tag, host_nat.clears.size(), host_ref.clears.size()])
+	for k in host_ref.clears.size():
+		assert_true(host_nat.clears[k].pos.is_equal_approx(host_ref.clears[k].pos), "%s 消散位置 #%d" % [tag, k])
+		assert_true((host_nat.clears[k].color as Color).is_equal_approx(host_ref.clears[k].color), "%s 消散颜色 #%d" % [tag, k])
 	pass_test("%s %d 帧原生↔参考一致" % [tag, frames])
+	return {&"nat_active": store.get_active_count(), &"ref_active": gs.get_active_count()}
 
 
 func _spread(n: int, y: float, vel_y := -180.0) -> Array:
@@ -329,6 +350,16 @@ func test_primitive_until_at_wall() -> void:
 	_parity("until:at_wall", lc, 30, spawns, BehaviorContext.new())
 
 
+func test_primitive_until_speed() -> void:
+	## V21：|v| 降到阈值 → 相位结束。初速 180，accel_heading(-200) 减速，约 11 帧穿过 145
+	## （阈值 145 故意避开帧边界 146.67 / 143.33，防 32↔64 位差一帧）。
+	var lc := BulletLifecycle.new()
+	lc.accel_heading(-200.0)
+	lc.until_speed(BulletLifecycle.CMP_LE, 145.0)
+	lc.despawn()
+	_parity("until:speed", lc, 60, _spread(4, 400.0), BehaviorContext.new())
+
+
 func test_primitive_until_turned() -> void:
 	## 便捷形式：当前相位 rotate 的累计转角 >= 其 limit（curve 用法）。
 	var lc := BulletLifecycle.new()
@@ -414,6 +445,81 @@ func test_primitive_action_on_end_call() -> void:
 	var spawns := _spread(4, 400.0)
 	_parity("action:on_end_call", lc, 40, spawns, BehaviorContext.new())
 	assert_eq(calls[0], spawns.size() * 2, "原生 + 参考各回调一次/弹")
+
+
+func test_primitive_action_clear_fx() -> void:
+	## op 47：`clear_fx()` 是**纯 action**（播消散、弹继续飞），`despawn_clear()` = 它 + 回收。
+	## 用**非白**弹色 —— 验 tint 真的过了桥（原生事件 kind=3 的 color 载荷）。
+	var tint := Color(0.25, 0.5, 0.75)
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(0.22)
+	lc.clear_fx()          # 只播特效，不回收
+	assert_eq(int(lc.compile()["act_count"][0]), 1, "clear_fx 只加 1 个 action，且不回收")
+	var spawns := _spread(3, 400.0)
+	_parity("action:clear_fx", lc, 40, spawns, BehaviorContext.new(), Vector2.ZERO, null, false, [], tint)
+
+
+func test_primitive_action_despawn_clear() -> void:
+	## `despawn_clear()` = 消散事件 + 回收（act_count = 2）。
+	var tint := Color(0.9, 0.3, 0.1)
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(0.22)
+	lc.despawn_clear()
+	assert_eq(int(lc.compile()["act_count"][0]), 2, "clear_fx + despawn = 2 个 action")
+	var spawns := _spread(3, 400.0)
+	_parity("action:despawn_clear", lc, 40, spawns, BehaviorContext.new(), Vector2.ZERO, null, false, [], tint)
+
+
+# ═══════════════════════════════════════════════ 出界宽限 out_grace ═══
+# 场地框 x 64..832 / y 32..928；margin=0 时边界就是框本身。
+
+func _field_rect() -> Rect2:
+	return Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
+		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT,
+		GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
+
+
+func test_out_grace_zero_culls_immediately() -> void:
+	## grace=0（默认）→ 出界立即剔除：**原行为必须零回归**。
+	var lc := BulletLifecycle.new().until_never()
+	var spawns: Array = [[Vector2(448.0, -200.0), Vector2.ZERO]]   # 框外上方
+	var r := _parity("out_grace:zero", lc, 10, spawns, BehaviorContext.new(),
+		Vector2.ZERO, null, false, [], Color.WHITE, {&"cull": _field_rect(), &"grace": 0.0})
+	assert_eq(int(r.get(&"nat_active", -1)), 0, "grace=0：出界立即剔除")
+	assert_eq(int(r.get(&"ref_active", -1)), 0, "参考侧同样立即剔除")
+
+
+func test_out_grace_keeps_outsider_alive_within_window() -> void:
+	## grace=1.0s，只跑 0.4s → 界外弹应**仍存活**（spell053 H/L 探针要的就是这个语义）。
+	var lc := BulletLifecycle.new().until_never()
+	var spawns: Array = [[Vector2(448.0, -200.0), Vector2(0.0, 100.0)]]
+	var r := _parity("out_grace:alive", lc, 24, spawns, BehaviorContext.new(),
+		Vector2.ZERO, null, false, [], Color.WHITE, {&"cull": _field_rect(), &"grace": 1.0})
+	assert_eq(int(r.get(&"nat_active", -1)), 1, "宽限窗口内应存活")
+
+
+func test_out_grace_expires_after_window() -> void:
+	## grace=0.2s，跑 0.5s → 超时应被剔除（宽限不是永久豁免）。
+	var lc := BulletLifecycle.new().until_never()
+	var spawns: Array = [[Vector2(448.0, -200.0), Vector2.ZERO]]
+	var r := _parity("out_grace:expire", lc, 30, spawns, BehaviorContext.new(),
+		Vector2.ZERO, null, false, [], Color.WHITE, {&"cull": _field_rect(), &"grace": 0.2})
+	assert_eq(int(r.get(&"nat_active", -1)), 0, "超宽限应剔除")
+
+
+func test_out_grace_resets_on_reentry() -> void:
+	## 出界 → **回到界内 → 计时归零**。弹从右侧界外以 600px/s 内向飞：
+	## 0.113s 入界（清零）→ 1.393s 从左侧再出界 → 再 +0.15s 才该淘汰。
+	## 所以跑 1.4s（84 帧）应**仍存活**；若没有「回界内归零」，它 0.15s 就死了。
+	var lc := BulletLifecycle.new().until_never()
+	var spawns: Array = [[Vector2(900.0, 480.0), Vector2(-600.0, 0.0)]]
+	var opts := {&"cull": _field_rect(), &"grace": 0.15}
+	var alive := _parity("out_grace:reentry", lc, 84, spawns, BehaviorContext.new(),
+		Vector2.ZERO, null, false, [], Color.WHITE, opts)
+	assert_eq(int(alive.get(&"nat_active", -1)), 1, "回界内应重置计时（否则 0.15s 就该死）")
+	var gone := _parity("out_grace:reentry-late", lc, 100, spawns, BehaviorContext.new(),
+		Vector2.ZERO, null, false, [], Color.WHITE, opts)
+	assert_eq(int(gone.get(&"nat_active", -1)), 0, "1.667s：左出界后超 0.15s → 应已淘汰")
 
 
 # ═══════════════════════════════════════════════ 组合（V1 回归）═══

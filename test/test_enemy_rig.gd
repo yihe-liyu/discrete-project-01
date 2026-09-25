@@ -3,6 +3,10 @@ extends GutTest
 
 const SHELL := preload("res://scripts/workbench/enemy_shell.gd")
 const RIG := preload("res://scripts/workbench/enemy_bench.gd")
+## 夹具敌人脚本（4 类可调参数 + 零值陷阱）：机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」。
+## 用「路径常量 + preload」而不是 `PROBE_SCRIPT.resource_path`（后者在 preload 常量上编译期不可见）。
+const PROBE_PATH := "res://test/fixtures/param_panel_probe.gd"
+const PROBE_SCRIPT := preload(PROBE_PATH)
 
 
 
@@ -26,7 +30,7 @@ func test_enemy_shell_build():
 	assert_eq(d.item_bomb_full, 2, "整B掉落")
 	assert_null(d.behavior_script, "无魂=纯壳")
 	# 带魂
-	var e: EnemyData = s.build(load("res://data/stages/stage01/enemy/enemy01.gd"))
+	var e: EnemyData = s.build(PROBE_SCRIPT)
 	assert_not_null(e.behavior_script, "带魂组装")
 	assert_eq(SHELL.visual_keys().size(), AssetRegistry.enemy_visuals.size(), "外观清单来自 AssetRegistry")
 
@@ -36,8 +40,8 @@ func test_param_listing_and_difficulty():
 	var rig = RIG.new()
 	add_child_autofree(rig)
 	await get_tree().process_frame
-	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy01.gd"
-	rig._cur_script = load(rig._cur_script_path)
+	rig._cur_script_path = PROBE_PATH
+	rig._cur_script = PROBE_SCRIPT
 	rig._param_panel.rebuild(rig._cur_script)
 	assert_true(rig._param_panel.get_rows().size() >= 3, "枚举出参数行（%d）" % rig._param_panel.get_rows().size())
 	var names: Array[String] = []
@@ -65,10 +69,10 @@ func test_vector2_and_color_params():
 	var rig = RIG.new()
 	add_child_autofree(rig)
 	await get_tree().process_frame
-	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy03.gd"
-	rig._cur_script = load(rig._cur_script_path)
+	rig._cur_script_path = PROBE_PATH
+	rig._cur_script = PROBE_SCRIPT
 	rig._param_panel.rebuild(rig._cur_script)
-	# enemy03: target_pos(默认 0,0)/rate=int 1/bullet_color=RED/start_time=2.0
+	# 夹具脚本：target_pos(默认 0,0) / rate=int 1 / bullet_color=RED / start_time=2.0
 	var found_vec := false
 	var found_color := false
 	for row in rig._param_panel.get_rows():
@@ -101,10 +105,10 @@ func test_rig_spawn_and_hot_reload():
 	add_child_autofree(rig)
 	await get_tree().process_frame
 
-	# 真实生成：默认壳 + enemy01 行为
+	# 真实生成：默认壳 + 夹具行为脚本
 	rig._stage_runtime.entity_registry.enemies.clear()
-	rig._cur_script_path = "res://data/stages/stage01/enemy/enemy01.gd"
-	rig._cur_script = load(rig._cur_script_path)
+	rig._cur_script_path = PROBE_PATH
+	rig._cur_script = PROBE_SCRIPT
 	rig._rebuild_watch()
 	rig._spawn_pos = Vector2(GameConfig.FIELD_CENTER_X, 260.0)
 	rig._spawn()

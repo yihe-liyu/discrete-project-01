@@ -357,7 +357,7 @@ func _load_stage() -> void:
 	_apply_audio()
 	# 停止旧关卡 + 清空
 	_stage_runtime.stop_stage()
-	_bullet_manager.clear_all()
+	_bullet_manager.reset_world()  # 重跑：回收内核 program/弹型（原生表只增不减）
 	AudioManager.stop_bgm()  # 重跑时 BGM 从头播（play_bgm 有同流防重保护，必须先停）
 	# 清 World 残留：退场中的 Boss（_is_exit_controlled 不 queue_free、已从
 	# active_enemies 移除）stop_stage 清不到 → 立即脱离树，避免卡在画面上

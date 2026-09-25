@@ -37,6 +37,11 @@ func _on_item_selected(index: int) -> void:
 			SaveData.is_restarting = true
 			GameManager.reload_current_scene()
 		2:
+			# 符卡练习里"返回"→ 回**符卡练习菜单**（并还原到离开时那一级），而不是主菜单根
+			# （逐面练习 is_practice_mode 为 false，仍走主菜单 ✓）
+			if PracticeSession.is_practice_mode:
+				PracticeSession.restore_menu_on_enter = true
+				GameManager.pending_page_path = "res://scenes/ui/spell_practice_menu.tscn"
 			GameManager.change_scene.call_deferred("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 

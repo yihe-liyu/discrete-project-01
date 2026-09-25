@@ -32,6 +32,8 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("reserve", "n"), &DanmakuStore::reserve);
 	ClassDB::bind_method(D_METHOD("set_cull", "cull"), &DanmakuStore::set_cull);
 	ClassDB::bind_method(D_METHOD("set_margin", "margin"), &DanmakuStore::set_margin);
+	ClassDB::bind_method(D_METHOD("set_out_grace", "id", "grace"), &DanmakuStore::set_out_grace);
+	ClassDB::bind_method(D_METHOD("get_out_grace", "id"), &DanmakuStore::get_out_grace);
 	ClassDB::bind_method(D_METHOD("set_default_life", "life"), &DanmakuStore::set_default_life);
 	ClassDB::bind_method(D_METHOD("set_hitbox", "id", "radius", "offset", "size", "follow_dir", "dir_offset"), &DanmakuStore::set_hitbox);
 	ClassDB::bind_method(D_METHOD("hit_test", "id", "center", "radius"), &DanmakuStore::hit_test);
@@ -103,6 +105,8 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_hb_diroff.assign(p_capacity, 0.0f);
 	_hb_follow.assign(p_capacity, 0);
 	_grazed.assign(p_capacity, 0);
+	_out_grace.assign(p_capacity, 0.0f);
+	_out_time.assign(p_capacity, 0.0f);
 	_render_rot.assign(p_capacity, (float)NAN);
 	_count = 0;
 }
@@ -123,6 +127,8 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_fx_type[i] = -1;
 	_color[i] = p_color;
 	_life[i] = _default_life;
+	_out_grace[i] = 0.0f;   // 默认无宽限 → 出界即剔除（原行为）；宿主随后可用 set_out_grace 覆盖
+	_out_time[i] = 0.0f;
 	_fx[i] = 0.0f;
 	_timer[i] = 0.0f;
 	// L3.5-4e：有状态 spawn 必须整行归零（batch 路径由调用方传数组，stateful 没有）。
@@ -164,6 +170,8 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		_fx_type[i] = -1;
 		_color[i] = k < p_color.size() ? p_color[k] : Color(1, 1, 1, 1);
 		_life[i] = _default_life;
+		_out_grace[i] = 0.0f;
+		_out_time[i] = 0.0f;
 		_fx[i] = 0.0f;
 		_timer[i] = 0.0f;
 		_program[i] = -1;
@@ -205,6 +213,8 @@ int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_c
 	_fx_type[i] = p_fx_type;
 	_color[i] = p_color;
 	_life[i] = p_life;
+	_out_grace[i] = 0.0f;
+	_out_time[i] = 0.0f;
 	_fx[i] = p_life;
 	_timer[i] = 0.0f;
 	_program[i] = -1;
@@ -241,6 +251,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_hb_radius.resize(p_n); _hb_offx.resize(p_n); _hb_offy.resize(p_n);
 	_hb_sizex.resize(p_n); _hb_sizey.resize(p_n); _hb_diroff.resize(p_n);
 	_hb_follow.resize(p_n); _grazed.resize(p_n); _render_rot.resize(p_n);
+	_out_grace.resize(p_n); _out_time.resize(p_n);
 }
 
 // swap-with-last 回收：把尾行整行搬进空槽（新增字段必须在这里同步）。
@@ -283,6 +294,8 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_hb_diroff[p_id] = _hb_diroff[last];
 	_hb_follow[p_id] = _hb_follow[last];
 	_grazed[p_id] = _grazed[last];
+	_out_grace[p_id] = _out_grace[last];
+	_out_time[p_id] = _out_time[last];
 	_render_rot[p_id] = _render_rot[last];
 }
 
@@ -313,7 +326,17 @@ void DanmakuStore::integrate(double p_delta) {
 			_timer[i] -= dt;
 		}
 		if (cull && !grown.has_point(Vector2(_x[i], _y[i]))) {
-			_swap_remove(i);
+			// 出界：grace <= 0 → 立即剔除（原行为，保持不变）；否则累计「连续出界时长」，超时才剔除。
+			if (_out_grace[i] <= 0.0f) {
+				_swap_remove(i);
+			} else {
+				_out_time[i] += dt;
+				if (_out_time[i] > _out_grace[i]) {
+					_swap_remove(i);
+				}
+			}
+		} else {
+			_out_time[i] = 0.0f;   // 回到界内 → 计时归零（往返弹回来后不该继续被计时淘汰）
 		}
 	}
 }
@@ -322,6 +345,17 @@ void DanmakuStore::integrate(double p_delta) {
 void DanmakuStore::reserve(int p_n) { _ensure_capacity(p_n); }
 void DanmakuStore::set_cull(const Rect2 &p_cull) { _cull = p_cull; _grid_dirty = true; }
 void DanmakuStore::set_margin(float p_margin) { _margin = p_margin; }
+// 逐弹出界宽限：设置时把「已出界时长」归零（新弹才算，改宽限不该立刻触发超时）。
+void DanmakuStore::set_out_grace(int p_id, float p_grace) {
+	if (p_id < 0 || p_id >= _count) {
+		return;
+	}
+	_out_grace[p_id] = p_grace;
+	_out_time[p_id] = 0.0f;
+}
+float DanmakuStore::get_out_grace(int p_id) const {
+	return (p_id >= 0 && p_id < _count) ? _out_grace[p_id] : 0.0f;
+}
 void DanmakuStore::set_default_life(float p_life) { _default_life = p_life; }
 void DanmakuStore::set_field(float p_left, float p_right, float p_top) { _field_left = p_left; _field_right = p_right; _field_top = p_top; }
 int DanmakuStore::get_capacity() const { return _capacity; }
@@ -807,6 +841,10 @@ bool DanmakuStore::_check_until(int i, float *slots, int ins, const Vector2 &pla
 			const float sv = slots[si];
 			return (int)a[3] == 0 ? sv >= a[4] : sv <= a[4];
 		}
+		case 25: { // speed（V21：|v| 与 value 比较，cmp 0=GE / 1=LE）
+			const float sp = Vector2(_vx[i], _vy[i]).length();
+			return (int)a[2] == 0 ? sp >= a[3] : sp <= a[3];
+		}
 		default:
 			return false;
 	}
@@ -830,6 +868,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_x.push_back(at.x); _ev_y.push_back(at.y);
 			_ev_dx.push_back(dir.x); _ev_dy.push_back(dir.y);
 			_ev_val.push_back(speed);
+			_ev_color.push_back(_color[i]);
 			_ev_variant.push_back(0);
 			break;
 		}
@@ -840,6 +879,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_bullet.push_back(i);
 			_ev_x.push_back(0); _ev_y.push_back(0); _ev_dx.push_back(0); _ev_dy.push_back(0);
 			_ev_val.push_back(a[1]);
+			_ev_color.push_back(_color[i]);
 			_ev_variant.push_back(0);
 			break;
 		case 42: // despawn
@@ -858,6 +898,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_bullet.push_back(i);
 			_ev_x.push_back(_x[i]); _ev_y.push_back(_y[i]);
 			_ev_dx.push_back(0); _ev_dy.push_back(0); _ev_val.push_back(0);
+			_ev_color.push_back(_color[i]);
 			_ev_variant.push_back(0);
 			break;
 		case 46: { // V9：变体发射（显式抽一次定分支；两套方向各自解析）
@@ -877,9 +918,20 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_x.push_back(at.x); _ev_y.push_back(at.y);
 			_ev_dx.push_back(dir.x); _ev_dy.push_back(dir.y);
 			_ev_val.push_back(speed);
+			_ev_color.push_back(_color[i]);
 			_ev_variant.push_back(hit ? 1 : 0);
 			break;
 		}
+		case 47: // clear_fx：纯 action —— 只回传「该弹此刻位置 + 颜色」，不改任何状态（宿主据此播消散特效）
+			_ev_kind.push_back(3);
+			_ev_prog.push_back(prog);
+			_ev_local.push_back(0);
+			_ev_bullet.push_back(i);
+			_ev_x.push_back(_x[i]); _ev_y.push_back(_y[i]);
+			_ev_dx.push_back(0); _ev_dy.push_back(0); _ev_val.push_back(0);
+			_ev_color.push_back(_color[i]);
+			_ev_variant.push_back(0);
+			break;
 		default:
 			break;
 	}
@@ -890,6 +942,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 	_tick_dead.clear();
 	_ev_kind.clear(); _ev_prog.clear(); _ev_local.clear(); _ev_bullet.clear();
 	_ev_x.clear(); _ev_y.clear(); _ev_dx.clear(); _ev_dy.clear(); _ev_val.clear(); _ev_variant.clear();
+	_ev_color.clear();
 	const int phase_total = _p_move_start.size();
 	for (int i = 0; i < _count; ++i) {
 		_render_rot[i] = (float)NAN;   // V19：每帧重置；只有 position(render_heading) 会设它
@@ -929,14 +982,16 @@ Dictionary DanmakuStore::_events_dict() const {
 	Dictionary out;
 	PackedInt32Array kind, eprog, local, bullet, variant;
 	PackedFloat32Array ex, ey, edx, edy, eval;
+	PackedColorArray ecolor;
 	for (size_t k = 0; k < _ev_kind.size(); ++k) {
 		kind.push_back(_ev_kind[k]); eprog.push_back(_ev_prog[k]); local.push_back(_ev_local[k]); bullet.push_back(_ev_bullet[k]);
 		ex.push_back(_ev_x[k]); ey.push_back(_ev_y[k]); edx.push_back(_ev_dx[k]); edy.push_back(_ev_dy[k]); eval.push_back(_ev_val[k]);
 		variant.push_back(_ev_variant[k]);
+		ecolor.push_back(k < _ev_color.size() ? _ev_color[k] : Color(1, 1, 1, 1));
 	}
 	out["kind"] = kind; out["eprog"] = eprog; out["local"] = local; out["bullet"] = bullet;
 	out["x"] = ex; out["y"] = ey; out["dx"] = edx; out["dy"] = edy; out["val"] = eval;
-	out["variant"] = variant;
+	out["variant"] = variant; out["color"] = ecolor;
 	return out;
 }
 

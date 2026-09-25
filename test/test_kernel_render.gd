@@ -83,4 +83,4 @@ func test_material_and_mesh_come_from_type() -> void:
 	var g: Dictionary = renderer._groups.values()[0]
 	assert_eq(g.mmi.material.get_shader_parameter("tint_mode"), BulletType.TintMode.BLEND,
 		"材质 tint_mode 应来自内核弹型")
-	assert_eq(g.mesh.size, AssetRegistry.get_bullet_tex("小玉").get_size(), "网格尺寸应匹配贴图")
+	assert_eq(g.mesh.size, BulletShapes.atlas_texture(&"小玉").get_size(), "网格尺寸应匹配贴图")

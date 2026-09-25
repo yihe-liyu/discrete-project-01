@@ -5,7 +5,8 @@ extends GutTest
 const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
 const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
 const EnemyService = preload("res://scripts/coroutine/services/enemy_service.gd")
-const ENEMY01_SCRIPT = preload("res://data/stages/stage01/enemy/enemy01.gd")
+## 夹具替身脚本（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
+const ENEMY_SCRIPT = preload("res://test/fixtures/no_port_behavior.gd")
 
 func test_boss_service_no_boss():
 	var s := BossService.new()
@@ -34,6 +35,6 @@ func test_diff_service_at_least_lunatic():
 
 func test_enemy_service_without_stage_returns_null():
 	# 配置合法但无世界 → null（不崩）；实例化机制在 StageRuntime，单测不启世界
-	var data := EnemyData.new().with_script(ENEMY01_SCRIPT)
+	var data := EnemyData.new().with_script(ENEMY_SCRIPT)
 	assert_null(EnemyService.new().spawn(data), "ctx 为空时 spawn 应返回 null")
 	assert_null(StageContext.new(null).enemies.spawn(data), "ctx 无 stage 时 spawn 应返回 null")

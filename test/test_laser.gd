@@ -4,6 +4,9 @@ extends GutTest
 var _holder: Node
 var _entity_registry: EntityRegistry
 
+## 机体数据用自建夹具（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
+const FIXTURES = preload("res://test/fixtures/fixture_lib.gd")
+
 ## 激光池 beams 挂在 holder 上，随测试结束 autofree 释放
 ## （LaserEngine.setup 每测试建 64 条 beam，直接挂测试脚本会累计成 unfreed children）
 func before_each():
@@ -216,7 +219,7 @@ func _make_engine() -> LaserEngine:
 func _make_engine_player(x: float) -> Player:
 	var player = preload("res://scenes/player.tscn").instantiate()
 	autofree(player)
-	player.player_data = load("res://data/player_data/marisa_data.tres")
+	player.player_data = FIXTURES.player_data()
 	add_child(player)
 	player.reinit_shoot()
 	player.global_position = Vector2(x, 300)

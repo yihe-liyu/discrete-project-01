@@ -5,11 +5,11 @@ class_name FieldFilterLayer
 ## 范围严格限制在游戏框内（ColorRect = 场地矩形），不影响框外 HUD。
 
 ## 扩圆 / 停留 / 渐隐时长（秒）。
-@export var expand_time: float = 0.45
-@export var hold_time: float = 1.0
-@export var fade_time: float = 0.7
+@export var expand_time: float = 1.5
+@export var hold_time: float = 0.5
+@export var fade_time: float = 3.0
 ## 圆边缘羽化（px）。
-@export var edge_softness: float = 80.0
+@export var edge_softness: float = 160.0
 
 @onready var _filter: ColorRect = $Filter
 
@@ -38,7 +38,7 @@ func play(p_color: Color) -> void:
 	if p_color.a <= 0.0:
 		return
 	_kill()
-	var max_radius := _filter.size.length() * 0.5   # 场地对角线/2：铺满整个框
+	var max_radius := _filter.size.length() * 0.75   # 场地对角线*0.75：铺满整个框
 	_material.set_shader_parameter("filter_color", p_color)
 	_material.set_shader_parameter("radius", 0.0)
 	_material.set_shader_parameter("alpha", 1.0)

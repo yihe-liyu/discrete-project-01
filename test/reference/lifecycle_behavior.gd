@@ -210,6 +210,9 @@ func _check_until(system: BulletSystem, id: int, st: Dictionary, cond: Dictionar
 				return false
 			var sv: float = float(slots[si])
 			return sv >= float(cond[&"value"]) if int(cond[&"cmp"]) == BulletLifecycle.CMP_GE else sv <= float(cond[&"value"])
+		BulletLifecycle.C_SPEED:
+			var sp: float = system.get_velocity(id).length()
+			return sp >= float(cond[&"value"]) if int(cond[&"cmp"]) == BulletLifecycle.CMP_GE else sp <= float(cond[&"value"])
 		_:
 			return false
 
@@ -246,6 +249,11 @@ func _run_actions(system: BulletSystem, id: int, st: Dictionary, actions: Array,
 				system.set_velocity(id, d2 * float(act[&"speed"]))
 			BulletLifecycle.A_CALL:
 				_call(act[&"call"], system, id, ctx)
+			BulletLifecycle.A_CLEAR_FX:
+				# op 47：纯 action、不改状态；宿主据「此刻位置 + 该弹当前色」播消散
+				# （与原生事件 kind=3 对齐）。行此时仍存活 —— 与原生「事件携带 pos+color」等价。
+				if host != null and host.has_method("play_clear_fx"):
+					host.play_clear_fx(system.get_position(id), system.get_color(id))
 
 
 func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ctx: BehaviorContext) -> void:

@@ -56,6 +56,19 @@ func _exit_tree() -> void:
 	_port_probes.clear()
 
 
+## 重置内核注册表（回收 program / 弹型 / 纹理句柄表 / 端口探测）。**清场后调用**（工作台重开演）。
+## 纹理句柄表与弹型表按下标对齐 —— 弹型清空则句柄表必须一起清，否则索引错位。
+func reset_registries() -> void:
+	_texture_by_index.clear()
+	_port_by_sig.clear()
+	for p in _port_probes:
+		if is_instance_valid(p):
+			p.free()
+	_port_probes.clear()
+	if system != null:
+		system.reset_registries()
+
+
 ## 生成宿主节点 bomb（返回节点，供调用方忽略/持有）。data 是 BombData（不是弹幕的 BulletData）。
 ## 宿主实体由 data 的**实际类型**决定（MistBombData → KernelMistBomb；其余/基类 → KernelBomb）。
 func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0) -> Node:

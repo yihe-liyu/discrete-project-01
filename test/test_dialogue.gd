@@ -8,16 +8,24 @@ func _make_profile(char_name: String) -> CharacterProfile:
 	return p
 
 
+## 内容校验：**遍历 profile 目录**，不写死文件名 —— 改名/增删不该红，数据违规才红
+## （契约见 docs/TEST_INDEX.md「内容绑定契约」）。
 func test_profiles_valid():
-	for path in [
-		"res://data/dialogue/profile/reimu_profile.tres",
-		"res://data/dialogue/profile/marisa_profile.tres",
-		"res://data/dialogue/profile/ka_profile.tres",
-	]:
+	var dir := DirAccess.open("res://data/dialogue/profile")
+	assert_not_null(dir, "profile 目录应存在")
+	if dir == null:
+		return
+	var checked := 0
+	for f in dir.get_files():
+		if not f.ends_with(".tres"):
+			continue
+		var path := "res://data/dialogue/profile/".path_join(f)
 		var p: CharacterProfile = load(path)
-		assert_not_null(p, "%s 应存在" % path)
+		assert_not_null(p, "%s 应可加载" % path)
 		if p:
 			assert_ne(p.char_name, "", "%s 应有 char_name" % path)
+		checked += 1
+	assert_gt(checked, 0, "至少应有一个角色 profile")
 
 
 func test_play_steps_shows_first_line():

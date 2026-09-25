@@ -59,6 +59,7 @@
 | **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 | 编剧 |
 | **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（剧本归档） | 编剧 |
 | **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（待实施） | 维护者 |
+| **[docs/TEST_INDEX.md](docs/TEST_INDEX.md)** | **测试索引** —— 99 个测试文件「改哪里 → 看哪条」+ 分层 + D3 白盒债清单 + 已知门禁坑 | 维护者 |
 | **[docs/omake.txt](docs/omake.txt)** | 附言、Extra Story、全角色设定 | 玩家/读者 |
 | **[docs/archive/](docs/archive/)** | 已归档：SPEC / ROADMAP / REFACTORING / STAGE_FLOW / SPELL_SYSTEM / CREATION_STATION / NEW_KERNEL_REFACTOR_PLAN / M3_TEXTURE / REBUILD_REPO_STATUS / 旧审计 | 历史 |
 
@@ -73,6 +74,7 @@
 | 「怎么写一颗弹 / 一套弹幕」 | docs/DANMAKU_API.md（参考）+ CONTENT_GUIDE.md §六（教学） |
 | 「怎么加一个新敌人 / 符卡」 | CONTENT_GUIDE.md |
 | 「某面角色说什么台词」 | docs/DIALOGUE.md |
+| 「改了某处，哪条测试在保护它 / 重构会不会踩到测试」 | docs/TEST_INDEX.md |
 | 「怎么跑 / 怎么测 / 快捷键」 | README.md（本页） |
 
 ---

@@ -92,7 +92,9 @@ func enter(to: Vector2, from: Vector2, dur: float = 1.5) -> BossHandle:
 	tw.tween_property(boss, "global_position", to, dur)
 	return self
 
-## 进入阶段。idle_only=true 时只在未开战才进入（对话 boss_fight 用，防重入）
+## 进入阶段。idle_only=true 时只在未开战才进入（对话 boss_fight 用，防重入）。
+## 按**当前难度**取阶段表：各难度列同形、同槽可换卡 —— 只看 phases_normal 会让
+## 难度专属符卡串味（与 stage01.gd / boss_ui.gd 的 phases_for_difficulty 保持一致）。
 func phase(index: int = 0, idle_only: bool = false) -> BossHandle:
 	var boss := resolve()
 	if not boss:
@@ -102,10 +104,12 @@ func phase(index: int = 0, idle_only: bool = false) -> BossHandle:
 	if data == null:
 		push_warning("BossHandle.phase: 槽位 '%s' 无 BossData" % _key)
 		return self
-	if index < 0 or index >= data.phases_normal.size():
-		push_warning("BossHandle.phase: 槽位 '%s' 的 BossData 只有 %d 个阶段，要求第 %d 个" % [_key, data.phases_normal.size(), index])
+	var phases := data.phases_for_difficulty(SaveData.selected_difficulty)
+	if index < 0 or index >= phases.size():
+		push_warning("BossHandle.phase: 槽位 '%s' 的 %s 难度只有 %d 个阶段，要求第 %d 个" % [
+			_key, BossData.difficulty_name(SaveData.selected_difficulty), phases.size(), index])
 		return self
-	boss.start_phase(data.phases_normal[index])
+	boss.start_phase(phases[index])
 	return self
 
 ## 退场：受控退出 + 仆街 + 飞出，播完清 ref（外部停 _process，指示器跟随照常）

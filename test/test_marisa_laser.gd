@@ -9,11 +9,13 @@ func test_segment_slicing():
 	autofree(inst)
 	var n: int = inst._seg_count()
 	var w: float = inst.SEG_W
+	# 切片取自**原始图集**：起点 = 图集合体格 `魔理沙子机高速弹` 的像素位置
+	var base: Vector2 = BulletShapes.pixel_rect(inst.LASER_SHAPE).position
 	var seg: AtlasTexture = inst._make_laser_segment(0)
 	assert_not_null(seg, "段 0 应存在")
-	assert_eq(seg.region, Rect2(0, 0, w, 32), "段 0 region 应为 (0,0,SEG_W,32)")
+	assert_eq(seg.region, Rect2(base, Vector2(w, 32)), "段 0 region 应为图集格起点 + (0,0)")
 	var seg_last: AtlasTexture = inst._make_laser_segment(n - 1)
-	assert_eq(seg_last.region, Rect2((n - 1) * w, 0, w, 32), "最后段 region 应正确")
+	assert_eq(seg_last.region, Rect2(base + Vector2((n - 1) * w, 0), Vector2(w, 32)), "最后段 region 应正确")
 	# 段数自动由图集算出
 	assert_eq(n, int(512.0 / w), "段数应自动 = 图集宽/段宽")
 

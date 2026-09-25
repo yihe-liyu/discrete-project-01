@@ -11,6 +11,8 @@ class_name PlayerData
 @export_group("", "")
 ## 角色动画帧（AnimatedSprite2D 用 SpriteFrames）
 @export var animation: SpriteFrames
+## Bomb 宣言立绘：用 Bomb 时从游戏框**左下角**快慢快扫到**右上角**后淡出。空 = 不用立绘。
+@export var portrait: Texture2D
 
 ## 射击脚本（PlayerShootScript）
 @export var shoot_script: Script

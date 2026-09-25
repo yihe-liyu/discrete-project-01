@@ -40,24 +40,33 @@ func test_tabs_switch_and_keep_bench_instances():
 
 
 
+## 目录双击 → 路由到对应台并装配。
+## 注（F10）：b 线后 `data/**` 已无 `*_bullet.gd`（弹道全部描述符化）→ `bullet` 组为空，
+## 故这里用**仍有内容**的 `enemy` / `phase` 组覆盖路由机制本身；子弹路由待工作台支持
+## 浏览 BulletLifecycle 描述符后恢复覆盖（TODO F10「工作台：弹道描述符浏览」）。
 func test_preset_route_switches_tab_and_assembles():
 	DirAccess.remove_absolute("user://creation_station.cfg")  # 清工作区配置（测试隔离）
 	var cs: Control = CS.instantiate()
 	add_child_autofree(cs)
 	await get_tree().process_frame
 	await get_tree().process_frame
-	# 取目录里第一颗子弹条目 → 路由 → 应切弹幕台且装配+发射
-	var bullets: Array = cs._bench_instances[0]._catalog.by_role("bullet")
-	if bullets.is_empty():
-		pending("b 线后 data/ 已无 *_bullet.gd（弹道全部描述符化）—— 见 TODO F10 工作台弹道浏览")
-		return
-	var entry = bullets[0]
-	BulletManager.current.clear_all()
-	cs._route_preset(entry)
+	var catalog = cs._bench_instances[0]._catalog
+
+	# 敌人：路由**末条** → 应切敌人台且选中的正是那一条（list 索引 +1，0 号是「不选」）
+	var enemies: Array = catalog.by_role("enemy")
+	assert_gt(enemies.size(), 0, "enemy 组应有内容（若空，本例需换 role）")
+	cs._route_preset(enemies[enemies.size() - 1])
 	await get_tree().process_frame
-	assert_eq(cs._current_slot, 1, "路由到弹幕台")
-	assert_true(cs._view._script_sel.selected > 0, "装配了脚本")
-	assert_true(BulletManager.current.active_count() >= 1, "直达即发射（%d）" % BulletManager.current.active_count())
+	assert_eq(cs._current_slot, 2, "enemy 路由到敌人台")
+	assert_eq(cs._view._script_sel.selected, enemies.size(), "敌人台选中被路由的那一条")
+
+	# 阶段：路由末条 → 应切阶段台且选中该条（selected = 索引）
+	var phases: Array = catalog.by_role("phase")
+	assert_gt(phases.size(), 0, "phase 组应有内容")
+	cs._route_preset(phases[phases.size() - 1])
+	await get_tree().process_frame
+	assert_eq(cs._current_slot, 3, "phase 路由到阶段台")
+	assert_eq(cs._view._phase_sel.selected, phases.size() - 1, "阶段台选中被路由的那一条")
 	cs.queue_free()
 
 

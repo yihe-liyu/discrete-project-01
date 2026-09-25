@@ -261,16 +261,24 @@ func test_boss_index_in_phase_identity():
 func test_same_boss_continued_phases_are_separate_records():
 	SaveData.selected_character = 0
 	SaveData.selected_difficulty = 1
-	# C：阶段身份走规范顺序（BossCatalog.stage_phase_order），用真实 stage 1 才能正确解析。
+	# 阶段身份走规范顺序（BossCatalog.stage_phase_order）→ 用**注入的夹具名册**而不是真实内容：
+	# 本用例测的是「同一 Boss 多段链的序号不撞键」，与内容是哪张符卡无关（内容改名不该让它红）。
 	# 备份/还原 spell_book 记录，避免污染持久存档（不泄露 —— 与 test_recent_mechanics 同法）。
 	var book_backup: Array = SaveData.spell_book.records.duplicate(true)
 	SaveData.current_stage_id = 1
 	PracticeSession.is_practice_mode = false
-	var non_mid: PhaseData = preload("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
-	var non01: PhaseData = preload("res://data/stages/stage01/phase/non01/non01.tres")
+	var non_mid := PhaseData.new()
+	non_mid.name = "夹具道中非符1"
+	non_mid.hp = 1000
+	non_mid.time_limit = 30.0
+	var non01 := PhaseData.new()
+	non01.name = "夹具非符1"
+	non01.hp = 1000
+	non01.time_limit = 30.0
 
 	# 道中 Boss：完整链 → 规范顺序定位 (phase_index 0, 非符1)
-	var bd := BossData.new().name("卡摩瑞").normal_phase(non_mid).normal_phase(non01)
+	var bd := BossData.new().name("夹具").normal_phase(non_mid).normal_phase(non01)
+	BossCatalog.set_catalog_override({1: [bd]})
 	var boss1: Boss = load("res://scripts/enemy/boss.gd").new()
 	add_child_autofree(boss1)
 	boss1.setup(bd, null)
@@ -294,4 +302,44 @@ func test_same_boss_continued_phases_are_separate_records():
 	if mid_rec:
 		assert_eq(mid_rec.phase_number, 1, "道中记录不被覆盖")
 	SaveData.spell_book.records = book_backup  # 还原，防污染持久记录
+	BossCatalog.clear_catalog_override()       # 还原名册（static 缓存全局可见，必须清）
 	SaveData.current_stage_id = 1
+
+
+## 发动前走位：`PhaseData.pre_move_script` **跑完才宣言**（phase_start）
+func test_pre_move_delays_declaration():
+	var boss: Boss = load("res://scripts/enemy/boss.gd").new()
+	add_child_autofree(boss)
+	var phase := PhaseData.new()
+	phase.name = "夹具符卡"
+	phase.uid = 7
+	phase.hp = 1000
+	phase.time_limit = 30.0
+	phase.pre_move_script = preload("res://test/fixtures/pre_move_probe.gd")   # 走 0.6 秒
+	var fired := [false]
+	var cb := func(_p: PhaseData) -> void: fired[0] = true
+	GameEvents.phase_start.connect(cb, CONNECT_ONE_SHOT)
+	boss.start_phase(phase)
+	assert_false(fired[0], "走位没跑完，还不该宣言")
+	await wait_physics_frames(60)                 # 0.6 秒 ≈ 36 物理帧
+	assert_true(fired[0], "走位跑完 → 宣言")
+	if GameEvents.phase_start.is_connected(cb):
+		GameEvents.phase_start.disconnect(cb)
+
+
+## 没配 pre_move_script → 宣言立即发生（不引入额外延迟）
+func test_without_pre_move_declares_immediately():
+	var boss: Boss = load("res://scripts/enemy/boss.gd").new()
+	add_child_autofree(boss)
+	var phase := PhaseData.new()
+	phase.name = "夹具符卡"
+	phase.uid = 7
+	phase.hp = 1000
+	phase.time_limit = 30.0
+	var fired := [false]
+	var cb := func(_p: PhaseData) -> void: fired[0] = true
+	GameEvents.phase_start.connect(cb, CONNECT_ONE_SHOT)
+	boss.start_phase(phase)
+	assert_true(fired[0], "没配走位 → 立刻宣言")
+	if GameEvents.phase_start.is_connected(cb):
+		GameEvents.phase_start.disconnect(cb)

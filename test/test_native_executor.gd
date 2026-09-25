@@ -186,7 +186,8 @@ func test_native_radial_accel() -> void:
 	_run("radial_accel", lc, CurveBehavior.new(), {}, FakeHost.new(), BehaviorContext.new(), _spread_at(6, 400.0, -180.0), 200, Vector2.ZERO, null, false, [])
 
 
-func test_native_non_mid_flee() -> void:
+## 原 non_mid_flee 预置已删；这里用原语拼出同构（= 内容「卡摩瑞道中一非」的内联版）验证原生执行器。
+func test_native_flee_then_burst() -> void:
 	if not _available(): pending("无扩展"); return
 	var player: Node2D = add_child_autofree(Node2D.new()); player.position = Vector2(448.0, 500.0)
 	var boss: Node2D = add_child_autofree(Node2D.new()); boss.position = Vector2(448.0, 120.0)
@@ -194,11 +195,17 @@ func test_native_non_mid_flee() -> void:
 	var r := 150.0
 	var burst := func(pos: Vector2, boss_pos: Vector2, has_boss: bool, _host) -> bool:
 		return has_boss and pos.distance_to(boss_pos) < r
-	var lc := BulletLifecycle.non_mid_flee(150.0, r, burst)
+	var lc := BulletLifecycle.new()
+	lc.until_near(BulletLifecycle.T_PLAYER, 150.0).every_ticks(3)
+	lc.on_end_heading(BulletLifecycle.away(BulletLifecycle.T_PLAYER))
+	lc.then()
+	lc.until_near(BulletLifecycle.T_BOSS, r).every_ticks(3)
+	lc.on_end_call(burst)
+	lc.despawn()
 	var spawns: Array = []
 	for i in 6:
 		spawns.append([Vector2(448.0 + (i - 3) * 20.0, 500.0 + (i - 3) * 15.0), Vector2(0.0, -200.0)])
-	_run("non_mid_flee", lc, CurveBehavior.new(), {}, FakeHost.new(), ctx, spawns, 150, player.global_position, boss, true, [])
+	_run("flee_then_burst", lc, CurveBehavior.new(), {}, FakeHost.new(), ctx, spawns, 150, player.global_position, boss, true, [])
 
 
 func test_native_marisa_laser() -> void:

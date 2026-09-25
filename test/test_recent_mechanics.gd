@@ -12,53 +12,33 @@ func test_grace_default_zero():
 func test_grace_chain_method():
 	var bd := BulletData.new().grace(2.5)
 	assert_eq(bd.out_grace, 2.5, ".grace(2.5) 链式设置")
+	assert_eq(bd.to_bullet_type().out_grace, 2.5, "且随类型级字段快照进 BulletType")
 
 
-func test_grace_offscreen_judgement():
-	# 复刻 bullet_manager 出屏回收判定：宽限内不回收、超时回收、回界重置
-	var grace := 2.0
-	var out_time := 0.0
-	var dt := 0.016
-	var frames_alive := 0
-	var collected := false
-	for _i in 300:
-		var offscreen := true  # 一直出界
-		if offscreen:
-			if grace > 0.0:
-				out_time += dt
-				if out_time < grace:
-					frames_alive += 1
-					continue
-			collected = true
-			break
-		else:
-			out_time = 0.0
-	assert_eq(collected, true, "超宽限后回收")
-	assert_between(frames_alive, 120, 130, "2.0s/0.016 ≈ 125 帧存活")
-
-
-func test_grace_zero_immediate():
-	# grace=0：出界立即回收（保持旧行为）
-	var grace := 0.0
-	var out_time := 0.0
-	var dt := 0.016
-	var frames_alive := 0
-	for _i in 10:
-		if grace > 0.0:
-			out_time += dt
-			if out_time < grace:
-				frames_alive += 1
-				continue
-		break
-	assert_eq(frames_alive, 0, "grace=0 出界立即回收，无宽限帧")
+func test_grace_flows_into_kernel_row():
+	## 真链路：BulletData.grace → BulletType.out_grace → KernelNativeSystem.spawn → 原生行。
+	## （2026-09-23 之前的 4 条 out_grace「测试」要么只断言 setter、要么把判定逻辑在测试里重抄
+	##  一遍 —— 全都不碰真代码，所以功能是空的门禁却一直绿。真行为 parity 见
+	##  test_lifecycle_primitives 的 out_grace 四条。）
+	if not ClassDB.class_exists("DanmakuStore"):
+		pending("未构建原生扩展")
+		return
+	var sys: KernelNativeSystem = autofree(KernelNativeSystem.new())
+	var bt: BulletType = BulletData.new().grace(1.5).to_bullet_type()
+	var id: int = sys.spawn(bt, Vector2(448.0, 480.0), Vector2.ZERO)
+	assert_eq(sys.get_out_grace(id), 1.5, "原生行拿到了逐弹宽限")
+	var plain: int = sys.spawn(BulletType.new(), Vector2(448.0, 480.0), Vector2.ZERO)
+	assert_eq(sys.get_out_grace(plain), 0.0, "未设宽限 = 0（出界立即剔除）")
 
 
 # ═══════════ open_reduce：开局减伤 ═══════════
 
-func test_open_reduce_default_off():
+## 默认值只锁**不变量**（时长非负、比例 0~1）。
+## ⚠️ 别锁具体数值 —— 曾断言"默认关闭(=0)"，作者把默认调成 3.0 后测试白红一次。
+func test_open_reduce_defaults_are_sane():
 	var phase := PhaseData.new()
-	assert_eq(phase.open_reduce_time, 0.0, "默认关闭")
-	assert_eq(phase.open_reduce_ratio, 0.9, "默认比例 0.9")
+	assert_gte(phase.open_reduce_time, 0.0, "默认减伤时长非负（0 = 关闭）")
+	assert_between(phase.open_reduce_ratio, 0.0, 1.0, "默认减伤比例在 0~1")
 
 
 func _make_boss_with_reduce() -> Node:

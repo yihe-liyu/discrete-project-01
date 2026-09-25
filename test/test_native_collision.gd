@@ -77,6 +77,17 @@ func test_native_query_circle_parity_rect() -> void:
 	_check(bt, "rect")
 
 
+func test_native_query_circle_parity_axis_aligned() -> void:
+	if not _available(): pending("无扩展"); return
+	var bt := BulletType.new()
+	bt.hitbox_radius = 5.0
+	bt.hitbox_offset = Vector2(3.0, 0.0)
+	bt.hitbox_size = Vector2(10.0, 6.0)
+	bt.follow_dir = false      # 关跟随 → 判定轴对齐，旋转恒 0
+	bt.dir_offset = 0.4        # follow_dir=false 时必须被忽略
+	_check(bt, "axis")
+
+
 func test_native_grazed_parity() -> void:
 	if not _available(): pending("无扩展"); return
 	var bt := BulletType.new()

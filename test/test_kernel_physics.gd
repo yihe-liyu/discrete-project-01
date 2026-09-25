@@ -2,7 +2,8 @@ extends GutTest
 ## KernelBulletPhysics —— 敌弹 ↔ 自机（命中 + 擦弹），规则与旧 BulletPhysics 1:1。
 
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
-const REIMU_DATA = preload("res://data/player_data/reimu_data.tres")
+## 夹具自建（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
+const FIXTURES = preload("res://test/fixtures/fixture_lib.gd")
 
 
 ## 轻量假敌人：只实现本层用到的字段/方法（免依赖完整 Enemy/Boss 场景）。
@@ -28,7 +29,7 @@ func before_each() -> void:
 	_kernel_bullet_physics = KernelBulletPhysics.new()
 	_kernel_bullet_physics.setup(_kernel_bullet_host)
 	_player = PLAYER_SCENE.instantiate()
-	_player.player_data = REIMU_DATA
+	_player.player_data = FIXTURES.player_data()
 	add_child_autofree(_player)
 	_player.global_position = Vector2(448, 640)
 	_player.is_invincible = false

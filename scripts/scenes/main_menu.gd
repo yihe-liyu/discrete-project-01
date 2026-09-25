@@ -18,6 +18,11 @@ func _ready() -> void:
 		return
 	# 导航初始化（不走 NavPage.on_enter，因为 MainMenu 是场景根）
 	_setup_nav()
+	# 从练习返回：先把主菜单那列**同步藏掉**，否则它会先渲染一帧再被淡出 —— 看着就是"闪一下"。
+	# （压页要等 PageHost 注册完，见下面 `set_page_host` 之后那行。）
+	if GameManager.pending_page_path != "":
+		_container.hide()
+		_is_nav_enabled = false
 	_is_nav_enabled = false  # 等 Logo 播完再启用
 	# 音效意图自行接线：MainMenu 是场景根，不经 MenuNav._connect_signals（那条只服务 push 的子页面）
 	sfx_requested.connect(AudioManager.play_ui_sfx)
@@ -35,6 +40,8 @@ func _ready() -> void:
 
 	GameManager.current_scene_path = "res://scenes/ui/main_menu.tscn"
 	GameManager.set_page_host(_page_host)   # R2：把子页面容器注入 MenuNav
+	# PageHost 就位后再压页（上面已同步藏好容器，所以不会闪一帧）
+	_consume_pending_page()
 	AudioManager.play_bgm(AssetRegistry.get_bgm("menu"), 1.0)
 
 	# Logo 入场动画
@@ -120,6 +127,17 @@ func _on_character_result(result: Dictionary, _page: Node) -> void:
 
 # ═══ 符卡练习 ═══
 
+## 从练习返回：把符卡练习页重新压回来（层级/选中项由该页自己从 PracticeSession 还原）
+func _consume_pending_page() -> void:
+	if GameManager.pending_page_path == "":
+		return
+	var path := GameManager.pending_page_path
+	GameManager.pending_page_path = ""
+	# ⚠️ 必须走 `_open_page()`（而不是直接 `GameManager.push_page`）—— 它会先 `_deactivate_title()`
+	#    淡出并隐藏主菜单那一列；绕过它就会「主菜单列 + 子页面」叠在一起（曾出此 bug）。
+	_open_page(path)
+
+
 func _open_spell_practice() -> void:
 	_deactivate_title()
 	var page := GameManager.push_page("res://scenes/ui/spell_practice_menu.tscn")
@@ -191,6 +209,8 @@ func _input(event: InputEvent) -> void:
 		skip_entrance()
 		return
 	if event.is_action_pressed("debug_toggle"):
-		# TODO: debug_fill_spells 已移除 — 从 stage_registry 自动填充
-		_container.get_node("Spell Practice").remove_meta("is_locked")
+		# F1 调试：一键解锁所有符卡练习（从名册填充；只补空白记录，不覆盖已有成绩）
+		var added := SaveData.debug_unlock_all_spells()
+		_refresh_spell_lock()
 		refresh_colors()
+		print("[debug] 符卡练习一键解锁：新增 %d 条 / 共 %d 条记录" % [added, SaveData.spell_book.records.size()])

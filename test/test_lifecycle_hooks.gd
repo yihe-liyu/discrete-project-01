@@ -22,8 +22,8 @@ func test_unknown_name_is_invalid() -> void:
 
 
 func test_named_hook_in_signature() -> void:
-	var a := BulletLifecycle.non_mid_flee(150.0, 100.0, &"h")
-	var b := BulletLifecycle.non_mid_flee(150.0, 100.0, &"h")
-	var c := BulletLifecycle.non_mid_flee(150.0, 100.0, &"other")
+	var a := BulletLifecycle.new().until_elapsed(1.0).on_end_call(&"h")
+	var b := BulletLifecycle.new().until_elapsed(1.0).on_end_call(&"h")
+	var c := BulletLifecycle.new().until_elapsed(1.0).on_end_call(&"other")
 	assert_eq(a.content_signature(), b.content_signature(), "同名 hook 应同签名（→ 共用 program）")
 	assert_ne(a.content_signature(), c.content_signature(), "不同名 hook 应异签名")

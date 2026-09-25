@@ -70,3 +70,50 @@ func record_practice(pid: PhaseIdentity, captured: bool) -> void:
 func record_practice_capture(pid: PhaseIdentity) -> void:
 	spell_book.record_practice_capture(pid.stage_id, pid.phase_index, pid.boss_index, pid.character, pid.difficulty)
 	save()
+
+
+# ═══ 调试 ═══
+
+## 一键解锁所有符卡练习：遍历名册每个 stage × Boss × 难度 × 角色，为**每个阶段**
+## （符卡 + 非符）补一条空白记录（"见到即记"，不记 attempts / 不覆盖已有成绩）。返回新建条数。
+## 零统计非符能落盘，靠 SpellRecordBook.prune_empty() 改按主键判活（phase_index>=0 即保留）。
+func debug_unlock_all_spells() -> int:
+	var added := 0
+	var roster := BossCatalog.all()
+	# 逐 stage 维护 Boss 槽位偏移（与规范序同源：phases_normal 长度 = 槽位数）
+	for stage in roster:
+		var acc := 0
+		var bosses: Array = roster[stage]
+		for bi in bosses.size():
+			var b: BossData = bosses[bi]
+			var shape: int = b.phases_normal.size()
+			for diff in SpellRecord.DIFF_VALUES:
+				var arr: Array = b.phases_for_difficulty(diff)
+				for off in mini(arr.size(), shape):
+					var phase: PhaseData = arr[off]
+					if phase == null:
+						continue
+					var phase_index: int = acc + off
+					var is_spell: bool = phase.uid != 0
+					for ch in [SpellRecord.Character.REIMU, SpellRecord.Character.MARISA]:
+						var character := int(ch)
+						if spell_book.get_record(stage, phase_index, bi, character, diff) != null:
+							continue
+						spell_book.get_or_create(stage, phase_index, bi, character, diff, phase.uid,
+							SpellRecord.PhaseType.SPELL if is_spell else SpellRecord.PhaseType.NONSPELL,
+							_debug_phase_number(stage, phase_index, is_spell))
+						added += 1
+			acc += shape
+	if added > 0:
+		save()
+	return added
+
+
+## 规范顺序里第 phase_index 个位置是第几张**同类**（符卡/非符，与 resolve_identity 同源；仅调试用）。
+func _debug_phase_number(stage: int, phase_index: int, is_spell: bool) -> int:
+	var count := 0
+	var order := BossCatalog.stage_phase_order(stage)
+	for j in range(mini(phase_index + 1, order.size())):
+		if order[j] != null and (order[j].uid != 0) == is_spell:
+			count += 1
+	return count

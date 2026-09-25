@@ -1,6 +1,10 @@
 extends GutTest
 ## KernelMistBomb：分阶段展开（长→保持→宽→保持→淡出）+ 跟随自机 + 椭圆持续伤害/清弹。
 ## 用测试自带短时长 MistBombData（不依赖 .tres 的可调时长）。
+##
+## `MARISA_DATA` **故意绑真实内容**：`test_marisa_bomb_data_is_mist` 验的是「marisa 配的 bomb
+## 确实是 MistBombData、且等宽阶段才带伤害」= **内容校验**（改名/改数据时该红）。
+## 其余用例只是借用它的贴图（`bd.texture`），已用测试自建的 MistBombData 承载，不额外增加耦合。
 
 const MARISA_DATA = preload("res://data/player_data/marisa_data.tres")
 

@@ -30,6 +30,8 @@ class DanmakuStore : public RefCounted {
 	std::vector<int> _fx_type;
 	std::vector<Color> _color;
 	std::vector<float> _life, _fx, _timer;
+	// 出界宽限（秒，逐弹；0 = 出界立即剔除）与「已连续出界时长」。cull 时按 _out_grace 计时。
+	std::vector<float> _out_grace, _out_time;
 	float _default_life = 20.0f;
 	std::vector<float> _hb_radius, _hb_offx, _hb_offy, _hb_sizex, _hb_sizey, _hb_diroff;
 	std::vector<unsigned char> _hb_follow, _grazed;
@@ -55,6 +57,8 @@ class DanmakuStore : public RefCounted {
 	std::vector<int> _tick_dead;
 	std::vector<int> _ev_kind, _ev_prog, _ev_local, _ev_bullet, _ev_variant;
 	std::vector<float> _ev_x, _ev_y, _ev_dx, _ev_dy, _ev_val;
+	// 事件携带的弹色（与上面各数组**等长对齐**）。宿主用它给消弹消散特效染同色（op 47）。
+	std::vector<Color> _ev_color;
 	int _capacity = 0;
 	int _count = 0;
 	Rect2 _cull;
@@ -96,6 +100,9 @@ public:
 	void reserve(int p_n);
 	void set_cull(const Rect2 &p_cull);
 	void set_margin(float p_margin);
+	/// 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
+	void set_out_grace(int p_id, float p_grace);
+	float get_out_grace(int p_id) const;
 	void set_default_life(float p_life);
 	void set_field(float p_left, float p_right, float p_top);
 	void set_seed(int p_seed);

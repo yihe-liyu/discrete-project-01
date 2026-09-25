@@ -65,6 +65,10 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	super.start(ctx, target)
 ```
 
+> **一次性初始化更轻的写法**：要在**首次 `_tick` 之前**建弹型 / 注册钩子时，覆写 `_on_start()` 即可 ——
+> `start()` 会先设好 `ctx`/`target` 再调它，**不必**再覆写 `start()` + `super.start(...)`。
+> 只有需要自定义启动时序（如在这里建 timeline、算 `_dir`）时才覆写 `start()`。
+
 Timeline 链式 API：`at(t)` 绝对时刻 · `wait(n)` 相对上一 blocking 结束 · `do(cb)` 任意逻辑 ·
 `start_phase(boss_getter, PhaseData)` 起阶段（保留时符等待：击破后激活后续 wait） · `every(t).times(n)` 重复。
 **场景动词（bgm/boss/dialogue/事件路由）由 `StageDirector` 承担**；Timeline 是**纯排程器**，动作一律 `do(func(): ctx.*)` / `do(func(): _dir.xxx())`。
@@ -108,22 +112,44 @@ uid = 55
 time_limit = 40.0
 hp = 4000
 move_script = ExtResource("...random_dir_move.gd")
-shoot_script = ExtResource("...orbit_spiral.gd")
+shoot_script = ExtResource("...spell053_shoot.gd")
 ```
 
-**`params`（阶段级脚本参数覆盖，脚本复用通道）**：`Boss.start_phase` 时把 `params` 注入到该阶段的 move/shoot 脚本**同名属性**（脚本有此 var 才设置）。同一弹幕脚本给多个阶段复用、参数不同时用——不用复制脚本：
+**`params`（阶段级脚本参数覆盖）—— 「分化三选一」的最后手段，不是首选。**
+
+> **分化优先级（2026-09-22 立）**：
+> **① `diff_pick()`（难度轴，首选）→ ② 另写一个脚本（内容轴，最直白）→ ③ `params`（只在"脚本几乎相同、复制很浪费"时）**
+>
+> 实测（2026-09-22）：全项目 53 个 `.tres` **没有一个用 `params`**；难度轴有 29 处 `diff_pick`。
+> 内容轴**确实存在脚本复用**（`random_dir_move.gd` 撑 9 个阶段、`spell053_shoot.gd` 与 `spell001_shoot.gd` 各撑 4 张），
+> 但**从未用 `params` 去分化它们** —— 也就是说这条通路至今一次都没派上用场。
+
+**为什么排最后**：值离逻辑远（脚本里默认 175、`.tres` 里覆盖 400，得两头看）、键名写错要到运行期才报、
+手感散在 `.tres` 里不进 diff —— 而 `diff_pick` 把这些值放在**逻辑旁边**。**能内联就别外置。**
+
+**它唯一的独门能力**（`diff_pick` 表达不了）：同一脚本 × 多张 PhaseData × 只差两三个数值
+—— 也就是"脚本不知道自己正跑在哪张符卡上"的那一维。
+
+**机制**：`Boss.start_phase` 把该阶段的 `params` 注入到 move/shoot 脚本的**同名属性**（`key in target` 才设）。
 
 ```gdscript
-# phase/第二符卡.tres（复用 orbit_spiral）
-shoot_script = ...orbit_spiral.gd
+# phase/第二符卡.tres（复用 spell053_shoot）
+shoot_script = ...spell053_shoot.gd
 params = {
-	"orbit_speed": 8.0,          # 覆盖脚本里的 var orbit_speed
-	"hold_time": 3.0,            # 覆盖 hold_time
-	"probe_count": [3, 5, 8, 12],
+	"发弹点角速度": 8.0,     # 覆盖脚本里的 var 发弹点角速度
+	"保持旋转时间": 3.0,     # 覆盖 保持旋转时间
+	"个数": 8,
 }
 ```
 
-> 惯例：参数默认直接写在脚本 var 里（调参即改脚本）；`params` 只用于"同一脚本多形态"的覆盖场景。
+**三条隐性约束（违反时都不报错，只是"没生效"）**：
+
+1. **只认 `var`，不认 `const`**：`const` 键的 `"X" in target` 为 **true**、但 `set()` **静默无效**
+   —— 可调项必须是 `var`（实测：`BulletLifecycle.MAX_SLOTS` 应用后值不变、无任何报错）。
+2. **move / shoot 共用同一个字典**（`boss.gd` 对两者都传 `data.params`）→ **两边不能有同名 var**，否则一个键同时改两边。
+3. **注入发生在 `start()` 之前**（`boss.gd`：`new()` → `apply` → `start()`）；
+   若脚本在 `_on_start()` 里建弹型（如 `spell053_shoot.gd`），把注入挪到 `start()` 之后会让
+   `_on_start()` 读的那批变量**静默失效**（而 `_tick()` 读的那批照旧生效 → 一半失灵最难查）。
 
 ### Boss 阶段脚本（协程 .gd + .tres 显式引用）
 
@@ -146,12 +172,11 @@ data/stages/stage01/phase/
     └── spell001.tres
 data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见/黄粱」）
 ├── spell053~056.tres
-├── orbit_spiral.gd                       # shoot_script（环绕发射器 + 探测弹）
-└── orbit_probe.gd                        # 探测弹行为
+└── spell053_shoot.gd                     # shoot_script（环绕发射器 + 往返探测弹描述符）
 ```
 
 **加新阶段 = 建目录 + 写 .gd + 建 .tres，`.tres` 里用 `move_script=ExtResource(...)` 指脚本**，
-再在关卡脚本 `timeline.start_phase(getter, that_tres)`（时轴驱动）或 `handle.phase(index)`（事件驱动）引用。脚本文件即复用单元，跨阶段复用用 `params` 覆盖。
+再在关卡脚本 `timeline.start_phase(getter, that_tres)`（时轴驱动）或 `handle.phase(index)`（事件驱动）引用。脚本文件即复用单元 —— 想复用同一脚本时，**先看难度轴能否用 `diff_pick`，再考虑另写一个脚本，`params` 是最后手段**（见上「分化三选一」）。
 
 ---
 
@@ -159,6 +184,7 @@ data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见
 
 - **Boss 阶段**：`BossData` 四组 phases（E/N/H/L），协程脚本里 `diff_pick()` 按难度取
 - **敌人强度**：行为脚本内 `diff_pick([1, 3, 5, 8])` 运行时取参
+- **分化手段优先级**：难度轴 → `diff_pick()`（首选，值放脚本里）；内容轴 → 另写脚本；`params` 最后（见 §四）
 - **UID 规则**：真符卡全局唯一（建议 1 面 100-199、2 面 200-299…）；非符 uid=0；角色共用 UID，SpellRecordBook 主键区分
 
 ---
@@ -256,7 +282,7 @@ func _fire(p_ctx: StageContext) -> void:
 	p_ctx.bullets.shoot_spread(_bullet, 8, TAU, Vector2.RIGHT, global_position)
 ```
 
-#### ② 常用：10 个命名 preset
+#### ② 常用：9 个命名 preset
 
 | preset | 参数（括号内为默认） | 说明 |
 |---|---|---|
@@ -267,7 +293,6 @@ func _fire(p_ctx: StageContext) -> void:
 | `bounce(accel_rate, bounce_angle, spawn_speed, spawn, sfx, sfx_db)` | `spawn: BulletData`（替换弹）、`sfx`("kira")、`sfx_db`(-8) | 碰框朝 Boss 转 `bounce_angle` 后换弹 |
 | `radial_accel(accel_rate, spawn, sfx, sfx_db)` | `spawn: BulletData`、`sfx`("")、`sfx_db`(0) | 沿初向加速 + 碰顶换向下弹 |
 | `avoid_player(proximity, jump, flee_time)` | — | 靠近自机逃 |
-| `non_mid_flee(proximity, boss_radius, burst)` | `burst` = 已注册 hook 名（`StringName`） | 逃 → 近 Boss 散圈 |
 | `marisa_laser(...)` / `laser_follow(...)` | `anchor_id`、`offset`、`angle`、`drift_speed`、`initial_drift` | 子机锚定激光（前者 World 兄弟用 global，后者子节点用局部） |
 
 > **权威真相 = `scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` 的 `build()`**（组合定义唯一在此）；上表是它的类型化薄包装。
@@ -295,7 +320,7 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 | 类 | 成员 |
 |---|---|
 | Move | `accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift` |
-| Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_state` `until_turned`；`then()` 开新相位 |
+| Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_speed` `until_state` `until_turned`；`then()` 开新相位 |
 | Action | `sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call` |
 | 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` |
 
@@ -369,3 +394,36 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 - 运行时保存 .tres 依赖 res:// 可写（开发模式）；导出包只读，符卡簿保存会失败（待数据迁移方案）
 - **弹丸协程脚本**（gravity_bullet.gd 等，被行为脚本 preload）与所有脚本改动都需**重启工作台**生效
 - 敌人/Boss 脚本零注册：preload/直接引用即用
+
+## 发动符卡前的走位（`PhaseData.pre_move_script`）
+
+符卡宣言（报幕 / `card` 音效 / 符卡背景）默认**立刻**发生。想让 Boss「先走到位、再发表宣言」，
+把走位脚本挂到该阶段的 `pre_move_script`：
+
+```gdscript
+# 符卡001.tres
+pre_move_script = <走位脚本>     # 它跑完 → 才宣言 → 再进入这张卡自己的 move/shoot
+```
+
+**现成示例**：[`data/boss_scripts/move/move_to_point.gd`](data/boss_scripts/move/move_to_point.gd)
+—— 走到指定站位后自己结束，站位/耗时可用 `params` 覆盖：
+
+```gdscript
+# PhaseData.params
+{"dest": Vector2(448, 240), "move_time": 1.2}
+```
+
+✅ 已验证生效（`_run_pre_move()` 在 `start()` 之前注入，错键名/类型由 `ParamValidator` 响亮报错）。
+
+⚠️ **但 `params` 是同一阶段**共用的一份字典** —— `pre_move_script` / `move_script` / `shoot_script`
+拿到的是**同一个 `data.params`**。所以**键名会互相干扰**：本示例的 `move_time` 与
+`random_dir_move.gd` 的 `move_time` 同名，同一阶段同时用这两个脚本时，它们会拿到**同一个值**。
+要么避开重名（如改叫 `glide_time`），要么接受这个共享语义。
+
+⚠️ **写 pre_move 脚本的铁律：必须能结束。** 它不结束，这张符卡就永远不会发动
+（`Boss.start_phase` 会一直等它的 `finished`）。注意 `CoroutineScript.auto_stop` **默认是 `false`**
+（持续运行语义），要在 `_init()` 里 `auto_stop = true`，`_tick` 返回 `false` 才真的会停。
+
+**第二个示例**：[`data/boss_scripts/move/corner_sweep.gd`](data/boss_scripts/move/corner_sweep.gd)
+—— 从游戏框**右上角**扫到**左下角**，**快→慢→快**（两段 tween 接力：`EASE_OUT` 到中点 + `EASE_IN` 到终点，中点即场地中心）。
+参数：`move_time`(1.6s) / `hold_middle`(中点停留) / `from_corner`(是否先瞬移到右上角)。

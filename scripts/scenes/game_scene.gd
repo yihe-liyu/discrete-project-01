@@ -5,9 +5,25 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
+## 当前 Boss（符卡背景取它的 `BossData.spell_background`）；由 boss_spawned/defeated 维护
+var _current_boss: Boss
+## 本局是否**已进入结算**。中弹(延迟 2s) / 击破 / 通关是三条独立的路，
+## 而结算菜单挂在 autoload 的菜单栈上（切场景后仍在）——不加闸门就会「主菜单 + Game Over」叠一起。
+## 规则：谁先到谁生效，其余一律放弃。
+var _ending: bool = false
+## 符卡练习的 SE 额外压低（dB）。**当前 0.0 = 关闭** ——
+## 真凶已修（`lc.sfx()` 的 db 默认 0.0 = 满音量，比正常大 15 dB），所以这条补偿先撤掉。
+## 若还是嫌大，从这里往负调（-3 → -6 → -9）；旋钮保留着，改一个数即可。
+const PRACTICE_SFX_TRIM_DB := 0.0
 
 @onready var _sub_viewport: SubViewport = %SubViewport
 @onready var _world: Node2D = %World
+## 符卡背景层（每 Boss 一张，压在 3D 背景之上、弹幕之下；见 spell_backdrop.gd）
+@onready var _spell_backdrop: Sprite2D = %SpellBackdrop
+## 符卡宣言立绘层（右上一→左下，快慢快 → 淡出；见 spell_portrait.gd）
+@onready var _spell_portrait: Sprite2D = %SpellPortrait
+## 自机 Bomb 立绘层（左下 → 右上，与 Boss 镜像；同一个脚本）
+@onready var _player_portrait: Sprite2D = %PlayerPortrait
 @onready var _fx_pool: FxPool = %FxPool
 @onready var _stage_runtime: StageRuntime = %StageRuntime
 @onready var _game_ui: GameUI = $GameUI
@@ -42,6 +58,13 @@ func _ready():
 	GameEvents.player_death.connect(_on_player_death)
 	GameManager.game_state_changed.connect(_on_game_state_changed)
 	_stage_runtime.stage_cleared.connect(_on_stage_cleared)
+	# 符卡背景：Boss 谱由 boss_spawned 记下，显示时机由 phase_start 决定。
+	# 顺序有保证：spawn_boss() 里先 start_boss()（发 boss_spawned）再 start_phase()（发 phase_start）。
+	GameEvents.boss_spawned.connect(_on_boss_spawned)
+	GameEvents.boss_defeated.connect(_on_boss_defeated)
+	GameEvents.phase_start.connect(_on_phase_start)
+	GameEvents.phase_end.connect(_on_phase_end)
+	GameEvents.player_bomb.connect(_on_player_bomb)
 
 	if PracticeSession.is_practice_mode:
 		SaveData.is_restarting = false
@@ -67,16 +90,29 @@ func _start_normal_game() -> void:
 
 
 func _start_practice_game() -> void:
+	# 符卡练习：作者反馈 SE（尤其弹幕 kira）在练习里明显偏大。
+	# 这里是**场景级**压低 —— 正常流程的混音一个数都不动。
+	AudioManager.sfx_trim_db = PRACTICE_SFX_TRIM_DB
 	_load_background(PracticeSession.background)
+	# 练习模式没有关卡脚本 → 没人起 BGM（只剩 SE，没有衬托会显得特别响）。
+	# 按关卡数据起本关 BGM（3B 这类没有可玩 StageData 的，靠目录扫描也能查到）。
+	var stage_data: StageData = StageCatalog.find(PracticeSession.stage_id)
+	if stage_data != null and stage_data.bgm_key != "":
+		var bgm: AudioStream = AssetRegistry.get_bgm(stage_data.bgm_key)
+		if bgm:
+			AudioManager.play_bgm(bgm)
 
 	var phase: PhaseData = PracticeSession.phase
 	if not phase:
 		push_error("GameScene: practice_phase 未设置")
 		return
 
+	# 现查**真 BossData**（记录的 stage/phase_index → 花名册）：
+	# 这样 `spell_background` / `portrait` 等字段不会丢，不必再让 PracticeSession 各带一份。
+	var boss_data: BossData = BossCatalog.boss_of_phase(PracticeSession.stage_id, PracticeSession.phase_index)
 	var boss: Boss = _stage_runtime.start_spell_card(
 		phase, PracticeSession.boss_scene, PracticeSession.boss_name,
-		Vector2(GameConfig.FIELD_CENTER_X, 240)
+		Vector2(GameConfig.FIELD_CENTER_X, 240), boss_data
 	)
 	if not boss:
 		push_warning("GameScene: start_spell_card 返回 null —— 练习 Boss 未生成")
@@ -116,6 +152,16 @@ func _exit_tree():
 		_stage_runtime.stage_cleared.disconnect(_on_stage_cleared)
 	if GameEvents.boss_defeated.is_connected(_on_practice_cleared):
 		GameEvents.boss_defeated.disconnect(_on_practice_cleared)
+	if GameEvents.boss_spawned.is_connected(_on_boss_spawned):
+		GameEvents.boss_spawned.disconnect(_on_boss_spawned)
+	if GameEvents.boss_defeated.is_connected(_on_boss_defeated):
+		GameEvents.boss_defeated.disconnect(_on_boss_defeated)
+	if GameEvents.phase_start.is_connected(_on_phase_start):
+		GameEvents.phase_start.disconnect(_on_phase_start)
+	if GameEvents.phase_end.is_connected(_on_phase_end):
+		GameEvents.phase_end.disconnect(_on_phase_end)
+	if GameEvents.player_bomb.is_connected(_on_player_bomb):
+		GameEvents.player_bomb.disconnect(_on_player_bomb)
 
 	_stage_runtime.miss_layer = null  # 解除注入（节点随本场景释放）
 	_bullet_manager.clear_all()       # 内含 fx_pool.clear_pool()
@@ -130,6 +176,7 @@ func _exit_tree():
 		_background_instance = null
 	_stage_runtime.stop_stage()
 	_stage_runtime.current_background = null
+	AudioManager.sfx_trim_db = 0.0   # 离场还原（别漏到下一局）
 	GameManager.unregister_world(_bullet_manager)   # 世界随场景注销
 
 
@@ -149,8 +196,82 @@ func _setup_player() -> void:
 	_game_ui.resources = _stage_runtime.entity_registry.get_player_resources()
 
 
+## ── 符卡背景（每 Boss 一张，只在符卡期间显示）──
+
+## 记下当前 Boss —— 背景图取自它的 `BossData.spell_background`。
+## 参数用 `Node` + `as Boss`（与 boss_ui 同法）：信号声明写的是 `Enemy`，但 `Boss` 与 `Enemy`
+## 是**兄弟**（都 extends Area2D），实际发的就是 `Boss` —— 那句声明是错的，见 BEST_PRACTICES_LOG。
+func _on_boss_spawned(boss: Node) -> void:
+	_current_boss = boss as Boss
+
+
+func _on_boss_defeated(_boss: Node) -> void:
+	_current_boss = null
+	_spell_backdrop.clear()
+
+
+## 判据在 `spell_backdrop.should_show()`：符卡显示、非符/没图淡出
+func _on_phase_start(phase: PhaseData) -> void:
+	_spell_backdrop.apply(phase, _resolve_spell_background())
+	_spell_portrait.sweep(_resolve_spell_portrait(phase))
+
+
+## 阶段结束（符卡打完 / 超时 / 被击破）→ 符卡背景**渐隐**。
+## 只靠 phase_start 更新的话，背景会一直挂到下一阶段开始 —— 符卡结束后本该收掉。
+func _on_phase_end(_captured: bool, _bonus: int) -> void:
+	_spell_backdrop.clear()
+
+
+## 自机用 Bomb：立绘**左下 → 右上**扫场（与 Boss 的符卡立绘镜像）
+func _on_player_bomb(_spell_name: String) -> void:
+	_player_portrait.sweep_from_bottom_left(_resolve_player_portrait())
+
+
+## 自机立绘：取当前机体 `PlayerData.portrait`（`%Player` 已按角色装配）
+func _resolve_player_portrait() -> Texture2D:
+	var player: Player = %Player
+	if player != null and player.player_data != null:
+		return player.player_data.portrait
+	return null
+
+
+## 符卡立绘：**只在符卡期间**扫场；取当前 Boss 的 `BossData.portrait`。
+## 练习模式回落用 `BossCatalog` 现查（`start_spell_card` 自建 BossData 会丢字段）。
+func _resolve_spell_portrait(phase: PhaseData) -> Texture2D:
+	if phase == null or phase.uid == 0:
+		return null
+	# ⚠️ 必须连 portrait != null 一起判：练习模式的自建 BossData 没有这个字段，
+	#    若这里拿到 null 就 return，就永远落不到下面的练习回落（符卡背景同样写法）
+	if is_instance_valid(_current_boss) and _current_boss.boss_data != null \
+			and _current_boss.boss_data.portrait != null:
+		return _current_boss.boss_data.portrait
+	if PracticeSession.is_practice_mode:
+		var bd: BossData = BossCatalog.boss_of_phase(PracticeSession.stage_id, PracticeSession.phase_index)
+		if bd != null:
+			return bd.portrait
+	return null
+
+
+## 符卡背景图：优先**当前 Boss** 的 `BossData.spell_background`；
+## 练习模式回落到会话载荷 —— `start_spell_card()` 自建 BossData（只带 phase/visual/name），
+## 会把 `spell_background` 丢掉，故 `PracticeSession` 单独携带一张。
+func _resolve_spell_background() -> Texture2D:
+	if is_instance_valid(_current_boss) and _current_boss.boss_data != null \
+			and _current_boss.boss_data.spell_background != null:
+		return _current_boss.boss_data.spell_background
+	if PracticeSession.is_practice_mode:
+		return PracticeSession.spell_background
+	return null
+
+
 func _on_player_death():
-	await get_tree().create_timer(2.0).timeout
+	if _ending:
+		return
+	await get_tree().create_timer(GameConfig.DEATH_MENU_DELAY).timeout
+	# 这段窗口里可能已被击破/通关结算过（那时主菜单已经出来了）→ 不能再叠一个 Game Over
+	if _ending or not is_inside_tree():
+		return
+	_ending = true
 	var menu: Control = GAME_OVER_MENU.instantiate()
 	menu.title_text = "Game Over"
 	GameManager.push_overlay_menu(menu)
@@ -164,6 +285,9 @@ func _on_game_state_changed(_old: int, new: int) -> void:
 
 
 func _on_stage_cleared():
+	if _ending:
+		return
+	_ending = true
 	if SaveData.is_stage_practice:
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
@@ -179,6 +303,9 @@ func _on_stage_cleared():
 
 
 func _on_practice_cleared(_boss: Node) -> void:
+	if _ending:
+		return
+	_ending = true
 	if _boss is Boss:
 		var runner: CoroutineRunner = (_boss as Boss).ctx.runner
 		if runner and is_instance_valid(runner):
@@ -186,6 +313,10 @@ func _on_practice_cleared(_boss: Node) -> void:
 			runner.queue_free()
 	GameEvents.boss_defeated.disconnect(_on_practice_cleared)
 	PracticeSession.finish()
+	# 返回**符卡练习菜单**（而不是主菜单）：到菜单后自动压回练习页，
+	# 层级/选中项由该页从 PracticeSession.return_menu_state 还原
+	PracticeSession.restore_menu_on_enter = true
+	GameManager.pending_page_path = "res://scenes/ui/spell_practice_menu.tscn"
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 

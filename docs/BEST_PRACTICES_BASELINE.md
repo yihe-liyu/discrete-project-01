@@ -80,7 +80,7 @@
 > - **不会（只靠枚举或被数据引用） → 内容槽 → 中文可读标签 OK**。
 > - **机制层代码（`scripts/**`）引用内容 → 只能走三种落点**：数据资源 `@export` / 场景装配（`.tscn` 给 `@export` 赋值）/ 内容脚本（`data/**`），不得写死路径/key。
 > - **跨层字符串 key**（数据里存、代码表里查）：默认归标识符 → ASCII；除非其定义表本身已迁为内容资源。
-> - **明确豁免 · `AssetRegistry`（2026-09-18 立）**：`scripts/asset_registry.gd` 是**内容槽的代码侧索引表**（`bullet_configs` / `enemy_visuals` / `sounds` / `BGM_PATHS`），其 `res://` 与中文 key 属**内容槽引用**、非机制标识符 → 当前**合规豁免**。**退役条件**：随 S13 图集 + 数据化（`F7`：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁入 `data/**`；迁完一表即**移除该表豁免**，全表迁完豁免终止。
+> - **明确豁免 · `AssetRegistry`（2026-09-18 立）**：`scripts/asset_registry.gd` 是**内容槽的代码侧索引表**（`bullet_configs` / `enemy_visuals` / `sounds` / `BGM_PATHS`），其 `res://` 与中文 key 属**内容槽引用**、非机制标识符 → 当前**合规豁免**。**退役条件**：随 S13 图集 + 数据化（`F7`：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁入 `data/**`；迁完一表即**移除该表豁免**，全表迁完豁免终止。**F7 进度（2026-09-20）**：`bullet_configs` 表**已整体退役** —— 弹型迁 `data/bullets/*.tres`（`BulletCatalog` 读取），贴图迁 1024² 图集 + `data/atlas/bullet_shapes.tres`；本表仅余 `enemy_visuals` / `sounds` / `BGM_PATHS` / `LASER_TEXTURE`（`laser` 按拍板留独立 PNG）。
 
 > - **明确豁免 · `assets/` 素材根目录（2026-09-18 立）**：`assets/Textures` / `assets/Music` / `assets/Sound` 三个**内容素材根目录**保留 PascalCase —— 改名 = 3 目录 + ~236 处路径（含 137 条 `.import`）+ 全量重导入，收益仅「字面合规」；与「`AssetRegistry` 内容槽索引表」同源。
 
@@ -196,7 +196,7 @@
 - [x] 弹型/颜色语义一致（敌弹颜色 vs 自机弹），背景/雾不吞弹 —— `BulletData.tint_mode`（MULTIPLY/BLEND）+ `bullet_batch` shader 分模式
 - [~] 弹幕有"预告/起手"（telegraph），不存在无解弹幕 —— 出生雾 = 内核逐行 `_fx` 相位（冻结 / 不判定 / 不跑行为）+ `EffectType`（`data/fx/enemy_spawn_fx.tres`）+ `bullet_batch.gdshader`(BLEND)；逐弹型开关 `BulletType.is_spawn_fog`；无解性仍靠人工试玩
 - [~] 弹幕密度、速度、命中点可读，玩家能瞬间判断下一步 —— `background/*` + `screen_fog_fx.gd` 已有；需人工调校
-- [x] 每颗子弹命中判定精确（hitbox 形状/偏移，测到像素级）—— `BulletData.hitbox_shape/offset/rotation` + 内核 `hit_geometry.gd`
+- [x] 每颗子弹命中判定精确（hitbox 形状/偏移，测到像素级）—— `BulletData.hitbox_shape/offset/size` + 内核 `hit_geometry.gd`
 
 ## S5. 敌人 / 阶段 / Boss / 符卡（phases & spell cards）
 状态：✔（机制闭环） ｜ 适用红线：R2, R17, R18, R20
@@ -256,10 +256,10 @@
 
 ## S13. 素材与图集（atlas / 贴图规格）
 状态：✘（未用图集） ｜ 适用红线：R12, R17
-- [ ] 弹幕贴图统一进图集（一图一 MultiMesh）；布局数据走 Resource（R17）—— **原项目是逐张独立 PNG**（`assets/Textures/bullet/*.png`，中文文件名属内容槽 = 合规）+ `AssetRegistry.bullet_configs` 代码侧配置；未做图集
+- [x] 弹幕贴图统一进图集（一图一 MultiMesh）；布局数据走 Resource（R17）（2026-09-20 完成）—— 全部弹型贴图进 1024² 图集（`data/atlas/bullet_shapes.tres` 44 格）；弹型数据化 `data/bullets/*.tres`（内容资源 = `BulletDef`：外观+碰撞+朝向；运行时 `BulletType` 由构造链建；`bullet_configs` 退役）；`test_atlas_layout` 哨兵 + 像素核对（敌弹/灵梦系逐字节相等，marisa 系 maxdiff≤2，`魔理沙bomb` 仅低 alpha 边缘噪声）；**例外** `laser`（按拍板留独立 PNG → `AssetRegistry.LASER_TEXTURE`）
 - [ ] 格间留 ≥1px 余量（gutter）—— 未用图集，不适用
 - [ ] 拆图集阈值（单图 > 1024² 或形状数 > 80 → 拆）—— 未用图集，不适用
-- [~] 弹型朝向：`follow_dir` / `dir_offset` 语义统一 —— `BulletData.hitbox_rotation` + 内核 `hit_geometry.gd`；朝向语义需审计
+- [x] 弹型朝向：`follow_dir` / `dir_offset` 语义统一（2026-09-19）—— 三处公式（GDScript `BulletType.rotation_for` / 原生 `_hit_rot` / 渲染桥）逐字等价；死字段 `BulletData.hitbox_rotation` 已删；两字段经 `bullet_configs` + 实例直赋打通到内核弹型（`test_bullet_orientation` / `test_native_collision` 锁定）
 
 ---
 

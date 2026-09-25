@@ -150,15 +150,27 @@ func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -
 ## 生成对应 Boss 并直接让它进入该阶段。
 ## 与 load_stage（整关编排）不同：本方法只服务"点杀单阶段"，故自建 clock，不复用整关脚本。
 ## 返回 Boss；Boss.ctx.runner 即本次时钟（可 stop/queue_free 清理）。
-func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: String, position: Vector2) -> Boss:
+func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: String, position: Vector2,
+		p_data: BossData = null) -> Boss:
 	var runner := CoroutineRunner.new()
 	runner.run(func(): return true)  # 保活：让 ctx.runner 保持 is_running（ctx.active/clock 依赖）
 	var ctx := StageContext.new(runner)
 	ctx.stage = self   # 符卡练习 ctx 也要绑 StageRuntime：ctx.effects/entity_registry 才能解析 Miss 层与自机
-	var single := BossData.new()
-	single.boss_name = boss_name
-	single.visual = boss_scene
-	single.phases_normal = [p_phase]
+	# 用**真 BossData**（调用方给）→ `spell_background` / `portrait` 等字段不会被丢掉；
+	# 阶段表收敛成"就这一张卡"（练习是单阶段战）。没给则退回自建（工作台等场景）。
+	var single: BossData
+	if p_data != null:
+		single = p_data.duplicate() as BossData
+		single.phases_easy = [p_phase]
+		single.phases_normal = [p_phase]
+		single.phases_hard = [p_phase]
+		single.phases_lunatic = [p_phase]
+		single.phases_extra = [p_phase]
+	else:
+		single = BossData.new()
+		single.boss_name = boss_name
+		single.visual = boss_scene
+		single.phases_normal = [p_phase]
 	var boss := spawn_boss(single, position, ctx) as Boss
 	if boss:
 		boss.get_parent().add_child(runner)  # 把时钟放进场景树（Boss 所在 World），随场景一起释放

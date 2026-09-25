@@ -13,6 +13,8 @@ var _scene_transition: SceneTransition
 var _menu_nav: MenuNav
 
 # ═══ 状态 ═══
+## 换场景后要自动压入的菜单页（如"从练习返回 → 回到符卡练习页"）。由目标场景消费后清空。
+var pending_page_path: String = ""
 var current_scene_path: String = ""
 var previous_scene_path: String = ""
 var current_state: AppState = AppState.MENU

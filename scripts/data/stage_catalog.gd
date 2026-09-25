@@ -14,14 +14,18 @@ static func load_registry() -> void:
 		registry = ResourceLoader.load(REGISTRY_PATH)
 
 
-## 按 id 取 StageData（注册表优先，空则扫描目录）
+## 按 id 取 StageData：注册表优先；**未收录则回退目录扫描**。
+## 分工：注册表 = **可玩清单**（`StageData.validate` 要求 create_script）；
+## 仅用于命名/背景的舞台（如还没做关卡脚本的 B 线）不进注册表，走扫描兜底。
 static func find(stage_id: int) -> StageData:
 	if registry:
-		return registry.find(stage_id)
+		var stage_data := registry.find(stage_id)
+		if stage_data != null:
+			return stage_data
 	return scan(stage_id)
 
 
-## 扫描 res://data/stages/ 顶层 .tres 找匹配 id（注册表缺失时的回退）
+## 扫描 `data/stages/**/stage_data/*.tres` 找匹配 id（注册表未收录时的回退）
 static func scan(stage_id: int) -> StageData:
 	for stage_data in _load_all():
 		if stage_data.stage_id == stage_id:
@@ -42,17 +46,41 @@ static func background(stage_id: int) -> PackedScene:
 	return stage_data.background_scene if stage_data else null
 
 
+## **给人看**的关卡名：`StageData.display_name` → 回落 `"Stage %d"`。
+## UI 一律走这里，别自己拼 `"Stage %d"` —— 否则「3 面 B 线」这类就没法显示。
+static func display_name_of(stage_id: int) -> String:
+	var stage_data := find(stage_id)
+	if stage_data and stage_data.display_name != "":
+		return stage_data.display_name
+	return "Stage %d" % stage_id
+
+
+## 递归扫 `data/stages/**/stage_data/*.tres`。
+## ⚠️ 曾经只看 `res://data/stages/` **顶层** .tres，而文件一直在 `<面>/stage_data/`（嵌套）
+## → 扫描兜底从未生效（`scan` / `all` / `background` 在注册表缺项时全死）。回归见 test_stage_catalog。
 static func _load_all() -> Array[StageData]:
 	var result: Array[StageData] = []
-	var dir := DirAccess.open("res://data/stages/")
-	if not dir:
-		return result
-	dir.list_dir_begin()
-	var file_name := dir.get_next()
-	while file_name != "":
-		if file_name.ends_with(".tres"):
-			var stage_data: StageData = ResourceLoader.load("res://data/stages/" + file_name)
-			if stage_data:
-				result.append(stage_data)
-		file_name = dir.get_next()
+	for path in _find_stage_data_files("res://data/stages"):
+		var stage_data: StageData = ResourceLoader.load(path)
+		if stage_data:
+			result.append(stage_data)
 	return result
+
+
+## 递归收集 `<dir>/**/stage_data/*.tres`（只认约定目录，避免把别的 .tres 当舞台）。
+static func _find_stage_data_files(dir_path: String) -> Array[String]:
+	var out: Array[String] = []
+	var dir := DirAccess.open(dir_path)
+	if not dir:
+		return out
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if dir.current_is_dir():
+			if not entry.begins_with("."):
+				out.append_array(_find_stage_data_files(dir_path.path_join(entry)))
+		elif entry.ends_with(".tres") and dir_path.get_file() == "stage_data":
+			out.append(dir_path.path_join(entry))
+		entry = dir.get_next()
+	dir.list_dir_end()
+	return out

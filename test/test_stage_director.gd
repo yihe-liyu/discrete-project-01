@@ -45,3 +45,34 @@ func test_resolve_after_register():
 	ctx.objects.unregister("boss_test")
 	assert_false(h.exists(), "注销后 exists 应为 false")
 	b.free()
+
+
+## 难度专属阶段：phase(index) 必须按当前难度取（回归：曾只取 phases_normal → Easy/Hard/Lunatic 串成 Normal 的卡）
+func test_phase_uses_current_difficulty():
+	var fin: BossData = BossCatalog.boss(1, 1)
+	if fin == null:
+		pending("stage 1 无第二个 Boss")
+		return
+	var prev_diff := SaveData.selected_difficulty
+	var prev_stage := SaveData.current_stage_id
+	SaveData.current_stage_id = 0   # _stage_id=0 → 身份解析 null，不污染符卡簿
+
+	var ctx := StageContext.new(null)
+	var b := Boss.new()
+	add_child_autofree(b)
+	b.setup(fin, null)
+	ctx.objects.register("boss_diff", b, Boss)
+	var h := BossHandle.new("boss_diff", fin, "？？？", ctx.objects)
+
+	for diff in [0, 1, 2, 3]:
+		var arr := fin.phases_for_difficulty(diff)
+		if arr.is_empty():
+			continue
+		SaveData.selected_difficulty = diff
+		h.phase(1)
+		assert_eq(b.current_phase(), arr[1], "难度 %d 第 1 槽应进 %s" % [diff, arr[1].name])
+
+	ctx.objects.unregister("boss_diff")
+	SaveData.selected_difficulty = prev_diff
+	SaveData.current_stage_id = prev_stage
+

@@ -160,7 +160,7 @@ func _dead_phase() -> bool:
 func _ensure_meshes() -> void:
 	if _core_line:
 		return
-	var tex: Texture2D = laser_texture if laser_texture else AssetRegistry.get_bullet_tex("laser")
+	var tex: Texture2D = laser_texture if laser_texture else AssetRegistry.LASER_TEXTURE
 	var glow := Color(
 		minf(laser_color.r * 1.5, 1.0),
 		minf(laser_color.g * 1.5, 1.0),

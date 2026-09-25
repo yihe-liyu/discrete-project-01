@@ -6,16 +6,14 @@ class_name SpellRecordBook
 @export var records: Array[SpellRecord] = []
 
 
-## 清理幽灵记录（防御：编辑器/外部写入可能塞入 stage=0 空壳——
+## 清理幽灵记录（防御：编辑器/外部写入可能塞入空壳——
 ## 例：Godot 里编辑 .tres 删记录时块残留 + 数组引用 → 加载生成空对象）。
-## 正常记录 stage>=1；空壳 = stage<1 或 无 uid/统计的空对象。
+## 判据 = **主键有效**（stage>=1 且 phase_index>=0）：有主键就是真记录，哪怕 uid/统计全零
+## （调试「一键解锁」会造这种非符记录）。空壳的主键是默认的 phase_index=-1（/ stage=0）。
 func prune_empty() -> void:
 	var kept: Array[SpellRecord] = []
 	for record in records:
-		if record.stage < 1:
-			continue
-		if record.uid == 0 and record.attempts == 0 and record.captures == 0 \
-				and record.practice_attempts == 0 and record.practice_captures == 0:
+		if record.stage < 1 or record.phase_index < 0:
 			continue
 		kept.append(record)
 	records = kept

@@ -2,7 +2,8 @@ extends GutTest
 ## 内核路由（内核唯一后端）：内核池 + 渲染数据源 + 行为装配 + bomb 宿主节点。
 
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
-const REIMU_DATA = preload("res://data/player_data/reimu_data.tres")
+## 夹具自建（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
+const FIXTURES = preload("res://test/fixtures/fixture_lib.gd")
 
 
 func before_each() -> void:
@@ -72,7 +73,7 @@ func _live_bullets() -> int:
 
 func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	var player := PLAYER_SCENE.instantiate()
-	player.player_data = REIMU_DATA
+	player.player_data = FIXTURES.player_data()
 	add_child_autofree(player)
 	player.global_position = Vector2(448, 700)
 	var entity_registry := EntityRegistry.new()

@@ -14,6 +14,18 @@ const BOSS_SCAN_ROOT := "res://data/stages"
 static var _cache: Dictionary = {}
 
 
+## 名册覆盖（**仅供测试**）：直接投入 `stage → Array[BossData]`，跳过注册表/扫描。
+## 目的：机制测试（如阶段编号）不必绑真实内容 —— 内容改名/增删不该让它红。
+## ⚠️ static 缓存全局可见 —— 用完**必须** `clear_catalog_override()` 还原，否则后续测试会看到夹具内容。
+static func set_catalog_override(grouped: Dictionary) -> void:
+	_cache = grouped
+
+
+## 清掉覆盖与缓存 → 下次 `all()` 重新从真实内容构建。
+static func clear_catalog_override() -> void:
+	_cache = {}
+
+
 ## 全部 Boss 谱（惰性构建，缓存）：stage -> Array[BossData]（boss_index = 数组下标）
 ## 数据源：boss_registry.tres（回退：扫 data/stages/**/boss/*.tres）；按 stage_id 分组、order 排序。
 ## 注意：拆分"道中 / 关底"只影响"谁登场、ui 点数分段"，不影响阶段编号。
@@ -86,9 +98,30 @@ static func stage_phase_order(stage: int) -> Array[PhaseData]:
 	return order
 
 
-## 某 phase 在该面规范顺序中的位置（找不到返回 -1）。按 Resource 引用匹配（同一共享资源）。
+## 某 phase 在该面规范顺序中的槽位（找不到返回 -1）。
+## 身份 = 「哪个 Boss 的第几槽」，不是「哪个资源对象」：各难度列同形、同槽可换卡
+## （如 spell001/002/003/004 各占最终 Boss 第 1 槽）→ 必须按槽位找。
+## 回归：曾只 find phases_normal → 难度专属符卡（Easy/Hard/Lunatic）解析 null、不解锁。
 static func phase_canonical_index(stage: int, phase: PhaseData) -> int:
-	return stage_phase_order(stage).find(phase)
+	if phase == null:
+		return -1
+	var acc := 0
+	for b: BossData in all().get(stage, []):
+		var off := _phase_offset(b, phase)
+		if off >= 0:
+			return acc + off
+		acc += b.phases_normal.size()
+	return -1
+
+
+## 该 Boss 任一难度列里 phase 的槽位下标（-1 = 不属于本 Boss）。各难度列同形，同槽可换卡。
+static func _phase_offset(b: BossData, phase: PhaseData) -> int:
+	var lists: Array = [b.phases_normal, b.phases_easy, b.phases_hard, b.phases_lunatic, b.phases_extra]
+	for arr in lists:
+		var i: int = (arr as Array).find(phase)
+		if i >= 0:
+			return i
+	return -1
 
 
 ## 规范顺序第 phase_index 个阶段（跨越 Boss）；越界返回 null。

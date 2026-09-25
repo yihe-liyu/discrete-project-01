@@ -120,6 +120,8 @@ func _on_boss_defeated(_defeated_boss: Node) -> void:
 
 func _on_phase_start(phase: PhaseData) -> void:
 	if phase.uid != 0:
+		# 符卡宣言音（`card` 曾在 AssetRegistry 里注册却无人播放）
+		AudioManager.play_sfx(AssetRegistry.sounds["card"])
 		_play_spell_announce(phase.name)
 	else:
 		_clear_announce()

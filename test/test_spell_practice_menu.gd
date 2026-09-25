@@ -71,7 +71,7 @@ func test_menu_slots_fixed_unconfigured_locked():
 	assert_eq(menu._diff_entries[3].is_locked, true, "Lunatic 无阶段 → 锁定")
 
 
-## 锁定槽的名字显示 "?"
+## 锁定槽的名字显示 "?"；解锁的非符名字行为空（见下面那条高度一致性用例）
 func test_locked_slot_shows_question_mark():
 	var menu = _mk_menu()
 	menu._phases = _mk_phases({1: SpellRecord.new()}, _mk_boss([0, 1, 2, 3]))
@@ -81,11 +81,51 @@ func test_locked_slot_shows_question_mark():
 	var children: Array = menu._diff_box.get_children()
 	assert_eq(children.size(), 4, "4 个难度槽")
 	var locked_vbox: VBoxContainer = children[0]  # Easy(0) 锁定
-	var first_label: Label = locked_vbox.get_child(0) as Label
-	assert_eq(first_label.text, "?", "锁定难度名显示 ?")
-	var unlocked_vbox: VBoxContainer = children[1]  # Normal(1) 解锁
-	var unlocked_label: Label = unlocked_vbox.get_child(0) as Label
-	assert_ne(unlocked_label.text, "?", "解锁难度名不显示 ?")
+	assert_eq((locked_vbox.get_child(0) as Label).text, "?", "锁定难度名显示 ?")
+	var unlocked_vbox: VBoxContainer = children[1]  # Normal(1) 解锁（非符）
+	assert_eq((unlocked_vbox.get_child(0) as Label).text, "", "解锁的非符不显示名字")
+
+
+## 回归（作者报）：非符 / 符卡两种状态下，三级选项**高度必须一致**。
+## 非符靠**空名字行占位**（空 Label(font 30) 最小高仍是 44），而不是省掉那一行 ——
+## 省了选项就从 81 掉到 33，切难度时三级会跳。
+func test_diff_option_height_same_for_nonspell_and_spell():
+	var menu = _mk_menu()
+	# ① 非符
+	menu._phases = _mk_phases({1: SpellRecord.new()}, _mk_boss([0, 1, 2, 3]))
+	menu._phase_index = 0
+	menu._build_diff_list()
+	await get_tree().process_frame
+	var nonspell_entry: VBoxContainer = menu._diff_box.get_child(1)   # Normal(1) 解锁
+	var nonspell_name := (nonspell_entry.get_child(0) as Label).text
+	var nonspell_h := int(nonspell_entry.size.y)
+
+	# ② 符卡（卡名经注入的夹具名册取，不绑真实内容）
+	var rec := SpellRecord.new()
+	rec.stage = 1
+	rec.phase_index = 0
+	rec.uid = 7          # 非 0 = 符卡
+	rec.difficulty = 1
+	var info := {rec = rec, boss_index = 0, phase_index = 0, diffs = {1: rec}, label = "符卡1",
+		boss = _mk_boss([0, 1, 2, 3])}
+	var phases: Array[Dictionary] = [info]
+	menu._phases = phases
+	var named := PhaseData.new()
+	named.name = "夹具「符卡」"
+	named.hp = 1000
+	named.time_limit = 30.0
+	named.uid = 7
+	BossCatalog.set_catalog_override({1: [BossData.new().normal_phase(named)]})
+	menu._build_diff_list()
+	BossCatalog.clear_catalog_override()
+	await get_tree().process_frame
+	var spell_entry: VBoxContainer = menu._diff_box.get_child(1)
+	var spell_name := (spell_entry.get_child(0) as Label).text
+	var spell_h := int(spell_entry.size.y)
+
+	assert_eq(nonspell_name, "", "非符不显示名字")
+	assert_eq(spell_name, "夹具「符卡」", "符卡显示卡名")
+	assert_eq(nonspell_h, spell_h, "两种状态选项高度必须一致（非符靠空行占位）")
 
 
 ## 导航跳过锁定：向下从 Normal 到 Hard，再向下 wrap 回 Normal
@@ -163,3 +203,97 @@ func test_start_practice_guard_locked():
 	# 直接调用应被守卫拦截（不改 selected_difficulty）
 	menu._start_practice()
 	assert_eq(SaveData.selected_difficulty, 1, "锁定难度不改变选择")
+
+
+## 第一级舞台名走 `StageCatalog`（内容侧 `display_name`），**不自己拼 "Stage %d"** ——
+## 否则「3 面 B 线」（id 4）这类 id 与名字对不上的舞台就没法显示。
+func test_stage_label_uses_catalog_name():
+	var menu = _mk_menu()
+	var stages: Array[int] = [1]
+	menu._stages = stages
+	menu._build_lists()
+	assert_eq(menu._stage_box.get_child_count(), 1, "应建 1 行舞台名")
+	assert_eq((menu._stage_box.get_child(0) as Label).text, StageCatalog.display_name_of(1),
+		"舞台名应来自 StageCatalog（与 id 解耦）")
+	# 对齐方式不锁：那是纯视觉偏好（居中/左对齐都试过），锁了只会在调整时白红
+
+
+# ═══════════ 第一级切换 stage → 第二级必须重建 ═══════════
+
+func _mk_rec(stage: int, boss: int, phase: int) -> SpellRecord:
+	var rec := SpellRecord.new()
+	rec.stage = stage
+	rec.boss_index = boss
+	rec.phase_index = phase
+	rec.character = 0
+	rec.difficulty = 1
+	rec.uid = 0
+	rec.phase_number = phase + 1
+	return rec
+
+
+## 回归（2026-09-23）：在第一级按 ↓ 切 stage 时，第二级列表必须跟着重建。
+## 曾经 `_change_stage()` 只换 `_phases` **数据**、不重建 `_phase_box` → 二级仍显示上一个 stage 的行，
+## 而且与三级（按新 `_phases` 建）自相矛盾：二级写着「非符1/非符2/符卡1」、三级却是新 stage 的内容。
+func test_stage_nav_rebuilds_phase_list():
+	var saved_book: SpellRecordBook = SaveData.spell_book
+	var book := SpellRecordBook.new()
+	book.records.append(_mk_rec(1, 0, 0))   # stage1 两张
+	book.records.append(_mk_rec(1, 0, 1))
+	book.records.append(_mk_rec(2, 0, 0))   # stage2 一张
+	SaveData.spell_book = book
+
+	var menu = _mk_menu()
+	menu._char_index = 0
+	menu._build_data()
+	menu._build_lists()
+	assert_eq(menu._stages.size(), 2, "两个 stage")
+	assert_eq(menu._phases.size(), 2, "stage1 有 2 张")
+	assert_eq(menu._phase_box.get_child_count(), 2, "二级应显示 2 行")
+
+	menu._set_idx(1)        # 模拟第一级按 ↓
+	menu._highlight()
+	assert_eq(menu._stage_index, 1, "已切到第二个 stage")
+	assert_eq(menu._phases.size(), 1, "数据切到 stage2（1 张）")
+	assert_eq(menu._phase_box.get_child_count(), 1, "**二级 UI 必须跟着重建**（回归点）")
+
+	# 反方向：切回 stage1 也要能长回来（防止只清不建）
+	menu._set_idx(0)
+	menu._highlight()
+	assert_eq(menu._phase_box.get_child_count(), 2, "切回 stage1 二级应恢复 2 行")
+
+	SaveData.spell_book = saved_book
+
+
+## 从练习返回：还原到**第三级**（DIFF）与选中项，并消费掉状态
+func test_restore_return_state_goes_to_third_level():
+	var menu = _mk_menu()
+	menu._phases = _mk_phases({1: SpellRecord.new()}, _mk_boss([0, 1, 2, 3]))
+	menu._phase_index = 0
+	PracticeSession.restore_menu_on_enter = true
+	PracticeSession.return_menu_state = {"section": 2, "stage": 0, "phase": 0, "diff": 1, "char": 0}
+	menu._restore_return_state()
+	assert_eq(menu._section, 2, "应回到第三级（DIFF = 2）")
+	assert_eq(PracticeSession.return_menu_state, {}, "状态应被消费（否则下次正常进入也会跳级）")
+
+
+## 没有待还原状态时，什么都不动（正常进入不受影响）
+func test_restore_return_state_is_noop_without_state():
+	var menu = _mk_menu()
+	PracticeSession.return_menu_state = {}
+	menu._section = 0
+	menu._restore_return_state()
+	assert_eq(menu._section, 0, "无状态时不改动层级")
+
+
+## 回归（作者报）：**残留状态但没有"本次是返回"的授权** → 不许跳级
+## （从主菜单正常进入符卡练习时，上一局的状态还在，曾被误消费而直接进第三级）
+func test_stale_state_without_authorization_is_ignored():
+	var menu = _mk_menu()
+	menu._phases = _mk_phases({1: SpellRecord.new()}, _mk_boss([0, 1, 2, 3]))
+	PracticeSession.return_menu_state = {"section": 2, "stage": 0, "phase": 0, "diff": 1, "char": 0}
+	PracticeSession.restore_menu_on_enter = false      # ← 不是"返回"，只是正常进入
+	menu._section = 0
+	menu._restore_return_state()
+	assert_eq(menu._section, 0, "未授权 → 不跳级（正常进入仍是第一级）")
+	assert_eq(PracticeSession.return_menu_state, {}, "残留状态也应被清掉，避免下次再犯")

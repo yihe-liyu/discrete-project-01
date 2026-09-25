@@ -3,8 +3,18 @@ extends GutTest
 ## 原生存储的相位冻结/寿命、KernelNativeSystem 的阵营默认 + 逐弹开关、
 ## 渲染桥的弹/特效分流、消弹把雾中弹切成消散特效。
 
-const FOG: EffectType = preload("res://data/fx/enemy_spawn_fx.tres")
-const CLEAR: EffectType = preload("res://data/fx/enemy_clear_fx.tres")
+## 夹具自建（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）。
+## 两者时长**故意不同**（0.4 / 0.15）：雾与消散串了的话断言会立刻炸。
+const FIXTURES = preload("res://test/fixtures/fixture_lib.gd")
+var fog: EffectType
+var clear_fx: EffectType
+
+
+func before_each() -> void:
+	fog = FIXTURES.effect(0.4)
+	# 消散特效是**引擎内置**的（KernelNativeSystem.CLEAR_FX）—— 直接读引擎常量，
+	# 不在测试里另写一份内容引用（否则「消散 == 它自己」这种断言会绑上内容路径）。
+	clear_fx = KernelNativeSystem.CLEAR_FX
 
 
 func _native() -> bool:
@@ -37,10 +47,10 @@ func test_faction_default_and_per_type_switch() -> void:
 		pending("未构建原生扩展 → 跳过")
 		return
 	var sys: KernelNativeSystem = autofree(KernelNativeSystem.new())
-	sys.set_spawn_fx(BulletType.Faction.ENEMY, FOG)
+	sys.set_spawn_fx(BulletType.Faction.ENEMY, fog)
 	var enemy := _enemy_data()
 	var eid: int = sys.spawn(enemy.to_bullet_type(), Vector2.ZERO, Vector2.UP, Color.WHITE)
-	assert_almost_eq(sys.get_fx_phase(eid), FOG.duration, 0.0001, "敌弹应取阵营默认出生雾")
+	assert_almost_eq(sys.get_fx_phase(eid), fog.duration, 0.0001, "敌弹应取阵营默认出生雾")
 	assert_true(sys.get_fx_type_indices()[eid] >= 0, "行应指向特效表")
 	var player := BulletData.new().player().tex("小玉")
 	var pid: int = sys.spawn(player.to_bullet_type(), Vector2.ZERO, Vector2.UP, Color.WHITE)
@@ -61,7 +71,7 @@ func test_frozen_bullet_does_not_move() -> void:
 		pending("未构建原生扩展 → 跳过")
 		return
 	var sys: KernelNativeSystem = autofree(KernelNativeSystem.new())
-	sys.set_spawn_fx(BulletType.Faction.ENEMY, FOG)
+	sys.set_spawn_fx(BulletType.Faction.ENEMY, fog)
 	var enemy := _enemy_data()
 	var id: int = sys.spawn(enemy.to_bullet_type(), Vector2(100, 100), Vector2.RIGHT * 600.0, Color.WHITE)
 	sys._physics_process(0.1)
@@ -75,7 +85,7 @@ func test_sweep_turns_fog_into_clear_effect() -> void:
 		pending("未构建原生扩展 → 跳过")
 		return
 	var backend: KernelBulletHost = add_child_autofree(KernelBulletHost.new())
-	backend.system.set_spawn_fx(BulletType.Faction.ENEMY, FOG)
+	backend.system.set_spawn_fx(BulletType.Faction.ENEMY, fog)
 	backend.shoot(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
 	assert_gt(backend.system.get_fx_phase(0), 0.0, "出生即处于雾相位")
 	var physics := KernelBulletPhysics.new()
@@ -84,7 +94,7 @@ func test_sweep_turns_fog_into_clear_effect() -> void:
 	var sys: KernelNativeSystem = backend.system
 	assert_eq(sys.get_active_count(), 1, "弹被消掉、原地留 1 条消散特效行")
 	assert_eq(sys.get_type_indices()[0], -1, "留下的是纯特效行")
-	assert_almost_eq(sys.get_fx_phase(0), CLEAR.duration, 0.0001, "消散特效相位 = 消弹 EffectType 时长")
+	assert_almost_eq(sys.get_fx_phase(0), clear_fx.duration, 0.0001, "消散特效相位 = 消弹 EffectType 时长")
 
 
 func test_render_bridge_splits_bullets_and_fx() -> void:
@@ -93,9 +103,9 @@ func test_render_bridge_splits_bullets_and_fx() -> void:
 		PackedInt64Array([12345]), PackedInt32Array([BulletType.TintMode.BLEND]),
 		PackedInt32Array([BulletType.Kind.POINT]), PackedByteArray([0]), PackedFloat32Array([0.0]))
 	bridge.set_fx_table(
-		PackedInt64Array([98765]), PackedFloat32Array([FOG.duration]),
-		PackedFloat32Array([FOG.scale_from]), PackedFloat32Array([FOG.scale_to]),
-		PackedFloat32Array([FOG.alpha_from]), PackedFloat32Array([FOG.alpha_to]),
+		PackedInt64Array([98765]), PackedFloat32Array([fog.duration]),
+		PackedFloat32Array([fog.scale_from]), PackedFloat32Array([fog.scale_to]),
+		PackedFloat32Array([fog.alpha_from]), PackedFloat32Array([fog.alpha_to]),
 		PackedInt32Array([BulletType.TintMode.BLEND]))
 	var groups: Dictionary = bridge.group(
 		2,
@@ -106,11 +116,11 @@ func test_render_bridge_splits_bullets_and_fx() -> void:
 		PackedByteArray([0, 0]),
 		PackedFloat32Array([1.0, 1.0]),
 		PackedFloat32Array([NAN, NAN]),
-		PackedFloat32Array([0.0, FOG.duration]),       # 出生相位
+		PackedFloat32Array([0.0, fog.duration]),       # 出生相位
 		PackedInt32Array([-1, 0]))                     # 特效型下标
 	assert_eq(groups["keys"].size(), 1, "行0 应进弹批次")
 	assert_eq(groups["starts"][1], 1, "弹批次只含 1 行")
 	assert_eq(groups["fx_keys"].size(), 1, "行1 应进特效批次")
 	assert_eq(groups["fx_starts"][1], 1, "特效批次只含 1 行")
-	assert_almost_eq(groups["fx_scales"][0], FOG.scale_from, 0.0001, "相位起点用 scale_from")
-	assert_almost_eq(groups["fx_alphas"][0], FOG.alpha_from, 0.0001, "相位起点用 alpha_from")
+	assert_almost_eq(groups["fx_scales"][0], fog.scale_from, 0.0001, "相位起点用 scale_from")
+	assert_almost_eq(groups["fx_alphas"][0], fog.alpha_from, 0.0001, "相位起点用 alpha_from")

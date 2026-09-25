@@ -74,3 +74,32 @@ func test_collect_spells_dedups_same_object_across_difficulties():
 	}
 	var spells := BossCatalog.collect_spells_from(bosses)
 	assert_eq(spells.size(), 1, "同对象跨难度列只算一张")
+
+
+## 难度专属符卡：各难度列同槽换卡（spell001/002/003/004 各占最终 Boss 第 1 槽），身份必须按「槽位」解析。
+## 回归：phase_canonical_index 曾只 find phases_normal → Easy/Hard/Lunatic 的符卡解析 null、永不解锁。
+func test_difficulty_specific_spells_resolve_by_slot():
+	var fin: BossData = BossCatalog.boss(1, 1)
+	assert_not_null(fin, "stage 1 应有第二个 Boss")
+	if fin == null:
+		return
+	var order := BossCatalog.stage_phase_order(1)
+	var prev_diff := SaveData.selected_difficulty
+	for diff in [0, 1, 2, 3]:
+		var arr := fin.phases_for_difficulty(diff)
+		if arr.is_empty():
+			continue
+		SaveData.selected_difficulty = diff
+		for off in arr.size():
+			var phase: PhaseData = arr[off]
+			var idx := BossCatalog.phase_canonical_index(1, phase)
+			assert_true(idx >= 0, "难度 %d 第 %d 槽应能定位（%s）" % [diff, off, phase.name])
+			var pid := BossCatalog.resolve_identity(1, phase, -1)
+			assert_not_null(pid, "难度 %d 第 %d 槽应解析出身份（%s）" % [diff, off, phase.name])
+			if pid and idx >= 0:
+				assert_eq(pid.phase_index, idx, "身份 phase_index == 规范槽位")
+				assert_eq(pid.difficulty, diff, "身份 difficulty = 当前难度")
+			if idx >= 0 and idx < order.size():
+				assert_eq(BossCatalog.phase_at(1, idx, diff), phase, "phase_at 反查同一槽位")
+	SaveData.selected_difficulty = prev_diff
+

@@ -34,6 +34,16 @@ if echo "$GUT_OUT" | grep -q "Failed to load script"; then
 	echo "❌ 有测试脚本加载失败（被 GUT 静默跳过）"
 	GUT_EXIT=1
 fi
+# 门禁不许「静默跳过」：GUT 对 pending/risky **不返回非 0**（不计入失败），
+# 于是「其实没跑」会伪装成全绿 —— 原生测试在无扩展时会集体 pending，必须变红。
+# 注：0 pending 时 GUT **不打印** Risky/Pending 行，故「该行出现」即代表有 pending。
+if echo "$GUT_OUT" | grep -qE "^Risky/Pending"; then
+	echo "❌ 有用例 pending/risky（GUT 对 pending 返回 0，会伪装成全绿）："
+	echo "$GUT_OUT" | grep -E "^Risky/Pending"
+	echo "$GUT_OUT" | grep -E "\[Pending\]" | head -5
+	echo "   ↳ 若为「无扩展」：先构建 ./tools/build_gdextension.sh（README 步骤 0）；否则修好或删掉该用例。"
+	GUT_EXIT=1
+fi
 
 rm -rf "$TMP_USER"
 

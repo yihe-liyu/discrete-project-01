@@ -2,14 +2,16 @@ extends GutTest
 ## 债 C 第一步：EnemyData 可序列化（behavior_script/params @export）+ validate() 校验。
 ## 不动内容编排（stage01 仍用构造链），只把"数据类可序列化"补齐。
 
-const ENEMY01 = preload("res://data/stages/stage01/enemy/enemy01.gd")
+## 夹具替身脚本（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
+const ENEMY_SCRIPT = preload("res://test/fixtures/no_port_behavior.gd")
+
 
 func test_script_and_params_exportable():
 	var e := EnemyData.new()
-	e.with_script(ENEMY01)
+	e.with_script(ENEMY_SCRIPT)
 	e.param("target_y", 200)
 	e.param("rate", 4)
-	assert_eq(e.get_enemy_script(), ENEMY01, "behavior_script 可读")
+	assert_eq(e.get_enemy_script(), ENEMY_SCRIPT, "behavior_script 可读")
 	assert_eq(e.get_params(), {"target_y": 200, "rate": 4}, "params 可读")
 	assert_true(e.has_script(), "has_script 应 true")
 	var cs := e.make_script() as CoroutineScript
@@ -23,7 +25,7 @@ func test_validate_catches_missing_script():
 
 func test_validate_catches_bad_hp():
 	var e := EnemyData.new()
-	e.with_script(ENEMY01)
+	e.with_script(ENEMY_SCRIPT)
 	e.hp(0)
 	assert_true(not e.validate().is_empty(), "hp=0 应报错")
 

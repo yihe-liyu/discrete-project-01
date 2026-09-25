@@ -1,6 +1,7 @@
 # 弹幕内核接口（DANMAKU API）
 
 > **一句话**：给一颗弹写飞行规律 = `BulletData.trajectory(BulletLifecycle)`；发射 = `ctx.bullets.shoot_spread(...)`。
+> 发射后每一跳经过谁（宿主 ↔ 原生内核 ↔ 渲染）：见 `docs/BULLET_PIPELINE.md`。
 > 本文是弹幕创作的**唯一权威参考**：BulletData / BulletLifecycle 全词汇 + 原生语义 + 发射 API + ctx 服务 + 素材表 + 文件接线 + 陷阱。
 > 由浅入深的教学路径见 `CONTENT_GUIDE.md` `六·弹幕行为`；本文是它的**完整字典**。
 > 原生执行器：`gdextension/src/danmaku_store.cpp`（唯一存储/执行）；桥接：`scripts/kernel_bridge/`。
@@ -63,17 +64,17 @@ func _tick(p_ctx: StageContext) -> Variant:
 | damage | float | 10.0 | 基础伤害（支持小数，累积到整才扣血） |
 | velocity | Vector2 | (0,-1) | **只取长度当速度**；方向由发射时的 direction 决定 |
 | faction | Faction | PLAYER | PLAYER / ENEMY / BOMB |
-| can_be_canceled | bool | false | 是否可被 Bomb 清 |
 | hitbox_shape | HitboxShape | CIRCLE | CIRCLE / RECTANGLE |
 | hitbox_radius | float | 4.0 | 圆判定半径 |
 | hitbox_size | Vector2 | (8,8) | 矩形判定尺寸（shape=RECTANGLE 才用） |
 | hitbox_offset | Vector2 | ZERO | 判定偏移 |
-| hitbox_rotation | float | 0.0 | 矩形判定旋转（弧度） |
+| follow_dir | bool | true | 贴图/判定随飞行方向旋转；圆弹设 false（省一次旋转，视觉不变） |
+| dir_offset | float | 0.0 | 朝向补偿（弧度，仅 follow_dir 时生效；素材朝右=0、朝上=+PI/2） |
 | hit_effect | PackedScene | null | 命中特效场景 |
 | hit_sfx | String | "" | 命中音效 key（`AssetRegistry.sounds`；空=normal_damage） |
 | is_spawn_fog | bool | true | 是否跟随阵营出生雾；`.no_spawn_fog()` 逐型关（与 `.enemy()` 顺序无关） |
 | spawn_fx | EffectType | null | 这型的出生特效（null=用阵营默认） |
-| out_grace | float | 0.0 | 出界宽限秒（出界后仍活这么久；0=立即回收） |
+| out_grace | float | 0.0 | **逐弹出界宽限（秒）**：出界后仍活这么久；0 = 出界立即回收（默认）。走 `hitbox_*` 同规格：类型级 → 发射时推给内核逐行解释 |
 | lifecycle | BulletLifecycle | null | 弹道描述符（**推荐主路**） |
 | lifecycle_anchor | Variant | null | per-shot 锚点 `{id, offset, use_global}`（激光用） |
 | coroutine_script | Script | null | **已弃用**：旧端口载体 |
@@ -85,7 +86,8 @@ func _tick(p_ctx: StageContext) -> Variant:
 
 | 方法 | 作用 |
 |---|---|
-| `.tex(key)` | 设贴图 + **自动按 `bullet_configs` 配判定**。**key 必须来自 `7.1 表** |
+| `.def(d)` | 直接传 `BulletDef`（如 `preload` 常量）载入**外观 + 碰撞 + 朝向**；对象版，无查找 |
+| `.tex(key)` | 同 `.def`，但按字符串 key 查 `data/bullets/<key>.tres`（**当前内容主路**；key 来自 `7.1 表，拼错=运行时响亮告警） |
 | `.speed(v)` | 速度大小（`velocity.y = v`，长度 = v） |
 | `.dir(x, y)` | 直接设 velocity（方向+速度）—— 只在 `shoot_spread` 传 `ZERO` 方向时才用得上 |
 | `.color(c)` | 染色 |
@@ -99,7 +101,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 | `.grace(v)` | out_grace |
 | `.behavior(script)` | **已弃用** |
 
-> **未知 tex key 是静默的**：`get_bullet_tex("typo") → null`，判定退回默认 4px。务必查 `7.1 表。
+> **未知 tex key 会响亮告警**：`BulletCatalog.find("typo")` → `push_warning` + null（**不静默回退**）；务必查 `7.1 表。
 
 ### 2.3 弹型缓存（实例复用铁律）
 
@@ -152,7 +154,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 > - **离开模式**（相位结束、下一相位无 position op）：`pos` 留在模式最后一次结果，积分从该点接力；弹按速度轴的状态自由飞（所以 `drift` 后能按出生方向飞出）。
 > - **同相位多个 position op**：按顺序执行、**最后一个写 `pos`（last-wins）** —— 这是「模式切换」，不是叠加。位置模式与速度 op 混用会让速度变化在位置上看不见（见 §9.13）。
 
-### 3.3 Until（相位结束条件，4 + until_turned 糖 + 通用节流）
+### 3.3 Until（相位结束条件，5 + until_turned 糖 + 通用节流）
 
 | Until | 签名 | 语义 |
 |---|---|---|
@@ -160,21 +162,32 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | elapsed | `until_elapsed(t)` | 相位经过 t 秒 |
 | near | `until_near(target, r)` | 距 target < r |
 | at_wall | `until_at_wall(mask)` | 越界检测（左 1 / 右 2 / 上 4）；**纯谓词**：只输出「相位结束落点」（不改弹自身位置），供 `emit(..., at=AT_PHASE_END)` |
+| speed | `until_speed(cmp, value)` | `|v|` 与 value 比较（cmp = `CMP_GE` / `CMP_LE`）——撞墙后减速到某速度等 |
 | turned（糖） | `until_turned()` | 当前相位 `rotate` 的累计转角 ≥ 其 limit；**必须跟在同相位 rotate 之后**（否则 warn + 退化 never） |
 
 > **通用节流（V6）**：任何 Until 都可链式 `.every(sec)` / `.every_ticks(n)`，例如 `until_near(T_PLAYER, r).every(0.05)`、`until_elapsed(2.0).every_ticks(3)`。
 > **state 条件不再公开（V8）**：状态槽对创作者不可见，裸 slot 的 `until_state(slot, ...)` 已移除；读取状态只经 `until_turned()`。
 
-### 3.4 Action（相位结束时一次性，6 个）
+### 3.4 Action（相位结束时一次性；8 个 op + `despawn_clear()` 组合糖）
 
 | Action | 签名 | 语义 |
 |---|---|---|
 | sfx | `sfx(key: StringName, db: float = 0)` | 播音效（key 见 `7.2） |
 | emit | `emit(spawn, dir, speed=0, at=AT_CURRENT)` | 生成替换弹；`spawn` = BulletData / Callable()->BulletData / 数组；`at` 是**位置操作数**（`AT_CURRENT` / `AT_PHASE_END`） |
 | emit_variant | `emit_variant(spawns: Array, dir, speed=0, at=AT_CURRENT)` | **变体发射**：内核**显式抽一次 RNG**定分支（0=未中→spawns[0]，1=命中→spawns[1]）；`dir` 必须是 `chance_toward(...)` |
-| despawn | `despawn()` | 回收自己 |
+| despawn | `despawn()` | 回收自己。**静默**（不播特效）—— 多数 despawn 发生在屏外或做超时清理 |
+| **clear_fx** | `clear_fx()` | **纯 action（op 47）**：在弹**此刻位置**播一次「消弹消散」特效（颜色 = 该弹当前色提亮 1.5×），**不改任何状态**，弹继续飞 |
+| **despawn_clear** | `despawn_clear()` | `clear_fx().despawn()` —— 消散 + 回收。用于**显式**想让人看见「这颗弹消失了」的场合 |
 | on_end_heading | `on_end_heading(dir)` | 转向（保速度大小） |
 | on_end_call | `on_end_call(hook)` | **逃逸口（V13）**：每相位结束最多一次、宿主侧、非热路径。`hook` = StringName（注册表名，推荐）或 Callable；`host` 只暴露 `queue_spawn`。用了它描述符就不再是唯一行为来源 |
+
+> **`despawn` vs `despawn_clear`（2026-09-22 立）**：默认用 `despawn()`。只有当你**确实想让人看见消散**时才用
+> `despawn_clear()`。⚠️ 别无脑全换 —— `bounce` / `radial_accel` 在**撞墙**时回收、`avoid_player` 相位2 在
+> **屏外**回收；那些地方播消散 = 屏外闪光 + 高强度弹幕下的特效风暴。
+>
+> 消散特效与死亡清弹圈扫掠**共用同一实现**（`KernelNativeSystem.play_clear_fx`，同色提亮 1.5×）。
+> 原生侧由 op 47 发 `kind=3` 事件，**载荷自带该弹颜色** —— 因为事件 drain 时那些行已被 swap-remove，
+> 宿主无法按行 id 回查颜色。
 
 **emit 细则**：
 - `speed <= 0` → 继承当前速度大小；`speed > 0` → 用该速度。
@@ -231,7 +244,7 @@ BulletLifecycle.CMP_LE  # 1  槽 <= value
 - 创作者**看不到槽**（builder 自动分配）。
 - **同相位状态槽上限 = 8**（内核 `SLOT_STRIDE`）：`position`(PHASE_START) 占 3，`position`(ANCHOR) / `rotate` 各占 1。**超过上限的 program 会被内核拒绝注册**（该弹退化为直线，不执行行为）。
 
-### 3.8 preset（10 个类型化薄包装；组合定义在 `LifecycleCatalog.build()`）
+### 3.8 preset（9 个类型化薄包装；组合定义在 `LifecycleCatalog.build()`）
 
 ```gdscript
 BulletLifecycle.world_accel(v: Vector2)
@@ -241,7 +254,6 @@ BulletLifecycle.homing(angle_per_sec=720°, accel_time=2, min_speed=500, max_spe
 BulletLifecycle.bounce(accel_rate, bounce_angle, spawn_speed, spawn, sfx_key=&"kira", sfx_db=-8.0)
 BulletLifecycle.radial_accel(accel_rate, spawn, sfx_key=&"", sfx_db=0.0)
 BulletLifecycle.avoid_player(proximity, jump, flee_time)
-BulletLifecycle.non_mid_flee(proximity, boss_radius, burst)
 BulletLifecycle.laser_follow(anchor_id, offset, angle, drift_speed, initial_drift)
 BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drift)
 ```
@@ -257,7 +269,6 @@ BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drif
 | bounce | `[accel_heading(accel)]`，until at_wall(LEFT\|RIGHT\|TOP)，on_end [sfx(kira,-8), emit(spawn, toward(T_BOSS, bounce_angle), spawn_speed, at=AT_PHASE_END), despawn] |
 | radial_accel | `[accel_heading(rate)]`，until at_wall(TOP)，on_end [sfx?, emit(spawn, heading(PI), 0, at=AT_PHASE_END)（向下）, despawn] |
 | avoid_player | 相位1 until near(T_PLAYER, proximity, every=jump)，on_end 背对自机 → 相位2 until elapsed(flee_time)，despawn |
-| non_mid_flee | 相位1 until near(T_PLAYER, proximity, every_ticks=3)，on_end 背对自机 → 相位2 until near(T_BOSS, boss_radius, every_ticks=3)，on_end [call(hook), despawn] |
 | laser_follow | `[anchor_drift(..., use_global=false, render_heading=false)]`，until never |
 | marisa_laser | `[anchor_drift(..., use_global=true, render_heading=true)]`，until never |
 
@@ -417,31 +428,42 @@ tl.loop()
 
 ### 7.1 子弹贴图 key（`BulletData.tex(key)` 唯一来源）
 
-`scripts/asset_registry.gd` 的 `bullet_configs` —— **可用值如下（完整）**：
+**数据源 = `data/bullets/<key>.tres`**（`BulletDef` 内容资源；`BulletCatalog` 扫目录建索引）。
+`BulletDef` 只放**外观 + 碰撞 + 朝向**（共享、换发不换的那点）：`texture_key`（→ `data/atlas/bullet_shapes.tres` 图集格）
++ `hitbox_radius`/`hitbox_size`/`hitbox_offset` + `follow_dir`/`dir_offset`。其余一切（阵营 / 染色 / 特效 / 伤害 / 出生雾）
+由 `BulletData` **构造链**按需给 —— 构造链的存在就是为了「只改一点不必新建资源」。`bullet_configs` 代码表已退役。
+运行时类型是 **`BulletType`**（`BulletData.to_bullet_type()` 的产物，内核/渲染读它），**不是内容资源**。
+贴图本体 = 1024² 图集 `assets/Textures/bullet/bullet.png`（`laser` 除外，见下）。
 
-| key | 判定 | 备注 |
-|---|---|---|
-| 点弹 | circle 4 | 微型 |
-| 点棱弹 | circle 4 | 微型 |
-| 菌弹 | circle 4 | 微型 |
-| 小玉 | circle 6 | 小型（最常用） |
-| 星弹 | circle 6 | 小型 |
-| 枪弹 | circle 6 | 小型 |
-| 棱弹 | circle 6 | 小型 |
-| 滴弹 | circle 6 | 小型 |
-| 环玉 | circle 6 | 小型 |
-| 符札 | circle 6 | 小型 |
-| 米弹 | circle 6 | 小型 |
-| 苦无 | circle 6 | 小型 |
-| 长菌弹 | circle 6 | 小型 |
-| 鳞弹 | circle 6 | 小型 |
-| 小光玉 | circle 12 | 中型 |
-| reimu_main / reimu_opt1 / reimu_opt2 | rect / circle / rect | 自机弹 |
-| marisa_main / marisa_opt1 / marisa_opt2 | rect | 自机弹 |
-| reimu_bomb01 | circle 45 | 自机炸弹 |
-| laser | circle 0 | 激光贴图 |
+| key | texture_key | 判定 | 备注 |
+|---|---|---|---|
+| 点弹 | 点弹 | circle 4 | 微型 |
+| 点棱弹 | 点棱弹 | circle 4 | 微型 |
+| 菌弹 | 菌弹 | circle 4 | 微型 |
+| 小玉 | 小玉 | circle 6 | 小型（最常用） |
+| 星弹 | 星弹 | circle 6 | 小型 |
+| 枪弹 | 枪弹 | circle 6 | 小型 |
+| 棱弹 | 棱弹 | circle 6 | 小型 |
+| 滴弹 | 滴弹 | circle 6 | 小型 |
+| 环玉 | 环玉 | circle 6 | 小型 |
+| 符札 | 符札 | circle 6 | 小型 |
+| 米弹 | 米弹 | circle 6 | 小型 |
+| 苦无 | 苦无 | circle 6 | 小型 |
+| 长菌弹 | 长菌弹 | circle 6 | 小型 |
+| 鳞弹 | 鳞弹 | circle 6 | 小型 |
+| 小光玉 | 小光玉 | circle 12 | 中型 |
+| 中玉 | 中玉 | circle 24 | 中型 |
+| reimu_main | 灵梦自机主弹 | rect 48×24 | 自机弹 |
+| reimu_opt1 | 灵梦子机高速弹 | circle 12 | 自机弹 |
+| reimu_opt2 | 灵梦子机低速弹 | rect 120×24 | 自机弹 |
+| marisa_main | 魔理沙自机主弹 | rect 48×24 | 自机弹 |
+| marisa_opt1 | 魔理沙子机高速弹 | rect 32×32 | 激光条（512×32 合体格） |
+| marisa_opt2 | 魔理沙子机低速弹 | rect 48×24 | 自机弹 |
+| reimu_bomb01 | 灵梦bomb | circle 45 | 自机炸弹 |
 
-> 未知 key → 静默 null + 默认 4px 判定。**新增贴图** = 往 `assets/Textures/bullet/` 放 PNG + 在 `bullet_configs` 加一行。
+> 圆弹可标 `follow_dir=false`（如 `点弹` / `小玉` / `菌弹` / `环玉`）；也可构造后直接赋值 `data.follow_dir = false` 覆盖（类型级，须在首次发射前）。
+> **未知 key 会响亮告警**（`BulletCatalog.find` → `push_warning` + null），不再静默。**新增弹型** = 图集加一格（`data/atlas/bullet_shapes.tres`）+ 新建 `data/bullets/<key>.tres`。
+> `laser` **不是弹型**：`AssetRegistry.LASER_TEXTURE`（`assets/Textures/bullet/laser.png`）供 `LaserBeam` 兜底，未进图集。
 
 ### 7.2 音效 key
 

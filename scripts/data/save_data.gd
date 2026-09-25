@@ -134,3 +134,8 @@ static func record_practice(pid: PhaseIdentity, captured: bool) -> void:
 
 static func record_practice_capture(pid: PhaseIdentity) -> void:
 	spell_book_mgr.record_practice_capture(pid)
+
+
+## 调试：一键解锁所有符卡练习（只补空白符卡记录，不覆盖已有成绩）。返回新建条数。
+static func debug_unlock_all_spells() -> int:
+	return spell_book_mgr.debug_unlock_all_spells()

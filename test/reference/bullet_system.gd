@@ -39,6 +39,8 @@ var _has_offset: bool = false					# 是否出现过非零偏移（查询走偏�
 var _has_rect: bool = false						# 是否出现过矩形判定（同上）
 var _life_left := PackedFloat32Array()			# 剩余秒；-1 表示永存
 var _color := PackedColorArray()				# 渲染颜色
+var _out_grace := PackedFloat32Array()			# 逐弹出界宽限（秒；0 = 出界立即剔除）
+var _out_time := PackedFloat32Array()			# 已连续出界时长（回界内归零）
 var _type_index := PackedInt32Array()			# 索引到 _type_registry
 var _faction := PackedByteArray()				# 该行阵营（渲染按阵营分批用）
 var _frame := PackedInt32Array()				# 多帧弹型：该行当前帧（0 = 首帧）
@@ -103,6 +105,8 @@ func _ensure_capacity(capacity: int) -> void:
 	_hitbox_size.resize(new_capacity)
 	_life_left.resize(new_capacity)
 	_color.resize(new_capacity)
+	_out_grace.resize(new_capacity)
+	_out_time.resize(new_capacity)
 	_type_index.resize(new_capacity)
 	_faction.resize(new_capacity)
 	_frame.resize(new_capacity)
@@ -138,6 +142,8 @@ func _copy_row(dst: int, src: int) -> void:
 	_grazed[dst] = _grazed[src]
 	_fx_phase[dst] = _fx_phase[src]
 	_fx_type_index[dst] = _fx_type_index[src]
+	_out_grace[dst] = _out_grace[src]
+	_out_time[dst] = _out_time[src]
 
 ## 整行归零，spawn 前调用（无残留）。
 func _reset_row(id: int) -> void:
@@ -159,6 +165,8 @@ func _reset_row(id: int) -> void:
 	_grazed[id] = 0
 	_fx_phase[id] = 0.0
 	_fx_type_index[id] = -1
+	_out_grace[id] = 0.0
+	_out_time[id] = 0.0
 
 # ==== ② 发射与回收 ====
 
@@ -228,6 +236,7 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 	if bullet_data.hitbox_size != Vector2.ZERO:
 		_has_rect = true
 	_color[bullet_id] = color
+	_out_grace[bullet_id] = bullet_data.out_grace
 	_type_index[bullet_id] = _type_registry_index_of(bullet_data)
 	_faction[bullet_id] = bullet_data.faction
 	_behavior_id[bullet_id] = intern_move(move)   # 名字 intern 成槽
@@ -354,9 +363,25 @@ func _physics_process(delta: float) -> void:
 		# 通用计时递减（>0 才减；到 0 不自动回收）
 		if _timer[i] > 0.0:
 			_timer[i] -= delta
-		# 越界剔除：须走出 cull_rect + margin
+		# 越界剔除：须走出 cull_rect + margin。逐弹 grace>0 时改为「累计连续出界时长」，超时才回收。
 		if should_cull and not cull_rect.grow(cull_margin).has_point(_positions[i]):
-			despawn(i)
+			if _out_grace[i] <= 0.0:
+				despawn(i)
+			else:
+				_out_time[i] += delta
+				if _out_time[i] > _out_grace[i]:
+					despawn(i)
+		else:
+			_out_time[i] = 0.0
+
+
+## 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
+## 设置时把已出界时长归零（与原生 `DanmakuStore.set_out_grace` 同义）。
+func set_out_grace(id: int, grace: float) -> void:
+	if id < 0 or id >= _active_count:
+		return
+	_out_grace[id] = grace
+	_out_time[id] = 0.0
 
 # ==== ④ 查询 ====
 

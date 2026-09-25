@@ -12,6 +12,8 @@ class_name CoroutineScript
 ##   add_child(s)
 ##   s.start(ctx)
 ##   s.start_timeline().at(0.0).every(0.5).do(func(): shoot())
+##   func _on_start():            # 可选：一次性初始化（此时 ctx/target 已就绪）
+##       _build()
 
 var ctx: StageContext
 ## 要控制的节点（可选）。设置后可在 _tick/timeline 中访问。
@@ -27,12 +29,19 @@ func start_timeline() -> Timeline:
 	return _timeline
 
 
-## 启动协程
+## 启动协程：设 ctx/target → `_on_start()` → 开跑 `_tick`。
 func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	if p_target != null:
 		target = p_target
+	_on_start()   # 一次性初始化钩子（ctx/target 已就绪，早于首次 _tick）
 	run(_tick.bind(ctx))
+
+
+## start() 的一次性初始化钩子（空默认）：首次 _tick 之前调一次，`ctx`/`target` 已就绪。
+## 覆写它 = 「发射前建弹型 / 注册钩子」等，**不必**再覆写 start() + super.start(...)。
+func _on_start() -> void:
+	pass
 
 
 ## 每帧回调。覆写此方法可实现自定义逻辑（不用 Timeline）

@@ -9,8 +9,7 @@ const GHOST := preload("res://scripts/workbench/ghost_player.gd")
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 
-## 创作台嵌入时页面在页签横栏下方（standalone 为 0）：场地局部 + 偏移 = 游戏坐标
-var _world_offset := Vector2.ZERO
+## 坐标约定：场地局部坐标 = 游戏坐标（工作台里所有游戏内容都是本 Control 的子节点，天然同一空间）。
 
 var _field: Control
 var _player: Player
@@ -164,6 +163,8 @@ func ensure_bullet_world() -> BulletManager:
 		return _bullet_manager
 	_bullet_manager = BulletManager.new()
 	_bullet_manager.name = "BulletManager"
+	# top_level：游戏世界原点 = 画布原点（全局坐标 = 游戏坐标），不叠工作台页签偏移
+	_bullet_manager.top_level = true
 	add_child(_bullet_manager)
 	return _bullet_manager
 
@@ -174,6 +175,7 @@ func ensure_stage_runtime() -> StageRuntime:
 		return _stage_runtime
 	var bench_world := Node2D.new()
 	bench_world.name = "BenchWorld"
+	bench_world.top_level = true   # 同 BulletManager：游戏坐标 = 画布坐标
 	add_child(bench_world)
 	_stage_runtime = StageRuntime.new()
 	_stage_runtime.name = "StageRuntime"
@@ -194,6 +196,7 @@ func build_world() -> Control:
 	_field = Control.new()
 	_field.position = Vector2.ZERO
 	_field.size = Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_BOTTOM)
+	_field.top_level = true        # 场地也在画布坐标（与子弹/Boss 同一空间）
 	_field.mouse_filter = Control.MOUSE_FILTER_STOP
 	_field.gui_input.connect(_on_field_input)
 	_field.draw.connect(_on_field_draw)
@@ -212,22 +215,6 @@ func build_world() -> Control:
 	return _field
 
 
-## 创作台嵌入时记录页面偏移（standalone 为 0）。deferred：等布局就绪再取（首台 _ready 时 add_child 未布局完）。
-func sync_world_offset() -> void:
-	call_deferred("_sync_world_offset_now")
-
-func _sync_world_offset_now() -> void:
-	_world_offset = get_global_rect().position
-
-
-## 场地局部坐标 → 游戏坐标（点击/子弹落点用）
-func to_game(p: Vector2) -> Vector2:
-	return p + _world_offset
-
-
-## 游戏坐标 → 场地局部坐标（绘制用）
-func from_game(p: Vector2) -> Vector2:
-	return p - _world_offset
 
 
 ## 面板脚手架：右锚金边卡片 + 内部纵向滚动 → 返回内容 VBox
@@ -259,11 +246,11 @@ func _hint(text: String) -> Label:
 	return _label(text, RIG_COMMON.HINT_SIZE)
 
 
-## 场地左键（含坐标换算）→ 子类 _on_click；并重绘。
+## 场地左键 → 子类 _on_click（参数即游戏坐标）；并重绘。
 ## 需要更多手势（如弹幕台右键指向）的子类覆写本函数。
 func _on_field_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		_on_click(to_game((event as InputEventMouseButton).position))
+		_on_click((event as InputEventMouseButton).position)
 		_field.queue_redraw()
 
 
@@ -274,12 +261,12 @@ func _on_click(_game_pos: Vector2) -> void:
 
 ## 场地绘制：金框 + 子类标记（子弹台整函数覆写；敌人/阶段用基类 + _draw_marker）
 func _on_field_draw() -> void:
-	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - _world_offset.y,
+	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 	_field.draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
 	_draw_marker()
 
 
-## 子类实现：在游戏坐标画标记（基类已画金框；用 from_game() 转场地局部）
+## 子类实现：在游戏坐标画标记（基类已画金框；坐标即场地局部）
 func _draw_marker() -> void:
 	pass

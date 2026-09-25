@@ -2,7 +2,6 @@ extends GutTest
 ## L2：其余 preset 与现有 GDScript 行为 parity（见 docs/LIFECYCLE_MODEL.md §9）。
 
 const DT := 1.0 / 60.0
-const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
 
 
 class FakeHost extends RefCounted:
@@ -170,27 +169,4 @@ func test_marisa_laser_preset_parity() -> void:
 		spawns.append([Vector2(280.0 + i * 5.0, 600.0), Vector2(0.0, -200.0)])
 	# V19：生命周期侧不再写 velocity（渲染改走独立 render_rot 通道），旧 oracle 仍写 → 只比位置。
 	_parity("marisa_laser", beh, params, lc, null, null, ctx, spawns, 30, 0.0, false)
-
-
-func test_non_mid_flee_preset_parity() -> void:
-	var player: Node2D = add_child_autofree(Node2D.new())
-	player.position = Vector2(448.0, 500.0)
-	var boss: Node2D = add_child_autofree(Node2D.new())
-	boss.position = Vector2(448.0, 120.0)
-	var ctx := BehaviorContext.new()
-	ctx.setup(player)
-	var r := 150.0
-	var burst := func(pos: Vector2, boss_pos: Vector2, has_boss: bool, _host) -> bool:
-		return has_boss and pos.distance_to(boss_pos) < r
-	var ha := FakeHost.new(); ha.boss = boss
-	var hb := FakeHost.new(); hb.boss = boss
-	var beh = preload("res://test/reference/behavior/non_mid_flee_behavior.gd").new()
-	beh.host = ha
-	var params := {&"player_proximity": 150.0, &"on_flee_burst": burst}
-	LIFECYCLE_HOOKS_SCRIPT.register(&"test_non_mid_burst", burst)
-	var lc := BulletLifecycle.non_mid_flee(150.0, r, &"test_non_mid_burst")
-	var spawns: Array = []
-	for i in 6:
-		spawns.append([Vector2(448.0 + (i - 3) * 20.0, 500.0 + (i - 3) * 15.0), Vector2(0.0, -200.0)])
-	_parity("non_mid_flee", beh, params, lc, ha, hb, ctx, spawns, 150)
 

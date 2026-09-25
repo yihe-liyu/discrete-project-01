@@ -3,6 +3,7 @@ extends GutTest
 
 const SHELL := preload("res://scripts/workbench/phase_shell.gd")
 const RIG := preload("res://scripts/workbench/phase_bench.gd")
+const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 
 
 
@@ -15,8 +16,8 @@ func test_phase_shell_copy_does_not_mutate_base():
 	base.time_limit = 45.0
 	base.bonus = 99
 	base.params = {"a": 1}
-	var mv := load("res://data/stages/stage01/phase/non_mid01/non_mid01_move.gd")
-	var sh := load("res://data/stages/stage01/phase/non_mid01/non_mid01_shoot.gd")
+	var mv := preload("res://test/fixtures/lifecycle_port_behavior.gd")
+	var sh := preload("res://test/fixtures/no_port_behavior.gd")
 	var s = SHELL.new()
 	var d: PhaseData = s.build_copy(base, mv, sh, 2000.0, 20.0)
 	assert_eq(d.hp, 2000, "HP 覆盖")
@@ -30,74 +31,66 @@ func test_phase_shell_copy_does_not_mutate_base():
 	assert_eq(base.time_limit, 45.0, "原时限未被修改")
 
 
+## 取目录里**第一张同时带 move+shoot 的阶段**下标。
+## ⚠️ 不写死路径/文件名 —— 内容改名、重排、增删都不该让**机制**测试红（那是内容校验测试的活）。
+func _pick_phase(rig, need_scripts: bool = true) -> int:
+	var phases = rig._catalog.by_role("phase")
+	for i in phases.size():
+		if not need_scripts:
+			return i
+		var p: PhaseData = load(phases[i].path)
+		if p != null and p.move_script != null and p.shoot_script != null:
+			return i
+	return -1
+
+
 func test_phase_rig_select_defaults_from_tres():
 	var rig = RIG.new()
 	add_child_autofree(rig)
 	await get_tree().process_frame
-	# 找"道中非符1"在目录里的下标（顺序来自扫描，不写死）
-	var phases = rig._catalog.by_role("phase")
-	var idx := -1
-	for i in phases.size():
-		if phases[i].path.ends_with("non_mid01.tres"):
-			idx = i
-	assert_true(idx >= 0, "目录含 non_mid01")
+	var idx := _pick_phase(rig, true)
+	assert_true(idx >= 0, "目录里应有同时带 move+shoot 的阶段")
 	if idx < 0:
+		rig.queue_free()
 		return
 	rig._select_phase(idx)
-	var p: PhaseData = load("res://data/stages/stage01/phase/non_mid01/non_mid01.tres")
+	var p: PhaseData = load(rig._catalog.by_role("phase")[idx].path)
 	assert_eq(rig._hp_spin.value, float(p.hp), "HP 默认=阶段值")
 	assert_eq(rig._time_spin.value, p.time_limit, "时限默认=阶段值")
 	assert_true(rig._move_sel.selected > 0, "move 槽默认选中")
 	assert_true(rig._shoot_sel.selected > 0, "shoot 槽默认选中")
-	assert_eq(rig._move_path, "res://data/stages/stage01/phase/non_mid01/non_mid01_move.gd", "move 路径")
+	assert_eq(rig._move_path, (p.move_script as Script).resource_path, "move 路径 = 该阶段自己引用的脚本")
 	# 清空 shoot 槽 → 解析为 null
 	rig._shoot_sel.selected = 0
 	assert_null(rig._resolve_slot(rig._shoot_sel, "boss_shoot"), "空槽=不发射")
 	rig.queue_free()
 
 
-
-func test_dual_param_panels_for_slots():
+func test_phase_bench_drops_script_param_panels():
 	var rig = RIG.new()
 	add_child_autofree(rig)
 	await get_tree().process_frame
-	# 选 spell053（试符：move=random_dir_move, shoot=orbit_spiral）
-	var phases = rig._catalog.by_role("phase")
-	var idx := -1
-	for i in phases.size():
-		if phases[i].path.ends_with("spell053.tres"):
-			idx = i
-	assert_true(idx >= 0, "目录含 spell053")
+	# 任选一张阶段即可：本用例只验「阶段台不再挂脚本改参数面板」
+	var idx := _pick_phase(rig, false)
+	assert_true(idx >= 0, "目录里应有阶段")
 	if idx < 0:
+		rig.queue_free()
 		return
 	rig._select_phase(idx)
-	# shoot 面板枚举出 orbit_spiral 的参数（orbit_speed 等）
-	var shoot_rows = rig._shoot_params.get_rows()
-	var found_speed := false
-	for row in shoot_rows:
-		if row.name == "orbit_speed":
-			found_speed = true
-			row.ctrl.value = 20.0
-	assert_true(found_speed, "弹幕槽参数面板含 orbit_speed（%d 行）" % shoot_rows.size())
-	# move 面板（random_dir_move）也应有行
-	var move_rows = rig._move_params.get_rows()
-	assert_true(move_rows.size() >= 1, "移动槽参数面板有行（%d）" % move_rows.size())
-	# 合并收集
-	var merged := {}
-	merged.merge(rig._move_params.collect())
-	merged.merge(rig._shoot_params.collect())
-	assert_eq(merged.get("orbit_speed", 0.0), 20.0, "合并后 shoot 参数生效")
+	assert_false(rig.has_method("_rebuild_param_panels"), "阶段台已移除参数面板接口")
+	assert_eq(_find_param_panels(rig).size(), 0, "阶段台 UI 不再挂载脚本改参数面板")
 	rig.queue_free()
+
 
 func test_phase_rig_play_spawns_boss():
 	var rig = RIG.new()
 	add_child_autofree(rig)
 	await get_tree().process_frame
-	var phases = rig._catalog.by_role("phase")
-	var idx := -1
-	for i in phases.size():
-		if phases[i].path.ends_with("non_mid01.tres"):
-			idx = i
+	var idx := _pick_phase(rig, true)
+	assert_true(idx >= 0, "目录里应有阶段")
+	if idx < 0:
+		rig.queue_free()
+		return
 	rig._select_phase(idx)
 	rig._boss_pos = Vector2(GameConfig.FIELD_CENTER_X, 250.0)
 	rig._stage_runtime.entity_registry.enemies.clear()
@@ -106,3 +99,13 @@ func test_phase_rig_play_spawns_boss():
 		"开演生成 Boss（%d）" % rig._stage_runtime.entity_registry.get_active_enemies().size())
 	rig._clear_all()
 	rig.queue_free()
+
+
+## 递归找 param_panel.gd 实例（回归守卫：阶段台不应再有脚本改参数 UI）
+func _find_param_panels(n: Node) -> Array[Node]:
+	var out: Array[Node] = []
+	for c in n.get_children():
+		if c.get_script() == PARAM_PANEL:
+			out.append(c)
+		out.append_array(_find_param_panels(c))
+	return out
