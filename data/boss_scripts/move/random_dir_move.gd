@@ -12,9 +12,9 @@ const META := {
 var jump_interval: float = 5   # 移动间隔（秒）
 var move_time: float = 1.2       # 单次移动耗时（秒，tween 时长）
 var move_distance: float = 120.0 # 单次移动距离（像素）
-var margin: float = 120.0         # 左右边界留白（像素，防贴边）
-var top_min_y: float = 180.0     # y 下限（上方区域）
-var top_max_y: float = 380.0     # y 上限
+var margin: float = 180.0         # 左右边界留白（像素，防贴边）
+var top_min_y: float = 240.0     # y 下限（上方区域）
+var top_max_y: float = 320.0     # y 上限
 
 var _t: float = 0.0
 

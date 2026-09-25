@@ -191,6 +191,16 @@ func start_phase(data: PhaseData) -> void:
 	if _phase_identity:
 		RecordService.record_phase_start(_phase_identity)   # 记录服务：解锁/记尝试（Boss 不再摸 SaveData.record_*）
 
+	# 发动前走位：先跑 pre_move_script，跑完才宣言（报幕 / 音效 / 符卡背景都在 _declare_phase 里）
+	if data.pre_move_script:
+		await _run_pre_move(data)
+		if _phase_data != data:
+			return   # 等待期间阶段已被换掉 / Boss 已亡 → 放弃这次宣言
+	_declare_phase(data)
+
+
+## 宣言 + 涨血 + 启动本阶段 move/shoot（原 start_phase 的后半段）
+func _declare_phase(data: PhaseData) -> void:
 	if data.name != "":
 		GameEvents.phase_start.emit(data)
 
@@ -217,6 +227,18 @@ func start_phase(data: PhaseData) -> void:
 			_apply_phase_params(_shoot_coroutine_runner, data.params)
 			_shoot_coroutine_runner.start(_stage_context, self)
 	)
+
+
+## 跑「发动前走位」脚本并等它结束。⚠️ 内容侧别写死循环 —— 它不结束这张卡就不会宣言。
+func _run_pre_move(data: PhaseData) -> void:
+	var pre: CoroutineScript = data.pre_move_script.new()
+	add_child(pre)
+	_apply_phase_params(pre, data.params)
+	pre.start(_stage_context, self)
+	if pre.is_running:
+		await pre.finished
+	if is_instance_valid(pre):
+		pre.queue_free()
 
 
 func _process(delta: float) -> void:

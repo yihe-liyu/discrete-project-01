@@ -4,6 +4,8 @@ class_name LayerConfig
 
 
 # ── 游戏物件 ──
+const SPELL_BG      := -20  ## 符卡背景（每 Boss 一张）
+const SPELL_PORTRAIT := -15  ## 符卡宣言立绘（弹幕之下、符卡背景之上）  ## 符卡背景（3D 背景之上、自机子弹之下；每 Boss 一张）
 const PLAYER_BULLET := -10  ## 自机子弹
 const ITEM          := -5   ## 道具
 const PLAYER        := 0    ## 自机

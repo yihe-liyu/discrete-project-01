@@ -7,10 +7,14 @@ class_name PhaseData
 @export var uid: int = 0                  ## 全局唯一符卡编号，0=非符不记
 @export var bonus: int = 0               ## 初始奖励分
 @export var time_limit: float = 30.0     ## 时限（秒）
-@export var hp: int = 1000               ## 血量
+@export var hp: int = 4000               ## 血量
 @export var is_timeout_only: bool = false ## 时符
 @export var move_script: Script
 @export var shoot_script: Script
+## **发动前走位**：符卡宣言（报幕 / `card` 音效 / 符卡背景）**之前**跑完的移动脚本。
+## 用来做「先走到位、再发表宣言」的演出；空 = 不等待，宣言立即发生。
+## ⚠️ 它会**推迟宣言**：脚本不结束这张卡就不会发动 —— 别写死循环。
+@export var pre_move_script: Script
 @export var background: PackedScene      ## 可选换背景
 @export var item_power: int = 0         ## 击破掉落 P 点
 @export var item_point: int = 0         ## 击破掉落蓝点
@@ -20,7 +24,7 @@ class_name PhaseData
 @export var item_bomb_full: int = 0     ## 击破掉落整 B
 ## 移动/弹幕脚本参数（工作台编辑，运行时注入脚本同名属性）
 @export var params: Dictionary = {}
-@export var open_reduce_time: float = 0.0  ## 开局减伤时长（秒；0 = 关闭）。阶段开始后这段时间内受伤害减免
+@export var open_reduce_time: float = 3.0  ## 开局减伤时长（秒；0 = 关闭）。阶段开始后这段时间内受伤害减免
 @export var open_reduce_ratio: float = 0.9 ## 开局减伤比例（0~1；0.9 = 只受 10% 伤害）
 
 

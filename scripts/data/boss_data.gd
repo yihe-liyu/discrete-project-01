@@ -4,6 +4,13 @@ class_name BossData
 
 @export var boss_name: String = ""
 @export var visual: PackedScene
+## 符卡背景（**每 Boss 一张**）：压在 3D 背景之上、弹幕之下的一层图案。
+## 只在**符卡**期间显示（非符不显示）；空 = 该 Boss 不用符卡背景。
+## 尺寸按 `FIELD_*` 场地画（768×896）即可 —— 居中放置、不缩放。
+@export var spell_background: Texture2D
+## 符卡宣言立绘（**每 Boss 一张**）：宣言时从游戏框右上角快慢快扫到左下角后淡出。
+## 空 = 该 Boss 不用立绘。尺寸随意 —— 以**中心**锚定，右上角进、左下角出。
+@export var portrait: Texture2D
 ## 阶段列表：各难度**独立数组，互不回退**（某难度空 = 该难度无阶段）。
 ## 难度档：0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra（对应 SpellRecord.Difficulty）
 @export var phases_easy: Array[PhaseData] = []
