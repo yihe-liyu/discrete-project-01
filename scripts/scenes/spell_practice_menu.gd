@@ -140,7 +140,18 @@ func _change_stage(idx: int) -> void:
 		var bosses: Array = BossCatalog.all().get(sample.stage, [])
 		var boss: BossData = bosses[key.boss_index] if key.boss_index >= 0 and key.boss_index < bosses.size() else null
 		var prefix: String = ("%s·" % boss.section_label) if boss != null and boss.section_label != "" else ""
-		var label := "%s%s%d" % [prefix, "符卡" if is_spell else "非符", sample.phase_number]
+		# 序号**按 Boss 各自计**（道中·非符1 / 关底·非符1）——只影响显示：
+		# `phase_number` 仍是**全关规范序**（记录/身份口径不动 ✗），这里减去"该 Boss 之前同类有几张"即得。
+		var base_non := 0
+		var base_spell := 0
+		for bi in range(maxi(key.boss_index, 0)):
+			for prev in (bosses[bi] as BossData).phases_normal:
+				if prev.uid != 0:
+					base_spell += 1
+				else:
+					base_non += 1
+		var local_no: int = sample.phase_number - (base_spell if is_spell else base_non)
+		var label := "%s%s%d" % [prefix, "符卡" if is_spell else "非符", local_no]
 
 		var info := {rec = sample, boss_index = key.boss_index, phase_index = phase_idx, diffs = {}, label = label}
 
