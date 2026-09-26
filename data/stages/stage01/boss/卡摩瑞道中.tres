@@ -18,3 +18,5 @@ phases_normal = Array[ExtResource("1_8s5ng")]([ExtResource("2_pxk2m")])
 phases_hard = Array[ExtResource("1_8s5ng")]([ExtResource("2_pxk2m")])
 phases_lunatic = Array[ExtResource("1_8s5ng")]([ExtResource("2_pxk2m")])
 stage_id = 1
+
+section_label = "道中"

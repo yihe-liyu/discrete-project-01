@@ -24,3 +24,5 @@ phases_hard = Array[ExtResource("1_rqhbj")]([ExtResource("2_4fp0r"), ExtResource
 phases_lunatic = Array[ExtResource("1_rqhbj")]([ExtResource("2_4fp0r"), ExtResource("5_4yngo"), ExtResource("4_4yngo")])
 stage_id = 1
 order = 1
+
+section_label = "关底"

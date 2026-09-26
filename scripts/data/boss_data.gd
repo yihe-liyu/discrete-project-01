@@ -3,6 +3,9 @@ extends Resource
 class_name BossData
 
 @export var boss_name: String = ""
+## 阶段列表里的**区分前缀**（如"道中"/"关底"）—— 同一关有多只 Boss 时，光看"非符1/符卡1"
+## 分不清是谁的（道中非符 vs 关底非符）。空 = 不加前缀。
+@export var section_label: String = ""
 @export var visual: PackedScene
 ## 符卡背景（**每 Boss 一张**）：压在 3D 背景之上、弹幕之下的一层图案。
 ## 只在**符卡**期间显示（非符不显示）；空 = 该 Boss 不用符卡背景。

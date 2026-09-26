@@ -135,7 +135,12 @@ func _change_stage(idx: int) -> void:
 		var is_spell: bool = sample.uid != 0
 
 		# label：二级只显示"非符N / 符卡N"（不带 Boss 前缀；不同 Boss 用三级的名字区分）
-		var label := "%s%d" % ["符卡" if is_spell else "非符", sample.phase_number]
+		# 同一关可能有多只 Boss（道中 / 关底）→ 用 BossData.section_label 当前缀，
+		# 否则两级列表里全是"非符1/符卡1"，分不清是谁的。
+		var bosses: Array = BossCatalog.all().get(sample.stage, [])
+		var boss: BossData = bosses[key.boss_index] if key.boss_index >= 0 and key.boss_index < bosses.size() else null
+		var prefix: String = ("%s·" % boss.section_label) if boss != null and boss.section_label != "" else ""
+		var label := "%s%s%d" % [prefix, "符卡" if is_spell else "非符", sample.phase_number]
 
 		var info := {rec = sample, boss_index = key.boss_index, phase_index = phase_idx, diffs = {}, label = label}
 
