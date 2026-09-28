@@ -54,18 +54,28 @@ def main() -> int:
     base = {k: round(v - mean, 1) for k, v in raw.items()}
 
     print(f"{'音效':<16}{'RMS基准':>9}{'当前值':>8}{'差':>7}   状态")
+    # 表是**相对**语义（总电平在调用点的 `SFX_LEVEL_DB`）→ 整表平移不表达任何混音意图。
+    # 判定"手调"前先扣掉**公共平移**：否则为了保持整表居中而抬了一次表，
+    # 每个 key 都会被标成"手调"，把「哪些是耳朵定过的」这个信号淹掉。
+    # 平移量取**中位数**：少数被手调的 key 不该把基准拖偏。
+    diffs = {k: current[k] - base[k] for k in base if k in current}
+    shift = 0.0
+    if diffs:
+        ordered = sorted(diffs.values())
+        mid = len(ordered) // 2
+        shift = ordered[mid] if len(ordered) % 2 else (ordered[mid - 1] + ordered[mid]) / 2.0
     tuned = 0
     for key in sorted(base):
         cur = current.get(key)
         if cur is None:
             print(f"{key:<16}{base[key]:>+9.1f}{'—':>8}{'—':>7}   ⚠️ 表里还没有，建议填 {base[key]:+.1f}")
             continue
-        diff = cur - base[key]
+        diff = cur - base[key] - shift
         note = "手调" if abs(diff) >= 0.5 else "= 基准"
         if note == "手调":
             tuned += 1
         print(f"{key:<16}{base[key]:>+9.1f}{cur:>+8.1f}{diff:>+7.1f}   {note}")
-    print(f"\n共 {len(base)} 个：手调 {tuned} 个，其余等于 RMS 基准。")
+    print(f"\n共 {len(base)} 个：手调 {tuned} 个，其余等于 RMS 基准（已扣掉整表公共平移 {shift:+.1f} dB）。")
     print("含义：RMS 只负责把源文件之间 ~13 dB 的电平差拉平（起点）；")
     print("      短促/高频音的听感偏差（kira 偏响、菜单点击偏小）只能靠耳朵终调。")
     return 0

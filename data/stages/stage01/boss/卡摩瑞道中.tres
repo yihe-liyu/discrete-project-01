@@ -5,11 +5,12 @@
 [ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="3_1sohn"]
 [ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="4_skqdj"]
 [ext_resource type="Texture2D" uid="uid://cb5n52jpgy3ex" path="res://assets/Textures/character/kamorui/卡摩瑞符卡背景.png" id="5_sbg"]
+[ext_resource type="Texture2D" uid="uid://br8vr3n284kcl" path="res://assets/Textures/character/kamorui/kamorui1.png" id="9_portrait"]
 
-[ext_resource type="Texture2D" path="res://assets/Textures/character/kamorui/kamorui1.png" id="9_portrait"]
 [resource]
 script = ExtResource("3_1sohn")
 boss_name = "卡摩瑞"
+section_label = "道中"
 visual = ExtResource("4_skqdj")
 spell_background = ExtResource("5_sbg")
 portrait = ExtResource("9_portrait")
@@ -18,5 +19,3 @@ phases_normal = Array[ExtResource("1_8s5ng")]([ExtResource("2_pxk2m")])
 phases_hard = Array[ExtResource("1_8s5ng")]([ExtResource("2_pxk2m")])
 phases_lunatic = Array[ExtResource("1_8s5ng")]([ExtResource("2_pxk2m")])
 stage_id = 1
-
-section_label = "道中"

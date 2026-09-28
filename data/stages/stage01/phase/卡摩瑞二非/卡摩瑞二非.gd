@@ -30,7 +30,7 @@ func _tick(p_ctx: StageContext):
 		if 波内距下次开花计时 >= 波内两次开花间隔:
 			波内距下次开花计时 = 0.0
 			波内剩余开花弹次数 -= 1
-			_fire_ring(p_ctx)
+			开花(p_ctx)
 	else:
 		# 无波进行：等下一波
 		距下一波计时 += dt
@@ -45,7 +45,7 @@ func _tick(p_ctx: StageContext):
 	
 	return true
 
-func _fire_ring(p_ctx: StageContext) -> void:
+func 开花(p_ctx: StageContext) -> void:
 	var 个数: int = diff_pick([10, 15, 20, 25])
 	var 速度: float = 5.0 + 本波已发圈数 * diff_pick([35, 30, 25, 20])
 	本波已发圈数 += 1

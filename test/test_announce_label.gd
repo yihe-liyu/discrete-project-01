@@ -127,5 +127,53 @@ func test_info_labels_declared_and_hidden_until_finished() -> void:
 	assert_false(capture.visible, "播报中先隐藏")
 	label.set_bonus_text("59273")
 	label.set_capture_text("00/01")
-	assert_eq(bonus.text, "59273", "Bonus 文本走 setter")
-	assert_eq(capture.text, "00/01", "Capture 文本走 setter")
+	assert_ne(label.bonus_prefix, "", "Bonus 说明前缀声明在场景里")
+	assert_ne(label.capture_prefix, "", "Capture 说明前缀声明在场景里")
+	assert_eq(bonus.text, label.bonus_prefix + "59273", "Bonus 文本 = 前缀 + 值")
+	assert_eq(capture.text, label.capture_prefix + "00/01", "Capture 文本 = 前缀 + n/m")
+
+
+## 回归（2026-09-26）：加了说明前缀后 Bonus/Capture 两串变宽 —— 曾①各贴一端直接**叠在一起**、
+## ②按名字宽度比例落点**顶出场地右缘**（实测越界 48px）。
+## 现在整行**右对齐到名字视觉右缘**、向左依次排开：不重叠、且整行窄于场地。
+func test_info_labels_right_aligned_without_overlap() -> void:
+	var label := _make_label()
+	label.play("阳符「宏辉抑世」", Vector2(768, 896))
+	label._show_info_labels()
+	label.set_bonus_text("1234567")
+	label.set_capture_text("01/03")
+
+	var bonus := label.get_node("BonusLabel") as Label
+	var capture := label.get_node("CaptureLabel") as Label
+	var bonus_w := bonus.get_minimum_size().x
+	var capture_w := capture.get_minimum_size().x
+
+	assert_almost_eq(capture.position.x + capture_w, label.size.x, 0.5,
+		"整行右缘贴名字视觉右缘（= 场地右缘）")
+	assert_almost_eq(capture.position.x - (bonus.position.x + bonus_w), AnnounceLabel.INFO_GAP, 0.5,
+		"两串之间恰好 INFO_GAP（不重叠）")
+	var row_w := (capture.position.x + capture_w - bonus.position.x) * AnnounceLabel.SHRINK
+	assert_lt(row_w, 768.0, "整行缩放后必须窄于场地（实测 %.1f）" % row_w)
+
+
+## 回归（2026-09-26 作者报）：bonus 逐帧递减 → 「奖励分数」整块会往右**抽动**。
+## 根因：落点用的是**当前**文本宽度，而本作字体数字不等宽（实测 "1"=15px、"8"=18px）。
+## 现在 Bonus 的预留宽度**只增不减**（递减计数器 ⇒ 见过的最宽即此后最宽）→ 框钉住不动。
+func test_bonus_row_does_not_move_while_counting_down() -> void:
+	var label := _make_label()
+	label.play("阳符「宏辉抑世」", Vector2(768, 896))
+	label._show_info_labels()
+	label.set_capture_text("01/03")
+	label.set_bonus_text("100000")
+	var fixed_x: float = label._bonus_label.position.x
+	var fixed_capture_x: float = label._capture_label.position.x
+
+	for value in ["99999", "88888", "11111", "9999", "1", "0"]:
+		label.set_bonus_text(value)
+		assert_almost_eq(label._bonus_label.position.x, fixed_x, 0.001,
+			"bonus 掉到 %s 时整块不应重排（否则抽动）" % value)
+	assert_almost_eq(label._capture_label.position.x, fixed_capture_x, 0.001, "Capture 也不动")
+	# 预留框（最宽时的 Bonus）与 Capture 之间必须留住 INFO_GAP → 最宽的数字也不会压到收取数
+	assert_almost_eq(
+		label._capture_label.position.x - (label._bonus_label.position.x + label._bonus_reserve),
+		AnnounceLabel.INFO_GAP, 0.001, "预留宽度保住 INFO_GAP（不重叠）")

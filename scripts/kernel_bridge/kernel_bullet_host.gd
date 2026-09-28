@@ -103,7 +103,7 @@ func _ensure_system() -> void:
 	system = KernelNativeSystem.new()
 	system.name = "KernelBulletSystem"
 	if not system.is_native_ready():
-		push_error("[KernelBulletHost] 原生扩展未加载：本项目已要求 GDExtension（见 docs/N2_NATIVE_INTEGRATION_PLAN.md §63）")
+		push_error("[KernelBulletHost] 原生扩展未加载：本项目已要求 GDExtension（见 docs/archive/N2_NATIVE_INTEGRATION_PLAN.md §63）")
 	add_child(system)
 
 

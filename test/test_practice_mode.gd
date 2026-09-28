@@ -50,3 +50,12 @@ func test_reset_all_clears_practice_payload():
 	SaveData.reset_all(null)
 	assert_false(PracticeSession.is_practice_mode, "reset_all 应复位练习模式")
 	assert_null(PracticeSession.phase, "reset_all 应清空 practice_phase")
+
+
+## 练习 BGM key 随载荷走（菜单按选中的卡解析后传进来），结束时要清干净
+func test_practice_bgm_key_travels_with_payload_and_clears():
+	SaveData.is_restarting = false
+	PracticeSession.start(PhaseData.new(), null, "测试", 9, 0, null, "stageEX_boss")
+	assert_eq(PracticeSession.bgm_key, "stageEX_boss", "载荷应带上本局 BGM key")
+	PracticeSession.finish()
+	assert_eq(PracticeSession.bgm_key, "", "结束练习应清空 BGM key（防残留到下一局）")

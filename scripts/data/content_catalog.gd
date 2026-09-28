@@ -212,7 +212,6 @@ func _scan_tres(path: String) -> void:
 		"uid": phase.uid,
 		"hp": phase.hp,
 		"time_limit": phase.time_limit,
-		"bonus": phase.bonus,
 		"is_timeout_only": phase.is_timeout_only,
 		"move_script": phase.move_script.resource_path if phase.move_script else "",
 		"shoot_script": phase.shoot_script.resource_path if phase.shoot_script else "",

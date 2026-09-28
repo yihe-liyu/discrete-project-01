@@ -1,0 +1,71 @@
+[gd_scene format=3 uid="uid://dxr4oy8fp8yvd"]
+
+[ext_resource type="Script" uid="uid://bilf3r5wh3gug" path="res://scripts/ui/dialogue_preview.gd" id="1_preview"]
+
+[node name="DialoguePreview" type="Control" unique_id=970088717]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_preview")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1795151030]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.043, 0.051, 0.098, 1)
+
+[node name="Field" type="ColorRect" parent="." unique_id=776849950]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 32.0
+offset_right = 832.0
+offset_bottom = 928.0
+color = Color(0.09, 0.11, 0.19, 1)
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=1595187970]
+layout_mode = 0
+offset_left = 856.0
+offset_top = 32.0
+offset_right = 1256.0
+offset_bottom = 300.0
+
+[node name="VBox" type="VBoxContainer" parent="Panel" unique_id=979989753]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Panel/VBox" unique_id=533966810]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "对话预览"
+
+[node name="ScriptLabel" type="Label" parent="Panel/VBox" unique_id=30979429]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "脚本"
+
+[node name="ScriptPicker" type="OptionButton" parent="Panel/VBox" unique_id=2143639697]
+layout_mode = 2
+
+[node name="FuncLabel" type="Label" parent="Panel/VBox" unique_id=1939251688]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "段落（构建函数）"
+
+[node name="FuncPicker" type="OptionButton" parent="Panel/VBox" unique_id=1439319925]
+layout_mode = 2
+
+[node name="PlayButton" type="Button" parent="Panel/VBox" unique_id=1294794597]
+layout_mode = 2
+text = "▶ 播放（R）"
+
+[node name="Info" type="Label" parent="Panel/VBox" unique_id=1924949484]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "对话预览"
+autowrap_mode = 3

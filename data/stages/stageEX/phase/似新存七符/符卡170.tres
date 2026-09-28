@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bfad5o4vu6mv2"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_2xpkx"]
+
+[resource]
+script = ExtResource("1_2xpkx")
+name = "生死意「呜呼哀哉，终非后人」"
+uid = 170
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

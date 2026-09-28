@@ -15,14 +15,24 @@ const OPTIONS: Array[Dictionary] = [
 const CHAR_NAMES = SpellRecord.CHAR_NAMES
 const DIFF_NAMES = SpellRecord.DIFF_NAMES
 const SUB_COLOR := Color(0.72, 0.72, 0.78, 1.0)  # 英文小标题暗色
-const PER_PAGE := 6
+## 记录行字号（`_make_row` 三个 Label 共用；行高由它决定，见 `_row_pitch`）
+const ROW_FONT_SIZE := 26
+## 未遇见符卡的名字位：只显示 uid + 三个问号（与 Boss 未揭名同一套写法）
+const UNKNOWN_NAME := "？？？"
+## 未遇见的名字位颜色（比正常名暗一档，一眼能看出"还没见过"）
+const UNKNOWN_NAME_COLOR := Color(0.42, 0.42, 0.48, 1.0)
+## **至少收取过一次**的符卡名颜色（蓝）
+const CAPTURED_NAME_COLOR := Color(0.4, 0.7, 1.0)
 
 var _view: int = View.OPTIONS
 var _char_index: int = 0
 var _diff_index: int = 0
 var _cards: Array[Dictionary] = []
-var _visible: Array[Dictionary] = []  # 当前角色+难度下有记录的卡（渲染用）
+var _visible: Array[Dictionary] = []  # 当前页要渲染的卡（= 当前难度的全部符卡，见 _render）
 var _page: int = 0
+## 每页行数 —— 按面板**实测**高度算（`_rows_per_page`），不写死常量。
+## 回归（2026-09-26 作者报）：曾是 `const PER_PAGE = 6`，面板下方还空一大半就翻页。
+var _per_page: int = 1
 
 
 # ═══ 选项视图构建 ═══
@@ -87,28 +97,39 @@ func _hide_record_view() -> void:
 
 # ═══ 符卡记录数据 ═══
 
-## 从记录扫全部符卡（uid!=0 且 SPELL），按 (stage, phase_index, boss_index, uid) 去重
-## （不同难度可挂不同 uid 的卡，如 spell53/54——key 含 uid 才不会误合并）
+## 扫**花名册**列出当前难度下的**全部**符卡（uid != 0）——**不看记录**：
+## 没遇见过的也要占一行（显示 uid + 问号，见 `_make_row`）。
+## key 含 uid：同槽位在不同难度可挂不同卡（如 spell53/54），按 uid 去重避免重复行。
+## 名字按**当前难度**取（本页本来就一次只看一个难度，难度切换会重扫）。
 func _collect_cards() -> void:
 	var seen := {}
 	_cards.clear()
-	var book: SpellRecordBook = SaveData.spell_book
-	for record in book.records:
-		if record.uid == 0 or record.phase_type != SpellRecord.PhaseType.SPELL:
-			continue
-		var key := "%d_%d_%d_%d" % [record.stage, record.phase_index, record.boss_index, record.uid]
-		if seen.has(key):
-			continue
-		seen[key] = true
-		# 名字**现从花名册取**（`SpellRecord` 不存名字 —— 快照会锁死首次遇到的难度卡名）：
-		# 用记录自己的难度，取到的是玩家当时打的那张卡。
-		var phase: PhaseData = BossCatalog.phase_at(record.stage, record.phase_index, record.difficulty)
-		_cards.append({
-			"stage": record.stage, "phase_index": record.phase_index, "boss_index": record.boss_index,
-			"uid": record.uid, "name": phase.name if (phase and phase.name != "") else "-",
-		})
+	var stage_ids: Array = BossCatalog.all().keys()
+	stage_ids.sort()
+	for stage_id in stage_ids:
+		# 按**舞台规范槽号**遍历 —— 不是"每个 Boss 的第几槽"：多 Boss 面上两者不同
+		# （道中 4 槽 + 关底 3 槽 ⇒ 关底第 0 槽是舞台第 4 槽）。`phase_at` 收的就是舞台槽号。
+		var order: Array = BossCatalog.stage_phase_order(stage_id)
+		for phase_index in order.size():
+			var phase: PhaseData = BossCatalog.phase_at(stage_id, phase_index, _diff_index)
+			if phase == null or phase.uid == 0:
+				continue          # 该难度此槽空着 / 非符（无 uid）→ 不进符卡记录
+			if seen.has(phase.uid):
+				continue
+			seen[phase.uid] = true
+			var boss_index: int = BossCatalog.boss_index_of_phase(stage_id, phase_index)
+			if boss_index < 0:
+				continue
+			_cards.append({
+				"stage": stage_id, "phase_index": phase_index, "boss_index": boss_index,
+				"uid": phase.uid, "name": phase.name if phase.name != "" else "-",
+			})
 	_cards.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return a["stage"] < b["stage"] or (a["stage"] == b["stage"] and a["phase_index"] < b["phase_index"]))
+		if a["stage"] != b["stage"]:
+			return a["stage"] < b["stage"]
+		if a["phase_index"] != b["phase_index"]:
+			return a["phase_index"] < b["phase_index"]
+		return a["uid"] < b["uid"])
 
 
 func _record_of(card: Dictionary) -> SpellRecord:
@@ -121,34 +142,65 @@ func _record_of(card: Dictionary) -> SpellRecord:
 
 
 func _total_pages() -> int:
-	return maxi(1, int(ceil(_visible.size() / float(PER_PAGE))))
+	return maxi(1, int(ceil(_visible.size() / float(maxi(_per_page, 1)))))
 
+
+## 每页行数 = 面板可用高度 / 一行的实际行距。
+## 用面板高度（不是 ListBox 高度）：ListBox 隐藏时是 0，而面板已经布局好 —— 首次翻开也能算对。
+func _rows_per_page() -> int:
+	var panel: PanelContainer = $"RecordView/RecordPanel"
+	var style: StyleBox = panel.get_theme_stylebox("panel")
+	var available: float = panel.size.y - style.get_minimum_size().y
+	var pitch: float = _row_pitch()
+	if available <= 0.0 or pitch <= 0.0:
+		return 1
+	return maxi(1, int(floor(available / pitch)))
+
+
+## 一行的高度 + 行距：字高由主题字体决定，用一行真 Label 量（写死像素会随字体漂）。
+func _row_pitch() -> float:
+	var box: VBoxContainer = $"RecordView/RecordPanel/ListBox"
+	var probe := Label.new()
+	probe.add_theme_font_size_override("font_size", ROW_FONT_SIZE)
+	probe.text = "0"
+	box.add_child(probe)
+	var row_h: float = probe.get_combined_minimum_size().y
+	box.remove_child(probe)
+	probe.free()
+	return row_h + float(box.get_theme_constant("separation"))
+
+
+## 难度切换：卡片列表来自**花名册**（按难度取名字/uid），所以必须重扫再渲染
+func _reload_diff() -> void:
+	_collect_cards()
+	_update_header()
+	_render()
 
 func _update_header() -> void:
 	$RecordView/Header/CharLabel.text = "← %s →" % CHAR_NAMES[_char_index]
 	$RecordView/Header/DiffLabel.text = DIFF_NAMES[_diff_index]
 
 
+## 一页一行地渲染**全部**符卡（没遇见过的也在，显示 uid + 问号）。
+## 三档显示由 `_make_row` 决定：未遇见 = 「？？？」/ 遇见过 = 名字 / 收取过 = 名字**蓝色**。
 func _render() -> void:
 	var box: VBoxContainer = $"RecordView/RecordPanel/ListBox"
 	for child in box.get_children():
 		child.queue_free()
 
-	# 只显示当前角色+难度下有记录的符卡（如 Extra 没打过黄粱 → 不显示）
-	_visible.clear()
-	for card in _cards:
-		if _record_of(card):
-			_visible.append(card)
+	_visible.assign(_cards)
 
 	if _visible.is_empty():
 		var empty := Label.new()
-		empty.text = "暂无符卡记录"
+		empty.text = "该难度暂无符卡"
 		empty.add_theme_font_size_override("font_size", 26)
 		empty.modulate.a = 0.6
 		box.add_child(empty)
 	else:
-		var start := _page * PER_PAGE
-		for i in range(start, mini(start + PER_PAGE, _visible.size())):
+		_per_page = _rows_per_page()
+		_page = clampi(_page, 0, _total_pages() - 1)   # 面板变矮/卡变少时收敛页码，防空白页
+		var start := _page * _per_page
+		for i in range(start, mini(start + _per_page, _visible.size())):
 			box.add_child(_make_row(_visible[i]))
 
 
@@ -181,6 +233,11 @@ func _pad_cn(v: Variant, width: int) -> String:
 	return text
 
 
+## 一行 = uid + 名字 + 收取/尝试。
+## 三档（作者要求）：
+##   ① **没遇见过**（无记录）→ 名字显示 **？？？**（uid 照常显示，便于按 uid 找卡）
+##   ② **遇见过但没收取**（有记录、captures == 0）→ 显示真名（普通色）
+##   ③ **至少收取过一次**（captures > 0）→ 名字**蓝色**
 func _make_row(card: Dictionary) -> HBoxContainer:
 	var rec := _record_of(card)
 	var row := HBoxContainer.new()
@@ -188,15 +245,17 @@ func _make_row(card: Dictionary) -> HBoxContainer:
 	# Ｎｏ.＋全角数字（uid 三位宽：全角空格补位右对齐，不补前导零）
 	var uid_l := Label.new()
 	uid_l.text = _to_full("No.") + _pad_cn(_to_full(str(card["uid"])), 3)
-	uid_l.add_theme_font_size_override("font_size", 26)
+	uid_l.add_theme_font_size_override("font_size", ROW_FONT_SIZE)
 	uid_l.add_theme_color_override("font_color", Color(0.72, 0.72, 0.78))
 	uid_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	var name_l := Label.new()
-	name_l.text = card["name"]
-	name_l.add_theme_font_size_override("font_size", 26)
+	name_l.text = card["name"] if rec != null else UNKNOWN_NAME
+	name_l.add_theme_font_size_override("font_size", ROW_FONT_SIZE)
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if rec and rec.captures > 0:
-		name_l.add_theme_color_override("font_color", Color(0.4, 0.7, 1.0))  # 实战收取过：符卡名蓝色
+	if rec != null and rec.captures > 0:
+		name_l.add_theme_color_override("font_color", CAPTURED_NAME_COLOR)   # 收取过：符卡名蓝色
+	elif rec == null:
+		name_l.add_theme_color_override("font_color", UNKNOWN_NAME_COLOR)    # 未遇见：问号压暗一档
 	# 普通模式收取 ***/***（右对齐，不补前导零）
 	var stat_l := Label.new()
 	if rec:
@@ -205,7 +264,7 @@ func _make_row(card: Dictionary) -> HBoxContainer:
 	else:
 		stat_l.text = "--"
 		stat_l.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
-	stat_l.add_theme_font_size_override("font_size", 26)
+	stat_l.add_theme_font_size_override("font_size", ROW_FONT_SIZE)
 	stat_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(uid_l)
 	row.add_child(name_l)
@@ -243,15 +302,13 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_diff_index = wrapi(_diff_index - 1, 0, DIFF_NAMES.size())
 		_page = 0
-		_update_header()
-		_render()
+		_reload_diff()
 		sfx_nav()
 	elif event.is_action_pressed("ui_down"):
 		get_viewport().set_input_as_handled()
 		_diff_index = wrapi(_diff_index + 1, 0, DIFF_NAMES.size())
 		_page = 0
-		_update_header()
-		_render()
+		_reload_diff()
 		sfx_nav()
 	elif event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()

@@ -1,12 +1,23 @@
 [gd_resource type="Resource" script_class="CharacterProfile" format=3 uid="uid://dt3vg7e6cb275"]
 
 [ext_resource type="Texture2D" uid="uid://dvoyd8ncl38ww" path="res://assets/Textures/character/marisa/marisa1.png" id="1_6ak2h"]
+[ext_resource type="Texture2D" uid="uid://cgsuqvg4xhoi3" path="res://assets/Textures/character/marisa/marisa4.png" id="2_5dju4"]
 [ext_resource type="Script" uid="uid://bx50hqvly0v0c" path="res://scripts/data/character_profile.gd" id="2_g0epn"]
+[ext_resource type="Texture2D" uid="uid://8qk1kwuyw00v" path="res://assets/Textures/character/marisa/marisa2.png" id="3_5dju4"]
+[ext_resource type="Texture2D" uid="uid://eossb6m7j8a5" path="res://assets/Textures/character/marisa/marisa5.png" id="4_iae32"]
+[ext_resource type="Texture2D" uid="uid://bvabbwr78wsjq" path="res://assets/Textures/character/marisa/marisa6.png" id="5_sjo6r"]
+[ext_resource type="Texture2D" uid="uid://b6y33koif2qdp" path="res://assets/Textures/character/marisa/marisa7.png" id="6_tvy6y"]
 
 [resource]
 script = ExtResource("2_g0epn")
 char_name = "魔理沙"
 portraits = {
-"通常": ExtResource("1_6ak2h")
+"叹气": ExtResource("2_5dju4"),
+"尴尬": ExtResource("6_tvy6y"),
+"疑惑": ExtResource("4_iae32"),
+"笑": ExtResource("3_5dju4"),
+"通常": ExtResource("1_6ak2h"),
+"震惊": ExtResource("5_sjo6r")
 }
+default_bubble_offset = Vector2(-150, 250)
 metadata/_custom_type_script = "uid://bx50hqvly0v0c"

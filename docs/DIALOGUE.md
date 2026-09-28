@@ -1,8 +1,11 @@
 # 东方星尘回 ～ Broadest and Narrowest — 对白全集
 
-> **归档说明**：对白已代码化（2026-08 对话重构）——实际台词写在关卡脚本的 `DialogueSteps` DSL 里
-> （见 `data/stages/stage01/stage_script/stage01.gd` 战前对话）。本文档保留为**剧本归档**，
-> 供写作/审阅/校对用；改台词请改代码，并同步本文档。
+> **归档说明**：对白已代码化（2026-08 对话重构）——实际台词写在 `data/dialogue/stage/<面>_dialogue.gd` 的 `static` 构建函数里
+> （Stage 1 = `data/dialogue/stage/stage01_dialogue.gd`，由 `data/stages/stage01/stage_script/stage01.gd` 在时间线里调用）。
+> 本文档保留为**剧本原稿**，供写作/审阅/校对用；改台词请改代码，并同步本文档。
+>
+> ⚠️ **已实现的部分一律以代码为准**：Stage 1 的代码里已出现本文档没有的东西（`portrait(...)` 情绪、行间的省略/补白、
+> 角色名内嵌称呼、`d.event(...)` 收尾事件），两边**已知不一致**。本文档的价值在**未实现的面**（Stage 2~6 / EX）的写作稿。
 >
 > 角色代号：r = 灵梦 / m = 魔理沙
 > 各面角色代号见各章说明

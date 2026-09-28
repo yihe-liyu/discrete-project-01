@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://c0roidnfpvatk"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_gut2h"]
+
+[resource]
+script = ExtResource("1_gut2h")
+name = "虚实意「近水楼台，痴月忘水」"
+uid = 164
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

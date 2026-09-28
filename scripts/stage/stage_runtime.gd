@@ -84,6 +84,23 @@ func stop_stage() -> void:
 		bullet_manager.clear_bullets()  # 清弹幕，激光自己淡出
 
 
+## **关卡正常收尾**（内容动词 `StageDirector.finish_stage()` 的落点）。
+## ⚠️ 两个都不能走错，否则"这关结束了"就没有出口（Boss 打完只能干等）：
+## ① 不能走 `stop_stage()`：它**先把 `current_stage` 置空**，`_on_stage_finished()` 会在
+##    `if not current_stage` 处直接 return、**不发 `stage_cleared`** —— 那是「拆场景」用的路；
+## ② 也不能靠 `_coroutine_script.stop()` 触发：`CoroutineRunner.stop()` 只清任务、**不发 `finished`**
+##    （`finished` 只在任务自然跑完时发）。
+## 所以这里**直接收尾**（发信号 + 存分），再把脚本停掉/回收。
+func finish_stage() -> void:
+	if not _is_stage_active:
+		return
+	_on_stage_finished()
+	if _coroutine_script and is_instance_valid(_coroutine_script):
+		_coroutine_script.stop()
+		_coroutine_script.queue_free()
+		_coroutine_script = null
+
+
 func _on_stage_finished() -> void:
 	if not current_stage:
 		return

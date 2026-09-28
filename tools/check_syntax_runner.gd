@@ -31,8 +31,12 @@ func _scan(dir_path: String) -> void:
 		elif entry.ends_with(".gd"):
 			var path := dir_path.path_join(entry)
 			_total += 1
-			# 场景模式 load()：autoload 完整注册、class_name 全局可用，编译上下文与真实游戏一致
-			if load(path) == null:
+			# 场景模式 load()：autoload 完整注册、class_name 全局可用，编译上下文与真实游戏一致。
+			# ⚠️ 光判 `load() == null` 会漏掉**依赖级**编译失败：脚本自身语法没错、但它调用的
+			# 别处函数/类型不存在时，`load()` 仍返回**非 null** 的 GDScript（`can_instantiate()` 为 false）。
+			# 典型：内容侧把 `static func build()` 改名 → 测试里还在调旧名，测试文件就"加载得到但用不了"。
+			var script := load(path)
+			if script == null or (script is GDScript and not (script as GDScript).can_instantiate()):
 				_failures.append(path)
 		entry = dir.get_next()
 	dir.list_dir_end()

@@ -95,10 +95,13 @@ func _start_practice_game() -> void:
 	AudioManager.sfx_trim_db = PRACTICE_SFX_TRIM_DB
 	_load_background(PracticeSession.background)
 	# 练习模式没有关卡脚本 → 没人起 BGM（只剩 SE，没有衬托会显得特别响）。
-	# 按关卡数据起本关 BGM（3B 这类没有可玩 StageData 的，靠目录扫描也能查到）。
-	var stage_data: StageData = StageCatalog.find(PracticeSession.stage_id)
-	if stage_data != null and stage_data.bgm_key != "":
-		var bgm: AudioStream = AssetRegistry.get_bgm(stage_data.bgm_key)
+	# 曲目由菜单按「选中的卡属于哪只 Boss」解析后随载荷带来（道中 Boss 出道中曲、关底出 Boss 曲）；
+	# 载荷没带（旧路径 / 合成场景）→ 回落该面的 `StageData.bgm_key`。
+	var bgm_key: String = PracticeSession.bgm_key
+	if bgm_key.is_empty():
+		bgm_key = StageCatalog.bgm_key_of(PracticeSession.stage_id)
+	if bgm_key != "":
+		var bgm: AudioStream = AssetRegistry.get_bgm(bgm_key)
 		if bgm:
 			AudioManager.play_bgm(bgm)
 

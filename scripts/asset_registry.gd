@@ -38,23 +38,25 @@ const LASER_TEXTURE := preload("res://assets/Textures/bullet/laser.png")
 ## 短促/高频音的听感偏差（`kira` 偏响、菜单点击偏小）RMS 无法建模，只能手调（下面标 `## 手调` 的就是）。
 ## 新加音效时用 `python3 tools/sfx_db_baseline.py` 算起点，并看哪些是手调过的。
 const SFX_DB := {
-	"cancel": 0.0,   ## 手调：菜单返回音，同上
-	"card": -1.7,
-	"enemy_die": +1.2,
-	"graze": +4.1,
-	"item": +3.9,
-	"kira": -6.0,   ## 手调（作者反馈两次）：弹幕每颗子弹都发它，密度+高频 ⇒ 必须比 RMS 值再低一截
-	"lazer": -4.7,
-	"marisa_damage": +5.9,
-	"msl": +1.2,
-	"normal_damage": -4.7,
-	"ok": +2.9,
-	"pause": +2.9,
-	"player_card": +1.9,   ## 手调：Bomb 宣言是关键时刻音，该亮出来
-	"player_die": -4.7,
-	"player_shoot": -5.8,   ## 手调：自机射击是持续音，连打时疲劳；作者两次反馈偏大
-	"select": -1.7,   ## 手调：菜单导航音。短促点击，RMS 高估了它的响度 ⇒ 表里被压过头，作者反馈偏小
-	"shoot": +0.6,   ## 手调：作者要求更突出
+	"cancel": +1.4,   ## 手调：菜单返回音，同上
+	"card": -0.3,
+	"enemy_die": +2.6,
+	"boss_die": -3.0,   ## 专用素材（作者提供）。RMS 基准 -4.4，随整表居中抬到与其余音效同档
+	"graze": +5.5,
+	"item": +5.3,
+	"kira": -4.6,   ## 手调（作者反馈两次）：弹幕每颗子弹都发它，密度+高频 ⇒ 必须比 RMS 值再低一截
+	"lazer": -3.3,
+	"marisa_damage": -0.6,   ## 手调（作者反馈两次）：**魔理沙子机弹的命中音**（focus 弹专属 key），最多 20 次/秒（节流 0.05）
+	                         ## ⇒ 压 7 dB（相对 RMS 基准 −7.9），与 kira 同档：高频持续音必须比 RMS 值再低一截
+	"msl": -5.3,   ## 手调（作者反馈两次）：**魔理沙子机（focus）的发射音**，~12 次/秒的持续音 ⇒ 同样压 7 dB（相对基准 −7.9）
+	"normal_damage": -3.3,
+	"ok": +4.3,
+	"pause": +4.3,
+	"player_card": +3.3,   ## 手调：Bomb 宣言是关键时刻音，该亮出来
+	"player_die": -3.3,
+	"player_shoot": -4.4,   ## 手调：自机射击是持续音，连打时疲劳；作者两次反馈偏大
+	"select": -0.3,   ## 手调：菜单导航音。短促点击，RMS 高估了它的响度 ⇒ 表里被压过头，作者反馈偏小
+	"shoot": +2.0,   ## 手调：作者要求更突出
 }
 
 
@@ -78,6 +80,8 @@ const sounds := {
 	"marisa_damage":  preload("res://assets/Sound/marisa_damage.wav"),
 	"msl":            preload("res://assets/Sound/msl.wav"),
 	"normal_damage":  preload("res://assets/Sound/normal_damage.wav"),
+	# Boss 全破（`Boss.play_defeat`）。专用素材；`BossData.defeat_sfx` 可按 Boss 换 key。
+	"boss_die":       preload("res://assets/Sound/boss_die.wav"),
 }
 
 ## BGM 资源表 —— 按需加载（load 而非 preload，避免启动即解码大文件）

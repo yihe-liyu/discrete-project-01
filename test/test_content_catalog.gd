@@ -60,7 +60,7 @@ func test_fixture_phase_tres_fields():
 		assert_eq(p.extra["hp"], 123, "hp 入档")
 		assert_almost_eq(p.extra["time_limit"], 45.5, 0.01, "时限入档")
 		assert_eq(p.stage_key, "stageF", "stage_key 从路径提取")
-		for key in ["bonus", "is_timeout_only", "move_script", "shoot_script"]:
+		for key in ["is_timeout_only", "move_script", "shoot_script"]:
 			assert_true(p.extra.has(key), "阶段 extra 应含 %s" % key)
 
 
@@ -97,7 +97,7 @@ func test_real_content_smoke_is_content_agnostic():
 		assert_false(e.path.contains("/dialogue/"), "dialogue 排除（%s）" % e.path)
 		assert_true(CAT.ROLE_ORDER.has(e.role), "角色合法（%s → %s）" % [e.role, e.path])
 	for e in cat.by_role("phase"):
-		for key in ["uid", "hp", "time_limit", "bonus", "is_timeout_only", "move_script", "shoot_script"]:
+		for key in ["uid", "hp", "time_limit", "is_timeout_only", "move_script", "shoot_script"]:
 			assert_true(e.extra.has(key), "阶段 %s 缺字段 %s" % [e.path, key])
 
 

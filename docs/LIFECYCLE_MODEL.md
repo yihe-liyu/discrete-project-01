@@ -2,8 +2,11 @@
 
 > **状态**：**已落地（2026-09-14，L1–L4）**。B 路线（N3）的形态 = **一套词汇，三种 runtime**
 > （低频 GDScript / 高频 per-bullet 固定描述符 / 原生执行）。
-> **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §1/§5/§5.7；`docs/N2_NATIVE_INTEGRATION_PLAN.md`。
+> **相关**：`docs/GDEXTENSION_KERNEL_DESIGN.md` §1/§5/§5.7；`docs/archive/N2_NATIVE_INTEGRATION_PLAN.md`。
 > **由来（2026-09-13 决策）**：放弃「通用 opcode VM」，改为「频率分层 + 固定 schema 相位描述符」。理由见 §8。
+>
+> **本文怎么读**：**当前模型（权威）= §0–§6 + §11 的 unit 表**；**决策理由（只增不改）= §7 映射 · §8 与 VM 的关系**；
+> **历史记录（已完成，不再更新）= §9 落地步骤 · §10 L1 实测 · §11 末尾的 L2/更新脚注**。逐条状态与待办见基线 S 表。
 
 ---
 
@@ -131,7 +134,7 @@ BulletLifecycle.new()\
 - **Move**：`accel_world` `accel_heading` `rotate` / `rotate_velocity` / `rotate_heading` `steer` `speed_lerp` `speed_mul` `set_heading` `set_speed` `position`
 - **Until**：`until_never` `until_elapsed` `until_near` `until_at_wall` `until_speed` `until_turned`（+ 通用 `.every` / `.every_ticks`）；`then()` 开新相位
 - **Action**：`sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call`
-- **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)` `forward(angle)` `random_dir(spread)` `chance_toward(target, p, spread)`
+- **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)` `forward(angle)` `random_dir(spread)` `chance_toward(target, p, spread)` `reflect(angle)`
 
 **Canned preset**（9 个 `move` 的**类型化薄包装**，组合在 `build()`）：
 ```gdscript

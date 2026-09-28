@@ -20,6 +20,9 @@ signal phase_start(phase: PhaseData)
 signal phase_end(captured: bool, bonus: int)
 @warning_ignore("unused_signal")
 signal phase_bonus_tick(bonus: int)
+## 本符卡**奖励分作废**（期间 miss 过或用过 bomb）→ UI 把数字位换成「失败」。每阶段最多发一次。
+@warning_ignore("unused_signal")
+signal phase_bonus_failed()
 @warning_ignore("unused_signal")
 signal dialogue_event(event: String)
 

@@ -10,9 +10,13 @@ const PURPLE := Color(0.858, 0.5, 1.0, 1.0)
 const ANNOUNCE_SCENE := preload("res://scenes/ui/announce_label.tscn")
 ## 符卡名底衬（敌方 = 红）。玩家符卡（Bomb 名）用 player_spell_name_background。
 const ENEMY_SPELL_NAME_BG := preload("res://assets/Textures/ascii/enemy_spell_name_background.png")
+## 本符卡奖励分作废（期间 miss / 用 bomb）时，数字位显示的文案
+const BONUS_FAILED_TEXT := "失败"
 
 @onready var _boss_name: Label = $Control/BossName
 @onready var _history: HBoxContainer = $Control/History
+## 阶段倒计时（两位秒数）。位置声明在场景里（x 居中 / y = 符卡名**下方** 64px）——
+## 名字（BOSS 大字报）右停在 y=0、视觉底约 56，倒计时别再和它同高（工作台同值，见 workbench.gd）。
 @onready var _timer_label: Label = $Control/TimerLabel
 ## 阶段点模板（场景声明，按下标复制；数量随 Boss 阶段数变化）。
 @onready var _dot_template: ColorRect = $Control/DotTemplate
@@ -32,6 +36,7 @@ func _ready() -> void:
 	GameEvents.phase_start.connect(_on_phase_start)
 	GameEvents.phase_end.connect(_on_phase_end)
 	GameEvents.phase_bonus_tick.connect(_on_tick)
+	GameEvents.phase_bonus_failed.connect(_on_bonus_failed)
 
 
 func _exit_tree() -> void:
@@ -41,6 +46,7 @@ func _exit_tree() -> void:
 		[GameEvents.phase_start, _on_phase_start],
 		[GameEvents.phase_end, _on_phase_end],
 		[GameEvents.phase_bonus_tick, _on_tick],
+		[GameEvents.phase_bonus_failed, _on_bonus_failed],
 	]:
 		if conn[0].is_connected(conn[1]):
 			conn[0].disconnect(conn[1])
@@ -75,7 +81,6 @@ func _on_boss_spawned(boss: Node) -> void:
 		_on_name_visibility_changed(_boss_hud.is_name_shown())
 		_on_phase_dots_visibility_changed(_boss_hud.is_phase_dots_shown())
 
-	_timer_label.position = Vector2($Control.size.x / 2.0 - 16, 16)
 	_timer_label.visible = false
 
 	for d in _dots: d.queue_free()
@@ -133,6 +138,13 @@ func _on_phase_start(phase: PhaseData) -> void:
 func _on_tick(bonus: int) -> void:
 	if _announce_label and is_instance_valid(_announce_label):
 		_announce_label.set_bonus_text(str(bonus))
+
+
+## 本符卡奖励分**作废**（期间 miss 过 / 用过 bomb）→ 数字位换成「失败」两个字。
+## 之后 Boss 不再发 `phase_bonus_tick`（见 `Boss._process`），所以它会定格到本阶段结束。
+func _on_bonus_failed() -> void:
+	if _announce_label and is_instance_valid(_announce_label):
+		_announce_label.set_bonus_text(BONUS_FAILED_TEXT)
 
 func _on_phase_end(captured: bool, _bonus: int) -> void:
 	_clear_announce()

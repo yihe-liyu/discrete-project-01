@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BossData" format=3 uid="uid://fgs25ea0j37t"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_cffjm"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="2_5531t"]
+[ext_resource type="Resource" uid="uid://un0fhsexoquu" path="res://data/stages/stageEX/phase/似新存道中一符/符卡161.tres" id="2_bgrtf"]
+[ext_resource type="Resource" uid="uid://06wa8wjugd6e" path="res://data/stages/stageEX/phase/似新存道中二符/符卡162.tres" id="3_bgrtf"]
+[ext_resource type="Resource" uid="uid://bf452sl764g2u" path="res://data/stages/stageEX/phase/似新存道中三符/符卡163.tres" id="4_ad46o"]
+
+[resource]
+script = ExtResource("2_5531t")
+boss_name = "荷山雨"
+section_label = "道中"
+phases_extra = Array[ExtResource("1_cffjm")]([ExtResource("2_bgrtf"), ExtResource("3_bgrtf"), ExtResource("4_ad46o")])
+stage_id = 9
+metadata/_custom_type_script = "uid://be7pe6gf4etpl"

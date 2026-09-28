@@ -14,7 +14,6 @@ func test_phase_shell_copy_does_not_mutate_base():
 	base.uid = 77
 	base.hp = 1234
 	base.time_limit = 45.0
-	base.bonus = 99
 	base.params = {"a": 1}
 	var mv := preload("res://test/fixtures/lifecycle_port_behavior.gd")
 	var sh := preload("res://test/fixtures/no_port_behavior.gd")
@@ -25,7 +24,6 @@ func test_phase_shell_copy_does_not_mutate_base():
 	assert_eq(d.uid, 77, "uid 保留")
 	assert_eq(d.move_script, mv, "move 槽")
 	assert_eq(d.shoot_script, sh, "shoot 槽")
-	assert_eq(d.bonus, 99, "bonus 保留")
 	assert_eq(d.params.get("a", 0), 1, "params 复制（独立字典）")
 	assert_eq(base.hp, 1234, "原资源未被修改")
 	assert_eq(base.time_limit, 45.0, "原时限未被修改")

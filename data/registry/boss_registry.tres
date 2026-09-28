@@ -5,7 +5,10 @@
 [ext_resource type="Resource" uid="uid://gneeoatjau0d" path="res://data/stages/stage01/boss/卡摩瑞关底.tres" id="3_b4u0v"]
 [ext_resource type="Script" uid="uid://rswgyqyal30g" path="res://scripts/data/boss_registry.gd" id="4_3jupf"]
 [ext_resource type="Resource" uid="uid://bdrun4vtsmvba" path="res://data/stages/stage03B/boss/哆来咪关底.tres" id="4_b4u0v"]
+[ext_resource type="Resource" uid="uid://djl7xwe376kpj" path="res://data/stages/stage03B/boss/哆来咪道中.tres" id="4_l0tw0"]
+[ext_resource type="Resource" uid="uid://fgs25ea0j37t" path="res://data/stages/stageEX/boss/似新存道中.tres" id="6_3jupf"]
+[ext_resource type="Resource" uid="uid://btxsfdga0ak2g" path="res://data/stages/stageEX/boss/似新存关底.tres" id="7_3yhao"]
 
 [resource]
 script = ExtResource("4_3jupf")
-bosses = Array[ExtResource("1_u1om2")]([ExtResource("2_u1om2"), ExtResource("3_b4u0v"), ExtResource("4_b4u0v")])
+bosses = Array[ExtResource("1_u1om2")]([ExtResource("2_u1om2"), ExtResource("3_b4u0v"), ExtResource("4_l0tw0"), ExtResource("4_b4u0v"), ExtResource("6_3jupf"), ExtResource("7_3yhao")])

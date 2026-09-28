@@ -9,7 +9,6 @@
 script = ExtResource("2_qep5b")
 name = "试符「梦外之见」"
 uid = 54
-bonus = 100000
 time_limit = 42.0
 hp = 4500
 move_script = ExtResource("1_icsjk")

@@ -5,6 +5,29 @@ extends Area2D
 const BOSS_HP_RING_SCRIPT = preload("res://scripts/scenes/boss_hp_ring.gd")
 const POS_INDICATOR_TEX := preload("res://assets/Textures/front/boss_position.png")
 const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
+## 全破演出的默认件（`BossData.defeat_fx` / `defeat_sfx` / `defeat_hitstop` 可逐个覆盖）
+const DEFAULT_DEFEAT_FX := preload("res://scenes/effect/boss_defeat.tscn")
+const DEFAULT_DEFEAT_SFX := &"boss_die"
+const DEFAULT_DEFEAT_HITSTOP := 0.12
+## 定格时的 time_scale 倍率（只压时间、不冻结；真实时间到点恢复）
+const DEFEAT_HITSTOP_SCALE := 0.05
+## 全破清弹半径 / 震屏强度
+const DEFEAT_CLEAR_RADIUS := 960.0
+const DEFEAT_SHAKE := 1.0
+## 全破**反色圈**：与自机 miss **同一套参数**（`player.gd` 的 5 发十字偏移 + 1 发延迟补闪），
+## 只是圆心换成 Boss 位置 —— 反色是 shader 的**奇偶**语义（奇=反色、偶=复原），
+## 5 发同半径、圆心错开 100px ⇒ 叠出一圈"五瓣"的闪光边界，而不是同心靶环。
+## ⚠️ 所有圈的 `start_delay + duration` 必须**相等**（同时收）：`MissCircleLayer` 在
+## "本帧有圈到期且剩余圈数为奇"时会同帧全清（治反色闪烁），不同时收的话后几发会被提前掐掉。
+## （miss 那边的 1.5 + 1.0 = 2.5 正好也是同时收 —— 不是巧合，是同一个约束。）
+const DEFEAT_RING_RADIUS := 1280.0
+const DEFEAT_RING_DURATION := 2.5
+const DEFEAT_RING_DELAYED_DURATION := 1.0
+const DEFEAT_RING_DELAY := 1.5
+const DEFEAT_RING_OFFSETS: Array[Vector2] = [
+	Vector2.ZERO, Vector2(100.0, 0.0), Vector2(-100.0, 0.0),
+	Vector2(0.0, 100.0), Vector2(0.0, -100.0),
+]
 
 ## Boss 位置指示器距离淡出：离自机 x 越远越清晰（近处半透明，远处醒目）
 const INDICATOR_FADE_NEAR := 60.0    ## |dx| ≤ 60px 时最淡
@@ -38,14 +61,20 @@ var ui_layer: CanvasLayer
 var _phase_data: PhaseData
 var _pos_indicator: Sprite2D  # Boss 位置指示器（x 跟随 Boss，y 固定游戏框底）
 var _bonus: int = 0
+## 本阶段的**初始**奖励分（= 规则值）—— 衰减下限（30%）按它算，故要留住。
+var _bonus_initial: int = 0
 var _elapsed: float = 0.0
 var _is_invincible: bool = false
 var _is_phase_missed: bool = false   # 本阶段内玩家是否 miss 过（东方规则：miss 即失败尝试、miss 后击破不算收取）
+var _is_phase_bombed: bool = false   # 本阶段内玩家是否用过 bomb（同罪：bomb 即失败尝试）
 var _open_reduce_left: float = 0.0   # 开局减伤剩余时长（秒）
 var _open_reduce_ratio: float = 0.0  # 开局减伤比例（0~1）
 var _move_coroutine_runner: CoroutineRunner
 var _shoot_coroutine_runner: CoroutineRunner
 var _stage_id: int
+## 全破定格：是否正压着时间倍率 + 压之前的原值（恢复用；见 `play_defeat`）
+var _time_scaled: bool = false
+var _saved_time_scale: float = 1.0
 var _phase_identity: PhaseIdentity
 var _is_exit_controlled: bool = false
 var _is_cleared: bool = false
@@ -94,6 +123,8 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	z_index = LayerConfig.BOSS
 	if not GameEvents.player_missed.is_connected(_on_player_death):
 		GameEvents.player_missed.connect(_on_player_death)
+	if not GameEvents.player_bomb.is_connected(_on_player_bomb):
+		GameEvents.player_bomb.connect(_on_player_bomb)
 
 	if PracticeSession.is_practice_mode:
 		_stage_id = PracticeSession.stage_id
@@ -175,9 +206,12 @@ func start_phase(data: PhaseData) -> void:
 		push_error("Boss.start_phase 配置错误: " + e)
 	_is_cleared = false
 	_is_phase_missed = false  # 每阶段独立判定 miss
+	_is_phase_bombed = false  # 每阶段独立判定 bomb
 	_phase_data = data
 	_elapsed = 0.0
-	_bonus = data.bonus
+	# 奖励分走规则（`SpellBonus`，内容不再手填）：符卡 = (难度权重 + 面序号 − 1) × 50 万；非符 0
+	_bonus_initial = SpellBonus.initial(StageCatalog.stage_no_of(_stage_id), SaveData.selected_difficulty, data.uid != 0)
+	_bonus = _bonus_initial
 	_is_invincible = true
 	_set_hp(0)
 	# 开局减伤参数暂存，计时从"无敌解除"（涨血完，玩家能打伤）开始
@@ -249,13 +283,16 @@ func _process(delta: float) -> void:
 	if not _phase_data: return
 	_elapsed += delta
 
-	if _bonus > 0:
-		# maxf 防御：time_limit 非法为 0 时优雅降级（正常配置由 validate 拦截）
-		var time_limit := maxf(_phase_data.time_limit, 0.001)
-		var tick := maxi(1, int(float(_phase_data.bonus) / time_limit * delta))
-		_bonus = maxi(0, _bonus - tick)
-
-	GameEvents.phase_bonus_tick.emit(_bonus)
+	# 奖励分已作废（miss / bomb）→ 不再衰减、也不再发数字 tick：UI 的「失败」必须定格，
+	# 否则下一帧又被 `phase_bonus_tick` 的数字覆盖。
+	# ⚠️ **只跳过奖励分这一段**：后面的开卡减伤倒计时 / 时限判定都还在本函数里，
+	#    早退会把它们一起掐掉（回归：miss 后符卡到点不结束、减伤永久挂着）。
+	if not is_bonus_failed():
+		if _bonus > 0:
+			# 衰减走规则：非时符在**时限内均匀**掉到初始的 30%；时符完全不掉（见 SpellBonus）
+			_bonus = SpellBonus.decayed(_bonus, _bonus_initial, _phase_data.time_limit, delta,
+				_phase_data.is_timeout_only)
+		GameEvents.phase_bonus_tick.emit(_bonus)
 
 	if _open_reduce_left > 0.0:
 		_open_reduce_left = maxf(_open_reduce_left - delta, 0.0)
@@ -286,9 +323,30 @@ func take_damage(damage: float) -> void:
 func _on_player_death() -> void:
 	if PracticeSession.is_practice_mode:
 		return  # 练习 miss 走 _die 逻辑
-	if not _phase_data or _is_cleared or _is_phase_missed:
+	_fail_bonus(true)
+
+
+## 玩家用 bomb：与 miss **同罪**（东方规则：bomb 也算失败尝试）→ 本符卡奖励分作废
+func _on_player_bomb(_spell_name: String) -> void:
+	_fail_bonus(false)
+
+
+## **本符卡奖励分作废**（miss / bomb 任一）：标位 + 通知 UI 把数字位换成「失败」。
+## 每阶段只作废一次（`is_bonus_failed()` 已为真就直接返回，信号也只发一次）。
+func _fail_bonus(p_by_miss: bool) -> void:
+	if not _phase_data or _is_cleared or is_bonus_failed():
 		return
-	_is_phase_missed = true
+	if p_by_miss:
+		_is_phase_missed = true
+	else:
+		_is_phase_bombed = true
+	GameEvents.phase_bonus_failed.emit()
+
+
+## 本符卡奖励分是否已作废（期间 miss 过或用过 bomb）——
+## 后果：UI 显示「失败」、击破**不计分**、符卡簿不算干净收取。
+func is_bonus_failed() -> bool:
+	return _is_phase_missed or _is_phase_bombed
 
 
 func clear_phase(captured: bool) -> void:
@@ -302,11 +360,12 @@ func clear_phase(captured: bool) -> void:
 		# 阶段已开始（_phase_identity 已生成）才记录；Ctrl+G 在阶段开始前触发时只跳阶段不落盘
 		if PracticeSession.is_practice_mode:
 			RecordService.record_phase_capture(_phase_identity, false, 0, 0.0)  # 练习收取
-		elif captured and not _is_phase_missed:
+		elif captured and not is_bonus_failed():
 			RecordService.record_phase_capture(_phase_identity, true, _bonus, _elapsed)  # 干净收取
 
 	GameEvents.phase_end.emit(captured, _bonus)
-	if captured and _bonus > 0:
+	# 奖励分：作废（miss / bomb）就**一分不给** —— UI 那边数字位也已经换成「失败」
+	if captured and _bonus > 0 and not is_bonus_failed():
 		var entity_registry = _refs()
 		var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
 		if res != null:
@@ -316,6 +375,71 @@ func clear_phase(captured: bool) -> void:
 	if _stage_context:
 		_stage_context.bullets.death_clear(global_position, 960, 0.75, 30)
 	phase_cleared.emit(captured, _bonus)
+
+
+## **全破演出**（`BossHandle.defeat()` 调；「被完全击破」的表现层，不进逐弹热路径）：
+## 定格 → 清弹 + 冲击环 + 爆点 → 震屏 + 音效 → 本体闪白淡出。
+## 爆点场景 / 音效 / 定格时长可被 `BossData` 逐个覆盖（空 = 用默认常量）。
+func play_defeat() -> void:
+	var fx: PackedScene = DEFAULT_DEFEAT_FX
+	var sfx_key: StringName = DEFAULT_DEFEAT_SFX
+	var hitstop: float = DEFAULT_DEFEAT_HITSTOP
+	if _boss_data:
+		if _boss_data.defeat_fx:
+			fx = _boss_data.defeat_fx
+		if _boss_data.defeat_sfx != &"":
+			sfx_key = _boss_data.defeat_sfx
+		hitstop = _boss_data.defeat_hitstop
+
+	# ① 定格：只压时间倍率（**保存原值**再恢复 —— 工作台 12x 快进时不能被我们拉回 1.0）
+	if hitstop > 0.0 and is_inside_tree():
+		_saved_time_scale = Engine.time_scale
+		_time_scaled = true
+		Engine.time_scale = _saved_time_scale * DEFEAT_HITSTOP_SCALE
+		# 真实时间计时（ignore_time_scale=true）→ 自己的恢复不受定格影响
+		get_tree().create_timer(hitstop, true, false, true).timeout.connect(
+			_restore_time_scale, CONNECT_ONE_SHOT)
+
+	# ② 清弹（比阶段击破扫得更大）+ 反色圈（与自机 miss 同参数）+ 全破爆点
+	if _stage_context:
+		_stage_context.bullets.death_clear(global_position, DEFEAT_CLEAR_RADIUS, 1.0, 30)
+		for offset in DEFEAT_RING_OFFSETS:
+			_stage_context.effects.add_miss_circle(global_position + offset,
+				DEFEAT_RING_DURATION, DEFEAT_RING_RADIUS)
+		_stage_context.effects.add_miss_circle(global_position,
+			DEFEAT_RING_DELAYED_DURATION, DEFEAT_RING_RADIUS, 0.0, DEFEAT_RING_DELAY)
+		_stage_context.effects.play_hit_effect(fx, global_position)
+
+	# ④ 震屏 + 音效
+	GameEvents.screen_shake.emit(DEFEAT_SHAKE)
+	var stream: AudioStream = AssetRegistry.sounds.get(String(sfx_key), null)
+	if stream:
+		AudioManager.play_sfx(stream)
+
+	_flash_and_fade_out()
+
+
+## 本体演出：闪白两下 → 淡出（位移/回收由 `BossHandle.defeat()` 的退场 tween 负责）
+func _flash_and_fade_out() -> void:
+	var tw := create_tween()
+	tw.set_parallel(true)
+	for i in 2:
+		tw.tween_property(self, "modulate", Color(2.0, 2.0, 2.0, 1.0), 0.06)
+		tw.tween_property(self, "modulate", Color.WHITE, 0.06)
+	tw.set_parallel(false)
+	tw.tween_property(self, "modulate", Color(1.0, 1.0, 1.0, 0.0), 0.45)
+
+
+## 恢复定格前的时间倍率（幂等）
+func _restore_time_scale() -> void:
+	if _time_scaled:
+		_time_scaled = false
+		Engine.time_scale = _saved_time_scale
+
+
+## 定格途中被拆（关卡结束 / 切场景 / Boss 回收）→ 绝不能把整个游戏留在慢动作里
+func _exit_tree() -> void:
+	_restore_time_scale()
 
 
 ## 外部受控死亡（练习模式等场景调用）

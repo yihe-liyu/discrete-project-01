@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://b0w14lhue8enr"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_2n6d6"]
+[ext_resource type="Script" uid="uid://cdyt8rmu241ak" path="res://data/stages/stage03B/phase/哆来咪道中一符/哆来咪道中一符.gd" id="2_4tm7v"]
+
+[resource]
+script = ExtResource("1_2n6d6")
+name = "惘梦「雨下梦，光中眩」"
+uid = 43
+time_limit = 40.0
+hp = 4500
+shoot_script = ExtResource("2_4tm7v")
+item_power = 25
+item_point = 25
+item_life_full = 1
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

@@ -9,7 +9,6 @@
 script = ExtResource("2_liyt6")
 name = "音符「定点扩散」"
 uid = 2
-bonus = 100000
 time_limit = 40.0
 hp = 5000
 move_script = ExtResource("1_u2reh")
@@ -19,5 +18,4 @@ item_power = 25
 item_point = 25
 item_life = 1
 item_bomb = 1
-open_reduce_time = 3.0
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

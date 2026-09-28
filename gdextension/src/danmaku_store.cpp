@@ -617,12 +617,25 @@ float DanmakuStore::_rng_float() {
 float DanmakuStore::_rng_range(float a, float b) { return a + (b - a) * _rng_float(); }
 
 // V9/V10：纯方向解析——不消耗 RNG、不写隐藏分支；随机量 rnd 由调用方显式预抽。
-Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, float p_prob, float rnd) {
+Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, const Vector2 &vel, float p_prob, float rnd) {
 	if (p_dk == 0) {
 		return Vector2(sin(angle), -cos(angle));
 	}
 	if (p_dk == 3) {   // 自身朝向（forward）旋转 angle
 		return forward.rotated(angle);
+	}
+	if (p_dk == 6) {   // 镜面（reflect）：把**当前速度**按 pos 所在的场边翻分量，再转 angle
+		// 左右边翻 x、上边翻 y；角落（同时贴两条边）两边都翻 = 原路返回。
+		// pos 由调用方给：emit(at=AT_PHASE_END) 时 = 撞墙落点（at_wall 的相位结束输出），
+		// 不贴边（如 AT_CURRENT 未撞墙）→ 不翻，退化为自身朝向，**不会静默乱转向**。
+		Vector2 v = (vel != Vector2()) ? vel : forward;
+		bool flipped = false;
+		if (pos.x <= _field_left || pos.x >= _field_right) { v.x = -v.x; flipped = true; }
+		if (pos.y <= _field_top) { v.y = -v.y; flipped = true; }
+		if (!flipped || v == Vector2()) {
+			return forward.rotated(angle);
+		}
+		return v.normalized().rotated(angle);
 	}
 	if (p_dk == 4) {   // 随机：沿自身朝向 ± angle 内随机（rnd ∈ [0,1)）
 		return forward.rotated(-angle + 2.0f * angle * rnd);
@@ -651,7 +664,7 @@ float DanmakuStore::_draw_dir_rnd(int p_dk) {
 // V11：set_heading 的单一实现（Move case 7 / Action case 43 共用）。
 void DanmakuStore::_apply_set_heading(int i, const float *a, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies) {
 	const int dk = (int)a[0];
-	const Vector2 d = _resolve_dir(dk, (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[3], _draw_dir_rnd(dk));
+	const Vector2 d = _resolve_dir(dk, (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), Vector2(_vx[i], _vy[i]), a[3], _draw_dir_rnd(dk));
 	if (d != Vector2()) {
 		const float sp = Vector2(_vx[i], _vy[i]).length();
 		_vx[i] = d.x * sp;
@@ -860,7 +873,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			float speed = Vector2(_vx[i], _vy[i]).length();
 			if (a[5] > 0.0f) { speed = a[5]; }
 			const int dk = (int)a[1];
-			const Vector2 dir = _resolve_dir(dk, (int)a[2], a[3], at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), a[4], _draw_dir_rnd(dk));
+			const Vector2 dir = _resolve_dir(dk, (int)a[2], a[3], at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), Vector2(_vx[i], _vy[i]), a[4], _draw_dir_rnd(dk));
 			_ev_kind.push_back(0);
 			_ev_prog.push_back(prog);
 			_ev_local.push_back((int)a[0]);
@@ -910,7 +923,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			const int dk = (int)(hit ? a[2] : a[5]);
 			const int tg = (int)(hit ? a[3] : a[6]);
 			const float angle = hit ? a[4] : a[7];
-			const Vector2 dir = _resolve_dir(dk, tg, angle, at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), 0.0f, _draw_dir_rnd(dk));
+			const Vector2 dir = _resolve_dir(dk, tg, angle, at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), Vector2(_vx[i], _vy[i]), 0.0f, _draw_dir_rnd(dk));
 			_ev_kind.push_back(0);
 			_ev_prog.push_back(prog);
 			_ev_local.push_back((int)a[0]);

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bf452sl764g2u"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_12opt"]
+[ext_resource type="Script" uid="uid://b8w2voeo6t4ln" path="res://data/stages/stageEX/phase/似新存道中一符/似新存道中一符.gd" id="2_pbbyo"]
+
+[resource]
+script = ExtResource("1_12opt")
+name = "明符「终不只看光」"
+uid = 163
+shoot_script = ExtResource("2_pbbyo")
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

@@ -43,6 +43,28 @@ func _mk_phases(diffs: Dictionary, boss: BossData) -> Array[Dictionary]:
 	return out
 
 
+## 合成 N 个二级项（label = P0..Pn），用于超长列表的开窗测试
+func _mk_many_phases(count: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var boss := _mk_boss([0, 1, 2, 3])
+	for i in count:
+		var rec := SpellRecord.new()
+		rec.stage = 1
+		rec.boss_index = 0
+		rec.phase_index = i
+		rec.difficulty = 1
+		out.append({rec = rec, boss_index = 0, phase_index = i, diffs = {1: rec}, label = "P%d" % i, boss = boss})
+	return out
+
+
+## 二级列表当前渲染出来的行文字
+func _phase_labels(menu: Node) -> Array:
+	var out: Array = []
+	for child in menu._phase_box.get_children():
+		out.append((child as Label).text)
+	return out
+
+
 ## Boss 定义 4 个难度，只有 Normal 有记录 → 4 槽都在，只有 Normal 可选
 func test_build_diff_list_shows_configured_slots_locks_unseen():
 	var menu = _mk_menu()
@@ -126,6 +148,123 @@ func test_diff_option_height_same_for_nonspell_and_spell():
 	assert_eq(nonspell_name, "", "非符不显示名字")
 	assert_eq(spell_name, "夹具「符卡」", "符卡显示卡名")
 	assert_eq(nonspell_h, spell_h, "两种状态选项高度必须一致（非符靠空行占位）")
+
+
+## EX 面（该面 Boss 只配 Extra 档）：三级难度槽 = **仅 Extra 一档**，且该记录可选。
+## 回归（2026-09-26 作者报）：`MENU_DIFFS` 硬编码 [0,1,2,3] → EX 面 `configured` 恒为空 →
+## 四个槽全锁 `?`、`_diff_index` 停在 -1 → 卡在菜单里"看得见也点不动"。
+func test_extra_only_stage_lists_extra_slot():
+	var menu = _mk_menu()
+	var boss := _mk_boss([4])
+	BossCatalog.set_catalog_override({9: [boss]})
+
+	var rec := SpellRecord.new()
+	rec.stage = 9
+	rec.boss_index = 0
+	rec.phase_index = 0
+	rec.character = 0
+	rec.difficulty = 4
+	rec.uid = 161
+	var info := {rec = rec, boss_index = 0, phase_index = 0, diffs = {4: rec}, label = "道中·符卡1", boss = boss}
+	var phases: Array[Dictionary] = [info]
+	menu._phases = phases
+	menu._phase_index = 0
+	menu._build_diff_list()
+	BossCatalog.clear_catalog_override()
+
+	assert_eq(menu._diff_entries.size(), 1, "EX 面只列 Extra 一槽（不是固定 4 槽）")
+	assert_eq(menu._diff_entries[0].diff, SpellRecord.Difficulty.EXTRA, "该槽就是 Extra")
+	assert_eq(menu._diff_entries[0].is_locked, false, "有记录 + 该难度有阶段 → 可选")
+	assert_eq(menu._diff_index, 0, "初始索引跳到 Extra（可开始练习）")
+
+
+## 回归（2026-09-26 作者报）：二级（阶段）列表超长会**膨胀出面板**。
+## 现在按 PhaseBox 实测高度开窗：只渲染放得下的行数，选中项上下移动时窗口跟着滚。
+func test_phase_list_window_follows_selection():
+	var menu = _mk_menu()
+	await get_tree().process_frame          # 让锚点布局生效 → PhaseBox 有实测高度
+	var limit: int = menu._rows_visible(menu._phase_box)
+	assert_gt(limit, 1, "PhaseBox 应能量出可视行数（实测 %d）" % limit)
+
+	var total: int = limit + 3              # 故意超出容量
+	menu._phases = _mk_many_phases(total)
+	menu._section = menu.Section.PHASE
+	menu._phase_index = 0
+	menu._build_phase_list()
+	assert_eq(menu._phase_box.get_child_count(), limit, "只渲染放得下的行数（不膨胀出面板）")
+	assert_eq(_phase_labels(menu)[0], "P0", "初始窗口从第 1 项开始")
+
+	menu._phase_index = limit               # 往下移动，越过窗口下沿
+	menu._highlight()
+	assert_eq(menu._phase_offset, 1, "越过下沿 → 窗口下滚一行")
+	assert_eq(menu._phase_box.get_child_count(), limit, "任何位置上渲染行数都不超过容量")
+	assert_true(_phase_labels(menu).has("P%d" % limit), "选中项必须出现在窗口里")
+	assert_eq(menu._phase_local_index(), limit - 1, "选中项落在窗口末行")
+	assert_eq(_phase_labels(menu)[0], "P1", "旧行出、新行入（1、2、3 → 2、3、4…）")
+
+	menu._phase_index = total - 1           # 移到最后一项
+	menu._highlight()
+	assert_eq(menu._phase_offset, total - limit, "移到末项 → 窗口贴底")
+	assert_true(_phase_labels(menu).has("P%d" % (total - 1)), "末项必须在窗口里")
+
+	menu._phase_index = 0                   # 往回移动
+	menu._highlight()
+	assert_eq(menu._phase_offset, 0, "回到首项 → 窗口回顶")
+	assert_eq(_phase_labels(menu)[0], "P0", "首项在窗口首行")
+	assert_eq(menu._phase_local_index(), 0, "选中项回到窗口首行")
+
+
+## 滚动提示：▲ = 上面还有、▼ = 下面还有，中间是可见区间/总数；全都看得见时为空串。
+func test_phase_scroll_hint_shows_hidden_ends():
+	var menu = _mk_menu()
+	await get_tree().process_frame
+	var limit: int = menu._rows_visible(menu._phase_box)
+	assert_gt(limit, 1, "PhaseBox 应能量出可视行数（实测 %d）" % limit)
+	var total: int = limit + 3
+	menu._phases = _mk_many_phases(total)
+	menu._section = menu.Section.PHASE
+	menu._phase_index = 0
+	menu._build_phase_list()
+
+	# 窗口贴顶：只有下面还有
+	var top_hint: String = menu._phase_scroll_hint.text
+	assert_false(top_hint.contains("▲"), "贴顶时不应有「上面还有」：%s" % top_hint)
+	assert_true(top_hint.contains("▼"), "贴顶时下面还有 → 应有 ▼：%s" % top_hint)
+	assert_true(top_hint.contains("1–%d / %d" % [limit, total]), "应显示可见区间/总数：%s" % top_hint)
+
+	# 中间：两头都有
+	menu._phase_index = limit
+	menu._highlight()
+	var mid_hint: String = menu._phase_scroll_hint.text
+	assert_true(mid_hint.contains("▲") and mid_hint.contains("▼"), "中间位置两头都还有：%s" % mid_hint)
+	assert_true(mid_hint.contains("2–%d / %d" % [limit + 1, total]), "区间随窗口滚动：%s" % mid_hint)
+
+	# 窗口贴底：只有上面还有
+	menu._phase_index = total - 1
+	menu._highlight()
+	var bottom_hint: String = menu._phase_scroll_hint.text
+	assert_true(bottom_hint.contains("▲"), "贴底时上面还有 → 应有 ▲：%s" % bottom_hint)
+	assert_false(bottom_hint.contains("▼"), "贴底时不应有「下面还有」：%s" % bottom_hint)
+
+	# 装得下 → 不显示（不制造噪音）
+	menu._phases = _mk_many_phases(limit)
+	menu._phase_index = 0
+	menu._build_phase_list()
+	assert_eq(menu._phase_scroll_hint.text, "", "全部看得见 → 提示为空")
+
+	# 二级清空（无记录）→ 提示也清
+	menu._phases.clear()
+	menu._stages.clear()
+	menu._build_lists()
+	assert_eq(menu._phase_scroll_hint.text, "", "二级清空 → 提示为空")
+
+
+## 量不到高度（未入树 / 尚未布局）→ `_rows_visible` 返回 -1，调用方退回「全渲染」，不藏内容
+func test_rows_visible_is_unknown_without_layout():
+	var menu = _mk_menu()
+	var box := VBoxContainer.new()          # 未入树 → 无尺寸
+	assert_eq(menu._rows_visible(box), -1, "量不到高度 → -1")
+	box.free()
 
 
 ## 导航跳过锁定：向下从 Normal 到 Hard，再向下 wrap 回 Normal

@@ -30,11 +30,11 @@ func test_dsl_builds_steps():
 	d.line("第一句")
 	d.event("bgm_switch")
 	d.wait(0.5)
-	d.flip("灵梦", false)
-	d.move("灵梦", Vector2(300, 200), 0.8)
-	d.portrait("灵梦", "笑")
-	d.dim("灵梦", 0.4)
-	d.exit("灵梦")
+	d.flip(p, false)
+	d.move(p, Vector2(300, 200), 0.8)
+	d.portrait(p, "笑")
+	d.dim(p, 0.4)
+	d.exit(p)
 	assert_eq(d.steps.size(), 9, "9 个步骤")
 	assert_eq(d.steps[0].type, DialogueStep.Type.ENTER, "0 = enter")
 	assert_eq(d.steps[1].type, DialogueStep.Type.LINE, "1 = line")
@@ -50,6 +50,108 @@ func test_dsl_builds_steps():
 	assert_eq(d.steps[6].emotion, "笑", "portrait 表情")
 	assert_eq(d.steps[7].light, 0.4, "dim 明暗")
 	assert_eq(d.steps[8].type, DialogueStep.Type.EXIT, "8 = exit")
+
+
+# ═══════════ 情绪：不声明就不动 ═══════════
+
+## `portrait("笑")` 之后的 `line()` **不该**把表情冲回"通常"（"声明即改变，不声明不动"）。
+## 回归：`_build_line` 曾默认 `emotion = "通常"` → 句柄写法 `reimu.portrait("笑").line(…)` 静默丢表情。
+func test_line_keeps_emotion_unless_declared():
+	var p := _make_profile("灵梦")
+	var d := DialogueSteps.new()
+	var h := d.enter(p, Vector2.ZERO)
+	h.portrait("笑").line("笑着说")
+	h.line("继续（仍未声明 → 还是笑）")
+	h.line("复位", {"emotion": "通常"})
+
+	var first_line: DialogueLine = null
+	for step in d.steps:
+		if step.type == DialogueStep.Type.LINE:
+			first_line = step.line_data
+			break
+	assert_not_null(first_line, "应有 LINE 步")
+	assert_eq(first_line.bubbles[0].emotion, "", "气泡 emotion 默认空（不声明不动）")
+	var report := DialogueDryRun.play(d.steps)
+	assert_eq(report["emotions"], ["笑", "笑", "通常"], "不声明则保持；显式声明才改")
+
+
+# ═══════════ 句柄写法（ActorHandle） ═══════════
+
+## 句柄动词与低层（收 profile 的）动词**产物完全一致** —— 句柄只是薄委托，不是第二套构建逻辑
+func test_actor_handle_matches_low_level_verbs():
+	var p := _make_profile("灵梦")
+	var a := DialogueSteps.new()
+	var ha := a.enter(p, Vector2(10, 20))
+	ha.line("甲")
+	ha.portrait("笑").move(Vector2(30, 40), 0.5).flip().dim(0.4).bubble(Vector2(1, 2))
+	ha.exit()
+
+	var b := DialogueSteps.new()
+	b.enter(p, Vector2(10, 20))
+	b.say(p, "甲")
+	b.portrait(p, "笑")
+	b.move(p, Vector2(30, 40), 0.5)
+	b.flip(p, true)
+	b.dim(p, 0.4)
+	b.bubble(p, Vector2(1, 2))
+	b.exit(p)
+
+	assert_eq(a.steps.size(), b.steps.size(), "步骤数一致")
+	for i in a.steps.size():
+		assert_eq(a.steps[i].type, b.steps[i].type, "第 %d 步类型一致" % i)
+		assert_eq(a.steps[i].char_name, b.steps[i].char_name, "第 %d 步 actor key 一致" % i)
+
+
+## 动词一律返回 self（可链式），且全部落到同一个 actor key —— "谁"是接收者，传不错人
+func test_actor_handle_chainable_on_same_actor():
+	var p := _make_profile("卡摩瑞")
+	var d := DialogueSteps.new()
+	var h := d.enter(p, Vector2.ZERO)
+	assert_same(h.portrait("笑"), h, "动词返回 self")
+	assert_same(h.move(Vector2(5, 6)), h, "链式仍返回同一句柄")
+	assert_same(h.line("台词"), h, "说话也能链")
+	for step in d.steps:
+		# 两种载荷形态：LINE 的说话者在 line_data.bubbles 里；演出动词才用 char_name
+		if step.type == DialogueStep.Type.ENTER:
+			continue
+		elif step.type == DialogueStep.Type.LINE:
+			assert_eq((step.line_data as DialogueLine).bubbles[0].speaker.char_name, "卡摩瑞",
+				"句柄说的那句，说话者应是该句柄的角色")
+		else:
+			assert_eq(step.char_name, "卡摩瑞", "演出动词落到同一 actor key")
+
+
+## 退场语义：句柄记得 `is_exited()`；DSL 清掉在场标记（允许"退场后再登场"）；
+## 退场后再调度动词**只告警、不拦步骤**（剧本仍能跑完，问题早暴露）
+func test_actor_handle_exit_semantics():
+	var p := _make_profile("灵梦")
+	var d := DialogueSteps.new()
+	var h := d.enter(p, Vector2.ZERO)
+	assert_true(d.has_entered(p), "登场后 has_entered 为真")
+	h.exit()
+	assert_true(h.is_exited(), "句柄记得已退场")
+	assert_false(d.has_entered(p), "退场后清在场标记（允许再登场）")
+	h.portrait("笑")
+	assert_eq(d.steps.back().type, DialogueStep.Type.PORTRAIT, "退场后调度仍加入步骤（不拦）")
+
+
+## 同一角色连续两次 enter（漏了 exit）→ 告警但两步都落（不静默吞掉剧本）
+func test_enter_twice_without_exit_keeps_both_steps():
+	var p := _make_profile("灵梦")
+	var d := DialogueSteps.new()
+	d.enter(p, Vector2.ZERO)
+	d.enter(p, Vector2(50, 50))
+	assert_eq(d.steps.size(), 2, "两次 enter 都落步骤")
+	assert_true(d.has_entered(p), "仍在场上")
+
+
+## enter(null) 不崩：跳过该步骤，句柄仍可持有（动词各自告警）
+func test_enter_null_profile_is_safe():
+	var d := DialogueSteps.new()
+	var h := d.enter(null, Vector2.ZERO)
+	assert_eq(d.steps.size(), 0, "null profile → 不落步骤")
+	assert_not_null(h, "仍返回句柄（可继续链式）")
+	assert_false(h.is_exited(), "未退场")
 
 
 func test_dsl_line_continues_speaker_and_say_switches():
@@ -224,17 +326,38 @@ func test_runner_enter_opts_applied():
 	assert_true(runner.is_finished(), "演出步骤立即结束")
 
 
+## 演出版动词收 **CharacterProfile**（与 enter/say 一致），但落进步骤的是 actor key（`char_name`）——
+## 锁住这条转换：播放器是按**名字**查 actor 的，谁也别"顺手"把步骤里的 key 改成 profile。
+func test_stage_ops_take_profile_and_store_actor_key():
+	var p := _make_profile("灵梦")
+	var d := DialogueSteps.new()
+	d.enter(p, Vector2.ZERO)
+	d.move(p, Vector2(10, 20))
+	d.exit(p)
+	assert_eq(d.steps[1].char_name, "灵梦", "步骤里落的是 actor key（名字）")
+	assert_eq(d.steps[2].char_name, "灵梦", "exit 同样落 actor key")
+	assert_eq(d.steps[2].type, DialogueStep.Type.EXIT, "类型仍是 EXIT")
+
+
+## profile 为 null → 告警但不崩（步骤照样加、key 空 → 播放时自然找不到 actor，不会误伤别人）
+func test_stage_ops_tolerate_null_profile():
+	var d := DialogueSteps.new()
+	d.exit(null)
+	assert_eq(d.steps.size(), 1, "步骤仍加入")
+	assert_eq(d.steps[0].char_name, "", "key 为空")
+
+
 func test_runner_stage_ops():
 	var runner := DialogueRunner.new()
 	var r := _make_profile("灵梦")
 	var d := DialogueSteps.new()
 	d.enter(r, Vector2(100, 100))
-	d.move("灵梦", Vector2(300, 300))
-	d.flip("灵梦", true)
-	d.dim("灵梦", 0.2)
-	d.portrait("灵梦", "笑")
-	d.bubble("灵梦", Vector2(-650, 250))
-	d.exit("灵梦")
+	d.move(r, Vector2(300, 300))
+	d.flip(r, true)
+	d.dim(r, 0.2)
+	d.portrait(r, "笑")
+	d.bubble(r, Vector2(-650, 250))
+	d.exit(r)
 	runner.start(d.steps)
 	assert_true(runner.is_finished(), "全部执行完")
 	var a: ActorState = runner.state.actor("灵梦")

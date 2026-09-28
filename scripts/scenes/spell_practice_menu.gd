@@ -5,6 +5,7 @@ extends BasePage
 @onready var _phase_box: VBoxContainer = $PhaseBox
 @onready var _diff_box: VBoxContainer = $DiffBox
 @onready var _char_name: Label = $CharPanel/CharName
+@onready var _phase_scroll_hint: Label = $PhaseScrollHint
 
 enum Section { STAGE, PHASE, DIFF }
 var _section: int = Section.STAGE
@@ -23,8 +24,27 @@ const CAPTURE_FULL := Color(0.4, 0.7, 1.0)
 
 ## 菜单难度槽的**标准集合**（普通面 Easy~Lunatic）。
 ## 与 `phases_for_difficulty` 解耦：某难度没配阶段 → 槽仍在，但锁定 `?`、不可选。
-## 未来 EX 面只有 Extra → 按 stage 分支（`MENU_DIFFS_EXTRA = [4]`）。
+## EX 面只有 Extra 档 → 该面改列 `MENU_DIFFS_EXTRA`（序号与普通面分开，见 `_menu_diffs_for`）。
 const MENU_DIFFS: Array[int] = [0, 1, 2, 3]
+const MENU_DIFFS_EXTRA: Array[int] = [SpellRecord.Difficulty.EXTRA]
+
+## 列表行字号（`_make_label`）；行高由它决定，见 `_row_pitch`。
+const LIST_FONT_SIZE := 28
+
+
+## 该面的练习难度槽集合：普通面 = Easy~Lunatic（固定 4 槽，未配置的锁 `?`）；
+## **只配了 Extra 的面（EX）** = 仅 Extra 一槽。
+## 按 stage 分支而非单个 Boss：同一面里各阶段的三级槽集合保持一致，UI 高度/语义才稳定。
+func _menu_diffs_for(stage: int) -> Array[int]:
+	var bosses: Array = BossCatalog.all().get(stage, [])
+	for b: BossData in bosses:
+		for difficulty in MENU_DIFFS:
+			if not b.phases_for_difficulty(difficulty).is_empty():
+				return MENU_DIFFS
+	for b: BossData in bosses:
+		if not b.phases_for_difficulty(SpellRecord.Difficulty.EXTRA).is_empty():
+			return MENU_DIFFS_EXTRA
+	return MENU_DIFFS
 
 
 func diff_name(v: int) -> String:
@@ -35,6 +55,8 @@ func diff_name(v: int) -> String:
 var _stages: Array[int] = []
 # 每个 phase: {rec: SpellRecord(带配置), diffs: {diff: SpellRecord}}
 var _phases: Array[Dictionary] = []
+## 二级（阶段）列表的**可视窗口起点**：超长时只渲染这一段，选中项永远在窗口内（见 `_build_phase_list`）。
+var _phase_offset: int = 0
 # 当前 phase 的难度项：{diff: int, is_locked: bool}（锁定 = 花名册有该难度但未挑战过）
 var _diff_entries: Array[Dictionary] = []
 var _pulse_tween: Tween
@@ -145,8 +167,8 @@ func _change_stage(idx: int) -> void:
 		var base_non := 0
 		var base_spell := 0
 		for bi in range(maxi(key.boss_index, 0)):
-			for prev in (bosses[bi] as BossData).phases_normal:
-				if prev.uid != 0:
+			for prev in BossCatalog.boss_slot_phases(bosses[bi] as BossData):
+				if prev != null and prev.uid != 0:
 					base_spell += 1
 				else:
 					base_non += 1
@@ -181,6 +203,7 @@ func _build_lists() -> void:
 		lbl.add_theme_font_size_override("font_size", 28)
 		_stage_box.add_child(lbl)
 		_clear(_phase_box)
+		_sync_phase_scroll_hint()   # 二级清空 → 提示也要跟着清
 		return
 
 	for stage in _stages:
@@ -194,15 +217,78 @@ func _build_lists() -> void:
 	_build_phase_list()
 
 
+# ═══ 列表开窗（超长不撑爆面板）═══
+
+## 该列表的**可视行数**：按容器实测高度 / 一行行距算。`-1` = 量不到（尚未布局）→ 不裁剪。
+func _rows_visible(vbox: VBoxContainer) -> int:
+	var available: float = vbox.size.y
+	var pitch: float = _row_pitch(vbox)
+	if available <= 0.0 or pitch <= 0.0:
+		return -1
+	return maxi(1, int(floor(available / pitch)))
+
+
+## 一行的实际高度 + 行距：字高由主题字体决定，用一行真 Label 量（写死像素会随字体漂）。
+func _row_pitch(vbox: VBoxContainer) -> float:
+	var probe := Label.new()
+	probe.add_theme_font_size_override("font_size", LIST_FONT_SIZE)
+	probe.text = "0"
+	vbox.add_child(probe)
+	var row_h: float = probe.get_combined_minimum_size().y
+	vbox.remove_child(probe)
+	probe.free()
+	return row_h + float(vbox.get_theme_constant("separation"))
+
+
+## 窗口起点：保证选中项落在 `limit` 行窗口内 —— 上下移动时窗口跟着滚，而不是把列表撑长。
+## `limit <= 0`（量不到高度）→ 起点 0 = 不裁剪（旧行为，测试直调 `_build_*` 时走这条）。
+func _window_start(current: int, selected: int, total: int, limit: int) -> int:
+	if limit <= 0 or total <= limit:
+		return 0
+	var start := current
+	if selected < start:
+		start = selected
+	elif selected >= start + limit:
+		start = selected - limit + 1
+	return clampi(start, 0, total - limit)
+
+
 func _build_phase_list() -> void:
 	_clear(_phase_box)
 
-	for info in _phases:
+	var limit := _rows_visible(_phase_box)
+	_phase_offset = _window_start(_phase_offset, _phase_index, _phases.size(), limit)
+	var stop: int = _phases.size() if limit <= 0 else mini(_phase_offset + limit, _phases.size())
+	for i in range(_phase_offset, stop):
+		var info: Dictionary = _phases[i]
 		var lbl := _make_label(info["label"])
 		# 级联：该 phase 花名册里所有难度槽全收 → 正蓝（锁定 "?" 槽需全部收齐）
 		if _phase_capture_all(info["rec"].stage, info["rec"].boss_index, info["rec"].phase_index, info.get("boss")) == 2:
 			lbl.add_theme_color_override("font_color", CAPTURE_FULL)
 		_phase_box.add_child(lbl)
+
+	_sync_phase_scroll_hint()
+
+
+## 二级滚动提示：`▲` = 上面还有、`▼` = 下面还有，中间是当前可见区间 / 总数。
+## 全部看得见（没被窗口裁掉）→ 空串，不占版面、不制造噪音。
+## 箭头位用全角空格占位 —— 只有一侧有箭头时字串长度不变，不会左右抖。
+func _sync_phase_scroll_hint() -> void:
+	var total: int = _phases.size()
+	var shown: int = _phase_box.get_child_count()
+	var has_above: bool = _phase_offset > 0
+	var has_below: bool = _phase_offset + shown < total
+	if not (has_above or has_below):
+		_phase_scroll_hint.text = ""
+		return
+	_phase_scroll_hint.text = "%s %d–%d / %d %s" % [
+		"▲" if has_above else "　", _phase_offset + 1, _phase_offset + shown, total,
+		"▼" if has_below else "　"]
+
+
+## 选中项**在当前窗口内的行号**（渲染用的 child index）。
+func _phase_local_index() -> int:
+	return clampi(_phase_index - _phase_offset, 0, maxi(_phase_box.get_child_count() - 1, 0))
 
 
 func _build_diff_list() -> void:
@@ -215,10 +301,11 @@ func _build_diff_list() -> void:
 	var info: Dictionary = _phases[_phase_index]
 	var rec: SpellRecord = info["rec"]
 	var boss: BossData = _boss_for(info)
+	var diffs := _menu_diffs_for(rec.stage)
 
-	var configured := _configured_diffs(boss)
-	# 难度槽 = 标准集合（MENU_DIFFS）；「有记录 **且** 该难度有阶段」才可选，否则锁定 ?。
-	for difficulty in MENU_DIFFS:
+	var configured := _configured_diffs(boss, diffs)
+	# 难度槽 = 该面的标准集合（普通面 4 档 / EX 面 Extra）；「有记录 **且** 该难度有阶段」才可选，否则锁定 ?。
+	for difficulty in diffs:
 		var is_locked: bool = not info["diffs"].has(difficulty) or not configured.has(difficulty)
 		_diff_entries.append({diff = difficulty, is_locked = is_locked})
 
@@ -286,7 +373,7 @@ func _make_label(text: String) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.add_theme_font_size_override("font_size", 28)
+	lbl.add_theme_font_size_override("font_size", LIST_FONT_SIZE)
 	return lbl
 
 
@@ -296,7 +383,7 @@ func _make_label(text: String) -> Label:
 ## 全部收 → 2；部分 → 1；无 → 0。锁定 "?" 槽计 0 收取（该难度也收齐才整条蓝）
 func _phase_capture_all(stage: int, boss: int, phase_idx: int, boss_override: BossData = null) -> int:
 	var boss_data: BossData = boss_override if boss_override != null else BossCatalog.boss_of_phase(stage, phase_idx)
-	var candidate: Array = _configured_diffs(boss_data)
+	var candidate: Array = _configured_diffs(boss_data, _menu_diffs_for(stage))
 	if candidate.is_empty():
 		return 0  # 花名册未收录，无法判定
 	var captured := 0
@@ -342,6 +429,9 @@ func _stage_capture_state(stage: int) -> int:
 
 func _highlight() -> void:
 	_stop_pulse()
+	# 二级窗口跟着选中项滚（超长列表不撑爆面板）：只有窗口真的要变才重建，不白重建
+	if _window_start(_phase_offset, _phase_index, _phases.size(), _rows_visible(_phase_box)) != _phase_offset:
+		_build_phase_list()
 	_dim_all_vbox(_stage_box)
 	_dim_all_vbox(_phase_box)
 	_dim_diff()
@@ -352,8 +442,8 @@ func _highlight() -> void:
 			_pulse_on_vbox(_stage_box, _stage_index)
 			_clear(_diff_box)
 		Section.PHASE:
-			_highlight_one_vbox(_phase_box, _phase_index)
-			_pulse_on_vbox(_phase_box, _phase_index)
+			_highlight_one_vbox(_phase_box, _phase_local_index())
+			_pulse_on_vbox(_phase_box, _phase_local_index())
 			_build_diff_list()
 			_dim_diff()
 		Section.DIFF:
@@ -484,9 +574,9 @@ func _boss_for(info: Dictionary) -> BossData:
 
 
 ## 该 Boss **实际配置**的难度档（有阶段的那些；全收判定用；不回退）。
-func _configured_diffs(boss: BossData) -> Array[int]:
+func _configured_diffs(boss: BossData, diffs: Array[int]) -> Array[int]:
 	var out: Array[int] = []
-	for difficulty in [0, 1, 2, 3]:
+	for difficulty in diffs:
 		if boss and not boss.phases_for_difficulty(difficulty).is_empty():
 			out.append(difficulty)
 	return out
@@ -608,7 +698,8 @@ func _get_highlighted_item() -> Control:
 			return children[_stage_index] if _stage_index < children.size() else null
 		Section.PHASE:
 			var children := _phase_box.get_children()
-			return children[_phase_index] if _phase_index < children.size() else null
+			var local := _phase_local_index()
+			return children[local] if local < children.size() else null
 		Section.DIFF:
 			var children := _diff_box.get_children()
 			return children[_diff_index] if _diff_index < children.size() else null
@@ -654,8 +745,10 @@ func _start_practice() -> void:
 		"section": Section.DIFF, "stage": _stage_index,
 		"phase": _phase_index, "diff": _diff_index, "char": _char_index,
 	}
-	# 符卡背景随载荷带一张（练习模式自建 BossData 会丢 spell_background）
-	PracticeSession.start(phase, boss_scene, boss_label, rec.stage, rec.phase_index, boss.spell_background)
+	# 符卡背景随载荷带一张（练习模式自建 BossData 会丢 spell_background）；
+	# BGM 也随载荷带 key：按**选中的这张卡属于哪只 Boss**解析（道中曲 / Boss 曲由 Boss 各自定）
+	PracticeSession.start(phase, boss_scene, boss_label, rec.stage, rec.phase_index, boss.spell_background,
+		BossCatalog.practice_bgm_key(boss, rec.stage))
 	AudioManager.stop_bgm()
 	on_leave()
 	GameManager.change_scene("res://scenes/game_scene.tscn")

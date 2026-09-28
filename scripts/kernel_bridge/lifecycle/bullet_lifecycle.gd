@@ -69,6 +69,9 @@ const D_AWAY := &"away"
 const D_FORWARD := &"forward"
 const D_RANDOM := &"random"
 const D_CHANCE := &"chance"
+## 镜面：把**当前速度**按发射点所在的场边翻分量（左右翻 x / 上翻 y；角落两边都翻）。
+## 搭 `emit(..., at = AT_PHASE_END)` 用 —— 发射点 = `at_wall` 输出的撞墙落点。
+const D_REFLECT := &"reflect"
 
 # ---- 墙位掩码（at_wall 只支持 左/右/上；无下墙，故无 WALL_BOTTOM）/ 状态槽比较 ----
 const WALL_LEFT := 1
@@ -160,6 +163,21 @@ static func random_dir(spread: float) -> Dictionary:
 ## 也是 emit_variant 唯一的分支来源（0 = 未命中，1 = 命中）。
 static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> Dictionary:
 	return {&"kind": D_CHANCE, &"target": target, &"angle": spread, &"p": p}
+
+
+## **镜面反射**：把弹的**当前速度**按发射点所在的场边翻分量 —— 左右边翻 x、上边翻 y，
+## 角落（pos 同时贴两条边）两边都翻 = 原路返回；再叠加 `angle`（可选，用来做"镜面 + 微散"）。
+##
+## 典型用法（撞墙后发射替换弹，方向 = 镜面）：
+## ```gdscript
+## lc.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+## lc.emit(反射弹, BulletLifecycle.reflect(), 150.0, BulletLifecycle.AT_PHASE_END)
+## lc.despawn()
+## ```
+## ⚠️ 必须配 `at = AT_PHASE_END`：镜面判据是**发射点**贴没贴场边，而 `at_wall` 不改弹自身位置，
+## 只有它的相位结束落点（夹紧到边上）才算"撞到了"。用 `AT_CURRENT` 且没贴边 → 不翻，退化为自身朝向。
+static func reflect(angle: float = 0.0) -> Dictionary:
+	return {&"kind": D_REFLECT, &"target": &"", &"angle": angle}
 
 
 # ═══ Move（每帧施加；9 个）═══
@@ -489,6 +507,7 @@ const DK_AWAY := 2
 const DK_FORWARD := 3   ## 沿弹自身朝向（与速度解耦）
 const DK_RANDOM := 4    ## 沿自身朝向 ± 随机
 const DK_CHANCE := 5    ## p 概率朝 target，否则自身朝向旋转
+const DK_REFLECT := 6   ## 镜面（与内核 _resolve_dir 的 dk 编号对齐）
 
 ## 编译为扁平 packed program。actions / sfx 是**程序级**表：事件回传 (program, local_id)，
 ## 由宿主查这两张表（Callable 永不进原生）。
@@ -629,6 +648,8 @@ func _dir_args(d: Dictionary) -> Array:
 		dk = DK_RANDOM
 	elif d[&"kind"] == D_CHANCE:
 		dk = DK_CHANCE
+	elif d[&"kind"] == D_REFLECT:
+		dk = DK_REFLECT
 	return [dk, _target_code(d[&"target"]), float(d[&"angle"]), float(d.get(&"p", 0.0))]
 
 

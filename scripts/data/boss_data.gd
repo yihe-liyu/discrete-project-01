@@ -14,6 +14,18 @@ class_name BossData
 ## 符卡宣言立绘（**每 Boss 一张**）：宣言时从游戏框右上角快慢快扫到左下角后淡出。
 ## 空 = 该 Boss 不用立绘。尺寸随意 —— 以**中心**锚定，右上角进、左下角出。
 @export var portrait: Texture2D
+## **符卡练习**时该 Boss 用哪首 BGM（`AssetRegistry.BGM_PATHS` 的语义 key）。
+## 空 = 回落该面的 `StageData.bgm_key`。练习是按「单张卡」打的、一场只面对一只 Boss，
+## 所以道中 Boss 填道中曲、关底 Boss 填 Boss 曲 —— 否则整面只能听同一首（曾如此）。
+## ⚠️ 只影响练习；正常关卡的 BGM 由关卡脚本 `stage_director.bgm(key)` 起。
+@export var practice_bgm_key: String = ""
+## **全破演出**用的爆点特效场景（`BossHandle.defeat()` 播；池化 `HitEffect` 场景）。
+## 空 = 用默认 `AssetRegistry` 的通用全破特效（`scenes/effect/boss_defeat.tscn`）。
+@export var defeat_fx: PackedScene
+## 全破音效 key（`AssetRegistry.sounds`）。空 = 默认 `&"boss_die"`。
+@export var defeat_sfx: StringName = &""
+## 全破**定格**时长（秒；0 = 不定格）。原作那种"炸开之前顿一下"的手感。
+@export var defeat_hitstop: float = 0.12
 ## 阶段列表：各难度**独立数组，互不回退**（某难度空 = 该难度无阶段）。
 ## 难度档：0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra（对应 SpellRecord.Difficulty）
 @export var phases_easy: Array[PhaseData] = []

@@ -41,6 +41,33 @@ func test_prune_empty_keeps_zero_stat_records_with_key():
 	assert_eq(book.records.size(), 0, "无主键空壳应被清理")
 
 
+## 只有 Extra 档的 Boss（EX 面）也必须被一键解锁覆盖（F1 调试）。
+## 回归（2026-09-26 作者报）：shape 只取 `phases_normal.size()` → `mini(1, 0) = 0` →
+## 该 Boss 整体被跳过 → F1 按了等于没按，符卡练习里始终看不见。
+func test_debug_unlock_covers_extra_only_boss():
+	var extra := PhaseData.new()
+	extra.name = "阳符「宏辉抑世」"
+	extra.uid = 161
+	extra.hp = 1000
+	extra.time_limit = 30.0
+	var ex := BossData.new().in_stage(9).extra_phase(extra)
+	BossCatalog.set_catalog_override({9: [ex]})
+
+	var mgr := SpellBookManager.new()
+	mgr.spell_book = SpellRecordBook.new()
+	mgr.debug_unlock_all_spells()
+	BossCatalog.clear_catalog_override()
+
+	for ch in [SpellRecord.Character.REIMU, SpellRecord.Character.MARISA]:
+		var rec: SpellRecord = mgr.spell_book.get_record(9, 0, 0, int(ch), SpellRecord.Difficulty.EXTRA)
+		assert_not_null(rec, "EX 面阶段应被一键解锁（角色 %d）" % ch)
+		if rec:
+			assert_eq(rec.uid, 161, "记录 uid 对得上")
+			assert_eq(rec.phase_type, SpellRecord.PhaseType.SPELL, "uid!=0 → 符卡")
+	assert_null(mgr.spell_book.get_record(9, 0, 0, SpellRecord.Character.REIMU, SpellRecord.Difficulty.NORMAL),
+		"该面没配 Normal → 不应凭空造 Normal 记录")
+
+
 ## 难度专属符卡（最终 Boss 第 1 槽在各难度换卡）四种难度 × 两角色都要有记录且 uid 对得上
 func test_debug_unlock_covers_difficulty_specific_spells():
 	var mgr := SpellBookManager.new()

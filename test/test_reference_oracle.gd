@@ -1,7 +1,7 @@
 extends GutTest
 ## 冻结参照（oracle）自足性：`test/reference/BulletSystem` 能**独立** new / spawn / 查询。
 ## 目的：证明这份 GDScript 参照实现不依赖原项目任何 autoload / 实体层 —— 它要当原生内核
-## parity 的逐位基准（见 docs/TEST_INDEX.md「B1 parity 套件」、docs/N2_NATIVE_INTEGRATION_PLAN.md）。
+## parity 的逐位基准（见 docs/TEST_INDEX.md「B1 parity 套件」、docs/archive/N2_NATIVE_INTEGRATION_PLAN.md）。
 ##
 ## 前身 = `test_kernel_vendor`：内核 vendor 流程已废止（`scripts/kernel/` 与
 ## `tools/vendor_kernel.sh` 均已删），该名字与文档不再成立，故更名。

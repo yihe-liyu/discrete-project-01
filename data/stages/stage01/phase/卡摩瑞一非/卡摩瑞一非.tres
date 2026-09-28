@@ -11,5 +11,4 @@ shoot_script = ExtResource("3_8axke")
 item_power = 25
 item_point = 25
 item_bomb = 1
-open_reduce_time = 3.0
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

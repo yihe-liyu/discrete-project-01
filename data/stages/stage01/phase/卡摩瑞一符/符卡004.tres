@@ -9,7 +9,6 @@
 script = ExtResource("2_xarr0")
 name = "递符「定向传播」"
 uid = 4
-bonus = 100000
 time_limit = 40.0
 hp = 5000
 move_script = ExtResource("1_k73tn")
@@ -19,5 +18,4 @@ item_power = 25
 item_point = 25
 item_life = 1
 item_bomb = 1
-open_reduce_time = 3.0
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

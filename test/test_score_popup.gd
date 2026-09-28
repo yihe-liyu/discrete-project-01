@@ -78,11 +78,20 @@ func test_highlight_point_keeps_full_score() -> void:
 	assert_true(got[0][2], "且金色")
 
 
-func test_force_collect_is_highlight() -> void:
+## 「金色」只属于「点」(POINT)：P 点即使被强收也不金色（+1 火力 +10 分，白字）
+func test_force_collect_power_is_not_highlight() -> void:
 	var r: Dictionary = _pickup(Item.Type.POWER)
 	r.item.force_collect()
 	var got: Array = _collect(r.item)
-	assert_true(got[0][2], "记忆释放强收 → 金色")
+	assert_false(got[0][2], "P 点强收 → 不金色")
+
+
+## P 点过收点线同样不金色（两条置位路径都堵住：`_mark_highlight` 只认 POINT）
+func test_cross_line_power_is_not_highlight() -> void:
+	var r: Dictionary = _pickup(Item.Type.POWER, LINE - 100.0)   # 自机在收点线之上
+	r.item._physics_process(1.0 / 60.0)
+	var got: Array = _collect(r.item)
+	assert_false(got[0][2], "P 点过收点线 → 不金色")
 
 
 func test_cross_line_is_highlight() -> void:

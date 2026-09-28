@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="BossData" format=3 uid="uid://btxsfdga0ak2g"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_j7rnn"]
+[ext_resource type="Resource" uid="uid://dyei5g6e25pqf" path="res://data/stages/stageEX/phase/似新存一非/似新存一非.tres" id="2_haove"]
+[ext_resource type="Resource" uid="uid://c0roidnfpvatk" path="res://data/stages/stageEX/phase/似新存一符/符卡164.tres" id="2_wlywn"]
+[ext_resource type="Resource" uid="uid://bo72e3skld20d" path="res://data/stages/stageEX/phase/似新存二符/符卡165.tres" id="3_035f5"]
+[ext_resource type="Resource" uid="uid://i2udjyu2ccyp" path="res://data/stages/stageEX/phase/似新存三符/符卡166.tres" id="4_j7rnn"]
+[ext_resource type="Resource" uid="uid://bhp3entq6c55y" path="res://data/stages/stageEX/phase/似新存二非/似新存二非.tres" id="4_q5ydy"]
+[ext_resource type="Resource" uid="uid://db3q1334h8121" path="res://data/stages/stageEX/phase/似新存四符/符卡167.tres" id="5_buem7"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="5_o71av"]
+[ext_resource type="Resource" uid="uid://c7dg3m83v4xy7" path="res://data/stages/stageEX/phase/似新存五符/符卡168.tres" id="6_haove"]
+[ext_resource type="Resource" uid="uid://cjo7tvfq07dpg" path="res://data/stages/stageEX/phase/似新存三非/似新存三非.tres" id="6_q5ydy"]
+[ext_resource type="Resource" uid="uid://bbcgc00yxcv1r" path="res://data/stages/stageEX/phase/似新存六符/符卡169.tres" id="7_q5ydy"]
+[ext_resource type="Resource" uid="uid://dxgvhunh35vay" path="res://data/stages/stageEX/phase/似新存四非/似新存四非.tres" id="8_mav5o"]
+[ext_resource type="Resource" uid="uid://bfad5o4vu6mv2" path="res://data/stages/stageEX/phase/似新存七符/符卡170.tres" id="8_nqym7"]
+[ext_resource type="Resource" uid="uid://b5m5aql0lfnef" path="res://data/stages/stageEX/phase/似新存五非/似新存五非.tres" id="10_3gtmy"]
+[ext_resource type="Resource" uid="uid://bp6obewalxm4l" path="res://data/stages/stageEX/phase/似新存六非/似新存六非.tres" id="12_b2i02"]
+[ext_resource type="Resource" uid="uid://cx1jdhdaxko28" path="res://data/stages/stageEX/phase/似新存七非/似新存七非.tres" id="14_onmn6"]
+
+[resource]
+script = ExtResource("5_o71av")
+boss_name = "似新存"
+section_label = "关底"
+phases_extra = Array[ExtResource("1_j7rnn")]([ExtResource("2_haove"), ExtResource("2_wlywn"), ExtResource("4_q5ydy"), ExtResource("3_035f5"), ExtResource("6_q5ydy"), ExtResource("4_j7rnn"), ExtResource("8_mav5o"), ExtResource("5_buem7"), ExtResource("10_3gtmy"), ExtResource("6_haove"), ExtResource("12_b2i02"), ExtResource("7_q5ydy"), ExtResource("14_onmn6"), ExtResource("8_nqym7")])
+stage_id = 9
+order = 1
+practice_bgm_key = "stageEX_boss"
+metadata/_custom_type_script = "uid://be7pe6gf4etpl"

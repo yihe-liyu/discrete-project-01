@@ -9,7 +9,6 @@
 script = ExtResource("2_qklgp")
 name = "黄粱「不可测之梦」"
 uid = 56
-bonus = 100000
 time_limit = 40.0
 hp = 4500
 move_script = ExtResource("1_8jio1")

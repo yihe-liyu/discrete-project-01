@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://06wa8wjugd6e"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_nssbx"]
+[ext_resource type="Script" uid="uid://b8w2voeo6t4ln" path="res://data/stages/stageEX/phase/似新存道中一符/似新存道中一符.gd" id="2_ueahq"]
+
+[resource]
+script = ExtResource("1_nssbx")
+name = "光符「来去匆匆」"
+uid = 162
+shoot_script = ExtResource("2_ueahq")
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

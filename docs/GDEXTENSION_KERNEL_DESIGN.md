@@ -4,10 +4,10 @@
 > **状态（2026-09-14 刷新）**：触发条件**已达成**；N1 工具链 ✅、N2.2 原生积分 ✅、N4-real 原生渲染 ✅、
 > **L3.5 全落地 ✅**（原生行为/判定/宽相 + 存储翻转：`KernelNativeSystem` 为唯一存储），**`scripts/kernel/**` 已从生产删除**
 > 冻结参照移入 `test/reference/`（见 `BEST_PRACTICES_LOG.md` 4e/4f）。**扩展为必需**。
-> **已拍板**：① 扩展成为**必需**（**GDScript 内核已从生产删除**，见 `N2_NATIVE_INTEGRATION_PLAN.md` 终局决策 / 4f）；
+> **已拍板**：① 扩展成为**必需**（**GDScript 内核已从生产删除**，见 `docs/archive/N2_NATIVE_INTEGRATION_PLAN.md` 终局决策 / 4f）；
 > ② 实现**不走通用 opcode VM** —— 采用更精简的**「生命周期描述符」**（`BulletLifecycle` → `compile()` 成 packed program → 原生 `behavior_tick`）；
 > 本文 §5.7 的「通用 Danmaku VM」为**早期设想，已被取代**。
-> **前置阅读**：`docs/archive/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`docs/N2_NATIVE_INTEGRATION_PLAN.md`（终局决策 + 拆除清单）；`test/reference/`（冻结的 GDScript 参照实现）。
+> **前置阅读**：`docs/archive/NEW_KERNEL_REFACTOR_PLAN.md` §15.6/§16；`docs/archive/N2_NATIVE_INTEGRATION_PLAN.md`（终局决策 + 拆除清单）；`test/reference/`（冻结的 GDScript 参照实现）。
 
 ---
 
@@ -24,6 +24,8 @@
 | 每弹 `Behavior.process()` + Variant 哈希 | GDScript 调度 | 原生 VM 直跑寄存器 |
 | `sys` / `tl` / `refs` 命名纠结 | 手写 GDScript 宿主 | 原生命名，契约不再管宿主内部 |
 | 工作台正则扫源码 | 没有程序模型 | 程序是数据，可列举 / 可校验 |
+
+> **读法**：上表是**迁移前的痛**（历史理由），不是今天的现状 —— 其中"翻译层 / 每弹 `Behavior.process()` / 5 张侧表"**已在 L3.5-4e/4f 消失**；"工作台正则扫源码"仍待做（见基线待改进）。现状看基线 S 表。
 
 ### 0.2 触发条件（没到就别开工）
 
@@ -140,6 +142,12 @@ flags[N] type_id[N] program_id[N] pc[N] wait_ticks[N] state[STRIDE*N]
 
 ## 5. Danmaku VM（核心）
 
+> ⚠️ **本节 §5.1–§5.6 是早期设想，已被取代 —— 不要照此实现。**（2026-09-14 拍板）
+> 最终实现是更精简的「**生命周期描述符**」：`BulletLifecycle`（Phase/Move/Until/Action 固定 schema，**无 pc / goto / 表达式**）
+> → `compile()` 成 packed program → 原生 `behavior_tick`。设计见 `docs/LIFECYCLE_MODEL.md`，接口见 `docs/DANMAKU_API.md`。
+> 本节里仍然成立的是 **§5.7「先迁数据、后换实现」** 与 §5.4/§5.5 的**分层动机**（目标查询归宿主缓存、跨边界只在两端）——
+> 它们已分别落到 `BulletLifecycle` 与原生 `TargetCache` / 事件 drain 上。§5.3 的"指令集草案 / 现按路径 B 主动推进"**已作废**。
+
 ### 5.1 为什么 VM 是终局答案（而不是继续手写 Behavior）
 
 - 手写 `Behavior` 会随弹幕种类线性增长且互相重复；VM 让**弹幕 = 数据**。
@@ -184,7 +192,7 @@ native program_id                  # 结构数组 / 字节码；运行期零哈�
 | 判定 | `collision` | flags | can_be_canceled / out_grace / faction |
 | 表现 | `fx` / `sfx` | key | 事件输出（帧末 drain） |
 
-> 第一批只需覆盖现在 **2 个** `kernel_port()` 内容（`move_homing` / `marisa_laser_follow`；2026-09-13 grep 实测，原稿写 6 —— 已过时）。但**行为集共 10 个**（含 `BulletData.accel` 派生的 world_accel 等，见 §5.7）。VM 的**触发条件**仍是计划 §15.6：行为种类/复杂度爆炸，或解释器成为热点 —— **现按路径 B 主动推进**。
+> 第一批只需覆盖现在 **2 个** `kernel_port()` 内容（`move_homing` / `marisa_laser_follow`；2026-09-13 grep 实测，原稿写 6 —— 已过时）。但**行为集共 10 个**（含 `BulletData.accel` 派生的 world_accel 等，见 §5.7）。VM 的**触发条件**是计划 §15.6（行为种类/复杂度爆炸，或解释器成为热点）—— **但"现按路径 B 主动推进"已作废**：2026-09-14 拍板改走生命周期描述符（见本节开头横幅）。
 
 ### 5.4 寄存器模型
 

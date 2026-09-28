@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bvu8y8u16ftw8"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_0li5g"]
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="1_j13pr"]
+[ext_resource type="Script" uid="uid://b2tfxq8rr8ygg" path="res://data/boss_scripts/move/move_to_point.gd" id="2_3qysv"]
+[ext_resource type="Script" uid="uid://lkqxbg7glx12" path="res://data/stages/stage01/phase/卡摩瑞二符/卡摩瑞二符.gd" id="4_3qysv"]
+
+[resource]
+script = ExtResource("1_0li5g")
+name = "速符「停顿波」"
+uid = 5
+time_limit = 40.0
+hp = 5000
+move_script = ExtResource("1_j13pr")
+shoot_script = ExtResource("4_3qysv")
+pre_move_script = ExtResource("2_3qysv")
+item_power = 25
+item_point = 25
+item_life = 1
+item_bomb = 1
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

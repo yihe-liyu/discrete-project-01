@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 一键验证：命名契约 + 语法 + 真实启动零错误 + GUT 全绿 + 文件所有权恢复 + git 状态
+# 一键验证：文档哨兵 + 命名契约 + 语法 + 真实启动零错误 + GUT 全绿 + 文件所有权恢复 + git 状态
 # 用法: ./tools/verify.sh [可选: 启动验证的场景]
 #   默认验证 res://scenes/game_scene.tscn
 #   例:  ./tools/verify.sh res://scenes/workbench.tscn
@@ -17,15 +17,19 @@ echo "  🔧 一键验证（场景: $TARGET_SCENE）"
 echo "═══════════════════════════════════════"
 
 echo ""
-echo "== [1/5] 秒级语法检查 =="
+echo "== [1/6] 文档哨兵（文档 ↔ 代码/数据） =="
+python3 ./tools/check_docs.py
+
+echo ""
+echo "== [2/6] 秒级语法检查 =="
 ./tools/check_syntax.sh
 
 echo ""
-echo "== [2/5] 命名契约（含形参/局部/循环遮蔽成员） =="
+echo "== [3/6] 命名契约（含形参/局部/循环遮蔽成员） =="
 ./tools/check_naming.sh --fail
 
 echo ""
-echo "== [3/5] 真实启动验证（$TARGET_SCENE） =="
+echo "== [4/6] 真实启动验证（$TARGET_SCENE） =="
 # 隔离 user://（与 run_tests.sh 一致）：启动会写 user://logs 日志，不隔离会污染真实玩家目录。
 # 预建 logs 子目录：避免 godot 打不开 user://logs → SIGSEGV 崩溃出 coredump。
 TMP_USER="$(mktemp -d)"
@@ -40,7 +44,7 @@ fi
 echo "✅ 启动零错误"
 
 echo ""
-echo "== [4/5] GUT 全量测试 =="
+echo "== [5/6] GUT 全量测试 =="
 if ! ./test/run_tests.sh; then
 	echo "❌ GUT 测试失败"
 	exit 1
@@ -48,7 +52,7 @@ fi
 echo "✅ GUT 全绿"
 
 echo ""
-echo "== [5/5] 文件所有权恢复 =="
+echo "== [6/6] 文件所有权恢复 =="
 if [ "$(id -u)" = "0" ]; then
 	chown -R cirno:cirno .godot/ scripts/ data/ test/ tools/ scenes/ 2>/dev/null || true
 	echo "✅ 已恢复 cirno 所有权（root 运行，防污染）"

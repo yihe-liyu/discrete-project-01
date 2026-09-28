@@ -208,6 +208,17 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | forward | `forward(angle=0)` | 沿**自身朝向**再转 angle（与速度解耦） |
 | random_dir | `random_dir(spread)` | 沿自身朝向 ±spread 内随机（内核确定性 RNG；**每次求值抽 1 次**，V10） |
 | chance_toward | `chance_toward(target, p, spread=0)` | p 概率**精确朝** target（angle 被忽略）；否则沿自身朝向转 spread。**仅作 `emit_variant` 的 dir**（V9：分支由该 op 显式抽） |
+| reflect | `reflect(angle=0)` | **镜面**：把**当前速度**按发射点所在的场边翻分量 —— 左右边翻 x、上边翻 y，角落两边都翻（原路返回），再转 `angle`。需配 `at = AT_PHASE_END`；不在场边 → 退化为自身朝向 |
+
+> **镜面反射（`reflect`）**：`at_wall` 只输出「夹到边上的相位结束落点」、**不改弹自身位置**，
+> 所以 `reflect` 的判据是**发射点贴没贴场边** —— 必须走 `emit(..., at = AT_PHASE_END)`：
+> ```gdscript
+> lc.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+> lc.emit(反射弹, BulletLifecycle.reflect(), 150.0, BulletLifecycle.AT_PHASE_END)
+> lc.despawn()
+> ```
+> **撞的是哪面墙不用你声明**（内核按落点自己判）→ 不会和 `at_wall` 的 mask 脱节。
+> 「镜面 + 微散」用 `reflect(deg_to_rad(8.0))`。原生专属用例：`test/test_native_reflect.gd`。
 
 > **RNG**：内核单通道 PRNG，种子由宿主 `RNG` 派生；抽取顺序 = 弹行遍历顺序 → 回放可复现。
 
@@ -469,7 +480,10 @@ tl.loop()
 
 `ctx.audio.play_sfx(AssetRegistry.sounds[key])` / `sfx()` / `hit_sfx` 可用：
 
-`shoot` `player_shoot` `kira` `enemy_die` `player_die` `graze` `item` `card` `player_card` `select` `ok` `cancel` `pause` `lazer` `marisa_damage` `msl` `normal_damage`
+`shoot` `player_shoot` `kira` `enemy_die` `boss_die` `player_die` `graze` `item` `card` `player_card` `select` `ok` `cancel` `pause` `lazer` `marisa_damage` `msl` `normal_damage`
+
+> 权威表 = `scripts/asset_registry.gd` 的 `sounds`（BGM 的 `music_*` 同在那一张表，但不走 `play_sfx`）；
+> 每个 key 都要在 `SFX_DB` 有音量项（`test_sfx_mix` 会红）。**加 key 时顺手改上面这一行。**
 
 ### 7.3 阵营 / 混合
 

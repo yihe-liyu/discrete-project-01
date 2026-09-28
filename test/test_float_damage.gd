@@ -26,7 +26,6 @@ func test_boss_fractional_damage():
 	var phase := PhaseData.new()
 	phase.hp = 5
 	phase.time_limit = 10.0
-	phase.bonus = 100
 	boss.start_phase(phase)
 	boss._is_invincible = false
 	boss._hp = 5

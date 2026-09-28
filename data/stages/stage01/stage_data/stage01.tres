@@ -6,6 +6,7 @@
 
 [resource]
 script = ExtResource("1")
+stage_no = 1
 display_name = "Stage１　"
 bgm_key = "stage1"
 create_script = ExtResource("3")

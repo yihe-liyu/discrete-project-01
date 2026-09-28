@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BossData" format=3 uid="uid://djl7xwe376kpj"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_4dsb7"]
+[ext_resource type="Resource" uid="uid://mj5k81bpgwu5" path="res://data/stages/stage03B/phase/哆来咪道中一非/哆来咪道中一非.tres" id="2_idf35"]
+[ext_resource type="Resource" uid="uid://baacxonesfsg5" path="res://data/stages/stage03B/phase/哆来咪道中一符/符卡041.tres" id="3_mhu1h"]
+[ext_resource type="Resource" uid="uid://b0w14lhue8enr" path="res://data/stages/stage03B/phase/哆来咪道中一符/符卡043.tres" id="4_ifh5g"]
+[ext_resource type="Resource" uid="uid://caqdryv4dbtm0" path="res://data/stages/stage03B/phase/哆来咪道中一符/符卡044.tres" id="5_pp7bx"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="6_5hmhw"]
+[ext_resource type="Resource" uid="uid://bilf0x31vy1fu" path="res://data/stages/stage03B/phase/哆来咪道中一符/符卡042.tres" id="6_62q0n"]
+[ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="7_62q0n"]
+
+[resource]
+script = ExtResource("6_5hmhw")
+boss_name = "哆来咪"
+section_label = "道中"
+visual = ExtResource("7_62q0n")
+phases_easy = Array[ExtResource("1_4dsb7")]([ExtResource("2_idf35"), ExtResource("3_mhu1h")])
+phases_normal = Array[ExtResource("1_4dsb7")]([ExtResource("2_idf35"), ExtResource("6_62q0n")])
+phases_hard = Array[ExtResource("1_4dsb7")]([ExtResource("2_idf35"), ExtResource("4_ifh5g")])
+phases_lunatic = Array[ExtResource("1_4dsb7")]([ExtResource("2_idf35"), ExtResource("5_pp7bx")])
+stage_id = 4
+metadata/_custom_type_script = "uid://be7pe6gf4etpl"

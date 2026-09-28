@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://dyei5g6e25pqf"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_g4ajl"]
+
+[resource]
+script = ExtResource("1_g4ajl")
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

@@ -4,6 +4,11 @@ extends Resource
 ## 难度差分在 CoroutineScript 中通过 diff_pick() / diff_get() 运行时处理
 
 @export var stage_id: int = 1
+## 符卡奖励分用的**面序号**（`SpellBonus` 公式里的 stage）：1..6，EX = 7。
+## 与 `stage_id` 分工：`stage_id` 是**记录主键**（存档唯一，3B 面因此取 4、EX 取 9），
+## 而奖励分要的是**原作面数**（3A/3B 都是 3、6A/6B 都是 6、EX = 7）。
+## `0` = 未指定 → 回落 `stage_id`。
+@export var stage_no: int = 0
 ## **给人看**的关卡名（UI 用）。空 = 回落 `"Stage %d"%stage_id`。
 ## 与 `stage_id` 分工：**id 是记录主键**（`SpellRecord.stage`，必须唯一、不能复用），
 ## 显示名才是可读标签 —— 所以「3 面 B 线」这种可以有 id=4 + display_name="Stage 3B"，

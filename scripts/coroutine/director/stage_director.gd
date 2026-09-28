@@ -25,25 +25,48 @@ func bgm(key: String) -> StageDirector:
 	return self
 
 ## 生成 Boss：spawn + 注册命名槽位 + 进场，返回 BossHandle（默认隐藏真名）。
+## **同名槽位幂等**：已经有一只就只返回句柄（不重复生成/进场）——
+## 于是内容侧不必自己写 `if not handle.exists()` 之类的防重入判断。
 func boss(key: String, data: BossData, from: Vector2, to: Vector2,
 		hide: String = "？？？") -> BossHandle:
+	var handle := BossHandle.new(key, data, hide, ctx.objects)
+	if handle.exists():
+		return handle
 	if ctx.stage == null:
 		push_warning("StageDirector.boss: ctx.stage 未装配（由 StageRuntime 回填）")
-		return BossHandle.new(key, data, hide, ctx.objects)
+		return handle
 	var boss_node := ctx.stage.spawn_boss(data, from, ctx) as Boss
+	if boss_node == null:
+		push_warning("StageDirector.boss: spawn_boss 返回 null（槽位 %s）" % key)
+		return handle
 	ctx.objects.register(key, boss_node, Boss)
-	var handle := BossHandle.new(key, data, hide, ctx.objects)
 	if hide != "":
 		handle.hide_name()
 	handle.enter(to, from)
 	return handle
 
-## 播对话（steps 版 DSL，台词内联）
-func dialogue(steps: Array) -> StageDirector:
-	ctx.play_dialogue_steps(steps)
+## 播对话（`DialogueSteps` 版 DSL，台词已内联）。
+## 收 **DialogueSteps 本身**，不是它的 `.steps` 数组：内容层不必知道步骤容器的内部结构，
+## 且参数有类型 → 传错东西在**编译期**就被拦住（Array 参数要等运行时才炸）。
+func dialogue(p_steps: DialogueSteps) -> StageDirector:
+	if p_steps == null:
+		push_warning("StageDirector.dialogue: steps 为 null，跳过")
+		return self
+	ctx.play_dialogue_steps(p_steps.steps)
 	return self
 
-## 监听对话事件（GameEvents.dialogue_event）→ 路由到 handler
+## **这关到此为止**（内容唯一收尾动词）。落点是 `StageRuntime.finish_stage()`
+## （保留 current_stage 只停脚本 → 走完整 stage_cleared 收尾；**不是** stop_stage）。
+## 延迟请用时间线摆：`timeline.wait(3.0).do(func(): director.finish_stage())`。
+func finish_stage() -> StageDirector:
+	if ctx.stage == null:
+		push_warning("StageDirector.finish_stage: ctx.stage 未装配（由 StageRuntime 回填）")
+		return self
+	ctx.stage.finish_stage()
+	return self
+
+## 监听对话事件（GameEvents.dialogue_event）→ 路由到 handler。
+## **handler 里不需要再写 `if ctx.active()`**：关卡拆掉/未装配后事件一律不派发（见 `_route`）。
 func on(event_name: String, handler: Callable) -> StageDirector:
 	if not _is_connected:
 		GameEvents.dialogue_event.connect(_route)
@@ -51,7 +74,13 @@ func on(event_name: String, handler: Callable) -> StageDirector:
 	_handlers[event_name] = handler
 	return self
 
+## 事件派发的**唯一**关卡存活判据：关卡已拆（脚本 stop / runner 失效）→ 一律忽略。
+## 集中在这里，handler 才能只写"要做什么"。
+## 注意对话播放期间 runner 是 **paused 而非 stopped**，`active()` 仍为 true ——
+## 所以战前那些行间事件（boss_enter/bgm_switch/boss_fight）照常生效。
 func _route(event_name: String) -> void:
+	if ctx == null or not ctx.active():
+		return
 	var handler: Callable = _handlers.get(event_name, Callable())
 	if handler.is_valid():
 		handler.call()

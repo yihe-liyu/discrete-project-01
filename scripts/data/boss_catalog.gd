@@ -88,13 +88,48 @@ static func boss(stage: int, boss_index: int) -> BossData:
 
 # ═══════════ 规范阶段顺序（C 的核心：阶段身份与 Boss 组织解耦）═══════════
 
+## 该 Boss 的**槽位数** = 各难度列的最大长度（不是 `phases_normal.size()`）。
+## 各难度列同形（同槽可换卡），但**允许某难度列为空** —— 例：EX 面只有 Extra 档，
+## `phases_normal` 空而 `phases_extra` 有卡。
+## 回归（2026-09-26）：曾一律拿 `phases_normal.size()` 当槽位数 → 这种 Boss 规范序 0 槽 →
+## `resolve_identity` 越界、阶段永远解不了锁（一键解锁也跳过）→ 符卡练习里看不见。
+static func boss_slot_count(b: BossData) -> int:
+	if b == null:
+		return 0
+	var slots := 0
+	for arr in _difficulty_lists(b):
+		slots = maxi(slots, (arr as Array).size())
+	return slots
+
+
+## 该 Boss 每槽的**代表阶段**（规范序用）；长度 = `boss_slot_count`。
+static func boss_slot_phases(b: BossData) -> Array[PhaseData]:
+	var out: Array[PhaseData] = []
+	for slot in boss_slot_count(b):
+		out.append(_slot_phase(b, slot))
+	return out
+
+
+## 第 slot 槽的代表阶段：优先规范列 `phases_normal`，该槽为空则依次回落 Easy → Hard → Lunatic → Extra。
+static func _slot_phase(b: BossData, slot: int) -> PhaseData:
+	for arr in _difficulty_lists(b):
+		var a := arr as Array
+		if slot < a.size() and a[slot] != null:
+			return a[slot]
+	return null
+
+
+## 五个难度列（顺序即代表阶段的优先级：规范列 `phases_normal` 在前）。
+static func _difficulty_lists(b: BossData) -> Array:
+	return [b.phases_normal, b.phases_easy, b.phases_hard, b.phases_lunatic, b.phases_extra]
+
+
 ## 某面的"规范阶段顺序"：跨所有 Boss 扁平展开（每个 phase 唯一确定）。
 ## 这是 phase_index / 非符N·符卡N / boss_index 的唯一真相来源。
 static func stage_phase_order(stage: int) -> Array[PhaseData]:
 	var order: Array[PhaseData] = []
 	for b: BossData in all().get(stage, []):
-		for p: PhaseData in b.phases_normal:
-			order.append(p)
+		order.append_array(boss_slot_phases(b))
 	return order
 
 
@@ -110,14 +145,13 @@ static func phase_canonical_index(stage: int, phase: PhaseData) -> int:
 		var off := _phase_offset(b, phase)
 		if off >= 0:
 			return acc + off
-		acc += b.phases_normal.size()
+		acc += boss_slot_count(b)
 	return -1
 
 
 ## 该 Boss 任一难度列里 phase 的槽位下标（-1 = 不属于本 Boss）。各难度列同形，同槽可换卡。
 static func _phase_offset(b: BossData, phase: PhaseData) -> int:
-	var lists: Array = [b.phases_normal, b.phases_easy, b.phases_hard, b.phases_lunatic, b.phases_extra]
-	for arr in lists:
+	for arr in _difficulty_lists(b):
 		var i: int = (arr as Array).find(phase)
 		if i >= 0:
 			return i
@@ -133,7 +167,7 @@ static func phase_at(stage: int, phase_index: int, difficulty: int) -> PhaseData
 		return null
 	var acc := 0
 	for b: BossData in all().get(stage, []):
-		var sz: int = b.phases_normal.size()
+		var sz: int = boss_slot_count(b)
 		if phase_index < acc + sz:
 			var off := phase_index - acc
 			var arr := b.phases_for_difficulty(difficulty)
@@ -151,7 +185,7 @@ static func boss_index_of_phase(stage: int, phase_index: int) -> int:
 		return -1
 	var acc := 0
 	for bi in all().get(stage, []).size():
-		var sz: int = all().get(stage, [])[bi].phases_normal.size()
+		var sz: int = boss_slot_count(all().get(stage, [])[bi])
 		if phase_index < acc + sz:
 			return bi
 		acc += sz
@@ -161,6 +195,15 @@ static func boss_index_of_phase(stage: int, phase_index: int) -> int:
 ## 取拥有该规范 phase_index 的 BossData；越界返回 null
 static func boss_of_phase(stage: int, phase_index: int) -> BossData:
 	return boss(stage, boss_index_of_phase(stage, phase_index))
+
+
+## **符卡练习**该用哪首 BGM：Boss 的 `practice_bgm_key` → 回落该面的 `StageData.bgm_key`。
+## 练习按「单张卡」打、一场只面对一只 Boss，所以**道中/关底可以各配一首**
+## （道中 Boss 填道中曲、关底 Boss 填 Boss 曲）；两边都不给 → ""（练习静音）。
+static func practice_bgm_key(p_boss: BossData, stage: int) -> String:
+	if p_boss and p_boss.practice_bgm_key != "":
+		return p_boss.practice_bgm_key
+	return StageCatalog.bgm_key_of(stage)
 
 
 ## 解析一个阶段的完整身份（phase_index / 第N张非符·符卡 / boss_index）。
@@ -175,8 +218,8 @@ static func resolve_identity(stage: int, phase: PhaseData, prefer_phase_index: i
 		var spell_count := 0
 		var non_count := 0
 		var order := stage_phase_order(stage)
-		for j in range(phase_index + 1):
-			if order[j].uid != 0:
+		for j in range(mini(phase_index + 1, order.size())):
+			if order[j] != null and order[j].uid != 0:
 				spell_count += 1
 			else:
 				non_count += 1

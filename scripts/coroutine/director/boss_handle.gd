@@ -125,3 +125,21 @@ func retreat(to: Vector2, dur: float = 2.0) -> BossHandle:
 	tw.tween_property(boss, "global_position", to, dur)
 	tw.tween_callback(boss.queue_free)
 	return self
+
+
+## **全破**：被打死（区别于 `retreat` = 没打死的退场/逃走）。
+## = 播全破演出（`Boss.play_defeat`：定格/清弹/冲击环/爆点/震屏/音效/闪白）+ `die()` + 退场 tween + 回收。
+## 时机由内容摆（典型：`sequence_phases` 打完后 `wait(2.0).do(func(): handle.defeat())`）。
+func defeat(to: Vector2 = Vector2(GameConfig.FIELD_CENTER_X, -150.0), dur: float = 1.4) -> BossHandle:
+	var boss := resolve()
+	if not boss:
+		return self
+	boss.set_exit_controlled()
+	boss.play_defeat()
+	boss.die()
+	var tw := boss.create_tween()
+	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(boss, "global_position", to, dur)
+	tw.tween_callback(boss.queue_free)
+	return self

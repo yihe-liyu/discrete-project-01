@@ -67,6 +67,15 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 > **一次性初始化更轻的写法**：要在**首次 `_tick` 之前**建弹型 / 注册钩子时，覆写 `_on_start()` 即可 ——
 > `start()` 会先设好 `ctx`/`target` 再调它，**不必**再覆写 `start()` + `super.start(...)`。
+
+> **事件 handler 里不用堆 `if`**（三条契约把守卫都收走了）：
+> 1. **关卡存活**由路由统一把关（`StageDirector._route`：关卡拆掉/未装配 → 事件一律不派发）
+>    → handler 里不必写 `if ctx and ctx.active()`；
+> 2. **句柄在 `start()` 里先建好**（此刻还没生成实体 = 未解析）→ 永不为 null，
+>    而句柄动词对空目标**静默 no-op** → 不必写 `if 句柄:`；
+> 3. **`_dir.boss()` 同名槽位幂等**（已有 Boss 就只返回句柄）→ 不必写 `if not 句柄.exists()` 防重发。
+>
+> 剩下的 `if` 应该是**语义**判据（如"已开战就别再开一次"），不是这些空值/生命周期巡检。
 > 只有需要自定义启动时序（如在这里建 timeline、算 `_dir`）时才覆写 `start()`。
 
 Timeline 链式 API：`at(t)` 绝对时刻 · `wait(n)` 相对上一 blocking 结束 · `do(cb)` 任意逻辑 ·
@@ -76,6 +85,57 @@ Timeline 只保留 `at/every/times/wait/do` + `start_phase`（相对时间 wait 
 
 > ⚠️ start_phase 链注意：`wait()` 后接 `start_phase()` 必须直接链（`timeline.wait(1.0).start_phase(...)`），
 > 中间插 `do(pass)` 会破坏 wait 偏移继承（阶段会立即触发）。
+
+#### Boss「全破」与关卡收尾（两个动词）
+
+`sequence_phases(...)` 打完**最后一张**后只会**武装 `wait` 事件**（`_cursor = 当前时刻`），
+所以"全破之后干什么"必须由你显式接 —— 不接就一直站着：
+
+```gdscript
+# 关底：逐张连打 → 全破演出 → 战后对话 → 由对话收尾
+timeline.start_sequence_now(func(): return handle.resolve(), boss_data.phases_for_difficulty(diff), 1.0)
+timeline.wait(2.0).do(func(): handle.defeat())                                  # ① 全破演出 + 退场
+timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))            # ② 战后对话
+# ③ 收尾不在这里 —— 由对话最后一句的 `d.event("stage_end")` 触发（见下）
+```
+
+| 动词 | 语义 | 做什么 |
+|---|---|---|
+| `handle.defeat(to, dur)` | **打死了** | 定格 → 清弹 → **反色圈（与自机 miss 同参数）** + 爆点 → 震屏 + 音效 → 闪白淡出 → 退场 tween → 回收 |
+| `handle.retreat(to, dur)` | **没打死**（逃走/退场） | 受控退出 + 飞走，**不放全破演出** |
+| `_dir.finish_stage()` | **这关到此为止** | 走完整 `stage_cleared` 收尾 → 有下一关进下一关、没有回标题 |
+
+> **要在"击破之后、关卡结束之前"插对话** → 插在 ① 与收尾之间，**收尾交给对话的行间事件**：
+> ```gdscript
+> # 对话文件（data/dialogue/<角色>/<面>_dialogue.gd，static 构建函数）
+> static func 战斗后() -> DialogueSteps:
+>     var d := DialogueSteps.new()
+>     d.screen([[KA, "叹气", "……"]])
+>     d.screen([[REIMU, "通常", "……"]])
+>     d.event("stage_end")            # ← 最后一步：读完这句 → 收尾
+>     return d
+>
+> # 关卡脚本：注册路由 + 收尾回调
+> _dir.on("stage_end", func(): _dir.finish_stage())
+> ```
+> `_dir.dialogue(...)` 收的是 **`DialogueSteps` 本身**（不是 `.steps` 数组）—— 参数有类型，传错在编译期就红。
+> **为什么用事件而不是 `wait(秒) → finish_stage()`**：对话播放时宿主 runner 会被 `pause()`
+> （时间轴确实不推进），所以 `wait` 方案**能工作** —— 但它依赖播放器的这个内部行为，
+> 且 `wait(n)` 都是从"最后一张击破"那个游标算的**绝对值**（要手算秒数、台词一改就得重算）；
+> 事件表达的是"剧本最后一句 = 这关结束"，与时长天然解耦 ✅
+> 战前的 `boss_enter`/`boss_fight` 是同一套机制。
+
+> - **反色圈**（`Boss.DEFEAT_RING_*` 常量）**逐字照搬自机 miss**（`player.gd` 的 5 发 + 1 发回声）：
+>   5 发**同半径 1280（满屏）**、圆心呈**十字 ±100 偏移**，外加 1 发 `delay 1.5s` 的回声。
+>   反色是 shader 的**奇偶**语义（奇=反色、偶=复原）：5 发同心叠 → 中央反色、边界因偏移成五瓣月牙；
+>   回声那发让它变 6 发（偶）→ **中心回色、外面仍反色**的"回声环"。
+>   ⚠️ 所有圈 `start_delay + duration` 必须**相等**（同时收）—— `MissCircleLayer` 在"有圈到期且剩余为奇"时
+>   会同帧全清（防反色闪烁），不同时收的话后几发会被提前掐掉（miss 的 `1.5+1.0=2.5` 正因此）。
+> - 特效**每 Boss 可配**（`BossData`）：`defeat_fx`（爆点场景，空 = 通用全破特效）·
+>   `defeat_sfx`（音效 key，空 = `boss_die`）· `defeat_hitstop`（定格秒数，默认 0.12，0 = 不定格）。
+> - **别用 `timeline.at(绝对秒)` 接全破** —— 玩家打得快/慢，绝对秒对不上；用 `wait`（从最后一张击破算起）。
+> - 道中 Boss 只要 `defeat()`，**不要** `finish_stage()`（关卡还要继续）。
+> - 全破演出是表现层（一场只播一次），不占逐弹预算；定格只压时间倍率、到点恢复原值。
 
 ---
 
@@ -100,8 +160,35 @@ Timeline 只保留 `at/every/times/wait/do` + `start_phase`（相对时间 wait 
 
 ### BossData / PhaseData（.tres）
 
-- `BossData`（`data/stages/stage01/phase/` 参照）：`boss_name` / `visual` / `phases_normal`（Normal 组）/ `phases_easy/hard/lunatic/extra`（各难度独立、不回退） / `enter_script` / `exit_script` / `score_value`
-- `PhaseData`：`name`（空串 = 非符）、`uid`（0 = 非符不记；真符卡全局唯一）、`hp` / `time_limit` / `bonus`、`is_timeout_only`、`move_script` / `shoot_script`、掉落 item 系列、`params`
+- `BossData`（`data/stages/stage01/phase/` 参照）：`boss_name` / `visual` / `phases_normal`（Normal 组）/ `phases_easy/hard/lunatic/extra`（各难度独立、不回退） / `enter_script` / `exit_script` / `score_value` / **`practice_bgm_key`**（见下）
+- `PhaseData`：`name`（空串 = 非符）、`uid`（0 = 非符不记；真符卡全局唯一）、`hp` / `time_limit` / `is_timeout_only`（时符）、`move_script` / `shoot_script`、掉落 item 系列、`params`
+
+> **符卡练习放哪首 BGM（每 Boss 一首）**：练习是按「单张卡」打的、一场只面对一只 Boss，
+> 所以配曲的粒度是 **Boss** 而不是面：
+> - `BossData.practice_bgm_key`（key 取自 `AssetRegistry.BGM_PATHS`）→ **填了就用它**；
+> - 空 → **回落该面的 `StageData.bgm_key`**；两边都空 → 练习静音。
+>
+> 于是「道中 Boss 放道中曲、关底 Boss 放 Boss 曲」= 面默认填道中曲 + **关底 Boss 填 Boss 曲**
+> （本仓库现状：`stage01` 面默认 `stage1`、`卡摩瑞关底` 填 `stage1_boss`；`stageEX` 面默认 `stageEX`、
+> `似新存关底` 填 `stageEX_boss`）。想反过来（面默认 Boss 曲、道中 Boss 覆盖道中曲）也行，链是一样的。
+> ⚠️ 只影响练习；正常关卡的 BGM 由关卡脚本 `stage_director.bgm(key)` 起。
+
+> **奖励分（bonus）不用手填** —— 由规则算（`SpellBonus`）：
+> 初始值 = **难度权重 × 面序号 × 500,000**（乘法）。难度权重：**E/N/H/L = 1/2/3/4，EX = 2**（Extra 单独破例）；
+> **只有符卡有**（`uid != 0`，非符 0）。
+> 面序号取 `StageData.stage_no`（3A/3B 都填 3、6A/6B 都填 6、EX 面填 7；`0` = 回落 `stage_id`）——
+> ⚠️ 别拿 `stage_id` 直接算：它为了存档唯一会把 3B 取 4、EX 取 9。
+> 例：1 面 Easy = 50 万、1 面 Normal = 100 万、3 面 Lunatic = 600 万、6 面 Lunatic = 1,200 万、EX 面 = 700 万。
+> 衰减：**非时符在时限内均匀（线性）衰减到初始值的 30%** —— 走满时限正好落 30%，
+> 故速率 = (初始 − 30%) / `time_limit`（长卡掉得慢、短卡掉得快，**不是固定值**）；
+> **时符（`is_timeout_only = true`）完全不衰减**。
+>
+> **miss / 用 bomb = 本符卡作废（拿不到奖励分）**：这张卡**开卡之后、击破之前**只要 **miss 过一次**（中弹掉残机）
+> 或**用过 bomb**，它的奖励分就作废 —— ① 击破时**一分不给**；② 数字位显示 **「失败」**两个字（前缀仍在：
+> 「奖励分数：失败」），且**定格不衰减**；③ 符卡簿也不算**干净收取**。
+> 判定**每阶段独立**（下一张卡重新算）；阶段开始**之前**用的 bomb 不算在它头上。
+
+> **EX 面 Boss（只配 Extra 档）**：`phases_normal` **可以留空**，只填 `phases_extra` —— 「槽位数」取各难度列的**最大长度**（`BossCatalog.boss_slot_count`），阶段身份 / 一键解锁 / 符卡练习都按它算；练习页对这类面自动**只列 Extra 一档**。
 
 阶段示例（`data/stages/stage03B/phase/spell03/spell055.tres`——黄粱「不可测之梦」）：
 ```gdscript
@@ -322,10 +409,18 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 | Move | `accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift` |
 | Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_speed` `until_state` `until_turned`；`then()` 开新相位 |
 | Action | `sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call` |
-| 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` |
+| 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` / **`reflect(angle)`** |
 
 > - `target` = `T_PLAYER` / `T_BOSS` / `T_NEAREST_ENEMY`。
 > - **`emit`**：相位结束时生成替换弹。第一参 = `BulletData`（推荐）／`Callable（）-> BulletData`（旧写法）／数组（变体发射）。
+> - **`reflect(angle)` 做镜面反弹**：把**当前速度**按发射点所在的场边翻分量（左右翻 x、上墙翻 y、角落原路返回）。
+>   撞哪面墙**不用自己声明**（内核按落点判）→ 不会和 `until_at_wall` 的 mask 脱节：
+>   ```gdscript
+>   lc.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+>   lc.emit(反射弹, BulletLifecycle.reflect(), 150.0, BulletLifecycle.AT_PHASE_END)   # ⚠️ 必须 AT_PHASE_END
+>   lc.despawn()
+>   ```
+>   「镜面 + 微散」= `reflect(deg_to_rad(8.0))`；不贴边（如 `AT_CURRENT` 且在场内）→ 不翻，退化为自身朝向。
 > - **`emit_variant([未命中, 命中], chance_toward(T_PLAYER, p, spread), speed)`**：内核按概率分支抽签，0 = 未中取第 1 个、1 = 命中取第 2 个。
 >   自机狙转红的例子：`lc.emit_variant([_青玉, _红玉], BulletLifecycle.chance_toward(T_PLAYER, 0.1, a), 60.0)`。
 >   **模板永远留在宿主**（内核只回传一个分支号），所以换色 / 换贴图 / 换大小都行。
@@ -350,6 +445,7 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 
 | 工具 | 用法 |
 |------|------|
+| **对话预览** | `godot --path . scenes/ui/dialogue_preview.tscn -- --func=战斗后`（`--list` 列目录 / `--dry` 无头打印整段 / `--shot=x.png` 截图）—— 不用打关卡就能看对话 |
 | 固定种子 | 播放区开关：重跑弹幕序列可复现（调参必备） |
 | 命中框 | 播放区开关：红=敌弹判定、绿=敌人、青=自机、蓝=擦弹 |
 | 逐帧 | 暂停中按 F：精确走 1/60s |
@@ -382,10 +478,16 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
   `CardDef` / `spell_registry.tres` 早已移除（2026-08，放弃"双驱动"）。练习入口默认锁定：
   MainMenu 的 Spell Practice 在符卡簿为空时锁定，有记录（解锁过符卡）才可进入。
 - **菜单页**：`scenes/ui/*_menu.tscn` 继承 BasePage（`scripts/scenes/menu_nav.gd` 导航）
+- **符卡记录页**（`player_data_menu` →「符卡记录」）：列出**当前难度下的全部符卡**（来源是**花名册**，不是记录），
+  三档显示 —— ① **未遇见**：uid +「？？？」（名字不剧透）② **遇见过**（有记录）：真名（普通色）
+  ③ **至少收取过一次**（`captures > 0`）：真名**蓝色**。左右切角色、上下切难度（切难度会重扫花名册）。
 - **对话（DSL 台词内联，2026-08 重构）**：`DialogueSteps` 流程 DSL，**台词直接写在代码里**（与弹幕编排同构）：
   `enter/say/line/move/flip/dim/portrait/bubble/event/wait` → `ctx.play_dialogue_steps(steps)`。
-  `line()` 延续上一说话者、`say(profile, text)` 换人；`d.event(key)` 是行间事件，时机精确。
-  参考：`data/stages/stage01/stage_script/stage01.gd` 战前对话、`docs/DIALOGUE_SYSTEM.md`、剧本归档 `docs/DIALOGUE.md`
+  `line()` 延续上一说话者、`say(profile, text)` 换人；`d.event(key)` 是行间事件，时机精确；
+  `enter()` 返回 `ActorHandle`（`h.line/move/flip/dim/portrait/bubble/exit`，可链式）。
+  台词住在 `data/dialogue/stage/<面>_dialogue.gd`（`static` 构建函数，战前/战后各一支），
+  由 `data/stages/<面>/stage_script/*.gd` 在时间线里调用。
+  参考：`docs/DIALOGUE_SYSTEM.md`、剧本原稿 `docs/DIALOGUE.md`（已实现的面以代码为准）
 
 ---
 

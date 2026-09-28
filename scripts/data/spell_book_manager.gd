@@ -80,13 +80,13 @@ func record_practice_capture(pid: PhaseIdentity) -> void:
 func debug_unlock_all_spells() -> int:
 	var added := 0
 	var roster := BossCatalog.all()
-	# 逐 stage 维护 Boss 槽位偏移（与规范序同源：phases_normal 长度 = 槽位数）
+	# 逐 stage 维护 Boss 槽位偏移（与规范序同源：BossCatalog.boss_slot_count = 槽位数）
 	for stage in roster:
 		var acc := 0
 		var bosses: Array = roster[stage]
 		for bi in bosses.size():
 			var b: BossData = bosses[bi]
-			var shape: int = b.phases_normal.size()
+			var shape: int = BossCatalog.boss_slot_count(b)
 			for diff in SpellRecord.DIFF_VALUES:
 				var arr: Array = b.phases_for_difficulty(diff)
 				for off in mini(arr.size(), shape):

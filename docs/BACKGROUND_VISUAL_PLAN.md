@@ -1,8 +1,11 @@
 # Stage01 道中背景 — 画面效果优化清单
 
-> 状态：**待实施**（性能优化已完成，见文末）
+> 状态：**部分已实施** —— 第一批（E+G 氛围 pass / C 地面距离雾 / D3 树融雾）+ 性能优化已落，见文末「已完成」；**§A–§I 中未打 ✅ 的仍是待做**。
 > 范围：仅背景 SubViewport（弹幕/UI 不受影响）
 > 2026-08-10 记录
+>
+> **本文怎么读**：**§0 是改动前基线（历史快照，别当现状）** · **§A–§I 是待做清单（做了就打 ✅ 或移进文末）** · **文末「已完成」是记录（只增不改）**。
+> 逐条状态权威仍在基线 S 表（S13 背景/图集线）。
 
 ---
 
@@ -97,7 +100,8 @@
 
 ## 验证流程
 
-- ✅ 已建 `tools/background_capture.tscn`：独立渲染背景截图（`godot --path . res://tools/background_capture.tscn -- --out <dir>`，`--fixed-fps 60` 保证两次可比）
+- ⚠️ 当年建的截图工具 `tools/background_capture.tscn` **已不在仓库**（随 2026-08「3D 背景重构 · 死代码清理」提交 `54d7758` 删除；需要时 `git show bfe853f` 取回）。
+  用法（当年）：`godot --path . res://tools/background_capture.tscn -- --out <dir>`，`--fixed-fps 60` 保证两次可比。
 - 改前/改后截图在 `~/Desktop/bg_before/`、`~/Desktop/bg_after/`，对比图 `~/Desktop/compare_t3s.png` / `compare_t9s.png`
 - 注意 6s 相机上移后、10s 加速后的画面都要看（动态效果看视频/实机）
 
@@ -111,7 +115,7 @@
 - ✅ **C**：`background_plane.gdshader` 距离雾 + 平铺扰动；后续修：`fog_disabled` 摆脱环境黑雾、距离改为 vertex 插值（**fragment 的 VIEW 内置在本项目环境返回 0**，需传 cam_pos uniform）、远缘带渐变到天球色（0.29,0.32,0.35）→ 水平线无缝
 - ✅ **D3**：`decor_fade.gdshader` 新 shader —— 树按距离融进雾色/天球色，远处树海不再是硬剪影墙；SCISSOR 层改用此 shader，cam_pos 每帧同步
 - ✅ 地面平面加深 256→340 盖住树带、tiling.y 6→8 保持密度
-- ✅ 新增 `tools/background_capture`：背景截图工具（视口线性→sRGB 修正后存 PNG）
+- ✅ 新增 `tools/background_capture`：背景截图工具（视口线性→sRGB 修正后存 PNG）——**后随 3D 背景重构删除（`54d7758`），见「验证流程」的说明**
 
 ### 性能优化（2026-08-10）
 

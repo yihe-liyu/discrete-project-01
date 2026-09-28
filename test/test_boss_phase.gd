@@ -38,13 +38,13 @@ func before_each():
 	# 副作用由 run_tests.sh 兜底隔离：XDG_DATA_HOME 重定向 user:// + spell_records.tres 备份还原。
 
 
-func _make_phase(hp: int = 100, time_limit: float = 10.0, timeout_only: bool = false, bonus: int = 10000) -> PhaseData:
+func _make_phase(hp: int = 100, time_limit: float = 10.0, timeout_only: bool = false, uid: int = 0) -> PhaseData:
 	var p := PhaseData.new()
 	p.name = "测试符卡" if not timeout_only else ""
 	p.hp = hp
 	p.time_limit = time_limit
 	p.is_timeout_only = timeout_only
-	p.bonus = bonus
+	p.uid = uid   # uid != 0 = 符卡（才有奖励分，见 SpellBonus）
 	return p
 
 
@@ -119,13 +119,52 @@ func test_no_double_clear():
 	assert_signal_emit_count(_boss, "phase_cleared", 1, "phase_cleared 只能发出一次")
 
 
-## bonus 随时间递减
-func test_bonus_decreases_over_time():
-	var phase := _make_phase(100, 10.0, false, 10000)
+## 非时符：奖励分在**时限内均匀**衰减到初始的 30%（规则见 `SpellBonus`，内容不再手填）
+func test_bonus_decays_uniformly_to_30_percent_over_time_limit():
+	_boss._stage_id = 7                             # 面序号 7（无该面内容 → 身份解析 null，不碰存档）
+	var phase := _make_phase(100, 40.0, false, 1)   # uid != 0 = 符卡
 	_boss.start_phase(phase)
-	_boss._process(5.0)  # 过 5 秒
-	assert_lt(_boss._bonus, 10000, "bonus 应随时间递减")
-	assert_gt(_boss._bonus, 0, "bonus 不应在时限内耗尽到负")
+	var start := _boss._bonus
+	assert_gt(start, 0, "符卡应有初始奖励分（非符才是 0）")
+
+	_boss._process(20.0)                            # 走一半时限 → 线性 → 初始的 65%
+	assert_almost_eq(float(_boss._bonus), float(start) * 0.65, float(start) * 0.02,
+		"半程 ≈ 初始的 65%%（线性）")
+
+	_boss._process(20.0)                            # 走满时限 → 30%
+	assert_almost_eq(float(_boss._bonus), float(SpellBonus.decay_floor(start)), float(start) * 0.02,
+		"满时限 ≈ 初始的 30%%")
+
+
+## 下限兜底：时限内怎么掉都不会低于 30%
+func test_bonus_never_below_30_percent():
+	_boss._stage_id = 7
+	var phase := _make_phase(100, 10.0, false, 1)
+	_boss.start_phase(phase)
+	var start := _boss._bonus
+	for i in 30:
+		_boss._process(1.0)
+		assert_gte(_boss._bonus, SpellBonus.decay_floor(start), "第 %d 秒仍不低于 30%%" % (i + 1))
+
+
+## 时符：奖励分**不**衰减（作者 2026-09-26 规则）
+func test_timeout_only_spell_bonus_does_not_decay():
+	_boss._stage_id = 7                             # 挂个面序号，否则初始奖励分本身就是 0
+	var phase := _make_phase(100, 60.0, true, 2)    # 时符 + 符卡
+	_boss.start_phase(phase)
+	var start := _boss._bonus
+	assert_gt(start, 0, "时符也是符卡 → 有初始奖励分")
+	_boss._process(30.0)
+	assert_eq(_boss._bonus, start, "时符不掉奖励分")
+
+
+## 非符：没有奖励分（原作口径）→ 不掉、也不加分
+func test_nonspell_bonus_is_zero():
+	var phase := _make_phase(100, 60.0, false, 0)
+	_boss.start_phase(phase)
+	assert_eq(_boss._bonus, 0, "非符奖励分 = 0")
+	_boss._process(10.0)
+	assert_eq(_boss._bonus, 0, "非符不掉（本来就是 0）")
 
 
 ## 掉落表：按配置精确生成掉落（用 CtxSpy 记录）
@@ -343,3 +382,179 @@ func test_without_pre_move_declares_immediately():
 	assert_true(fired[0], "没配走位 → 立刻宣言")
 	if GameEvents.phase_start.is_connected(cb):
 		GameEvents.phase_start.disconnect(cb)
+
+
+# ═══════════ 全破演出（play_defeat） ═══════════
+
+## 全破定格必须**保存原 time_scale 再恢复**，不能硬写 1.0 ——
+## 工作台有 12x 快进（同样是 Engine.time_scale），硬写会把工具拉回常速。
+## 无 ctx 时演出其余部分全走守卫（静默跳过），所以本用例只锁定格这条不变量。
+func test_play_defeat_hitstop_saves_and_restores_time_scale():
+	add_child(_boss)                     # create_tween / 计时器需要入树
+	var original := Engine.time_scale
+	Engine.time_scale = 4.0              # 模拟工作台快进
+	_boss.play_defeat()
+	assert_almost_eq(Engine.time_scale, 4.0 * Boss.DEFEAT_HITSTOP_SCALE, 0.001,
+		"定格应把时间倍率压低（保存原值 × 倍率）")
+	_boss._restore_time_scale()          # 等价于定格计时器到点
+	assert_almost_eq(Engine.time_scale, 4.0, 0.001, "必须恢复**原值** 4.0，而不是硬写 1.0")
+	Engine.time_scale = original
+
+
+## 定格途中 Boss 被回收（关卡结束/切场景）→ _exit_tree 兜底恢复，绝不把游戏留在慢动作
+func test_play_defeat_exit_tree_restores_time_scale():
+	var boss := Boss.new()
+	add_child_autofree(boss)
+	Engine.time_scale = 1.0
+	boss.play_defeat()
+	assert_lt(Engine.time_scale, 1.0, "已进入定格")
+	boss._exit_tree()
+	assert_almost_eq(Engine.time_scale, 1.0, 0.001, "出树兜底恢复")
+
+
+## 记录被加进层的反色圈（只关心"加了几发、圆心/半径"）
+class RingLayerSpy:
+	extends MissCircleLayer
+	var centers: Array[Vector2] = []
+	var radii: Array[float] = []
+	func add_circle(world_pos: Vector2, _duration: float = 0.8, max_radius: float = 1280.0,
+			_start_radius: float = 0.0, _start_delay: float = 0.0, _fade_out: float = 0.0) -> void:
+		centers.append(world_pos)
+		radii.append(max_radius)
+
+
+## 全破的反色圈必须**与自机 miss 同一套参数**（作者指出过：同心不等半径不是 miss 的做法）：
+## 5 发同半径、圆心呈十字 ±100 偏移，外加 1 发延迟补闪 —— 共 6 发。
+func test_play_defeat_spawns_miss_style_inverted_rings():
+	var rt := StageRuntime.new()
+	rt.miss_layer = RingLayerSpy.new()   # 注入槽可直接写 → 拿来数圈
+	var ctx := StageContext.new(null)
+	ctx.stage = rt
+	var boss := Boss.new()
+	add_child_autofree(boss)
+	boss.setup(BossData.new(), ctx)
+	boss.global_position = Vector2(111.0, 222.0)
+
+	boss.play_defeat()
+
+	var layer: RingLayerSpy = rt.miss_layer
+	assert_eq(layer.centers.size(), 6, "5 发十字 + 1 发延迟补闪 = 6 发")
+	var expected_centers := 0
+	for offset in Boss.DEFEAT_RING_OFFSETS:
+		if layer.centers.has(boss.global_position + offset):
+			expected_centers += 1
+	assert_eq(expected_centers, 5, "五发圆心 = Boss 位置 + 十字偏移（与 miss 同）")
+	for radius in layer.radii:
+		assert_almost_eq(radius, Boss.DEFEAT_RING_RADIUS, 0.001, "六发同半径（1280 满屏）")
+	Engine.time_scale = 1.0
+	rt.free()
+
+
+# ═══════════ 奖励分作废（miss / 用 bomb） ═══════════
+
+## 轻量玩家桩：`EntityRegistry.get_player_resources()` 只认 `player.get("resources")`
+class PlayerResStub:
+	extends Node2D
+	var resources: PlayerResources
+
+
+## 接一个能读分数的 registry（`Boss._refs()` 优先用它）
+func _bind_score_registry(p_boss: Boss) -> PlayerResources:
+	var res := PlayerResources.new()
+	res.reset_all()
+	var player_stub := PlayerResStub.new()
+	player_stub.resources = res
+	add_child_autofree(player_stub)
+	var registry := EntityRegistry.new()
+	registry.bind_player(player_stub)
+	p_boss.registry = registry
+	return res
+
+
+## bomb 与 miss **同罪**：本符卡奖励分作废，且奖励分**定格**（不再衰减、不再发数字 tick）
+func test_bomb_fails_bonus_and_freezes_it():
+	_boss.setup(BossData.new(), null)
+	_boss._stage_id = 7
+	var phase := _make_phase(1000, 30.0, false, 11)
+	_boss.start_phase(phase)
+	assert_false(_boss.is_bonus_failed(), "刚开卡不该作废")
+	assert_gt(_boss.current_bonus(), 0, "符卡应有初始奖励分")
+
+	GameEvents.player_bomb.emit("测试 bomb")
+
+	assert_true(_boss.is_bonus_failed(), "用 bomb 应作废本符卡奖励分")
+	var frozen := _boss.current_bonus()
+	var ticks := [0]
+	var cb := func(_b: int) -> void: ticks[0] += 1
+	GameEvents.phase_bonus_tick.connect(cb)
+	_boss._process(5.0)
+	GameEvents.phase_bonus_tick.disconnect(cb)
+	assert_eq(_boss.current_bonus(), frozen, "作废后不再衰减（UI 的「失败」要定格）")
+	assert_eq(ticks[0], 0, "作废后不再发数字 tick（否则下一帧会覆盖「失败」）")
+
+
+## miss 也作废（原有"miss 不算干净收取"的规则之上，再断掉奖励分）
+func test_miss_fails_bonus():
+	PracticeSession.is_practice_mode = false        # 正篇才走 miss 标记（练习走 _die）
+	_boss.setup(BossData.new(), null)
+	_boss._stage_id = 7
+	_boss.start_phase(_make_phase(1000, 30.0, false, 12))
+	GameEvents.player_missed.emit()
+	assert_true(_boss.is_bonus_failed(), "miss 应作废本符卡奖励分")
+
+
+## 还没开卡就用 bomb → 不作废（没在打这张卡）
+func test_bomb_before_phase_does_not_fail_bonus():
+	_boss.setup(BossData.new(), null)
+	GameEvents.player_bomb.emit("测试 bomb")
+	assert_false(_boss.is_bonus_failed(), "阶段开始前用 bomb 不该算在符卡头上")
+
+
+## 作废后击破：**一分不给**（阶段本身照样算击破）
+func test_failed_bonus_awards_no_score():
+	_boss.setup(BossData.new(), null)
+	_boss._stage_id = 7
+	_boss.start_phase(_make_phase(100, 30.0, false, 13))
+	var res := _bind_score_registry(_boss)
+	GameEvents.player_bomb.emit("测试 bomb")
+	_skip_hp_tween()
+	_boss.take_damage(100)
+	assert_eq(res.current_score, 0, "作废 → 奖励分一分不给")
+
+
+## 对照组：没作废时照常给分（锁住"不是把给分整个关掉了"）
+func test_clean_capture_awards_bonus():
+	_boss.setup(BossData.new(), null)
+	_boss._stage_id = 7
+	_boss.start_phase(_make_phase(100, 30.0, false, 14))
+	var res := _bind_score_registry(_boss)
+	var expect := _boss.current_bonus()
+	assert_gt(expect, 0, "符卡应有正奖励分（否则这条测试没意义）")
+	_skip_hp_tween()
+	_boss.take_damage(100)
+	assert_eq(res.current_score, expect, "干净击破应照常给奖励分")
+	assert_false(_boss.is_bonus_failed(), "没 miss / 没用 bomb → 不作废")
+
+
+## **回归（作者报）**：作废后「只跳过奖励分」，`_process` 其余职责照常 ——
+## 曾写成 `if is_bonus_failed(): return`（早退），把**开卡减伤倒计时**与**时限判定**一起掐掉：
+## 后果是 miss 后符卡倒计时到 0 也不结束、减伤永久挂着。
+func test_failed_bonus_still_times_out_and_clears_open_reduce():
+	PracticeSession.is_practice_mode = false
+	_boss.setup(BossData.new(), null)
+	_boss._stage_id = 7
+	var phase := _make_phase(1000, 1.0, false, 15)
+	_boss.start_phase(phase)
+	_boss._open_reduce_left = 0.5            # 开卡减伤还有 0.5s
+	_boss._open_reduce_ratio = 0.5
+	watch_signals(_boss)
+
+	GameEvents.player_bomb.emit("测试 bomb")
+	assert_true(_boss.is_bonus_failed(), "作废了")
+
+	_boss._process(0.6)                      # 走掉减伤
+	assert_eq(_boss._open_reduce_left, 0.0, "作废后减伤倒计时仍要照常走完")
+
+	_boss._process(0.6)                      # 累计 1.2s > 时限 1.0s
+	assert_signal_emitted(_boss, "phase_cleared", "作废后符卡仍应到点结束")
+	assert_true(_boss._is_cleared, "阶段应已收尾（clear_phase 只置标记，不清 _phase_data）")

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bbcgc00yxcv1r"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_ptvh3"]
+
+[resource]
+script = ExtResource("1_ptvh3")
+name = "始终意「人无完人，迥异同死」"
+uid = 169
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

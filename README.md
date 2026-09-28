@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-310%20tests%20/%2057%20scripts-green)]()
+[![Tests](https://img.shields.io/badge/GUT-620%20tests%20/%20108%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -38,30 +38,36 @@
 | 叙事 | ██████████ 50% |
 | 打磨/QoL | ██████████████ 70% |
 
-已知待做：Bomb 系统、Stage 2~6、Stage Practice、Replay 播放器、结算画面。
+已知待做：Stage 2~6 内容（面脚本 / Boss / 符卡）、Stage Practice、Replay 播放器、结算画面、各页面逐页核验。
+待办逐条清单在 [docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md) 的「🔴 待改进」与本地 `TODO_TEMP.md`。
 
 ---
 
 ## 📖 文档索引
 
 > 文档地图 —— 每件事找"该读的那一份"，避免到处翻。
+>
+> **分工（同一信息只有一处写权威版）**：规则与状态 = `BEST_PRACTICES_BASELINE.md` · 架构契约 = `ARCHITECTURE.md` ·
+> 历史与"为什么" = `BEST_PRACTICES_LOG.md` + `docs/archive/` · 参考资料 = `DANMAKU_API.md` / `LIFECYCLE_MODEL.md` /
+> `BULLET_PIPELINE.md` / `TEST_INDEX.md` / `CONTENT_GUIDE.md` · 内容原稿 = `DIALOGUE.md` / `docs/*.txt`（随实现走，非权威）。
 
 | 文档 | 内容 | 适合 |
 |------|------|------|
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | 架构契约 —— 分层 / 系统地图 / 所有权 / 边界铁律 / 债清单 / 命名禁令 | 开发者（首选） |
-| **[docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md)** | 项目基线 —— STG 品质需求 S1–S13 × 工程红线 R1–R22 + 帧序/层序/命名契约 + 实测审计 | 维护者 |
-| **[docs/BEST_PRACTICES_LOG.md](docs/BEST_PRACTICES_LOG.md)** | 最佳实践日志 —— 每个改动的「为什么 / 踩坑 / 验收」（唯一历史记录） | 维护者 |
-| **[docs/GDEXTENSION_KERNEL_DESIGN.md](docs/GDEXTENSION_KERNEL_DESIGN.md)** | 原生弹幕内核**北极星设计**（已落地） | 内核/桥接 |
-| **[docs/N2_NATIVE_INTEGRATION_PLAN.md](docs/N2_NATIVE_INTEGRATION_PLAN.md)** | 原生内核**接入与拆除记录**（已完成） | 内核/桥接 |
+| **[docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md)** | 项目基线（**改动前必读，只留规则与状态**）—— 改动前 60 秒 + S1–S13 状态总表 + R1–R22 + 帧序/层序/命名/注入/会话契约；**证据与实测审计**在 [docs/BASELINE_EVIDENCE.md](docs/BASELINE_EVIDENCE.md) | 维护者 |
+| **[docs/BEST_PRACTICES_LOG.md](docs/BEST_PRACTICES_LOG.md)** | 最佳实践日志 —— 每个改动的「为什么 / 踩坑 / 验收」（唯一历史记录）。**顶部索引**列全部条目，正文只留最近几天，更早在 `docs/archive/`（`python3 tools/log_archive.py` 维护） | 维护者 |
+| **[docs/GDEXTENSION_KERNEL_DESIGN.md](docs/GDEXTENSION_KERNEL_DESIGN.md)** | 原生弹幕内核**北极星设计**（已落地；§5 通用 VM 部分**已被取代**，见文内横幅） | 内核/桥接 |
 | **[docs/LIFECYCLE_MODEL.md](docs/LIFECYCLE_MODEL.md)** | 弹幕生命周期模型（已落地 L1–L4） | 行为/内容 |
 | **[docs/DANMAKU_API.md](docs/DANMAKU_API.md)** | **弹幕内核 API 参考** —— BulletData / BulletLifecycle 全词汇 + 发射 + ctx 服务 + 素材表 + 陷阱 | 弹幕创作者 |
+| **[docs/BULLET_PIPELINE.md](docs/BULLET_PIPELINE.md)** | **一颗弹的完整路径** —— 定义 → 发射 → 每物理帧 → 渲染 → 回收 + 边界职责（改链路前看） | 内核/渲染 |
 | **[CONTENT_GUIDE.md](CONTENT_GUIDE.md)** | 内容制作流程 —— 怎么加关卡/敌人/Boss/符卡 | 关卡设计师 |
-| **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 | 编剧 |
-| **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（剧本归档） | 编剧 |
-| **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（待实施） | 维护者 |
-| **[docs/TEST_INDEX.md](docs/TEST_INDEX.md)** | **测试索引** —— 99 个测试文件「改哪里 → 看哪条」+ 分层 + D3 白盒债清单 + 已知门禁坑 | 维护者 |
-| **[docs/omake.txt](docs/omake.txt)** | 附言、Extra Story、全角色设定 | 玩家/读者 |
-| **[docs/archive/](docs/archive/)** | 已归档：SPEC / ROADMAP / REFACTORING / STAGE_FLOW / SPELL_SYSTEM / CREATION_STATION / NEW_KERNEL_REFACTOR_PLAN / M3_TEXTURE / REBUILD_REPO_STATUS / 旧审计 | 历史 |
+| **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 / 预览与干跑 | 编剧 |
+| **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（**剧本原稿**）—— 已实现关卡（Stage 1）以 `data/dialogue/stage/*.gd` 为准 | 编剧 |
+| **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（未做项 + 已完成记录） | 维护者 |
+| **[docs/TEST_INDEX.md](docs/TEST_INDEX.md)** | **测试索引** —— 108 个测试文件「改哪里 → 看哪条」+ 分层 + D3 白盒债清单 + 已知门禁坑（计数口径以本文为准） | 维护者 |
+| `docs/*.txt` | 原始设定资料：[omake.txt](docs/omake.txt)（附言 / Extra Story / 全角色设定）· [music.txt](docs/music.txt)（曲目）· [SpellCard.txt](docs/SpellCard.txt)（符卡名）· [FrontData.txt](docs/FrontData.txt) | 玩家/作者 |
+| `TODO_TEMP.md` | 作者**本地**临时待办（`.gitignore` 忽略、**不进 Git**、非权威） | 作者本人 |
+| **[docs/archive/](docs/archive/)** | 已归档（**一句话价值见 [ARCHIVE_INDEX.md](docs/archive/ARCHIVE_INDEX.md)**）：SPEC / ROADMAP / REFACTORING / STAGE_FLOW / SPELL_SYSTEM / CREATION_STATION / NEW_KERNEL_REFACTOR_PLAN / **N2 接入与拆除记录** / M3_TEXTURE / REBUILD_REPO_STATUS / 旧审计 / 按月日志 | 历史 |
 
 ### 我在做什么？看哪份？
 
@@ -70,11 +76,16 @@
 | 「这项目怎么组织 / 谁归谁管 / 怎么改对」 | docs/ARCHITECTURE.md |
 | 「项目现在什么状态 / 还差什么」 | docs/BEST_PRACTICES_BASELINE.md |
 | 「为什么当初这么改 / 踩过什么坑」 | docs/BEST_PRACTICES_LOG.md |
-| 「原生内核接入到哪了 / 怎么拆的」 | docs/N2_NATIVE_INTEGRATION_PLAN.md + docs/GDEXTENSION_KERNEL_DESIGN.md |
+| 「原生内核接入到哪了 / 怎么拆的（已完成的历史）」 | [docs/archive/N2_NATIVE_INTEGRATION_PLAN.md](docs/archive/N2_NATIVE_INTEGRATION_PLAN.md) + docs/GDEXTENSION_KERNEL_DESIGN.md |
+| 「archive 里那一堆是什么 / 哪篇值得看」 | docs/archive/ARCHIVE_INDEX.md |
 | 「怎么写一颗弹 / 一套弹幕」 | docs/DANMAKU_API.md（参考）+ CONTENT_GUIDE.md §六（教学） |
+| 「这颗弹从定义到画出来走了哪些步 / 谁负责」 | docs/BULLET_PIPELINE.md |
 | 「怎么加一个新敌人 / 符卡」 | CONTENT_GUIDE.md |
-| 「某面角色说什么台词」 | docs/DIALOGUE.md |
+| 「某面角色说什么台词 / 台词和代码不一致找谁」 | docs/DIALOGUE.md（原稿）→ 已实现面看 data/dialogue/stage/*.gd |
+| 「对话怎么写 / 怎么预览与干跑」 | docs/DIALOGUE_SYSTEM.md + `scenes/ui/dialogue_preview.tscn` |
 | 「改了某处，哪条测试在保护它 / 重构会不会踩到测试」 | docs/TEST_INDEX.md |
+| 「我自己记的临时待办」 | TODO_TEMP.md（本地，不进 Git） |
+| 「这些文档各自什么性质 / 哪份是权威」 | README.md 本表 + docs/ARCHITECTURE.md §7 |
 | 「怎么跑 / 怎么测 / 快捷键」 | README.md（本页） |
 
 ---
@@ -98,11 +109,14 @@
 ./test/run_tests.sh
 ```
 
-### 一键验证（语法 + 启动 + 测试）
+### 一键验证（文档哨兵 + 语法 + 命名 + 启动 + 测试 + 所有权）
 
 ```bash
 ./tools/verify.sh
 ```
+
+> 第 1 步是**文档哨兵**（`tools/check_docs.py`）：TEST_INDEX 的测试清单 / 抬头数字 / README 徽章 /
+> `DANMAKU_API` 的弹型与音效 key 表 / README 链接 / 滚动日志，全部对着代码与数据机械核对 —— 文档数字再也不会静默腐烂。
 
 ### 开发常用
 

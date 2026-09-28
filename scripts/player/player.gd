@@ -37,6 +37,11 @@ var input_vector: Vector2 = Vector2.ZERO
 var is_focused: bool = false
 var is_invincible: bool = false
 var _invincible_timer: float = 0.0
+## 中弹后自机移动的**最终位置** = 复位点（默认 `MISS_RESPAWN_POS` = "正中偏下"）。
+## 两步里的**第二步终点**；第一步是瞬移到 `MISS_RESPAWN_FROM`（框下正中）。
+var _respawn_pos: Vector2 = MISS_RESPAWN_POS
+## 中弹复位移动进行中 → 锁移动输入（tween 正在写 position，别跟输入抢）
+var _is_respawning: bool = false
 
 var hitbox_radius: float = 5.0
 var graze_radius: float = 40.0  # 擦弹判定半径
@@ -152,6 +157,8 @@ func update_hitbox_display() -> void:
 		_hit_point_display.hide_hitpoint()
 
 func update_move(delta: float) -> void:
+	if _is_respawning:
+		return  # 复位移动期间锁输入（位置由 tween 写）
 	var move_input: Vector2 = input_vector
 	# 归一化对角线速度，使斜向移动速度不增加
 	if move_input.length() > 1.0: move_input = move_input.normalized()
@@ -270,6 +277,20 @@ func _force_collect_all_items() -> void:
 			child.force_collect()
 
 
+## Miss 的"赔偿点"：在自机处撒 MISS_POWER_COUNT 个 P 点，绕自机**向上 180° 均匀弧形**
+## （中轴 = 正上方，含两端点 → 10 个点相邻 20°），**左右夹在场地框内**（贴墙时靠墙一侧横向压扁、
+## 纵向半径不变 → 连同随后竖直下落的轨迹都不会出框）。两段式：
+## ① 沿弧向飞到目标点（`MISS_POWER_HANG` 秒，期间不被吸附）→
+## ② 径向初速归零 → **竖直下落**（`Item.burst` 的语义）。走 `ctx.items` 服务；无 ctx（单测/无舞台）时安全跳过。
+func _spawn_miss_power_fan(pos: Vector2) -> void:
+	if ctx == null:
+		return
+	var targets := ItemService.fan_targets(MISS_POWER_COUNT, pos, Vector2.UP,
+			MISS_POWER_SPREAD_DEG, MISS_POWER_RADIUS,
+			FRONT_LEFT + MISS_POWER_MARGIN, FRONT_RIGHT - MISS_POWER_MARGIN)
+	ctx.items.spawn_fan(Item.Type.POWER, pos, targets, MISS_POWER_HANG)
+
+
 func _spawn_one_item(at: Vector2, limits: Dictionary) -> void:
 	const MAX_LIFE := 2
 	const MAX_BOMB := 2
@@ -307,6 +328,24 @@ func _find_item_pool() -> ItemPool:
 
 # ═══ Miss ═══
 
+## Miss 撒出的 P 点数量（绕自机、向上均匀半圆）
+const MISS_POWER_COUNT: int = 10
+## 扇形总张角：180° = 向上半圆（含两端点 → 相邻 20°）
+const MISS_POWER_SPREAD_DEG: float = 180.0
+## 两段式的第一段：沿弧向飞 `MISS_POWER_HANG` 秒，飞到 `MISS_POWER_RADIUS` 处
+const MISS_POWER_HANG: float = 0.45
+## 弧半径（px）。**必须 > `Item.PROXIMITY_RANGE`(128)**：否则弧飞完那一刻就落进吸附圈被吸走，
+## 第二段"竖直下落"根本看不到（`test_player` 有一条契约测试守着这个不等式）。
+const MISS_POWER_RADIUS: float = 240.0
+## 左右留白（px）：道具贴图 32×32，整张也要留在场地框内 → 目标点横坐标夹在 [框左+16, 框右−16]
+const MISS_POWER_MARGIN: float = 16.0
+## 中弹复位移动的**起点**（第一步瞬移到这里）：水平正中、**场地框下方之外**（船从框下升进场）。
+const MISS_RESPAWN_FROM := Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_BOTTOM + 96.0)
+## 中弹复位移动的**终点**默认值（第二步走到这里）= "正中偏下"（场地底部上方 88px、水平正中）
+const MISS_RESPAWN_POS := Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_BOTTOM - 120.0)
+## 复位移动时长（秒）
+const MISS_RESPAWN_TIME: float = 1.0
+
 func miss() -> void:
 	if is_invincible:
 		return
@@ -325,6 +364,12 @@ func miss() -> void:
 	# Miss 后记忆值增加 25%
 	resources.add_memory(PlayerResources.MEMORY_MISS)
 
+	# 火力惩罚（原作口径）：miss 削 50 火力（clamp 0..300）
+	resources.on_miss_power_penalty()
+
+	# 在自机处撒 10 个 P 点：绕自机、向上 180° 均匀弧形（宽限内不被吸走，先飞成弧）
+	_spawn_miss_power_fan(pos)
+
 	# 每次 miss 都通知（boss 判定 miss 后不收；player_death 只在残机 0 发，不能复用）
 	GameEvents.player_missed.emit()
 
@@ -338,6 +383,25 @@ func miss() -> void:
 		is_invincible = true
 		_invincible_timer = 3.0
 		GameEvents.player_death.emit()
+
+	# ── 自机复位（**必须放在最后**）────────────────────────────────────────
+	# 上面所有演出/撒点用的都是 `pos`（中弹那一刻的位置）——反色圈必须留在中弹处，
+	# 所以移动自机这件事只能在最后做，否则圈会画到移动后的位置上。
+	# ① 瞬移到**场地框下方之外**（水平正中）—— 让船从框下升进来
+	global_position = MISS_RESPAWN_FROM
+	# ② 从那里移动到 `_respawn_pos`（复位点 = 终点）
+	_move_to_respawn()
+
+
+## 中弹复位第二步：从 `MISS_RESPAWN_FROM`（框下正中）移动到 `_respawn_pos`（复位点），期间锁移动输入。
+func _move_to_respawn() -> void:
+	if _is_respawning:
+		return
+	_is_respawning = true
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "global_position", _respawn_pos, MISS_RESPAWN_TIME)
+	tween.finished.connect(func() -> void: _is_respawning = false)
 
 
 # ═══ 系统操作服务（统一走 ctx 服务；ctx 为 null 时跳过，不回退全局） ═══

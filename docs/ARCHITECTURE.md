@@ -58,15 +58,18 @@
 ### 2.1.5 弹幕链路（端到端 · 追一条弹）
 
 ```
-内容弹丸脚本 *_bullet.gd
-  └─ kernel_port() → {move, params}
-       └─ KernelBulletHost.prepare_shot()        ← _port_for() 缓存端口
+内容面 = data/bullets/<key>.tres（BulletDef：外观/碰撞/朝向）+ 发射脚本里的 BulletData.trajectory(lc)
+  └─ BulletLifecycle（Phase/Move/Until/Action 描述符，内容直接挂）
+       └─ KernelBulletHost.prepare_shot()        ← 描述符装配 / 缓存
             └─ KernelNativeSystem.spawn()           ← 原生 DanmakuStore.spawn + set_hitbox + set_program
                  └─ [每物理帧] DanmakuStore.integrate() + behavior_tick()    ← 积分 + 行为，全原生
                       └─ KernelNativeSystem._pull_snapshot()                 ← 原生 → GDScript 只读快照
                            ├─ 渲染：BulletMultiMesh._sync_native() → DanmakuRenderBridge → MultiMesh
                            └─ 判定：KernelBulletPhysics → system.query_circle / hit_test（原生宽相网格）
 ```
+
+> 旧的 `*_bullet.gd` 载体（`kernel_port()` 端口）**已弃用**：`data/**` 里 0 个文件，只剩 `kernel_bridge` 里的测试夹具通路
+> （CONTENT_GUIDE §六 ⑥ 有历史说明）。
 
 - **权威存储** = 原生 `DanmakuStore`（`gdextension/src/danmaku_store.{h,cpp}`）；GDScript 只是每帧只读快照。
 - **行为** = `LifecycleCatalog` 把 `move+params` 映射成 `BulletLifecycle` → `compile()` 成 packed program → 原生 `behavior_tick`。
@@ -164,7 +167,7 @@
 - 加新 bomb = 一个 `XxxBombData extends BombData` + 一个 `KernelXxxBomb extends BombEntity` + `spawn_bomb` 一条分派；不需要动内核。
 
 ### 新增弹幕行为（`move`）
-- **组合现有原语**（推荐）：`LifecycleCatalog.build()` 加分支（`move+params` → `BulletLifecycle` preset），内容写 `kernel_port()`；**无需改 C++**。
+- **组合现有原语**（推荐）：`LifecycleCatalog.build()` 加分支（`move+params` → `BulletLifecycle` preset）后，内容直接 `BulletData.trajectory(lc)`；**无需改 C++**，也不用写 `*_bullet.gd`。
 - **要新原语**（新 Move / Until / Action）才动 `gdextension/src/danmaku_store.cpp`（`_exec_move` / `_check_until` / `_exec_action`）+ `BulletLifecycle` 编译；改完重建扩展。
 - 权威参数表见 `CONTENT_GUIDE.md`「弹幕行为接口」。
 
@@ -181,13 +184,18 @@
 
 - **总纲（本文）**：分层/系统地图/所有权/边界/债/操作指南。
 - **内核迁移（历史，已完成）**：`docs/archive/NEW_KERNEL_REFACTOR_PLAN.md`（Strangler→融合 M1–M3）。
-- **弹幕内核（现状 ✅）**：原生 GDExtension `DanmakuStore` 为**唯一存储**（L3.5-4e/4f，`KernelNativeSystem` 桥接）；设计见 `docs/GDEXTENSION_KERNEL_DESIGN.md`，接入/拆除见 `docs/N2_NATIVE_INTEGRATION_PLAN.md`；冻结参照 `test/reference/`。
+- **弹幕内核（现状 ✅）**：原生 GDExtension `DanmakuStore` 为**唯一存储**（L3.5-4e/4f，`KernelNativeSystem` 桥接）；设计见 `docs/GDEXTENSION_KERNEL_DESIGN.md`，接入/拆除见 `docs/archive/N2_NATIVE_INTEGRATION_PLAN.md`；冻结参照 `test/reference/`。
 - **路线**：`docs/archive/STAGE_FLOW_PLAN.md`（(b) 规划：对象自治/身份归位/命令化 + 七步；Step 1 / 3 / 4 已完成）。
 - **对话**：`docs/DIALOGUE_SYSTEM.md`（当前系统）+ `docs/DIALOGUE.md`（剧本归档）。
 - **符卡**：`docs/archive/SPELL_SYSTEM_TARGET.md`（目标蓝图，核心已由 `boss_catalog.gd` 落地）。
 - **背景**：`docs/BACKGROUND_VISUAL_PLAN.md`。
 
 ## 8. 命名约定 · 禁令 · 现状（并入自 SPEC §14/§15/§17）
+
+> **权威顺序**：机械校验 `./tools/check_naming.sh`（0 违规 = 达标）> 基线 `BEST_PRACTICES_BASELINE.md`
+> 「命名边界契约」/ R15（严格版：私有字段 `_`+类型 snake、一个私有名只归一个类型、`p_` 前缀仅用于形参遮蔽、
+> 单字母三例外、中文只进内容槽）> 本节（**入门摘要**，冲突时以上面两处为准）。**状态类信息**（待补 / 债务 / 缺什么）
+> 的权威在基线 S 表与「🔴 待改进」，本节 §8.3 只是给架构读者的粗粒度印象。
 
 ### 8.1 命名约定
 | 类别 | 约定 | 例 |
@@ -214,11 +222,13 @@
 - ❌ 场景切换期间读 `current_scene` 子节点
 - ❌ 直接改 `.uid` 文件（Godot 维护）
 
-### 8.3 现状 / 待补 / 债务（SPEC §17 摘）
-- ✅ 已实现：引擎核心/Autoload、弹幕、敌人Boss、玩家、协程框架、道具、特效、背景、音频、UI/菜单、对话、记忆释放、数据类、Stage1。
-- ⏳ 待补：Stage 2~6、Boss 战多面、部分美术占位。
-- 🐛 债务：DifficultyScreen 覆写 NavPage 90%、PauseMenu/GameOverMenu `_on_leave` 重复。
-- 🚧 缺：Bomb 释放（`cancel&bomb` 未接读取）、Stage Practice（占位）、Replay（只录不放）、Continue/Result 结算。
+### 8.3 现状 / 待补 / 债务（**粗粒度摘要**；逐条权威 = 基线 S 表 + 「🔴 待改进」）
+- ✅ 已实现：引擎核心/Autoload、弹幕（原生权威）、敌人 Boss、玩家与 Bomb（`BombData`/`RingBombData`/`MistBombData` + `PlayerResources.use_bomb`）、协程框架、道具、特效、背景、音频、UI/菜单、对话、记忆释放、数据类、Stage 1。
+- ⏳ 待补：Stage 2~6 内容（面脚本 / Boss / 符卡脚本）、Boss 战多面、部分美术占位、各页面 F6 逐页核验。
+- 🐛 债务：`DifficultyScreen`(287) 与基类 `NavPage`(353) 同名函数 **12/23**（`navigate` / `_nav_directional` / `refresh_colors` / `accept_current` …）→ 抽差分化；`workbench.gd` / `spell_practice_menu.gd` 上帝对象（R18/R19）。
+- 🚧 缺：Stage Practice（`stage_practice_menu.gd` 仍是占位）、Replay（只录不放）、Continue/Result 结算。
+
+> 曾经登记的「`PauseMenu`/`GameOverMenu` 的 `_on_leave` 重复」已随基类收口消失（全项目已无 `_on_leave`）；「Bomb 释放未接」也已落地 —— 修完即删，别留在本文。
 
 > 完整/原始的命名与文件树见已归档的 `docs/archive/SPEC.md`（未来不再逐系统维护，交给 ARCHITECTURE + 子系统文档）。
 

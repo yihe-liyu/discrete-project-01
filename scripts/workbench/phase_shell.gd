@@ -11,7 +11,6 @@ func build_copy(base: PhaseData, move_script: Script, shoot_script: Script,
 	var d := PhaseData.new()
 	d.name = base.name
 	d.uid = base.uid
-	d.bonus = base.bonus
 	d.time_limit = time_override
 	d.hp = int(hp_override)
 	d.is_timeout_only = base.is_timeout_only

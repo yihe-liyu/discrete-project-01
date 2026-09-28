@@ -135,14 +135,15 @@ func _ready() -> void:
 	_check_phase_uid_conflicts()
 
 
-## phase 倒计时（仿真游戏 BossUI）：两位秒数、框顶中央，间隙/无 Boss 隐藏
+## phase 倒计时（仿真游戏 BossUI）：两位秒数、框顶中央**符卡名下方**，间隙/无 Boss 隐藏
 func _setup_phase_timer() -> void:
 	_phase_timer_label = Label.new()
 	_phase_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_phase_timer_label.add_theme_font_size_override("font_size", 32)
+	# y 与 BossUI.TimerLabel 对齐（场景 offset_top = 64：场地坐标即 FIELD_TOP + 64）—— 别和符卡名同高
 	_phase_timer_label.position = Vector2(
 		GameConfig.FIELD_LEFT + (GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT) / 2.0 - 16.0,
-		GameConfig.FIELD_TOP + 16.0)
+		GameConfig.FIELD_TOP + 64.0)
 	_phase_timer_label.visible = false
 	$UI.add_child(_phase_timer_label)
 
