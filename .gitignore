@@ -22,8 +22,7 @@ package.json
 # 临时工作清单（做完一条删一条；不进库）
 TODO_TEMP.md
 
-# 一次性探针产出的截图（临时证据，看完可删）
-tmp_probe_miss_fan/
+# 注：探针产物放 `.godot/probe/` —— `.godot/`（见上）已整目录忽略，不需要单独规则。
 
 # GDExtension 构建产物（.so / .gdextension 都随构建生成，不入库）：
 # 未构建 = 无扩展 = 游戏照跑 GDScript；构建后才加载原生。
