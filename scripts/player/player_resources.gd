@@ -118,11 +118,18 @@ func collect_bomb_full() -> void:
 
 ## 使用一个 Bomb：有存货返回 true 并扣除，否则 false
 func use_bomb() -> bool:
-	if bomb_count <= 0:
-		return false
-	bomb_count -= 1
+	return use_bombs(1) == 1
+
+
+## 一次用掉至多 `count` 个 Bomb（**不足则把手上的用完**），返回实际消耗数。
+## 被弹炸弹（deathbomb）用它一次扣 2 —— 只剩 1 个时就只扣 1。
+func use_bombs(count: int) -> int:
+	var used := mini(maxi(count, 0), bomb_count)
+	if used <= 0:
+		return 0
+	bomb_count -= used
 	changed.emit()
-	return true
+	return used
 
 
 ## 每帧记忆自然恢复（不发信号：UI 不需要每帧刷）

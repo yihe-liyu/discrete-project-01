@@ -39,3 +39,10 @@ signal screen_shake_sustain(amount: float)
 ## 自机 Bomb 的场地颜色滤镜（a <= 0 = 不启用）——FieldFilterLayer 订阅。
 @warning_ignore("unused_signal")
 signal field_filter(color: Color)
+
+## 被弹炸弹（deathbomb）窗口开 / 关 —— FieldFilterLayer 订阅，做"框内整体渐显红滤镜"。
+## 窗口期间全局定格（`Engine.time_scale = 0`），所以订阅方的动画要走 `ignore_time_scale`。
+@warning_ignore("unused_signal")
+signal deathbomb_started()
+@warning_ignore("unused_signal")
+signal deathbomb_ended()

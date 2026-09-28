@@ -20,16 +20,22 @@
 
 ## S2. 自机判定与擦弹（hitbox / graze）
 状态：✔（机制闭环） ｜ 适用红线：R1, R2, R10
-- [x] 自机判定点极小且始终可见（HitPointDisplay 常显）—— `scripts/player/hit_point_display.gd`
+- [x] 自机判定点极小；**focus 时**淡入显示、松开淡出（`move_toward` 0.15s，`_ready` 时 alpha = 0）——
+      `scripts/player/hit_point_display.gd` + `Player.update_hitbox_display()`。
+      原文写"始终可见（常显）"，2026-09-27 对过代码后**按实际行为改写**（作者拍板：改这行字，行为不动）。
+      （另注：无敌闪烁**只动机体贴图** `AnimatedSprite2D`，判定点/枪口是兄弟节点、不受影响 —— 有断言守着）
 - [x] 擦弹半径清晰（focus 时反馈），擦弹次数计入 HUD —— `player.gd graze_radius` + `game_ui.gd`
 - [x] 无敌期间的碰撞被正确忽略，死亡清弹（death clear）覆盖全场 —— `is_invincible`（内核 `KernelBulletPhysics`）+ `scripts/bullet/death_clear.gd`
 - [x] 碰撞用宽相网格，不做全弹 O(n²) —— 内核 uniform grid；旧 `SpatialHash` 已随旧池删除（W4a-2）
 
 ## S3. 自机操控与武器（移动 / Option / 射击 / 炸弹）
-状态：🚧 ｜ 适用红线：R2, R6, R10, R20
+状态：✔（2026-09-27：炸弹资源扣除被 `use_bombs` 用例 + 被弹炸弹用例覆盖，原先的 `[~]` 关闭） ｜ 适用红线：R2, R6, R10, R20
 - [x] 射击方向/弹型按角色数据（reimu/marisa）驱动，可复用 —— `scripts/data/player_data.gd` + `coroutine/player/reimu_shoot.gd`/`marisa_shoot.gd`
 - [x] Option 子机行为独立、可复用 —— `reimu_option_visual.gd`/`marisa_option_visual.gd` + `option_follow.gd`
-- [~] 炸弹：无敌时长、清弹、特效、资源扣除符合预期 —— `cancel&bomb` + Bomb 弹 + `death_clear` 已在；资源扣除（`use_bomb`）待核
+- [x] 炸弹：无敌时长、清弹、特效、资源扣除符合预期 —— `cancel&bomb` → `_bomb()` → `_fire_bomb()`（含 `bomb_data.invincible_time` 无敌）；
+      `BombData` 家族与 mist 清弹形状有 `test_bomb_data` / `test_mist_bomb`；
+      **资源扣除**：`use_bomb()` 走 `use_bombs(1)`，并有专门用例（扣 2 / 不足扣光 / 没雷不报错 / 负数当 0）；
+      **被弹炸弹**（deathbomb）一次扣 `DEATHBOMB_COST`(2)、只剩 1 个就扣 1（详见 S6 的 miss 语义）
 - [x] 武器/行为脚本走注入（ctx），不摸全局 —— `StageContext` + `CoroutineScript`；`grep GameState` **0**（W4b-4）
 
 ## S4. 弹幕可读性与公平（readability & fairness）
@@ -55,11 +61,22 @@
       **最大点 / 捡点** `item.gd:125` → `PlayerResources.add_max_point()`（`max_point` 恒 +10，入账当前值；深位递减）；
       **擦弹** `kernel_bullet_physics.gd:178 on_graze()` → `graze_count += 1` + `add_score(10)` + `add_memory(MEMORY_GRAZE)`；
       **记忆** —— 修正旧措辞：它不是**分数**来源，而是**资源**（0–100）：擦弹 +0.25、miss +25、每秒自然回复，`memory_release`（`player.gd:242`）消耗它强收道具，并决定 Stage 3A / 3B 路线。
-- [x] **miss 语义完整**（2026-09-27 接上缺口）：`Player.miss()`（`player.gd:318`）= 清弹 + 记忆 +25 + **火力 −50**（`on_miss_power_penalty()`，clamp 0..300）
-      + **撒 10 个 P 点扇形** + 扣残机 + **自机复位两步** + 3 秒无敌。
-      **复位两步**（放在 miss 序列**最后**）：① **瞬移**到 `MISS_RESPAWN_FROM = (FIELD_CENTER_X, FIELD_BOTTOM + 96)` = `(448, 1024)` —— 水平正中、**场地框下方之外**（船从框下升进场）；
-      ② 0.45s tween（`MISS_RESPAWN_TIME`）移动到 **`_respawn_pos`**（**终点**；默认 `MISS_RESPAWN_POS = (FIELD_CENTER_X, FIELD_BOTTOM − 88)` = `(448, 840)`"正中偏下"），期间锁移动输入（`_is_respawning`）。
-      实测（xvfb 探针）：`t=0.05s (448, 1024)` 框下 → `t=0.25s (448, 850)` 已进框 → `t=0.60s (448, 840)` 复位点，`_is_respawning` 全程由真转假。
+- [x] **miss 语义完整**（2026-09-27 接上缺口 + 当日再补被弹炸弹）：`miss()` = 先判**被弹炸弹窗口** → 否则 `_apply_miss()`。
+      `_apply_miss()` = 清弹 + 记忆 +25 + **火力 −50**（`on_miss_power_penalty()`，clamp 0..300）+ **撒 10 个 P 点扇形** + 扣残机 + **自机复位两步** + 3 秒无敌。
+      **被弹炸弹（deathbomb）窗口**：有雷（≥ `DEATHBOMB_MIN_BOMBS`）且机体配了 `BombData` 时，被弹瞬间 `Engine.time_scale = 0` **全局定格** `DEATHBOMB_FRAMES`(12) 帧 ≈ 0.2s
+      （**保存/恢复倍率**，与 Boss 全破定格同一套；出树有安全阀，切场景/测试回收都不会把 `time_scale` 留在 0）。
+      **收尾走真实时间计时器**（`create_timer(…, process_always=true, ignore_time_scale=true)`）—— 定格中 delta=0、玩家按暂停时 `tree.paused` 也照样到点。
+      **踩过的坑（作者实测）**：早先按物理帧倒计时收尾，窗口内按暂停会把收尾一起冻住 → `time_scale` 永远回不到 1 → **暂停菜单出不来也解不开**；改成真实时间计时器后实测 `state 1→2→1 / tree.paused true→false / time_scale 全程 1.00`。
+      窗口期还有**框内整体渐显红滤镜**：`GameEvents.deathbomb_started/ended` → `FieldFilterLayer`（`deathbomb_color` / `deathbomb_fade_in` 皆为 @export），
+      tween 走 `set_ignore_time_scale(true)` + `TWEEN_PAUSE_PROCESS` —— 否则定格里一步都不动（探针实测：帧 1→12 时 `alpha 0.01→1.00`，全程 `time_scale=0.00`）。
+      窗口里按 `cancel&bomb` → `_cancel_miss_by_deathbomb()`：花 `DEATHBOMB_COST`(2) 个雷（**只剩 1 个就扣 1**）并照常放炸弹 `_fire_bomb()` —— **不掉命 / 不削火力 / 不出扇形 / 不复活**；
+      不按 → 窗口到点才走 `_apply_miss()`。定格期间的第二发命中被忽略（`miss()` 见窗口即 return）。
+      **无敌时长**（2026-09-27 改成链接）：`MISS_INVINCIBLE_TIME`(3.0s)，但**残机归零**时 = `miss_invincible_time(true)` =
+      `max(3.0, GameConfig.DEATH_MENU_DELAY + MISS_DEATH_INVINCIBLE_MARGIN(1.0))` —— 菜单延迟一调大，无敌自动跟上（有契约断言守着）。
+      无敌期间**机体贴图闪烁**（`INVINCIBLE_BLINK_HZ` 6Hz，暗半周期 alpha 0.2），只动 `animation.modulate.a`。
+      **复位两步**（放在 `_apply_miss` **最后**）：① **瞬移**到 `MISS_RESPAWN_FROM = (FIELD_CENTER_X, FIELD_BOTTOM + 96)` = `(448, 1024)` —— 框下方之外、水平正中（船从框下升进场）；
+      ② tween（`MISS_RESPAWN_TIME`，**作者现调 1.0s**）移动到 **`_respawn_pos`**（**终点**；默认 `MISS_RESPAWN_POS = (FIELD_CENTER_X, FIELD_BOTTOM − 120)`），期间锁移动输入（`_is_respawning`）。
+      探针实测（0.45s / 840 的旧参数下）：`t=0.05s (448, 1024)` 框下 → `t=0.25s (448, 850)` 已进框 → `t=0.60s` 复位点；现值由 `test_player` 的复位用例守着。
       **为什么必须最后**：反色圈 / 清弹 / 扇形全用开头的 `pos`（中弹那一刻的位置），移动自机只能最后做，否则圈会画到移动后的位置。
       扇形 = `ItemService.spawn_fan(POWER, 自机, targets, 0.45s)`，目标点由 `ItemService.fan_targets()` 算：**绕自机、向上 180°、均匀 20° 一档、含两端点**，
       并把横坐标**夹进场内** `[FIELD_LEFT+16, FIELD_RIGHT−16]`（留白 = 半张 32×32 贴图）→ **左右不出框**（贴墙时靠墙一侧压扁成竖列，纵向弧高不变）。

@@ -16,7 +16,7 @@
 ./tools/verify.sh                                    # 六步门禁（文档哨兵+语法+命名+启动+GUT+所有权）
 ```
 
-**现状**：108 脚本 / **620 用例（619 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6175 断言 / 30.7s** / 19 orphans / **0 pending**。
+**现状**：108 脚本 / **631 用例（630 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6222 断言 / 32.0s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -24,7 +24,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 34 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 172 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 41 | 286 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 41 | 297 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 13 | 77 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 8 | 26 | `scripts/workbench/**`、创作站 |
@@ -102,7 +102,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（41 / 286）
+## C · 宿主 · 运行时系统（41 / 297）
 
 ### C1 组合根 / 服务 / 时间线（8 / 35）
 
@@ -118,12 +118,12 @@
 | [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环 | 2 | 0 |
 | [test_timeline_phase_unfreeze](../test/test_timeline_phase_unfreeze.gd) | B 方案回归：Boss 阶段战斗不再冻结时间轴 | 1 | 0 |
 
-### C2 自机 / 道具 / 资源（5 / 44）
+### C2 自机 / 道具 / 资源（5 / 53）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_player_resources](../test/test_player_resources.gd) | `PlayerResources` 数值系统：分数/火力/记忆/残机/Bomb（不经全局转发） | 11 | 0 |
-| [test_player](../test/test_player.gd) | `Player`：移动 / focus 低速 / 被弹（扣火力 + **复位两步**：瞬移到框下 → 移到 `_respawn_pos`，期间锁输入）/ 数据应用 / 扇形半径与左右边界契约 | 15 | 4 |
+| [test_player_resources](../test/test_player_resources.gd) | `PlayerResources` 数值系统：分数/火力/记忆/残机/Bomb（不经全局转发）+ **`use_bombs(n)` 一次扣多、不足扣光** | 12 | 0 |
+| [test_player](../test/test_player.gd) | `Player`：移动 / focus 低速 / 被弹（扣火力 + **复位两步** + **被弹炸弹窗口**：定格/按 bomb 抵消扣 2 雷/只剩 1 扣 1/没雷不开窗/过期照常结算/**窗口内按暂停也能收尾**）/ 数据应用 / 无敌时长链接 DEATH_MENU_DELAY / 无敌闪烁只闪贴图 / 扇形半径与左右边界契约 | 23 | 4 |
 | [test_item](../test/test_item.gd) | 道具系统：掉落收集 / 类型效果 / 防重复 / **miss 扇形爆发**（宽限不被吸附 + 等半径弧 + 均匀 20° + 飞完**竖直下落** + **左右夹进框**） | 13 | 0 |
 | [test_practice_mode](../test/test_practice_mode.gd) | 练习模式：残机/bomb 归零、火力拉满（须在自机绑定后生效） | 4 | 0 |
 | [test_float_damage](../test/test_float_damage.gd) | 小数伤害累积器 | 2 | 4 |
@@ -145,7 +145,7 @@
 | [test_boss_encapsulation](../test/test_boss_encapsulation.gd) | 债 E：Boss 封装 —— hp/`boss_data`/`hitbox_radius` 只读 + `hp_changed` 信号 | 3 | 6 |
 | [test_boss_targeting](../test/test_boss_targeting.gd) | 自机诱导弹不该追「还没进入战斗的 Boss」（对话/进场期） | 3 | 0 |
 
-### C5 特效 / 背景 / 表现（9 / 45）
+### C5 特效 / 背景 / 表现（9 / 47）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -155,7 +155,7 @@
 | [test_hit_effect](../test/test_hit_effect.gd) | 通用击中特效：一个类驱动所有特效场景（数据驱动验证） | 6 | 0 |
 | [test_spawn_fx](../test/test_spawn_fx.gd) | 出生雾 / 消弹消散统一特效模型（`EffectType` + 行 `fx_type`） | 5 | 2 |
 | [test_fx_pool](../test/test_fx_pool.gd) | `FxPool` 池化语义（取代 `HitEffectPool` autoload） | 3 | 1 |
-| [test_field_filter_layer](../test/test_field_filter_layer.gd) | 场地颜色滤镜：透明色不播；有色时铺满游戏框、从框中心扩圆 | 3 | 0 |
+| [test_field_filter_layer](../test/test_field_filter_layer.gd) | 场地颜色滤镜：透明色不播；有色时铺满游戏框、从框中心扩圆 + **被弹炸弹窗口的框内整体渐显红滤镜**（定格中也得走 → `ignore_time_scale`；窗口关则渐隐收起） | 5 | 0 |
 | [test_fog_texture](../test/test_fog_texture.gd) | 雾纹理无缝性：`fract(q)` 平铺采样 noise | 1 | 1 |
 
 ### C6 Bomb / 机制（3 / 17）

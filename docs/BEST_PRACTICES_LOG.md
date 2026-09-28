@@ -26,8 +26,12 @@
 
 ## 索引
 
-> 共 34 条（本文件留最近 34 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 38 条（本文件留最近 38 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-09-27 — S2「判定点」那句**改字**（作者："改这行字"）
+- 2026-09-27 — 中弹无敌**跟着 `DEATH_MENU_DELAY` 联动** + 无敌期**机体闪烁**
+- 2026-09-27 — 被弹炸弹补两处：**窗口内按暂停不再卡死** + 窗口期**框内整体渐显红滤镜**
+- 2026-09-27 — 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命（一次扣 2 个雷）
 - 2026-09-27 — 约定：临时探针产物放 `.godot/probe/`（不再往项目根建目录，作者已认可）
 - 2026-09-27 — 吃 P 点**不再变金色**（金色只属于「点」）
 - 2026-09-27 — miss 后自机**复位两步**：瞬移到**框下方之外** → 升到 `_respawn_pos`（最后触发）
@@ -64,6 +68,83 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-09-27 — S2「判定点」那句**改字**（作者："改这行字"）
+
+- **承接上一条**：我报出 `BASELINE_EVIDENCE` S2 原写「自机判定点极小且**始终可见**（HitPointDisplay 常显）」，
+  而代码实际是 **focus 门控**（`Player.update_hitbox_display()` 按住 focus → `show_hitpoint()`、松开 → `hide_hitpoint()`，0.15s 淡入淡出，`_ready` 时 alpha = 0）。
+- **作者拍板**：**改这行字，行为不动**。于是：
+  - 该条从 `[~]`（待裁决）改回 `[x]`，措辞按**实际行为**写成"focus 时淡入显示、松开淡出（0.15s）"，
+    并留一句"原文写'始终可见'，2026-09-27 对过代码后按实际改写"——**保留改过什么的痕迹**，省得下次又有人照旧话去核。
+  - 同一说法的另外两处也顺手清掉：`player.gd` 闪烁注释（"判定点常显是 S2 红线" → "判定点由 focus 门控自管淡入淡出"）、
+    `test_player` 的断言说明（"不参与闪烁（S2：常显）" → "自管 focus 淡入淡出，不被闪烁干扰"）。
+- **复查**：全仓再搜 `常显 / 始终可见`，非 log 历史处已无残留（其余命中是"uid 照常显示"之类无关词）。
+- **验收**：文档哨兵 ✅ · 语法 351 脚本 0 失败 ✅ · 命名 0 违规 ✅ · GUT **631 用例**（本次只改说明文字，用例数/断言数不变）。
+
+### 2026-09-27 — 中弹无敌**跟着 `DEATH_MENU_DELAY` 联动** + 无敌期**机体闪烁**
+
+- **作者要求**："跟 DEATH_MENU_DELAY 联动吧，自机无敌时也可以加一个闪烁效果"（起因：上一轮我指出"死亡后无敌"是硬编码 3.0s，把菜单延迟调到 3s 以上就不够了）。
+- **① 无敌时长链接**：
+  - `MISS_INVINCIBLE_TIME = 3.0`（**还有残机**时用这个，不动）；残机归零（在等 Game Over 菜单）时走新纯函数
+    `static func miss_invincible_time(p_dead) -> float` = `max(MISS_INVINCIBLE_TIME, GameConfig.DEATH_MENU_DELAY + MISS_DEATH_INVINCIBLE_MARGIN(1.0))`。
+  - 于是**菜单延迟一调大，无敌自动跟上**；`_apply_miss()` 里那两处 `3.0` 合并成 `var dead := not resources.lose_life()` + 一次赋值。
+  - 契约测试钉住链接：`miss_invincible_time(false) == MISS_INVINCIBLE_TIME`、`miss_invincible_time(true) >= DEATH_MENU_DELAY + 余量`
+    —— 以后谁调 `DEATH_MENU_DELAY` 都不会再静默踩坑。
+- **② 无敌闪烁**：`_update_invincible_blink(delta)` —— 按 `INVINCIBLE_BLINK_HZ`(6Hz) 在 `INVINCIBLE_BLINK_MIN_ALPHA`(0.2) 与 1.0 之间切换
+  **只动 `AnimatedSprite2D.modulate.a`**；无敌一结束立刻恢复不透明（不留半透明残留）。
+  - **刻意只闪机体贴图**：判定点 `HitPointDisplay` 与枪口 `Muzzle` 是**兄弟节点**，闪烁碰不到它们（有断言）。
+  - 实测（`--fixed-fps 60` 探针，真 game_scene）：12 帧 alpha = `0.20 ×5 → 1.00 ×5 → 0.20`（正好 6Hz / 周期 10 帧）。
+- **⚠️ 顺带发现（文档与代码不符，已报作者）**：`BASELINE_EVIDENCE` S2 原写"自机判定点极小且**始终可见**（HitPointDisplay 常显）"，
+  但代码是 **focus 门控**：`Player.update_hitbox_display()` 按住 focus → `show_hitpoint()`、松开 → `hide_hitpoint()`（0.15s 淡入淡出，`_ready` 时 alpha = 0）。
+  我把该行改成 `[~]` 并写明"待作者裁决：改这行字，还是改成常显"——**没有替作者改行为**。
+- **测试**：`test_player` +2（无敌时长链接契约 / 闪烁只闪贴图且结束恢复）→ **631 用例**。`TEST_INDEX` / README 徽章 / 证据 S2·S6 段同步。
+- **验收**：`./tools/verify.sh` 六步全过。
+
+### 2026-09-27 — 被弹炸弹补两处：**窗口内按暂停不再卡死** + 窗口期**框内整体渐显红滤镜**
+
+- **作者反馈**："①（音效）没事，但是②我测了，窗口内按暂停游戏会既没有暂停菜单也没法解除暂停，然后呢再给窗口期加一个框内的整体的渐显的红色滤镜"。
+- **① 暂停卡死（真 bug，我上一版的实现缺陷）**：
+  - **病根**：窗口收尾挂在 `_physics_process` 的**帧倒计时**上。窗口内按暂停 → `get_tree().paused = true` → 玩家的 `_physics_process` 不再跑（PAUSABLE）→
+    倒计时永远走不完 → `Engine.time_scale` **卡在 0** → 暂停菜单自己的 tween/`await`（delta=0）也一起冻住 → **菜单出不来、也解不开暂停**。
+  - **修法**：收尾改成**真实时间计时器** —— `get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, /*process_always*/ true, false, /*ignore_time_scale*/ true)`。
+    定格中、暂停中都照走完并还回 `time_scale`；`SceneTreeTimer` 取消不掉，所以回调里用 `_is_deathbombing` 判"窗口是否还开着"来忽略迟到的到点。
+  - 状态也跟着改名：`_deathbomb_frames_left: int` → **`_is_deathbombing: bool`**（它现在是"窗口开着"的开关，不再是帧计数）。
+  - **实测（真 game_scene + xvfb）**：窗口内 `GameManager.pause_game()` → 0.6s 后 `state 1→2`（暂停菜单正常出来）、`time_scale` 回到 1.00；
+    `resume_game()` → `state 2→1`、`tree.paused false`（**解不开的问题消失**）。
+  - **回归测试**：`test_deathbomb_window_finishes_even_while_paused`（窗口 + `paused = true` → 窗口照走完、`time_scale` 还回 1、miss 照常结算）。
+- **② 框内整体渐显红滤镜**：
+  - `GameEvents` 新增 `deathbomb_started` / `deathbomb_ended`（过去式命名，R7）；`FieldFilterLayer` 订阅它们。
+  - 复用现有 shader（`field_filter.gdshader`）：**半径直接给满**（整框铺满，不是 bomb 那种从中心扩圆）+ `alpha` 0→1 渐显；窗口关 → 渐隐收起。
+  - @export 可调：`deathbomb_color`（默认 `Color(1, 0.2, 0.2, 0.35)`）/ `deathbomb_fade_in`(0.2s) / `deathbomb_fade_out`(0.35s)。
+  - **关键**：窗口期全局定格 → 这条 tween 必须 `set_ignore_time_scale(true)` + `set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)`，否则**一步都不动**。
+  - **实测**：`--fixed-fps 60` 探针，帧 1→12 的 `alpha = 0.01 / 0.06 / 0.12 / 0.22 / 0.35 … 0.99 / 1.00`，全程 `time_scale = 0.00`（证明渐显真的发生在定格里）；截图确认红滤镜**严格只在场地框内**、框外背景不受影响。
+- **测试**：`test_player` +1（暂停回归）· `test_field_filter_layer` +2（整框渐显 + 定格中也走 / 窗口关渐隐收起）→ **629 用例**。
+  `TEST_INDEX` / README 徽章 / 证据文档 S6 段同步。
+- **验收**：`./tools/verify.sh` 六步全过。
+
+### 2026-09-27 — 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命（一次扣 2 个雷）
+
+- **作者要求**："如果 miss 时，有大于等于 2 个 bomb，那么 miss 后会游戏暂停几帧，此时如果玩家按下了 bomb 键，就停止 miss 并消耗两个 bomb（如果只有一个 bomb 就只消耗一个 bomb）"。
+- **实现**（把 `miss()` 拆成"窗口 → 结算"两段）：
+  - `miss()`：无敌中 / 已在窗口 → return；否则**先试开被弹炸弹窗口**，开不了才 `_apply_miss()`。
+  - `_apply_miss()` = 原来的 miss 全部后果（清弹 / 记忆 +25 / 火力 −50 / P 点扇形 / 扣残机 / 复位两步）—— 一字未改，只是搬了名字。
+  - `_begin_deathbomb_window()`：有雷（≥ `DEATHBOMB_MIN_BOMBS`）且机体配了 `BombData` 才开；`Engine.time_scale = 0` **全局定格** `DEATHBOMB_FRAMES`(12) 物理帧 ——
+    **保存/恢复倍率**（可能与 Boss 全破定格叠加，所以不写死 1.0，跟 `boss.gd` 那套 `_saved_time_scale` 同源）。
+  - `_physics_process` 在窗口里**只倒计时**（delta 已被定格成 0，别的不做）；到点没按 → 恢复倍率 + `_apply_miss()`。
+  - 按 bomb 仍走 **`_unhandled_input`**（**R4**：不在物理帧轮询输入）→ `_cancel_miss_by_deathbomb()`：
+    `use_bombs(DEATHBOMB_COST)` 花 2 个雷（**不足则用完** → 只剩 1 个就扣 1），再 `_fire_bomb()`（演出/无敌/编队）—— **不掉命 / 不削火力 / 不出扇形 / 不复活**。
+  - `PlayerResources.use_bombs(n)`：一次扣至多 n、返回实际扣数；`use_bomb()` 改为 `use_bombs(1) == 1`（行为不变，少一处重复）。
+  - `_bomb()` 拆出 `_fire_bomb(bomb_data)`（不含扣雷）与 `_bomb_data()`（扣雷/开窗前先问配置，免得白扣白开）。
+  - **安全阀**：`_exit_tree` 里窗口没走完也强制恢复 `time_scale` —— 切场景 / 测试回收都不会把全局冻在 0。
+- **⚠️ 闸门取值的取舍（请作者确认）**：原文是"有 **≥2** 个 bomb 才暂停几帧"，但括号里又说"**只有一个 bomb 就只消耗一个**" ——
+  后者只有在"只有 1 个雷也给窗口"时才可能发生。我按后者实现：`DEATHBOMB_MIN_BOMBS = 1`（有雷就开窗）、`DEATHBOMB_COST = 2`（不足则用完）。
+  若要"必须 ≥2 才有窗口"，把 `DEATHBOMB_MIN_BOMBS` 改成 `2` 即可。
+- **测试（+6）**：`test_player` +5（开窗时命/雷/火力/miss 信号都还没动 · 按 bomb 抵消：扣 2 雷 / 不掉命 / 放炸弹 / 解定格 · 只剩 1 个雷也开窗且只扣 1 ·
+  没雷不开窗立即结算 · 窗口过期照常结算）+ `test_player_resources` +1（`use_bombs` 扣 2 / 不足扣光 / 没雷 / 负数）。
+  **老用例改动**：关心"miss 后果"的 6 处改用新助手 `_miss_now()`（先清空雷、绕开窗口）；`test_composition_root` 里验反色圈那条同样先清雷；
+  `test_player` 加 `after_each()` 复位 `time_scale`（防窗口泄漏把整个套件冻住）。
+- **顺带结案**：**基线 S3 🚧 → ✔** —— 它的 `[~]` 是"炸弹资源扣除待核"，本次 `use_bombs` 专门用例 + 被弹炸弹用例把它覆盖了。
+- **验收**：`./tools/verify.sh` 六步全过（GUT **626 用例 / 625 通过**，唯一红仍是 `test_data_validity` 内容 WIP）。
 
 ### 2026-09-27 — 约定：临时探针产物放 `.godot/probe/`（不再往项目根建目录，作者已认可）
 

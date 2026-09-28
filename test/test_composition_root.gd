@@ -56,6 +56,8 @@ func test_player_miss_adds_miss_circle() -> void:
 	var player: Player = inst.get_node("World/Player")
 	var layer: MissCircleLayer = inst.get_node("MissCircleLayer")
 	player.is_invincible = false
+	# 本条验的是"miss 会加反色圈"，不是被弹炸弹窗口 → 先清空雷，让 miss 立即结算
+	player.resources.bomb_count = 0
 	player.miss()
 	assert_gt(layer._circles.size(), 0, "miss 后应加入反色圈")
 

@@ -42,6 +42,12 @@ var _invincible_timer: float = 0.0
 var _respawn_pos: Vector2 = MISS_RESPAWN_POS
 ## 中弹复位移动进行中 → 锁移动输入（tween 正在写 position，别跟输入抢）
 var _is_respawning: bool = false
+## 被弹炸弹（deathbomb）窗口开着：= "刚被弹、还没死"，全局定格等玩家按 bomb（见 `_begin_deathbomb_window`）
+var _is_deathbombing: bool = false
+## 定格前的 `Engine.time_scale`（与 Boss 全破定格同一套：保存/恢复**倍率**，别写死 1.0）
+var _deathbomb_saved_time_scale: float = 1.0
+## 无敌闪烁的相位累加器（秒；只在无敌期间前进）
+var _blink_phase: float = 0.0
 
 var hitbox_radius: float = 5.0
 var graze_radius: float = 40.0  # 擦弹判定半径
@@ -67,6 +73,11 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	# 定格安全阀：被弹炸弹窗口没走完就出树（切场景 / 测试回收）也绝不能把 time_scale 留在 0
+	if _is_deathbombing:
+		_is_deathbombing = false
+		_restore_time_scale()
+		GameEvents.deathbomb_ended.emit()
 	if GameEvents.enemy_killed.is_connected(_on_enemy_killed):
 		GameEvents.enemy_killed.disconnect(_on_enemy_killed)
 
@@ -81,7 +92,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		_memory_release()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cancel&bomb"):
-		_bomb()
+		if _is_deathbombing:
+			# 抢在被弹炸弹窗口关掉之前按下 bomb → 抵消这次 miss（只花雷，不掉命）
+			_end_deathbomb(true)
+		else:
+			_bomb()
 		get_viewport().set_input_as_handled()
 
 ## 注入/切换机体：应用数值 + (重)装配射击。同数据且已装配 → 跳过（幂等，避免组合根重复初始化）。
@@ -115,6 +130,7 @@ func _physics_process(delta):
 		_invincible_timer -= delta
 		if _invincible_timer <= 0.0:
 			is_invincible = false
+	_update_invincible_blink(delta)
 
 	input_vector.x = Input.get_axis("move_left", "move_right")
 	input_vector.y = Input.get_axis("move_up", "move_down")
@@ -171,6 +187,20 @@ func update_move(delta: float) -> void:
 	position.x = clamp(position.x, FRONT_LEFT + MIN_MARGIN * 3, FRONT_RIGHT - MIN_MARGIN * 3)
 	position.y = clamp(position.y, FRONT_UP + MIN_MARGIN * 4, FRONT_DOWN - MIN_MARGIN * 4)
 
+
+## 无敌闪烁：只在 `is_invincible` 期间按 `INVINCIBLE_BLINK_HZ` 切换**机体贴图**的不透明度；
+## 无敌一结束立刻恢复不透明（不留半透明残留）。判定点 / 枪口是兄弟节点，不受影响。
+func _update_invincible_blink(delta: float) -> void:
+	if not is_invincible:
+		if animation.modulate.a < 1.0:
+			_blink_phase = 0.0
+			animation.modulate.a = 1.0
+		return
+	_blink_phase += delta
+	var half_period := 0.5 / maxf(INVINCIBLE_BLINK_HZ, 0.01)
+	var blink_off := fmod(_blink_phase, half_period * 2.0) < half_period
+	animation.modulate.a = INVINCIBLE_BLINK_MIN_ALPHA if blink_off else 1.0
+
 func update_animation() -> void:
 	var is_pressing_left: bool = input_vector.x < -0.1
 	var is_pressing_right: bool = input_vector.x > 0.1
@@ -210,12 +240,22 @@ func _on_animation_finished() -> void:
 func _bomb() -> void:
 	if is_invincible:
 		return
-	var bomb_data: BombData = player_data.bomb if player_data else null
+	var bomb_data := _bomb_data()
 	if bomb_data == null:
 		push_warning("Player._bomb：player_data.bomb 未配置（BombData）")
 		return
 	if not resources.use_bomb():
 		return
+	_fire_bomb(bomb_data)
+
+
+## 取当前机体的 BombData（未配置 → null）。扣雷 / 开被弹炸弹窗口之前先问它，免得白扣白开。
+func _bomb_data() -> BombData:
+	return player_data.bomb if player_data else null
+
+
+## bomb 的"演出 + 无敌 + 编队"部分（**不含雷数扣除**）：常规 bomb 与被弹炸弹共用。
+func _fire_bomb(bomb_data: BombData) -> void:
 	_play_sfx(AssetRegistry.sounds["player_card"])
 	GameEvents.player_bomb.emit(bomb_data.name)
 	GameEvents.field_filter.emit(bomb_data.field_filter_color)
@@ -345,11 +385,44 @@ const MISS_RESPAWN_FROM := Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_B
 const MISS_RESPAWN_POS := Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_BOTTOM - 120.0)
 ## 复位移动时长（秒）
 const MISS_RESPAWN_TIME: float = 1.0
+## 中弹无敌时长（秒）——**还有残机**时用这个
+const MISS_INVINCIBLE_TIME: float = 3.0
+## 残机归零（在等 Game Over 菜单）时的无敌 = `max(MISS_INVINCIBLE_TIME, DEATH_MENU_DELAY + 这个余量)`。
+## 菜单延迟一调大，无敌自动跟上 —— 否则 0 残机下会在等菜单时被弹打中，演出会怪。
+const MISS_DEATH_INVINCIBLE_MARGIN: float = 1.0
+## 无敌闪烁：每秒明暗切换次数 + 暗半周期的 alpha（0 = 全隐）。
+## **只动机体贴图**（`AnimatedSprite2D`）—— 判定点由 focus 门控自管淡入淡出（S2 判据），枪口也是兄弟节点，都别碰。
+const INVINCIBLE_BLINK_HZ: float = 6.0
+const INVINCIBLE_BLINK_MIN_ALPHA: float = 0.2
+## 被弹炸弹（deathbomb）窗口长度（**物理帧**）：被弹瞬间全局定格这么多帧，等玩家按 bomb 抢命
+const DEATHBOMB_FRAMES: int = 12
+## 开窗所需的最少雷数（1 = 只剩一个雷也给机会；想"必须 ≥2 才有窗口"就改成 2）
+const DEATHBOMB_MIN_BOMBS: int = 1
+## 抵消一次 miss 消耗的雷数（不足则把手上的用完 —— 只剩 1 个就只扣 1）
+const DEATHBOMB_COST: int = 2
 
+
+## 本次 miss 的无敌时长（秒）。`p_dead = true` = 残机已归零、正在等 Game Over 菜单 →
+## 跟着 `GameConfig.DEATH_MENU_DELAY` 走（+余量），保证等菜单期间一直无敌。
+## 纯函数（可测）：菜单延迟以后被调大，这条链接有断言守着。
+static func miss_invincible_time(p_dead: bool) -> float:
+	if not p_dead:
+		return MISS_INVINCIBLE_TIME
+	return maxf(MISS_INVINCIBLE_TIME, GameConfig.DEATH_MENU_DELAY + MISS_DEATH_INVINCIBLE_MARGIN)
+
+## 被弹：**有雷先给一个"被弹炸弹"窗口**（全局定格几帧等玩家按 bomb 抢命）；
+## 窗口里按下 bomb → 抵消这次 miss（只花雷，不掉命）；没按 → 窗口结束才真正结算（`_apply_miss`）。
 func miss() -> void:
-	if is_invincible:
+	if is_invincible or _is_deathbombing:
+		return  # 无敌中不重复触发；窗口里的第二发命中一律忽略（定格的意义就在这）
+	if _begin_deathbomb_window():
 		return
+	_apply_miss()
 
+
+## 真正的 miss 结算（清弹 / 记忆 / 火力惩罚 / P 点扇形 / 扣残机 / 复位两步，最后触发）。
+## **反色圈等演出用的都是这里捕获的 `pos`**（中弹那一刻的位置），所以复位移动必须放在本函数末尾。
+func _apply_miss() -> void:
 	_play_sfx(AssetRegistry.sounds["player_die"])
 	var pos: Vector2 = global_position
 	_miss_circle(pos, 2.5, 1280)
@@ -373,15 +446,14 @@ func miss() -> void:
 	# 每次 miss 都通知（boss 判定 miss 后不收；player_death 只在残机 0 发，不能复用）
 	GameEvents.player_missed.emit()
 
-	# 残机扣除
-	if resources.lose_life():
-		# 无敌：倒计时 3 秒，_physics_process 自动倒数（不 await，不挂起调用链）
-		is_invincible = true
-		_invincible_timer = 3.0
-	else:
-		# 残机为 0 → Game Over，给短暂无敌防止每帧连续触发
-		is_invincible = true
-		_invincible_timer = 3.0
+	# 残机扣除（`lose_life()` = 减之前还有命 → 返回 true；false = 残机归零）
+	var dead := not resources.lose_life()
+	# 无敌：倒计时由 `_physics_process` 自动倒数（不 await，不挂起调用链）。
+	# 时长见 `miss_invincible_time()`：有残机 = 固定值；残机归零 = **跟着 `DEATH_MENU_DELAY` 走**
+	# （菜单延迟调大时无敌自动跟上，0 残机下不会在等 Game Over 时被弹打中）。
+	is_invincible = true
+	_invincible_timer = miss_invincible_time(dead)
+	if dead:
 		GameEvents.player_death.emit()
 
 	# ── 自机复位（**必须放在最后**）────────────────────────────────────────
@@ -402,6 +474,61 @@ func _move_to_respawn() -> void:
 	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(self, "global_position", _respawn_pos, MISS_RESPAWN_TIME)
 	tween.finished.connect(func() -> void: _is_respawning = false)
+
+
+# ═══ 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命 ═══
+
+## 开窗：有雷（≥ `DEATHBOMB_MIN_BOMBS`）且机体配了 `BombData` 才开。
+## 开了就**全局定格** `DEATHBOMB_FRAMES` 帧（`Engine.time_scale = 0`，保存/恢复倍率 ——
+## 与 Boss 全破定格同一套做法，别写死 1.0）。返回 true = 本次 miss 的后果推迟到窗口结束时结算。
+func _begin_deathbomb_window() -> bool:
+	if DEATHBOMB_FRAMES <= 0 or _bomb_data() == null:
+		return false
+	if resources.bomb_count < DEATHBOMB_MIN_BOMBS:
+		return false
+	_is_deathbombing = true
+	_deathbomb_saved_time_scale = Engine.time_scale
+	Engine.time_scale = 0.0
+	GameEvents.deathbomb_started.emit()
+	# 收尾用**真实时间**计时（process_always + ignore_time_scale）：定格中 delta = 0、玩家按暂停时
+	# `get_tree().paused` 也照样到点 —— 否则窗口永远走不完，`time_scale` 卡在 0，
+	# 暂停菜单会被一起冻住（既出不来也解不开，实测踩到过）。
+	var timer := get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, true, false, true)
+	timer.timeout.connect(_on_deathbomb_timeout)
+	return true
+
+
+## 窗口到点（真实时间，定格 / 暂停中都会到）：还没按 bomb → 这次 miss 照常结算。
+func _on_deathbomb_timeout() -> void:
+	if not _is_deathbombing:
+		return  # 已抢命成功 / 已出树 → 什么都不做（SceneTreeTimer 取消不掉，只能这样忽略）
+	_end_deathbomb(false)
+
+
+## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
+func _end_deathbomb(p_cancelled: bool) -> void:
+	_is_deathbombing = false
+	_restore_time_scale()
+	GameEvents.deathbomb_ended.emit()
+	if p_cancelled:
+		_cancel_miss_by_deathbomb()
+	else:
+		_apply_miss()
+
+
+## 被弹炸弹成功：花掉 `DEATHBOMB_COST` 个雷（不足则用完，只剩 1 个就只扣 1）并照常放炸弹 —— **不掉命**。
+func _cancel_miss_by_deathbomb() -> void:
+	var bomb_data := _bomb_data()
+	if bomb_data == null:
+		_apply_miss()  # 配置没了（不该发生）→ 老老实实吃这次 miss
+		return
+	resources.use_bombs(DEATHBOMB_COST)
+	_fire_bomb(bomb_data)
+
+
+## 解开定格：恢复开窗前的 `time_scale`（可能叠加在别的定格上）
+func _restore_time_scale() -> void:
+	Engine.time_scale = _deathbomb_saved_time_scale
 
 
 # ═══ 系统操作服务（统一走 ctx 服务；ctx 为 null 时跳过，不回退全局） ═══

@@ -86,6 +86,21 @@ func test_bomb_cap():
 		_player_resources.collect_bomb_fragment()
 	assert_eq(_player_resources.bomb_count, 8, "Bomb 上限 8")
 
+
+## `use_bombs(n)`：一次扣 n，**不足则把手上的用完**（被弹炸弹扣 2 / 只剩 1 就扣 1）
+func test_use_bombs_partial_and_clamp():
+	_player_resources.bomb_count = 5
+	assert_eq(_player_resources.use_bombs(2), 2, "有 5 个 → 扣 2 成功")
+	assert_eq(_player_resources.bomb_count, 3, "余 3")
+
+	_player_resources.bomb_count = 1
+	assert_eq(_player_resources.use_bombs(2), 1, "只剩 1 个 → 只扣 1")
+	assert_eq(_player_resources.bomb_count, 0, "扣完")
+
+	assert_eq(_player_resources.use_bombs(2), 0, "没雷 → 扣 0（不报错）")
+	assert_eq(_player_resources.use_bombs(-3), 0, "负数当 0 处理")
+	assert_eq(_player_resources.use_bomb(), false, "没雷时 use_bomb 仍返回 false")
+
 ## ── 复位 ──
 
 func test_reset_all():

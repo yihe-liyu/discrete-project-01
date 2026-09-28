@@ -24,6 +24,26 @@ func _make_player() -> Player:
 	player.is_invincible = false
 	return player
 
+
+func after_each() -> void:
+	# 安全阀：任何用例把"被弹炸弹"窗口留在半开状态，都不能污染后面的用例（time_scale 卡 0 会冻住整个套件）
+	Engine.time_scale = 1.0
+
+
+## 直接把这次 miss 结算到底：**先清空雷**，不给被弹炸弹窗口机会。
+## 关心"miss 的后果"的用例用它；窗口本身的行为另有专门用例。
+func _miss_now(player: Player) -> void:
+	player.resources.bomb_count = 0
+	player.miss()
+
+
+## 合成一次 "cancel&bomb" 按键事件（R4：bomb 走 `_unhandled_input`，测试就直接喂事件）
+func _bomb_event() -> InputEventAction:
+	var ev := InputEventAction.new()
+	ev.action = "cancel&bomb"
+	ev.pressed = true
+	return ev
+
 func test_player_data_applied():
 	var player := _make_player()
 	assert_gt(player.normal_speed, 0, "常速应 > 0")
@@ -85,14 +105,14 @@ func test_focus_slows_down():
 func test_miss_loses_life_and_invincible():
 	var player := _make_player()
 	player.resources.lives = 2
-	player.miss()
+	_miss_now(player)
 	assert_eq(player.resources.lives, 1, "被弹扣 1 命")
 	assert_true(player.is_invincible, "被弹后进入无敌")
 
 func test_miss_no_life_game_over():
 	var player := _make_player()
 	player.resources.lives = 0
-	player.miss()
+	_miss_now(player)
 	assert_true(player.is_invincible, "无命也进无敌（防连续触发）")
 
 
@@ -100,7 +120,7 @@ func test_miss_no_life_game_over():
 func test_miss_applies_power_penalty():
 	var player := _make_player()
 	player.resources.power_raw = 300
-	player.miss()
+	_miss_now(player)
 	assert_eq(player.resources.power_raw, 250, "miss 应削 50 火力")
 
 
@@ -109,7 +129,7 @@ func test_miss_without_ctx_is_safe():
 	var player := _make_player()
 	assert_null(player.ctx, "夹具没有 ctx")
 	player.resources.power_raw = 100
-	player.miss()
+	_miss_now(player)
 	assert_eq(player.resources.power_raw, 50, "无 ctx 也照常削火力")
 	assert_true(player.is_invincible, "无 ctx 也照常进无敌")
 
@@ -136,7 +156,7 @@ func test_miss_teleports_below_field_then_moves_to_respawn_pos():
 	player._respawn_pos = Vector2(448, 840)
 	player.global_position = Vector2(500, 600)
 
-	player.miss()
+	_miss_now(player)
 	assert_eq(player.global_position, Player.MISS_RESPAWN_FROM, "第一步：瞬移到框下方之外（正中）")
 	assert_gt(player.global_position.y, GameConfig.FIELD_BOTTOM, "起点确实在场地框下方之外")
 	assert_true(player._is_respawning, "第二步：复位移动已开始")
@@ -159,15 +179,157 @@ func test_second_miss_repeats_teleport_and_respawn():
 	var player := _make_player()
 	player._respawn_pos = Vector2(448, 840)
 	player.global_position = Vector2(200, 700)
-	player.miss()
+	_miss_now(player)
 	assert_eq(player.global_position, Player.MISS_RESPAWN_FROM, "第一次先瞬移到框下")
 
 	player.is_invincible = false          # 允许再中一次
 	player.global_position = Vector2(600, 300)
-	player.miss()
+	_miss_now(player)
 	assert_eq(player.global_position, Player.MISS_RESPAWN_FROM, "第二次也先瞬移到框下（同一处）")
 	assert_eq(player._respawn_pos, Vector2(448, 840), "复位点不变")
 
 func test_graze_radius_positive():
 	var player := _make_player()
 	assert_gt(player.graze_radius, 10.0, "擦弹半径应有效")
+
+
+# ═══ 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命 ═══
+
+## 夹具机体默认没配雷（真机体在 `PlayerData.bomb` 的 .tres 里），这里补上
+func _arm_bomb(player: Player) -> void:
+	player.player_data.bomb = BombData.new()
+
+
+## 有雷 → 被弹先**定格开窗**：命 / 雷 / miss 副作用全部还没发生
+func test_deathbomb_window_freezes_before_any_miss_effect():
+	var player := _make_player()
+	_arm_bomb(player)
+	watch_signals(GameEvents)
+	player.resources.lives = 3
+	player.resources.bomb_count = 3
+	player.resources.power_raw = 300
+
+	player.miss()
+	assert_true(player._is_deathbombing, "开窗：进入被弹炸弹窗口")
+	assert_eq(Engine.time_scale, 0.0, "定格：全局暂停几帧（time_scale = 0）")
+	assert_eq(player.resources.lives, 3, "窗口里还没掉命")
+	assert_eq(player.resources.bomb_count, 3, "窗口里还没扣雷")
+	assert_eq(player.resources.power_raw, 300, "窗口里还没削火力")
+	assert_signal_not_emitted(GameEvents, "player_missed", "窗口里还不算 miss")
+	Engine.time_scale = 1.0   # 别把定格留给下一个用例（after_each 兜底）
+
+
+## 窗口里按 bomb → 抵消这次 miss：花 2 个雷、掉 0 命、炸弹照放、定格解开
+func test_deathbomb_press_cancels_miss_and_costs_two_bombs():
+	var player := _make_player()
+	_arm_bomb(player)
+	watch_signals(GameEvents)
+	player.resources.lives = 3
+	player.resources.bomb_count = 3
+
+	player.miss()
+	player._unhandled_input(_bomb_event())
+	assert_eq(player.resources.bomb_count, 1, "抵消 miss 花 2 个雷")
+	assert_eq(player.resources.lives, 3, "不掉命")
+	assert_false(player._is_deathbombing, "窗口关闭")
+	assert_eq(Engine.time_scale, 1.0, "定格解开")
+	assert_true(player.is_invincible, "炸弹的无敌照给")
+	assert_signal_emitted(GameEvents, "player_bomb", "照常放炸弹")
+	assert_signal_not_emitted(GameEvents, "player_missed", "没发生 miss")
+
+
+## 只剩 1 个雷也给窗口（DEATHBOMB_MIN_BOMBS），且**只扣 1 个**
+func test_deathbomb_with_single_bomb_costs_one():
+	var player := _make_player()
+	_arm_bomb(player)
+	player.resources.lives = 3
+	player.resources.bomb_count = 1
+
+	player.miss()
+	assert_true(player._is_deathbombing, "只有 1 个雷也开窗")
+	player._unhandled_input(_bomb_event())
+	assert_eq(player.resources.bomb_count, 0, "只剩 1 个 → 只扣 1 个")
+	assert_eq(player.resources.lives, 3, "不掉命")
+
+
+## 没雷 → 不开窗、不定格，miss 立即结算
+func test_no_deathbomb_window_without_bombs():
+	var player := _make_player()
+	_arm_bomb(player)
+	player.resources.lives = 3
+	player.resources.bomb_count = 0
+
+	player.miss()
+	assert_false(player._is_deathbombing, "没雷不开窗")
+	assert_eq(player.resources.lives, 2, "直接掉命")
+	assert_eq(Engine.time_scale, 1.0, "不定格")
+
+
+## 窗口到点没按 bomb → 这次 miss 照常结算（掉命、雷不动、定格解开）
+func test_deathbomb_window_expiry_applies_miss():
+	var player := _make_player()
+	_arm_bomb(player)
+	watch_signals(GameEvents)
+	player.resources.lives = 3
+	player.resources.bomb_count = 3
+
+	player.miss()
+	for _i in Player.DEATHBOMB_FRAMES + 6:
+		await get_tree().physics_frame
+	assert_eq(player.resources.lives, 2, "窗口过期 → 掉命")
+	assert_eq(player.resources.bomb_count, 3, "没按 bomb → 雷不动")
+	assert_eq(Engine.time_scale, 1.0, "定格解开")
+	assert_signal_emitted(GameEvents, "player_missed", "这才是真的 miss")
+	assert_signal_emitted(GameEvents, "deathbomb_ended", "窗口结束信号（滤镜渐隐靠它）")
+
+
+## 回归（作者实测）：窗口里按暂停 → 既没有暂停菜单、也解不开暂停。
+## 病根 = 窗口收尾挂在被定格/暂停卡住的帧循环上 → `time_scale` 永远回不来。
+## 现在收尾走**真实时间**计时器，暂停中也照走完并还回 `time_scale`。
+func test_deathbomb_window_finishes_even_while_paused():
+	var player := _make_player()
+	_arm_bomb(player)
+	player.resources.lives = 3
+	player.resources.bomb_count = 3
+
+	player.miss()
+	get_tree().paused = true   # 模拟"窗口内按了暂停"
+	for _i in Player.DEATHBOMB_FRAMES + 6:
+		await get_tree().physics_frame
+	get_tree().paused = false  # 先解开，别把暂停状态漏给下一个用例
+
+	assert_false(player._is_deathbombing, "暂停中也照走完窗口")
+	assert_eq(Engine.time_scale, 1.0, "定格必须还回去（否则暂停菜单被一起冻住）")
+	assert_eq(player.resources.lives, 2, "没按 bomb → miss 照常结算")
+
+
+# ═══ 无敌时长 & 闪烁 ═══
+
+## 契约：有残机 = 固定时长；残机归零 = **跟着 DEATH_MENU_DELAY 走**（菜单延迟调大，无敌自动跟上）
+func test_miss_invincible_time_links_to_death_menu_delay():
+	assert_eq(Player.miss_invincible_time(false), Player.MISS_INVINCIBLE_TIME, "有残机用固定值")
+	var dead_time := Player.miss_invincible_time(true)
+	assert_true(dead_time >= Player.MISS_INVINCIBLE_TIME, "残机归零不低于固定值")
+	assert_true(dead_time >= GameConfig.DEATH_MENU_DELAY + Player.MISS_DEATH_INVINCIBLE_MARGIN,
+			"残机归零：无敌必须盖住等 Game Over 菜单的时间")
+
+
+## 无敌闪烁：只动机体贴图 alpha，判定点/枪口不动；无敌一结束立刻恢复不透明
+func test_invincible_blink_toggles_ship_sprite_only():
+	var player := _make_player()
+	player.is_invincible = true
+	player._invincible_timer = 10.0
+	var half := 0.5 / Player.INVINCIBLE_BLINK_HZ
+	var hpd_alpha: float = player._hit_point_display.modulate.a
+
+	player._update_invincible_blink(half * 0.5)   # 落在暗半周期
+	assert_almost_eq(player.animation.modulate.a, Player.INVINCIBLE_BLINK_MIN_ALPHA, 0.001,
+			"暗时用 BLINK_MIN_ALPHA")
+	assert_eq(player._hit_point_display.modulate.a, hpd_alpha, "判定点自管 focus 淡入淡出，不被闪烁干扰")
+
+	player._update_invincible_blink(half * 1.2)   # 跨进亮半周期
+	assert_almost_eq(player.animation.modulate.a, 1.0, 0.001, "亮时完全不透明")
+
+	player.is_invincible = false
+	player._update_invincible_blink(half)
+	assert_almost_eq(player.animation.modulate.a, 1.0, 0.001, "无敌结束后恢复不透明")
