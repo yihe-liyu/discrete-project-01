@@ -26,4 +26,4 @@ const SCREEN_CENTER := Vector2(VIEW_WIDTH / 2.0, VIEW_HEIGHT / 2.0)
 ## 中弹 → 弹出 Game Over 菜单的等待（秒）：留出死亡演出/复活动画的时间。
 ## ⚠️ 这段窗口内若已被击破 / 通关**结算**过，`GameScene._ending` 闸门会放弃这次弹窗
 ## （否则 Game Over 会叠在已经切过去的场景上）。
-const DEATH_MENU_DELAY: float = 2.0
+const DEATH_MENU_DELAY: float = 1.5

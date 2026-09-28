@@ -40,6 +40,7 @@ static func 灵梦战斗后() -> DialogueSteps:
 	ka.portrait("战败").line("呜……")
 	ka.portrait("战败").line("真的是巫女啊……")
 	reimu.portrait("叹气").line("明明知道我的厉害还要来妨碍我……")
+	ka.portrait("战败").line("……")
 	d.exit(KA)
 	reimu.portrait("笑").line("哦？有新的线索出现了～")
 	d.event("stage_end")  # 行间事件：最后一句读完 → 这关结束（关卡脚本 finish_stage）

@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="EffectType" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="EffectType" format=3 uid="uid://bkb1l5o4dp8y7"]
 
-[ext_resource type="Script" path="res://scripts/data/effect_type.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/Textures/bullet/消弹.png" id="2_texture"]
+[ext_resource type="Script" uid="uid://cuc3t0lglu6dd" path="res://scripts/data/effect_type.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bpeubcwuhq558" path="res://assets/Textures/bullet/消弹.png" id="2_texture"]
 
 [resource]
 script = ExtResource("1_script")
@@ -10,6 +10,3 @@ texture = ExtResource("2_texture")
 duration = 0.2
 scale_from = 1.0
 scale_to = 0.2
-alpha_from = 1.0
-alpha_to = 0.0
-tint_mode = 1
