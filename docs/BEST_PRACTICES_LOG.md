@@ -26,8 +26,14 @@
 
 ## 索引
 
-> 共 38 条（本文件留最近 38 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 44 条（本文件留最近 44 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-09-28 — 修 bug（作者报）：符卡练习**返回后人物选择没回到同一个人**
+- 2026-09-28 — miss 补偿：**直接 +2 个雷**（不撒掉落物、雷碎片不动）
+- 2026-09-28 — 符卡结算横幅：`Bonus Failed` / `Get Spell Card Bonus` + 奖励分 + 击破时间
+- 2026-09-28 — 拿到**完整残机**播 `get_player` 回报音（碎片集满 / 整命道具）
+- 2026-09-27 — `get_card` 音量 **+3 dB**（作者："调大一点"）
+- 2026-09-27 — 正常流程**干净收取一张符卡**播 `get_card` 回报音
 - 2026-09-27 — S2「判定点」那句**改字**（作者："改这行字"）
 - 2026-09-27 — 中弹无敌**跟着 `DEATH_MENU_DELAY` 联动** + 无敌期**机体闪烁**
 - 2026-09-27 — 被弹炸弹补两处：**窗口内按暂停不再卡死** + 窗口期**框内整体渐显红滤镜**
@@ -68,6 +74,173 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-09-28 — 修 bug（作者报）：符卡练习**返回后人物选择没回到同一个人**
+
+- **作者报**："符卡练习的返回有点问题，并没有回退到相同的人物选择"。
+- **复现（先写红测试再看代码）**：给菜单塞一份**两个人物都有记录**的假符卡簿，再走**真实入口** `on_enter()`
+  并带 `PracticeSession.return_menu_state = {…, "char": 1}` + 授权标志 → 断言失败：
+  `_char_index` 是 **1**（对），但标签实得 **"← 博丽灵梦 →"**（0 号）—— 与"已经按 1 号人物重建的记录列表"自相矛盾。
+- **病根（一行顺序）**：`on_enter()` 在**建列表之前**就把 `_char_name.text` 写成了那一刻的 `_char_index`
+  （新实例 = 0），而 `_char_index` 是后面 `_restore_return_state()` 才还原的 —— **标签没有任何人事后再同步**。
+  （列表反而是对的：`_restore_return_state()` → `_change_stage()` 用还原后的 `_char_index` 过滤记录。）
+- **顺带发现的同族缺口**：菜单进场时**根本不看 `SaveData.selected_character`** ——
+  所以"退出再进来"永远回到 0 号人物。而**玩家数据菜单**（`player_data_menu.gd:44`）早就是
+  `_char_index = clampi(SaveData.selected_character, …)` —— 两个菜单对同一个人物选择口径不一致（本次拉齐）。
+- **改法**（`scripts/scenes/spell_practice_menu.gd`）：
+  1. `on_enter()` 进场先 `_char_index = clampi(SaveData.selected_character, 0, CHAR_NAMES.size() - 1)`；
+  2. 抽出 `_sync_char_label()` 作为**标签 ↔ `_char_index` 的唯一同步点**，在
+     「进场 / 还原之后 / 切人物」三处调用（`_refresh_char()` 里那行旧写法也换成它）。
+  3. `_restore_return_state()` 在改完 `_char_index` 后立刻同步标签（并留注释：还原会改它）。
+- **测试**：`test_spell_practice_menu` **+2**（返回回到同一个人物 / 进场取上次选的人物）——
+  两条都是**先红后绿**（红的那次实得 `← 博丽灵梦 →`）⇒ **663 用例**。
+- **没动的**：`PracticeSession.return_menu_state` 的 `"char"` 字段、`_start_practice()` 写
+  `SaveData.selected_character` 的时机（它本来就是"真的开始练习才算选"）—— 也就是说
+  **在菜单里左右浏览人物不算选择**，退出后仍回到"上次真开局/练习的那个人物"。
+  想改成"浏览即记住"就在 `_refresh_char()` 里补一行 `SaveData.selected_character = _char_index`。
+- **验收**：[1] 文档哨兵 ✅ · [2] 语法 353 脚本 0 失败 ✅ · [3] 命名 0 违规 ✅ · [4] 启动零错误 ✅ ·
+  [5] GUT **663 用例 / 662 通过**（唯一红 = `test_data_validity` 内容 WIP，与本次无关）。
+
+### 2026-09-28 — miss 补偿：**直接 +2 个雷**（不撒掉落物、雷碎片不动）
+
+- **作者要求**："miss 后直接增加两个 bomb（bomb 碎片不动），不用掉落物，直接加"。
+- **落点**：`Player._apply_miss()` 里一行 `resources.add_bombs(MISS_BOMB_GAIN)`（`const MISS_BOMB_GAIN := 2`，
+  与 `MISS_POWER_*` 那批常量放一起，0 = 关掉补偿）。
+- **新入口**：`PlayerResources.add_bombs(count) -> int` —— **直接**加完整雷（绕过碎片），返回**实际加上几个**
+  （到上限就加不上）。顺手把写死的 `8` 提成 `MAX_LIVES` / `MAX_BOMBS`（原来 `_add_life` 和 `_add_bomb`
+  各写一个 8，正是 R17 说的散落魔术数字）。
+  - **碎片那条线一点没动**：收满 5 片照旧合成 1 个（`collect_bomb_fragment` → `_add_bomb`）。
+- **两条边界（都由测试钉住）**：
+  1. **被弹炸弹窗口在 `miss()` 里先判** ⇒ 这 2 个雷**抢不了这一次命**（不能"用刚补的雷抵消这次被弹"）；
+     反过来，窗口里真按了 bomb、miss 被抵消的那次**不算 miss，不发补偿**（否则白拿 2 个雷）。
+  2. **到 `MAX_BOMBS`(8) 封顶**：7 个时补到 8，不越界（UI 就 8 个格子）。
+- **测试**：`test_player` +3（+2 且碎片不动 / 封顶 / 被弹炸弹抵消的那次不给）；
+  `test_player_resources` +1（`add_bombs` 绕过碎片 + 封顶 + 负数当 0）⇒ **661 用例**。
+  另：既有 `test_deathbomb_window_expiry_applies_miss` 的断言按新语义改成「不扣雷，还倒给 +2」（它是**行为变更**，
+  不是测试坏了 —— 一起改掉才诚实）。
+- **文档**：`BASELINE_EVIDENCE` S6 的「miss 语义完整」补上这 2 个雷与那两条边界；`TEST_INDEX` / README 徽章同步。
+- **可翻的边界**：① 练习模式照给（练习一被弹就结束本回，拿到也用不上；要关就在 `_apply_miss` 里加练习判断）；
+  ② **残机归零那一次**照给（反正要进 Game Over 菜单了）；③ 数量就是 `MISS_BOMB_GAIN` 一个数。
+- **验收**：[1] 文档哨兵 ✅ · [2] 语法 353 脚本 0 失败 ✅ · [3] 命名 0 违规 ✅ · [4] 启动零错误 ✅ ·
+  [5] GUT **661 用例 / 660 通过**（唯一红 = `test_data_validity` 内容 WIP，与本次改动无关）。
+
+### 2026-09-28 — 符卡结算横幅：`Bonus Failed` / `Get Spell Card Bonus` + 奖励分 + 击破时间
+
+- **作者要求**："符卡如果收取失败，那么在该符卡结束后在框的正中偏上方渐显一个 Bonus Failed 然后渐隐；
+  如果收取成功，那么…渐显一个 Get Spell Card Bonus，下方是具体的 bonus 分数然后渐隐；
+  然后不管收取是否成功，都要在更下面的位置渐显一个击破时间然后渐隐"。
+- **数据从哪来**：`Boss.clear_phase` 那一刻四样东西都在手上（`captured` / `_bonus` / `_elapsed` / `is_bonus_failed()`），
+  于是新增 `GameEvents.spell_result(captured, bonus, elapsed, bonus_failed)` —— **只在符卡阶段发**
+  （`_phase_data.uid != 0`；非符没有"奖励分"这回事）。**不动**既有 `phase_end` ——
+  它有 3 个订阅者（BossUI 进度点 / game_scene / 工作台日志），改签名等于为一件 UI 事去碰战斗收尾链路。
+- **"收取失败"的口径**（别和进度点的颜色混淆）：进度点看 `captured`（**有没有击破**），横幅看
+  `PhaseResultBanner.is_clean_capture(captured, bonus_failed)` = **击破了且奖励分没作废** ——
+  所以 miss / bomb 之后照样把卡打掉时：点变金、横幅却该是「Bonus Failed」。
+- **落点**：`scripts/components/phase_result_banner.gd` + `scenes/ui/phase_result_banner.tscn`
+  （文案 / 配色 / 落点声明在场景里，改措辞不用动代码）；`BossUI` 订阅 `spell_result` → 实例化播放，
+  `finished` 自回收。**唯一**会提前收掉它的是"又出了一张结算"（替换）或整个 BossUI 退场 ——
+  **阶段边界不掐它**（见下条）。
+- **版面**：VBox 三行（标题 → 分数 → 击破时间），锚 `anchor_left/right = 0.5`（**场地**水平居中）
+  + `anchor_top = 0.17`（场地上部）。**失败时分数行 `visible = false` → VBox 自动收掉那一格**，
+  击破时间自己贴到标题下面 —— "更下面"由容器保证，不用写"上移"逻辑。
+- **时长与阶段间隔解耦（作者要求："不能让这个和阶段间隔不相关吗🥺"）**：
+  - 起因：作者在编辑器里把 `line_stagger` 0.1 / `hold` 0.5 调上去（总时长 1.2s > 内容的 1.0s 间隔），
+    于是撞上我原先加的那道"`phase_start` 兜底清理"—— 横幅会被下一张开卡**掐掉半截**。
+  - 改法：**删掉那道清理**。横幅不看阶段边界，只按四个 @export 走完 ⇒ 以后调时长**不用再动内容**
+    （`sequence_phases(gap)` 保持 1.0 就好）。
+  - 代价：横幅会**和下一张符卡的大字报幕同屏**。所以落点不能随便放 —— 实测那条"免费带子"是
+    **倒计时之下、报幕大字最大态之上**：横幅块高 160px（三行最小高 59+47+38 + 行距 8×2）、
+    倒计时底 132、报幕最大态视觉顶 343（= 场地中心 448 − 布局高 70×3/2）⇒ 取 **0.17×896 = 152**，
+    离上下各约 20 / 31px。这条关系由 `test_block_fits_between_countdown_and_spell_announce` 钉住。
+  - **实测对比**（`overlap_pos030_*` vs `overlap_pos015_*`，都是把时长拉到 2.6s 的极端值）：
+    留在 0.30 时报幕大字会**直接压在击破时间那行字上**；提到 0.15/0.17 后两者干净分开。
+- **动画**：渐显（逐行错开 `line_stagger`）→ 停 `hold` → 渐隐。
+  实现**全用绝对 delay 排一条并行时间线**（`tween_property(...).set_delay()`）：`chain()` 那种"并行 + 顺序"
+  混用的写法，接在谁后面得看引擎实现，而顺序是要被测试钉住的。
+- **测试**：
+  - `test_phase_result_banner`（新，12 条）：真值表 / 成功与失败的行显隐与文案 / 标题配色 / 行序 /
+    **居中 + 在中线之上** / **块体夹在倒计时与报幕之间**（锁关系不锁像素，与
+    `test_boss_ui.test_timer_sits_below_spell_name` 同法）/ 渐显→停→渐隐 / `finished` / `clear()` 释放。
+  - **动画用例改成手动步进时间轴**（`tween.pause()` + `custom_step()`）：实测 GUT 起来后的**第一个帧特别长**
+    （0.05s 的 `SceneTreeTimer` 一帧就被吞掉，渐变直接跳完），拿真实时间采样会假红；手动步进是确定性的，
+    顺带省掉 1s 级的等待。
+  - `test_boss_ui` +4（`spell_result` → 出场 / **阶段边界不掐它**（这条就是"解耦"的回归钉子）/
+    第二张结算替换第一张 / 作废时不显示分数行）；
+    `test_boss_phase` +3（符卡才发；带击破 · 奖励分 · 用时；miss·bomb 作废时 `bonus_failed = true`）⇒ **657 用例**。
+- **实测（xvfb 实渲染，`.godot/probe/`）**：`banner_captured.png` / `banner_failed.png`（两种结果各一张；
+  失败那张分数行收起、击破时间贴到标题下）+ `banner_with_announce.png`（**共存**：横幅还在、下一张报幕已进场，两带子分得干净）+ `overlap_pos030_*` / `overlap_pos015_*`（把时长拉到 2.6s 的极端对比 —— 0.30 会叠字、0.15 不会）。
+- **文档**：`TEST_INDEX`（新文件 + 用例数）· README 徽章 · `BASELINE_EVIDENCE` S8 补这条演出的证据。
+- **可翻的边界**（都是作者一句话的事）：① 非符阶段**不播** —— 作者的话是针对符卡的；要非符也报时间就去掉 `uid != 0` 那个门；
+  ② **超时**（没击破）算失败 ⇒ 「Bonus Failed」+ 击破时间（= 时限，语义上其实是"时间到"）；
+  ③ 练习模式照播（不涉及奖励分入账）；④ 想让它回"正中偏上"（0.30）也行 —— 代价是长横幅会和报幕叠字（图在 `.godot/probe/`）。
+- **验收**：[1] 文档哨兵 ✅ · [2] 语法 353 脚本 0 失败 ✅ · [3] 命名 0 违规 ✅ · [4] 启动零错误 ✅ ·
+  [5] GUT **657 用例 / 656 通过**（唯一红 = `test_data_validity` 内容 WIP，与本次改动无关）。
+
+### 2026-09-28 — 拿到**完整残机**播 `get_player` 回报音（碎片集满 / 整命道具）
+
+- **作者要求**："然后在得到一个完整残机的时候播放 get_player 音效♥️"（素材 `assets/Sound/get_player.wav` 此前只是躺在目录里，**从没注册过**）。
+- **"得到一个完整残机"全仓只有两条路**（`grep -rn "collect_life_"` 唯一调用者是 `Item.collect`）：
+  ① 残机碎片集满第 5 片（`collect_life_fragment()` → `_add_life()`）；② 吃到整命道具（`LIFE_FULL` → `collect_life_full()` = 连收 5 片）。
+  两条都汇到 `_add_life()`，所以**门槛不是"碰到碎片/道具"，而是"真的多了一条命"**。
+- **规则提到返回值**（在单一 owner 里判，别让调用点重算"满没满"）：
+  `PlayerResources.collect_life_fragment() -> bool` / `collect_life_full() -> bool` / `_add_life() -> bool`，
+  **只有真的 +1 命才 true**；**8 命上限**时碎片照旧被消耗（道具不白留）但返回 false ⇒ **不播**（回报音不许撒谎）。
+- **落点**：`Item.EXTEND_SFX := &"get_player"` + `Item.collect()` 里 `if got_life: AudioManager.play_sfx(...)`。
+  音频策略留在"道具被吃"这一处（与同函数里那声 `item` 同源），状态判定留在 `PlayerResources`（只有它知道 8 命上限）——
+  这样 `EXTEND_SFX` 拼错会被 `test_item` 抓住（不像 key 拼错那样静默无声）。
+- **取值**：`SFX_DB["get_player"] = +0.4` = **RMS 基准**（`python3 tools/sfx_db_baseline.py` 量的起点）。
+  该素材峰值 0 / RMS −13.1 dBFS，比 `item` 的源素材**响 ~4.9 dB**，所以它要的补偿是**负的少补**（+0.4 而不是 +5.3）。
+  **取基准 ⇒ 与 `item`/`graze` 这些同样取基准的音「有效 RMS 完全相同」**——这就是这张表的设计不变式：
+  `输出 RMS = 常量 − mean(raw)`，与源文件电平无关。
+  （我一开始把"素材 RMS + 表的 dB"当成了最终响度、算出"比 item 轻 1.3 dB"，**探针一跑就露了**：见下条实测。）
+- **实测（探针，真实 Item + EntityRegistry + AudioManager；`.godot/probe/`，看完即删）**：
+  - 素材：`get_player.wav` **1.591 s / loop_mode=0（不循环）/ 22050 Hz / QOA**（与 `get_card` 同一套导入参数，不是"响一下就没"的短音）。
+  - **第 5 片**：`lives 2→3`、`fragments 4→0`，SFX 池交进 **`item.wav`(−9.80 dB) + `get_player.wav`(−14.70 dB)** —— 两声同帧、互不挤掉（同帧去重是**按流**的）。
+  - **满 8 命时第 5 片**：`lives 8→8`、`fragments 4→0`（道具仍被消耗），池里**只有 `item.wav`** ⇒ 不播回报音 ✓
+  - 两声音量差 −4.9 dB **恰好**抵消素材电平差 +4.9 dB ⇒ 有效 RMS 相同（回到上面的不变式）。
+- **⚠️ 整表余量见底**：加完这个 key，整表均值 **0.380**（`test_sfx_mix` 限 ±0.5）——
+  上一轮 `get_card` +3 dB 已把均值从 0.22 抬到 0.379，这次只再加 0.001。**再抬这个音 ~2 dB 就会越界**，
+  到时按老规矩**整表统一回中心**（所有 key 同减 X dB，均衡关系不变，见 2026-09-27 `boss_die` 那条）。
+  （工具会把这个新 key 标成"手调 −1.4"：那是**整表相对纯 RMS 线有 +1.4 公共平移**造成的，不是耳朵定的 —— `get_card` 刚加时读数一样。）
+- **测试**：`test_item` +4（碎片第 5 片播 / 没集满不播 / 整命道具播 / 满 8 命不播 ——
+  用 `AudioManager._sfx_players` 看流身份，与 `test_boss_ui` 同法）；`test_player_resources` +2（返回值 =「真的多了一条命」+ 满命仍消耗道具）⇒ **638 用例**。
+- **文档**：`DANMAKU_API.md` §7.2 key 清单补 `get_player`（**哨兵核对清单 == 注册表**，不加就红）+ 一行语义；
+  `TEST_INDEX` / README 徽章同步（638）。
+- **可翻的边界**：满 8 命时"静默吃掉道具"是**我们的选择**（作者要的是"得到完整残机时播"）；想改成"满命也播一声"只需删 `_add_life()` 的上限分支。
+- **验收**：`verify.sh` 的 [1] 文档哨兵 ✅ · [2] 语法 351 脚本 0 失败 ✅ · [3] 命名 0 违规 ✅ · [4] 启动零错误 ✅
+  （**[5] GUT 638 用例 / 637 通过**：唯一红 = `test_data_validity` 内容 WIP —— stage01/03B/EX 里还有报「需要移动脚本/弹幕脚本」的 `.tres`，
+  那是作者正在填的内容，与本次改动无关；本次新增 6 条**全过**）。
+
+### 2026-09-27 — `get_card` 音量 **+3 dB**（作者："调大一点"）
+
+- **从 RMS 基准 +3.9 → +6.9**（3 dB ≈ 明显一档）。`tools/sfx_db_baseline.py` 复核为「手调 +1.6 dB」——
+  即比它自己的 RMS 基准再亮一截，与 `item`(+5.3) / `graze`(+5.5) 同档：**奖励音该亮出来**。
+- **削顶余量**：总电平 `SFX_LEVEL_DB = -12.0`，素材本身峰值 0 dBFS ⇒ 混音峰值约 **−5.1 dB**，不削顶（还有约 5 dB 可抬）。
+- **整表均值 0.379**（`test_sfx_mix` 限 ±0.5）⇒ 还能再抬约 2 dB；再往上就得把**整表统一回中心**
+  （所有 key 同减 X dB，均衡关系不变）——不然测试会红。
+- 顺手修掉 `sounds` 注释里的笔误：`Boss.capture_sfx` → **`Boss.CAPTURE_SFX`**。
+- **验收**：文档哨兵 ✅ · 语法 351 脚本 0 失败 ✅ · `test_sfx_mix` ✅ · `./tools/verify.sh` 六步全过
+  （**632 用例**，本次只改一个 dB 值，用例/断言数不变）。
+
+### 2026-09-27 — 正常流程**干净收取一张符卡**播 `get_card` 回报音
+
+- **作者要求**："现在给正常流程中成功收取一张符卡使用 get_card 音效吧"（素材已放进 `assets/Sound/get_card.wav`）。
+- **语义对齐**：`Boss.clear_phase()` 里本来就有两支分支 —— 上面是**练习收取**（`PracticeSession.is_practice_mode`），
+  下面就是**正常流程的干净收取**（`captured and not is_bonus_failed()`）。所以"正常流程中成功收取"= 后者 ✓
+  另外**非符**（`PhaseData.uid == 0`）不算"收取符卡"，不能播。
+- **落点**：
+  - `AssetRegistry.sounds["get_card"]` + `SFX_DB["get_card"] = +3.9`（**起点 = RMS 基准**，用 `python3 tools/sfx_db_baseline.py` 量的；
+    整表均值 0.22，仍在 `test_sfx_mix` 的 ±0.5 内 ⇒ 不用重新居中）。
+  - `Boss.CAPTURE_SFX := &"get_card"` + 纯函数 `Boss.should_play_capture_sfx(captured, bonus_failed, uid, practice)`：
+    **非练习 + 干净收取 + 且 uid != 0** 才为真 —— 把规则提成真值表，免得以后有人把它挪到"任意 clear_phase"上。
+  - 顺手把全破音效那段的内联取法抽成 `Boss._play_sfx(key)`（key 不存在静默跳过），两处共用一套。
+- **测试**：`test_boss_phase` +1（真值表五条 + `CAPTURE_SFX` 必须在 `AssetRegistry.sounds` 里）→ **632 用例**；
+  `test_sfx_mix` 自动覆盖新 key（每个 sounds key 都要有 SFX_DB 项 + 整表居中）。
+- **文档**：`DANMAKU_API.md` §7.2 的 key 清单补 `get_card`（**文档哨兵会核对这张清单 == 注册表**，不加就红）；
+  `TEST_INDEX` / README 徽章同步。
+- **边界说明**：工作台里 `workbench.gd` 的调试跳阶段（Ctrl+G）也走 `clear_phase(true)`，所以**调试时会听到这个音**
+  （非练习模式、uid != 0）—— 当"你确实收了一张卡"的反馈，可接受；想去掉就给那一处加练习/调试标记。
+- **验收**：`./tools/verify.sh` 六步全过。
 
 ### 2026-09-27 — S2「判定点」那句**改字**（作者："改这行字"）
 

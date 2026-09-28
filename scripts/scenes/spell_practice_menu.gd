@@ -67,10 +67,13 @@ var _pulse_tween: Tween
 
 func on_enter() -> void:
 	modulate.a = 0.0
-	_char_name.text = "← %s →" % CHAR_NAMES[_char_index]
+	# 人物**起点** = 上次选的那个人物（与 `player_data_menu` 同口径）
+	_char_index = clampi(SaveData.selected_character, 0, CHAR_NAMES.size() - 1)
+	_sync_char_label()
 	_build_data()
 	_build_lists()
-	_restore_return_state()   # 从练习返回时还原层级/选中项（无状态则不动）
+	_restore_return_state()   # 从练习返回时还原层级/选中项（无状态则不动；它可能再改 `_char_index`）
+	_sync_char_label()        # ← 还原之后再同步一次：标签必须跟着还原后的人物
 	_highlight()
 
 	var overlay: ColorRect = $"Overlay"
@@ -592,6 +595,9 @@ func _restore_return_state() -> void:
 	if not authorized:
 		return
 	_char_index = int(st.get("char", _char_index))
+	# ⚠️ 还原可能改了 `_char_index`（从练习返回时就是）—— 标签必须在这里同步。
+	#    曾经只在 `on_enter()` 开头写一行标签，而还原发生在其后 ⇒ 返回后人物选择显示回 0 号（作者报的 bug）。
+	_sync_char_label()
 	# ⚠️ 必须用 `_change_stage()`（而不是只赋 `_stage_index`）—— 它会**重建 `_phases`** 再建第二级；
 	#    只赋值的话第二级还留着上一个 stage 的列表（与"切 stage 不重建二级"是同一个病）。
 	_change_stage(clampi(int(st.get("stage", 0)), 0, maxi(_stages.size() - 1, 0)))
@@ -602,8 +608,13 @@ func _restore_return_state() -> void:
 	_highlight()
 
 
-func _refresh_char() -> void:
+## 人物标签 ↔ `_char_index` 的**唯一同步点**（进场 / 切人物 / 从练习返回都走它）。
+func _sync_char_label() -> void:
 	_char_name.text = "← %s →" % CHAR_NAMES[_char_index]
+
+
+func _refresh_char() -> void:
+	_sync_char_label()
 	_section = Section.STAGE
 	_stage_index = 0
 	_phase_index = 0

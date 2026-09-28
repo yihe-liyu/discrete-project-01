@@ -8,6 +8,8 @@ const RED := Color(1.0, 0.0, 0.0, 1.0)
 const PURPLE := Color(0.858, 0.5, 1.0, 1.0)
 ## 符卡名大字报（场景声明式：Label 根 + Background/BonusLabel/CaptureLabel 子节点）。
 const ANNOUNCE_SCENE := preload("res://scenes/ui/announce_label.tscn")
+## 符卡结算横幅（阶段结束后一闪而过；文案 / 位置声明在场景里）
+const RESULT_BANNER_SCENE := preload("res://scenes/ui/phase_result_banner.tscn")
 ## 符卡名底衬（敌方 = 红）。玩家符卡（Bomb 名）用 player_spell_name_background。
 const ENEMY_SPELL_NAME_BG := preload("res://assets/Textures/ascii/enemy_spell_name_background.png")
 ## 本符卡奖励分作废（期间 miss / 用 bomb）时，数字位显示的文案
@@ -24,6 +26,7 @@ const BONUS_FAILED_TEXT := "失败"
 var _dots: Array[ColorRect] = []
 var _phase_idx: int = 0
 var _announce_label: AnnounceLabel
+var _phase_result_banner: PhaseResultBanner
 var _boss: Boss
 var _boss_hud: BossHud
 
@@ -35,6 +38,7 @@ func _ready() -> void:
 	GameEvents.boss_defeated.connect(_on_boss_defeated)
 	GameEvents.phase_start.connect(_on_phase_start)
 	GameEvents.phase_end.connect(_on_phase_end)
+	GameEvents.spell_result.connect(_on_spell_result)
 	GameEvents.phase_bonus_tick.connect(_on_tick)
 	GameEvents.phase_bonus_failed.connect(_on_bonus_failed)
 
@@ -45,6 +49,7 @@ func _exit_tree() -> void:
 		[GameEvents.boss_defeated, _on_boss_defeated],
 		[GameEvents.phase_start, _on_phase_start],
 		[GameEvents.phase_end, _on_phase_end],
+		[GameEvents.spell_result, _on_spell_result],
 		[GameEvents.phase_bonus_tick, _on_tick],
 		[GameEvents.phase_bonus_failed, _on_bonus_failed],
 	]:
@@ -124,6 +129,8 @@ func _on_boss_defeated(_defeated_boss: Node) -> void:
 	visible = false
 
 func _on_phase_start(phase: PhaseData) -> void:
+	# 结算横幅**不看阶段边界**（作者要求：时长别和阶段间隔挂钩）—— 它只按自己的 @export 走完，
+	# 唯一会提前收掉它的是"又出了一张结算"（`_on_spell_result`）或整个 BossUI 退场。
 	if phase.uid != 0:
 		# 符卡宣言音（`card` 曾在 AssetRegistry 里注册却无人播放）
 		AudioManager.play_sfx(AssetRegistry.sounds["card"])
@@ -157,6 +164,22 @@ func _clear_announce() -> void:
 	if _announce_label and is_instance_valid(_announce_label):
 		_announce_label.clear()
 		_announce_label = null
+
+
+## 符卡结算横幅：**正中偏上**渐显「Bonus Failed」或「Get Spell Card Bonus」+ 奖励分 + 击破时间。
+## 数据全来自 `spell_result`（`Boss` 只在符卡阶段发它），所以这里不碰 Boss 状态。
+func _on_spell_result(captured: bool, bonus: int, elapsed: float, bonus_failed: bool) -> void:
+	_clear_banner()
+	_phase_result_banner = RESULT_BANNER_SCENE.instantiate() as PhaseResultBanner
+	$Control.add_child(_phase_result_banner)
+	_phase_result_banner.finished.connect(_clear_banner, CONNECT_ONE_SHOT)
+	_phase_result_banner.show_result(captured, bonus, elapsed, bonus_failed)
+
+
+func _clear_banner() -> void:
+	if _phase_result_banner and is_instance_valid(_phase_result_banner):
+		_phase_result_banner.clear()
+		_phase_result_banner = null
 
 
 func _play_spell_announce(spell_name: String) -> void:

@@ -368,6 +368,9 @@ func _find_item_pool() -> ItemPool:
 
 # ═══ Miss ═══
 
+## Miss 补偿：**直接 +N 个完整雷**（不撒掉落物、不动雷碎片；0 = 关掉补偿）。
+## 走 `PlayerResources.add_bombs()` —— 到 `MAX_BOMBS` 就加不上（满了不越界）。
+const MISS_BOMB_GAIN: int = 2
 ## Miss 撒出的 P 点数量（绕自机、向上均匀半圆）
 const MISS_POWER_COUNT: int = 10
 ## 扇形总张角：180° = 向上半圆（含两端点 → 相邻 20°）
@@ -395,7 +398,7 @@ const MISS_DEATH_INVINCIBLE_MARGIN: float = 1.0
 const INVINCIBLE_BLINK_HZ: float = 6.0
 const INVINCIBLE_BLINK_MIN_ALPHA: float = 0.2
 ## 被弹炸弹（deathbomb）窗口长度（**物理帧**）：被弹瞬间全局定格这么多帧，等玩家按 bomb 抢命
-const DEATHBOMB_FRAMES: int = 12
+const DEATHBOMB_FRAMES: int = 24
 ## 开窗所需的最少雷数（1 = 只剩一个雷也给机会；想"必须 ≥2 才有窗口"就改成 2）
 const DEATHBOMB_MIN_BOMBS: int = 1
 ## 抵消一次 miss 消耗的雷数（不足则把手上的用完 —— 只剩 1 个就只扣 1）
@@ -439,6 +442,10 @@ func _apply_miss() -> void:
 
 	# 火力惩罚（原作口径）：miss 削 50 火力（clamp 0..300）
 	resources.on_miss_power_penalty()
+
+	# 雷补偿：**直接 +2 个完整雷**（作者要求：不撒掉落物、雷碎片不动）——
+	# 到 8 个上限就加不上；被弹炸弹窗口在 `miss()` 里**先**判定，所以这 2 个雷抢不了这次命。
+	resources.add_bombs(MISS_BOMB_GAIN)
 
 	# 在自机处撒 10 个 P 点：绕自机、向上 180° 均匀弧形（宽限内不被吸走，先飞成弧）
 	_spawn_miss_power_fan(pos)

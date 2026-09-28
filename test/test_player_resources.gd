@@ -61,6 +61,25 @@ func test_life_cap():
 	_player_resources.collect_life_full()
 	assert_eq(_player_resources.lives, 8, "命上限 8")
 
+
+## 返回值 = 「这一次**真的**多了一条命」：`Item` 靠它决定要不要播 `get_player` 回报音（别在没加命时播）
+func test_life_fragment_returns_true_only_on_completion():
+	_player_resources.lives = 1
+	for i in 4:
+		assert_false(_player_resources.collect_life_fragment(),
+				"第 %d 片只是碎片，还没合出完整残机" % (i + 1))
+	assert_eq(_player_resources.life_fragments, 4, "前 4 片仍存着")
+	assert_true(_player_resources.collect_life_fragment(), "第 5 片 → 真的合出一个完整残机")
+	assert_eq(_player_resources.lives, 2, "确实 +1 命")
+
+
+## 满命时整命道具照旧被吃掉（碎片不留下），但**没有多命** ⇒ 返回 false（不播回报音）
+func test_full_life_at_cap_returns_false():
+	_player_resources.lives = 8
+	assert_false(_player_resources.collect_life_full(), "8 命上限 → 没真的加命")
+	assert_eq(_player_resources.lives, 8, "命仍是 8")
+	assert_eq(_player_resources.life_fragments, 0, "道具仍被消耗（不白留碎片）")
+
 func test_lose_life():
 	_player_resources.lives = 2
 	assert_true(_player_resources.lose_life(), "有命时被弹返回 true")
@@ -85,6 +104,21 @@ func test_bomb_cap():
 	for i in 5:
 		_player_resources.collect_bomb_fragment()
 	assert_eq(_player_resources.bomb_count, 8, "Bomb 上限 8")
+
+
+## `add_bombs(n)`：**直接**加 n 个完整雷（miss 补偿走它），返回实际加上几个 + 封顶 + **不动碎片**
+func test_add_bombs_direct_bypasses_fragments():
+	_player_resources.bomb_count = 1
+	_player_resources.bomb_fragments = 3
+	assert_eq(_player_resources.add_bombs(2), 2, "加 2 个成功")
+	assert_eq(_player_resources.bomb_count, 3, "雷 +2")
+	assert_eq(_player_resources.bomb_fragments, 3, "碎片一点没动（直接加，不走碎片）")
+
+	_player_resources.bomb_count = PlayerResources.MAX_BOMBS - 1
+	assert_eq(_player_resources.add_bombs(2), 1, "到上限 → 只加上 1 个")
+	assert_eq(_player_resources.bomb_count, PlayerResources.MAX_BOMBS, "封顶")
+	assert_eq(_player_resources.add_bombs(2), 0, "已经满了 → 加 0 个（不越界、不报错）")
+	assert_eq(_player_resources.add_bombs(-5), 0, "负数当 0 处理")
 
 
 ## `use_bombs(n)`：一次扣 n，**不足则把手上的用完**（被弹炸弹扣 2 / 只剩 1 就扣 1）

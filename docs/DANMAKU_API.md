@@ -480,10 +480,12 @@ tl.loop()
 
 `ctx.audio.play_sfx(AssetRegistry.sounds[key])` / `sfx()` / `hit_sfx` 可用：
 
-`shoot` `player_shoot` `kira` `enemy_die` `boss_die` `player_die` `graze` `item` `card` `player_card` `select` `ok` `cancel` `pause` `lazer` `marisa_damage` `msl` `normal_damage`
+`shoot` `player_shoot` `kira` `enemy_die` `boss_die` `player_die` `graze` `item` `card` `get_card` `get_player` `player_card` `select` `ok` `cancel` `pause` `lazer` `marisa_damage` `msl` `normal_damage`
 
 > 权威表 = `scripts/asset_registry.gd` 的 `sounds`（BGM 的 `music_*` 同在那一张表，但不走 `play_sfx`）；
 > 每个 key 都要在 `SFX_DB` 有音量项（`test_sfx_mix` 会红）。**加 key 时顺手改上面这一行。**
+> `get_card` = **正常流程干净收取一张符卡**的回报音（`Boss.CAPTURE_SFX`；非符 / 练习模式 / miss·bomb 作废都不播）。
+> `get_player` = 拿到**完整残机**的回报音（`Item.EXTEND_SFX`；碎片集满 5 片 / 吃到整命道具，且**只在真的多了一条命时播** —— 已满 8 命不播）。
 
 ### 7.3 阵营 / 混合
 

@@ -40,6 +40,11 @@ const LASER_TEXTURE := preload("res://assets/Textures/bullet/laser.png")
 const SFX_DB := {
 	"cancel": +1.4,   ## 手调：菜单返回音，同上
 	"card": -0.3,
+	## 符卡干净收取的回报音（作者素材）。起点 = RMS 基准(+3.9)，**作者反馈偏小 → +3 dB**
+	"get_card": +6.9,
+	## 拿到**完整残机**的回报音（作者素材）。起点 = RMS 基准(+0.4)：素材 RMS −13.1 dBFS，
+	## 比 get_card 的源还响 ~3.5 dB ⇒ 几乎不用补（取基准 ⇒ 与 item/graze 的有效 RMS 相同）
+	"get_player": +0.4,
 	"enemy_die": +2.6,
 	"boss_die": -3.0,   ## 专用素材（作者提供）。RMS 基准 -4.4，随整表居中抬到与其余音效同档
 	"graze": +5.5,
@@ -69,6 +74,10 @@ const sounds := {
 	"graze":        preload("res://assets/Sound/graze.wav"),
 	"item":         preload("res://assets/Sound/item.wav"),
 	"card":         preload("res://assets/Sound/card.wav"),
+	## 符卡**干净收取**（正常流程）的回报音 —— 见 `Boss.CAPTURE_SFX`
+	"get_card":     preload("res://assets/Sound/get_card.wav"),
+	## 拿到**完整残机**（碎片集满 5 片 / 吃到整命道具）的回报音 —— 见 `Item.EXTEND_SFX`
+	"get_player":   preload("res://assets/Sound/get_player.wav"),
 	"player_card":  preload("res://assets/Sound/player_card.wav"),
 	# ── UI ──
 	"select":       preload("res://assets/Sound/select.wav"),

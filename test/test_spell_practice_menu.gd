@@ -436,3 +436,58 @@ func test_stale_state_without_authorization_is_ignored():
 	menu._restore_return_state()
 	assert_eq(menu._section, 0, "未授权 → 不跳级（正常进入仍是第一级）")
 	assert_eq(PracticeSession.return_menu_state, {}, "残留状态也应被清掉，避免下次再犯")
+
+
+# ═══════════ 人物选择：进菜单 / 从练习返回都要"同一个人" ═══════════
+
+## 夹具记录（指定人物）
+func _mk_rec_char(stage: int, boss: int, phase: int, char_idx: int) -> SpellRecord:
+	var rec := _mk_rec(stage, boss, phase)
+	rec.character = char_idx
+	return rec
+
+
+## 回归（作者报）：**从练习返回后，人物选择必须回到同一个人**。
+## 病根：`on_enter()` 在建列表**之前**就把 `_char_name` 写成了那一刻的 `_char_index`
+## （新实例 = 0），而 `_char_index` 是 `_restore_return_state()` 之后才被还原的
+## —— 标签因此停在 0 号人物，和已经按 1 号人物重建的记录列表自相矛盾。
+func test_return_from_practice_restores_same_character():
+	var saved_book: SpellRecordBook = SaveData.spell_book
+	var saved_char: int = SaveData.selected_character
+	var book := SpellRecordBook.new()
+	book.records.append(_mk_rec_char(1, 0, 0, 0))
+	book.records.append(_mk_rec_char(1, 0, 0, 1))
+	SaveData.spell_book = book
+	SaveData.selected_character = 0
+
+	var menu = _mk_menu()
+	PracticeSession.restore_menu_on_enter = true
+	PracticeSession.return_menu_state = {"section": 2, "stage": 0, "phase": 0, "diff": 0, "char": 1}
+	menu.on_enter()
+
+	assert_eq(menu._char_index, 1, "还原后内部人物 = 1（这条本来就对）")
+	assert_eq(menu._char_name.text, "← %s →" % SpellRecord.CHAR_NAMES[1],
+		"**人物标签也要回到 1 号**（实得：%s）" % menu._char_name.text)
+
+	SaveData.spell_book = saved_book
+	SaveData.selected_character = saved_char
+
+
+## 进菜单的**起点** = 上次选的那个人物（与 `player_data_menu` 同口径）——
+## 否则"退出再进来"永远回到 0 号人物。
+func test_enter_starts_from_last_selected_character():
+	var saved_book: SpellRecordBook = SaveData.spell_book
+	var saved_char: int = SaveData.selected_character
+	SaveData.spell_book = SpellRecordBook.new()
+	SaveData.selected_character = 1
+
+	var menu = _mk_menu()
+	PracticeSession.return_menu_state = {}
+	PracticeSession.restore_menu_on_enter = false
+	menu.on_enter()
+
+	assert_eq(menu._char_index, 1, "起点跟着 SaveData.selected_character")
+	assert_eq(menu._char_name.text, "← %s →" % SpellRecord.CHAR_NAMES[1], "标签与内部一致")
+
+	SaveData.spell_book = saved_book
+	SaveData.selected_character = saved_char

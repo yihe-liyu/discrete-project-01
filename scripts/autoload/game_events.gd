@@ -23,6 +23,13 @@ signal phase_bonus_tick(bonus: int)
 ## 本符卡**奖励分作废**（期间 miss 过或用过 bomb）→ UI 把数字位换成「失败」。每阶段最多发一次。
 @warning_ignore("unused_signal")
 signal phase_bonus_failed()
+
+## **符卡结算**（`Boss.clear_phase` 发；**只在符卡阶段**发 —— 非符没有奖励分这回事）。
+## 结算横幅（`PhaseResultBanner`）的数据源：
+## `captured` = 击破了（超时 / 时符撑过则为 false）；`bonus_failed` = 期间 miss / 用 bomb 作废；
+## `elapsed` = 本张符卡用时（秒）；`bonus` = 最终奖励分（作废时它**没入账** → UI 不显示分数）。
+@warning_ignore("unused_signal")
+signal spell_result(captured: bool, bonus: int, elapsed: float, bonus_failed: bool)
 @warning_ignore("unused_signal")
 signal dialogue_event(event: String)
 

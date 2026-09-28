@@ -7,6 +7,9 @@ enum Type { POWER, POINT, LIFE_FRAGMENT, BOMB_FRAGMENT, LIFE_FULL, BOMB_FULL }
 const POWER_SCORE: int = 10
 ## 点被**非金色**收取时的最低分（越靠近框底越接近它；收点线附近 = max_point）
 const MIN_POINT_SCORE: int = 5000
+## 拿到**完整残机**时的回报音 key（`AssetRegistry.sounds`）：残机碎片第 5 片合成 / 吃到整命道具。
+## **只在真的多了一条命时播** —— 见 `collect()`（8 命上限时不播）。
+const EXTEND_SFX := &"get_player"
 
 var item_type: Type = Type.POINT
 ## 吃下时给的分数（POWER 用；POINT 的分是动态 max_point，不吃这个字段）
@@ -155,6 +158,8 @@ func collect() -> void:
 	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
 	# 本次吃到的分（P 点 = value，点 = 当前 max_point）；>0 才弹浮字。
 	var gained := 0
+	# 本次是否**真的多了一条命**（碎片集满 5 片 / 整命道具且未到 8 命上限）
+	var got_life := false
 	if res != null:
 		match item_type:
 			Type.POWER:
@@ -165,13 +170,16 @@ func collect() -> void:
 				var pts := res.max_point
 				gained = res.add_max_point(pts if _is_highlight else _point_score_at(pts))
 			Type.LIFE_FRAGMENT:
-				res.collect_life_fragment()
+				got_life = res.collect_life_fragment()
 			Type.BOMB_FRAGMENT:
 				res.collect_bomb_fragment()
 			Type.LIFE_FULL:
-				res.collect_life_full()
+				got_life = res.collect_life_full()
 			Type.BOMB_FULL:
 				res.collect_bomb_full()
+	# 拿到完整残机 = 里程碑事件，单独给一声（与上面那声 `item` 不冲突：两道不同的流）
+	if got_life:
+		AudioManager.play_sfx(AssetRegistry.sounds[EXTEND_SFX])
 	if gained > 0:
 		GameEvents.item_score.emit(gained, global_position, _is_highlight)
 	_recycle()

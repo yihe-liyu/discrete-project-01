@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://doh0f1mb7qwuc"]
+
+[ext_resource type="Script" uid="uid://bo5t78e4rxult" path="res://scripts/components/phase_result_banner.gd" id="1_script"]
+
+[node name="PhaseResultBanner" type="Control" unique_id=1219680006]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="Lines" type="VBoxContainer" parent="." unique_id=609204875]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.17
+anchor_right = 0.5
+anchor_bottom = 0.17
+offset_left = -400.0
+offset_top = 136.8
+offset_right = 400.0
+offset_bottom = 336.8
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Lines" unique_id=376354378]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.839, 0.475, 1)
+theme_override_font_sizes/font_size = 40
+horizontal_alignment = 1
+
+[node name="Bonus" type="Label" parent="Lines" unique_id=1042326493]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.839, 0.475, 1)
+theme_override_font_sizes/font_size = 32
+horizontal_alignment = 1
+
+[node name="Time" type="Label" parent="Lines" unique_id=1110490236]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.85)
+theme_override_font_sizes/font_size = 26
+horizontal_alignment = 1

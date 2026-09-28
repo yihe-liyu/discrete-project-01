@@ -16,7 +16,7 @@
 ./tools/verify.sh                                    # 六步门禁（文档哨兵+语法+命名+启动+GUT+所有权）
 ```
 
-**现状**：108 脚本 / **631 用例（630 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6222 断言 / 32.0s** / 19 orphans / **0 pending**。
+**现状**：109 脚本 / **663 用例（662 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6315 断言 / 32.4s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -24,8 +24,8 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 34 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 172 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 41 | 297 | `scripts/**` 的实体/系统/服务 |
-| **D UI / 菜单** | 13 | 77 | `scenes/ui/**` 与 HUD |
+| **C 宿主 · 运行时系统** | 41 | 311 | `scripts/**` 的实体/系统/服务 |
+| **D UI / 菜单** | 14 | 95 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 8 | 26 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
@@ -102,7 +102,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（41 / 297）
+## C · 宿主 · 运行时系统（41 / 311）
 
 ### C1 组合根 / 服务 / 时间线（8 / 35）
 
@@ -118,13 +118,13 @@
 | [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环 | 2 | 0 |
 | [test_timeline_phase_unfreeze](../test/test_timeline_phase_unfreeze.gd) | B 方案回归：Boss 阶段战斗不再冻结时间轴 | 1 | 0 |
 
-### C2 自机 / 道具 / 资源（5 / 53）
+### C2 自机 / 道具 / 资源（5 / 63）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_player_resources](../test/test_player_resources.gd) | `PlayerResources` 数值系统：分数/火力/记忆/残机/Bomb（不经全局转发）+ **`use_bombs(n)` 一次扣多、不足扣光** | 12 | 0 |
-| [test_player](../test/test_player.gd) | `Player`：移动 / focus 低速 / 被弹（扣火力 + **复位两步** + **被弹炸弹窗口**：定格/按 bomb 抵消扣 2 雷/只剩 1 扣 1/没雷不开窗/过期照常结算/**窗口内按暂停也能收尾**）/ 数据应用 / 无敌时长链接 DEATH_MENU_DELAY / 无敌闪烁只闪贴图 / 扇形半径与左右边界契约 | 23 | 4 |
-| [test_item](../test/test_item.gd) | 道具系统：掉落收集 / 类型效果 / 防重复 / **miss 扇形爆发**（宽限不被吸附 + 等半径弧 + 均匀 20° + 飞完**竖直下落** + **左右夹进框**） | 13 | 0 |
+| [test_player_resources](../test/test_player_resources.gd) | `PlayerResources` 数值系统：分数/火力/记忆/残机/Bomb（不经全局转发）+ **`use_bombs(n)` 一次扣多、不足扣光** + **残机碎片/整命的返回值 = 「真的多了一条命」** + **`add_bombs(n)` 直接加雷（绕过碎片、封顶）** | 15 | 0 |
+| [test_player](../test/test_player.gd) | `Player`：移动 / focus 低速 / 被弹（扣火力 + **复位两步** + **被弹炸弹窗口**：定格/按 bomb 抵消扣 2 雷/只剩 1 扣 1/没雷不开窗/过期照常结算/**窗口内按暂停也能收尾**）/ 数据应用 / 无敌时长链接 DEATH_MENU_DELAY / 无敌闪烁只闪贴图 / 扇形半径与左右边界契约 + **miss 补偿：直接 +2 雷（碎片不动、封顶、被弹炸弹抵消的不给）** | 26 | 4 |
+| [test_item](../test/test_item.gd) | 道具系统：掉落收集 / 类型效果 / 防重复 / **拿到完整残机播 `get_player`**（碎片第 5 片 / 整命道具播；没集满 / 满 8 命不播）/ **miss 扇形爆发**（宽限不被吸附 + 等半径弧 + 均匀 20° + 飞完**竖直下落** + **左右夹进框**） | 17 | 3 |
 | [test_practice_mode](../test/test_practice_mode.gd) | 练习模式：残机/bomb 归零、火力拉满（须在自机绑定后生效） | 4 | 0 |
 | [test_float_damage](../test/test_float_damage.gd) | 小数伤害累积器 | 2 | 4 |
 
@@ -135,11 +135,11 @@
 | [test_laser](../test/test_laser.gd) | Laser 2.0：骨架采样 + 生长/持续/收缩状态机 + 判定/擦弹 | 23 | 20 |
 | [test_marisa_laser](../test/test_marisa_laser.gd) | 魔理沙分段激光：切片 + 偏移无缝 + 编译加载 | 2 | 4 |
 
-### C4 Boss 战（4 / 30）
+### C4 Boss 战（4 / 34）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_boss_phase](../test/test_boss_phase.gd) | 符卡判定：捕获 / 超时 / 时符 / 防双清 / 掉落表 | 30 | 20 |
+| [test_boss_phase](../test/test_boss_phase.gd) | 符卡判定：捕获 / 超时 / 时符 / 防双清 / 掉落表 + **收取回报音真值表**（只正常流程干净收取符卡才播）+ **结算信号 `spell_result`**（符卡才发；带击破/用时/作废） | 34 | 20 |
 | [test_spell_bonus](../test/test_spell_bonus.gd) | 符卡奖励分规则：初始值 = 难度权重×面序号×50万（EX 权重 2）、非符 0；时限内均匀衰减到 30%、时符不衰减 | 10 | 0 |
 | [test_boss_catalog](../test/test_boss_catalog.gd) | Boss 谱（花名册）+ 符卡集合派生 | 8 | 0 |
 | [test_boss_encapsulation](../test/test_boss_encapsulation.gd) | 债 E：Boss 封装 —— hp/`boss_data`/`hitbox_radius` 只读 + `hp_changed` 信号 | 3 | 6 |
@@ -185,19 +185,20 @@
 | [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台） | 5 | 0 |
 | [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` | 3 | 0 |
 
-## D · UI / 菜单（13 / 77）
+## D · UI / 菜单（14 / 95）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_score_popup](../test/test_score_popup.gd) | 吃道具得分浮字：`Item.collect` 发事件 → `ScorePopupLayer` 原位显示；**金色只属于「点」**（P 点强收/过线都不金色） | 12 | 9 |
+| [test_phase_result_banner](../test/test_phase_result_banner.gd) | **符卡结算横幅**：干净收取 / 失败（超时 / miss·bomb 作废）的文案与分数行显隐 + 渐显→停→渐隐顺序 + 落点（倒计时之下、报幕大字之上 —— 时长因此自由） | 12 | 3 |
 | [test_announce_label](../test/test_announce_label.gd) | `AnnounceLabel`：右停落点（视觉盒贴边）+ 场景声明的底衬/Bonus/Capture 子节点 | 12 | 0 |
 | [test_boss_hud](../test/test_boss_hud.gd) | `BossHud`：名字文字/显隐 + 阶段进度点显隐 | 10 | 10 |
-| [test_spell_practice_menu](../test/test_spell_practice_menu.gd) | 符卡练习菜单：难度槽（锁定 "?"、导航跳过）+ 切 stage 重建二级 + 非符三级不显名字但保持等高 + **舞台名走 `StageCatalog`** + **二级超长开窗滚动 + 滚动提示** | 17 | **45** |
+| [test_spell_practice_menu](../test/test_spell_practice_menu.gd) | 符卡练习菜单：难度槽（锁定 "?"、导航跳过）+ 切 stage 重建二级 + 非符三级不显名字但保持等高 + **舞台名走 `StageCatalog`** + **二级超长开窗滚动 + 滚动提示** + **人物选择：进场取上次选的、从练习返回回到同一个人** | 19 | **45** |
 | [test_player_data_menu](../test/test_player_data_menu.gd) | 玩家数据菜单·符卡记录页：**列全部符卡**（来源=花名册）+ **三档显示**（未遇见 ？？？ / 遇见过真名 / 收取过蓝）+ 分页按面板实测 | 4 | 0 |
 | [test_dialogue](../test/test_dialogue.gd) | 对话播放层：`DialogueBox` 步骤驱动（台词内联 DSL） | 4 | 7 |
 | [test_bgm_hint](../test/test_bgm_hint.gd) | BGM 提示：曲名解析 + 播放时提示显示 | 3 | 0 |
 | [test_boss_indicator](../test/test_boss_indicator.gd) | Boss 位置指示器：生成 / 跟随 x / 框外对齐 / 随 Boss 销毁 | 3 | 10 |
-| [test_boss_ui](../test/test_boss_ui.gd) | `BossUI` 场景声明式建树（R21）：倒计时与阶段点模板都在 `.tscn` | 7 | 0 |
+| [test_boss_ui](../test/test_boss_ui.gd) | `BossUI` 场景声明式建树（R21）：倒计时与阶段点模板都在 `.tscn` + **符卡结算横幅**：`spell_result` → 出场 / **阶段边界不掐它（与间隔解耦）** / 第二张替换第一张 / 作废不显示分数 | 11 | 0 |
 | [test_player_spell_ui](../test/test_player_spell_ui.gd) | `PlayerSpellUI`：订阅 `player_bomb`，非空名字才播大字报 | 2 | 0 |
 | [test_option_menu](../test/test_option_menu.gd) | 选项菜单「清空数据」：无 `def` 崩溃回归 + 二次确认 | 2 | 14 |
 | [test_dialogue_pause](../test/test_dialogue_pause.gd) | 暂停菜单期间对话 WAIT/auto_advance 计时应冻结 | 1 | 8 |

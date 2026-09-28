@@ -8,6 +8,8 @@ const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
 ## 全破演出的默认件（`BossData.defeat_fx` / `defeat_sfx` / `defeat_hitstop` 可逐个覆盖）
 const DEFAULT_DEFEAT_FX := preload("res://scenes/effect/boss_defeat.tscn")
 const DEFAULT_DEFEAT_SFX := &"boss_die"
+## **正常流程干净收取一张符卡**的回报音（非符 `phase.uid == 0`、练习模式、miss/bomb 作废都不算）
+const CAPTURE_SFX := &"get_card"
 const DEFAULT_DEFEAT_HITSTOP := 0.12
 ## 定格时的 time_scale 倍率（只压时间、不冻结；真实时间到点恢复）
 const DEFEAT_HITSTOP_SCALE := 0.05
@@ -349,6 +351,16 @@ func is_bonus_failed() -> bool:
 	return _is_phase_missed or _is_phase_bombed
 
 
+## 该不该播 `CAPTURE_SFX`：**正常流程（非练习）+ 干净收取 + 是符卡** 三者齐备。
+## 纯函数（真值表在 `test_boss_phase`）—— `p_uid == 0` = 非符，不算"收取符卡"；
+## miss / 用 bomb 作废（`p_bonus_failed`）与练习模式都不算"正常流程收取"。
+static func should_play_capture_sfx(p_captured: bool, p_bonus_failed: bool, p_uid: int,
+		p_practice: bool) -> bool:
+	if p_practice:
+		return false
+	return p_captured and not p_bonus_failed and p_uid != 0
+
+
 func clear_phase(captured: bool) -> void:
 	if _is_cleared: return
 	_is_cleared = true
@@ -363,7 +375,15 @@ func clear_phase(captured: bool) -> void:
 		elif captured and not is_bonus_failed():
 			RecordService.record_phase_capture(_phase_identity, true, _bonus, _elapsed)  # 干净收取
 
+	# 正常流程**收取一张符卡**的回报音（规则见 `should_play_capture_sfx`）
+	if should_play_capture_sfx(captured, is_bonus_failed(), _phase_data.uid if _phase_data else 0,
+			PracticeSession.is_practice_mode):
+		_play_sfx(CAPTURE_SFX)
+
 	GameEvents.phase_end.emit(captured, _bonus)
+	# 符卡结算（结算横幅的数据源）—— **只在符卡阶段发**：非符没有"奖励分"这回事
+	if _phase_data and _phase_data.uid != 0:
+		GameEvents.spell_result.emit(captured, _bonus, _elapsed, is_bonus_failed())
 	# 奖励分：作废（miss / bomb）就**一分不给** —— UI 那边数字位也已经换成「失败」
 	if captured and _bonus > 0 and not is_bonus_failed():
 		var entity_registry = _refs()
@@ -412,11 +432,16 @@ func play_defeat() -> void:
 
 	# ④ 震屏 + 音效
 	GameEvents.screen_shake.emit(DEFEAT_SHAKE)
-	var stream: AudioStream = AssetRegistry.sounds.get(String(sfx_key), null)
-	if stream:
-		AudioManager.play_sfx(stream)
+	_play_sfx(sfx_key)
 
 	_flash_and_fade_out()
+
+
+## 播一个 `AssetRegistry.sounds` 里的音效（key 不存在就静默跳过 —— 与全破音效同一套取法）
+func _play_sfx(p_key: StringName) -> void:
+	var stream: AudioStream = AssetRegistry.sounds.get(String(p_key), null)
+	if stream:
+		AudioManager.play_sfx(stream)
 
 
 ## 本体演出：闪白两下 → 淡出（位移/回收由 `BossHandle.defeat()` 的退场 tween 负责）

@@ -63,6 +63,60 @@ func test_bomb_full_item():
 	item.collect()
 	assert_eq(_player_resources.bomb_count, 2, "整 B → +1 Bomb")
 
+## 拿到**完整残机**要单独给一声 `get_player`（里程碑反馈）：碎片第 5 片 / 整命道具 → 播
+func test_extend_sfx_on_life_fragment_completion():
+	_player_resources.life_fragments = 4
+	_clear_sfx_pool()
+	var item := _make_item()
+	item.setup(Item.Type.LIFE_FRAGMENT, Vector2(100, 100))
+	item.collect()
+	assert_true(_pool_has(AssetRegistry.sounds[Item.EXTEND_SFX]),
+			"第 5 片合成完整残机 → 播 %s" % Item.EXTEND_SFX)
+
+
+## 碎片没集满只是 +1 片 → 不播整命回报音（否则每片都响一声，反馈就贬值了）
+func test_no_extend_sfx_before_completion():
+	_clear_sfx_pool()
+	var item := _make_item()
+	item.setup(Item.Type.LIFE_FRAGMENT, Vector2(100, 100))
+	item.collect()
+	assert_false(_pool_has(AssetRegistry.sounds[Item.EXTEND_SFX]), "碎片没集满 → 不播整命回报音")
+
+
+func test_life_full_item_plays_extend_sfx():
+	_clear_sfx_pool()
+	var item := _make_item()
+	item.setup(Item.Type.LIFE_FULL, Vector2(100, 100))
+	item.collect()
+	assert_true(_pool_has(AssetRegistry.sounds[Item.EXTEND_SFX]),
+			"整命道具 → 播 %s" % Item.EXTEND_SFX)
+
+
+## 8 命上限：道具照旧被吃掉，但**没有真的多命** → 不播（回报音不许撒谎）
+func test_life_full_item_at_cap_plays_no_extend_sfx():
+	_player_resources.lives = 8
+	_clear_sfx_pool()
+	var item := _make_item()
+	item.setup(Item.Type.LIFE_FULL, Vector2(100, 100))
+	item.collect()
+	assert_false(_pool_has(AssetRegistry.sounds[Item.EXTEND_SFX]), "已满命 → 不播整命回报音")
+
+
+## 清空 SFX 池与同帧去重表（照 test_boss_ui 的做法），避免上一条用例的残留影响
+func _clear_sfx_pool() -> void:
+	for player in AudioManager._sfx_players:
+		player.stop()
+		player.stream = null
+	AudioManager._played_this_frame.clear()
+
+
+func _pool_has(stream: AudioStream) -> bool:
+	for player in AudioManager._sfx_players:
+		if player.stream == stream:
+			return true
+	return false
+
+
 func test_collect_once_only():
 	var item := _make_item()
 	item.setup(Item.Type.POWER, Vector2(100, 100))

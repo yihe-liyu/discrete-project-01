@@ -536,6 +536,56 @@ func test_clean_capture_awards_bonus():
 	assert_false(_boss.is_bonus_failed(), "没 miss / 没用 bomb → 不作废")
 
 
+## 结算横幅的数据源：符卡收尾发一次 `spell_result`（是否击破 / 最终奖励分 / 用时 / 是否作废）
+func test_spell_result_reports_capture_bonus_and_time() -> void:
+	PracticeSession.is_practice_mode = false
+	_boss.setup(BossData.new(), null)
+	_boss._stage_id = 7
+	_boss.start_phase(_make_phase(100, 30.0, false, 16))
+	var got: Array = []
+	var cb := func(captured: bool, bonus: int, elapsed: float, bonus_failed: bool) -> void:
+		got.append([captured, bonus, elapsed, bonus_failed])
+	GameEvents.spell_result.connect(cb)
+	_boss._process(1.5)                      # 攒一点用时
+	_skip_hp_tween()
+	_boss.take_damage(100)                   # 打空 → 击破
+	GameEvents.spell_result.disconnect(cb)
+	assert_eq(got.size(), 1, "符卡收尾应发一次 spell_result")
+	assert_true(got[0][0], "击破 → captured = true")
+	assert_gt(got[0][1], 0, "干净收取要带上最终奖励分")
+	assert_almost_eq(got[0][2], 1.5, 0.01, "带上本张符卡用时")
+	assert_false(got[0][3], "没 miss / 没用 bomb → 没作废")
+
+
+## miss / bomb 作废时的结算：`bonus_failed` = true（UI 据此只显示「Bonus Failed」、不显示分数）
+func test_spell_result_marks_bonus_failed() -> void:
+	PracticeSession.is_practice_mode = false
+	_boss.setup(BossData.new(), null)
+	_boss._stage_id = 7
+	_boss.start_phase(_make_phase(100, 30.0, false, 17))
+	var got: Array = []
+	var cb := func(_c: bool, _b: int, _e: float, bonus_failed: bool) -> void:
+		got.append(bonus_failed)
+	GameEvents.spell_result.connect(cb)
+	GameEvents.player_bomb.emit("测试 bomb")
+	_skip_hp_tween()
+	_boss.take_damage(100)                   # 作废后照样击破
+	GameEvents.spell_result.disconnect(cb)
+	assert_eq(got, [true], "作废后收尾 → bonus_failed = true")
+
+
+## 非符不发 `spell_result`（没有奖励分这回事）—— 结算横幅只属于符卡
+func test_spell_result_not_emitted_for_nonspell() -> void:
+	_boss.setup(BossData.new(), null)
+	var count := [0]
+	var cb := func(_c: bool, _b: int, _e: float, _f: bool) -> void: count[0] += 1
+	GameEvents.spell_result.connect(cb)
+	_boss.start_phase(_make_phase(100, 5.0, false, 0))
+	_boss._process(5.0 + 0.01)               # 超时收尾
+	GameEvents.spell_result.disconnect(cb)
+	assert_eq(count[0], 0, "非符不该发 spell_result")
+
+
 ## **回归（作者报）**：作废后「只跳过奖励分」，`_process` 其余职责照常 ——
 ## 曾写成 `if is_bonus_failed(): return`（早退），把**开卡减伤倒计时**与**时限判定**一起掐掉：
 ## 后果是 miss 后符卡倒计时到 0 也不结束、减伤永久挂着。
@@ -558,3 +608,15 @@ func test_failed_bonus_still_times_out_and_clears_open_reduce():
 	_boss._process(0.6)                      # 累计 1.2s > 时限 1.0s
 	assert_signal_emitted(_boss, "phase_cleared", "作废后符卡仍应到点结束")
 	assert_true(_boss._is_cleared, "阶段应已收尾（clear_phase 只置标记，不清 _phase_data）")
+
+
+## 契约：**收取回报音**（`get_card`）的真值表 —— 只有"正常流程 + 干净收取 + 是符卡"才播。
+## 尤其别在**非符**（`uid == 0`）上播：非符不算"收取符卡"。
+func test_capture_sfx_truth_table():
+	assert_true(Boss.should_play_capture_sfx(true, false, 8, false), "正常流程干净收取符卡 → 播")
+	assert_false(Boss.should_play_capture_sfx(true, false, 0, false), "非符（uid 0）不算收取符卡 → 不播")
+	assert_false(Boss.should_play_capture_sfx(true, true, 8, false), "miss / bomb 作废 → 不播")
+	assert_false(Boss.should_play_capture_sfx(false, false, 8, false), "没收取（超时且非时符）→ 不播")
+	assert_false(Boss.should_play_capture_sfx(true, false, 8, true), "练习模式 → 不播（只算正常流程）")
+	assert_true(AssetRegistry.sounds.has(String(Boss.CAPTURE_SFX)),
+			"CAPTURE_SFX(%s) 必须在 AssetRegistry.sounds 里（拼错会静默无声）" % Boss.CAPTURE_SFX)

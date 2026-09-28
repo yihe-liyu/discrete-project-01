@@ -61,8 +61,9 @@
       **最大点 / 捡点** `item.gd:125` → `PlayerResources.add_max_point()`（`max_point` 恒 +10，入账当前值；深位递减）；
       **擦弹** `kernel_bullet_physics.gd:178 on_graze()` → `graze_count += 1` + `add_score(10)` + `add_memory(MEMORY_GRAZE)`；
       **记忆** —— 修正旧措辞：它不是**分数**来源，而是**资源**（0–100）：擦弹 +0.25、miss +25、每秒自然回复，`memory_release`（`player.gd:242`）消耗它强收道具，并决定 Stage 3A / 3B 路线。
-- [x] **miss 语义完整**（2026-09-27 接上缺口 + 当日再补被弹炸弹）：`miss()` = 先判**被弹炸弹窗口** → 否则 `_apply_miss()`。
-      `_apply_miss()` = 清弹 + 记忆 +25 + **火力 −50**（`on_miss_power_penalty()`，clamp 0..300）+ **撒 10 个 P 点扇形** + 扣残机 + **自机复位两步** + 3 秒无敌。
+- [x] **miss 语义完整**（2026-09-27 接上缺口 + 当日再补被弹炸弹 + 2026-09-28 补雷补偿）：`miss()` = 先判**被弹炸弹窗口** → 否则 `_apply_miss()`。
+      `_apply_miss()` = 清弹 + 记忆 +25 + **火力 −50**（`on_miss_power_penalty()`，clamp 0..300）+ **直接 +2 个雷**（`MISS_BOMB_GAIN` → `PlayerResources.add_bombs()`：不撒掉落物、**雷碎片不动**、到 `MAX_BOMBS` 封顶）+ **撒 10 个 P 点扇形** + 扣残机 + **自机复位两步** + 3 秒无敌。
+      （被弹炸弹窗口在 `miss()` 里**先**判定 ⇒ 这 2 个雷抢不了这一次命；窗口里抵消掉的那次不算 miss，不发补偿。）
       **被弹炸弹（deathbomb）窗口**：有雷（≥ `DEATHBOMB_MIN_BOMBS`）且机体配了 `BombData` 时，被弹瞬间 `Engine.time_scale = 0` **全局定格** `DEATHBOMB_FRAMES`(12) 帧 ≈ 0.2s
       （**保存/恢复倍率**，与 Boss 全破定格同一套；出树有安全阀，切场景/测试回收都不会把 `time_scale` 留在 0）。
       **收尾走真实时间计时器**（`create_timer(…, process_always=true, ignore_time_scale=true)`）—— 定格中 delta=0、玩家按暂停时 `tree.paused` 也照样到点。
@@ -97,6 +98,11 @@
 ## S8. 反馈与演出（feedback / fx / sound / fog）
 状态：✔（机制闭环） ｜ 适用红线：R2, R7, R20
 - [x] 受击/消除/擦弹/Boss 阶段有即时视觉+音效反馈 —— `scripts/effect/*` + `AudioManager`
+      **符卡结算**再补一块演出：`Boss.clear_phase` → `GameEvents.spell_result` → `PhaseResultBanner`
+      （场地上部渐显 → 停 → 渐隐，**时长与阶段边界无关** —— 下一张开卡不会掐它）：干净收取 = 「Get Spell Card Bonus」+ 奖励分；
+      失败（超时 / miss·bomb 作废）= 「Bonus Failed」且**不显示分数**（那分没入账）；两种都带一行**击破时间**。
+      文案 / 配色 / 落点声明在 `scenes/ui/phase_result_banner.tscn`，改措辞不用动代码；
+      落点夹在「倒计时之下、报幕大字最大态之上」（`test_phase_result_banner` 锁关系）。
 - [x] 弹雾/背景与弹幕对比度足够，不吞弹、不刺眼 —— `screen_fog_fx.gd` + `bullet_batch.gdshader`(BLEND 特效应) + `background/*` + `decor_manager.gd`
 - [x] 特效走服务/对象池（hit_effect / miss_effect），不再频繁 instantiate —— `FxPool`（精灵特效池，世界坐标/节点池）+ `MissCircleLayer`（全屏反色圈，屏幕空间 shader）；均组合根注入，非 autoload
 - [x] 发弹雾 / 消弹消散**共用一套特效模型**（`EffectType` + 逐行 `fx_type` + 纯特效行）—— 消弹把被清弹原地换成一条纯特效行（`KernelNativeSystem.spawn_fx`），雾中的弹同样可消（直接切成消散）；渲染桥按行分流、`BulletMultiMesh` 用同一 `bullet_batch.gdshader` 批量画 —— `data/fx/*.tres`，不再逐弹 `EnemyBulletClear` 节点 + tween

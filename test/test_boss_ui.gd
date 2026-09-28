@@ -66,6 +66,62 @@ func test_nonspell_does_not_play_card_sfx() -> void:
 	assert_false(_pool_has(card), "非符不该播 card 音效")
 
 
+## 符卡结算横幅：`Boss` 发 `spell_result` → 场地正中偏上出现结算
+func test_spell_result_shows_banner() -> void:
+	var ui := BOSS_UI_SCENE.instantiate()
+	add_child_autofree(ui)
+	assert_null(ui.get_node_or_null("Control/PhaseResultBanner"), "默认没有结算横幅")
+
+	GameEvents.spell_result.emit(true, 12345, 12.34, false)
+
+	var banner := ui.get_node_or_null("Control/PhaseResultBanner") as PhaseResultBanner
+	assert_not_null(banner, "干净收取 → 应出现结算横幅")
+	assert_eq((banner.get_node("Lines/Title") as Label).text, banner.captured_title, "标题 = 收取成功那条")
+	assert_eq((banner.get_node("Lines/Bonus") as Label).text, banner.bonus_prefix + "12345",
+			"分数行 = 前缀 + 实得奖励分")
+
+
+## **横幅与阶段边界解耦**（作者要求：时长别和阶段间隔挂钩）：
+## 下一张开卡不该掐掉还没淡完的横幅 —— 它只按自己的 @export 走完。
+func test_next_phase_start_does_not_cut_banner() -> void:
+	var ui := BOSS_UI_SCENE.instantiate()
+	add_child_autofree(ui)
+	GameEvents.spell_result.emit(true, 12345, 1.0, false)
+	var banner := ui.get_node_or_null("Control/PhaseResultBanner") as PhaseResultBanner
+
+	ui._on_phase_start(_phase(5))        # 下一张符卡开打（报幕照常走）
+	await get_tree().process_frame       # `clear()` 会 queue_free → 一帧后节点就无效了
+	assert_true(is_instance_valid(banner), "横幅不该被阶段边界收掉（否则时长只能跟着阶段间隔走）")
+	assert_eq(ui.get_node_or_null("Control/PhaseResultBanner"), banner, "还是同一张（没被换掉）")
+
+
+## 唯一提前收掉横幅的是**又出了一张结算**：换新的，不叠两张
+func test_second_spell_result_replaces_banner() -> void:
+	var ui := BOSS_UI_SCENE.instantiate()
+	add_child_autofree(ui)
+	GameEvents.spell_result.emit(true, 1, 1.0, false)
+	var first := ui.get_node_or_null("Control/PhaseResultBanner") as PhaseResultBanner
+	GameEvents.spell_result.emit(false, 0, 9.9, false)
+	await get_tree().process_frame
+	var banners: Array[Node] = []
+	for child in ui.get_node("Control").get_children():
+		if child is PhaseResultBanner:
+			banners.append(child)
+	assert_eq(banners.size(), 1, "同时只该有一张结算横幅")
+	assert_ne(banners[0], first, "第二张结算应替换掉第一张")
+
+
+## 收取失败（miss / bomb 作废）：横幅照出，但只亮「Bonus Failed」+ 击破时间
+func test_spell_result_failed_hides_bonus_line() -> void:
+	var ui := BOSS_UI_SCENE.instantiate()
+	add_child_autofree(ui)
+	GameEvents.spell_result.emit(true, 12345, 5.0, true)
+	var banner := ui.get_node_or_null("Control/PhaseResultBanner") as PhaseResultBanner
+	assert_not_null(banner, "作废也要给结算横幅（只是不显示分数）")
+	assert_eq((banner.get_node("Lines/Title") as Label).text, banner.failed_title, "标题 = 失败那条")
+	assert_false((banner.get_node("Lines/Bonus") as Label).visible, "作废 → 不显示分数行")
+
+
 func _phase(uid: int) -> PhaseData:
 	var phase := PhaseData.new()
 	phase.name = "夹具符卡"
