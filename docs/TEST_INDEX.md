@@ -17,7 +17,7 @@
 ./tools/verify.sh                                    # 七步门禁（文档哨兵+语法+命名+结构+启动+GUT+所有权）
 ```
 
-**现状**：114 脚本 / **722 用例（721 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6613/6652 断言（过/总）/ 36.7s** / 19 orphans / **0 pending**。
+**现状**：114 脚本 / **722 用例（721 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6625/6664 断言（过/总）/ 36.6s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -184,7 +184,7 @@
 |---|---|---|---|
 | [test_dialogue_preview](../test/test_dialogue_preview.gd) | 对话预览交互契约：**默认不自动播**（进场景预选但不播 / 换段只选中并停演出 / 换脚本同理） | 3 | 0 |
 | [test_dialogue_steps](../test/test_dialogue_steps.gd) | 对话系统：`StageState` / `DialogueSteps` DSL / `DialogueRunner`（纯逻辑，不进树） | 28 | 0 |
-| [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块** · **阶段按 uid 升序（符卡优先、非符路径定序）** | 8 | 0 |
+| [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块** · **阶段按 uid 升序（符卡优先、非符路径定序）** · `@role` 补空缺不算冲突 | 8 | 0 |
 | [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` | 3 | 0 |
 
 ## D · UI / 菜单（14 / 96）

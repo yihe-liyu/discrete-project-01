@@ -45,6 +45,17 @@ func test_fixture_role_annotation_and_boundaries():
 		if w.contains("x_move.gd"):
 			warned = true
 	assert_true(warned, "约定/注解打架 → warning 响亮")
+	# 约定 = misc（没规则匹配）时，@role 是**补空缺**，不该被当成冲突
+	var orphan = cat.find(FIXTURE.path_join("annotated_orphan.gd"))
+	assert_not_null(orphan, "annotated_orphan 在目录")
+	if orphan:
+		assert_eq(orphan.role, "boss_move", "@role 给孤儿脚本补角色")
+		assert_eq(orphan.name, "孤儿走位", "顶部隔开的注释块仍提供显示名")
+	var noisy := false
+	for w in cat.get_warnings():
+		if w.contains("annotated_orphan.gd"):
+			noisy = true
+	assert_false(noisy, "补空缺不该报“冲突”（实得警告：%s）" % str(cat.get_warnings()))
 
 
 ## ── 夹具：阶段 .tres ──
@@ -190,6 +201,9 @@ func _build_fixture() -> void:
 	_write(FIXTURE.path_join("stages/stageF/background/decor.gd"), "extends CoroutineScript\n## 背景演出脚本\n")
 	_write(FIXTURE.path_join("dialogue/intro.gd"), "extends CoroutineScript\n## 对话脚本不入目录\n")
 	_write(FIXTURE.path_join("loose.gd"), "extends CoroutineScript\n## 杂项\n")
+	# 孤儿脚本：约定判不出（misc），靠 @role 补角色 —— **不该**报"冲突"警告
+	_write(FIXTURE.path_join("annotated_orphan.gd"),
+		"extends CoroutineScript\n## @role: boss_move\n## 孤儿走位\n\nvar t := 0.0\n")
 	_write(FIXTURE.path_join("boss_scripts/move/meta_move.gd"),
 		"extends CoroutineScript\nconst META = {\"name\": \"夹具元数据\", \"desc\": \"描述开头\"}\n## 注释\n")
 	_phase_tres(FIXTURE.path_join("stages/stageF/phase/a/p.tres"), "夹具阶段", 42, 123, 45.5)

@@ -1,4 +1,7 @@
 extends CoroutineScript
+## @role: boss_move
+## （上面这行是**创作台目录角色**：`const META` 只管名字/描述，角色要靠 `@role`；
+##   缺了它这个"只被 `pre_move_script` 之外没人引用"的脚本会落到「未分类」、目录里双击不跳台。）
 ## 对角扫场：从游戏框**右上角**扫到**左下角**，**快 → 慢 → 快**。
 ## 用作 `PhaseData.pre_move_script`（发动符卡**之前**的走位）：跑完才宣言。
 ##

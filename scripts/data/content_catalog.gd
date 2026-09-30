@@ -154,7 +154,9 @@ func _scan_script(path: String) -> void:
 	var role := convention
 	if ann.has("role"):
 		role = ann["role"]
-		if role != convention:
+		# 只有"约定真是规则"时才算**冲突**；约定 = misc 只是"没规则匹配上"，
+		# 此时 `@role` 是在**补空缺**（如孤儿走位脚本 corner_sweep）→ 不该报冲突（2026-09-30）
+		if role != convention and convention != ROLE_MISC:
 			_warnings.append(
 				"角色分类冲突 [%s]：约定=%s 注解=%s（注解优先）"
 				% [path.get_file(), convention, role])
