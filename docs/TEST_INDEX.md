@@ -17,7 +17,7 @@
 ./tools/verify.sh                                    # 七步门禁（文档哨兵+语法+命名+结构+启动+GUT+所有权）
 ```
 
-**现状**：114 脚本 / **721 用例（720 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6564/6603 断言（过/总）/ 36.8s** / 19 orphans / **0 pending**。
+**现状**：114 脚本 / **722 用例（721 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6613/6652 断言（过/总）/ 36.7s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -25,7 +25,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 35 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 176 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 42 | 323 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 42 | 324 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 14 | 96 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 12 | 66 | `scripts/workbench/**`、创作站 |
@@ -103,7 +103,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（42 / 323）
+## C · 宿主 · 运行时系统（42 / 324）
 
 ### C1 组合根 / 服务 / 时间线（9 / 46）
 
@@ -178,13 +178,13 @@
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |
 | [test_enemy_data_serializable](../test/test_enemy_data_serializable.gd) | 债 C 第一步：`EnemyData` 可序列化 + `validate()` | 3 | 0 |
 
-### C8 对话逻辑 / 内容目录（3 / 32）
+### C8 对话逻辑 / 内容目录（3 / 33）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_dialogue_preview](../test/test_dialogue_preview.gd) | 对话预览交互契约：**默认不自动播**（进场景预选但不播 / 换段只选中并停演出 / 换脚本同理） | 3 | 0 |
 | [test_dialogue_steps](../test/test_dialogue_steps.gd) | 对话系统：`StageState` / `DialogueSteps` DSL / `DialogueRunner`（纯逻辑，不进树） | 28 | 0 |
-| [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块**（贴住声明 = 成员文档，要报警告） | 7 | 0 |
+| [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块** · **阶段按 uid 升序（符卡优先、非符路径定序）** | 8 | 0 |
 | [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` | 3 | 0 |
 
 ## D · UI / 菜单（14 / 96）

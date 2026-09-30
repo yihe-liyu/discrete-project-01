@@ -52,7 +52,7 @@ func test_fixture_role_annotation_and_boundaries():
 func test_fixture_phase_tres_fields():
 	var cat = CAT.new().scan(FIXTURE)
 	var phases = cat.by_role("phase")
-	assert_eq(phases.size(), 1, "夹具应有 1 个阶段")
+	assert_eq(phases.size(), 5, "夹具应有 5 个阶段（3 符卡 + 2 非符）")
 	var p = cat.find(FIXTURE.path_join("stages/stageF/phase/a/p.tres"))
 	assert_not_null(p, "夹具阶段在目录")
 	if p:
@@ -104,6 +104,30 @@ func test_fixture_header_must_be_top_and_detached():
 		if w.contains("hdr_member.gd"):
 			warned = true
 	assert_true(warned, "名字退化成文件名要响亮（模块承诺「不静默」）")
+
+
+## ── 夹具：阶段列表按 uid 升序（2026-09-30）─────────────────────────────
+## 阶段台的下拉与工作台目录面板都只走 `by_role("phase")`；扫描顺序是文件系统给的
+## （真内容实测会显示成 uid41/43/44/42 这种乱序），而 uid 才是符卡编号。
+func test_fixture_phases_sorted_by_uid():
+	var cat = CAT.new().scan(FIXTURE)
+	var phases = cat.by_role("phase")
+	assert_eq(phases.size(), 5, "夹具 5 个阶段（3 符卡 + 2 非符）")
+	var uids: Array = []
+	for p in phases:
+		uids.append(int(p.extra.get("uid", 0)))
+	# 符卡（uid>0）按 uid 升序在前；非符（uid 0）在后，且**顺序确定**（按路径）
+	assert_eq(uids, [7, 42, 99, 0, 0], "符卡按 uid 升序在前、非符在后（实得 %s）" % str(uids))
+	var tail: Array = []
+	for i in range(3, 5):
+		tail.append(phases[i].path.get_file())
+	assert_eq(tail, ["n1.tres", "n2.tres"], "非符之间按路径定序（sort_custom 非稳定，必须给第二键）")
+	# 反向哨兵：扫描原序确实不是升序 —— 否则上面那条断言是空转（排序没做事也会绿）
+	var raw: Array = []
+	for e in cat.get_entries():
+		if e.role == "phase":
+			raw.append(int(e.extra.get("uid", 0)))
+	assert_ne(raw, uids, "夹具的扫描顺序应与 uid 顺序不同（否则测不出排序）")
 
 
 ## ── 夹具：const META ──
@@ -169,6 +193,12 @@ func _build_fixture() -> void:
 	_write(FIXTURE.path_join("boss_scripts/move/meta_move.gd"),
 		"extends CoroutineScript\nconst META = {\"name\": \"夹具元数据\", \"desc\": \"描述开头\"}\n## 注释\n")
 	_phase_tres(FIXTURE.path_join("stages/stageF/phase/a/p.tres"), "夹具阶段", 42, 123, 45.5)
+	# 阶段顺序哨兵：uid 与"扫描顺序"故意错开（a=42 / b=7 / c=99）
+	_phase_tres(FIXTURE.path_join("stages/stageF/phase/b/q.tres"), "夹具阶段B", 7, 80, 30.0)
+	_phase_tres(FIXTURE.path_join("stages/stageF/phase/c/r.tres"), "夹具阶段C", 99, 200, 60.0)
+	# 非符（uid 0）两个：验证"符卡优先 + 无 uid 按路径定序"
+	_phase_tres(FIXTURE.path_join("stages/stageF/phase/d/n1.tres"), "夹具非符1", 0, 50, 20.0)
+	_phase_tres(FIXTURE.path_join("stages/stageF/phase/e/n2.tres"), "夹具非符2", 0, 60, 25.0)
 
 
 func _phase_tres(path: String, p_name: String, uid: int, hp: int, time_limit: float) -> void:

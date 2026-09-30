@@ -25,12 +25,11 @@ theme_override_constants/margin_top = 36
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="BarLayer" type="CanvasLayer" parent="."]
+[node name="BarLayer" type="CanvasLayer" parent="." unique_id=349004766]
 layer = 2
 
 [node name="Bar" type="HBoxContainer" parent="BarLayer" unique_id=1335930980]
 custom_minimum_size = Vector2(0, 34)
-layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 36.0

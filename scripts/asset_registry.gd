@@ -52,7 +52,7 @@ const SFX_DB := {
 	"kira": -4.6,   ## 手调（作者反馈两次）：弹幕每颗子弹都发它，密度+高频 ⇒ 必须比 RMS 值再低一截
 	"lazer": -3.3,
 	"marisa_damage": -0.6,   ## 手调（作者反馈两次）：**魔理沙子机弹的命中音**（focus 弹专属 key），最多 20 次/秒（节流 0.05）
-	                         ## ⇒ 压 7 dB（相对 RMS 基准 −7.9），与 kira 同档：高频持续音必须比 RMS 值再低一截
+							 ## ⇒ 压 7 dB（相对 RMS 基准 −7.9），与 kira 同档：高频持续音必须比 RMS 值再低一截
 	"msl": -5.3,   ## 手调（作者反馈两次）：**魔理沙子机（focus）的发射音**，~12 次/秒的持续音 ⇒ 同样压 7 dB（相对基准 −7.9）
 	"normal_damage": -3.3,
 	"ok": +4.3,
@@ -101,6 +101,7 @@ const BGM_PATHS := {
 	"music_1":  "res://assets/Music/THq01_01.无缘故之回.mp3",
 	"music_2":  "res://assets/Music/THq01_02.夜间漫步.mp3",
 	"music_3":  "res://assets/Music/THq01_03.洞窟蝙蝠.mp3",
+	"music_4":  "res://assets/Music/THq01_04.又一次瞥向日食.mp3",
 	"music_7":  "res://assets/Music/THq01_07.就在那里的不思议宇宙.mp3",
 	"music_10": "res://assets/Music/THq01_10.寂寥记忆界.mp3",
 	"music_12": "res://assets/Music/THq01_12.不尽记忆的天空.mp3",
@@ -111,6 +112,7 @@ const BGM_PATHS := {
 	"menu":        "res://assets/Music/THq01_01.无缘故之回.mp3",
 	"stage1":      "res://assets/Music/THq01_02.夜间漫步.mp3",
 	"stage1_boss": "res://assets/Music/THq01_03.洞窟蝙蝠.mp3",
+	"stage2":      "res://assets/Music/THq01_04.又一次瞥向日食.mp3",
 	"stage3B":     "res://assets/Music/THq01_07.就在那里的不思议宇宙.mp3",
 	"stage4":      "res://assets/Music/THq01_10.寂寥记忆界.mp3",
 	"stage5":      "res://assets/Music/THq01_12.不尽记忆的天空.mp3",

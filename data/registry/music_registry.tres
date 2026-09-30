@@ -40,6 +40,16 @@ bgm_key = "music_3"
 is_unlocked = true
 metadata/_custom_type_script = "uid://be08pe8s61ass"
 
+[sub_resource type="Resource" id="Resource_6bqoe"]
+script = ExtResource("1")
+music_id = 4
+title = "又一次瞥向日食"
+comment = "又一次瞥向日食
+２面道中的音乐"
+bgm_key = "music_4"
+is_unlocked = true
+metadata/_custom_type_script = "uid://be08pe8s61ass"
+
 [sub_resource type="Resource" id="MusicRecord_03"]
 script = ExtResource("1")
 music_id = 7
@@ -117,4 +127,4 @@ metadata/_custom_type_script = "uid://be08pe8s61ass"
 
 [resource]
 script = ExtResource("2")
-records = Array[ExtResource("1")]([SubResource("MusicRecord_01"), SubResource("MusicRecord_02"), SubResource("Resource_n7uf7"), SubResource("MusicRecord_03"), SubResource("Resource_lemic"), SubResource("MusicRecord_04"), SubResource("Resource_p7x6n"), SubResource("Resource_mnbxo"), SubResource("Resource_immyd")])
+records = Array[ExtResource("1")]([SubResource("MusicRecord_01"), SubResource("MusicRecord_02"), SubResource("Resource_n7uf7"), SubResource("Resource_6bqoe"), SubResource("MusicRecord_03"), SubResource("Resource_lemic"), SubResource("MusicRecord_04"), SubResource("Resource_p7x6n"), SubResource("Resource_mnbxo"), SubResource("Resource_immyd")])

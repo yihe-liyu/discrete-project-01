@@ -74,11 +74,26 @@ func get_entries() -> Array:
 	return _entries
 
 
+## 按角色取条目。**阶段排序**：有 uid 的（符卡）在前、按 uid 升序（uid = 符卡编号，也就等于面序），
+## 没有 uid 的（非符 / 道中）在后、按路径定序；其余角色保持扫描顺序（脚本没有 uid）。
+## 为什么这么排：① 作者要"符卡按 uid 看"；② uid 0 并列时**必须**有第二键 ——
+## 否则 `sort_custom`（非稳定排序）会让非符的顺序每次不一样，UI 顺序必须确定。
+## 排序放在这里做，是因为阶段台的 5 处调用与工作台目录面板**都只走 by_role** → 一处排序、
+## 下拉索引与查找索引不会错位（2026-09-30）。
 func by_role(role: String) -> Array:
 	var out: Array = []
 	for entry in _entries:
 		if (entry as Entry).role == role:
 			out.append(entry)
+	if role == ROLE_PHASE:
+		out.sort_custom(func(a: Entry, b: Entry) -> bool:
+			var ua := int(a.extra.get("uid", 0))
+			var ub := int(b.extra.get("uid", 0))
+			if (ua > 0) != (ub > 0):
+				return ua > 0            # 符卡（有 uid）排在非符前
+			if ua != ub:
+				return ua < ub           # 符卡：uid 升序
+			return a.path < b.path)      # 并列 / 都无 uid：路径定序（确定性）
 	return out
 
 
