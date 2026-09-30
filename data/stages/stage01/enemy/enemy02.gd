@@ -1,5 +1,9 @@
 extends CoroutineScript
 
+## 环玉散弹 + 米弹点射
+## 扇形环玉（按难度 10~20 发）+ 3 次金色米弹点射；匀速下移出场。
+## （顶部注释块 = 创作台目录的显示名/描述；块后空一行才算脚本头，贴着 var 的是成员文档）
+
 const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 
 var target_pos: Vector2

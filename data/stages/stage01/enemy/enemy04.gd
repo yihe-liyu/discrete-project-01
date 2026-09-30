@@ -1,5 +1,8 @@
 extends CoroutineScript
 
+## 匀速下移 + 棱弹径向扩散
+## 扇形棱弹（米弹作替换弹型，沿各自发射角加速扩散）；匀速下移直到出屏。
+## （顶部注释块 = 创作台目录的显示名/描述；贴着 var 的那条是成员文档，不当脚本名）
 
 ## 匀速下移速度（px/s），外部可用 param("move_speed", v) 覆盖
 var move_speed: float = 120.0
