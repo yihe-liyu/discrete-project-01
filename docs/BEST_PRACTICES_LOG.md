@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 54 条（本文件留最近 54 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 55 条（本文件留最近 55 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-09-30 — 创作台 ③：参数面板键名**从中间断词**（`move_speed` → `move_spee` / `d`）
 - 2026-09-30 — 修创作台目录两处「说不清话」：显示名把成员注释当脚本名 / `pre_move_script` 漏了角色反推
 - 2026-09-30 — 工作台 S5：**把纪律变成会自己红的护栏**（`check_structure.sh` 第 4 步 + 文档哨兵看住分段小计）
 - 2026-09-30 — 修 bug（作者报）：创作台**「弹幕台 / 整关预览」点不开** —— 被托管的视图把页签横栏的点击吃掉了
@@ -84,6 +85,31 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-09-30 — 创作台 ③：参数面板键名**从中间断词**（`move_speed` → `move_spee` / `d`）
+
+- **症状**（作者体检时截图可见）：敌人台「参数 ▼」里 `move_speed` 显示成两行。
+  键名是**要照抄进代码**的东西（`param("move_speed", v)`）——断词等于看不清。
+- **根因**：`param_panel._add_row` 用 `_mk_label`（自带 `AUTOWRAP_WORD_SMART`）+ 键列
+  `custom_minimum_size = 90px`。实测：**BoxContainer 里非 EXPAND 的子节点只拿到自己的 min 宽**
+  （探针量过：键列 = 90px），而 `bullet_color` 一行就要 90px、`move_speed` ≈ 88px → 卡在边界上折行。
+- **修法**：键列固定 `KEY_COLUMN_W = 150`、`AUTOWRAP_OFF` + `OVERRUN_TRIM_ELLIPSIS` + `tooltip = 键名`
+  （真超长就省略号，悬停看全名）。只改 `_add_row` —— 它覆盖全部 5 种参数行（num/bool/str/vec2/color）；
+  `_add_note` 的说明文字**仍保留自动换行**（那是散文，该折）。
+- **新测试** `test/test_param_panel.gd`（2 条，专测这个面板）：键名不换行 / 不截断 / 有 tooltip /
+  渲染成单行 / 键列宽放得下最长键名。夹具 `param_panel_probe.gd` 补了一个**长键名哨兵**
+  `radial_spawn_delay`（≈145px，**别删**）。
+- **两次"安慰剂"教训（都记着）**：
+  1. 第一版测试直接 `PARAM.new()` 挂到测试节点上 —— 面板没被约束宽度 ⇒ VBox 按内容铺开、键名拿到全宽，
+     「单行」断言**永远绿**。修法：塞进一个 410px 宽的 host + `PRESET_FULL_RECT`（右侧面板真实可用宽度）。
+  2. 修好宽度约束后 `get_line_count()` **还是**不红 —— 因为夹具里最长的键名 `bullet_color` 正好 90px，
+     卡在旧键列宽上**恰好不折**。加长键名哨兵后才真正红在
+     `[2] expected to equal [1]: 键名渲染成单行（radial_spawn_delay）`。
+  **结论：哨兵要"先证明会红"；一次不红就先怀疑哨兵，别怀疑现象。**
+- **实测**：`move_speed` / `auto_stop` / `is_running` 三行键名都在单行（截图
+  `.godot/probe/station_enemy_params_fixed.png`）；下拉项同时显示 `enemy04`（① 的效果）。
+- **验收**：文档哨兵 ✅ · 语法 362 脚本 0 失败 ✅ · 命名 0 违规 ✅ · 结构契约 ✅ ·
+  GUT **721 用例 / 720 通过**（唯一红 = 内容 WIP）✅。
 
 ### 2026-09-30 — 修创作台目录两处「说不清话」：显示名把成员注释当脚本名 / `pre_move_script` 漏了角色反推
 

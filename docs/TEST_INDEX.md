@@ -17,7 +17,7 @@
 ./tools/verify.sh                                    # 七步门禁（文档哨兵+语法+命名+结构+启动+GUT+所有权）
 ```
 
-**现状**：113 脚本 / **719 用例（718 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6521/6560 断言（过/总）/ 36.7s** / 19 orphans / **0 pending**。
+**现状**：114 脚本 / **721 用例（720 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6564/6603 断言（过/总）/ 36.8s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -28,7 +28,7 @@
 | **C 宿主 · 运行时系统** | 42 | 323 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 14 | 96 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
-| **F 工具 · 开发台** | 11 | 64 | `scripts/workbench/**`、创作站 |
+| **F 工具 · 开发台** | 12 | 66 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
 
 > 「白盒」列 = 私有成员访问次数（`._xxx`，粗计）。**它越高，重构时越容易断。**
@@ -217,7 +217,7 @@
 | [test_stage01_dialogue](../test/test_stage01_dialogue.gd) | 第一面战前对话构建：台词/说话者/表情/事件顺序 | 9 | 0 |
 | [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断） | 1 | 0 |
 
-## F · 工具 · 开发台（11 / 64）
+## F · 工具 · 开发台（12 / 66）
 
 > ✅ **这一层已接缝化**（2026-09-30，S1）：原先 26 个用例里 181 处私有成员访问，现在**0**——
 > 六个文件全部改走 `BenchBase` / `CreationStation` / `CatalogPanel` 的**公开接口**（见下节）。
@@ -242,6 +242,7 @@
 | [test_hot_reload](../test/test_hot_reload.gd) | **热更新管线服务**（无树）：防抖要稳够才放行 / 轮询间隔节流 / 没改就静默 / 失败保旧版 / 基线刷新不反复重载 / 连坐同目录 / 关掉即惰性 | 6 | 0 |
 | [test_playback](../test/test_playback.gd) | **播放状态机**（无树）：暂停幂等 / 暂停先收快进 / 快进压过档位 / 物理步上限与 BGM 音高 / 到达收尾（含无 runner）/ 慢放音高不脱钩 / 跳转容差 / 逐帧放行物理 + 防重入 / 静音三源 | 20 | 0 |
 | [test_bookmarks](../test/test_bookmarks.gd) | **书签模型**（无树）：人工覆盖同刻自动并排序 / adopt 存副本 / 静态提取 / **人工打点重开还在**（只写不读的回归）/ 哈希不符保人工 / 串档不认 / 内容哈希可复现 | 11 | 0 |
+| [test_param_panel](../test/test_param_panel.gd) | **参数面板键名列**：不换行 / 不截断 / 悬停看全名 / 列宽放得下最长键名（作者报的 `move_spee`/`d` 断词回归；夹具带长键名哨兵） | 2 | 0 |
 | [test_bookmark_extractor](../test/test_bookmark_extractor.gd) | 书签提取器：字面量 + 循环展开 | 4 | 0 |
 
 ## G · 性能基准（2 / 3）
@@ -348,7 +349,7 @@ S3 的价值不在行数，在 ①**31 个新用例**（这些规则原先覆盖
 **可注入的接缝 / 现成夹具（要隔离内容就从这里走）**：
 
 - `test/fixtures/fixture_lib.gd` —— 夹具工厂：`player_data()`（含 SpriteFrames + `PlayerShootScript`）、`effect()`
-- `test/fixtures/param_panel_probe.gd` —— 组合台参数面板夹具（float/int/Vector2/Color + 零值陷阱）
+- `test/fixtures/param_panel_probe.gd` —— 组合台参数面板夹具（float/int/Vector2/Color + 零值陷阱 + **长键名 `radial_spawn_delay` 当键列宽度哨兵，别删**）
 - `test/fixtures/player_shoot_probe.gd` —— 机体射击脚本夹具（`Player` 有 `is PlayerShootScript` 断言，必须继承它）
 - `test/fixtures/{no,lifecycle}_port_behavior.gd` / `param_probe.gd` —— 通用 `extends CoroutineScript` 替身
 - `ContentCatalog.scan(root)` —— 传夹具根目录（已支持）

@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-719%20tests%20/%20113%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-721%20tests%20/%20114%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -64,7 +64,7 @@
 | **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 / 预览与干跑 | 编剧 |
 | **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（**剧本原稿**）—— 已实现关卡（Stage 1）以 `data/dialogue/stage/*.gd` 为准 | 编剧 |
 | **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（未做项 + 已完成记录） | 维护者 |
-| **[docs/TEST_INDEX.md](docs/TEST_INDEX.md)** | **测试索引** —— 113 个测试文件「改哪里 → 看哪条」+ 分层 + D3 白盒债清单 + 已知门禁坑（计数口径以本文为准） | 维护者 |
+| **[docs/TEST_INDEX.md](docs/TEST_INDEX.md)** | **测试索引** —— 114 个测试文件「改哪里 → 看哪条」+ 分层 + D3 白盒债清单 + 已知门禁坑（计数口径以本文为准） | 维护者 |
 | `docs/*.txt` | 原始设定资料：[omake.txt](docs/omake.txt)（附言 / Extra Story / 全角色设定）· [music.txt](docs/music.txt)（曲目）· [SpellCard.txt](docs/SpellCard.txt)（符卡名）· [FrontData.txt](docs/FrontData.txt) | 玩家/作者 |
 | `TODO_TEMP.md` | 作者**本地**临时待办（`.gitignore` 忽略、**不进 Git**、非权威） | 作者本人 |
 | **[docs/archive/](docs/archive/)** | 已归档（**一句话价值见 [ARCHIVE_INDEX.md](docs/archive/ARCHIVE_INDEX.md)**）：SPEC / ROADMAP / REFACTORING / STAGE_FLOW / SPELL_SYSTEM / CREATION_STATION / NEW_KERNEL_REFACTOR_PLAN / **N2 接入与拆除记录** / M3_TEXTURE / REBUILD_REPO_STATUS / 旧审计 / 按月日志 | 历史 |

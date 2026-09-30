@@ -5,6 +5,10 @@ extends VBoxContainer
 
 const _label_hint_color := Color(1, 1, 0.7, 0.8)
 const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
+## 键名列宽（px）。键名是**要照抄进代码**的东西（`param("move_speed", v)`）→
+## 给足宽度、**不换行**；真超长就省略号 + 悬停看全名。
+## 曾经的 90px + 自动换行会把 `move_speed` 从中间断成 `move_spee` / `d`（键名断行 = 看不清）
+const KEY_COLUMN_W := 150.0
 
 var _rows: Array = []  # [{name, kind, ctrl}]
 var body: VBoxContainer   # 参数行容器（测试/外部读取 children 用）
@@ -133,7 +137,11 @@ func _add_row(nm: String, kind: String, ctrl: Control) -> Label:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	var lb := _mk_label(nm, RIG_COMMON.HINT_SIZE)
-	lb.custom_minimum_size = Vector2(90, 0)
+	# 键名列：固定宽度 + 单行 + 超长省略（悬停看全名）——别用 _mk_label 的自动换行（会从中间断词）
+	lb.custom_minimum_size = Vector2(KEY_COLUMN_W, 0)
+	lb.autowrap_mode = TextServer.AUTOWRAP_OFF
+	lb.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	lb.tooltip_text = nm
 	row.add_child(lb)
 	row.add_child(ctrl)
 	body.add_child(row)
