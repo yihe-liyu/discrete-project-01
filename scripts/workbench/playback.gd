@@ -17,6 +17,8 @@ extends RefCounted
 signal changed
 signal logged(text: String)
 
+const COMMON := preload("res://scripts/workbench/bench_common.gd")
+
 ## 播放速度档位（慢放/快进；书签跳转另用 FAST_FORWARD_SCALE）
 const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
 ## 书签跳转的固定快进倍率（真实关卡不支持任意 seek，只能加速跑到目标）
@@ -24,8 +26,6 @@ const FAST_FORWARD_SCALE := 12.0
 ## 快进时抬高的物理步上限（默认 8 撑不住 12 步/帧 → 演出 tween/物理落后）
 const FAST_FORWARD_MAX_STEPS := 64
 const DEFAULT_MAX_STEPS := 8
-## 固定种子：重跑时弹幕序列可复现（调参看效果的必备开关）
-const FIXED_SEED := 20260801
 ## 跳转容差：目标比当前早这么多以内算"同一点"，不值得重跑
 const JUMP_BACK_TOLERANCE := 0.5
 ## 跳转下限：这么早的目标等价于"回开头"（不启动快进）
@@ -163,10 +163,16 @@ func set_show_bg(on: bool) -> void:
 func set_fixed_seed(on: bool) -> void:
 	fixed_seed = on
 	if on:
-		logged.emit("＊ 固定种子 %d：重跑弹幕序列可复现" % FIXED_SEED)
+		logged.emit("＊ 固定种子 %d：重跑弹幕序列可复现" % fixed_seed_value())
 	else:
 		logged.emit("＊ 随机种子：每次重跑弹幕不同")
 	changed.emit()
+
+
+## 本次重跑该用的固定种子（宿主据此设 RNG；开关关掉时宿主自己 randomize）。
+## 取值来自 `BenchCommon.FIXED_SEED` —— 全工作台唯一来源，别在这里抄字面量。
+func fixed_seed_value() -> int:
+	return COMMON.FIXED_SEED
 
 
 # ═══ 运行时投影（宿主据此下发；也是测试的断言面）═══

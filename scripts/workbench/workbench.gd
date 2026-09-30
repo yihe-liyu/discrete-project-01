@@ -368,7 +368,7 @@ func _load_stage() -> void:
 		SaveData.selected_difficulty = _diff_sel.selected
 	# 固定种子：重跑弹幕序列可复现（调参看效果必备）；关闭则随机化
 	if _playback.fixed_seed:
-		RNG.set_seed(Playback.FIXED_SEED)
+		RNG.set_seed(_playback.fixed_seed_value())
 	else:
 		RNG.randomize_seed()
 	# 幽灵复位（重头走路径）

@@ -68,6 +68,20 @@ func test_wire_does_both_halves() -> void:
 	_assert_wired(_stage_runtime, bm, _world)
 
 
+## 只交注册表（不绑自机）：真游戏"选机体失败 / 没有 Player"的异常路径走它
+func test_wire_registry_injects_without_binding_player() -> void:
+	var bm := StageHost.make_bullet_world(_world)
+	StageHost.wire_world(_stage_runtime, bm, _world)
+	StageHost.wire_registry(_stage_runtime)
+	assert_eq(bm.entity_registry, _stage_runtime.entity_registry, "内核后端拿到注册表")
+	assert_null(_stage_runtime.entity_registry.player, "这条路径不绑自机（没有自机可绑）")
+
+
+func test_wire_registry_without_bullet_world_is_loud() -> void:
+	StageHost.wire_registry(_stage_runtime)
+	assert_push_error("子弹世界还没接上")
+
+
 ## 没有子弹世界就接自机 = 装配顺序错了：要**响亮地**报错，且不许偷偷绑一半
 func test_wire_player_without_bullet_world_is_loud_and_inert() -> void:
 	var player := StageHost.make_player(_world, GHOST, "GhostPlayer", REIMU)

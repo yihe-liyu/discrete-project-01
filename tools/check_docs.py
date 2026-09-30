@@ -83,6 +83,56 @@ def check_test_index() -> tuple[int, int] | None:
 	return head_scripts, head_cases
 
 
+# ── [2b] 分层小节的小计 == 它自己的行（2026-09-30 加；此前没人看，烂了 19 个用例）──
+#
+# 为什么加：分层表与抬头只是"总数对得上"，**段落小计烂了也看不出来**——
+# 当时 `test_spell_practice_menu` 那行的「白盒」列被写成 `**45**`（加粗），任何朴素解析器都读不到它，
+# 于是那一行 19 个用例整行"隐身"，D 段小计与行合计差 19 而无人发现。
+# 判据三条：① 每行都得能解析（列数/数字格式）；② 小节小计 == 行合计；③ 分层表那一行 == 小节小计。
+
+ROW = re.compile(
+	r"^\|\s*\[test_[^\]]+\]\(\.\./test/[^)]+\.gd\)\s*\|.*?\|\s*\**(\d+)\**\s*\|\s*\**(\d+)\**\s*\|\s*$",
+	re.M,
+)
+SECTION = re.compile(r"^## ([A-G]) · .*?（\s*\**(\d+)\**\s*/\s*\**(\d+)\**\s*）", re.M)
+LAYER_ROW = re.compile(r"^\|\s*\*\*(.+?)\*\*\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|", re.M)
+
+
+def check_test_index_sections() -> None:
+	text = read("docs/TEST_INDEX.md")
+	layer_body = text.split("## 分层", 1)[1].split("\n## ", 1)[0]
+	layer_table = {m.group(1).strip()[:1]: (int(m.group(2)), int(m.group(3)))
+		for m in LAYER_ROW.finditer(layer_body)}
+
+	for chunk in re.split(r"\n## ", text):
+		title = chunk.split("\n", 1)[0]
+		sec = SECTION.match("## " + title)
+		if sec is None:
+			continue
+		letter, head_files, head_cases = sec.group(1), int(sec.group(2)), int(sec.group(3))
+		rows = ROW.findall(chunk)
+		row_files, row_cases = len(rows), sum(int(r[0]) for r in rows)
+
+		# ① 小节里每条 `| [test_x](...) |` 链接都必须落在一行**能解析**的行里
+		bad_rows = []
+		for line in chunk.splitlines():
+			if line.startswith("| [test_") and not ROW.match(line):
+				m = re.search(r"\(\.\./test/([^)]+\.gd)\)", line)
+				bad_rows.append(m.group(1) if m else line[:40])
+		if bad_rows:
+			fail("TEST_INDEX", f"{letter} 段有 {len(bad_rows)} 行解析不到（列数 / 漏列 / 列序变了）："
+				f"{', '.join(bad_rows[:3])}")
+
+		# ② 小节小计 == 行合计
+		if (row_files, row_cases) != (head_files, head_cases):
+			fail("TEST_INDEX", f"{letter} 段小计 {head_files}/{head_cases} ≠ 行合计 {row_files}/{row_cases}")
+
+		# ③ 分层表那一行 == 小节小计
+		if letter in layer_table and layer_table[letter] != (head_files, head_cases):
+			fail("TEST_INDEX", f"分层表 {letter} {layer_table[letter][0]}/{layer_table[letter][1]} "
+				f"≠ 小节小计 {head_files}/{head_cases}")
+
+
 # ── [3] README 徽章 == TEST_INDEX 抬头 ────────────────────────────────
 
 
@@ -183,6 +233,7 @@ def check_log() -> None:
 def main() -> int:
 	print("== 文档哨兵（文档 ↔ 代码/数据） ==")
 	head = check_test_index()
+	check_test_index_sections()
 	check_readme_badge(head)
 	check_danmaku_keys()
 	check_readme_links()

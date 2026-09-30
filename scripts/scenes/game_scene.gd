@@ -194,8 +194,8 @@ func _setup_player() -> void:
 		StageHost.wire_player(_stage_runtime, player)
 	else:
 		# 异常路径（角色下标越界 / 场景里没有 Player）：没有自机可绑，
-		# 但注册表仍要交给内核后端（保持原行为，别把这条路的注入弄丢）
-		_stage_runtime.bullet_manager.inject_entity_registry(_stage_runtime.entity_registry)
+		# 但注册表仍要交给内核后端（保持原行为；接线也只走 StageHost）
+		StageHost.wire_registry(_stage_runtime)
 	# HUD 单局资源
 	_game_ui.resources = _stage_runtime.entity_registry.get_player_resources()
 

@@ -1,11 +1,15 @@
 extends RefCounted
-## 组合台共享 UI 基建：标签/面板样式/标题（三台统一样式单一来源）
+## 工作台/组合台共享基建：标签/面板样式/标题 + **全局约定常量**（唯一的来源处）
 ## 视觉与游戏页面统一：半透明黑底 + 金边卡片（ui_theme 同款）
 
 ## 字号阶梯（全创作台唯一来源）：改字号只动这里 + workbench_theme.default_font_size
 const SECTION_SIZE := 18  ## 金色节标题（行为/外形/参数/操作/开发…）+ 各台标题
 const LABEL_SIZE := 18    ## 字段标签（贴图/染色/外观/HP/难度…）
 const HINT_SIZE := 15     ## 提示行（左键=… · 鼠标=自机）
+
+## 固定随机种子（**全工作台唯一来源**）：整关预览的「固定种子」开关 + 三台的「换种子」基准都用它。
+## ⚠️ 别再各处抄这个字面量 —— `tools/check_structure.sh` 会检查它只出现一次（同值多定义 = 漂移）。
+const FIXED_SEED := 20260801
 
 static func label(text: String, font_size: int) -> Label:
 	var l := Label.new()

@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-715%20tests%20/%20113%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-717%20tests%20/%20113%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -64,7 +64,7 @@
 | **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 / 预览与干跑 | 编剧 |
 | **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（**剧本原稿**）—— 已实现关卡（Stage 1）以 `data/dialogue/stage/*.gd` 为准 | 编剧 |
 | **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（未做项 + 已完成记录） | 维护者 |
-| **[docs/TEST_INDEX.md](docs/TEST_INDEX.md)** | **测试索引** —— 108 个测试文件「改哪里 → 看哪条」+ 分层 + D3 白盒债清单 + 已知门禁坑（计数口径以本文为准） | 维护者 |
+| **[docs/TEST_INDEX.md](docs/TEST_INDEX.md)** | **测试索引** —— 113 个测试文件「改哪里 → 看哪条」+ 分层 + D3 白盒债清单 + 已知门禁坑（计数口径以本文为准） | 维护者 |
 | `docs/*.txt` | 原始设定资料：[omake.txt](docs/omake.txt)（附言 / Extra Story / 全角色设定）· [music.txt](docs/music.txt)（曲目）· [SpellCard.txt](docs/SpellCard.txt)（符卡名）· [FrontData.txt](docs/FrontData.txt) | 玩家/作者 |
 | `TODO_TEMP.md` | 作者**本地**临时待办（`.gitignore` 忽略、**不进 Git**、非权威） | 作者本人 |
 | **[docs/archive/](docs/archive/)** | 已归档（**一句话价值见 [ARCHIVE_INDEX.md](docs/archive/ARCHIVE_INDEX.md)**）：SPEC / ROADMAP / REFACTORING / STAGE_FLOW / SPELL_SYSTEM / CREATION_STATION / NEW_KERNEL_REFACTOR_PLAN / **N2 接入与拆除记录** / M3_TEXTURE / REBUILD_REPO_STATUS / 旧审计 / 按月日志 | 历史 |
@@ -109,14 +109,18 @@
 ./test/run_tests.sh
 ```
 
-### 一键验证（文档哨兵 + 语法 + 命名 + 启动 + 测试 + 所有权）
+### 一键验证（文档哨兵 + 语法 + 命名 + 结构 + 启动 + 测试 + 所有权）
 
 ```bash
 ./tools/verify.sh
 ```
 
-> 第 1 步是**文档哨兵**（`tools/check_docs.py`）：TEST_INDEX 的测试清单 / 抬头数字 / README 徽章 /
-> `DANMAKU_API` 的弹型与音效 key 表 / README 链接 / 滚动日志，全部对着代码与数据机械核对 —— 文档数字再也不会静默腐烂。
+> 第 1 步是**文档哨兵**（`tools/check_docs.py`）：TEST_INDEX 的测试清单 / 抬头数字 / **各层小节小计** /
+> README 徽章 / `DANMAKU_API` 的弹型与音效 key 表 / README 链接 / 滚动日志，全部对着代码与数据机械核对
+> —— 文档数字再也不会静默腐烂。
+>
+> 第 4 步是**结构契约**（`tools/check_structure.sh`）：组合台必须有同名场景壳 · **测试白盒预算只减不增** ·
+> **唯一来源常量**（抄第二遍就红）· **舞台接线唯一**（`.inject_*` 只许在 `stage_host.gd`）。
 
 ### 开发常用
 

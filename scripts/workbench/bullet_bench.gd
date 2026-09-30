@@ -8,14 +8,13 @@ const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")  # WorkbenchTheme 构建器
 const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
-const FIXED_SEED := 20260801
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
 const VERSION_TAG := "v3.4-ui"
 
 
 var _shell: Variant      # BulletShell（preload 构造，规避新 class 全局缓存）
 var _emitter_pos := Vector2(GameConfig.FIELD_CENTER_X, 300.0)
-var _seed: int = FIXED_SEED
+var _seed: int = RIG_COMMON.FIXED_SEED
 var _burst_left := 0.0
 
 # ── UI ──
@@ -52,7 +51,7 @@ func _ready() -> void:
 	_toast = STATUS_TOAST.new()
 	add_child(_toast)
 	_reload_status = _toast.label   # 统一右下角浮动状态条（原面板状态行）
-	_set_seed(FIXED_SEED)
+	_set_seed(RIG_COMMON.FIXED_SEED)
 	_refresh_dir_label()
 	_set_current_script()
 	_param_panel.rebuild(_cur_script)

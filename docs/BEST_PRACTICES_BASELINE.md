@@ -199,6 +199,14 @@
 - **GDScript 警告 = 错误**（`check_syntax` 全扫）；原生 `WARN/ERR_PRINT` 被 GUT 记 Unexpected Errors → 内核静默返回、宿主 `push_warning`。
 - **场景期依赖用 `@tool` + `_get_configuration_warnings()`**（同 R3；运行时注入豁免）。
 - **Godot 的 `erase_section` / `remove_*` 对「不存在」目标会 `ERR_FAIL`（不是 no-op）**：先 `has_section` / `file_exists` 守卫；GUT 会把它记成 Unexpected Errors。
+- **重构的成果要靠机械护栏，不靠记性**：S1–S4 立的接缝 / 服务 / 装配约定由
+  `tools/check_structure.sh`（`verify.sh` 第 4 步）看住四条 —— 组合台必须有同名场景壳 ·
+  **测试白盒预算只减不增**（`._xxx` 粗计，跳过注释与 `test/reference`）·
+  唯一来源常量（值只许出现一次，抄第二遍就红）· **舞台接线唯一**（`.inject_*` 调用只许在 `stage_host.gd`）。
+  护栏本身也要**先证明会红**（逐条弄坏一次看它报不报）—— 不会红的哨兵是摆设。
+- **被托管视图的输入"领地"要显式划分**：宿主 chrome（页签横栏之类）必须占**更高的 `CanvasLayer`**
+  —— 子视图里 `top_level` + `MOUSE_FILTER_STOP` 的控件（如组合台场地 832x928）会把它整片点击吃掉，
+  而 **GUI 拾取按画布层从高到低**，与树序 / `z_index` 无关（本轮创作台「弹幕台/整关预览点不开」即此）。
 - **测试用夹具，别拿真实内容当断言标准**：目录扫描类（`ContentCatalog` / `CatalogPanel`）一律 `scan(夹具根)` / 注入 `catalog_root`；真实内容只做「不数数量、不写具体路径」的结构冒烟——否则加一张符卡就红。
 
 ---
@@ -208,7 +216,7 @@
 > 每修一条删一条。长版细节（行数、实测数字、决策经过）见 [BASELINE_EVIDENCE.md](BASELINE_EVIDENCE.md)。
 
 - [ ] **R16**：47MB 二进制未配 Git LFS（`.gitattributes` 仅 EOL 规范化）
-- [ ] **R18/R19**：`workbench.gd`(695) / `spell_practice_menu.gd`(754) 上帝对象 + 3 个超长 `_build_ui`（**行数只是提示，判据是"一个类只做一件事"**；2026-09-27 实测）
+- [ ] **R18/R19**：`workbench.gd`(611，2026-09-30 S3/S4 后；原 695) / `spell_practice_menu.gd`(754) 上帝对象 + 3 个超长 `_build_ui`（**行数只是提示，判据是"一个类只做一件事"**；2026-09-27 实测）
 - [ ] **R21**：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）
 - [ ] **R2（残余）**：`item_service.gd:16` / `player.gd:286` 经 `current_scene` 取 World，可改注入
 - [ ] **编排路线**（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生 / Step 6 `ctx.background` 注入服务 待做；Step 5/7 暂缓（产品决定）

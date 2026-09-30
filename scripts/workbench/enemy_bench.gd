@@ -7,12 +7,11 @@ const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
 
-const FIXED_SEED := 20260801
 const VERSION_TAG := "v1.7-ui"
 
 var _shell: Variant
 var _spawn_pos := Vector2(GameConfig.FIELD_CENTER_X, 260.0)
-var _seed: int = FIXED_SEED
+var _seed: int = RIG_COMMON.FIXED_SEED
 
 # ── UI ──
 var _script_sel: OptionButton
@@ -47,7 +46,7 @@ func _ready() -> void:
 	_toast = STATUS_TOAST.new()
 	add_child(_toast)
 	_reload_status = _toast.label
-	_set_seed(FIXED_SEED)
+	_set_seed(RIG_COMMON.FIXED_SEED)
 	_set_current_script()
 	_param_panel.rebuild(_cur_script)
 	_toast.show_msg("热更新：开", Color(0.5, 0.95, 0.6))

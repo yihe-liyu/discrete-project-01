@@ -13,10 +13,11 @@
 ./test/run_tests.sh                                  # GUT 全量（~22s）
 ./test/run_tests.sh -gtest=res://test/test_laser.gd  # 单文件（~1.4s）
 ./test/run_tests.sh -gtest=res://test/test_x.gd -gtest_func=test_xxx   # 单用例
-./tools/verify.sh                                    # 六步门禁（文档哨兵+语法+命名+启动+GUT+所有权）
+./tools/check_structure.sh                          # 结构契约（组合台/白盒预算/唯一来源/接线唯一）
+./tools/verify.sh                                    # 七步门禁（文档哨兵+语法+命名+结构+启动+GUT+所有权）
 ```
 
-**现状**：113 脚本 / **715 用例（714 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6466/6505 断言（过/总）/ 36.7s** / 19 orphans / **0 pending**。
+**现状**：113 脚本 / **717 用例（716 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6469/6508 断言（过/总）/ 36.8s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -24,8 +25,8 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 35 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 176 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 42 | 320 | `scripts/**` 的实体/系统/服务 |
-| **D UI / 菜单** | 14 | 95 | `scenes/ui/**` 与 HUD |
+| **C 宿主 · 运行时系统** | 42 | 321 | `scripts/**` 的实体/系统/服务 |
+| **D UI / 菜单** | 14 | 96 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 11 | 64 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
@@ -102,14 +103,14 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（42 / 320）
+## C · 宿主 · 运行时系统（42 / 321）
 
-### C1 组合根 / 服务 / 时间线（9 / 44）
+### C1 组合根 / 服务 / 时间线（9 / 46）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |
-| [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 四个宿主（真游戏 / 工作台 / 组合台）真的在用它 —— 注册表里有自机 / 内核后端拿到同一张注册表 / fx 挂舞台 | 9 | 0 |
+| [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 四个宿主（真游戏 / 工作台 / 组合台）真的在用它 —— 注册表里有自机 / 内核后端拿到同一张注册表 / fx 挂舞台 / 异常路径只交注册表 | 11 | 0 |
 | [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop | 9 | 0 |
 | [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 | 4 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 | 4 | 0 |
@@ -186,7 +187,7 @@
 | [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台） | 5 | 0 |
 | [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` | 3 | 0 |
 
-## D · UI / 菜单（14 / 95）
+## D · UI / 菜单（14 / 96）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|

@@ -57,11 +57,28 @@ static func wire_world(runtime: StageRuntime, bullet_manager: BulletManager, fx_
 ## 自机接上舞台：实体注册表 + 内核弹幕后端。
 ## 真游戏在**选好机体之后**才接（`setup_character()` 先跑）——所以这两步与 `wire_world` 分开。
 static func wire_player(runtime: StageRuntime, player: Player) -> void:
-	if runtime.bullet_manager == null:
-		push_error("StageHost.wire_player：子弹世界还没接上（先调 wire_world）")
-		return
+	if not _registry_ready(runtime, "wire_player"):
+		return          # 前置没满足就**什么都不做**（不许只绑自机、后端却没接）
 	runtime.entity_registry.bind_player(player)
 	runtime.bullet_manager.inject_entity_registry(runtime.entity_registry)
+
+
+## 只把实体注册表交给内核弹幕后端（不绑自机）。
+## 给**异常路径**用：真游戏选机体失败 / 场景里没有 Player 时，注册表仍要交给后端。
+## 也不要在调用点直接写 `bullet_manager.inject_entity_registry(...)` —— 那正是 S4 要收掉的分叉，
+## `tools/check_structure.sh` 会检查这类调用只出现在本文件。
+static func wire_registry(runtime: StageRuntime) -> void:
+	if not _registry_ready(runtime, "wire_registry"):
+		return
+	runtime.bullet_manager.inject_entity_registry(runtime.entity_registry)
+
+
+## 注入注册表的前置条件：子弹世界已接上。缺了就**响亮报错**并让调用方早退（不许绑一半）。
+static func _registry_ready(runtime: StageRuntime, who: String) -> bool:
+	if runtime.bullet_manager != null:
+		return true
+	push_error("StageHost.%s：子弹世界还没接上（先调 wire_world）" % who)
+	return false
 
 
 ## 一次接完（工作台/组合台：节点刚建好、自机已就位，两步之间没有别的注入）

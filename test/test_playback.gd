@@ -189,7 +189,7 @@ func test_fixed_seed_logs_and_marks() -> void:
 	pb.set_fixed_seed(true)
 	assert_true(pb.fixed_seed)
 	var params = get_signal_parameters(pb, "logged", 0)
-	assert_true(String(params[0]).contains(str(PLAYBACK.FIXED_SEED)), "播报固定种子值（实得 %s）" % params[0])
+	assert_true(String(params[0]).contains(str(pb.fixed_seed_value())), "播报固定种子值（实得 %s）" % params[0])
 	pb.set_fixed_seed(false)
 	assert_false(pb.fixed_seed)
 	assert_signal_emit_count(pb, "changed", 2, "开关两次 → 下发两次")
