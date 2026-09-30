@@ -60,8 +60,50 @@ func test_fixture_phase_tres_fields():
 		assert_eq(p.extra["hp"], 123, "hp 入档")
 		assert_almost_eq(p.extra["time_limit"], 45.5, 0.01, "时限入档")
 		assert_eq(p.stage_key, "stageF", "stage_key 从路径提取")
-		for key in ["is_timeout_only", "move_script", "shoot_script"]:
+		for key in ["is_timeout_only", "move_script", "pre_move_script", "shoot_script"]:
 			assert_true(p.extra.has(key), "阶段 extra 应含 %s" % key)
+
+
+## ── 夹具：`pre_move_script` 也要反推角色（2026-09-30 补）──────────────
+## 回归：`data/boss_scripts/move/` 里被阶段以 `pre_move_script`（符卡发动**前**的走位）引用的脚本
+## 曾经全落进「未分类」→ 目录里双击不跳台（`route_preset` 对 misc 直接 return，静默）。
+func test_fixture_pre_move_script_gets_boss_move_role():
+	var cat = CAT.new().scan(FIXTURE)
+	var pre = cat.find(FIXTURE.path_join("boss_scripts/move/pre_walk.gd"))
+	assert_not_null(pre, "pre_walk 在目录")
+	if pre:
+		assert_eq(pre.role, "boss_move", "被 pre_move_script 引用 → Boss 移动（而非未分类）")
+	# 对照：没被任何阶段引用的松散脚本仍是 misc（别把规则放宽成"一律 boss_move"）
+	var loose = cat.find(FIXTURE.path_join("loose.gd"))
+	assert_not_null(loose, "loose 在目录")
+	if loose:
+		assert_eq(loose.role, "misc", "没人引用的脚本仍是未分类")
+
+
+## ── 夹具：显示名只认**顶部且隔开**的注释块（2026-09-30 修）─────────────
+## 回归：`enemy04.gd` 的成员文档（`## 匀速下移速度…` 紧贴 `var move_speed`）曾被当成脚本名，
+## 下拉项显示成 `匀速下移速度（px/s），外部可用 param(…`；而且**静默**（警告 0）。
+func test_fixture_header_must_be_top_and_detached():
+	var cat = CAT.new().scan(FIXTURE)
+
+	# ① 顶部 + 隔开 → 正常取名
+	var good = cat.find(FIXTURE.path_join("stages/stageF/enemy/hdr_ok.gd"))
+	assert_not_null(good, "hdr_ok 在目录")
+	if good:
+		assert_eq(good.name, "隔行顶部名", "顶部且与声明隔开的注释块 → 当脚本名")
+
+	# ② 紧贴声明 → 那是成员文档，不许当名字（退化成文件名），且**要报警告**
+	var doc = cat.find(FIXTURE.path_join("stages/stageF/enemy/hdr_member.gd"))
+	assert_not_null(doc, "hdr_member 在目录")
+	if doc:
+		assert_eq(doc.name, "hdr_member", "贴住声明的注释块 = 成员文档 → 名字退化成文件名")
+		assert_false(doc.description.contains("成员文档不该当名字"),
+			"成员文档也不该混进描述（实得：%s）" % doc.description)
+	var warned := false
+	for w in cat.get_warnings():
+		if w.contains("hdr_member.gd"):
+			warned = true
+	assert_true(warned, "名字退化成文件名要响亮（模块承诺「不静默」）")
 
 
 ## ── 夹具：const META ──
@@ -107,11 +149,19 @@ func _build_fixture() -> void:
 	_rmtree(FIXTURE)
 	# 关卡脚本 preload 敌人脚本 → 测 refs_from
 	_write(FIXTURE.path_join("stages/stageF/stage_script/f_stage.gd"),
-		"extends CoroutineScript\n## 夹具关卡\nconst E = preload(\"%s\")\n" % FIXTURE.path_join("stages/stageF/enemy/e.gd"))
+		"extends CoroutineScript\n## 夹具关卡\n\nconst E = preload(\"%s\")\n" % FIXTURE.path_join("stages/stageF/enemy/e.gd"))
 	_write(FIXTURE.path_join("stages/stageF/enemy/e.gd"), "extends CoroutineScript\n## 夹具敌人\n")
 	_write(FIXTURE.path_join("stages/stageF/enemy/x_move.gd"),
 		"extends CoroutineScript\n## @role: bullet\n## @name: 测试弹\n## 这是描述行\n")
 	_write(FIXTURE.path_join("stages/stageF/enemy/y_bullet.gd"), "extends CoroutineScript\n## 普通螺旋弹\n")
+	# 显示名规则：顶部且隔开 → 取名；紧贴声明 → 那是成员文档
+	_write(FIXTURE.path_join("stages/stageF/enemy/hdr_ok.gd"),
+		"extends CoroutineScript\n## 隔行顶部名\n\nvar speed := 1.0\n")
+	_write(FIXTURE.path_join("stages/stageF/enemy/hdr_member.gd"),
+		"extends CoroutineScript\n\n## 成员文档不该当名字\nvar speed := 1.0\n")
+	# 角色反推：卡前走位脚本（被阶段以 pre_move_script 引用）
+	_write(FIXTURE.path_join("boss_scripts/move/pre_walk.gd"),
+		"extends CoroutineScript\n## 卡前走位\n\nvar t := 0.0\n")
 	_write(FIXTURE.path_join("stages/stageF/enemy/plain.gd"), "extends Node\n## 不是协程脚本\n")
 	_write(FIXTURE.path_join("stages/stageF/background/decor.gd"), "extends CoroutineScript\n## 背景演出脚本\n")
 	_write(FIXTURE.path_join("dialogue/intro.gd"), "extends CoroutineScript\n## 对话脚本不入目录\n")
@@ -122,9 +172,12 @@ func _build_fixture() -> void:
 
 
 func _phase_tres(path: String, p_name: String, uid: int, hp: int, time_limit: float) -> void:
+	var pre := FIXTURE.path_join("boss_scripts/move/pre_walk.gd")
 	var text := "[gd_resource type=\"Resource\" script_class=\"PhaseData\" format=3]\n\n"
-	text += "[ext_resource type=\"Script\" path=\"res://scripts/data/phase_data.gd\" id=\"1\"]\n\n"
+	text += "[ext_resource type=\"Script\" path=\"res://scripts/data/phase_data.gd\" id=\"1\"]\n"
+	text += "[ext_resource type=\"Script\" path=\"%s\" id=\"2\"]\n\n" % pre
 	text += "[resource]\nscript = ExtResource(\"1\")\nuid = %d\nname = \"%s\"\nhp = %d\ntime_limit = %s\n" % [uid, p_name, hp, str(time_limit)]
+	text += "pre_move_script = ExtResource(\"2\")\n"
 	_write(path, text)
 
 

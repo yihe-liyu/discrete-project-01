@@ -167,6 +167,11 @@ func _apply_meta(entry: Entry, ann: Dictionary, path: String, text: String) -> v
 				return
 			_warnings.append("META 缺 name [%s]：回退注解" % path.get_file())
 	# 回退：注解 / 注释块
+	if not ann.has("name") and not ann.has("_default_name"):
+		# 「不静默」：名字退化成文件名时要说出来（面板的「警告 N」会亮）——
+		# 三种成因：没写顶部注释块 / 注释块紧贴声明（被当成员文档丢掉）/ 只写了 @role
+		_warnings.append("脚本无显示名（回退文件名 [%s]）：加 `const META` 或顶部 `## @name:` / 隔行注释块"
+			% path.get_file())
 	var raw_name: String = ann.get("name", ann.get("_default_name", path.get_file().get_basename()))
 	entry.name = _short_name(raw_name)
 	entry.extra["full_title"] = raw_name
@@ -214,6 +219,7 @@ func _scan_tres(path: String) -> void:
 		"time_limit": phase.time_limit,
 		"is_timeout_only": phase.is_timeout_only,
 		"move_script": phase.move_script.resource_path if phase.move_script else "",
+		"pre_move_script": phase.pre_move_script.resource_path if phase.pre_move_script else "",
 		"shoot_script": phase.shoot_script.resource_path if phase.shoot_script else "",
 	}
 	_add(entry)
@@ -254,14 +260,18 @@ func _build_refs_from() -> void:
 ## ── 角色判定 ──
 
 ## 引用反推（两遍）：约定/注解都判不出来时，用真实引用关系定角色
-## ① 阶段 .tres 的 move_script/shoot_script 字段 → boss_move / boss_shoot
+## ① 阶段 .tres 的 move_script / **pre_move_script** / shoot_script 字段 → boss_move / boss_shoot
+##    （`pre_move_script` = 符卡发动**前**的走位。2026-09-30 补：漏了它 → `move_to_point.gd`
+##     这种"只被 pre_move_script 引用"的脚本显示成「未分类」，目录里双击也不跳台）
 ## ② boss_shoot 脚本 preload 的 misc 脚本 → bullet 行为（如 orbit_probe）
+## 注：**没人引用**的脚本仍是「未分类」——那是正确结果（目录会列出来，但当不了路由目标）
 func _apply_reference_fixes() -> void:
 	for entry in _entries:
 		var ent := entry as Entry
 		if ent.role != ROLE_PHASE:
 			continue
 		_assign_if_misc(ent.extra.get("move_script", ""), ROLE_BOSS_MOVE)
+		_assign_if_misc(ent.extra.get("pre_move_script", ""), ROLE_BOSS_MOVE)
 		_assign_if_misc(ent.extra.get("shoot_script", ""), ROLE_BOSS_SHOOT)
 	for entry in _entries:
 		var ent := entry as Entry
@@ -316,24 +326,42 @@ func _is_coroutine_script(text: String) -> bool:
 		or text.contains("coroutine_script.gd")
 
 
-## 解析文件顶部注释块：
+## 解析**文件顶部**注释块，取显示名/描述/角色注解：
 ##   ## @role: xxx    注解（角色覆盖，最高优先级）
 ##   ## @name: xxx    显示名覆盖
 ##   ## @desc: xxx    描述覆盖
 ##   ## 普通行          → 默认显示名（第一行）/ 描述（后续行）
+##
+## 「顶部」= ① 第一条语句之前（前面只允许空行 / `extends`·`class_name`·`@tool` / `#` 注释），
+## 且 ② **与下面的声明隔开**（块后是空行或文件结束）—— 否则那块 `##` 是**成员文档**
+## （`## 速度` 紧贴 `var speed`），拿去当脚本名就是错的：
+## 曾经的实现是"文件里第一个 `##`"，于是 `enemy04.gd` 的下拉项显示成
+## `匀速下移速度（px/s），外部可用 param(…`（2026-09-30 修）。
+## 例外：块里含 `@` 注解 = 显式意图，贴住声明也认（`@name` 本就是给人纠名用的）。
 func _parse_header(text: String) -> Dictionary:
 	var ann := {}
 	var first := text.find("##")
 	if first < 0:
 		return ann
+	# ① 顶部：`##` 之前不许有代码
+	for line in text.substr(0, first).split("\n"):
+		var above := line.strip_edges()
+		if above.is_empty() or above.begins_with("#") or above.begins_with("extends") \
+				or above.begins_with("class_name") or above.begins_with("@tool"):
+			continue
+		return ann
 	var lines := text.substr(first).split("\n")
 	var comments: Array[String] = []
+	var has_annotation := false
+	var block_len := 0
 	for line in lines:
 		var line_text := line.strip_edges()
 		if not line_text.begins_with("##"):
 			break
+		block_len += 1
 		var body := line_text.substr(2).strip_edges()
 		if body.begins_with("@"):
+			has_annotation = true
 			var parts := body.split(":", true, 1)
 			if parts.size() == 2:
 				ann[parts[0].substr(1).strip_edges()] = parts[1].strip_edges()
@@ -341,6 +369,9 @@ func _parse_header(text: String) -> Dictionary:
 				ann[body] = true
 		else:
 			comments.append(body)
+	# ② 隔开才算脚本头；贴住声明 = 成员文档（除非块里有 @ 注解）
+	if not has_annotation and block_len < lines.size() and not lines[block_len].strip_edges().is_empty():
+		return {}
 	if comments.size() > 0:
 		ann["_default_name"] = comments[0]
 	if comments.size() > 1:
