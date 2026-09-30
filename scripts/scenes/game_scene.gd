@@ -38,7 +38,6 @@ func _ready():
 
 	# R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
 	# 组合根装配：Miss 圈 / 特效层 / 关卡运行时（均在 game_scene.tscn 声明，R21），这里只注入。
-	_stage_runtime.bullet_manager = _bullet_manager
 	_stage_runtime.world = _world
 	_stage_runtime.miss_layer = _miss_circle_layer
 	_stage_runtime.fx_pool = _fx_pool
@@ -46,8 +45,8 @@ func _ready():
 	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层
 
 	_bullet_manager.inject_fx_pool(_fx_pool)
-	_bullet_manager.fx_parent = _world            # 炸弹爆炸贴图挂 World（不再全树找）
-	_bullet_manager.inject_stage_runtime(_stage_runtime)   # 共享子弹 ctx 显式绑 stage（去全局回退）
+	# 与工作台/组合台**同一条接线**（StageHost）：fx_parent / 运行时认领 / 共享子弹 ctx
+	StageHost.wire_world(_stage_runtime, _bullet_manager, _world)
 	GameManager.register_world(_bullet_manager, _stage_runtime.entity_registry)   # 切场由壳显式操作，不读 .current
 
 	_item_pool.entity_registry = _stage_runtime.entity_registry   # 道具经注册表取自机/资源
@@ -191,10 +190,12 @@ func _setup_player() -> void:
 	var player: Player = %Player
 	if player and SaveData.selected_character < data_map.size():
 		player.setup_character(data_map[SaveData.selected_character])
-		# 自机 → 本次关卡世界的实体注册表（BulletManager 亦经注入读取）
-		_stage_runtime.entity_registry.bind_player(player)
-	# 自机已就绪：把本关卡的实体注册表注入内核弹幕后端
-	_bullet_manager.inject_entity_registry(_stage_runtime.entity_registry)
+		# 自机 → 本次关卡世界的实体注册表；注册表 → 内核弹幕后端（同一条 StageHost 接线）
+		StageHost.wire_player(_stage_runtime, player)
+	else:
+		# 异常路径（角色下标越界 / 场景里没有 Player）：没有自机可绑，
+		# 但注册表仍要交给内核后端（保持原行为，别把这条路的注入弄丢）
+		_stage_runtime.bullet_manager.inject_entity_registry(_stage_runtime.entity_registry)
 	# HUD 单局资源
 	_game_ui.resources = _stage_runtime.entity_registry.get_player_resources()
 

@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 50 条（本文件留最近 50 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 51 条（本文件留最近 51 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-09-30 — 工作台 S4：**舞台装配合一**（`StageHost`：真游戏 / 工作台 / 三个组合台共用一条接线）
 - 2026-09-30 — 工作台 S3：抽出 `Playback` + `Bookmarks`（播放/书签变**可无树测试**，并抓到「只写不读」的真 bug）
 - 2026-09-30 — 工作台 S2：抽出 `HotReloadService`（热更新管线变成**可无树测试**的服务）
 - 2026-09-30 — 工作台重构 **S1：先立公开接缝**（私有访问 181 → **0**）
@@ -80,6 +81,55 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-09-30 — 工作台 S4：**舞台装配合一**（`StageHost`：真游戏 / 工作台 / 三个组合台共用一条接线）
+
+- **承接 S1–S3**：接缝化 → 抽 HotReload → 抽 Playback+Bookmarks。S4 处理**装配**：
+  `workbench.gd::_setup_world` 与 `BenchBase::build_world` **各写一份同一段接线**，
+  真游戏 `game_scene.gd` 还写着第三份。差别只在"节点从哪来、摆哪儿"，
+  而接线是逐字相同的一段 —— 每漏一句都是隐性 bug：
+  少 `fx_parent` 炸弹贴图挂错层 / 少 `inject_stage_runtime` 子弹 ctx 回退全局（切场串台）/
+  少 `inject_entity_registry` 内核后端看不到自机（自机狙全打空）/ 少 `player_data` 角色数据全默认。
+- **新落点** `scripts/stage/stage_host.gd`（**核心层**，不是 workbench）：
+  依赖方向只能是 工具 → 核心，而真游戏也要用 ⇒ 只能放核心。
+  接口按"建/接"分工：`make_bullet_world()` / `make_player()`（代码搭台的宿主用）·
+  `wire_world()` / `wire_player()` / `wire()`（真游戏节点是场景声明的 —— R21，只用接）。
+  `wire_player` 里加了一条守卫：子弹世界还没接就 `push_error`（装配顺序错了要**响亮**，不许绑一半）。
+- **四个调用点**全部改走它：`BenchBase.build_world`（顺带把场地创建拆成 `_make_field()`，
+  **保持原装配顺序** —— 场地金框画在子弹之上是刻意的观感）· `workbench.gd::_setup_world`（命中框另拆
+  `_setup_hitbox_overlay()`）· `game_scene.gd::_ready` + `_setup_player`（真游戏！）。
+  真游戏的 `_setup_player` 原来把 `inject_entity_registry` 放在 `if` **外面**（越界/无 Player 也要注入），
+  改走 `wire_player` 时把那条异常路径显式写成 `else`，**行为逐字保持**。
+- **新测试** `test_stage_host.gd`（**9 条**）：既验 StageHost 自己（建/接/守卫），
+  也**锁住四个宿主真在用**——组合台 / 工作台 / 真游戏各装一个**真场景**，断言同一条不变量
+  （注册表里是自机 / 内核后端拿到同一张注册表 / fx 挂舞台）。走 `get_node("World/...")` 节点路径，**白盒 0**。
+- **反向验证（三个宿主各验一次，哨兵先证明会红）**：只把 `bench_base` 的 `wire` 换成 `wire_world`
+  → **只有** `test_bench_scene_uses_stage_host` 红（其余 8 条绿）；工作台同理只红它那条；
+  真游戏那条红时还带出 `Invalid access to property 'current_score' on Nil` —— 正好演示"自机没进注册表"
+  的连锁后果（HUD 取不到自机资源）。
+- **真装配探针（跑完即删；`.godot/probe/`）**：
+  · 工作台 **7/7**（认领子弹世界 / fx_parent / 自机进注册表 / 内核后端拿到注册表 / 自机资源可读 /
+  真关卡脚本已加载 / 子弹出生全局坐标 == 发射点）；截图 `s4_workbench.png`。
+  · **真游戏 12/12**：400 帧后关卡时钟 2.9s、道中敌机 7 个、场上 22 颗弹、自机存活、接线与坐标空间全对。
+  · 另做对照：直接跑 `game_scene.tscn` 14 秒，**改动前后都是 0 条 SCRIPT ERROR**。
+- **踩坑（-s 探针的纪律，值得写死）**：探针源码里**不许出现项目类的类型标注**
+  （`StageRuntime` / `BulletManager` / `BulletData` …）。`-s` 的 MainLoop 脚本在**主循环开始前**解析，
+  那时 autoload 单例名还不是 GDScript 可解析标识符 ⇒ 依赖链连锁
+  `Compile Error: Identifier not found: RNG/GameEvents/AudioManager`，**探针根本不运行**（S3 那次侥幸全无类型）。
+  我因此先误判成"X11 授权失败 / 真游戏炸了"，查清后改成 `get_node()` + 动态访问即全绿。
+- **诚实交代 S4 的第二半「面板结构进 `.tscn`」：我**没做**，理由如下**：
+  ① 本项目既有约定是 **stub 场景 + 代码建 UI**（`scenes/workbench/*.tscn` 全是 13 行的壳）；
+  四个 widget 转 `.tscn` 会造出"一半在场景、一半在代码"的新混装，比现状更难读；
+  ② 容器骨架**本来就在** `workbench.tscn`（面板/卡片/插槽/页签/时间轴都是场景节点），
+  要搬的只是 widget **内部**那几十行；
+  ③ 真正的面板代码大头在**三个组合台的 `_build_ui`**（各 200+ 行），那需要的是共享构建器，不是 `.tscn`。
+  ⇒ 留给作者决定：要"编辑器里能直接调右侧面板"就做（4 个 `.tscn`），要"面板代码变少"就该做共享构建器。
+- **验收**：[1] 文档哨兵 ✅ · [2] 语法 **361 脚本 0 失败** ✅ · [3] 命名 **0 违规** ✅ ·
+  [4] 六个场景（真游戏 + 工作台 + 三台 + 创作站）启动**零错误** ✅ · [5] GUT **714 用例 / 713 通过**
+  （唯一红 = `test_data_validity` 内容 WIP）✅ · [6] 两个探针 7/7 + 12/12 ✅。
+- **顺带发现的文档漂移（未改，留给专门一轮）**：`TEST_INDEX` 的 C / D **段落标题**与它们的表格行不符
+  （C 标题 311 / 行合计 310；D 标题 95 / 行合计 77，差 19 个用例）。分层表与抬头（哨兵校验的那两个数）
+  是对的，漂移只在"层归属"这一层手工数字上 —— 说明**只有被哨兵看着的数字才不烂**，该给分段小计也立判据。
 
 ### 2026-09-30 — 工作台 S3：抽出 `Playback` + `Bookmarks`（播放/书签变**可无树测试**，并抓到「只写不读」的真 bug）
 

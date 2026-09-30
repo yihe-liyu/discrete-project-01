@@ -6,8 +6,10 @@ extends Control
 
 const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
 const GHOST := preload("res://scripts/workbench/ghost_player.gd")
-const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
+## 幽灵自机：组合台用鼠标跟随（自机狙随手走），起点在场地偏下（与真游戏自机带一致）
+const GHOST_MOUSE := 1     # GhostPlayer.Mode.MOUSE（静态类型 Player 无 mode，用 set 动态写）
+const GHOST_START_Y := 620.0
 
 ## 坐标约定：场地局部坐标 = 游戏坐标（工作台里所有游戏内容都是本 Control 的子节点，天然同一空间）。
 
@@ -107,13 +109,9 @@ func _do_hot_reload() -> void:
 
 
 func ensure_bullet_world() -> BulletManager:
-	if _bullet_manager != null:
-		return _bullet_manager
-	_bullet_manager = BulletManager.new()
-	_bullet_manager.name = "BulletManager"
-	# top_level：游戏世界原点 = 画布原点（全局坐标 = 游戏坐标），不叠工作台页签偏移
-	_bullet_manager.top_level = true
-	add_child(_bullet_manager)
+	if _bullet_manager == null:
+		# top_level：游戏世界原点 = 画布原点（全局坐标 = 游戏坐标），不叠工作台页签偏移
+		_bullet_manager = StageHost.make_bullet_world(self, true)
 	return _bullet_manager
 
 
@@ -133,34 +131,32 @@ func ensure_stage_runtime() -> StageRuntime:
 
 
 ## 场地 + 幽灵（鼠标跟随 = 自机狙目标）搭建；返回场地
+## 装配顺序照旧（子弹世界 → 垫底暗色 → 场地）：场地金框画在子弹之上，是刻意的观感。
 func build_world() -> Control:
 	ensure_stage_runtime()  # 保证本台有关卡运行时（子弹台不显式建：幽灵/注册表注入依赖它）
-	_bullet_manager = ensure_bullet_world()
-	_bullet_manager.fx_parent = _stage_runtime.world
-	_stage_runtime.bullet_manager = _bullet_manager
-	_bullet_manager.inject_stage_runtime(_stage_runtime)   # 共享子弹 ctx 显式绑本台 stage
+	ensure_bullet_world()
 	RIG_COMMON.add_stage_bg(self)
-	# 场地：直接子节点绝对定位；(0,0) 起、832x928 → 局部坐标=游戏坐标
-	_field = Control.new()
-	_field.position = Vector2.ZERO
-	_field.size = Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_BOTTOM)
-	_field.top_level = true        # 场地也在画布坐标（与子弹/Boss 同一空间）
-	_field.mouse_filter = Control.MOUSE_FILTER_STOP
-	_field.gui_input.connect(_on_field_input)
-	_field.draw.connect(_on_field_draw)
-	add_child(_field)
-	_player = PLAYER_SCENE.instantiate()
-	_player.set_script(GHOST)
-	_player.name = "GhostPlayer"
-	_player.set("mode", 1)  # GhostPlayer.Mode.MOUSE（AUTO=0/MOUSE=1/STATIC=2；静态类型 Player 无 mode，用 set 动态写）
-	_player.player_data = REIMU_DATA  # 必须：Player._ready 会应用角色数据
-	_player.position = Vector2(GameConfig.FIELD_CENTER_X, 620.0)
+	_field = _make_field()
+	_player = StageHost.make_player(_field, GHOST, "GhostPlayer", REIMU_DATA)
+	_player.set("mode", GHOST_MOUSE)  # 静态类型 Player 无 mode，用 set 动态写
+	_player.position = Vector2(GameConfig.FIELD_CENTER_X, GHOST_START_Y)
 	_player.z_index = LayerConfig.GHOST_PLAYER
-	_field.add_child(_player)
-	# 幽灵（自机）→ 关卡实体注册表；注册表 → 内核弹幕后端
-	_stage_runtime.entity_registry.bind_player(_player)
-	_bullet_manager.inject_entity_registry(_stage_runtime.entity_registry)
+	# 与真游戏/工作台同一条 StageHost 接线（fx_parent / 运行时认领 / 共享 ctx / 注册表 / 内核后端）
+	StageHost.wire(_stage_runtime, _bullet_manager, _player, _stage_runtime.world)
 	return _field
+
+
+## 场地：直接子节点绝对定位；(0,0) 起、832x928 → 局部坐标 = 游戏坐标
+func _make_field() -> Control:
+	var field := Control.new()
+	field.position = Vector2.ZERO
+	field.size = Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_BOTTOM)
+	field.top_level = true          # 场地也在画布坐标（与子弹/Boss 同一空间）
+	field.mouse_filter = Control.MOUSE_FILTER_STOP
+	field.gui_input.connect(_on_field_input)
+	field.draw.connect(_on_field_draw)
+	add_child(field)
+	return field
 
 
 

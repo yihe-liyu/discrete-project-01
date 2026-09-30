@@ -16,7 +16,7 @@
 ./tools/verify.sh                                    # 六步门禁（文档哨兵+语法+命名+启动+GUT+所有权）
 ```
 
-**现状**：112 脚本 / **705 用例（704 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6431/6470 断言（过/总）/ 35.8s** / 19 orphans / **0 pending**。
+**现状**：113 脚本 / **714 用例（713 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6461/6500 断言（过/总）/ 36.4s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -24,7 +24,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 35 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 176 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 41 | 311 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 42 | 320 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 14 | 95 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 11 | 63 | `scripts/workbench/**`、创作站 |
@@ -102,13 +102,14 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（41 / 311）
+## C · 宿主 · 运行时系统（42 / 320）
 
-### C1 组合根 / 服务 / 时间线（8 / 35）
+### C1 组合根 / 服务 / 时间线（9 / 44）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |
+| [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 四个宿主（真游戏 / 工作台 / 组合台）真的在用它 —— 注册表里有自机 / 内核后端拿到同一张注册表 / fx 挂舞台 | 9 | 0 |
 | [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop | 9 | 0 |
 | [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 | 4 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 | 4 | 0 |
@@ -215,7 +216,7 @@
 | [test_stage01_dialogue](../test/test_stage01_dialogue.gd) | 第一面战前对话构建：台词/说话者/表情/事件顺序 | 9 | 0 |
 | [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断） | 1 | 0 |
 
-## F · 工具 · 开发台（9 / 32）
+## F · 工具 · 开发台（11 / 63）
 
 > ✅ **这一层已接缝化**（2026-09-30，S1）：原先 26 个用例里 181 处私有成员访问，现在**0**——
 > 六个文件全部改走 `BenchBase` / `CreationStation` / `CatalogPanel` 的**公开接口**（见下节）。
@@ -321,7 +322,7 @@ S3 的价值不在行数，在 ①**31 个新用例**（这些规则原先覆盖
    *建议*：挪到 opt-in（如 `-gdir=res://test/perf_stress` 或按 tag 跳过），让 22s 门禁保持确定性。
 3. **无覆盖率度量**（GUT 自带没有）。705 用例 ≠ 覆盖面；`scripts/workbench`(4835 行) / `scenes/**/*.tscn`(2201 行)
    主要靠本层测试 + `verify.sh` 的启动烟测兜底。**在没有覆盖率之前不要按数量删测试**——那是盲删。
-4. **退出噪音**：19 orphans + 31169 ObjectDB 泄漏 + 24 resources 仍在使用。
+4. **退出噪音**：19 orphans + 31452 ObjectDB 泄漏 + 26 resources 仍在使用。
    现在只是噪音，但会掩盖将来真正的泄漏。*建议*：立预算（元测试断言 orphans == 0）。
 
 ## 加 / 删测试的判据

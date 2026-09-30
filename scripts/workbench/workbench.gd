@@ -38,7 +38,6 @@ extends Control
 
 const VERSION := "v4.7-ui"
 
-const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
 const HITBOX_OVERLAY := preload("res://scripts/workbench/hitbox_overlay.gd")
 const CATALOG_PANEL := preload("res://scripts/workbench/catalog_panel.gd")
@@ -123,8 +122,6 @@ func _ready() -> void:
 	_setup_phase_timer()
 	_sync_ui_layer_offset()  # 同步执行：首帧渲染即正确（见函数注释）
 	_setup_world()
-	# 注入 world，关卡运行时自持（无门面）
-	_stage_runtime.world = _world
 	_load_stage()
 	_check_phase_uid_conflicts()
 
@@ -311,31 +308,26 @@ func _on_tab_selected(i: int) -> void:
 	_set_tab(i)
 
 
-## 幽灵玩家：实例化真实 player.tscn + 换 GhostPlayer 脚本（继承 Player，类型兼容）
+## 舞台世界：幽灵自机（真实 player.tscn + GhostPlayer 脚本）+ 弹幕世界 + 命中框覆盖层
+## 接线与真游戏/组合台**同一条实现**（`StageHost`）——预览跑的就是游戏代码那条路。
 func _setup_world() -> void:
-	_bullet_manager = BulletManager.new()
-	_bullet_manager.name = "BulletManager"
-	add_child(_bullet_manager)
-	_bullet_manager.fx_parent = _world
-	_stage_runtime.bullet_manager = _bullet_manager
-	_bullet_manager.inject_stage_runtime(_stage_runtime)   # 共享子弹 ctx 显式绑本台 stage
-	# World 节点在 .tscn（显式 PAUSABLE！否则继承 root 的 ALWAYS，暂停时敌人照常发弹）
-	# 命中框覆盖层：独立 CanvasLayer + 高 z（> 敌弹 10 / 特效 50），画在子弹之上
+	_stage_runtime.world = _world   # 先认领舞台：fx_parent / 敌人生成目标都从运行时走
+	_bullet_manager = StageHost.make_bullet_world(self)
+	# 幽灵自机走固定路径（GhostPlayer 默认 AUTO），整关预览不看鼠标
+	_player = StageHost.make_player(_world, GHOST_SCRIPT, "Player", REIMU_DATA)
+	StageHost.wire(_stage_runtime, _bullet_manager, _player, _world)
+	_setup_hitbox_overlay()
+
+
+## 命中框覆盖层：独立 CanvasLayer + 高 z（> 敌弹 10 / 特效 50），画在子弹之上
+## （World 节点在 .tscn 且显式 PAUSABLE！否则继承 root 的 ALWAYS，暂停时敌人照常发弹）
+func _setup_hitbox_overlay() -> void:
 	_hitbox_overlay = HITBOX_OVERLAY.new()
 	_hitbox_overlay.name = "HitboxOverlay"
 	_hitbox_overlay.z_index = LayerConfig.HITBOX_OVERLAY
 	_hitbox_overlay.entity_registry = _stage_runtime.entity_registry
 	_hitbox_overlay.bullet_manager = _bullet_manager
 	$HitboxLayer.add_child(_hitbox_overlay)
-	_player = PLAYER_SCENE.instantiate()
-	_player.set_script(GHOST_SCRIPT)
-	_player.name = "Player"
-	_player.player_data = REIMU_DATA
-	_world.add_child(_player)
-	# 幽灵（自机）→ 关卡实体注册表
-	_stage_runtime.entity_registry.bind_player(_player)
-	# 幽灵就绪：把本台的实体注册表注入内核弹幕后端
-	_bullet_manager.inject_entity_registry(_stage_runtime.entity_registry)
 
 
 # ═══ 关卡加载 / 重跑 ═══
