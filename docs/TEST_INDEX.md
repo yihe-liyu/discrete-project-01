@@ -16,7 +16,7 @@
 ./tools/verify.sh                                    # 六步门禁（文档哨兵+语法+命名+启动+GUT+所有权）
 ```
 
-**现状**：109 脚本 / **668 用例（667 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6336 断言 / 35.8s** / 19 orphans / **0 pending**。
+**现状**：110 脚本 / **674 用例（673 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6369 断言 / 35.9s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 | **C 宿主 · 运行时系统** | 41 | 311 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 14 | 95 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
-| **F 工具 · 开发台** | 8 | 26 | `scripts/workbench/**`、创作站 |
+| **F 工具 · 开发台** | 9 | 32 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
 
 > 「白盒」列 = 私有成员访问次数（`._xxx`，粗计）。**它越高，重构时越容易断。**
@@ -215,10 +215,13 @@
 | [test_stage01_dialogue](../test/test_stage01_dialogue.gd) | 第一面战前对话构建：台词/说话者/表情/事件顺序 | 9 | 0 |
 | [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断） | 1 | 0 |
 
-## F · 工具 · 开发台（8 / 26）
+## F · 工具 · 开发台（9 / 32）
 
 > ✅ **这一层已接缝化**（2026-09-30，S1）：原先 26 个用例里 181 处私有成员访问，现在**0**——
 > 六个文件全部改走 `BenchBase` / `CreationStation` / `CatalogPanel` 的**公开接口**（见下节）。
+>
+> ✅ **S2 又抽出一个可无树测试的服务**：`HotReloadService`（防抖 / 连坐 / 失败保旧版 / 基线刷新），
+> 于是 `test_hot_reload` 不用 Control 台子就能验这四条规则（6 个用例）。
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -229,6 +232,7 @@
 | [test_phase_rig](../test/test_phase_rig.gd) | 阶段组合台：壳副本 / 双槽默认 / 开演真实生成（`select_phase` / `hp_value` / `selected_shoot_script` / `play`） | 4 | 0 |
 | [test_workbench_align](../test/test_workbench_align.gd) | 工作台坐标一致性：场地 / `BulletManager` / `BenchWorld` 同在画布坐标（`playfield` / `bullet_manager` / `bullet_global_position`） | 1 | 0 |
 | [test_bullet_shell](../test/test_bullet_shell.gd) | `BulletShell`（试验台"壳"）：自由方向 + 显示辅助 | 3 | 0 |
+| [test_hot_reload](../test/test_hot_reload.gd) | **热更新管线服务**（无树）：防抖要稳够才放行 / 轮询间隔节流 / 没改就静默 / 失败保旧版 / 基线刷新不反复重载 / 连坐同目录 / 关掉即惰性 | 6 | 0 |
 | [test_bookmark_extractor](../test/test_bookmark_extractor.gd) | 书签提取器：字面量 + 循环展开 | 4 | 0 |
 
 ## G · 性能基准（2 / 3）

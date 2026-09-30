@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 48 条（本文件留最近 48 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 49 条（本文件留最近 49 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-09-30 — 工作台 S2：抽出 `HotReloadService`（热更新管线变成**可无树测试**的服务）
 - 2026-09-30 — 工作台重构 **S1：先立公开接缝**（私有访问 181 → **0**）
 - 2026-09-28 — S13 复核结案（`✘ 判据已过期` → **✔**）+ 本地 TODO 清过期两条
 - 2026-09-28 — 工具 bug：`log_archive.py --index` 会**按滚动窗口截断正文**（本次踩到并修掉）
@@ -78,6 +79,45 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-09-30 — 工作台 S2：抽出 `HotReloadService`（热更新管线变成**可无树测试**的服务）
+
+- **承接 S1**（接缝化，181 → 0）：现在可以安全地**动实现**了。S2 只搬一块：热更新管线。
+- **搬走什么**：`bench_base.gd` 里的 `HOT_POLL_INTERVAL` / `HOT_DEBOUNCE` / `_watch_paths` / `_watch_mtimes` /
+  `_hot_enabled` / `_hot_poll` / `_hot_dirty_since` / `_with_dir_scripts()` / `_rebuild_watch()` /
+  `_refresh_watch_mtimes()` / `_process_hot_reload()` / `_do_hot_reload()` 与失败分支，
+  全部进 `scripts/workbench/hot_reload_service.gd`（**152 行**，`class_name HotReloadService`）。
+- **新服务的形状（为什么这么切）**：
+  - **不认识场景树、也不认识 toast**：构造时只收两个 `Callable`（「监听哪些路径」「主脚本是谁」），
+    结果走信号 `status(text,color)` / `reloaded(main_new)` / `failed(path)`。
+  - 于是那四条规则（防抖要稳够 / 连坐同目录 / 失败保旧版 / 重载后刷基线）**不必借一个 Control 台子**才能验
+    —— 这正是拆它的收益，而不是"文件行数好看"。
+  - `BenchBase` 只留**接线 + 转发**：`_hot.setup(_collect_watch_paths, _main_watch_path)` +
+    `status → toast`、`reloaded → _on_hot_reloaded()`；S1 的公开接缝（`poll_hot_reload` / `force_hot_reload` /
+    `watch_paths` / `set_watch_paths` / `age_watch_mtime` / `set_hot_enabled`）**名字与语义一字不变**，
+    所以六个既有测试**一行没改**照样过（delegation 的验收标准）。
+  - 顺手删掉一个**死包装** `_refresh_watch_mtimes()`（搬走后没人调）。
+- **新增测试** `test_hot_reload.gd`（**6 条，全部无树**）：
+  防抖要稳够才放行（`poll(0.5)` 只播报 / `poll(0.2)` 连 mtime 都不查 / 再 `poll(0.3)` 才放行）·
+  没改就静默 · 失败保旧版（`failed` + 红条 + 不报成功）· 重载后刷基线**不再反复重载** ·
+  连坐覆盖同目录 .gd · 关掉开关后完全惰性。
+- **两个踩到的坑（都记着）**：
+  1. 新 `class_name` **必须刷新全局类缓存**（`.godot/global_script_class_cache.cfg`）——
+     `BenchBase` 引用 `WorkbenchHotReload` 时先是 "Could not resolve class"；按老办法
+     （删缓存 → `check_syntax.sh` 自动 `--import` 重建）解决。
+  2. `with_dir_scripts(paths)` 的形参名与类里的 `paths()` 方法**撞名** → 遮蔽成员警告 = 编译失败 ⇒ 改 `p_paths`
+     （与 S1 那次 `field()` 撞局部名同一类坑，已经第二次，值得写进习惯：**公开方法名先扫一遍同名局部/形参**）。
+  3. **命名契约第①条**又抓了一次：字段 `_hot: WorkbenchHotReload` 不合规（私有字段必须 = `_` + 类型名 snake）
+     ⇒ 类名改成 `HotReloadService`、字段 `_hot_reload_service`、文件 `hot_reload_service.gd`。
+     **这一条是好事**：契约逼出了"服务"这个更贴切的命名（与既有 `AudioService` / `ItemService` 同族）。
+- **结果**：`bench_base.gd` 433 → **361 行**（S1 加的接缝留着，搬走的是管线与状态）；
+  新增服务 152 行；GUT **674 用例 / 673 通过**（唯一红 = 内容 WIP）；
+  五个 workbench 场景启动烟测**零错**。
+- **S2 的自我批评**：方案里我估"BenchBase 272 → ~150"是按 **S1 之前**的行数估的，
+  没算 S1 自己会加 ~160 行接缝文档 ⇒ 实际 361。真正的下一刀是 **S4 合一舞台装配**（`build_world` / `_setup_world`），
+  那才是 `bench_base.gd` 与 `workbench.gd` 的大头。
+- **验收**：[1] 文档哨兵 ✅ · [2] 语法 356 脚本 0 失败 ✅ · [3] 命名 0 违规 ✅ · [4] 启动零错误 ✅ ·
+  [5] GUT **674 用例 / 673 通过**（唯一红 = `test_data_validity` 内容 WIP，与本次无关）。
 
 ### 2026-09-30 — 工作台重构 **S1：先立公开接缝**（私有访问 181 → **0**）
 

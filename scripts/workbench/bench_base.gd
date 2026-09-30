@@ -45,18 +45,18 @@ func restore(_data: Dictionary) -> void:
 func preset_from_entry(_entry) -> void:
 	pass
 
-# ═══ 热更新管线（公共；子类只提供监听路径 + 重载后动作）═══
-## mtime 轮询间隔 + 修改稳定防抖（保存后不再变化才算完成）
-const HOT_POLL_INTERVAL := 0.5
-const HOT_DEBOUNCE := 0.8
-
+# ═══ 热更新（实现全在 `HotReloadService`；本类只做接线 + 转发）═══
 ## 右下角浮动状态条（子类 _ready 建好）
 var _toast: Control
-var _watch_paths: Array[String] = []
-var _watch_mtimes: Dictionary = {}
-var _hot_enabled := true
-var _hot_poll := 0.0
-var _hot_dirty_since := -1.0
+## 热更新服务（无树；两个来源是下面两个子类虚函数的 Callable）
+var _hot_reload_service: HotReloadService
+
+
+func _init() -> void:
+	_hot_reload_service = HotReloadService.new()
+	_hot_reload_service.setup(_collect_watch_paths, _main_watch_path)
+	_hot_reload_service.status.connect(_on_hot_status)
+	_hot_reload_service.reloaded.connect(_on_hot_reloaded)
 
 
 ## 子类覆写：要监听的脚本路径（主脚本 + 同目录全部 .gd，连坐重载）
@@ -74,102 +74,38 @@ func _on_hot_reloaded(_main_new: Script) -> void:
 	pass
 
 
+## 管线播报 → 状态条（子类没建 toast 时静默）
+func _on_hot_status(text: String, color: Color) -> void:
+	if _toast != null:
+		_toast.show_msg(text, color)
+
+
 func _on_hot_toggled(on: bool) -> void:
-	_hot_enabled = on
-	_toast.show_msg("热更新：开" if on else "热更新：关", Color(0.5, 0.95, 0.6) if on else Color(1, 1, 1, 0.6))
+	_hot_reload_service.enabled = on
+	_on_hot_status("热更新：开" if on else "热更新：关",
+			Color(0.5, 0.95, 0.6) if on else Color(1, 1, 1, 0.6))
 
 
-## 主脚本 + 其同目录全部 .gd（A preload B 时只重载 B 无效 → 连坐）
+## 主脚本 + 其同目录全部 .gd（连坐；实现见服务，这里保留旧名给子类调）
 func _with_dir_scripts(paths: Array) -> Array[String]:
-	var out: Array[String] = []
-	var dirs := {}
-	for p in paths:
-		if p == "":
-			continue
-		if not out.has(p):
-			out.append(p)
-		dirs[p.get_base_dir()] = true
-	for d in dirs:
-		var da := DirAccess.open(d)
-		if da:
-			for f in da.get_files():
-				if f.ends_with(".gd"):
-					var full: String = d.path_join(f)
-					if not out.has(full):
-						out.append(full)
-	return out
+	return HotReloadService.with_dir_scripts(paths)
 
 
 ## 重建监听集（子类切脚本时调用）
 func _rebuild_watch() -> void:
-	_watch_paths = _collect_watch_paths()
-	_refresh_watch_mtimes()
+	_hot_reload_service.rebuild()
 
 
-## 重载完成后刷新监听基线（避免同一改动反复触发）
-func _refresh_watch_mtimes() -> void:
-	for p in _watch_paths:
-		_watch_mtimes[p] = int(FileAccess.get_modified_time(p))
-
-
+## 推进一次热更新轮询（子类 `_process` 调）
 func _process_hot_reload(delta: float) -> void:
-	if not _hot_enabled or _watch_paths.is_empty():
-		return
-	_hot_poll += delta
-	if _hot_poll < HOT_POLL_INTERVAL:
-		return
-	_hot_poll = 0.0
-	var changed := false
-	for p in _watch_paths:
-		var mt := int(FileAccess.get_modified_time(p))
-		if mt != int(_watch_mtimes.get(p, 0)):
-			changed = true
-			# 注意：检测期间【不】更新基线！更新会把防抖清零导致永不重载；重载完成后统一刷新
-	if changed:
-		if _hot_dirty_since < 0.0:
-			_hot_dirty_since = 0.0
-			_toast.show_msg("＊ 检测到修改…", Color(1, 1, 0.6))
-		_hot_dirty_since += HOT_POLL_INTERVAL
-		if _hot_dirty_since >= HOT_DEBOUNCE:
-			_hot_dirty_since = -1.0
-			_do_hot_reload()
-	else:
-		_hot_dirty_since = -1.0
+	_hot_reload_service.poll(delta)
 
 
-## 连坐重载 + 成功后回调子类；解析失败 → 旧版继续 + 红条
+## 跳过防抖立刻重载
 func _do_hot_reload() -> void:
-	var main_path := _main_watch_path()
-	var main_new: Script = null
-	var failed := ""
-	for p in _watch_paths:
-		if p == main_path:
-			continue
-		if not FileAccess.file_exists(p):
-			failed = p
-			break
-		var s: Script = ResourceLoader.load(p, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
-		if s == null:
-			failed = p
-			break
-	if failed == "" and main_path != "":
-		if FileAccess.file_exists(main_path):
-			main_new = ResourceLoader.load(main_path, "GDScript", ResourceLoader.CACHE_MODE_REPLACE)
-			if main_new == null:
-				failed = main_path
-		else:
-			failed = main_path
-	if failed != "":
-		_toast.show_msg("⚠ 重载失败：%s（旧版继续）" % failed.get_file(), Color(1, 0.4, 0.4))
-		_refresh_watch_mtimes()
-		_hot_dirty_since = -1.0
-		return
-	_refresh_watch_mtimes()
-	_hot_dirty_since = -1.0
-	_on_hot_reloaded(main_new)
+	_hot_reload_service.force()
 
 
-## 建本台的弹幕世界（幂等）：standalone 工作台无 autoload，需自建
 func ensure_bullet_world() -> BulletManager:
 	if _bullet_manager != null:
 		return _bullet_manager
@@ -370,40 +306,32 @@ func reload_status_text() -> String:
 
 ## 正在监听（会被连坐重载）的脚本路径
 func watch_paths() -> Array[String]:
-	return _watch_paths.duplicate()
+	return _hot_reload_service.paths()
 
 
 ## 显式设定监听集（会重建 mtime 基线）；测试/创作台想固定监听目标时用
 func set_watch_paths(paths: Array[String]) -> void:
-	_watch_paths = paths.duplicate()
-	_refresh_watch_mtimes()
+	_hot_reload_service.set_paths(paths)
 
 
 ## 把"上次看到的 mtime"往回拨 seconds 秒 —— 等价于"这个文件刚被改过"（测试没法真去改夹具文件）
 func age_watch_mtime(path: String, seconds: float) -> void:
-	if not _watch_mtimes.has(path):
-		refresh_watch_baseline(path)
-	_watch_mtimes[path] = int(_watch_mtimes[path]) - int(seconds)
-
-
-## 单个路径的 mtime 基线（不在监听集里也能建）
-func refresh_watch_baseline(path: String) -> void:
-	_watch_mtimes[path] = int(FileAccess.get_modified_time(path))
+	_hot_reload_service.age_mtime(path, seconds)
 
 
 ## 推进一次热更新轮询（运行时每帧由 `_process` 调；测试手动步进）
 func poll_hot_reload(delta: float) -> void:
-	_process_hot_reload(delta)
+	_hot_reload_service.poll(delta)
 
 
 ## 跳过防抖立刻重载（= 防抖到点那一次）
 func force_hot_reload() -> void:
-	_do_hot_reload()
+	_hot_reload_service.force()
 
 
 ## 热更新开关（关掉后 `poll_hot_reload` 直接返回）
 func set_hot_enabled(on: bool) -> void:
-	_hot_enabled = on
+	_hot_reload_service.enabled = on
 
 
 ## 内容目录（三台同一份扫描结果）
