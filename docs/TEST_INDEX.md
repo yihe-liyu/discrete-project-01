@@ -16,7 +16,7 @@
 ./tools/verify.sh                                    # 六步门禁（文档哨兵+语法+命名+启动+GUT+所有权）
 ```
 
-**现状**：110 脚本 / **674 用例（673 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6369 断言 / 35.9s** / 19 orphans / **0 pending**。
+**现状**：112 脚本 / **705 用例（704 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6431/6470 断言（过/总）/ 35.8s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 | **C 宿主 · 运行时系统** | 41 | 311 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 14 | 95 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
-| **F 工具 · 开发台** | 9 | 32 | `scripts/workbench/**`、创作站 |
+| **F 工具 · 开发台** | 11 | 63 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
 
 > 「白盒」列 = 私有成员访问次数（`._xxx`，粗计）。**它越高，重构时越容易断。**
@@ -222,6 +222,11 @@
 >
 > ✅ **S2 又抽出一个可无树测试的服务**：`HotReloadService`（防抖 / 连坐 / 失败保旧版 / 基线刷新），
 > 于是 `test_hot_reload` 不用 Control 台子就能验这四条规则（6 个用例）。
+>
+> ✅ **S3 再把"播放状态机"与"书签模型"从 `workbench.gd` 里抽出来**（`Playback` / `Bookmarks`）：
+> 暂停 / 速度 / 快进 / 逐帧 / 静音 + 提取 / 持久化 / 合并 全部变成可无树断言的纯决策（31 个用例）。
+> 抽的过程中**顺手抓到一个真 bug**：`BookmarkCache.load()` / `has_cache()` 从来没被调用过 ——
+> 人工打点只写不读，**重启工作台就全丢**（"可编辑、持久化"名不副实）→ 已修 + 立回归。
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -233,6 +238,8 @@
 | [test_workbench_align](../test/test_workbench_align.gd) | 工作台坐标一致性：场地 / `BulletManager` / `BenchWorld` 同在画布坐标（`playfield` / `bullet_manager` / `bullet_global_position`） | 1 | 0 |
 | [test_bullet_shell](../test/test_bullet_shell.gd) | `BulletShell`（试验台"壳"）：自由方向 + 显示辅助 | 3 | 0 |
 | [test_hot_reload](../test/test_hot_reload.gd) | **热更新管线服务**（无树）：防抖要稳够才放行 / 轮询间隔节流 / 没改就静默 / 失败保旧版 / 基线刷新不反复重载 / 连坐同目录 / 关掉即惰性 | 6 | 0 |
+| [test_playback](../test/test_playback.gd) | **播放状态机**（无树）：暂停幂等 / 暂停先收快进 / 快进压过档位 / 物理步上限与 BGM 音高 / 到达收尾（含无 runner）/ 慢放音高不脱钩 / 跳转容差 / 逐帧放行物理 + 防重入 / 静音三源 | 20 | 0 |
+| [test_bookmarks](../test/test_bookmarks.gd) | **书签模型**（无树）：人工覆盖同刻自动并排序 / adopt 存副本 / 静态提取 / **人工打点重开还在**（只写不读的回归）/ 哈希不符保人工 / 串档不认 / 内容哈希可复现 | 11 | 0 |
 | [test_bookmark_extractor](../test/test_bookmark_extractor.gd) | 书签提取器：字面量 + 循环展开 | 4 | 0 |
 
 ## G · 性能基准（2 / 3）
@@ -277,6 +284,29 @@
 > 全项目白盒 Top（含非 workbench，未动）：`test_spell_practice_menu`(45)、`test_laser`(20)、
 > `test_boss_phase`(20)、`test_option_menu`(14)。
 
+### S2 / S3：把"规则"从上帝对象里搬出去（无树可测）
+
+S1 → S2 → S3 是一条链：**先立接缝**（测试抬到接口上）→ **再搬规则**（每搬一块，就给那块规则配上无树用例，
+不必借 Control 台子 + 真跑帧）。搬走的两块：
+
+- `hot_reload_service.gd`（152 行）—— 防抖 / 连坐重载 / 失败保旧版 / 基线刷新（6 个用例）。
+- `playback.gd`（201 行）—— 暂停 / 速度 / 快进 / 逐帧 / 静音。宿主只剩"下发"：
+  `changed` 一次把 `tree.paused` / `Engine.time_scale` / 物理步上限 / BGM 音高 / 总线静音按**投影**写出去。
+- `bookmarks.gd`（85 行）—— 自动书签静态提取 + 人工打点持久化 + 合并视图；
+  `bookmark_panel.gd` 从"自持一份数据"变成**纯视图**（数据只有一份，在 store 里）。
+
+**诚实记账**：方案里我写的是"`workbench.gd` 695 → ≤200"，**这个估计是错的**（和 S2 那次估错同因）——
+S3 实际只把它搬到 **695 → 619 行（-76）**，因为：
+① S1 自己加了 ~160 行接缝与文档，起点就不是 695；
+② 抽服务的同时宿主多了"下发"这一层（`_apply_playback_runtime` 等 ~40 行，本来散在 6 处副作用里）；
+③ 剩下的大头是**装配代码**（`_build_ui` / `_setup_world` / `_load_stage`）—— 那正是 **S4** 的活。
+S3 的价值不在行数，在 ①**31 个新用例**（这些规则原先覆盖率是 0）②**抓到一个真 bug**（见下）③播放状态与书签数据各只剩**一份**。
+
+> **S3 顺手抓到的真 bug**：`BookmarkCache.load()` / `has_cache()` 写得挺好的，**但从来没被调用过** ——
+> 人工打点只写不读，重启工作台就全丢（面板注释还写着"可编辑，持久化"）。
+> 抽 store 时把"读回来"接上，并立 `test_manual_survives_reopen` 回归
+> （反向验证过：把读回那行去掉 → 该用例精确红在"人工打点必须读回来"）。
+
 ## ⚠️ 已知的坑
 
 1. **「静默跳过」通道（已堵，2026-09-22）**。GUT 对 pending/risky **不返回非 0**，
@@ -289,9 +319,9 @@
    加载失败即失败；已双向验证（造一个 pending → exit 1；撤掉 → exit 0）。
 2. **perf 测试混在正确性门禁里**（G 层 2 个）。CI 机器负载抖动时可能误报。
    *建议*：挪到 opt-in（如 `-gdir=res://test/perf_stress` 或按 tag 跳过），让 22s 门禁保持确定性。
-3. **无覆盖率度量**（GUT 自带没有）。504 用例 ≠ 覆盖面；`workbench`(4241 行) / `scenes`(4320 行)
+3. **无覆盖率度量**（GUT 自带没有）。705 用例 ≠ 覆盖面；`scripts/workbench`(4835 行) / `scenes/**/*.tscn`(2201 行)
    主要靠本层测试 + `verify.sh` 的启动烟测兜底。**在没有覆盖率之前不要按数量删测试**——那是盲删。
-4. **退出噪音**：6 orphans + 31036 ObjectDB 泄漏 + 20 resources 仍在使用。
+4. **退出噪音**：19 orphans + 31169 ObjectDB 泄漏 + 24 resources 仍在使用。
    现在只是噪音，但会掩盖将来真正的泄漏。*建议*：立预算（元测试断言 orphans == 0）。
 
 ## 加 / 删测试的判据

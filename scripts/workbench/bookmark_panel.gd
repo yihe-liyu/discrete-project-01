@@ -1,23 +1,23 @@
 class_name BookmarkPanel
 extends VBoxContainer
 ## 书签面板：列表显示（自动 + 人工合并）+ 添加/重命名/删除（弹窗）
-## 数据自持（auto/manual 副本）；编辑后发 data_changed，
-## 由 Workbench 主控制器持久化到 BookmarkCache 并刷新时间轴
+## **纯视图**：数据在 `Bookmarks` store 里（宿主注入），编辑后发 `data_changed`，
+## 由 Workbench 主控制器落盘并刷新时间轴 —— 这里不再自持第二份副本（2026-09-30，S3）
 ##
 ## 信号：
-##   jump_requested(t)      —— 点击书签（左键）→ 快进跳转
-##   data_changed(auto, manual) —— 书签被编辑 → 持久化 + 刷时间轴
-##   log_requested(text)    —— 操作日志（转交 EventLog）
+##   jump_requested(t)   —— 点击书签（左键）→ 快进跳转
+##   data_changed        —— 书签被编辑 → 持久化 + 刷时间轴
+##   log_requested(text) —— 操作日志（转交 EventLog）
 
 signal jump_requested(t: float)
-signal data_changed(auto: Array, manual: Array)
+signal data_changed
 signal log_requested(text: String)
 
+## 书签模型（Workbench 注入；列表与时间轴共用它的合并视图）
+var store: Bookmarks
 ## 关卡运行时（Workbench 注入；读当前播放时刻）
 var stage_runtime: StageRuntime
 
-var _auto: Array = []
-var _manual: Array = []
 var _list: ItemList
 var _menu: PopupMenu
 var _dialog_host: DialogHost
@@ -46,33 +46,16 @@ func _init() -> void:
 	add_child(_dialog_host)
 
 
-## 设置书签（主控制器加载缓存/收集完成后调用）
-func set_bookmarks(auto: Array, manual: Array) -> void:
-	_auto = auto.duplicate(true)
-	_manual = manual.duplicate(true)
+## 重画列表（宿主打开关卡 / 编辑落盘后调用）
+func refresh() -> void:
 	_refresh()
-
-
-## 合并排序（人工覆盖同名自动）—— 静态导出供时间轴复用
-## 返回 [{t, label, is_manual}]，升序
-static func merged(auto: Array, manual: Array) -> Array:
-	var items: Array = []
-	for bm in manual:
-		var t: float = bm.t if bm is Dictionary else float(bm)
-		var label: String = bm.label if bm is Dictionary and bm.has("label") else "t=%.1fs" % t
-		items.append({"t": t, "label": label, "is_manual": true})
-	for bm in auto:
-		var t: float = bm.t if bm is Dictionary else float(bm)
-		if items.any(func(m: Dictionary) -> bool: return absf(m.t - t) < 0.01):
-			continue  # 被人工书签覆盖（改名）
-		items.append({"t": t, "label": "t=%.1fs" % t, "is_manual": false})
-	items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.t < b.t)
-	return items
 
 
 func _refresh() -> void:
 	_list.clear()
-	for it in merged(_auto, _manual):
+	if store == null:
+		return
+	for it in store.merged():
 		var label: String = ("◆ " + it.label) if it.is_manual else it.label
 		var idx := _list.add_item(label)
 		_list.set_item_metadata(idx, it)
@@ -109,6 +92,8 @@ func _on_menu_id(id: int) -> void:
 
 ## 添加书签弹窗（t < 0 = 用当前播放时刻；时间轴右键传指定时刻）
 func open_add(t: float = -1.0) -> void:
+	if store == null:
+		return
 	var cur: float = t
 	if cur < 0.0:
 		var runner: CoroutineScript = stage_runtime.current_stage_script() if is_instance_valid(stage_runtime) else null
@@ -131,7 +116,7 @@ func open_add(t: float = -1.0) -> void:
 		var label := line.text.strip_edges()
 		if label.is_empty():
 			label = "t=%.1fs" % t_use
-		_manual.append({"t": t_use, "label": label})
+		_manual_add(t_use, label)
 		log_requested.emit("◆ 添加书签：%s" % label)
 		_emit_changed()
 	)
@@ -152,13 +137,13 @@ func _open_rename(index: int) -> void:
 		if new_label.is_empty():
 			return
 		if is_manual:
-			for bm in _manual:
+			for bm in store.manual:
 				if absf(bm.t - meta.t) < 0.01 and bm.get("label", "") == meta.label:
 					bm.label = new_label
 					break
 		else:
 			# 自动书签重命名 → 加人工书签（保留 auto；删除人工后自动项恢复）
-			_manual.append({"t": meta.t, "label": new_label})
+			_manual_add(meta.t, new_label)
 		log_requested.emit("＊ 重命名书签：%s" % new_label)
 		_emit_changed()
 	)
@@ -182,16 +167,21 @@ func _delete_at(index: int) -> void:
 	if not meta.get("is_manual", false):
 		log_requested.emit("＊ 自动书签不可删（改关卡脚本才刷新）")
 		return
-	for i in range(_manual.size() - 1, -1, -1):
-		var bm: Dictionary = _manual[i]
+	for i in range(store.manual.size() - 1, -1, -1):
+		var bm: Dictionary = store.manual[i]
 		if absf(bm.t - meta.t) < 0.01 and bm.get("label", "") == meta.label:
-			_manual.remove_at(i)
+			store.manual.remove_at(i)
 			break
 	log_requested.emit("× 删除书签：%s" % meta.label)
 	_emit_changed()
 
 
-## 数据变化：刷新列表 + 通知主控制器（持久化 + 刷时间轴）
+## 追加人工书签（唯一入口：`store.manual` 只有这里写）
+func _manual_add(t: float, label: String) -> void:
+	store.manual.append({"t": t, "label": label})
+
+
+## 数据变化：刷新列表 + 通知主控制器（落盘 + 刷时间轴）
 func _emit_changed() -> void:
 	_refresh()
-	data_changed.emit(_auto, _manual)
+	data_changed.emit()

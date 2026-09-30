@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 49 条（本文件留最近 49 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 50 条（本文件留最近 50 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-09-30 — 工作台 S3：抽出 `Playback` + `Bookmarks`（播放/书签变**可无树测试**，并抓到「只写不读」的真 bug）
 - 2026-09-30 — 工作台 S2：抽出 `HotReloadService`（热更新管线变成**可无树测试**的服务）
 - 2026-09-30 — 工作台重构 **S1：先立公开接缝**（私有访问 181 → **0**）
 - 2026-09-28 — S13 复核结案（`✘ 判据已过期` → **✔**）+ 本地 TODO 清过期两条
@@ -79,6 +80,51 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-09-30 — 工作台 S3：抽出 `Playback` + `Bookmarks`（播放/书签变**可无树测试**，并抓到「只写不读」的真 bug）
+
+- **承接 S1/S2**：S1 立接缝（181 → 0 私有访问）→ S2 搬热更新管线 → **S3 搬播放状态机与书签模型**。
+  `workbench.gd` 是 695 行的上帝对象，播放规则（暂停/速度/快进/逐帧/静音）与书签规则
+  （提取/持久化/合并）**原先覆盖率是 0** —— 因为它们必须借一个 Control 台子 + 真跑帧才能验。
+- **`Playback`**（新 `scripts/workbench/playback.gd`，201 行，`extends RefCounted`）：
+  只持状态 + 只做决策，**不碰场景树 / 不碰 Engine / 不碰音频总线**；结果走 `changed` / `logged(text)`。
+  宿主在 `changed` 里**一次性下发投影**：`desired_time_scale()` / `desired_physics_steps()` /
+  `desired_bgm_pitch()` / `should_pause_tree()` / `is_audio_muted()`。
+  - 「一个物理步」的语义落进 `begin_step()/end_step()`：逐帧那一瞬 `should_pause_tree()` 为 false
+    且 `time_scale` 归 1 —— 原先这 18 行散在 `await` 前后，没人能测。
+  - 顺手统一一处**口径不一致**：旧代码"快进收尾"那一支把 BGM 音高**写死 1.0**，
+    慢放档下会 0.5 画面配 1.0 音高；现在 `desired_bgm_pitch() == desired_time_scale()`（有回归用例）。
+- **`Bookmarks`**（新 `scripts/workbench/bookmarks.gd`，85 行）：
+  自动书签（扫 `timeline.at()`）+ 人工打点（持久化）+ 合并视图（人工覆盖同刻自动）。
+  `bookmark_panel.gd` 顺势从"自持一份数据"变**纯视图**（`store` 注入，数据只剩一份），
+  `BookmarkPanel.merged()` 静态合并函数删掉、归位到 store（列表面板与时间轴共用同一个 `merged()`）。
+- **🐞 顺手抓到的真 bug**：`BookmarkCache.load()` / `has_cache()` **从来没被任何地方调用过** ——
+  人工书签**只写不读**，重启工作台就全丢（面板注释还写着"可编辑，持久化"，`CACHE_VERSION` 都升到 v5 了）。
+  抽 store 时把"读回来"接上（`BookmarkCache` 本身没改），并立 `test_manual_survives_reopen` 回归。
+- **反向验证（哨兵必须先证明会红）**：
+  ① 把"读回人工打点"那行去掉 → `test_manual_survives_reopen` 精确红在
+  `[0] expected to equal [2]`（其余 10 条仍绿）；
+  ② 让 `should_pause_tree()` 忽略 `stepping` → 逐帧放行那条红（19/20）。
+  两次都还原并复跑绿。
+- **测试**：新增 `test_playback.gd`（**20 条**）+ `test_bookmarks.gd`（**11 条**），**全部无树、白盒 0**。
+  `test_bookmarks` 内容依赖 = **0**：关卡脚本用 `GDScript.new()` + `source_code` 现造
+  （与既有 `test_bookmark_extractor` 同法）→ 改真实关卡编排不会让它变红。
+- **真装配探针**（`.godot/probe/s3_probe.gd`，跑完即删；截图 `workbench_after_s3.png` 留下）：
+  装真 `workbench.tscn` 再逐项断言**接线**真的落到引擎侧 —— 暂停 → `tree.paused` + 总线静音、
+  ×16 → `Engine.time_scale`、快进 → 12x + 物理步上限 64、收尾复位、面板加书签 → 列表/时间轴同步、
+  重开关卡 → 人工打点读回来。**21/21 全过**（探针第一次跑还红了一条：是我探针自己绕过面板直接改 store
+  —— 改成走用户路径后过，说明"用户路径"与"测试路径"确实是同一条）。
+- **诚实记账（估错了要写下来）**：方案里写"`workbench.gd` 695 → ≤200"，**这个估计是错的**。
+  实际 **695 → 619 行（-76）**；新增服务 286 行。原因同 S2：① S1 自己加了 ~160 行接缝与文档，
+  起点不是 695；② 抽走规则的同时宿主多了"下发"这一层（~40 行，原先散在 6 处副作用里）；
+  ③ 剩下的大头是**装配代码**（`_build_ui` / `_setup_world` / `_load_stage`）—— 那是 **S4** 的活。
+  S3 的收益不在行数：**31 个新用例**（原先 0 覆盖）+ **1 个真 bug** + 播放状态与书签数据各只剩**一份**。
+- **验收**：[1] 文档哨兵 ✅ · [2] 语法 **360 脚本 0 失败** ✅ · [3] 命名 **0 违规** ✅ ·
+  [4] 五个 workbench 场景启动**零错误** ✅ · [5] GUT **705 用例 / 704 通过**
+  （唯一红 = `test_data_validity` 内容 WIP，与本次无关）✅ · [6] 探针 21/21 ✅。
+- **下一步（S4）**：合一舞台装配（`_setup_world` 与 `BenchBase.build_world` 两套并存）+ 面板结构进 `.tscn`；
+  S5 机械护栏。另记：`FIXED_SEED = 20260801` 现在有 **4 处定义**（`Playback` + 三个台），
+  留作 S5 护栏的候选（同值多定义 = 漂移风险）。
 
 ### 2026-09-30 — 工作台 S2：抽出 `HotReloadService`（热更新管线变成**可无树测试**的服务）
 

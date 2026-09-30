@@ -22,11 +22,13 @@
 ##          B 打书签 · Ctrl+S 保存 · Home 回开头（弹窗/输入框聚焦时不拦截）
 ##
 ## 结构（组件化；纯预览沙盒）：
-##   workbench.gd        —— 主控制器：装配 + 关卡生命周期 + 状态路由
+##   workbench.gd        —— 主控制器：装配 + 关卡生命周期 + 状态路由（**只接线**）
+##   playback.gd         —— 播放状态机（暂停/速度/快进/逐帧/静音）· 无树可测
+##   bookmarks.gd        —— 书签模型（静态提取/人工打点持久化/合并）· 无树可测
 ##   playback_bar.gd     —— 播放控制行（信号 → 主控制器）
 ##   status_bar.gd       —— 实时状态显示（主控制器每帧喂数据）
 ##   event_log.gd        —— 事件日志（自连 GameEvents）
-##   bookmark_panel.gd   —— 书签列表 + 编辑弹窗（数据自持 + data_changed 信号）
+##   bookmark_panel.gd   —— 书签列表 + 编辑弹窗（视图；数据在 Bookmarks）
 ##   dialog_host.gd      —— 通用弹窗宿主（书签编辑用）
 ##   workbench_ui.gd     —— 控件工厂
 ##   布局框架在 scenes/workbench.tscn（容器/锚点/分割条/时间轴）
@@ -34,21 +36,17 @@
 ## 运行：F6（依赖 autoload），窗口自动设为 1600x1000
 extends Control
 
-const VERSION := "v4.6-ui"
+const VERSION := "v4.7-ui"
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
 const HITBOX_OVERLAY := preload("res://scripts/workbench/hitbox_overlay.gd")
-const BOOKMARK_EXTRACTOR := preload("res://scripts/workbench/bookmark_extractor.gd")
-const BOOKMARK_CACHE := preload("res://scripts/workbench/bookmark_cache.gd")
 const CATALOG_PANEL := preload("res://scripts/workbench/catalog_panel.gd")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 ## Stage 1 = 协程版（stage01.gd Timeline 编排；数据关卡系统已移除）
 const STAGE1_COROUTINE := preload("res://data/stages/stage01/stage_data/stage01.tres")
 
 const DIFFICULTIES: Array[String] = ["Easy", "Normal", "Hard", "Lunatic"]
-## 播放速度档位（慢放/快进；书签跳转仍用固定 12x）
-const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
 
 # ═══ .tscn 框架节点 ═══
 
@@ -68,6 +66,12 @@ var _event_log: EventLog
 var _bookmark_panel: BookmarkPanel
 var _catalog: VBoxContainer  # 内容目录（CatalogPanel；preload 构造规避类缓存）
 
+# ═══ 服务（无树；规则在服务里，宿主只下发/转发）═══
+## 播放状态机：暂停/速度/快进/逐帧/静音
+var _playback: Playback
+## 书签模型：静态提取 + 人工打点持久化 + 合并
+var _bookmarks: Bookmarks
+
 # 关卡状态
 var _stage_data: StageData = STAGE1_COROUTINE
 var _player: Player
@@ -76,27 +80,12 @@ var _hitbox_overlay: Node2D  # 实际是 HitboxOverlay（preload，避免类缓�
 ## 关卡的弹幕世界（组合根创建并注入）
 var _bullet_manager: BulletManager
 
-# 面板拖拽
-# 详情表单高度拖拽
-
-var _auto_bookmarks: Array = []    # 自动收集时刻（当前缓存，编辑后重存用）
-var _manual_bookmarks: Array = []  # 人工打点（可编辑，持久化）
-
-# 播放/编辑状态
-var _is_paused := false
-var _muted := false
-var _show_bg := true
-var _speed_idx := 2          # 速度档位索引（SPEEDS）
-var _ff_target := -1.0   # 快进目标时刻（-1 = 不快进）
+# 播放状态（全部在 Playback 里；本文件只读投影）
 var _prev_time := -1.0   # 时间轴刷新去重
 
-## 固定种子：重跑时弹幕序列可复现（调参看效果的必备开关）
-const FIXED_SEED := 20260801
 ## 右侧面板页签：书签（导航）/ 日志（调试）
 const _TABS := ["目录", "书签", "日志"]
 var _tab_btns: Array[Button] = []
-var _fixed_seed_on := false
-var _stepping := false        # 逐帧推进防重入
 var _stage_shift_y := 0.0    # 嵌入创作台页面偏移；舞台视觉归一回游戏坐标用
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
@@ -109,6 +98,11 @@ func _ready() -> void:
 	# UI 在暂停/快进时也要活着
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 服务：先建起来（UI 装配时要把信号接上去）
+	_playback = Playback.new()
+	_playback.changed.connect(_apply_playback_runtime)
+	_playback.logged.connect(_log_line)
+	_bookmarks = Bookmarks.new()
 	# 主题：东方风深色面板（中文字体 + 卡片 + 控件样式）
 	theme = WorkbenchTheme.build()
 	# 关键：右侧 UI 挂在 CanvasLayer 下——Control 主题链在非 Control 父节点处断裂
@@ -166,18 +160,20 @@ func _update_phase_timer() -> void:
 
 
 func _process(_delta: float) -> void:
-	# 快进到达检测（UI 是 ALWAYS，暂停中也检测）
-	if _ff_target >= 0.0:
-		var runner := _stage_runtime.current_stage_script()
-		if runner == null or runner.game_time() >= _ff_target:
-			_stop_fast_forward()
+	_poll_playback()
 	_update_ui()
 	_update_phase_timer()
 
 
+## 快进到达检测（本节点是 PROCESS_MODE_ALWAYS，暂停中也照检；取不到 runner = 关卡已停 → 收尾）
+func _poll_playback() -> void:
+	var runner := _stage_runtime.current_stage_script()
+	_playback.poll(runner.game_time() if runner != null else INF)
+
+
 func _draw() -> void:
 	# 场景底：有背景时让 3D 背景透出，只在东方框外画暗色；无背景时全屏实心
-	var has_bg: bool = _show_bg and _background and is_instance_valid(_background)
+	var has_bg: bool = _playback.show_bg and _background and is_instance_valid(_background)
 	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - _stage_shift_y,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT,
 		GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
@@ -250,17 +246,14 @@ func _build_ui() -> void:
 	_stage_grid.add_child(WorkbenchUI.label("难度"))
 	_stage_grid.add_child(_diff_sel)
 
-	# ── 播放控制（纯视图，信号驱动）──
+	# ── 播放控制（纯视图；信号直接接状态机，只有需要重跑的才经宿主）──
 	_playback_bar = PlaybackBar.new()
-	_playback_bar.play_toggled.connect(_toggle_play)
+	_playback_bar.play_toggled.connect(_playback.toggle_play)
 	_playback_bar.restart_requested.connect(_restart)
-	_playback_bar.mute_toggled.connect(_on_mute_toggled)
+	_playback_bar.mute_toggled.connect(_playback.set_muted)
 	_playback_bar.bg_toggled.connect(_on_bg_toggled)
-	_playback_bar.hitbox_toggled.connect(func(on: bool):
-		if _hitbox_overlay:
-			_hitbox_overlay.is_enabled = on
-	)
-	_playback_bar.speed_selected.connect(_on_speed_selected)
+	_playback_bar.hitbox_toggled.connect(_on_hitbox_toggled)
+	_playback_bar.speed_selected.connect(_playback.select_speed)
 	_playback_bar.seed_toggled.connect(_on_seed_toggled)
 	%PlaybackSlot.add_child(_playback_bar)
 
@@ -269,8 +262,9 @@ func _build_ui() -> void:
 	%StatusSlot.add_child(_status_bar)
 
 
-	# ── 书签（数据自持，编辑后 data_changed 回主控制器持久化）──
+	# ── 书签（视图；数据在 Bookmarks store，编辑后 data_changed 回主控制器落盘）──
 	_bookmark_panel = BookmarkPanel.new()
+	_bookmark_panel.store = _bookmarks
 	_bookmark_panel.stage_runtime = _stage_runtime
 	_bookmark_panel.jump_requested.connect(_jump_to)
 	_bookmark_panel.data_changed.connect(_on_bookmarks_changed)
@@ -354,8 +348,8 @@ func stop_stage() -> void:
 
 func _load_stage() -> void:
 	# 统一复位运行状态（防残留：快进打断后 time_scale/静音错乱）
-	_stop_fast_forward()
-	_apply_audio()
+	_playback.stop_fast_forward()
+	_apply_playback_runtime()
 	# 停止旧关卡 + 清空
 	_stage_runtime.stop_stage()
 	_bullet_manager.reset_world()  # 重跑：回收内核 program/弹型（原生表只增不减）
@@ -381,8 +375,8 @@ func _load_stage() -> void:
 	if _diff_sel:
 		SaveData.selected_difficulty = _diff_sel.selected
 	# 固定种子：重跑弹幕序列可复现（调参看效果必备）；关闭则随机化
-	if _fixed_seed_on:
-		RNG.set_seed(FIXED_SEED)
+	if _playback.fixed_seed:
+		RNG.set_seed(Playback.FIXED_SEED)
 	else:
 		RNG.randomize_seed()
 	# 幽灵复位（重头走路径）
@@ -390,7 +384,7 @@ func _load_stage() -> void:
 		_player.reset()
 	# 背景：必须先设 current_background（load_stage 会启动背景里的协程脚本）
 	# 挂 3D 专用 SubViewport（与真游戏同规格）→ 纵横比/相机/构图一致
-	if _show_bg and _stage_data.background_scene:
+	if _playback.show_bg and _stage_data.background_scene:
 		_background = _stage_data.background_scene.instantiate()
 		if _background is StageBackground:
 			_stage_runtime.current_background = _background
@@ -399,104 +393,63 @@ func _load_stage() -> void:
 		_bg_viewport.add_child(_background)
 	# 真实加载（跑 stage01.gd 的 Timeline）
 	_stage_runtime.load_stage(_stage_data)
-	# 时间轴 + 书签（协程关卡静态提取 timeline.at() 时刻）
+	# 时间轴 + 书签（自动 = 静态提取 timeline.at() 时刻；人工 = 缓存恢复）
 	_timeline.set_window(60.0)
-	_apply_bookmarks_from_cache()
+	_load_bookmarks()
 	_prev_time = -1.0
 	_log_line("▶ 加载 Stage %d（难度 %s）" % [_stage_data.stage_id, DIFFICULTIES[_diff_sel.selected]])
 
 
-# ═══ 书签缓存 + 静默收集 ═══
+# ═══ 书签（模型在 Bookmarks；这里只管落盘与时间轴）═══
 
-## 书签（协程关卡）：静态提取 timeline.at() 时刻 + 人工打点合并
-func _apply_bookmarks_from_cache() -> void:
-	_auto_bookmarks = _static_extract()
-	_bookmark_panel.set_bookmarks(_auto_bookmarks, _manual_bookmarks)
+## 打开关卡的书签：读缓存（人工打点）+ 静态提取（自动书签）
+func _load_bookmarks() -> void:
+	var info := _bookmarks.open(_stage_data)
+	_bookmark_panel.refresh()
 	_refresh_timeline_bookmarks()
-	_log_line("＊ 书签（静态提取 %d 个）" % _auto_bookmarks.size())
+	_log_line("＊ 书签：自动 %d 个 · 人工 %d 个（%s）"
+		% [info.auto, info.manual, _bookmark_source_text(info)])
 
 
-## 静态提取书签：扫描 timeline.at() 时刻
-func _static_extract() -> Array:
-	var bm: Array = BOOKMARK_EXTRACTOR.extract_from_script(_stage_data.create_script)
-	var auto: Array = []
-	for b in bm:
-		auto.append({"t": b.t})
-	return auto
+## 缓存来历（首次 / 命中 / 脚本变了 —— 三件事在日志里要能分清）
+func _bookmark_source_text(info: Dictionary) -> String:
+	if not info.cache_hit:
+		return "首次，无缓存"
+	return "缓存命中" if info.cache_fresh else "缓存失效（关卡脚本已改，自动书签重收集）"
 
 
-## 时间轴书签刷新（自动 + 人工合并；与 BookmarkPanel 同源静态合并函数）
+## 时间轴书签刷新（与列表面板同源的合并视图）
 func _refresh_timeline_bookmarks() -> void:
 	_timeline.clear_bookmarks()
-	for it in BookmarkPanel.merged(_auto_bookmarks, _manual_bookmarks):
+	for it in _bookmarks.merged():
 		_timeline.add_bookmark(it.t, it.label, "manual" if it.get("is_manual", false) else "")
 
-## 书签被编辑（BookmarkPanel data_changed）→ 持久化 + 刷时间轴
-func _on_bookmarks_changed(auto: Array, manual: Array) -> void:
-	_auto_bookmarks = auto.duplicate(true)
-	_manual_bookmarks = manual.duplicate(true)
-	var content_hash := BOOKMARK_CACHE.stage_content_hash(_stage_data)
-	BOOKMARK_CACHE.save(_stage_data.stage_id, content_hash, _auto_bookmarks, _manual_bookmarks)
+
+## 书签被编辑（BookmarkPanel data_changed）→ 落盘 + 刷时间轴
+func _on_bookmarks_changed() -> void:
+	_bookmarks.save()
 	_refresh_timeline_bookmarks()
 
 
-# ═══ 播放 / 暂停 / 快进 ═══
+# ═══ 播放 / 暂停 / 快进（状态机在 Playback；这里只发起与转发）═══
 
 func _restart() -> void:
-	_stop_fast_forward()
+	_playback.stop_fast_forward()
 	_load_stage()
 	_log_line("＊ 重跑")
 
 
-## 取消进行中的书签收集（切换关卡/重跑时调用，避免旧收集与新流程重叠）
-
-func _toggle_play() -> void:
-	if _is_paused:
-		_resume()
-	else:
-		_pause()
-
-
-func _pause() -> void:
-	if _ff_target >= 0.0:
-		_stop_fast_forward()
-	get_tree().paused = true
-	_is_paused = true
-	_playback_bar.set_playing(false)
-	_apply_audio()
-	_log_line("＊ 暂停")
-
-
-func _resume() -> void:
-	get_tree().paused = false
-	_is_paused = false
-	_playback_bar.set_playing(true)
-	_apply_audio()
-	_log_line("▶ 继续")
-
-
-# ═══ 快捷键 / 逐帧 / 出生点拖放 ═══
+# ═══ 快捷键 / 逐帧 ═══
 
 ## 逐帧推进：暂停状态下精确走一帧物理（弹幕排布/碰撞细节检查）
 ## 注：physics_frame 信号先于节点物理处理发射 → await 两次 = 恰好一个物理步
+## `begin_step/end_step` 各自发 changed → 宿主下发"这一瞬放行物理、time_scale 归 1"
 func _frame_step() -> void:
-	if _stepping:
+	if not _playback.begin_step():
 		return
-	if _ff_target >= 0.0:
-		_stop_fast_forward()
-	if not _is_paused:
-		_pause()
-	_stepping = true
-	get_tree().paused = false
-	Engine.time_scale = 1.0
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	get_tree().paused = true
-	_is_paused = true
-	Engine.time_scale = SPEEDS[_speed_idx]
-	_playback_bar.set_playing(false)
-	_apply_audio()
-	_stepping = false
+	_playback.end_step()
 
 
 ## 全局快捷键（输入框聚焦 / 弹窗打开时不拦截）
@@ -513,7 +466,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		k = event.keycode
 	match k:
 		KEY_SPACE:
-			_toggle_play()
+			_playback.toggle_play()
 			get_viewport().set_input_as_handled()
 		KEY_R:
 			_restart()
@@ -523,18 +476,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		KEY_LEFT, KEY_RIGHT:
 			var step := 5.0 if event.ctrl_pressed else 1.0
-			var runner := _stage_runtime.current_stage_script()
-			var cur := runner.game_time() if runner else 0.0
-			_jump_to(maxf(cur + (step if k == KEY_RIGHT else -step), 0.0))
+			_jump_to(maxf(_current_time() + (step if k == KEY_RIGHT else -step), 0.0))
 			get_viewport().set_input_as_handled()
 		KEY_B:
 			_bookmark_panel.open_add()
 			get_viewport().set_input_as_handled()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7:
 			var idx: int = k - KEY_1
-			if idx >= 0 and idx < SPEEDS.size():
-				_on_speed_selected(idx)
-				_playback_bar.set_speed(idx)
+			if idx >= 0 and idx < Playback.SPEEDS.size():
+				_playback.select_speed(idx)  # 播放控制行的下拉由 changed 回落同步
 				get_viewport().set_input_as_handled()
 		KEY_HOME:
 			_restart()
@@ -545,44 +495,19 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-##   协程关卡：只能 12x 加速跑到目标（保持唯一路径）
+## 跳转（时间轴点击 / 书签列表 / ←→ 键）：协程关卡不能倒带 → 目标在过去时先重跑
 func _jump_to(t: float) -> void:
-	# 统一先停现有快进：重置 time_scale / BGM pitch / _ff_target
-	# （否则重跑分支或 t≈0 分支会残留 12 倍速 → 数据全乱）
-	_stop_fast_forward()
-	var runner := _stage_runtime.current_stage_script()
-	var cur := runner.game_time() if runner else 0.0
-	if t < cur - 0.5:
-		# 目标在过去：无法倒带 → 重跑再快进
+	var cur := _current_time()
+	if _playback.jump_reload_needed(t, cur):
 		_log_line("＊ 目标 %.1fs 在过去（当前 %.1fs），重跑后快进" % [t, cur])
 		_load_stage()
-	if t <= 0.05:
-		return
-	_start_fast_forward(t)
+	_playback.jump_to(t)
 
 
-func _start_fast_forward(t: float) -> void:
-	if _is_paused:
-		_resume()
-	_ff_target = t
-	Engine.time_scale = 12.0
-	# 默认 max_physics_steps_per_frame=8 会丢步（12 步/帧的需求）→ 演出 tween/物理落后
-	Engine.max_physics_steps_per_frame = 64
-	_apply_audio()
-	AudioManager.set_bgm_pitch(Engine.time_scale)  # 音乐跟随快进变速
-	_log_line("▶ 快进到 %.1fs ..." % t)
-
-
-func _stop_fast_forward() -> void:
-	if _ff_target < 0.0:
-		return
-	var t := _ff_target
-	_ff_target = -1.0
-	Engine.time_scale = SPEEDS[_speed_idx]  # 恢复到用户设定的速度档位
-	Engine.max_physics_steps_per_frame = 8  # 恢复默认
-	_apply_audio()
-	AudioManager.set_bgm_pitch(1.0)  # 音乐恢复正常
-	_log_line("▶ 到达 %.1fs" % t)
+## 当前游戏内时刻（无 runner = 0）
+func _current_time() -> float:
+	var runner := _stage_runtime.current_stage_script()
+	return runner.game_time() if runner != null else 0.0
 
 
 # ═══ 选项回调 ═══
@@ -593,32 +518,20 @@ func _on_stage_selected(idx: int) -> void:
 	_log_line("＊ 切换关卡：%s" % (_stage_sel.get_item_text(idx)))
 
 
-func _on_speed_selected(idx: int) -> void:
-	_speed_idx = idx
-	if _ff_target < 0.0:
-		# 不在书签快进中：直接应用（慢放时 BGM 同步变速）
-		Engine.time_scale = SPEEDS[_speed_idx]
-		AudioManager.set_bgm_pitch(Engine.time_scale)
-		_log_line("＊ 速度 ×%.2f" % SPEEDS[_speed_idx])
-
-
 ## 固定种子：重跑复用同一随机序列（弹幕可复现）
 func _on_seed_toggled(on: bool) -> void:
-	_fixed_seed_on = on
-	if on:
-		_log_line("＊ 固定种子 %d：重跑弹幕序列可复现" % FIXED_SEED)
-	else:
-		_log_line("＊ 随机种子：每次重跑弹幕不同")
+	_playback.set_fixed_seed(on)
 	_restart()
 
 
-func _on_mute_toggled(on: bool) -> void:
-	_muted = on
-	_apply_audio()
+## 命中框覆盖层开关（覆盖层不是播放状态，直接设）
+func _on_hitbox_toggled(on: bool) -> void:
+	if _hitbox_overlay:
+		_hitbox_overlay.is_enabled = on
 
 
 func _on_bg_toggled(on: bool) -> void:
-	_show_bg = on
+	_playback.set_show_bg(on)
 	_restart()
 
 
@@ -626,19 +539,30 @@ func _on_difficulty_changed(_i: int) -> void:
 	_restart()
 
 
-func _apply_audio() -> void:
-	var m: bool = _muted or _is_paused or _ff_target >= 0.0
-	var idx := AudioServer.get_bus_index("Master")
-	if idx >= 0:
-		AudioServer.set_bus_mute(idx, m)
+# ═══ 状态下发 ═══
+
+## `Playback.changed` 的唯一落点：把状态机投影下发到引擎 / 音频 / 播放控制行。
+## 静音 → 总线；暂停/逐帧 → tree.paused；速度/快进 → time_scale + 物理步上限 + BGM 音高。
+func _apply_playback_runtime() -> void:
+	var scene_tree := get_tree()
+	if scene_tree != null:
+		scene_tree.paused = _playback.should_pause_tree()
+	Engine.time_scale = _playback.desired_time_scale()
+	Engine.max_physics_steps_per_frame = _playback.desired_physics_steps()
+	AudioManager.set_bgm_pitch(_playback.desired_bgm_pitch())
+	var bus := AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		AudioServer.set_bus_mute(bus, _playback.is_audio_muted())
+	if _playback_bar != null:
+		_playback_bar.set_playing(not _playback.paused)
+		_playback_bar.set_speed(_playback.speed_index)
 
 
 # ═══ UI 刷新 / 日志 ═══
 
 func _update_ui() -> void:
-	var runner := _stage_runtime.current_stage_script()
-	var t := runner.game_time() if runner else 0.0
-	_status_bar.set_time(t, _ff_target >= 0.0)
+	var t := _current_time()
+	_status_bar.set_time(t, _playback.ff_active())
 	if absf(t - _prev_time) >= 0.05:
 		_prev_time = t
 		_timeline.time = t

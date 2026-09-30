@@ -11,7 +11,8 @@ signal hitbox_toggled(on: bool)
 signal speed_selected(idx: int)
 signal seed_toggled(on: bool)
 
-const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+## 播放状态机（档位表与它同源：不再各存一份 7 元素数组，免得两边漂移）
+const PLAYBACK := preload("res://scripts/workbench/playback.gd")
 
 var _play_btn: Button
 var _speed_opt: OptionButton
@@ -62,7 +63,7 @@ func _init() -> void:
 	row3.add_theme_constant_override("separation", 6)
 	var speed := OptionButton.new()
 	speed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for s in SPEEDS:
+	for s in PLAYBACK.SPEEDS:
 		speed.add_item("×" + str(s))
 	speed.selected = 2
 	speed.item_selected.connect(func(idx: int): speed_selected.emit(idx))
