@@ -14,7 +14,6 @@ class_name PhaseData
 ## 用来做「先走到位、再发表宣言」的演出；空 = 不等待，宣言立即发生。
 ## ⚠️ 它会**推迟宣言**：脚本不结束这张卡就不会发动 —— 别写死循环。
 @export var pre_move_script: Script
-@export var background: PackedScene      ## 可选换背景
 @export var item_power: int = 0         ## 击破掉落 P 点
 @export var item_point: int = 0         ## 击破掉落蓝点
 @export var item_life: int = 0          ## 击破掉落残机碎片

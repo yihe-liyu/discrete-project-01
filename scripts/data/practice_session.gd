@@ -11,9 +11,9 @@ static var boss_name: String
 static var stage_id: int = 1
 static var phase_index: int = 0
 static var background: PackedScene
-## 符卡背景（每 Boss 一张）：`start_spell_card()` 自建 BossData 会丢 `BossData.spell_background`，
-## 故练习载荷单独携带一张，由 game_scene 优先取 Boss 的、回落取这张。
-static var spell_background: Texture2D
+## 符卡背景（每 Boss 一张，PackedScene）：`start_spell_card()` 自建 BossData 会丢
+## `BossData.spell_background`，故练习载荷单独携带一份，由 game_scene 优先取 Boss 的、回落取这份。
+static var spell_background: PackedScene
 ## 本局练习的 BGM key（菜单按选中的卡解析：`BossCatalog.practice_bgm_key()` = Boss 覆盖 → 面默认）。
 ## game_scene 起场景时用它；空 = 练习静音。
 static var bgm_key: String = ""
@@ -28,7 +28,7 @@ static var restore_menu_on_enter: bool = false
 
 ## 开一局符卡练习：先经 SaveData.reset_session() 清干净上一局，再装载本局载荷。
 static func start(p_phase: PhaseData, p_boss_scene: PackedScene, p_boss_name: String, p_stage_id: int,
-		p_phase_index: int = 0, p_spell_background: Texture2D = null, p_bgm_key: String = "") -> void:
+		p_phase_index: int = 0, p_spell_background: PackedScene = null, p_bgm_key: String = "") -> void:
 	SaveData.reset_session()
 	is_practice_mode = true
 	phase = p_phase

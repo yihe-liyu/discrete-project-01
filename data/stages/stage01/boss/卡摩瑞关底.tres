@@ -13,7 +13,7 @@
 [ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="8_47frn"]
 [ext_resource type="Resource" uid="uid://btu8u3kecrteu" path="res://data/stages/stage01/phase/卡摩瑞二符/符卡008.tres" id="9_1ucyo"]
 [ext_resource type="Texture2D" uid="uid://br8vr3n284kcl" path="res://assets/Textures/character/kamorui/kamorui1.png" id="9_portrait"]
-[ext_resource type="Texture2D" uid="uid://cb5n52jpgy3ex" path="res://assets/Textures/character/kamorui/卡摩瑞符卡背景.png" id="9_sbg"]
+[ext_resource type="PackedScene" path="res://data/stages/stage01/spell_background/卡摩瑞符卡背景.tscn" id="9_sbg"]
 [ext_resource type="Resource" uid="uid://c5tau0drmgnnr" path="res://data/stages/stage01/phase/卡摩瑞二符/符卡006.tres" id="11_ykwgi"]
 
 [resource]

@@ -19,7 +19,7 @@
 [ext_resource type="Script" uid="uid://r1cevfo2ay7l" path="res://scripts/bullet/bullet_manager.gd" id="18_bullets"]
 [ext_resource type="Script" uid="uid://bnelos8uxmg5q" path="res://scripts/effect/score_popup_layer.gd" id="19_popup"]
 [ext_resource type="PackedScene" path="res://scenes/ui/player_spell_ui.tscn" id="20_player_spell"]
-[ext_resource type="Script" uid="uid://nwlxb05ovtr6" path="res://scripts/scenes/spell_backdrop.gd" id="20_spellbg"]
+[ext_resource type="Script" path="res://scripts/scenes/spell_backdrop_layer.gd" id="20_spellbg"]
 [ext_resource type="Script" uid="uid://7b3tfc32hhho" path="res://scripts/effect/screen_shake.gd" id="21_shake"]
 [ext_resource type="PackedScene" path="res://scenes/effect/field_filter_layer.tscn" id="22_field_filter"]
 [ext_resource type="Script" uid="uid://86lktry7ibf8" path="res://scripts/scenes/spell_portrait.gd" id="22_playerpt"]
@@ -124,7 +124,7 @@ fov = 90.0
 [node name="World" type="Node2D" parent="." unique_id=1228399696]
 unique_name_in_owner = true
 
-[node name="SpellBackdrop" type="Sprite2D" parent="World" unique_id=20596400]
+[node name="SpellBackdrop" type="Node2D" parent="World" unique_id=20596400]
 unique_name_in_owner = true
 script = ExtResource("20_spellbg")
 

@@ -148,6 +148,16 @@ def main() -> int:
             print(f"  → {date} — {title}")
         return 0
 
+    # `--index` = **只重建索引**（见文件头与 README 的约定）：正文一个字都不许动。
+    # ⚠️ 曾经这里也走 `write_log(..., kept)`，于是"只重建索引"会**按滚动窗口截断正文、却不归档**
+    #    —— 正文里那几十条直接被删掉（只有 `--archive` 才该动正文）。2026-09-30 踩到：容器时钟比
+    #    项目日期快 2 天 ⇒ `kept` 从 44 掉到 12，一次 `--index` 就吞掉 32 条（幸而 HEAD 里有）。
+    if args.index:
+        write_log(head, entries, len(entries))
+        report(entries)
+        print(f"索引已重建（正文 {len(entries)} 条原样保留）✅")
+        return 0
+
     moved: dict[str, int] = {}
     if args.archive:
         moved = archive(entries, kept, dry=False)

@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/scenes/spell_backdrop_scroll.gd" id="1_scroll"]
+[ext_resource type="Texture2D" path="res://assets/Textures/character/kamorui/卡摩瑞符卡背景.png" id="2_tex"]
+
+[node name="KamoruiSpellBackdrop" type="Sprite2D"]
+centered = true
+texture = ExtResource("2_tex")
+script = ExtResource("1_scroll")

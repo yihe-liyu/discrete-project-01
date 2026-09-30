@@ -16,7 +16,6 @@ func build_copy(base: PhaseData, move_script: Script, shoot_script: Script,
 	d.is_timeout_only = base.is_timeout_only
 	d.move_script = move_script
 	d.shoot_script = shoot_script
-	d.background = base.background
 	d.item_power = base.item_power
 	d.item_point = base.item_point
 	d.item_life = base.item_life

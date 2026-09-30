@@ -18,8 +18,8 @@ const PRACTICE_SFX_TRIM_DB := 0.0
 
 @onready var _sub_viewport: SubViewport = %SubViewport
 @onready var _world: Node2D = %World
-## 符卡背景层（每 Boss 一张，压在 3D 背景之上、弹幕之下；见 spell_backdrop.gd）
-@onready var _spell_backdrop: Sprite2D = %SpellBackdrop
+## 符卡背景层（每 Boss 一张**场景**，压在 3D 背景之上、弹幕之下；见 spell_backdrop_layer.gd）
+@onready var _spell_backdrop: SpellBackdropLayer = %SpellBackdrop
 ## 符卡宣言立绘层（右上一→左下，快慢快 → 淡出；见 spell_portrait.gd）
 @onready var _spell_portrait: Sprite2D = %SpellPortrait
 ## 自机 Bomb 立绘层（左下 → 右上，与 Boss 镜像；同一个脚本）
@@ -255,10 +255,10 @@ func _resolve_spell_portrait(phase: PhaseData) -> Texture2D:
 	return null
 
 
-## 符卡背景图：优先**当前 Boss** 的 `BossData.spell_background`；
+## 符卡背景场景：优先**当前 Boss** 的 `BossData.spell_background`；
 ## 练习模式回落到会话载荷 —— `start_spell_card()` 自建 BossData（只带 phase/visual/name），
 ## 会把 `spell_background` 丢掉，故 `PracticeSession` 单独携带一张。
-func _resolve_spell_background() -> Texture2D:
+func _resolve_spell_background() -> PackedScene:
 	if is_instance_valid(_current_boss) and _current_boss.boss_data != null \
 			and _current_boss.boss_data.spell_background != null:
 		return _current_boss.boss_data.spell_background

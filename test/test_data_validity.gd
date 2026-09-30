@@ -71,7 +71,8 @@ func test_stage_4_has_display_name():
 	assert_ne(shown, "", "显示名不应为空")
 
 
-## 符卡背景（每 Boss 一张）：**若配了**，必须真能加载出图（宽 > 0）。
+## 符卡背景（每 Boss 一张**场景**）：**若配了**，必须真能实例化，且根是 `CanvasItem`
+## （否则宿主淡入淡出 / 层级都落空 —— `Node` 没有 modulate）。
 ## 不数数量、不写死路径 —— 改名/新增 Boss 不红，配了个坏引用才红。
 func test_boss_spell_backgrounds_resolve():
 	var configured := 0
@@ -80,8 +81,11 @@ func test_boss_spell_backgrounds_resolve():
 			if boss.spell_background == null:
 				continue
 			configured += 1
-			assert_gt(boss.spell_background.get_width(), 0,
-				"%s 的符卡背景应能加载出图" % boss.boss_name)
+			var inst: Node = boss.spell_background.instantiate()
+			assert_not_null(inst, "%s 的符卡背景场景应能实例化" % boss.boss_name)
+			assert_true(inst is CanvasItem,
+				"%s 的符卡背景场景根应是 CanvasItem（Node2D/Control）" % boss.boss_name)
+			inst.free()
 	assert_gt(configured, 0, "至少应有一个 Boss 配了符卡背景")
 
 

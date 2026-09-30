@@ -4,7 +4,7 @@
 [ext_resource type="Resource" uid="uid://c3x1nl4wb0g4t" path="res://data/stages/stage01/phase/卡摩瑞道中一非/卡摩瑞道中一非.tres" id="2_pxk2m"]
 [ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="3_1sohn"]
 [ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="4_skqdj"]
-[ext_resource type="Texture2D" uid="uid://cb5n52jpgy3ex" path="res://assets/Textures/character/kamorui/卡摩瑞符卡背景.png" id="5_sbg"]
+[ext_resource type="PackedScene" path="res://data/stages/stage01/spell_background/卡摩瑞符卡背景.tscn" id="5_sbg"]
 [ext_resource type="Texture2D" uid="uid://br8vr3n284kcl" path="res://assets/Textures/character/kamorui/kamorui1.png" id="9_portrait"]
 
 [resource]

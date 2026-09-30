@@ -16,14 +16,14 @@
 ./tools/verify.sh                                    # 六步门禁（文档哨兵+语法+命名+启动+GUT+所有权）
 ```
 
-**现状**：109 脚本 / **663 用例（662 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6315 断言 / 32.4s** / 19 orphans / **0 pending**。
+**现状**：109 脚本 / **667 用例（666 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6333 断言 / 35.9s** / 19 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 34 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 30 | 172 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **B 内核 · 原生 C++ + 桥接** | 30 | 176 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 41 | 311 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 14 | 95 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
@@ -49,7 +49,7 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：打错键名 / 类型不匹配要**响亮报错** | 5 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 | 4 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（30 / 172）
+## B · 内核 · 原生 C++ + 桥接（30 / 176）
 
 ### B1 parity 套件（13 文件 / 93 用例）—— 依赖 `test/reference/` 冻结 oracle
 
@@ -70,7 +70,7 @@
 | [test_bullet_orientation](../test/test_bullet_orientation.gd) | 弹型朝向契约（F7·B）：`rotation_for` 语义 + 到内核弹型的字段传递 | 3 | 0 |
 | [test_reference_oracle](../test/test_reference_oracle.gd) | 冻结参照（oracle）自足性：`test/reference/BulletSystem` 可独立 new / spawn / 查询（不依赖任何 autoload） | 2 | 0 |
 
-### B2 原生行为与桥接（12 文件 / 58 用例）
+### B2 原生行为与桥接（12 文件 / 62 用例）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -78,7 +78,7 @@
 | [test_kernel_host](../test/test_kernel_host.gd) | `KernelBulletHost`：`BulletData→BulletType` 映射 / 内容签名复用 / 纹理旁表 | 8 | 2 |
 | [test_kernel_physics](../test/test_kernel_physics.gd) | `KernelBulletPhysics`：敌弹↔自机（命中+擦弹），与旧规则 1:1 | 7 | 0 |
 | [test_kernel_render](../test/test_kernel_render.gd) | `BulletMultiMesh` 的**内核快照**渲染路径 + 分组键 | 5 | 12 |
-| [test_spell_backdrop](../test/test_spell_backdrop.gd) | **符卡背景**（每 Boss 一张，仅符卡期间显示）：判据纯函数 + 显隐淡入淡出 + 图层/定位 + **向上无缝滚动** | 6 | 0 |
+| [test_spell_backdrop](../test/test_spell_backdrop.gd) | **符卡背景 = 每 Boss 一个场景**：宿主层显隐/淡入淡出/层级/同场景不重建不重播 + 换场景换实例 + 淡出中途折返复用 + 滚动层（速度可调/取模无缝）+ plain 模板可用 | 10 | 0 |
 | [test_spell_portrait](../test/test_spell_portrait.gd) | **符卡宣言立绘**：右上角→左下角快慢快→淡出；层级在弹幕之下 | 5 | 0 |
 | [test_kernel_random](../test/test_kernel_random.gd) | K1：内核 PRNG 确定性（同种子同结果）+ `random_dir` / `chance_toward` | 5 | 0 |
 | [test_kernel_reset](../test/test_kernel_reset.gd) | 内核注册表重置（工作台清场：回收 program / 弹型） | 2 | 5 |
