@@ -16,13 +16,13 @@
 ./tools/verify.sh                                    # 六步门禁（文档哨兵+语法+命名+启动+GUT+所有权）
 ```
 
-**现状**：109 脚本 / **667 用例（666 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6333 断言 / 35.9s** / 19 orphans / **0 pending**。
+**现状**：109 脚本 / **668 用例（667 通过 / 1 红 = `test_data_validity` 内容 WIP）/ 6336 断言 / 35.8s** / 19 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
-| **A 元守卫 · 工程契约** | 10 | 34 | 跨层的红线/约定，不属任何功能 |
+| **A 元守卫 · 工程契约** | 10 | 35 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 176 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 41 | 311 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 14 | 95 | `scenes/ui/**` 与 HUD |
@@ -34,7 +34,7 @@
 
 ---
 
-## A · 元守卫 / 工程契约（10 / 34）
+## A · 元守卫 / 工程契约（10 / 35）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -47,7 +47,7 @@
 | [test_native_extension_loads](../test/test_native_extension_loads.gd) | 扩展**已构建**时必须真的注册成功 | 2 | 0 |
 | [test_coroutine_start](../test/test_coroutine_start.gd) | `CoroutineScript._on_start()` 时机（start 后、首次 `_tick` 前一次） | 2 | 0 |
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：打错键名 / 类型不匹配要**响亮报错** | 5 | 0 |
-| [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 | 4 | 0 |
+| [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
 ## B · 内核 · 原生 C++ + 桥接（30 / 176）
 
