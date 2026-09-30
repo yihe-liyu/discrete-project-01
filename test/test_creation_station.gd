@@ -5,7 +5,72 @@ extends GutTest
 
 const CS := preload("res://scenes/workbench/creation_station.tscn")
 const CS_SCRIPT := preload("res://scripts/workbench/creation_station.gd")
-const BUTTON_KIND := 0  # 占位（无类型化断言直接检查脚本路径）
+
+
+## 合成一次真左键按下/抬起（走 GUI 拾取 —— 和用户鼠标同一条路，不是调 open_slot 旁路）
+## 按真实鼠标的时序分帧：按下 → 下一帧抬起（同一帧内成对发有时收不到）
+func _mouse(pos: Vector2, button_down: bool) -> void:
+	Input.warp_mouse(pos)
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = button_down
+	ev.position = pos
+	ev.global_position = pos
+	Input.parse_input_event(ev)
+
+
+## 从控件往上找它所在的 CanvasLayer（没挂在任何画布层 → null）
+func _canvas_layer_of(node: Node) -> CanvasLayer:
+	var n: Node = node
+	while n != null:
+		if n is CanvasLayer:
+			return n
+		n = n.get_parent()
+	return null
+
+
+## 按下 → 下一帧抬起（按真实鼠标时序；同一帧内成对发有时收不到）
+func _click_tab(button: Button) -> void:
+	var c := button.get_global_rect().get_center()
+	_mouse(c, true)
+	await get_tree().process_frame
+	_mouse(c, false)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
+## 回归（2026-09-30，作者报「弹幕台和整关预览点不开」）：**被托管的视图会压住页签横栏、吃掉点击**——
+## 组合台的场地（`top_level` 的 832x928 Control + `MOUSE_FILTER_STOP`）与整关预览的 `BgContainer`
+## （嵌页归一到 y≈1、宽 762）都盖在横栏上，于是 x<832 一带的页签全点不动。
+## 修法：横栏挂 `CanvasLayer(layer=2)`（GUI 拾取按**画布层从高到低**）。
+##
+## 这条**必须用真点击**验：直接调 `open_slot()` 会绕过拾取 —— 正是它当初漏掉这个 bug 的原因。
+## 只点左边两个页签：GUT 运行器自己的界面占着视口右半（x>652 是它的输出面板）会截走点击，
+## 而作者报的「整关预览 / 弹幕台」正好都在左半，且这两下恰好各撞一个挡路者。
+func test_tab_clicks_reach_the_bar_over_the_hosted_view():
+	DirAccess.remove_absolute("user://creation_station.cfg")
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var bar_layer := _canvas_layer_of(cs.slot_button(0))
+	assert_not_null(bar_layer, "页签横栏必须在 CanvasLayer 里（被托管视图会吃掉横栏上的点击）")
+	if bar_layer != null:
+		assert_gt(bar_layer.layer, 1, "横栏要在更高的画布层（被托管视图自带 CanvasLayer(1) / top_level 控件）")
+
+	# ① 敌人台（场地挡路）→ 点「弹幕台」
+	cs.open_slot(2)
+	await get_tree().process_frame
+	await _click_tab(cs.slot_button(1))
+	assert_eq(cs.current_slot(), 1, "从敌人台点「弹幕台」应切过去（场地的 STOP 曾把这一带点击全吃掉）")
+
+	# ② 弹幕台（场地挡路）→ 点「整关预览」
+	await _click_tab(cs.slot_button(0))
+	assert_eq(cs.current_slot(), 0, "从弹幕台点「整关预览」应切过去")
+
+	# ③ 整关预览（BgContainer 压在横栏上）→ 点「弹幕台」
+	await _click_tab(cs.slot_button(1))
+	assert_eq(cs.current_slot(), 1, "从整关预览点「弹幕台」应切过去（BgContainer 曾挡这里）")
 
 
 func test_tabs_switch_and_keep_bench_instances():

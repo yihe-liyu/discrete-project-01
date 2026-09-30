@@ -31,9 +31,14 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	# 布局用场景里挂好的 root(VBoxContainer) 节点（作者在编辑器建的）——填充式，
-	# 和整关预览同为"tscn 挂节点 + 代码填内容"
-	var bar: HBoxContainer = $Root/Bar
+	# 布局用场景里挂好的节点（作者在编辑器建的）——填充式。
+	# ⚠️ 横栏挂在 **CanvasLayer(layer=2)** 里，不是内容区里：
+	# 被托管的视图会**压住横栏吃掉点击**（组合台的场地是 `top_level` 的 832x928 Control +
+	# MOUSE_FILTER_STOP；整关预览的 BgContainer 被嵌页归一时移到 y≈1、宽 762）→
+	# 整关预览/弹幕台/敌人台（x<832~963 一带）点不动。GUI 拾取按**画布层从高到低** →
+	# 横栏必须在更高的层上，且**必须显式挂主题**（CanvasLayer 会断 Control 主题链）。
+	var bar: HBoxContainer = $BarLayer/Bar
+	bar.theme = theme
 	for i in SLOTS.size():
 		var button := Button.new()
 		button.text = SLOTS[i]
@@ -54,6 +59,13 @@ func slot_names() -> Array[String]:
 
 func slot_count() -> int:
 	return SLOTS.size()
+
+
+## 第 i 个页签按钮（用户点的就是这个；测试也走它，不去摸节点路径）
+func slot_button(i: int) -> Button:
+	if i < 0 or i >= _slot_buttons.size():
+		return null
+	return _slot_buttons[i]
 
 
 ## 当前槽位下标（-1 = 还没打开过）

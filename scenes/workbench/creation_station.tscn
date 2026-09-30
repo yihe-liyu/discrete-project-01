@@ -12,20 +12,27 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_cs")
 
-[node name="Root" type="VBoxContainer" parent="." unique_id=1359645600]
+[node name="Root" type="MarginContainer" parent="." unique_id=1359645600]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 0
-
-[node name="Bar" type="HBoxContainer" parent="Root" unique_id=1335930980]
-custom_minimum_size = Vector2(0, 34)
-layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/margin_top = 36
 
 [node name="Content" type="Control" parent="Root" unique_id=1177330428]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="BarLayer" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Bar" type="HBoxContainer" parent="BarLayer" unique_id=1335930980]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 36.0
+grow_horizontal = 2
+theme_override_constants/separation = 6
