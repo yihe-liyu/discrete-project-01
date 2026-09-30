@@ -2,7 +2,6 @@ extends "res://scripts/workbench/bench_base.gd"
 ## 敌人组合台—— 选行为（脚本）× 设外形（外观/HP/判定/掉落）× 出生点 × 幽灵玩家（鼠标跟随）
 ## 跑真实 StageRuntime.spawn_enemy_data：敌人移动/发弹/行为脚本全部真实。
 
-const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/enemy_shell.gd")
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
@@ -12,7 +11,6 @@ const FIXED_SEED := 20260801
 const VERSION_TAG := "v1.7-ui"
 
 var _shell: Variant
-var _catalog: Variant
 var _spawn_pos := Vector2(GameConfig.FIELD_CENTER_X, 260.0)
 var _seed: int = FIXED_SEED
 
@@ -31,13 +29,9 @@ var _spawn_btn: Button
 var _clear_btn: Button
 var _seed_btn: Button
 var _stats_label: Label
-var _reload_status: Label
 var _diff_sel: OptionButton
-var _param_panel: VBoxContainer  # 共享参数面板（param_panel.gd）
 var _hot_chk: CheckBox
 
-var _cur_script: Script = null
-var _cur_script_path: String = ""
 
 
 func _ready() -> void:
@@ -284,20 +278,29 @@ func _on_script_changed(_idx: int) -> void:
 	_toast.show_msg("行为：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（无移动）"), Color(1, 1, 1, 0.85))
 
 
-func _set_current_script() -> void:
-	var idx := _script_sel.selected
-	if idx <= 0:
-		_cur_script = null
-		_cur_script_path = ""
-	else:
-		var entry = _catalog.by_role("enemy")[idx - 1]
-		_cur_script_path = entry.path
-		_cur_script = load(_cur_script_path)
-	_rebuild_watch()
 
 func _on_diff_changed(idx: int) -> void:
 	SaveData.selected_difficulty = idx
 	_update_stats()
+
+
+# ═══ 公开接缝（创作台 / 测试；用户操作走的是同一条实现）═══
+
+func _catalog_role() -> String: return "enemy"
+func _script_selector() -> OptionButton: return _script_sel
+func _primary_selector() -> OptionButton: return _script_sel
+
+
+## 在指定位置生成（= 用户点完场地按"生成"）；同步出生点
+func spawn_at(pos: Vector2) -> void:
+	_spawn_pos = pos
+	_spawn()
+
+
+## 切难度（同步下拉；= 用户在下拉里选）
+func select_difficulty(idx: int) -> void:
+	_diff_sel.selected = idx
+	_on_diff_changed(idx)
 # ═══ 场地交互 ═══
 
 ## 左键(游戏坐标) → 出生点（rig_base 基类处理坐标换算）

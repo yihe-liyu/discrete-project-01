@@ -2,7 +2,6 @@ extends "res://scripts/workbench/bench_base.gd"
 ## 阶段组合台—— 目录选阶段 × 双槽（move/shoot）× 阶段字段（HP/时限）× Boss 视觉
 ## 运行基于 start_spell_card（符卡练习同款单阶段运行器：自建时钟+ctx+Boss 直进阶段）
 
-const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const PHASE_SHELL := preload("res://scripts/workbench/phase_shell.gd")
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")
@@ -11,7 +10,6 @@ const FIXED_SEED := 20260801
 const VERSION_TAG := "v1.5"
 
 var _shell: Variant
-var _catalog: Variant
 var _boss_pos := Vector2(GameConfig.FIELD_CENTER_X, 250.0)
 var _seed: int = FIXED_SEED
 var _boss: Node = null          # 当前 Boss（开演/清场管理）
@@ -30,7 +28,6 @@ var _stats_label: Label
 var _name_label: Label
 var _move_desc: Label
 var _shoot_desc: Label
-var _reload_status: Label
 var _hot_chk: CheckBox
 
 var _move_path: String = ""
@@ -332,6 +329,83 @@ func _play() -> void:
 	var boss := _stage_runtime.start_spell_card(phase, _shell.boss_scene(), _name_label.text, _boss_pos)
 	_boss = boss
 	_update_stats()
+
+
+# ═══ 公开接缝（创作台 / 测试；用户操作走的是同一条实现）═══
+
+func _primary_selector() -> OptionButton: return _phase_sel
+
+
+## 选一张阶段（同步下拉；= 用户在阶段下拉里选）
+func select_phase(idx: int) -> void:
+	_phase_sel.selected = idx
+	_select_phase(idx)
+
+
+## 开演一次（= 用户按"开演"）
+func play() -> void:
+	_play()
+
+
+## 清场（= 用户按"清场"）
+func clear_all() -> void:
+	_clear_all()
+
+
+## HP / 时限输入框当前值（开演用的就是它们）
+func hp_value() -> float:
+	return _hp_spin.value
+
+
+func time_value() -> float:
+	return _time_spin.value
+
+
+## 双槽当前选中下标（0 = 空槽）
+func move_slot_index() -> int:
+	return _move_sel.selected
+
+
+## 设 move/shoot 槽的下标（0 = 空槽；测试与创作台恢复工作区用）
+func set_move_slot_index(i: int) -> void:
+	_move_sel.selected = i
+
+
+func set_shoot_slot_index(i: int) -> void:
+	_shoot_sel.selected = i
+
+
+func shoot_slot_index() -> int:
+	return _shoot_sel.selected
+
+
+## 双槽当前解析出的脚本（空槽 → null；开演时用的就是这两个）
+func selected_move_script() -> Script:
+	return _resolve_slot(_move_sel, "boss_move")
+
+
+func selected_shoot_script() -> Script:
+	return _resolve_slot(_shoot_sel, "boss_shoot")
+
+
+## 当前阶段的 move 脚本路径（槽里为空 → 空串）
+func move_script_path() -> String:
+	return _move_path
+
+
+## Boss 出生点（用户点场地设的那个）
+func boss_spawn_pos() -> Vector2:
+	return _boss_pos
+
+
+func set_boss_spawn_pos(pos: Vector2) -> void:
+	_boss_pos = pos
+	_field.queue_redraw()
+
+
+## 当前选择对应的 Boss 外观场景（开演时用的就是它）
+func boss_scene() -> PackedScene:
+	return _shell.boss_scene()
 
 
 func _clear_all() -> void:

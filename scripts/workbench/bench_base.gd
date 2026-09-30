@@ -18,6 +18,18 @@ var _stage_runtime: StageRuntime
 ## 本台的弹幕世界（组合台自持；standalone 也能跑）
 var _bullet_manager: BulletManager
 
+# ── 三台共用的工作区状态（原先 bullet/enemy 各写一份、phase 又抄两处；2026-09-30 上移）──
+## 内容目录（`ContentCatalog.scan()`）；三台同一份扫描
+const CATALOG := preload("res://scripts/data/content_catalog.gd")
+var _catalog: Variant
+## 当前"行为脚本"（发射/生成用它；热重载后替换）。不关心脚本的台子留空。
+var _cur_script: Script = null
+var _cur_script_path: String = ""
+## 参数字段面板（脚本 var → 可调控件）；不建面板的台子留空
+var _param_panel: VBoxContainer = null
+## 右下角状态条文案（热更新结果等）；三台都指向 `_toast.label`
+var _reload_status: Label = null
+
 
 # ═══ 创作台工作区接口（子类覆写；CreationStation 统一调用，R6 公开虚函数）═══
 
@@ -270,3 +282,152 @@ func _on_field_draw() -> void:
 ## 子类实现：在游戏坐标画标记（基类已画金框；坐标即场地局部）
 func _draw_marker() -> void:
 	pass
+
+
+# ═══ 公开接缝（创作台 / 测试走这里；R6：外部不碰 _私有）═══
+# ⚠️ 这些方法**不是**为测试新开的旁路 —— 用户操作走的就是同一条实现：
+#    `load_script()` = 用户在脚本下拉里选一条；`force_hot_reload()` = 防抖到点那一次。
+
+## 子类覆写：本台"行为脚本"在目录里的角色（"bullet" / "enemy" / "" = 没有脚本概念）
+func _catalog_role() -> String:
+	return ""
+
+
+## 子类覆写：本台的"行为脚本"下拉（没有就返回 null）
+func _script_selector() -> OptionButton:
+	return null
+
+
+## 子类覆写：本台的"主选择器"（用于 selected_index()；没有就返回 null）
+func _primary_selector() -> OptionButton:
+	return null
+
+
+## 按路径装载"行为脚本"：等价于用户在下拉里选中它 ——
+## 在目录里 → 同步下拉并走同一条实现；不在目录里（测试夹具脚本）→ 直接记录 + load。
+## 都会重建监听集与参数面板。
+func load_script(path: String) -> void:
+	var idx := _selector_index_of(path)
+	var sel := _script_selector()
+	if sel != null and idx >= 0:
+		sel.selected = idx
+		_set_current_script()
+	else:
+		_cur_script_path = path
+		# 路径不存在 → **保留旧脚本**（与"热更新失败时旧版继续"同一口径），失败交给管线去报
+		if ResourceLoader.exists(path):
+			_cur_script = load(path)
+		_rebuild_watch()
+	if _param_panel != null:
+		_param_panel.rebuild(_cur_script)
+
+
+## 该路径在下拉里的下标（0 = "（无）"占位；不在目录里 → -1）
+func _selector_index_of(path: String) -> int:
+	var role := _catalog_role()
+	if role == "" or _catalog == null:
+		return -1
+	var entries: Array = _catalog.by_role(role)
+	for i in entries.size():
+		if entries[i].path == path:
+			return i + 1
+	return -1
+
+
+## 由下拉当前项推出"行为脚本"路径 → 记录 + load + 重建监听集（用户选脚本走这条）
+func _set_current_script() -> void:
+	var sel := _script_selector()
+	var idx: int = sel.selected if sel != null else 0
+	if idx <= 0:
+		_cur_script = null
+		_cur_script_path = ""
+	else:
+		var entries: Array = _catalog.by_role(_catalog_role())
+		_cur_script_path = entries[idx - 1].path
+		_cur_script = load(_cur_script_path)
+	_rebuild_watch()
+
+
+## 当前"行为脚本"（无 → null）
+func current_script() -> Script:
+	return _cur_script
+
+
+## 当前"行为脚本"路径（无 → 空串）
+func current_script_path() -> String:
+	return _cur_script_path
+
+
+## 参数字段面板（没建面板的台子 → null）
+func param_panel() -> VBoxContainer:
+	return _param_panel
+
+
+## 右下角状态条文案（热更新"检测到修改 / 已重载 / 失败"都在这；测试断言它的内容）
+func reload_status_text() -> String:
+	return _reload_status.text if _reload_status != null else ""
+
+
+## 正在监听（会被连坐重载）的脚本路径
+func watch_paths() -> Array[String]:
+	return _watch_paths.duplicate()
+
+
+## 显式设定监听集（会重建 mtime 基线）；测试/创作台想固定监听目标时用
+func set_watch_paths(paths: Array[String]) -> void:
+	_watch_paths = paths.duplicate()
+	_refresh_watch_mtimes()
+
+
+## 把"上次看到的 mtime"往回拨 seconds 秒 —— 等价于"这个文件刚被改过"（测试没法真去改夹具文件）
+func age_watch_mtime(path: String, seconds: float) -> void:
+	if not _watch_mtimes.has(path):
+		refresh_watch_baseline(path)
+	_watch_mtimes[path] = int(_watch_mtimes[path]) - int(seconds)
+
+
+## 单个路径的 mtime 基线（不在监听集里也能建）
+func refresh_watch_baseline(path: String) -> void:
+	_watch_mtimes[path] = int(FileAccess.get_modified_time(path))
+
+
+## 推进一次热更新轮询（运行时每帧由 `_process` 调；测试手动步进）
+func poll_hot_reload(delta: float) -> void:
+	_process_hot_reload(delta)
+
+
+## 跳过防抖立刻重载（= 防抖到点那一次）
+func force_hot_reload() -> void:
+	_do_hot_reload()
+
+
+## 热更新开关（关掉后 `poll_hot_reload` 直接返回）
+func set_hot_enabled(on: bool) -> void:
+	_hot_enabled = on
+
+
+## 内容目录（三台同一份扫描结果）
+func catalog() -> ContentCatalog:
+	return _catalog as ContentCatalog
+
+
+## 主选择器当前下标（-1 = 没有选择器）
+func selected_index() -> int:
+	var sel := _primary_selector()
+	return sel.selected if sel != null else -1
+
+
+## 本台的关卡运行时（坐标/注册表/开演都从它走）
+func stage_runtime() -> StageRuntime:
+	return _stage_runtime
+
+
+## 本台的弹幕世界（画布坐标，`top_level`）
+func bullet_manager() -> BulletManager:
+	return _bullet_manager
+
+
+## 本台的场地（画布坐标，`top_level`；原点 = 画布原点）
+## 名字不叫 `field()`：基类/子类里 `var field` 是个常见局部名，会触发"遮蔽成员"警告（warnings-as-errors）
+func playfield() -> Control:
+	return _field

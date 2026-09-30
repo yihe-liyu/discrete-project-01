@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 47 条（本文件留最近 47 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 48 条（本文件留最近 48 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-09-30 — 工作台重构 **S1：先立公开接缝**（私有访问 181 → **0**）
 - 2026-09-28 — S13 复核结案（`✘ 判据已过期` → **✔**）+ 本地 TODO 清过期两条
 - 2026-09-28 — 工具 bug：`log_archive.py --index` 会**按滚动窗口截断正文**（本次踩到并修掉）
 - 2026-09-28 — 符卡背景从「一张贴图」升级成「一个**场景**」（+ 清掉死字段 `PhaseData.background`）
@@ -77,6 +78,42 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-09-30 — 工作台重构 **S1：先立公开接缝**（私有访问 181 → **0**）
+
+- **作者要求**："看看 workbench 怎么能重构、设计的更好" → 交付了 5 阶段方案（S1 立接缝 / S2 抽 HotReload /
+  S3 抽 Playback+Bookmarks / S4 合一舞台装配 + 补 widget 场景 / S5 机械护栏）→ 作者："试试" ⇒ 先做 **S1**。
+- **诊断（为什么先做 S1）**：六个测试文件 **181 处 `._`** 直接摸 workbench 内部 ——
+  "想重构"与"测试会一起断"互相锁死。所以第一刀不是拆代码，而是**把测试抬到接口上**，之后动结构才有安全网。
+- **S1 只做一件事**：立接缝（行为零变化），并把三台重复的状态上移：
+  - `BenchBase`：上移 `_cur_script` / `_cur_script_path` / `_param_panel` / `_reload_status` / `_catalog` / `CATALOG`
+    （原先 bullet/enemy 各写一份、phase 又抄两处），并公开
+    `load_script` · `current_script[ _path]` · `watch_paths` / `set_watch_paths` / `age_watch_mtime` /
+    `poll_hot_reload` / `force_hot_reload` / `set_hot_enabled` / `reload_status_text` / `param_panel` /
+    `catalog` / `selected_index` / `stage_runtime` / `bullet_manager` / `playfield`；
+    两份逐字相同的 `_set_current_script()` 合并成基类一份（子类只答 `_catalog_role()` / `_script_selector()`）。
+  - 三台语义接缝：`fire_once`/`set_burst`/`burst_remaining`（弹幕）、`spawn_at`/`select_difficulty`（敌人）、
+    `select_phase`/`play`/`clear_all`/`hp_value`/`time_value`/`move|shoot_slot_index`/`set_*_slot_index`/
+    `selected_move|shoot_script`/`move_script_path`/`boss_spawn_pos`/`set_boss_spawn_pos`/`boss_scene`（阶段）。
+  - `CreationStation`：`slot_names`/`slot_count`/`current_slot`/`current_view`/`bench_instance`/`open_slot` +
+    **`_route_preset` 正名 `route_preset`**；`CatalogPanel`：`divider_y`/`split_area_height`/`drag_divider`/
+    `set_search_text`/`tree`/`handle_tree_input`/`info_card`；
+    `BulletManager.bullet_global_position(id)`（外面不必再摸内核宿主的私有存储）。
+- **接缝不是"给测试开的旁路"**：`load_script()` 就是"用户在下拉里选一条"、`force_hot_reload()` 就是
+  "防抖到点那一次"、`open_slot()` 就是"用户点页签" —— 测试与被测的**是同一条实现**（这条要是不守，
+  接缝化就变成给测试造第二套真相）。
+- **顺带抓到一个空转测试**（价值比接缝本身还高）：`test_catalog_panel` 的"搜索筛选"那半条**一直是假绿** ——
+  直接写 `_search.text` 不会触发 `text_changed`，而未筛选的树里本来就只有 2 条含"夹具符卡" ⇒ 断言恒真。
+  接缝化时改成**真的在筛**：搜"独苗"剩 1 条 / 搜"夹具符卡"剩 2 条 / 搜不存在 → 0 条 / 清空 → 恢复。
+- **一个命名坑（记下来）**：访问器本来叫 `field()`，但基类/子类里 `var field` 是常见局部名 →
+  "遮蔽成员"警告在 warnings-as-errors 下直接编译失败 ⇒ 改名 `playfield()`。
+- **结果**：六个文件 `._` **181 → 0**；GUT **668 用例 / 667 通过**（断言 +6，来自上面那条真筛选）；
+  `TEST_INDEX` 的「🔴 D3 债」整节改写成「✅ 已还」（含接缝清单）。
+- **下一步（S2 起，方案已记录在上一条对话里）**：抽 `HotReload` 服务 → 抽 `Playback` + `Bookmarks`
+  → 合一 `StageHost` 并补 widget `.tscn` → 上机械护栏（`workbench` 测试 0 `._`、每台 `extends BenchBase` 且有同名场景、
+  `workbench_ui.gd` 的 static 构造器只减不增）。
+- **验收**：[1] 文档哨兵 ✅ · [2] 语法 354 脚本 0 失败 ✅ · [3] 命名 0 违规 ✅ · [4] 启动零错误 ✅ ·
+  [5] GUT **668 用例 / 667 通过**（唯一红 = `test_data_validity` 内容 WIP，与本次无关）。
 
 ### 2026-09-28 — S13 复核结案（`✘ 判据已过期` → **✔**）+ 本地 TODO 清过期两条
 

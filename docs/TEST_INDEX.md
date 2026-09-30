@@ -217,16 +217,17 @@
 
 ## F · 工具 · 开发台（8 / 26）
 
-> 🔴 **这一层是白盒重灾区**：26 个用例里 181 处私有成员访问。见下节。
+> ✅ **这一层已接缝化**（2026-09-30，S1）：原先 26 个用例里 181 处私有成员访问，现在**0**——
+> 六个文件全部改走 `BenchBase` / `CreationStation` / `CatalogPanel` 的**公开接口**（见下节）。
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_enemy_rig](../test/test_enemy_rig.gd) | 敌人组合台：壳组装 / 真实生成 / 热重载重演 | 4 | **42** |
-| [test_bullet_rig](../test/test_bullet_rig.gd) | 弹幕试验台热更新：重载成功自动重演 / 失败保留旧版 | 3 | **41** |
-| [test_creation_station](../test/test_creation_station.gd) | 创作台（三合一）：页签切换 / 实例保持 / 运行时清理 / 预设路由切台+装配 | 4 | **36** |
-| [test_catalog_panel](../test/test_catalog_panel.gd) | `CatalogPanel` 目录树渲染：组头完整 / 重名消歧 / 拖拽 | 3 | **33** |
-| [test_phase_rig](../test/test_phase_rig.gd) | 阶段组合台：壳副本 / 双槽默认 / 开演真实生成 | 4 | **20** |
-| [test_workbench_align](../test/test_workbench_align.gd) | 工作台坐标一致性：场地 / `BulletManager` / `BenchWorld` 同在画布坐标 | 1 | 9 |
+| [test_enemy_rig](../test/test_enemy_rig.gd) | 敌人组合台：壳组装 / 真实生成 / 热重载重演（`load_script` / `spawn_at` / `force_hot_reload`） | 4 | 0 |
+| [test_bullet_rig](../test/test_bullet_rig.gd) | 弹幕试验台热更新：重载成功自动重演 / 失败保留旧版（`poll_hot_reload` / `age_watch_mtime` / `param_panel`） | 3 | 0 |
+| [test_creation_station](../test/test_creation_station.gd) | 创作台（三合一）：页签切换 / 实例保持 / 运行时清理 / 预设路由切台+装配（`open_slot` / `current_view` / `bench_instance`） | 4 | 0 |
+| [test_catalog_panel](../test/test_catalog_panel.gd) | `CatalogPanel` 目录树渲染：组头完整 / 重名消歧 / 拖拽 / **搜索真的在筛**（原先那半条是空转的） | 3 | 0 |
+| [test_phase_rig](../test/test_phase_rig.gd) | 阶段组合台：壳副本 / 双槽默认 / 开演真实生成（`select_phase` / `hp_value` / `selected_shoot_script` / `play`） | 4 | 0 |
+| [test_workbench_align](../test/test_workbench_align.gd) | 工作台坐标一致性：场地 / `BulletManager` / `BenchWorld` 同在画布坐标（`playfield` / `bullet_manager` / `bullet_global_position`） | 1 | 0 |
 | [test_bullet_shell](../test/test_bullet_shell.gd) | `BulletShell`（试验台"壳"）：自由方向 + 显示辅助 | 3 | 0 |
 | [test_bookmark_extractor](../test/test_bookmark_extractor.gd) | 书签提取器：字面量 + 循环展开 | 4 | 0 |
 
@@ -239,25 +240,38 @@
 
 ---
 
-## 🔴 D3 债：181 处私有成员访问
+## ✅ D3 债已还：181 → 0 处私有成员访问（2026-09-30 · S1 接缝化）
 
-`workbench.gd` 是 TODO 里排着要拆的上帝对象（D3：694 行 + 3 个超长 `_build_ui`）。
-下面这些测试**直接摸它的内部**，所以 D3 一动，它们会**一起断**：
+原状：`workbench.gd` 是排着要拆的上帝对象（D3：694 行 + 3 个超长 `_build_ui`），
+六个测试文件**直接摸它的内部**（`_cur_script` / `_watch_paths` / `_view` / `_divider_y` … **181 处**）
+—— 于是"想重构"和"测试会一起断"互相锁死。
 
-| 文件 | 私有访问 | 用例 |
-|---|---|---|
-| test_enemy_rig | 42 | 4 |
-| test_bullet_rig | 41 | 3 |
-| test_creation_station | 36 | 4 |
-| test_catalog_panel | 33 | 3 |
-| test_phase_rig | 20 | 4 |
-| test_workbench_align | 9 | 1 |
-| **合计** | **181** | **19** |
+**S1 只做一件事：先立公开接缝，把测试抬到接口上。**
+- `BenchBase`：把三台重复的那几份状态上移（`_cur_script` / `_cur_script_path` / `_param_panel` /
+  `_reload_status` / `_catalog` / `CATALOG`），并公开
+  `load_script` / `current_script` / `current_script_path` / `watch_paths` / `set_watch_paths` /
+  `age_watch_mtime` / `poll_hot_reload` / `force_hot_reload` / `reload_status_text` / `param_panel` /
+  `catalog` / `selected_index` / `stage_runtime` / `bullet_manager` / `playfield`。
+- 三台各自补语义接缝：`fire_once` / `set_burst` / `burst_remaining`（弹幕台）、
+  `spawn_at` / `select_difficulty`（敌人台）、
+  `select_phase` / `play` / `clear_all` / `hp_value` / `time_value` / `move_slot_index` /
+  `set_move_slot_index` / `set_shoot_slot_index` / `selected_move_script` / `selected_shoot_script` /
+  `move_script_path` / `boss_spawn_pos` / `set_boss_spawn_pos` / `boss_scene`（阶段台）。
+- `CreationStation`：`slot_names` / `slot_count` / `current_slot` / `current_view` / `bench_instance` /
+  `open_slot` / `route_preset`（原私有 `_route_preset` 正名）。
+- `CatalogPanel`：`divider_y` / `split_area_height` / `drag_divider` / `set_search_text` / `tree` /
+  `handle_tree_input` / `info_card`。
+- `BulletManager.bullet_global_position(id)`：按 id 取全局位置 —— 外面不必再摸内核宿主的私有存储。
 
-> **处置：不是现在删，是 D3 时一起还。** 拆 workbench 时把测试的接触面从 `_private` 抬到公开接口——
-> 这样测试同时变**更强**（测接口比测接线抗重构）。
+> 接缝**不是为测试开的旁路**：`load_script()` 就是"用户在下拉里选一条"、
+> `force_hot_reload()` 就是"防抖到点那一次"、`open_slot()` 就是"用户点页签"。
 >
-> 全项目白盒 Top（含非 workbench）：`test_spell_practice_menu`(45)、`test_laser`(20)、`test_boss_phase`(20)、`test_option_menu`(14)。
+> 顺带发现的**空转测试**：`test_catalog_panel` 的搜索那半条以前是假绿 ——
+> 直接写给 `_search.text` **不会**触发 `text_changed`，而未筛选的树本来就只有 2 条含"夹具符卡"
+> ⇒ 断言恒真。接缝化时补成"真的在筛"（搜到 1 条 / 2 条 / 0 条 / 清空恢复）。
+
+> 全项目白盒 Top（含非 workbench，未动）：`test_spell_practice_menu`(45)、`test_laser`(20)、
+> `test_boss_phase`(20)、`test_option_menu`(14)。
 
 ## ⚠️ 已知的坑
 

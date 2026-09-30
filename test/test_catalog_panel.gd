@@ -1,6 +1,8 @@
 extends GutTest
-## CatalogPanel 目录树渲染测试（组头完整 / 重名消歧 / 拖拽）。
+## CatalogPanel 目录树渲染测试（组头完整 / 重名消歧 / 拖拽 / 搜索筛选）。
 ## 数据源 = **夹具目录**（panel.catalog_root），不拿真实游戏内容当断言标准 —— 加内容不红。
+## 走**公开接缝**（`divider_y` / `split_area_height` / `drag_divider` / `set_search_text` /
+## `tree` / `handle_tree_input` / `info_card`）—— 不再摸 `_私有`。
 
 const PANEL := preload("res://scripts/workbench/catalog_panel.gd")
 
@@ -24,39 +26,39 @@ func test_drag_follows_mouse_and_clamps():
 	host.add_child(panel)
 	await get_tree().process_frame
 	await get_tree().process_frame
-	var start_div: float = panel._divider_y
+	var start_div: float = panel.divider_y()
 	assert_true(start_div > 100.0, "初始分隔条位置（%s）" % str(start_div))
 	# 按下（全局坐标 y=300）
 	var btn := InputEventMouseButton.new()
 	btn.button_index = MOUSE_BUTTON_LEFT
 	btn.pressed = true
 	btn.global_position = Vector2(150, 300)
-	panel._on_info_sep_input(btn)
+	panel.drag_divider(btn)
 	# 拖动 +200px：分隔条应精确跟随（非累加、无反馈环）
 	var motion := InputEventMouseMotion.new()
 	motion.button_mask = MOUSE_BUTTON_MASK_LEFT
 	motion.global_position = Vector2(150, 500)
-	panel._on_info_sep_input(motion)
-	var max_div: float = panel._split_area.size.y - 120.0
+	panel.drag_divider(motion)
+	var max_div: float = panel.split_area_height() - 120.0
 	var exp1: float = clampf(start_div + 200.0, 100.0, max_div)
-	assert_true(absf(panel._divider_y - exp1) < 1.0,
-		"拖动跟随鼠标+钳制（期望 %s 实际 %s）" % [str(exp1), str(panel._divider_y)])
+	assert_true(absf(panel.divider_y() - exp1) < 1.0,
+		"拖动跟随鼠标+钳制（期望 %s 实际 %s）" % [str(exp1), str(panel.divider_y())])
 	# 再次 +5px（分隔条移动后仍稳定）
 	motion.global_position = Vector2(150, 505)
-	panel._on_info_sep_input(motion)
+	panel.drag_divider(motion)
 	var exp2: float = clampf(start_div + 205.0, 100.0, max_div)
-	assert_true(absf(panel._divider_y - exp2) < 1.0,
-		"多次拖动稳定（期望 %s 实际 %s）" % [str(exp2), str(panel._divider_y)])
+	assert_true(absf(panel.divider_y() - exp2) < 1.0,
+		"多次拖动稳定（期望 %s 实际 %s）" % [str(exp2), str(panel.divider_y())])
 	# 拖出面板 → 钳制在 [100, h-120]
 	motion.global_position = Vector2(150, 99999)
-	panel._on_info_sep_input(motion)
-	assert_true(panel._divider_y <= panel._split_area.size.y - 120.0 + 0.5,
-		"上限钳制（%s / %s）" % [str(panel._divider_y), str(panel._split_area.size.y)])
+	panel.drag_divider(motion)
+	assert_true(panel.divider_y() <= panel.split_area_height() - 120.0 + 0.5,
+		"上限钳制（%s / %s）" % [str(panel.divider_y()), str(panel.split_area_height())])
 	motion.global_position = Vector2(150, 0)
-	panel._on_info_sep_input(motion)
-	assert_true(panel._divider_y >= 100.0 - 0.5, "下限钳制（%s）" % str(panel._divider_y))
+	panel.drag_divider(motion)
+	assert_true(panel.divider_y() >= 100.0 - 0.5, "下限钳制（%s）" % str(panel.divider_y()))
 	btn.pressed = false
-	panel._on_info_sep_input(btn)
+	panel.drag_divider(btn)
 	panel.queue_free()
 
 
@@ -65,30 +67,34 @@ func test_search_filter_and_double_click_signal():
 	panel.catalog_root = FIXTURE
 	add_child_autofree(panel)
 	await get_tree().process_frame
-	# 搜索"夹具符卡" → 命中 2 张同名符卡
-	panel._search.text = "夹具符卡"
-	await get_tree().process_frame
-	var root = panel._tree.get_root()
-	var hit := 0
-	for i in root.get_child_count():
-		var h = root.get_child(i)
-		for j in h.get_child_count():
-			if h.get_child(j).get_text(0).contains("夹具符卡"):
-				hit += 1
-	assert_eq(hit, 2, "搜索命中试符条目（%d）" % hit)
-	# 双击 → 信号带条目
+	# 搜索**真的在筛**：全部条目 vs 只搜"独苗"
+	var all_labels := _item_labels(panel)
+	assert_gt(all_labels.size(), 1, "未筛选时有多条（%d）" % all_labels.size())
+	panel.set_search_text("独苗")
+	var filtered := _item_labels(panel)
+	assert_eq(filtered.size(), 1, "筛选后只剩 1 条（%d：%s）" % [filtered.size(), str(filtered)])
+	assert_true(filtered[0].contains("独苗"), "剩下的是命中的那条（%s）" % str(filtered))
+	panel.set_search_text("夹具符卡")
+	assert_eq(_item_labels(panel).size(), 2, "同名符卡命中 2 条")
+	panel.set_search_text("这个名字不存在")
+	assert_eq(_item_labels(panel).size(), 0, "搜不到 → 空树")
+	panel.set_search_text("")
+	assert_gt(_item_labels(panel).size(), 1, "清空搜索 → 恢复全部")
+
+	# 双击 → 信号带条目（走真实的树输入路径）
 	var got := {}
 	panel.preset_requested.connect(func(e): got["e"] = e)
+	var root = panel.tree().get_root()
 	for i in root.get_child_count():
 		var h = root.get_child(i)
 		for j in h.get_child_count():
 			var it = h.get_child(j)
-			panel._tree.set_selected(it, 0)
+			panel.tree().set_selected(it, 0)
 			var ev := InputEventMouseButton.new()
 			ev.button_index = MOUSE_BUTTON_LEFT
 			ev.double_click = true
 			ev.pressed = true
-			panel._on_tree_input(ev)
+			panel.handle_tree_input(ev)
 			if got.has("e"):
 				break
 		if got.has("e"):
@@ -108,7 +114,7 @@ func test_panel_tree_has_role_headers_and_unique_names():
 	await get_tree().process_frame  # _ready → refresh() + 首帧布局
 	await get_tree().process_frame
 
-	var root = panel._tree.get_root()
+	var root = panel.tree().get_root()
 	assert_not_null(root, "树根存在")
 	# 夹具角色：stage / phase / boss_move / boss_shoot / enemy / bg（bullet 空组不显示）
 	assert_eq(root.get_child_count(), 6, "应有 6 个角色组头")
@@ -128,14 +134,27 @@ func test_panel_tree_has_role_headers_and_unique_names():
 	assert_true(labels.has("独苗"), "非重名阶段不带 uid 后缀（%s）" % [labels])
 	# 分割布局真实高度（防 ScrollContainer 塌陷回归）
 	assert_eq(panel.size_flags_vertical, Control.SIZE_EXPAND_FILL, "面板自身 EXPAND_FILL（防容器给 0 高）")
-	assert_true(panel._split_area.size.y > 200.0, "split_area 有真实高度（%s）" % str(panel._split_area.size.y))
-	assert_true(panel._tree.size.y > 100.0, "树有真实高度（%s）" % str(panel._tree.size.y))
-	assert_true(panel._info_panel.offset_top < 0.0, "信息卡偏移为负（底锚点）")
-	assert_true(panel._info_panel.offset_top <= -100.0,
-		"信息卡在分割区内（top=%s, 区高=%s）" % [str(panel._info_panel.offset_top), str(panel._split_area.size.y)])
-	assert_true(panel._info_panel.size.y > 50.0,
-		"信息卡可见高度（%s）" % str(panel._info_panel.size.y))
+	assert_true(panel.split_area_height() > 200.0, "split_area 有真实高度（%s）" % str(panel.split_area_height()))
+	assert_true(panel.tree().size.y > 100.0, "树有真实高度（%s）" % str(panel.tree().size.y))
+	assert_true(panel.info_card().offset_top < 0.0, "信息卡偏移为负（底锚点）")
+	assert_true(panel.info_card().offset_top <= -100.0,
+		"信息卡在分割区内（top=%s, 区高=%s）" % [str(panel.info_card().offset_top), str(panel.split_area_height())])
+	assert_true(panel.info_card().size.y > 50.0,
+		"信息卡可见高度（%s）" % str(panel.info_card().size.y))
 	panel.queue_free()
+
+
+## 目录树里的**条目**文本（跳过组头）——用公开的 tree() 句柄遍历
+func _item_labels(panel) -> Array[String]:
+	var out: Array[String] = []
+	var root = panel.tree().get_root()
+	if root == null:
+		return out
+	for i in root.get_child_count():
+		var head = root.get_child(i)
+		for j in head.get_child_count():
+			out.append(head.get_child(j).get_text(0))
+	return out
 
 
 # ═══ 夹具 ═══

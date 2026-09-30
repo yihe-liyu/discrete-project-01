@@ -208,6 +208,42 @@ func _rebuild_tree() -> void:
 
 ## 拖动分隔条：分隔条位置跟随鼠标（树/信息卡以它划分）
 ## 拖拽用全局坐标（event.global_position）：分隔条移动不影响计算 → 无反馈环、不闪不跳
+## 设置搜索词 **并立即重建树**（`text_changed` 之外的入口：外部/测试驱动筛选走它）
+func set_search_text(text: String) -> void:
+	_search.text = text
+	_rebuild_tree()
+
+
+## 目录树句柄（行文本 / 选中 / 遍历都走它；调试工具需要看得到）
+func tree() -> Tree:
+	return _tree
+
+
+## 把输入事件交给目录树（= `_tree.gui_input` 那条路：双击进条目等）
+func handle_tree_input(event: InputEvent) -> void:
+	_on_tree_input(event)
+
+
+## 信息卡（底部那张；布局断言看它的 offset_top / size）
+func info_card() -> Control:
+	return _info_panel
+
+
+## 信息区/目录区**分隔条**的当前 y（布局断言用；0 = 还没初始化）
+func divider_y() -> float:
+	return _divider_y
+
+
+## 可拖区高度（分隔条钳制上限的依据）
+func split_area_height() -> float:
+	return _split_area.size.y if _split_area != null else 0.0
+
+
+## 拖动分隔条（= 用户按住分隔条拖；输入事件由调用方给）
+func drag_divider(event: InputEvent) -> void:
+	_on_info_sep_input(event)
+
+
 func _on_info_sep_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_drag_info = event.pressed

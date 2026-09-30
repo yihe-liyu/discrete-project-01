@@ -6,7 +6,6 @@ extends "res://scripts/workbench/bench_base.gd"
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")  # WorkbenchTheme 构建器
-const CATALOG := preload("res://scripts/data/content_catalog.gd")
 const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const FIXED_SEED := 20260801
@@ -15,7 +14,6 @@ const VERSION_TAG := "v3.4-ui"
 
 
 var _shell: Variant      # BulletShell（preload 构造，规避新 class 全局缓存）
-var _catalog: Variant    # ContentCatalog
 var _emitter_pos := Vector2(GameConfig.FIELD_CENTER_X, 300.0)
 var _seed: int = FIXED_SEED
 var _burst_left := 0.0
@@ -34,15 +32,11 @@ var _clear_btn: Button
 var _seed_btn: Button
 var _stats_label: Label
 var _dir_angle_label: Label
-var _param_panel: VBoxContainer
 
-var _reload_status: Label
 
 var _hot_chk: CheckBox
 var _diff_sel: OptionButton
 
-var _cur_script: Script = null          # 当前行为脚本（发射用它；热重载后替换）
-var _cur_script_path: String = ""
 
 
 func _ready() -> void:
@@ -312,18 +306,30 @@ func _on_script_changed(_idx: int) -> void:
 	_toast.show_msg("行为：%s" % (_cur_script_path.get_file() if _cur_script_path != "" else "（直线弹）"), Color(1, 1, 1, 0.85))
 
 
-func _set_current_script() -> void:
-	var idx := _script_sel.selected
-	if idx <= 0:
-		_cur_script = null
-		_cur_script_path = ""
-	else:
-		var entry = _catalog.by_role("bullet")[idx - 1]
-		_cur_script_path = entry.path
-		_cur_script = load(_cur_script_path)
-	_rebuild_watch()
 func _on_diff_changed(idx: int) -> void:
 	SaveData.selected_difficulty = idx
+
+
+# ═══ 公开接缝（创作台 / 测试；用户操作走的是同一条实现）═══
+
+func _catalog_role() -> String: return "bullet"
+func _script_selector() -> OptionButton: return _script_sel
+func _primary_selector() -> OptionButton: return _script_sel
+
+
+## 打一次（= 用户按 F / 点"发射"）
+func fire_once() -> void:
+	_fire()
+
+
+## 连发开关（同步勾选框，UI 与内部状态不会各说各话）
+func set_burst(on: bool) -> void:
+	_burst_chk.button_pressed = on
+
+
+## 连发剩余秒数（0 = 不在连发）
+func burst_remaining() -> float:
+	return _burst_left
 # ═══ 场地交互 ═══
 
 func _on_field_input(event: InputEvent) -> void:

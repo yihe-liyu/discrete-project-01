@@ -45,6 +45,39 @@ func _build_ui() -> void:
 		_slot_buttons.append(button)
 
 
+# ═══ 公开接缝（测试/外部驱动；用户点页签走的是同一条实现）═══
+
+## 页签名（顺序 = 槽位下标：0 = 整关预览，1..3 = 三台）
+func slot_names() -> Array[String]:
+	return SLOTS.duplicate()
+
+
+func slot_count() -> int:
+	return SLOTS.size()
+
+
+## 当前槽位下标（-1 = 还没打开过）
+func current_slot() -> int:
+	return _current_slot
+
+
+## 当前显示的子视图（整关预览 = workbench；其余 = 对应试验台）
+func current_view() -> Control:
+	return _view
+
+
+## 常驻试验台实例（0=弹幕台 / 1=敌人台 / 2=阶段台；没建过 → null）
+func bench_instance(i: int) -> BenchBase:
+	if i < 0 or i >= _bench_instances.size():
+		return null
+	return _bench_instances[i]
+
+
+## 打开某个槽位（同步页签高亮 + 切换视图）
+func open_slot(i: int) -> void:
+	_on_slot(i)
+
+
 ## 页签切换
 func _on_slot(i: int) -> void:
 	if _current_slot == i and _view != null:
@@ -68,8 +101,8 @@ func _on_slot(i: int) -> void:
 	if i == 0:
 		var wb = _view
 		var catalog = wb.get("_catalog")
-		if catalog and not catalog.preset_requested.is_connected(_route_preset):
-			catalog.preset_requested.connect(_route_preset)
+		if catalog and not catalog.preset_requested.is_connected(route_preset):
+			catalog.preset_requested.connect(route_preset)
 	# 工作区恢复
 	if i > 0:
 		var ri := i - 1
@@ -83,7 +116,8 @@ func _on_slot(i: int) -> void:
 
 
 ## 目录双击条目 → 切对应台并装配
-func _route_preset(entry) -> void:
+## 把目录条目路由到对应试验台并装配（目录双击走这条；测试/外部也可直接调）
+func route_preset(entry) -> void:
 	var slot := 1
 	match entry.role:
 		"bullet":
