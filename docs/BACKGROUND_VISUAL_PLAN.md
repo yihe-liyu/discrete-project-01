@@ -122,6 +122,11 @@
   画框（金边/网格）从根 `_draw` 拆成 `scripts/workbench/frame_overlay.gd`，排在 `BgContainer` **之后**
   ⇒ 画在背景**之上**（原先画框在背景下面，才被迫内缩）。真场景探针：容器 (48,16)/(800×928)、
   视口 (400×464)、子节点顺序 `BgContainer → FrameOverlay → World…` ✓。
+- ✅ **已落地（2026-10-02）BG1：环境唯一来源 = `stage01_env.tres`** —— `StageBackground._env_node()` **懒查找**
+  `WorldEnvironment`（内容脚本挂在 `Decor` **子节点**上，而子节点 `_ready` **先于**父节点 ⇒ 旧实现那次
+  `apply_env_preset()` 撞 `world_environment == null` **静默返回**，**练习模式**于是用场景内联环境）；
+  同时删掉 `stage01_background.tscn` 的内联 `Environment`。哨兵实验：预设临时改 `fog_density = 0.99`
+  ⇒ 实例化后 改前 **0.30** / 改后 **0.99** ✓。守卫：`test/test_stage_background.gd`（2 用例，反向均会红）。
 - ✅ **已落地（2026-10-02）：暂停时停掉背景渲染** —— `game_scene.gd:_on_game_state_changed` 末尾一行
   （`UPDATE_DISABLED` / 回 `ALWAYS`，挂现成的 `AppState.PAUSED` 钩子）。实测 **真实帧 13.21 → 4.53 ms/帧**
   （75.7 → 220.7 FPS）＝**省 8.7 ms/帧**。副作用：雾 shader 用 `TIME`，暂停时本来还在飘 ⇒ 现在**冻住**（作者要的）。

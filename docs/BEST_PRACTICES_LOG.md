@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 67 条（本文件留最近 67 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 68 条（本文件留最近 68 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-02 — BG1 落地：环境**唯一来源 = 预设**（堵掉「练习模式静默用旧环境」）
 - 2026-10-02 — BG7 落地：工作台背景纳入真游戏规格 + 画框拆成独立层（预览与真游戏同构图）
 - 2026-10-02 — BG7 复核：「工作台/真游戏背景规格不同」**不是笔误，是有意的两种做法**
 - 2026-10-02 — 暂停时停掉背景渲染（BG5 ③）：省 8.7 ms/帧，代价是"雾冻住"（作者要的）
@@ -97,6 +98,40 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-10-02 — BG1 落地：环境**唯一来源 = 预设**（堵掉「练习模式静默用旧环境」）
+
+- **作者拍板**："A"（最小修法）。
+- **动手前先验证，发现我原来的 BG1 写偏了**：
+  - 我原写"`WorldEnvironment` 按 World3D 取第一个 ⇒ 会互相覆盖" —— **潜在**风险，当前同时只有一个背景实例 + 一个
+    `WorldEnvironment`，**没触发**（与 BG12 `own_world_3d` 同源，先记着）。
+  - **真正在流血的是另一处**：`stage01_decor.gd` 挂在 **`Decor` 子节点**上，而 Godot 里**子节点 `_ready` 先于父节点**
+    ⇒ 它 `_ready()` 里那句 `apply_env_preset()` 执行时，父节点还没跑 `_ready`、`world_environment` 还是 null，
+    旧实现 `if not world_environment: return` **静默返回**。
+  - 正常流程没事：`load_stage` 会启动背景的协程子节点 ⇒ `stage01_decor.gd::start()` 里再应用一次（那时父节点已就绪）。
+    但 **练习模式只 `_load_background`、不走 `load_stage`** ⇒ `start()` 不跑 ⇒ **练习模式用的是场景内联环境**。
+  - 而两份 Environment 当时**逐字相同**（`fog_enabled` / `fog_light_color 0.24780053` / `fog_density 0.3`，我 diff 过）
+    ⇒ 今天看不出差别 —— **但改预设，练习模式静默不变**。这正是 `stage01_decor.gd` 头注释
+    "环境预设 `stage01_env.tres` 管初始状态"所承诺的反面，也是本项目最恨的"静默 no-op"。
+- **哨兵实验（决定性）**：把预设临时改成 `fog_density = 0.99` → 实例化背景场景（= 练习模式路径）读实际值：
+  改前 **0.30**（内联那份生效、预设被丢弃）· 改后 **0.99** ✓（预设生效）。跑完立即还原（用 git 核对无残留）。
+- **改动（A）**：
+  1. `stage_background.gd` 新增 `_env_node()` **懒查找**（用时就查，不再依赖 `_ready` 顺序）：
+     `apply_env_preset()` / `tween_env_fog()` 改用它；
+  2. 删掉 `stage01_background.tscn` 的内联 `Environment` 子资源 + 节点上的 `environment =` 行
+     ⇒ **唯一来源 = `stage01_env.tres`**（`Camera3D.environment` 那条并入 BG6）。
+- **新守卫**（`test/test_stage_background.gd`，+1 文件 / 2 用例）：
+  ① 父节点 `_ready` **之前**调 `apply_env_preset()` 也必须生效；② `build_environment()` 每次必须是**全新实例**
+  （防"越重跑越暗"，这条此前**完全没有测试**）。
+  **反向验证**（守卫必须证明会红）：退回懒查找 → ① 红（`Expected [<null>] to be anything but NULL`）；
+  退回 `duplicate(true)` → ② 红（两次构建同一个 `Environment` 实例）✓。
+- ⚠️ **过程中自伤一次，记下来**：反向验证 B 的备份放在 `/tmp`，而**每次 bash 调用 `/tmp` 都是全新的**
+  ⇒ 还原那步 `cp /tmp/ep.bak ...` 失败，`background_env_preset.gd` 一度**留在反向补丁状态**。
+  发现后立刻用 python 逐字还原，并 `git diff --exit-code` 核对与 HEAD 一致 ✓。
+  **教训：备份/还原必须在同一次调用内完成，或用 git 兜底 —— 别跨调用依赖 `/tmp`。**
+- **验收**：`check_syntax` **381 脚本** 0 失败 ✅ · 命名 0 ✅ · 结构契约 ✅（白盒 463/463 未涨）· 文档哨兵 ✅ ·
+  `./tools/verify.sh` 七步全过 ✅ · GUT **725 用例 / 725 通过 / 6770 断言 / 36.9s**
+  （+1 测试文件 ⇒ `TEST_INDEX` 抬头 114→**115** 脚本、C 层 42/325→**43/327**、README 徽章同步）。
 
 ### 2026-10-02 — BG7 落地：工作台背景纳入真游戏规格 + 画框拆成独立层（预览与真游戏同构图）
 

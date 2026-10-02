@@ -14,6 +14,8 @@ func _ready():
 	# 关键：Environment 是场景 SubResource，多个实例共享同一资源！
 	# 重跑/多背景实例会互相污染（雾/环境光状态残留）→ duplicate 成实例私有
 	# （否则每次实例化拿到的是上一次 tween 改过的状态 → "越重跑越暗"）
+	# 注：2026-10-02 起 `stage01_background.tscn` **不再带内联 Environment**（唯一来源 = 预设 .tres，
+	# 见 `apply_env_preset`）⇒ 这里的 duplicate 只对"仍自带内联环境"的背景场景有意义，故有 null 守卫。
 	if world_environment and world_environment.environment:
 		world_environment.environment = world_environment.environment.duplicate()
 	# 无外部相机（工作台等复用场景）→ 自建随本实例销毁的相机
@@ -173,17 +175,29 @@ func set_sun_rotation(rot: Vector3, duration: float = 2.0) -> void:
 
 # ═══ 环境服务（预设 + 联动 tween）═══
 
+## WorldEnvironment **懒查找**：子节点的 `_ready` 早于父节点 —— 内容脚本（挂在 `Decor` 子节点上）
+## 会在自己的 `_ready` 里 `apply_env_preset()`，那时本节点还没跑过 `_ready`、`world_environment` 还是 null
+## ⇒ 以前那次调用**静默返回**（练习模式于是用场景内联环境、改预设它不变）。改成用时就查。
+func _env_node() -> WorldEnvironment:
+	if world_environment == null:
+		world_environment = _find_world_environment()
+	return world_environment
+
+
 ## 应用环境预设：替换为全新 Environment（每次全新实例 → 重跑/多背景零共享污染）
-## 配套 BackgroundEnvPreset（.tres）：初始环境一律从预设来，不手写裸属性
+## 配套 BackgroundEnvPreset（.tres）：**初始环境一律从预设来**，不手写裸属性
+## ⚠️ 本函数可能在父节点 `_ready` 之前被调用（内容脚本在自己 `_ready` 里调用）⇒ 靠 `_env_node()` 兜住。
 func apply_env_preset(preset: BackgroundEnvPreset) -> void:
-	if not world_environment:
+	var we := _env_node()
+	if we == null:
 		return
-	world_environment.environment = preset.build_environment()
+	we.environment = preset.build_environment()
 
 ## 联动 tween：雾色/密度 + 天球地面水平色一起变（改雾色不露地平线）
 ## 地面底色按雾色暗化 25%（与预设默认 ground_bottom ≈ 雾色×0.75 一致）
 func tween_env_fog(color: Color, density: float, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
-	var env := world_environment.environment if world_environment else null
+	var we := _env_node()
+	var env := we.environment if we != null else null
 	if not env:
 		return
 	var sm := _sky_material(env)
