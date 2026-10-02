@@ -223,6 +223,11 @@ func reset_camera() -> void:
 		return
 	camera.fov = 90.0
 
+## 取天球材质（`ProceduralSkyMaterial`）：`tween_env_fog()` 靠它把地平线色跟着雾色走。
+## ⚠️ **天球配在内容预设里**（`data/stages/stage01/background/stage01_env.tres`：`background_mode = BG_SKY`
+## + `Sky` + `ProceduralSkyMaterial` + `fog_sky_affect = 0`；参数取自作者原版 `486766c` /
+## `d2a7d7d:new_environment.tres`）。2026-10-02 BG2/BG3 之前预设**没有** sky ⇒ 本函数恒返回 null，
+## 那条"改雾色不露地平线"的联动是**静默 no-op**；`test/test_stage_background.gd` 现在钉住它。
 func _sky_material(env: Environment) -> ProceduralSkyMaterial:
 	if env.sky and env.sky.sky_material is ProceduralSkyMaterial:
 		return env.sky.sky_material

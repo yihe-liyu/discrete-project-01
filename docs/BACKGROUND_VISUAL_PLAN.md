@@ -127,6 +127,19 @@
   `apply_env_preset()` 撞 `world_environment == null` **静默返回**，**练习模式**于是用场景内联环境）；
   同时删掉 `stage01_background.tscn` 的内联 `Environment`。哨兵实验：预设临时改 `fog_density = 0.99`
   ⇒ 实例化后 改前 **0.30** / 改后 **0.99** ✓。守卫：`test/test_stage_background.gd`（2 用例，反向均会红）。
+- ✅ **已落地（2026-10-02）BG2+BG3：真配天球（参数 = 作者原版）+ `fog_sky_affect = 0`** ——
+  写进 `stage01_env.tres`（预设 = 环境唯一来源）：`ProceduralSkyMaterial`（`sky_top (0.20,0.24,0.30)` /
+  `sky_horizon (0.42,0.44,0.46)` / `curve 0.35` / `ground_horizon (0.30,0.33,0.30)` / `ground_bottom (0.16,0.18,0.14)`，
+  出自 `486766c`）+ `Sky` + `background_mode = BG_SKY` + `fog_sky_affect = 0`（作者 `d2a7d7d` 原值）
+  ⇒ `tween_env_fog()` 那条"改雾色不露地平线"的联动**终于真的生效**（此前恒为静默 no-op）。
+  真演出 A/B：天空区亮 **+1.2%**（顶部行均值 0.3719 → 0.3764），**地平线带跳变 Δ≈0.002（两态都无接缝）**
+  —— 在蒙眼雾下"安全但看不出"，做它的理由是**堵掉静默 no-op + 雾薄处有真天 + 成本≈0**。
+- ⚠️ **顺手挖到并修掉一个 5 倍性能坑**：`Sky.radiance_size` 默认 **256px**，而天球颜色被 `tween_env_fog`
+  **每帧**改 ⇒ 引擎**每帧重算 6 面立方图**：背景视口 GPU **8.9 → 44.8 ms**（76.4 → 21.5 FPS，
+  且 `--shrink 2` 也一样 —— 说明它与视口像素数无关）。设 **`radiance_size = 0`（32px）** 后回到
+  **8.9 ms / 76.4 FPS**，而画面差 **0.00000** —— 背景**全是 unshaded 材质**，没人消费辐照/反射。
+  （"关 `ambient_light_source` / `reflected_light_source`"**试过无效**、属性名已确认；有效杠杆只有 `radiance_size`。）
+  守卫 `test_stage_background.gd::test_sky_radiance_is_cheap`，反向验证会红。
 - ✅ **已落地（2026-10-02）：暂停时停掉背景渲染** —— `game_scene.gd:_on_game_state_changed` 末尾一行
   （`UPDATE_DISABLED` / 回 `ALWAYS`，挂现成的 `AppState.PAUSED` 钩子）。实测 **真实帧 13.21 → 4.53 ms/帧**
   （75.7 → 220.7 FPS）＝**省 8.7 ms/帧**。副作用：雾 shader 用 `TIME`，暂停时本来还在飘 ⇒ 现在**冻住**（作者要的）。

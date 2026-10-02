@@ -37,3 +37,57 @@ func test_env_preset_builds_fresh_environment_each_time():
 	# 改一份不许影响另一份
 	first.fog_density = 0.99
 	assert_ne(second.fog_density, first.fog_density, "改一份不许串到另一份")
+
+
+## 回归（BG2/BG3）：预设必须带**真天球**，且 `fog_sky_affect` 不能把天球洗掉。
+## 历史：预设一度只有雾（`background_mode = BG_CLEAR_COLOR`、`sky = null`、`fog_sky_affect` 走默认 1.0）
+## ⇒ 天是平坦清屏色，`stage_background.gd::_sky_material()` 恒返回 null，地平线联动**静默 no-op**。
+func test_preset_has_unfogged_sky():
+	var env := BG_PRESET.build_environment()
+	assert_not_null(env, "预设应能构建环境")
+	if env == null:
+		return
+	assert_eq(env.background_mode, Environment.BG_SKY, "天必须是天球（BG_SKY），不是清屏色")
+	assert_not_null(env.sky, "预设必须带 Sky（否则没有渐变天、地平线联动也无从生效）")
+	if env.sky != null:
+		assert_true(env.sky.sky_material is ProceduralSkyMaterial, "天球材质应是 ProceduralSkyMaterial")
+	assert_lt(env.fog_sky_affect, 0.5, "fog_sky_affect 默认 1.0 会把天球整片洗成雾色（实测等于白配，作者原值 0.0）")
+
+
+## 回归（BG2）：`tween_env_fog()` 必须**真的**把天球地平线色跟着雾色走 —— 以前预设没 sky，
+## 这段联动是静默 no-op（写着"改雾色不露地平线"，实际什么都没做）。
+func test_tween_env_fog_drives_sky_horizon():
+	var bg := StageBackground.new()
+	var env_node := WorldEnvironment.new()
+	bg.add_child(env_node)
+	add_child_autofree(bg)      # 入树：create_tween() 需要树，_ready 才能找到 WorldEnvironment
+	await wait_frames(1)
+	bg.apply_env_preset(BG_PRESET)
+	var sky_mat: ProceduralSkyMaterial = null
+	if bg.world_environment != null and bg.world_environment.environment != null \
+			and bg.world_environment.environment.sky != null:
+		sky_mat = bg.world_environment.environment.sky.sky_material as ProceduralSkyMaterial
+	assert_not_null(sky_mat, "预设的天球材质应可用（否则联动无从生效）")
+	if sky_mat == null:
+		return
+	bg.tween_env_fog(Color.RED, 0.05, 0.05)
+	await wait_physics_frames(12)
+	assert_almost_eq(sky_mat.ground_horizon_color.r, Color.RED.r, 0.02, "地平线色应跟着雾色走")
+	assert_almost_eq(sky_mat.ground_bottom_color.r, Color.RED.darkened(0.25).r, 0.02,
+		"地面底色 = 雾色暗化 25%")
+
+
+## 回归（BG2 性能，2026-10-02 实测）：`Sky.radiance_size` 必须**压低**。
+## 背景**全是 unshaded 材质**（地面 shader / 树 / Sprite3D 太阳）⇒ 没有任何材质消费天球的辐照/反射，
+## 而 `radiance_size` 默认 256px，且天球颜色被 `tween_env_fog` **每帧**改 ⇒ 引擎每帧重算 6 面立方图。
+## 实测（llvmpipe，800×928）：256 → 背景视口 GPU **44.8 ms**（21.5 FPS）；32 → **8.9 ms**（76.4 FPS，
+## 等于**完全没天球**的 8.92 ms）；而两者**画面差 0.00000**（radiance 只喂环境光/反射，全 unshaded 用不到）。
+func test_sky_radiance_is_cheap():
+	var env := BG_PRESET.build_environment()
+	assert_not_null(env, "预设应能构建环境")
+	if env == null or env.sky == null:
+		return
+	assert_lt(env.sky.radiance_size, 2,
+		"radiance_size 必须低（0/1 = 32/64px）：默认 3 = 256px 时每帧重算立方图，实测 8.9 → 44.8 ms")
+
+
