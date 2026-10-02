@@ -117,6 +117,11 @@
   `Background/SubViewportContainer`、`scenes/workbench.tscn` 的 `BgContainer`）。真场景实测（入树后读值）：
   `game_scene` 容器 800×928 → **视口 400×464**；`workbench` 容器 768×896 → **视口 384×448**。
   项目未设 `default_texture_filter` ⇒ 放大用引擎默认 **Linear**（平滑）。回滚 = 删那两行。
+- ✅ **已落地（2026-10-02）：暂停时停掉背景渲染** —— `game_scene.gd:_on_game_state_changed` 末尾一行
+  （`UPDATE_DISABLED` / 回 `ALWAYS`，挂现成的 `AppState.PAUSED` 钩子）。实测 **真实帧 13.21 → 4.53 ms/帧**
+  （75.7 → 220.7 FPS）＝**省 8.7 ms/帧**。副作用：雾 shader 用 `TIME`，暂停时本来还在飘 ⇒ 现在**冻住**（作者要的）。
+  ⚠️ **测量陷阱**：`viewport_get_measured_render_time_gpu()` 在停止渲染后**仍报上一帧的残值**（两种状态都报 8.84 ms）
+  ⇒ 别用它判断"还在不在渲染"，要看真实帧间隔。
 - 📏 **空视口的代价（推翻"无背景也在白跑"的直觉）**：**空的** 800×928 `UPDATE_ALWAYS` 视口实测只花
   **GPU 0.28 ms / CPU 0.04 ms**（`disable_3d` 再省 0.05 ms，`UPDATE_DISABLED` 基本无差别）——
   没有 3D 对象就只剩一次 clear + 一次全屏合成 ⇒ **「无背景的关卡关掉视口」不值得做**（≈0.3 ms）。

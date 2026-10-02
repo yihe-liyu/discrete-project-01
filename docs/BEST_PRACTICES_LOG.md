@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 64 条（本文件留最近 64 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 65 条（本文件留最近 65 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-02 — 暂停时停掉背景渲染（BG5 ③）：省 8.7 ms/帧，代价是"雾冻住"（作者要的）
 - 2026-10-02 — 背景视口减半分辨率（`stretch_shrink = 2`）：两个宿主各一行，省 ≈40% 背景 GPU
 - 2026-10-02 — 重建背景「截图 + 渲染耗时」工具（先恢复可测量性，再调画面）
 - 2026-10-02 — GUT **全绿**了：补完最后 22 个 move_script（复用 `random_dir_move`）
@@ -94,6 +95,24 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-10-02 — 暂停时停掉背景渲染（BG5 ③）：省 8.7 ms/帧，代价是"雾冻住"（作者要的）
+
+- **作者要求**："要暂停" ⇒ 采纳 ③，接受"暂停时背景（含雾）**冻住**"这个副作用。
+- **问题**：暂停是 `get_tree().paused = true` + 暂停菜单**盖在**游戏场景之上 ⇒ `game_scene` 还活着，而
+  viewport 的 `render_target_update_mode` **与 `process_mode` 无关**（`PROCESS_MODE_PAUSABLE` 拦不住渲染）
+  ⇒ 暂停时 3D 背景照旧每帧跑整条管线，玩家却只看得到那层模糊。
+- **改动（1 行，挂现成的钩子）**：`game_scene.gd:_on_game_state_changed` 末尾
+  `_sub_viewport.render_target_update_mode = UPDATE_DISABLED if new == PAUSED else UPDATE_ALWAYS` ——
+  写成"按**新状态**赋值"而不是 `if/elif` 分支：任何迁移路径（含 PAUSED→TRANSITIONING→PLAYING）都自洽，不会漏恢复。
+- **实测**（真背景 + 真演出）：
+  - 接线（真 `game_scene` 实例）：PLAYING → **4 (ALWAYS)** · PAUSED → **0 (DISABLED)** · 恢复 → **4** ✓
+  - 收益：**真实帧 13.21 → 4.53 ms/帧**（75.7 → **220.7 FPS**，llvmpipe）＝ **省 8.7 ms/帧**
+- ⚠️ **顺手踩到一个测量陷阱（值得单记）**：`viewport_get_measured_render_time_gpu()` 在**停止渲染后
+  仍报上一帧的残值**（ALWAYS / DISABLED 两次都报 8.84 ms，一模一样）⇒ **别用它判断"还在不在渲染"**，
+  要看**真实帧间隔**。我是先拿到"两次一模一样"的诡异结果，才改用真帧时间把这件事钉死的。
+- **副作用（作者已拍板接受）**：雾 shader 用 `TIME`，本来暂停时雾还在飘 —— 现在整张背景冻住（更像暂停）。
+- **验收**：`./tools/verify.sh` 七步全过（启动零错误；GUT **723/723** 全绿）✅ · 回滚 = 删那一行。
 
 ### 2026-10-02 — 背景视口减半分辨率（`stretch_shrink = 2`）：两个宿主各一行，省 ≈40% 背景 GPU
 
