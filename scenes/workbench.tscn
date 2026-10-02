@@ -23,6 +23,7 @@ offset_right = 832.0
 offset_bottom = 928.0
 mouse_filter = 2
 stretch = true
+stretch_shrink = 2
 
 [node name="BgViewport" type="SubViewport" parent="BgContainer" unique_id=469653418]
 unique_name_in_owner = true

@@ -110,6 +110,7 @@ offset_top = 16.0
 offset_right = 848.0
 offset_bottom = 944.0
 stretch = true
+stretch_shrink = 2
 
 [node name="SubViewport" type="SubViewport" parent="Background/SubViewportContainer" unique_id=1903016322]
 unique_name_in_owner = true

@@ -113,6 +113,10 @@
   | `--shrink 2` | 400×464 | **7.3 ~ 7.6 ms** | 12.9 ~ 14.4 | 70 ~ 77 |
 
   ⇒ 背景视口是**主开销**（主视口只 0.4 ~ 1.7 ms）；`stretch_shrink = 2` 一档就把它的 GPU 时间砍掉 ≈40%。
+- ✅ **已落地（2026-10-02）：`stretch_shrink = 2`** —— 两个宿主各一行（`scenes/game_scene.tscn` 的
+  `Background/SubViewportContainer`、`scenes/workbench.tscn` 的 `BgContainer`）。真场景实测（入树后读值）：
+  `game_scene` 容器 800×928 → **视口 400×464**；`workbench` 容器 768×896 → **视口 384×448**。
+  项目未设 `default_texture_filter` ⇒ 放大用引擎默认 **Linear**（平滑）。回滚 = 删那两行。
 - 📏 **空视口的代价（推翻"无背景也在白跑"的直觉）**：**空的** 800×928 `UPDATE_ALWAYS` 视口实测只花
   **GPU 0.28 ms / CPU 0.04 ms**（`disable_3d` 再省 0.05 ms，`UPDATE_DISABLED` 基本无差别）——
   没有 3D 对象就只剩一次 clear + 一次全屏合成 ⇒ **「无背景的关卡关掉视口」不值得做**（≈0.3 ms）。
