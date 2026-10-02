@@ -59,6 +59,7 @@ func _ready() -> void:
 	RNG.set_seed(_seed)
 
 	_vp = SubViewport.new()
+	_vp.own_world_3d = true   # BG12-fix：各自持有 World3D（否则同 world 的第二个 WorldEnvironment 被静默忽略）
 	_vp.name = "CaptureViewport"
 	_vp.size = Vector2i(
 		int(round(float(FIELD_SIZE.x) / float(_shrink))),

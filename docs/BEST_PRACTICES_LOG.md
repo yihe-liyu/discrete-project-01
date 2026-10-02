@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 77 条（本文件留最近 77 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 78 条（本文件留最近 78 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-02 — BG12-fix 落地：三个宿主的背景视口各自持有 World3D
 - 2026-10-02 — BG12 确认：背景 SubViewport 与根视口**共享** World3D（"第二个 WorldEnvironment 被忽略"风险**成立**）
 - 2026-10-02 — BG10 拍板：**留 3D 视口**（真机实测背景只花 1.03 ms）
 - 2026-10-02 — BG9 文档治理：清单不再"自己变陈"（两条硬规矩 + 机器兜底）
@@ -107,6 +108,21 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-10-02 — BG12-fix 落地：三个宿主的背景视口各自持有 World3D
+
+- **作者**："做完提交吧"。
+- **改动（各一行 `own_world_3d = true`）**：`scenes/game_scene.tscn`
+  （`Background/SubViewportContainer/SubViewport`）、`scenes/workbench.tscn`（`BgContainer/BgViewport`）、
+  `tools/background_capture.gd`（截图视口）。⇒ 每个宿主的背景各自一个 World3D，**环境不再可能被同 world 的
+  另一个 `WorldEnvironment` 静默抢走**（BG12 实测的风险）。
+- **守卫**：`test_stage_background.gd::test_background_viewports_own_their_world` —— 加载两个宿主场景，
+  断言其背景视口 `own_world_3d == true`。**反向验证**：撤掉 `game_scene.tscn` 那行 ⇒ 红
+  （`... 必须 own_world_3d = true（否则它与根视口共享 World3D…）`）；还原后 **8/8** ✓。
+- **行为不变性（关键）**：工具重跑 15s 帧（改成 `own_world_3d = true` 之后）与改动前的 `fogE` 同种子同帧
+  **逐像素差 `0.00000`** ⇒ 这次只是隔离了世界，**观感零变化**。
+- **验收**：`./tools/verify.sh` 七步全过 ✅ · GUT **731 用例 / 731 通过 / 6791 断言**
+  （`TEST_INDEX` C 段 43/332 → **43/333**、README 徽章同步）。
 
 ### 2026-10-02 — BG12 确认：背景 SubViewport 与根视口**共享** World3D（"第二个 WorldEnvironment 被忽略"风险**成立**）
 

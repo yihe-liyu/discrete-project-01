@@ -27,6 +27,7 @@ stretch = true
 stretch_shrink = 2
 
 [node name="BgViewport" type="SubViewport" parent="BgContainer" unique_id=469653418]
+own_world_3d = true
 unique_name_in_owner = true
 handle_input_locally = false
 size = Vector2i(800, 928)

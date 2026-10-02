@@ -129,3 +129,25 @@ func test_background_finds_camera_by_type_not_name():
 		if c is Camera3D:
 			cam_count += 1
 	assert_eq(cam_count, 1, "不许自建第二台相机（按名字找的旧实现改名后会多出一台）")
+
+
+## 回归（BG12-fix）：两个宿主的**背景视口必须 `own_world_3d = true`**。
+## 实测（2026-10-02 探针）：`false` 时背景视口**与根视口共享同一个 World3D**，而一个 World3D 只有一份生效的
+## Environment ⇒ 后进的 `WorldEnvironment` **被静默忽略**（塞红雾无效）。⇒ 各自持有世界才不会被抢。
+func test_background_viewports_own_their_world():
+	var hosts := {
+		"res://scenes/game_scene.tscn": "Background/SubViewportContainer/SubViewport",
+		"res://scenes/workbench.tscn": "BgContainer/BgViewport",
+	}
+	for path in hosts.keys():
+		var packed: PackedScene = load(path) as PackedScene
+		assert_not_null(packed, "场景应能加载：" + str(path))
+		if packed == null:
+			continue
+		var host: Node = packed.instantiate()
+		var vp := host.get_node_or_null(hosts[path]) as SubViewport
+		assert_not_null(vp, "%s 里应能找到背景 SubViewport（%s）" % [path, hosts[path]])
+		if vp != null:
+			assert_true(vp.own_world_3d,
+				"%s 的背景视口必须 own_world_3d = true（否则它与根视口共享 World3D，环境会被同 world 的另一个 WorldEnvironment 抢）" % path)
+		host.free()
