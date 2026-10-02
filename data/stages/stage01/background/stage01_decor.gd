@@ -34,9 +34,10 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	# ① 雾散光来 (0→6s, tween 12s)
 	timeline.at(0.0).do(func():
-		stage_background.tween_env_fog(Color.DARK_GRAY, 0.02, 10.0)  # 雾散目标：暖橙（日食结束天光转暖）；密度 0.02：近处清晰远处融雾
-		# ⚠️ 别为"远处更渐淡"把它整体调大（2026-10-02 试过 0.08）：指数雾是**全局**加厚，
-		#    再叠上蒙眼雾 pass 就"背景看不见了"。要更强的远处渐淡应走"按片元距离只融远树"。
+		stage_background.tween_env_fog(Color(0.25, 0.27, 0.30), 0.02, 10.0)  # 冷灰雾：近处清晰、远处渐淡进雾色
+		# ⚠️ 别用 `Color.DARK_GRAY` —— 那是 **CSS darkgray (#A9A9A9, 亮度 0.663) 亮灰**，
+		#    雾色亮灰 = 把远处**洗亮**（实测「远/近」= 1.15，看着发灰不真实；0.25/0.27/0.30 → 1.02）
+		# ⚠️ 也别为"远处更渐淡"把密度整体调大（试过 0.08）：指数雾是**全局**加厚 ⇒ 背景被糊没
 		stage_background.tween_env_fov(68.0, 12.0)
 	)
 

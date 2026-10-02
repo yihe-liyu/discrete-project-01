@@ -97,3 +97,16 @@ func test_sky_radiance_is_cheap():
 		"radiance_size 必须低（0/1 = 32/64px）：默认 3 = 256px 时每帧重算立方图，实测 8.9 → 44.8 ms")
 
 
+
+
+## 回归（2026-10-02）：雾色**不许是亮灰** —— `Color.DARK_GRAY` 是 CSS `darkgray` (#A9A9A9，
+## 亮度 0.663)，名字骗人；雾色偏亮会把**远处洗亮**（实测"远/近" = 1.15 ⇒ 发灰、不真实；
+## 换成冷灰 (0.25,0.27,0.30) 后 = 1.02）。另外：**雾量 ≥0.05 基本饱和，雾色才是主导旋钮**。
+func test_preset_fog_color_is_not_washed_out():
+	var env := BG_PRESET.build_environment()
+	assert_not_null(env, "预设应能构建环境")
+	if env == null:
+		return
+	var lum := 0.2126 * env.fog_light_color.r + 0.7152 * env.fog_light_color.g + 0.0722 * env.fog_light_color.b
+	assert_lt(lum, 0.45, "雾色亮度必须 < 0.45（0.663 = CSS darkgray ⇒ 把远处洗亮）")
+	assert_gt(lum, 0.05, "也别黑到没有空气感")
