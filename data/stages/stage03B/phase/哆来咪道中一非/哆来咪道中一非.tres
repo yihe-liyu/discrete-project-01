@@ -2,8 +2,10 @@
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_q0j5s"]
 [ext_resource type="Script" uid="uid://c7g7kix2fqs63" path="res://data/stages/stage03B/phase/哆来咪道中一非/哆来咪道中一非.gd" id="2_shoot"]
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="3_move"]
 
 [resource]
 script = ExtResource("1_q0j5s")
+move_script = ExtResource("3_move")
 shoot_script = ExtResource("2_shoot")
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

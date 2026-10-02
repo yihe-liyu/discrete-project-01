@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_6kmkh"]
 [ext_resource type="Script" uid="uid://cdyt8rmu241ak" path="res://data/stages/stage03B/phase/哆来咪道中一符/哆来咪道中一符.gd" id="2_687ws"]
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="3_move"]
 
 [resource]
 script = ExtResource("1_6kmkh")
@@ -9,6 +10,7 @@ name = "梦符「广阔的梦」"
 uid = 42
 time_limit = 40.0
 hp = 4500
+move_script = ExtResource("3_move")
 shoot_script = ExtResource("2_687ws")
 item_power = 25
 item_point = 25

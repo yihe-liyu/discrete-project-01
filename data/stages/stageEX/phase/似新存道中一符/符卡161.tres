@@ -2,10 +2,12 @@
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_p1prj"]
 [ext_resource type="Script" uid="uid://b8w2voeo6t4ln" path="res://data/stages/stageEX/phase/似新存道中一符/似新存道中一符.gd" id="2_kfhag"]
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="3_move"]
 
 [resource]
 script = ExtResource("1_p1prj")
 name = "阳符「宏辉抑世」"
 uid = 161
+move_script = ExtResource("3_move")
 shoot_script = ExtResource("2_kfhag")
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

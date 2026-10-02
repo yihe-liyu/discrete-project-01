@@ -2,10 +2,12 @@
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_ptvh3"]
 [ext_resource type="Script" uid="uid://dsgft4xe1evsd" path="res://data/stages/stageEX/phase/似新存六符/似新存六符.gd" id="2_shoot"]
+[ext_resource type="Script" uid="uid://ck8mrrfobfrtt" path="res://data/boss_scripts/move/random_dir_move.gd" id="3_move"]
 
 [resource]
 script = ExtResource("1_ptvh3")
 name = "始终意「人无完人，迥异同死」"
 uid = 169
+move_script = ExtResource("3_move")
 shoot_script = ExtResource("2_shoot")
 metadata/_custom_type_script = "uid://70htyyc4o2hu"
