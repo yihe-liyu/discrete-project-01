@@ -1,5 +1,6 @@
 extends CoroutineScript
-## Stage01 背景演出 —— 时间线版（组件化：环境/太阳/蒙眼雾已抽成组件与基类 API）
+## Stage01 背景演出（时间线版）
+## 组件化：环境/太阳/蒙眼雾已抽成组件与基类 API
 ## 环境预设 stage01_env.tres 管"初始状态"，tween_env_* 管"动态变化"，本脚本只做编排
 
 @onready var stage_background: StageBackground = get_parent() as StageBackground

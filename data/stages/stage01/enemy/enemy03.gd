@@ -1,5 +1,5 @@
 extends CoroutineScript
-## 红杂鱼: 向下减速 + 自机狙 + 散射
+## 红杂鱼: 五秒缓降 + 两波自机狙
 
 const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 

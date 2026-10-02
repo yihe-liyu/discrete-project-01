@@ -190,7 +190,7 @@ func _apply_meta(entry: Entry, ann: Dictionary, path: String, text: String) -> v
 		_warnings.append("脚本无显示名（回退文件名 [%s]）：加 `const META` 或顶部 `## @name:` / 隔行注释块"
 			% path.get_file())
 	var raw_name: String = ann.get("name", ann.get("_default_name", path.get_file().get_basename()))
-	entry.name = _short_name(raw_name)
+	entry.name = _short_name(raw_name, entry.role)
 	entry.extra["full_title"] = raw_name
 	entry.description = ann.get("desc",
 		" ".join(ann.get("_comments", [])) if ann.has("name") else ann.get("_desc", ""))
@@ -298,18 +298,55 @@ func _apply_reference_fixes() -> void:
 			_assign_if_misc(tpath, ROLE_BULLET)
 
 
-## 目录显示名：优先取"："之后的内容（角色标签不重复），超长截断
-## 有冒号 → 18 字符；无冒号 → 24 字符（保持短名完整）
-func _short_name(raw: String) -> String:
+## 目录显示名：砍掉「角色标签」（`红杂鱼: 向下减速…` → `向下减速…`），再按长度截断。
+## 有标签 → 18 字符；无标签 → 24 字符（保持短名完整）
+##
+## 判定「冒号前是角色标签」而不是句子，要**两个条件同时成立**（2026-10-02 收紧，见下）：
+##   ① role == enemy —— 「标签: 行为」是**敌人脚本**的写法（红杂鱼 / 蓝妖精 / 红YY玉）；
+##      其余角色（走位 / 发射 / 背景 / 关卡）用「整句标题」或 `const META`。
+##   ② 前缀是**标签形状**：非空、≤ 6 字、无空白、无标点（`（）—，、/·` 等）。
+##      半角 `:` 还必须是 **`": "`**（冒号 + 空格）——「标签: 行为」的写法；
+##      全角 `：` 无空格要求（中文习惯）。
+##
+## 为什么收紧：旧规则是"第一个 `：` 一律砍"，于是
+## `stage01_decor.gd` 的 `## Stage01 背景演出 —— 时间线版（组件化：环境/太阳…）`
+## 被**句中的冒号**从中间劈开 → 目录里显示成 `环境/太阳/蒙眼雾已抽成组件与基类 …`（实测）。
+## 半角 `:` 也被漏掉 → `enemy01/03` 的 `红杂鱼: …` 标签没砍、名字偏长。
+func _short_name(raw: String, role: String) -> String:
 	var text := raw.strip_edges()
 	var limit := 24
-	var idx := text.find("：")
-	if idx >= 0:
-		text = text.substr(idx + 1).strip_edges()
-		limit = 18
+	if role == ROLE_ENEMY:
+		var idx := _tag_separator(text)
+		if idx >= 1:
+			text = text.substr(idx).strip_edges()
+			limit = 18
 	if text.length() > limit:
 		text = text.substr(0, limit) + "…"
 	return text
+
+
+## 找「角色标签: 行为」的冒号位置；不是标签形状 → -1。返回值 = 内容起始下标。
+func _tag_separator(text: String) -> int:
+	var idx := -1
+	var full := text.find("：")
+	if full >= 0:
+		idx = full
+	var half := text.find(": ")
+	if half >= 0 and (idx < 0 or half < idx):
+		idx = half
+	if idx < 0:
+		return -1
+	var tag := text.substr(0, idx).strip_edges()
+	if tag.is_empty() or tag.length() > 6:
+		return -1
+	for ch in [" ", "\t", "（", "）", "，", "、", "。", "—", "/", "·", "「", "」"]:
+		if tag.contains(ch):
+			return -1
+	# 冒号后要有内容（`## 红杂鱼:` 光杆标签不算）
+	var rest := text.substr(idx).lstrip(":：").strip_edges()
+	if rest.is_empty():
+		return -1
+	return idx + 1 if text[idx] == "：" else idx + 2
 
 
 func _assign_if_misc(path: String, role: String) -> void:

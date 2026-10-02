@@ -141,6 +141,36 @@ func test_fixture_phases_sorted_by_uid():
 	assert_ne(raw, uids, "夹具的扫描顺序应与 uid 顺序不同（否则测不出排序）")
 
 
+# ── 夹具：显示名的「角色标签」只在敌人脚本里砍（2026-10-02 收紧）──────────
+## 两个真实回归：
+## ① `enemy01/03` 的头用**半角** `红杂鱼: …`，旧实现只认全角 `：` → 标签没砍、名字偏长，
+##    而且两条注释逐字相同 → 下拉里**两项同名**（只能靠 tooltip 的路径区分）；
+## ② 反方向误伤：`stage01_decor.gd` 的 `## Stage01 背景演出 —— 时间线版（组件化：环境/太阳…）`
+##    被**句中的全角冒号**从中间劈开 → 目录里显示成 `环境/太阳/蒙眼雾已抽成组件与基类 …`。
+func test_fixture_role_tag_stripping_is_enemy_only_and_tag_shaped():
+	var cat = CAT.new().scan(FIXTURE)
+
+	# ① 敌人 + `标签: 行为` → 砍标签，完整名留 tooltip
+	var tagged = cat.find(FIXTURE.path_join("stages/stageF/enemy/tagged.gd"))
+	assert_not_null(tagged, "tagged 在目录")
+	if tagged:
+		assert_eq(tagged.name, "快速下沉 + 三波自机狙", "半角 `: ` 标签也要砍")
+		assert_eq(tagged.extra["full_title"], "红杂鱼: 快速下沉 + 三波自机狙", "完整名保留")
+
+	# ② 句中冒号（前缀含空格）= 标点，不是标签 → 整句留住
+	var mid = cat.find(FIXTURE.path_join("stages/stageF/enemy/midsentence.gd"))
+	assert_not_null(mid, "midsentence 在目录")
+	if mid:
+		assert_true(mid.name.begins_with("Stage01 背景演出"),
+			"句中冒号不许把标题劈两半（实得：%s）" % mid.name)
+
+	# ③ 非敌人角色：冒号一律当句子标点（`走位到点：移动到…` 的前缀是标题，不是角色标签）
+	var titled = cat.find(FIXTURE.path_join("boss_scripts/move/titled_move.gd"))
+	assert_not_null(titled, "titled_move 在目录")
+	if titled:
+		assert_eq(titled.name, "走位到点：移动到指定站位后自己结束", "非敌人角色不按标签砍")
+
+
 ## ── 夹具：const META ──
 
 func test_fixture_meta_const():
@@ -199,6 +229,13 @@ func _build_fixture() -> void:
 		"extends CoroutineScript\n## 卡前走位\n\nvar t := 0.0\n")
 	_write(FIXTURE.path_join("stages/stageF/enemy/plain.gd"), "extends Node\n## 不是协程脚本\n")
 	_write(FIXTURE.path_join("stages/stageF/background/decor.gd"), "extends CoroutineScript\n## 背景演出脚本\n")
+	# 角色标签：敌人 + 半角 `: ` → 砍；句中冒号 / 非敌人角色 → 不砍
+	_write(FIXTURE.path_join("stages/stageF/enemy/tagged.gd"),
+		"extends CoroutineScript\n## 红杂鱼: 快速下沉 + 三波自机狙\n\nvar t := 0.0\n")
+	_write(FIXTURE.path_join("stages/stageF/enemy/midsentence.gd"),
+		"extends CoroutineScript\n## Stage01 背景演出 —— 时间线版（组件化：环境/太阳）\n\nvar t := 0.0\n")
+	_write(FIXTURE.path_join("boss_scripts/move/titled_move.gd"),
+		"extends CoroutineScript\n## 走位到点：移动到指定站位后自己结束\n\nvar t := 0.0\n")
 	_write(FIXTURE.path_join("dialogue/intro.gd"), "extends CoroutineScript\n## 对话脚本不入目录\n")
 	_write(FIXTURE.path_join("loose.gd"), "extends CoroutineScript\n## 杂项\n")
 	# 孤儿脚本：约定判不出（misc），靠 @role 补角色 —— **不该**报"冲突"警告
