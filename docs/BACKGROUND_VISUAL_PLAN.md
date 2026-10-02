@@ -113,6 +113,13 @@
   | `--shrink 2` | 400×464 | **7.3 ~ 7.6 ms** | 12.9 ~ 14.4 | 70 ~ 77 |
 
   ⇒ 背景视口是**主开销**（主视口只 0.4 ~ 1.7 ms）；`stretch_shrink = 2` 一档就把它的 GPU 时间砍掉 ≈40%。
+- 📏 **空视口的代价（推翻"无背景也在白跑"的直觉）**：**空的** 800×928 `UPDATE_ALWAYS` 视口实测只花
+  **GPU 0.28 ms / CPU 0.04 ms**（`disable_3d` 再省 0.05 ms，`UPDATE_DISABLED` 基本无差别）——
+  没有 3D 对象就只剩一次 clear + 一次全屏合成 ⇒ **「无背景的关卡关掉视口」不值得做**（≈0.3 ms）。
+- 📏 **`stretch_shrink` 机制实测**（`stretch = true` 时**容器驱动** `SubViewport.size`）：
+  `shrink=1` → 800×928；`2` → 400×464；`3` → **266×309**（整数**截断**）；`stretch = false` 时**不生效**；
+  且 `stretch = true` 时**手改 `SubViewport.size` 会被容器立刻覆盖**（官方那句"别再手改"的实证）。
+  容器矩形不变 ⇒ 暂停模糊（`_add_blur` 用 container.position/size）与震屏（`bind_layer` 只做位移）都不受影响。
 - ✅ **蒙眼雾 = 故事设定（作者 2026-10-02 拍板，保留）**：实拍 3s（`bg_f0180`）/ 9s（`bg_f0540`）两档，
   画面**几乎全是蒙眼雾**（草地在画面底部才隐约可见）；`stage01_decor.gd` 只 tween **环境雾**（0.3 → 0.02），
   `ScreenFogFX.fog_dark` 保持 **0.8** —— 这是**有意**的，**别去动 `fog_dark`**。
