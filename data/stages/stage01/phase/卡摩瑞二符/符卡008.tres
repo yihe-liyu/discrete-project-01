@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://b2tfxq8rr8ygg" path="res://data/boss_scripts/move/move_to_point.gd" id="2_iajwm"]
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="3_xvla4"]
 [ext_resource type="Script" uid="uid://lkqxbg7glx12" path="res://data/stages/stage01/phase/卡摩瑞二符/卡摩瑞二符.gd" id="4_pdip3"]
+[ext_resource type="Script" uid="uid://4xhjtjbfijnf" path="res://data/boss_scripts/move/stay_still.gd" id="5_move"]
 
 [resource]
 script = ExtResource("3_xvla4")
@@ -10,6 +11,7 @@ name = "动符「顺势而动」"
 uid = 8
 time_limit = 40.0
 hp = 5000
+move_script = ExtResource("5_move")
 shoot_script = ExtResource("4_pdip3")
 pre_move_script = ExtResource("2_iajwm")
 item_power = 25

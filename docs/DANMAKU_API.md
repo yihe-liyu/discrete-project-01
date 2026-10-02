@@ -532,7 +532,7 @@ data/stages/<stage>/
 | uid | 全局唯一符卡编号（0 = 非符不记） |
 | bonus / time_limit / hp | 奖励 / 时限 / 血量 |
 | is_timeout_only | 时符 |
-| move_script / shoot_script | 挂的 Script（Boss 移动 / 弹幕） |
+| move_script / shoot_script | 挂的 Script（Boss 移动 / 弹幕）。**两个槽都必须填**（`test_data_validity` 强制）——「本卡 Boss 不走位」不等于留空：留空与**漏接**在数据里无法区分，请显式挂 `data/boss_scripts/move/stay_still.gd`（「原地不动」）。 |
 | params | 注入脚本同名属性 |
 | background | 可选换背景 |
 | item_* | 掉落 |
