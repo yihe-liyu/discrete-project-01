@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 62 条（本文件留最近 62 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 63 条（本文件留最近 63 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-09-30 — 重建背景「截图 + 渲染耗时」工具（先恢复可测量性，再调画面）
 - 2026-09-30 — GUT **全绿**了：补完最后 22 个 move_script（复用 `random_dir_move`）
 - 2026-09-30 — 「不动的符卡」怎么填 move 槽：`stay_still.gd`（空槽 ≠ 不动）
 - 2026-09-30 — 补 15 个缺失的 `shoot_script` 架子（只写架子 + 接线，不写弹幕内容）
@@ -92,6 +93,39 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-09-30 — 重建背景「截图 + 渲染耗时」工具（先恢复可测量性，再调画面）
+
+- **作者要求**："试试 BG8"（`TODO_TEMP` 那条 = 把当年被删的背景截图工具恢复起来 + 固定种子 + 接官方渲染耗时接口）。
+- **为什么先做这条**：背景是真 3D SubViewport（每帧一整条 3D 管线 + 天空/glow + 全屏氛围 pass），
+  但"它花多少 ms"全项目没人量过；2026-08-10 那批画面改动（`bfe853f`→`785eda7`）就是因为**没有可量化对比**，
+  最后整体回退（`17e928e`，用户反馈"没解决且引入竖线"）—— 没有测量就只能靠眼睛赌，赌输就整批回退。
+- **重建而非照抄**：旧工具（`54d7758` 删除）引用的 `StageManager` autoload 已不存在 ⇒ 改走
+  `StageRuntime` + `StageContext`，且**照抄 `StageRuntime.load_stage()` 启动背景协程的方式**
+  （`ctx.stage = runtime` 才有 `ctx.decor`），不自创接线。`git show bfe853f` 只当参考。
+- **两个"可比性"要点**（都踩过）：
+  1. **`--fixed-fps 60` 必须**：它把模拟时间与真实时间解耦 ⇒ 同帧号 = 同画面状态；
+  2. **种子必须固定**：树是 `DecorManager.batch_spawn` **随机**撒的 —— 本轮做 A/B 时单列采样撞到树冠，
+     天空亮度一度量出 0.85（同场景另一次是 0.247），**A/B 直接白做**。工具默认取
+     `BenchCommon.FIXED_SEED`（**复用常量、不抄字面量**，`check_structure` 的"唯一来源常量"护栏仍只数到 1 处）。
+- **API 别照文档猜**（本轮第三次踩）：`viewport_get_measured_render_time_cpu/gpu` 的 **getter 在
+  `RenderingServer` 上**（`Viewport` 上没有），签名 4.7.2 实测 = `(viewport: RID) -> float`；
+  `viewport_set_measure_render_time(viewport: RID, enable: bool)`。两个探测过滤串我一开始都写窄了
+  （`measure_render_time` 匹配不到 `measured_render_time`），白跑两轮。
+- **首份基线（llvmpipe 软件渲染，绝对值不代表真 GPU；比值和"谁是瓶颈"可看）**：
+  | 档 | 背景视口 | 背景视口 GPU | 真实 ms/帧 | FPS |
+  |---|---|---|---|---|
+  | `--shrink 1` | 800×928 | 11.8 ~ 14.5 ms | 17.8 ~ 18.2 | 55 ~ 56 |
+  | `--shrink 2` | 400×464 | 7.3 ~ 7.6 ms | 12.9 ~ 14.4 | 70 ~ 77 |
+  ⇒ **背景视口是主开销**（主视口仅 0.4 ~ 1.7 ms），`stretch_shrink = 2` 一档就砍掉 ≈40% —— 成本项从"猜"变成"数"。
+- **顺带拍到的观感问题**（记进 `TODO_TEMP` 的 BG13）：3s / 9s 两档画面**几乎全是蒙眼雾**
+  （草地在底部才隐约可见），而 `stage01_decor.gd` 只 tween **环境雾**（0.3 → 0.02，注释写"雾散光来/近处清晰"），
+  **没动** `ScreenFogFX.fog_dark`（场景值 0.8）⇒ 若本意是"雾散后看得见背景"，那条被全屏雾 pass 挡住了。
+  **这正是"先有测量/截图"的价值**：靠想法永远看不出"你以为在调 3D，玩家其实只看到雾"。
+- **落点**：`tools/background_capture.gd` + `.tscn`（无场景 uid，照 `tools/` 邻居的老式写法）；
+  用法与基线数字写进 `docs/BACKGROUND_VISUAL_PLAN.md`「验证流程 + 测量基线」（那份文档当初就是把工具记成"已不在仓库"的地方）。
+- **验收**：`check_syntax` **380 脚本 0 失败** ✅ · 命名 0 违规 ✅ · 结构契约 ✅（白盒 463/463 未涨、
+  唯一来源常量仍 1 处）· 文档哨兵 ✅ · `./tools/verify.sh` **七步全过**（GUT 723/723 全绿）✅。
 
 ### 2026-09-30 — GUT **全绿**了：补完最后 22 个 move_script（复用 `random_dir_move`）
 

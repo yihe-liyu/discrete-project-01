@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/background_capture.gd" id="1_bgcap"]
+
+[node name="BackgroundCapture" type="Node"]
+script = ExtResource("1_bgcap")

@@ -98,10 +98,24 @@
 彩蛋（试性能）：H2 真体积雾
 ```
 
-## 验证流程
+## 验证流程 + 测量基线
 
-- ⚠️ 当年建的截图工具 `tools/background_capture.tscn` **已不在仓库**（随 2026-08「3D 背景重构 · 死代码清理」提交 `54d7758` 删除；需要时 `git show bfe853f` 取回）。
-  用法（当年）：`godot --path . res://tools/background_capture.tscn -- --out <dir>`，`--fixed-fps 60` 保证两次可比。
+- ✅ 截图/测量工具 **已按现架构重建（2026-10-02）**：`tools/background_capture.tscn`（原版随 `54d7758` 删除；重建版按 `StageRuntime` + `StageContext` 接线，与 `load_stage` 启动背景协程的方式一致）。
+  用法：`godot --path . res://tools/background_capture.tscn --fixed-fps 60 -- --out res://.godot/probe/bg_shots --shots 180,540`
+  （`--fixed-fps 60` 把模拟时间与真实时间解耦 ⇒ 同帧号 = 同画面；`--seed` 默认取 `BenchCommon.FIXED_SEED`，
+  因为树是 `DecorManager.batch_spawn` **随机**撒的，**不固定种子两次跑的画面不可比**）。
+  它同时打印官方测量接口的每帧数字（`RenderingServer.viewport_get_measured_render_time_cpu/gpu`）。
+- **测量基线（2026-10-02 · 软件 Vulkan/llvmpipe，绝对数不代表真实 GPU；比值与"谁是瓶颈"可看）**：
+
+  | 档 | 背景视口 | 背景视口 GPU | 真实 ms/帧 | FPS |
+  |---|---|---|---|---|
+  | 现状 `--shrink 1` | 800×928 | **11.8 ~ 14.5 ms** | 17.8 ~ 18.2 | 55 ~ 56 |
+  | `--shrink 2` | 400×464 | **7.3 ~ 7.6 ms** | 12.9 ~ 14.4 | 70 ~ 77 |
+
+  ⇒ 背景视口是**主开销**（主视口只 0.4 ~ 1.7 ms）；`stretch_shrink = 2` 一档就把它的 GPU 时间砍掉 ≈40%。
+- ⚠️ **实测观感（同一次跑出图）**：3s（`bg_f0180`）与 9s（`bg_f0540`）两档，画面**几乎全是蒙眼雾**
+  （草地在画面底部才隐约可见）。而 `stage01_decor.gd` 只 tween **环境雾**（0.3 → 0.02，注释写"雾散光来/近处清晰"），
+  **没有动** `ScreenFogFX.fog_dark`（场景里 **0.8**）⇒ 若本意是"雾散后看得见背景"，这一条被全屏雾 pass 挡住了。
 - 改前/改后截图在 `~/Desktop/bg_before/`、`~/Desktop/bg_after/`，对比图 `~/Desktop/compare_t3s.png` / `compare_t9s.png`
 - 注意 6s 相机上移后、10s 加速后的画面都要看（动态效果看视频/实机）
 
@@ -122,3 +136,8 @@
 - ✅ `decor_manager.gd`：逐实例更新 → 节点整体平移（O(n)→O(1)）；砍每帧排序/数组分配；死亡槽位复用池；分块扩容
 - ✅ 修复：`Transform3D.scaled()` 连 origin 一起缩放的 bug
 - ✅ 新增 `test/test_decor_manager.gd`（6 个回归测试）
+
+### 工具链（2026-10-02）
+
+- ✅ 按现架构**重建** `tools/background_capture`（原版随 `54d7758` 删除；旧版引用的 `StageManager` 已不存在，重建版改走 `StageRuntime` + `StageContext`）：同种子**可对比截图** + 官方接口**渲染耗时测量**；首份测量基线见「验证流程 + 测量基线」。
+- ⚠️ 同一次测量还拍到：3s / 9s 两档画面**几乎全是蒙眼雾**（`ScreenFogFX.fog_dark = 0.8` 未被演出改动）—— 见「验证流程」那条观感记录。
