@@ -1,7 +1,9 @@
 [gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bhp3entq6c55y"]
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_exvym"]
+[ext_resource type="Script" uid="uid://biotibdprqjgx" path="res://data/stages/stageEX/phase/似新存二非/似新存二非.gd" id="2_shoot"]
 
 [resource]
 script = ExtResource("1_exvym")
+shoot_script = ExtResource("2_shoot")
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

@@ -1,9 +1,11 @@
 [gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://i2udjyu2ccyp"]
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_vnxef"]
+[ext_resource type="Script" uid="uid://f54rrmmo2ptq" path="res://data/stages/stageEX/phase/似新存三符/似新存三符.gd" id="2_shoot"]
 
 [resource]
 script = ExtResource("1_vnxef")
 name = "稳荡意「漂泊半生，所见无极」"
 uid = 166
+shoot_script = ExtResource("2_shoot")
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

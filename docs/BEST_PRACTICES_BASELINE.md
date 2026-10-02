@@ -192,7 +192,7 @@
 - **池化/复用对象加字段 → `setup()`/`reset()` 必须归零**（`Item` 漏 `_is_highlight` → 回池复用误金色；原生行同理）。
 - **遍历中 `despawn` 必须倒序**（swap-with-last；dead 重放降序，升序丢大 id）。
 - **改内核 C++ → 必须 `./tools/build_gdextension.sh` 重编**；`test/reference/**` 只作冻结参照。
-- **改 `class_name` / 删脚本·场景后 → `godot --headless --import` 刷 `.godot` 缓存**（否则 stale class/uid 加载失败）。
+- **改 `class_name` / 新增 / 删脚本·场景后 → `godot --headless --import` 刷 `.godot` 缓存**（否则 stale class/uid 加载失败）。新增的 `.gd` 要靠它生成 `.gd.uid` —— **写 `.tres` 的 `ext_resource` 引用要用那个 uid**（先 import 再接线，别手编 uid）。
 - **preset/builder 不覆写显式开关**（`.enemy()` 别设 `is_spawn_fog`，否则静默翻回显式关闭）。
 - **缩放 Node2D 父层会连带子节点 `position`**：改尺寸缩**每个实例**，别缩容器层（`NumberSprite` 字号即此）。
 - **绕中心 pivot 缩放 → 视觉盒 ≠ 布局框**：视觉盒每侧比布局框多 `size*(1-scale)/2`；贴边落点要按**视觉右缘**算，否则布局框贴边、文字越界被上层不透明 HUD 相框盖掉（符卡名 `AnnounceLabel.rest_x`；`false_front.png` 在 GameUI layer 32，场地外不透明）。

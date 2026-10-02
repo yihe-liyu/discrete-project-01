@@ -503,14 +503,26 @@ BulletData.TintMode.BLEND      # rgb = mix(tint, 白, 贴图亮度)（敌弹换�
 
 ```
 data/stages/<stage>/
-  stage_script/*.gd        关卡编排（Timeline）
-  enemy/*.gd               敌人行为（CoroutineScript）
-  phase/<phase>/*.tres     PhaseData
-  phase/<phase>/*_move.gd  Boss 移动脚本
-  phase/<phase>/*_shoot.gd Boss 弹幕脚本
-  phase/<phase>/*.gd       其它内容脚本（@role 覆写）
+  stage_script/*.gd                关卡编排（Timeline）
+  enemy/*.gd                       敌人行为（CoroutineScript）
+  phase/<阶段名>/*.tres             PhaseData（一个 .tres = 一个阶段）
+  phase/<阶段名>/<阶段名>.gd         Boss 弹幕脚本 ← 本仓库现行命名
+  phase/<阶段名>/<阶段名>移动.gd     Boss 移动脚本 ← 本仓库现行命名
   background/ stage_data/
 ```
+
+> **角色靠引用反推，不靠路径**：`data/stages/**/phase/**` 在 `ContentCatalog._convention_role()` 里
+> **没有规则**（既不是 `enemy/` 也不是 `background/`…）。阶段脚本的「弹幕发射 / Boss 移动」角色，
+> 来自目录扫描的第二遍 —— `PhaseData.shoot_script` / `move_script` **引用反推**
+> （`_apply_reference_fixes()`）。⇒ **新建的脚本在接进 .tres 之前一律显示成「未分类」**
+> （实例：`似新存道中二符.gd` 至今没被任何 .tres 引用）—— 这是正确结果，不是 bug。
+> `*_shoot.gd` / `*_move.gd` 后缀是约定表里认的**另一种**写法（`_convention_role()` 第一优先级），
+> 本仓库内容没用它。
+
+> **新建阶段脚本的三步**：① 写 `<阶段名>.gd`（两行架子也行：`extends CoroutineScript` + `## <阶段名>`）；
+> ② `godot --headless --import` 生成 `<阶段名>.gd.uid`（写 .tres 引用要用到里面的 uid）；
+> ③ 在对应 `.tres` 里加 `[ext_resource type="Script" uid="…" path="…" id="2_shoot"]`
+> 并填 `shoot_script = ExtResource("2_shoot")`（字段位置照同目录既有 .tres）。
 
 ### 8.2 PhaseData（`scripts/data/phase_data.gd`）
 

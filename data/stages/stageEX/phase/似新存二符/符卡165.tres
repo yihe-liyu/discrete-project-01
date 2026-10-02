@@ -1,9 +1,11 @@
 [gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bo72e3skld20d"]
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_mi7dt"]
+[ext_resource type="Script" uid="uid://bx1sxgethj7lb" path="res://data/stages/stageEX/phase/似新存二符/似新存二符.gd" id="2_shoot"]
 
 [resource]
 script = ExtResource("1_mi7dt")
 name = "进退意「阡陌交通，身困四方」"
 uid = 165
+shoot_script = ExtResource("2_shoot")
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

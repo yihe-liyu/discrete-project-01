@@ -1,9 +1,11 @@
 [gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://c7dg3m83v4xy7"]
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_mdyg6"]
+[ext_resource type="Script" uid="uid://bxcph8uyclkjx" path="res://data/stages/stageEX/phase/似新存五符/似新存五符.gd" id="2_shoot"]
 
 [resource]
 script = ExtResource("1_mdyg6")
 name = "是非意「吞声踯躅，铿锵不动」"
 uid = 168
+shoot_script = ExtResource("2_shoot")
 metadata/_custom_type_script = "uid://70htyyc4o2hu"

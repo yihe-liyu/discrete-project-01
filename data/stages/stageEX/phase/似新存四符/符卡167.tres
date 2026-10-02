@@ -1,9 +1,11 @@
 [gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://db3q1334h8121"]
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_8s5l4"]
+[ext_resource type="Script" uid="uid://brkubotyhsdf8" path="res://data/stages/stageEX/phase/似新存四符/似新存四符.gd" id="2_shoot"]
 
 [resource]
 script = ExtResource("1_8s5l4")
 name = "取舍意「鱼与熊掌，身不由己」"
 uid = 167
+shoot_script = ExtResource("2_shoot")
 metadata/_custom_type_script = "uid://70htyyc4o2hu"
