@@ -18,6 +18,12 @@ const FIELD_CENTER_Y: float = 480.0
 const VIEW_WIDTH: float = 1280.0
 const VIEW_HEIGHT: float = 960.0
 
+## 背景容器相对场地**每边外扩**多少（over-scan）：震屏时边缘不露底。
+## 真游戏（`game_scene.tscn`）与工作台（`workbench.gd::_sync_ui_layer_offset`）都按这个规格铺背景
+## ⇒ 两边容器同为 800×928、相机/fov 相同 ⇒ **预览与真游戏同构图**。
+## ⚠️ `game_scene.tscn` 里是字面量偏移（48/16/848/944），改本常量要**同步那边**（tscn 引不到常量）。
+const BACKGROUND_OVERSCAN: float = 16.0
+
 ## 屏幕中心
 const SCREEN_CENTER := Vector2(VIEW_WIDTH / 2.0, VIEW_HEIGHT / 2.0)
 

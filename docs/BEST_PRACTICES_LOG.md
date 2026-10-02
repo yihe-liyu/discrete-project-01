@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 66 条（本文件留最近 66 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 67 条（本文件留最近 67 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-02 — BG7 落地：工作台背景纳入真游戏规格 + 画框拆成独立层（预览与真游戏同构图）
 - 2026-10-02 — BG7 复核：「工作台/真游戏背景规格不同」**不是笔误，是有意的两种做法**
 - 2026-10-02 — 暂停时停掉背景渲染（BG5 ③）：省 8.7 ms/帧，代价是"雾冻住"（作者要的）
 - 2026-10-02 — 背景视口减半分辨率（`stretch_shrink = 2`）：两个宿主各一行，省 ≈40% 背景 GPU
@@ -96,6 +97,31 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-10-02 — BG7 落地：工作台背景纳入真游戏规格 + 画框拆成独立层（预览与真游戏同构图）
+
+- **作者拍板**："②" ⇒ 把那两步都做了（真 WYSIWYG）。
+- **两步**：
+  1. **容器改用 over-scan**：新增唯来源常量 `GameConfig.BACKGROUND_OVERSCAN = 16.0`（tscn 引不到常量 ⇒
+     注释提醒同步 `game_scene.tscn` 的字面量）；`workbench.tscn` 的 `BgContainer` 从"场地 1:1"
+     （64,32~832,928）改成 **48,16~848,944**（= 场地每边 +16）⇒ 与真游戏容器**同尺寸 800×928**；
+     `workbench.gd::_sync_ui_layer_offset` 也按常量算，并**删掉**那段"内缩 3px"。
+  2. **画框拆层**：新增 `scripts/workbench/frame_overlay.gd`（`class_name FrameOverlay`：金边 + 网格/路径线），
+     在 `workbench.tscn` 里排在 `BgContainer` **之后** ⇒ 画在背景**之上**；根 `_draw` 只留"框外压暗"。
+- **为什么必须两步一起**：画框原本在根 Control 的 `_draw()` 里，而 **CanvasItem 的 `_draw` 先于子节点渲染**
+  ⇒ 背景一铺就盖住金边（当年正是为此把背景内缩 3px 绕开，代价 ≈4% 横向 FOV）。
+  只搬画框不铺 over-scan 没意义；只铺 over-scan 不搬画框则金边被盖。
+- **顺手修一处陈旧**：新增 `_redraw_stage()`（根 + 画框层一起重画）并挂进 `_apply_playback_runtime()`
+  与 `_sync_ui_layer_offset()` —— 以前根 `_draw` **一个 `queue_redraw()` 都没有**，
+  切"背景"开关 / 页面偏移变化时画面靠运气刷新。
+- **验证**（真场景探针，`.godot/probe/` 用完删）：
+  ① `BgContainer` pos=(48,16) size=(800,928) —— 与真游戏一致 ✓（原先 (64,32)/(768,896)）
+  ② `BgViewport.size=(400,464)`（shrink=2）✓
+  ③ 根的子节点顺序 `["BgContainer", "FrameOverlay", "World", "HitboxLayer", "UI", "BulletManager"]`
+     ⇒ 画框层确实排在背景之后 ✓
+  ④ **截图**（1280×960）金边**可见且压在背景之上**、背景按 over-scan 铺到边框外那 16px ✓
+- **验收**：`check_syntax` **381 脚本** 0 失败 ✅ · 命名 0 ✅ · 结构契约 ✅（白盒 463/463 未涨）·
+  文档哨兵 ✅ · `./tools/verify.sh` 七步全过（GUT **723/723**）✅。
 
 ### 2026-10-02 — BG7 复核：「工作台/真游戏背景规格不同」**不是笔误，是有意的两种做法**
 

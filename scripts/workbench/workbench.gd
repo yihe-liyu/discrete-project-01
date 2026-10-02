@@ -53,15 +53,15 @@ const DIFFICULTIES: Array[String] = ["Easy", "Normal", "Hard", "Lunatic"]
 @onready var _stage_grid: GridContainer = %StageGrid
 @onready var _world: Node2D = $World
 @onready var _stage_runtime: StageRuntime = %StageRuntime
-## 3D 背景专用子视口。⚠️ **与真游戏不是同一尺寸，别照抄数字**：
+## 3D 背景专用子视口。**与真游戏同规格**（2026-10-02 BG7 对齐）：
 ##   场地本体（东方框）= 768×896 @(64,32)，唯一来源 `GameConfig`；
-##   真游戏 `game_scene.tscn`：容器 = **场地每边 over-scan 16px**（800×928）—— 震屏不露边；
-##   工作台：容器 = **场地 1:1**（768×896），且被**内缩 3px**（见 `_apply_stage_shift`：背景画在画框之上
-##     会盖住金边、底部还会露出雾的"亮地面"条）。
-##   两侧**相机 / fov 相同** ⇒ 玩法元素（子弹/敌人/自机）坐标完全一致；
-##   但**视口尺寸不同** ⇒ 玩家在场地内的横向 FOV 差 ≈4%（游戏 ≈78° vs 工作台 ≈81°）
-##     ⇒ 背景构图**不是**逐像素一致（要不要抹平见 `TODO_TEMP` 的 BG7）。
+##   容器 = **场地每边 over-scan** `GameConfig.BACKGROUND_OVERSCAN`（16px）⇒ 800×928，
+##     与 `game_scene.tscn` 的容器**同尺寸**、相机/fov 相同 ⇒ 预览与真游戏同构图；
+##   ⚠️ 画框（金边/网格）在 `FrameOverlay` 里、**画在背景之上** ⇒ 别再为"别盖住金边"把背景内缩
+##     （以前内缩 3px，代价是预览与真游戏差 ≈4% 横向 FOV）。
 @onready var _bg_viewport: SubViewport = %BgViewport
+## 画框层（金边/网格）：必须叠在 3D 背景之上，故单独成节点
+@onready var _frame_overlay: FrameOverlay = $FrameOverlay
 ## phase 倒计时（与真游戏 BossUI 同款：两位秒数、框顶中央）
 var _phase_timer_label: Label
 
@@ -176,29 +176,20 @@ func _poll_playback() -> void:
 
 
 func _draw() -> void:
-	# 场景底：有背景时让 3D 背景透出，只在东方框外画暗色；无背景时全屏实心
+	# 场景底：有背景时让 3D 背景透出，只在东方框外画暗色；无背景时全屏实心。
+	# 金边 / 网格**不在这里** —— 它们要画在 3D 背景**之上**，见 `FrameOverlay`。
 	var has_bg: bool = _playback.show_bg and _background and is_instance_valid(_background)
 	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - _stage_shift_y,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT,
 		GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 	if not has_bg:
 		draw_rect(Rect2(0, 0, size.x, size.y), Color(0.03, 0.03, 0.05))
-	else:
-		# 东方框外四块（左上/右上/左下/右下）压暗，框内留给 3D 背景
-		draw_rect(Rect2(0, 0, size.x, field.position.y), Color(0.03, 0.03, 0.05))
-		draw_rect(Rect2(0, field.end.y, size.x, size.y - field.end.y), Color(0.03, 0.03, 0.05))
-		draw_rect(Rect2(0, field.position.y, field.position.x, field.size.y), Color(0.03, 0.03, 0.05))
-		draw_rect(Rect2(field.end.x, field.position.y, size.x - field.end.x, field.size.y), Color(0.03, 0.03, 0.05))
-	# 东方框边框（保留，提示边界）+ 网格/路径线（仅背景关闭时画，避免浮在 3D 上）
-	draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
-	if not has_bg:
-		for x in range(64, 833, 64):
-			draw_line(Vector2(x, 32 - _stage_shift_y), Vector2(x, 928 - _stage_shift_y), Color(1, 1, 1, 0.05))
-		for y in range(32, 929, 64):
-			draw_line(Vector2(64, y - _stage_shift_y), Vector2(832, y - _stage_shift_y), Color(1, 1, 1, 0.05))
-		# 幽灵玩家路径参考（纵向漂移中线）
-		draw_line(Vector2(64, 620 - _stage_shift_y), Vector2(832, 620 - _stage_shift_y), Color(0.3, 0.9, 0.5, 0.15))
-	# 出生点标记（数据关卡波次）
+		return
+	# 东方框外四块（左上/右上/左下/右下）压暗；框内（含背景 over-scan 的那圈）留给 3D 背景
+	draw_rect(Rect2(0, 0, size.x, field.position.y), Color(0.03, 0.03, 0.05))
+	draw_rect(Rect2(0, field.end.y, size.x, size.y - field.end.y), Color(0.03, 0.03, 0.05))
+	draw_rect(Rect2(0, field.position.y, field.position.x, field.size.y), Color(0.03, 0.03, 0.05))
+	draw_rect(Rect2(field.end.x, field.position.y, size.x - field.end.x, field.size.y), Color(0.03, 0.03, 0.05))
 
 ## CanvasLayer 平移到页面全局位置（独立运行 = 0，嵌入创作台 = 页签横栏下方）
 func _sync_ui_layer_offset() -> void:
@@ -214,14 +205,18 @@ func _sync_ui_layer_offset() -> void:
 		# 舞台（幽灵/背景/边框/网格/命中/计时器）归一到游戏坐标（视口空间）：
 		# 子弹/敌人在 autoload 根空间=游戏坐标，页面偏移会让瞄准/绘制差 page_y 像素
 		$World.position.y -= pos.y
-		# 3D 背景收进画框内 3px：背景绘制在画框之上会盖住金边线（顶/底线消失，
-		# 底部露出雾的"亮地面"条 → 看起来像灰边）
+		# 3D 背景按**真游戏的 over-scan 规格**铺（场地每边外扩 `BACKGROUND_OVERSCAN`）⇒ 与
+		# `game_scene.tscn` 的容器同尺寸（800×928），预览与真游戏同构图。
+		# 金边由 `FrameOverlay` 画在背景**之上**，所以这里不必再为"别盖住金边"而内缩。
+		var over := GameConfig.BACKGROUND_OVERSCAN
 		$BgContainer.position = Vector2(
-			GameConfig.FIELD_LEFT + 3.0, GameConfig.FIELD_TOP + 3.0 - pos.y)
+			GameConfig.FIELD_LEFT - over, GameConfig.FIELD_TOP - over - pos.y)
 		$BgContainer.size = Vector2(
-			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT - 6.0,
-			GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP - 6.0)
+			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT + over * 2.0,
+			GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP + over * 2.0)
 		_phase_timer_label.position.y -= pos.y
+	# 画框层随页面偏移一起走（它是独立节点，不会自动跟着根 `_draw` 的坐标）
+	_redraw_stage()
 
 
 func _exit_tree() -> void:
@@ -555,6 +550,18 @@ func _apply_playback_runtime() -> void:
 	if _playback_bar != null:
 		_playback_bar.set_playing(not _playback.paused)
 		_playback_bar.set_speed(_playback.speed_index)
+	# 背景开关会改变「框外压暗 / 网格」的形态 ⇒ 两层都要重画
+	_redraw_stage()
+
+
+## 舞台视觉重画：根 `_draw`（框外压暗）+ 画框层（金边 / 网格）。
+## 画框必须画在 3D 背景**之上**，所以它在 `FrameOverlay` 里而不是根 `_draw`（见 frame_overlay.gd）。
+func _redraw_stage() -> void:
+	queue_redraw()
+	if _frame_overlay == null:
+		return
+	var has_bg: bool = _playback.show_bg and _background != null and is_instance_valid(_background)
+	_frame_overlay.sync(_stage_shift_y, not has_bg)
 
 
 # ═══ UI 刷新 / 日志 ═══

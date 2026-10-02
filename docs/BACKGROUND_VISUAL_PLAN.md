@@ -117,6 +117,11 @@
   `Background/SubViewportContainer`、`scenes/workbench.tscn` 的 `BgContainer`）。真场景实测（入树后读值）：
   `game_scene` 容器 800×928 → **视口 400×464**；`workbench` 容器 768×896 → **视口 384×448**。
   项目未设 `default_texture_filter` ⇒ 放大用引擎默认 **Linear**（平滑）。回滚 = 删那两行。
+- ✅ **已落地（2026-10-02）BG7：工作台纳入同一规格** —— 容器改用 `GameConfig.BACKGROUND_OVERSCAN`（=16，
+  新唯来源常量）⇒ 与真游戏同 **800×928**（原先"场地 1:1 + 内缩 3px"，差 ≈4% 横向 FOV）；
+  画框（金边/网格）从根 `_draw` 拆成 `scripts/workbench/frame_overlay.gd`，排在 `BgContainer` **之后**
+  ⇒ 画在背景**之上**（原先画框在背景下面，才被迫内缩）。真场景探针：容器 (48,16)/(800×928)、
+  视口 (400×464)、子节点顺序 `BgContainer → FrameOverlay → World…` ✓。
 - ✅ **已落地（2026-10-02）：暂停时停掉背景渲染** —— `game_scene.gd:_on_game_state_changed` 末尾一行
   （`UPDATE_DISABLED` / 回 `ALWAYS`，挂现成的 `AppState.PAUSED` 钩子）。实测 **真实帧 13.21 → 4.53 ms/帧**
   （75.7 → 220.7 FPS）＝**省 8.7 ms/帧**。副作用：雾 shader 用 `TIME`，暂停时本来还在飘 ⇒ 现在**冻住**（作者要的）。
