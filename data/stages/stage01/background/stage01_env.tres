@@ -19,7 +19,7 @@ sky = SubResource("Sky_stage01")
 fog_enabled = true
 fog_light_color = Color(0.24780053, 0.24780053, 0.24780053, 1)
 fog_density = 0.3
-fog_sky_affect = 0.0
+fog_sky_affect = 1.0
 
 [resource]
 script = ExtResource("1")

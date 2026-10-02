@@ -39,10 +39,15 @@ func test_env_preset_builds_fresh_environment_each_time():
 	assert_ne(second.fog_density, first.fog_density, "改一份不许串到另一份")
 
 
-## 回归（BG2/BG3）：预设必须带**真天球**，且 `fog_sky_affect` 不能把天球洗掉。
-## 历史：预设一度只有雾（`background_mode = BG_CLEAR_COLOR`、`sky = null`、`fog_sky_affect` 走默认 1.0）
-## ⇒ 天是平坦清屏色，`stage_background.gd::_sky_material()` 恒返回 null，地平线联动**静默 no-op**。
-func test_preset_has_unfogged_sky():
+## 回归（BG2/BG3）：预设必须带**真天球**，且 `fog_sky_affect` 必须**够大**（让雾也糊天球）。
+## 历史：预设一度只有雾（`background_mode = BG_CLEAR_COLOR`、`sky = null`）⇒ 天是平坦清屏色，
+## `stage_background.gd::_sky_material()` 恒返回 null，地平线联动**静默 no-op**。
+## ⚠️ `fog_sky_affect` 的方向**两次都翻过**，最终实测定案：
+##   **0.0**（作者 2026-08 的原值）⇒ 天球整条不受雾 ⇒ 相机上移/雾变薄后，地面平面**远缘**处出现
+##     「暗天花板 + 锯齿树线」硬边：t=15s 实测行均值跳变 **Δ=0.078**（y=67）；
+##   **1.0** ⇒ 同帧 Δ=**0.005**（边消失）。关键：洗白**与雾量成正比** ⇒ 雾薄时（density 0.02）
+##     天球照样看得见（≈98% 不被洗），所以**该按"雾最薄那一刻"定，而不是按开局最浓的 0.3 定**。
+func test_preset_sky_is_fogged_like_the_scene():
 	var env := BG_PRESET.build_environment()
 	assert_not_null(env, "预设应能构建环境")
 	if env == null:
@@ -51,7 +56,8 @@ func test_preset_has_unfogged_sky():
 	assert_not_null(env.sky, "预设必须带 Sky（否则没有渐变天、地平线联动也无从生效）")
 	if env.sky != null:
 		assert_true(env.sky.sky_material is ProceduralSkyMaterial, "天球材质应是 ProceduralSkyMaterial")
-	assert_lt(env.fog_sky_affect, 0.5, "fog_sky_affect 默认 1.0 会把天球整片洗成雾色（实测等于白配，作者原值 0.0）")
+	assert_gt(env.fog_sky_affect, 0.3,
+		"fog_sky_affect 必须够大：0.0 时天球整条不受雾 ⇒ t=15s 地面平面远缘出现 Δ=0.078 的硬边（1.0 时为 0.005）")
 
 
 ## 回归（BG2）：`tween_env_fog()` 必须**真的**把天球地平线色跟着雾色走 —— 以前预设没 sky，
