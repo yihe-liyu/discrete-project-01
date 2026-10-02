@@ -53,7 +53,14 @@ const DIFFICULTIES: Array[String] = ["Easy", "Normal", "Hard", "Lunatic"]
 @onready var _stage_grid: GridContainer = %StageGrid
 @onready var _world: Node2D = $World
 @onready var _stage_runtime: StageRuntime = %StageRuntime
-## 3D 背景专用子视口（768x896，与真游戏 SubViewport 同规格 → 纵横比/构图一致）
+## 3D 背景专用子视口。⚠️ **与真游戏不是同一尺寸，别照抄数字**：
+##   场地本体（东方框）= 768×896 @(64,32)，唯一来源 `GameConfig`；
+##   真游戏 `game_scene.tscn`：容器 = **场地每边 over-scan 16px**（800×928）—— 震屏不露边；
+##   工作台：容器 = **场地 1:1**（768×896），且被**内缩 3px**（见 `_apply_stage_shift`：背景画在画框之上
+##     会盖住金边、底部还会露出雾的"亮地面"条）。
+##   两侧**相机 / fov 相同** ⇒ 玩法元素（子弹/敌人/自机）坐标完全一致；
+##   但**视口尺寸不同** ⇒ 玩家在场地内的横向 FOV 差 ≈4%（游戏 ≈78° vs 工作台 ≈81°）
+##     ⇒ 背景构图**不是**逐像素一致（要不要抹平见 `TODO_TEMP` 的 BG7）。
 @onready var _bg_viewport: SubViewport = %BgViewport
 ## phase 倒计时（与真游戏 BossUI 同款：两位秒数、框顶中央）
 var _phase_timer_label: Label
