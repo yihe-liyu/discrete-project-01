@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 73 条（本文件留最近 73 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 74 条（本文件留最近 74 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-02 — BG6 接缝化：删 4 组 0 调用点死 API + 相机改**按类型**找
 - 2026-10-02 — 雾色定案：`Color.DARK_GRAY` 是 CSS **亮灰**，一直在把远处"洗亮"
 - 2026-10-02 — 回退「残雾」：我把"加厚"当成了"远处渐淡"（**验收漏看全局量**）
 - 2026-10-02 — 作者要"远处渐淡进雾色"：**DEPTH 实测更差**、`fog_density` 是**弱旋钮** ⇒ 落"残雾"
@@ -103,6 +104,31 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-10-02 — BG6 接缝化：删 4 组 0 调用点死 API + 相机改**按类型**找
+
+- **核实（事实优先）**：`stage_background.gd` 那批"接缝"API **全部 0 调用点**（含 `test/`）：
+  `set_camera_size`（`Camera3D.size` 是**正交**尺寸，本项目全透视 ⇒ **永远无效**的假 API）、
+  `set_camera_z`、`camera_rush`（`while…await` 手写推镜）、整段**光照**（`setup_sun` 造
+  `DirectionalLight3D`：`light_energy = 0` + `light_color = BLACK`，配 `set_sun_color/energy/rotation`）
+  —— 活的太阳是场景里的 `BackgroundSun`（`sun.setup()` + `fog.setup(sun)`）。
+  ⇒ **净删 53 行（246 → 193 行）**，0 行为变化。
+- **`Camera3D.environment`：全仓库不存在**（`scripts/` `data/` `scenes/` grep 无）⇒ BG1 写的"可能"
+  实为**没有**，这条**关闭**。
+- **真接缝 = 按名字找相机**：`_find_camera()` 原为 `parent.get_node_or_null("Camera3D")`，而 `camera`
+  的**唯一赋值处**就是它（"组合根可预注入"其实**没人注入**）⇒ **改名 = 静默掉进 `_own_camera()` 兜底**
+  （多出一台相机、注入的相机被无视）。`tools/background_capture.gd` 里那句"⚠️ 名字必须是 `Camera3D`"
+  的迁就注释本提交删掉。
+- **为什么不改用 `get_viewport().get_camera_3d()`**（**先探针，不猜**）：`Camera3D.current` **默认 false**，
+  实测置 `true` 后 `SubViewport.get_camera_3d()` **仍返回 null**；两个场景文件也没写 `current`
+  ⇒ 拿不到 ⇒ **遍历兄弟节点按类型找**才稳。
+- **守卫**：`test_background_finds_camera_by_type_not_name`（造一台叫「主相机」的相机，要求 `bg.camera`
+  就是它、且**不许自建第二台**）。反向（改回按名字）实测：`[Camera3D:…] expected to equal [主相机:…]`、
+  6 通过 / 1 失败 / 20-21 断言 ✓。
+- ⚠️ **本轮我把反向验证做废了两次（同类错误第三次）**：① 匹配串不成立 ⇒ 命令链短路、**根本没跑**；
+  ② 补丁**缩进掉了**（`if parent:` 体变空）⇒ **解析失败** ⇒ GUT 起不来，我把"没输出"当成了结果。
+  ⇒ **定成硬规矩：反向验证必须 ①自证补丁文本落地 ②自证补丁能编译（`check_syntax` 0 失败）③再跑测试。**
+- **验收**：`./tools/verify.sh` 七步全过 ✅ · GUT **730 用例 / 730 通过 / 6785 断言**。
 
 ### 2026-10-02 — 雾色定案：`Color.DARK_GRAY` 是 CSS **亮灰**，一直在把远处"洗亮"
 

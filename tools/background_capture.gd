@@ -67,7 +67,6 @@ func _ready() -> void:
 	add_child(_vp)
 
 	var cam := Camera3D.new()
-	# ⚠️ 名字必须是 `Camera3D`：`StageBackground._find_camera()` 按名字找（BG6 待接缝化）
 	cam.name = "Camera3D"
 	cam.position = CAM_POS
 	cam.rotation_degrees = CAM_ROT_DEG

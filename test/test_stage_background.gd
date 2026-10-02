@@ -110,3 +110,22 @@ func test_preset_fog_color_is_not_washed_out():
 	var lum := 0.2126 * env.fog_light_color.r + 0.7152 * env.fog_light_color.g + 0.0722 * env.fog_light_color.b
 	assert_lt(lum, 0.45, "雾色亮度必须 < 0.45（0.663 = CSS darkgray ⇒ 把远处洗亮）")
 	assert_gt(lum, 0.05, "也别黑到没有空气感")
+
+
+## 回归（BG6）：相机必须按**类型**找，**不能按名字** —— 旧实现只认 `Camera3D` 这个名字，
+## 一改名就**静默**掉进 `_own_camera()` 兜底（多出一台相机、注入的那台被无视）。
+func test_background_finds_camera_by_type_not_name():
+	var host := Node.new()
+	add_child_autofree(host)
+	var cam := Camera3D.new()
+	cam.name = "主相机"      # 故意不叫 Camera3D
+	host.add_child(cam)
+	var bg := StageBackground.new()
+	host.add_child(bg)       # 入树触发 _ready → _find_camera
+	await wait_frames(1)
+	assert_eq(bg.camera, cam, "应按类型找到那台相机（而不是只认名字 Camera3D）")
+	var cam_count := 0
+	for c in host.get_children():
+		if c is Camera3D:
+			cam_count += 1
+	assert_eq(cam_count, 1, "不许自建第二台相机（按名字找的旧实现改名后会多出一台）")

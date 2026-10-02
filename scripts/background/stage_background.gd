@@ -44,13 +44,16 @@ func _process(delta):
 func _exit_tree():
 	_on_cleanup()
 
+## 按**类型**在兄弟节点里找相机（BG6）—— **不按名字**：旧实现 `parent.get_node_or_null("Camera3D")`
+## 把行为绑在节点名上（一改名就**静默**掉进 `_own_camera()` 兜底、悄悄多出一台相机）。
+## 也不用 `get_viewport().get_camera_3d()`：本项目相机没有显式 `current`
+## （实测默认 false、置 true 后仍返回 null）⇒ 拿不到，按类型找才稳。
 func _find_camera() -> Camera3D:
 	var parent := get_parent()
 	if parent:
-		var cam_node := parent.get_node_or_null("Camera3D")
-		if cam_node is Camera3D:
-			return cam_node
-	# 无父级相机 → 组合根可预注入 camera；否则 _ready 走 _own_camera() 兜底
+		for child in parent.get_children():
+			if child is Camera3D:
+				return child
 	return null
 
 func _find_world_environment() -> WorldEnvironment:
@@ -62,16 +65,6 @@ func _find_world_environment() -> WorldEnvironment:
 func set_camera_fov(fov: float):
 	if camera:
 		camera.fov = fov
-
-func set_camera_size(size: float):
-	if camera:
-		camera.size = size
-
-func set_camera_z(z: float):
-	if camera:
-		var t = camera.transform
-		t.origin.z = z
-		camera.transform = t
 
 func set_camera_y(y: float):
 	if camera:
@@ -117,24 +110,6 @@ func move_camera(target_pos: Vector3, duration: float, ease_type: int = Tween.EA
 	tween.set_ease(ease_type).set_trans(trans_type)
 	tween.tween_property(camera, "position", target_pos, duration)
 
-## 真加速推镜 — 持续加速推进 direction 方向, 总时长 duration 秒, 加速度 accel (m/s²)
-func camera_rush(direction: Vector3, duration: float, accel: float = 2.0):
-	if not camera:
-		return
-	var vel := Vector3.ZERO
-	var elapsed := 0.0
-	var origin := camera.transform.origin
-	while elapsed < duration and camera:
-		var delta := get_process_delta_time()
-		vel += direction.normalized() * accel * delta
-		var step := vel * delta
-		camera.transform.origin += step
-		elapsed += delta
-		await get_tree().process_frame
-	# 可选: 回到原位
-	# var tween = create_tween()
-	# tween.tween_property(camera, "transform", Transform3D(camera.transform.basis, origin), 0.5)
-
 func _on_setup():
 	# 子 CoroutineScript 由 StageRuntime 统一 start()
 	pass
@@ -144,34 +119,6 @@ func _on_update(_delta: float, _t: float):
 
 func _on_cleanup():
 	pass
-
-# ═══ 光照 ═══
-
-var sun_light: DirectionalLight3D
-
-func setup_sun() -> void:
-	sun_light = DirectionalLight3D.new()
-	sun_light.name = "Sun"
-	sun_light.light_energy = 0.0
-	sun_light.light_color = Color.BLACK
-	sun_light.shadow_enabled = false
-	add_child(sun_light)
-
-func set_sun_color(color: Color, duration: float = 2.0) -> void:
-	if not sun_light: return
-	var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.tween_property(sun_light, "light_color", color, duration)
-
-func set_sun_energy(energy: float, duration: float = 2.0) -> void:
-	if not sun_light: return
-	var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.tween_property(sun_light, "light_energy", energy, duration)
-
-func set_sun_rotation(rot: Vector3, duration: float = 2.0) -> void:
-	if not sun_light: return
-	var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.tween_property(sun_light, "rotation", rot, duration)
-
 
 # ═══ 环境服务（预设 + 联动 tween）═══
 
