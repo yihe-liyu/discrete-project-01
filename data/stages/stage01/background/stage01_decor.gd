@@ -34,7 +34,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	# ① 雾散光来 (0→6s, tween 12s)
 	timeline.at(0.0).do(func():
-		stage_background.tween_env_fog(Color.DARK_GRAY, 0.02, 10.0)  # 雾散目标：暖橙（日食结束天光转暖）；密度 0.02：近处清晰远处融雾
+		stage_background.tween_env_fog(Color.DARK_GRAY, 0.08, 10.0)  # 雾散：只散到**残雾**（0.08）—— 留一层远处渐淡；调到 0.02 会让远处没有空气感（"不现实"）
 		stage_background.tween_env_fov(68.0, 12.0)
 	)
 
@@ -51,7 +51,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	)
 
 	timeline.at(25.0).do(func():
-		stage_background.tween_env_fog(Color(0.733, 0.572, 0.402, 1.0), 0.02, 20.0)
+		stage_background.tween_env_fog(Color(0.733, 0.572, 0.402, 1.0), 0.08, 20.0)
 	)
 
 	# ④ 每 4 帧喷一棵树（持续）
@@ -62,7 +62,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	)
 
 	timeline.at(50.0).do(func():
-		stage_background.tween_env_fog(Color(0.331, 0.58, 0.77, 1.0), 0.01, 35.0)
+		stage_background.tween_env_fog(Color(0.331, 0.58, 0.77, 1.0), 0.06, 35.0)
 	)
 
 	timeline.at(60.0).do(func():

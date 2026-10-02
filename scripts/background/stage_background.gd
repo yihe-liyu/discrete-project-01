@@ -193,9 +193,21 @@ func apply_env_preset(preset: BackgroundEnvPreset) -> void:
 		return
 	we.environment = preset.build_environment()
 
-## 联动 tween：雾色/密度 + 天球地面水平色一起变（改雾色不露地平线）
+## 雾量 → DEPTH 模式的等效字段（**当前不用**，留作已量过的结论）：
+## ⚠️ **DEPTH 模式在本项目实测更差**（2026-10-02）：树是 **z −220…−50 的一带纸片**（纵深 170），
+## 每棵树被雾化的程度不同 ⇒ 树线出现**台阶**：远端最大行间跳变 **0.0046 → 0.0326**（t=15s）；
+## 而"可得距离"只有 0…324（地面平面远缘），**没有足够的远处地面**给 DEPTH 铺开渐淡。
+## 另：**DEPTH 下 `fog_density` 几乎失效**（冻结滚动实测 0.02 vs 0.30 行均值差 ≤0.0044）⇒
+## 若哪天真要换 DEPTH，必须把雾量落到 `fog_depth_end`（否则演出会哑）。
+## 结论：**保持 EXPONENTIAL**，靠"留一层残雾"实现远处渐淡（见 `stage01_decor.gd` 的雾量取值）。
+
+
+## 联动 tween：雾色 + **雾量** + 天球地面水平色一起变（改雾色不露地平线）
+## `amount` = 雾量（0 = 最清 … 1 = 最浓）→ `fog_density`（EXPONENTIAL，本项目现行模式）。
+## ⚠️ **别把雾量调到 0 附近**：那样远处就没有渐淡了（"不现实"的来源），
+## 演出里的残雾取值见 `data/stages/stage01/background/stage01_decor.gd`。
 ## 地面底色按雾色暗化 25%（与预设默认 ground_bottom ≈ 雾色×0.75 一致）
-func tween_env_fog(color: Color, density: float, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
+func tween_env_fog(color: Color, amount: float, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
 	var we := _env_node()
 	var env := we.environment if we != null else null
 	if not env:
@@ -203,7 +215,7 @@ func tween_env_fog(color: Color, density: float, duration: float, ease_type: int
 	var sm := _sky_material(env)
 	var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS).set_parallel(true)
 	tw.tween_property(env, "fog_light_color", color, duration)
-	tw.tween_property(env, "fog_density", density, duration)
+	tw.tween_property(env, "fog_density", amount, duration)
 	if sm:
 		tw.tween_property(sm, "ground_horizon_color", color, duration)
 		tw.tween_property(sm, "ground_bottom_color", color.darkened(0.25), duration)
