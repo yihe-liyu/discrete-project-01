@@ -230,6 +230,41 @@ def check_log() -> None:
 		fail("LOG", "log_archive.py --check 失败：\n" + (proc.stdout + proc.stderr).strip())
 
 
+# ── [6] 视觉计划清单：✅ 必须有出处；✅ 提到的文件必须存在（"回退也要更新清单"）──
+
+PLAN = "docs/BACKGROUND_VISUAL_PLAN.md"
+COMMIT_RE = re.compile(r"\b[0-9a-f]{7}\b")
+DOC_PATH_RE = re.compile(r"((?:[\w.-]+/)*[\w.-]+\.(?:gdshader|tscn|tres|gd|py|sh|png|md))(?![\w])")
+
+
+def _path_exists(rel: str) -> bool:
+	if (ROOT / rel).exists():
+		return True
+	if "/" not in rel:  # 裸文件名 → 全仓库找（文档里常省略目录），但**跳过隐藏目录**：
+		# `.godot/` 里有构建产物（如 shader 缓存），会把已删除的源文件判成"存在" ⇒ 漏报
+		for hit in ROOT.rglob(rel):
+			if not any(part.startswith(".") for part in hit.relative_to(ROOT).parts):
+				return True
+	return False
+
+
+def check_visual_plan() -> None:
+	"""BG9 两条硬规矩：① 未划掉的 ✅ 必须带 7 位提交哈希（出处）；
+	② ✅ 提到的文件必须存在 —— 东西被回退/删除后要就地划掉（`~~✅ …~~`）并追加 ⛔ 说明回退提交。"""
+	for lineno, line in enumerate(read(PLAN).splitlines(), 1):
+		if "~~" in line or "⛔" in line:
+			continue
+		# 只认「条目行」= 去掉列表标记后**以 ✅ 开头**的行（避免把"如何阅读/规矩说明"这类散文误判）
+		body = re.sub(r"^\s*(?:[-*+>]\s*|\d+\.\s*)*", "", line)
+		if not body.startswith("✅"):
+			continue
+		if not COMMIT_RE.search(line):
+			fail("VISUAL_PLAN", f"{PLAN}:{lineno} ✅ 条目没有出处 —— 补 7 位提交哈希（或划掉它）")
+		for rel in DOC_PATH_RE.findall(line):
+			if not _path_exists(rel):
+				fail("VISUAL_PLAN", f"{PLAN}:{lineno} ✅ 条目提到不存在的文件：{rel}（回退/删除后要划掉并加 ⛔）")
+
+
 def main() -> int:
 	print("== 文档哨兵（文档 ↔ 代码/数据） ==")
 	head = check_test_index()
@@ -238,13 +273,14 @@ def main() -> int:
 	check_danmaku_keys()
 	check_readme_links()
 	check_log()
+	check_visual_plan()
 
 	if PROBLEMS:
 		print(f"❌ 文档哨兵：{len(PROBLEMS)} 处不一致")
 		for problem in PROBLEMS:
 			print(f"   • {problem}")
 		return 1
-	print("✅ 文档哨兵全过（TEST_INDEX / README 徽章 / DANMAKU_API key 表 / README 链接 / 日志）")
+	print("✅ 文档哨兵全过（TEST_INDEX / README 徽章 / DANMAKU_API key 表 / README 链接 / 日志 / 视觉计划清单）")
 	return 0
 
 

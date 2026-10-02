@@ -1,10 +1,11 @@
 # Stage01 道中背景 — 画面效果优化清单
 
-> 状态：**部分已实施** —— 第一批（E+G 氛围 pass / C 地面距离雾 / D3 树融雾）+ 性能优化已落，见文末「已完成」；**§A–§I 中未打 ✅ 的仍是待做**。
+> 状态：**部分已实施** —— 2026-08 那批（E+G 氛围 pass / C 地面距离雾 / D3 树融雾）**已被 `17e928e`（2026-08-10）整体回退**（见文末 ⛔ 条）；**现役 = 2026-10-02 那批 ✅**（BG1 / BG2+BG3 / BG5 / BG7 / 工具重建 / 雾色定案）；**§A–§I 中未打 ✅ 的仍是待做**。
 > 范围：仅背景 SubViewport（弹幕/UI 不受影响）
 > 2026-08-10 记录
 >
-> **本文怎么读**：**§0 是改动前基线（历史快照，别当现状）** · **§A–§I 是待做清单（做了就打 ✅ 或移进文末）** · **文末「已完成」是记录（只增不改）**。
+> **本文怎么读**：**§0 是改动前基线（历史快照，别当现状）** · **§A–§I 是待做清单（做了就打 ✅ 或移进文末）** · **文末「已完成」是记录**。
+> **两条硬规矩（BG9，2026-10-02）**：① 每条未划掉的 ✅ **必须带 7 位提交哈希**（出处）；② **回退必须留痕** —— 把原 ✅ 划掉（`~~✅ …~~`）并追加 ⛔ 说明回退提交，**不许让「只增不改」把清单蒙陈**。`tools/check_docs.py` 的 `VISUAL_PLAN` 规则机械校验这两条（✅ 无出处 / ✅ 提到的文件不存在 ⇒ 门禁红）。
 > 逐条状态权威仍在基线 S 表（S13 背景/图集线）。
 
 ---
@@ -92,7 +93,7 @@
 ## 推荐分批
 
 ```
-第一批（shader 快赢）：E+G 合并氛围 pass  +  C 地面距离雾 ✅
+第一批（shader 快赢）：E+G 合并氛围 pass  +  C 地面距离雾 ~~✅~~ ⛔ 已随 `17e928e`（2026-08-10）**整体回退**（地平线分界线/黑远地面未解决 + 引入竖线）。
 第二批（3D 氛围）：F 尘埃粒子 + I 远山剪影 + H1 光锥
 第三批（打磨）：B 日冕 + D 树风摆/色调 + A 云
 彩蛋（试性能）：H2 真体积雾
@@ -113,21 +114,21 @@
   | `--shrink 2` | 400×464 | **7.3 ~ 7.6 ms** | 12.9 ~ 14.4 | 70 ~ 77 |
 
   ⇒ 背景视口是**主开销**（主视口只 0.4 ~ 1.7 ms）；`stretch_shrink = 2` 一档就把它的 GPU 时间砍掉 ≈40%。
-- ✅ **已落地（2026-10-02）：`stretch_shrink = 2`** —— 两个宿主各一行（`scenes/game_scene.tscn` 的
+- ✅ **已落地（2026-10-02）：`stretch_shrink = 2`** —— 两个宿主各一行（`scenes/game_scene.tscn` 的 〔出处 `751dbad`〕
   `Background/SubViewportContainer`、`scenes/workbench.tscn` 的 `BgContainer`）。真场景实测（入树后读值）：
   `game_scene` 容器 800×928 → **视口 400×464**；`workbench` 容器 768×896 → **视口 384×448**。
   项目未设 `default_texture_filter` ⇒ 放大用引擎默认 **Linear**（平滑）。回滚 = 删那两行。
-- ✅ **已落地（2026-10-02）BG7：工作台纳入同一规格** —— 容器改用 `GameConfig.BACKGROUND_OVERSCAN`（=16，
+- ✅ **已落地（2026-10-02）BG7：工作台纳入同一规格** —— 容器改用 `GameConfig.BACKGROUND_OVERSCAN`（=16， 〔出处 `ad439bb`〕
   新唯来源常量）⇒ 与真游戏同 **800×928**（原先"场地 1:1 + 内缩 3px"，差 ≈4% 横向 FOV）；
   画框（金边/网格）从根 `_draw` 拆成 `scripts/workbench/frame_overlay.gd`，排在 `BgContainer` **之后**
   ⇒ 画在背景**之上**（原先画框在背景下面，才被迫内缩）。真场景探针：容器 (48,16)/(800×928)、
   视口 (400×464)、子节点顺序 `BgContainer → FrameOverlay → World…` ✓。
-- ✅ **已落地（2026-10-02）BG1：环境唯一来源 = `stage01_env.tres`** —— `StageBackground._env_node()` **懒查找**
+- ✅ **已落地（2026-10-02）BG1：环境唯一来源 = `stage01_env.tres`** —— `StageBackground._env_node()` **懒查找** 〔出处 `cccf471`〕
   `WorldEnvironment`（内容脚本挂在 `Decor` **子节点**上，而子节点 `_ready` **先于**父节点 ⇒ 旧实现那次
   `apply_env_preset()` 撞 `world_environment == null` **静默返回**，**练习模式**于是用场景内联环境）；
   同时删掉 `stage01_background.tscn` 的内联 `Environment`。哨兵实验：预设临时改 `fog_density = 0.99`
   ⇒ 实例化后 改前 **0.30** / 改后 **0.99** ✓。守卫：`test/test_stage_background.gd`（2 用例，反向均会红）。
-- ✅ **已落地（2026-10-02）BG2+BG3：真配天球（参数 = 作者原版）+ `fog_sky_affect = 0`** ——
+- ✅ **已落地（2026-10-02）BG2+BG3：真配天球（参数 = 作者原版）+ `fog_sky_affect = 0`** —— 〔出处 `fcabcd3`〕
   写进 `stage01_env.tres`（预设 = 环境唯一来源）：`ProceduralSkyMaterial`（`sky_top (0.20,0.24,0.30)` /
   `sky_horizon (0.42,0.44,0.46)` / `curve 0.35` / `ground_horizon (0.30,0.33,0.30)` / `ground_bottom (0.16,0.18,0.14)`，
   出自 `486766c`）+ `Sky` + `background_mode = BG_SKY` + `fog_sky_affect = 0`（作者 `d2a7d7d` 原值）
@@ -164,7 +165,7 @@
   ⇒ 这个尺度下**它是弱旋钮**；"近处清晰 + 远处明显渐淡"**不能只靠它**。更强的空中透视要么
   **按片元距离给树带融雾**（8 月 `decor_fade.gdshader` 的方向），要么 DEPTH 但 `begin` 落在树带之外
   （那样几乎没有可渐淡的地面）—— 两条都更大，见 `TODO_TEMP` 的 BG4。
-- ✅ **已落地（2026-10-02）：暂停时停掉背景渲染** —— `game_scene.gd:_on_game_state_changed` 末尾一行
+- ✅ **已落地（2026-10-02）：暂停时停掉背景渲染** —— `game_scene.gd:_on_game_state_changed` 末尾一行 〔出处 `e051fab`〕
   （`UPDATE_DISABLED` / 回 `ALWAYS`，挂现成的 `AppState.PAUSED` 钩子）。实测 **真实帧 13.21 → 4.53 ms/帧**
   （75.7 → 220.7 FPS）＝**省 8.7 ms/帧**。副作用：雾 shader 用 `TIME`，暂停时本来还在飘 ⇒ 现在**冻住**（作者要的）。
   ⚠️ **测量陷阱**：`viewport_get_measured_render_time_gpu()` 在停止渲染后**仍报上一帧的残值**（两种状态都报 8.84 ms）
@@ -176,7 +177,7 @@
   `shrink=1` → 800×928；`2` → 400×464；`3` → **266×309**（整数**截断**）；`stretch = false` 时**不生效**；
   且 `stretch = true` 时**手改 `SubViewport.size` 会被容器立刻覆盖**（官方那句"别再手改"的实证）。
   容器矩形不变 ⇒ 暂停模糊（`_add_blur` 用 container.position/size）与震屏（`bind_layer` 只做位移）都不受影响。
-- ✅ **蒙眼雾 = 故事设定（作者 2026-10-02 拍板，保留）**：实拍 3s（`bg_f0180`）/ 9s（`bg_f0540`）两档，
+- ✅ **蒙眼雾 = 故事设定（作者 2026-10-02 拍板，保留）**：实拍 3s（`bg_f0180`）/ 9s（`bg_f0540`）两档， 〔出处 `768f2ae`〕
   画面**几乎全是蒙眼雾**（草地在画面底部才隐约可见）；`stage01_decor.gd` 只 tween **环境雾**（0.3 → 0.02），
   `ScreenFogFX.fog_dark` 保持 **0.8** —— 这是**有意**的，**别去动 `fog_dark`**。
 - 📏 **由此得到的成本结论**（同种子同帧号，把 `--shrink 2` 的图放大到同尺寸**逐像素**比）：
@@ -191,19 +192,19 @@
 
 ### 画面优化（第一批 + 地平线/树墙修复，2026-08-10）
 
-- ✅ **E+G**：`screen_fog.gdshader` 合并为全屏不透明氛围 pass —— 调色 + 双层噪声蒙眼雾 + 太阳不规则羽化浓雾 + 渐晕 + 日食漏光亮环 + 呼吸感
-- ✅ **C**：`background_plane.gdshader` 距离雾 + 平铺扰动；后续修：`fog_disabled` 摆脱环境黑雾、距离改为 vertex 插值（**fragment 的 VIEW 内置在本项目环境返回 0**，需传 cam_pos uniform）、远缘带渐变到天球色（0.29,0.32,0.35）→ 水平线无缝
-- ✅ **D3**：`decor_fade.gdshader` 新 shader —— 树按距离融进雾色/天球色，远处树海不再是硬剪影墙；SCISSOR 层改用此 shader，cam_pos 每帧同步
-- ✅ 地面平面加深 256→340 盖住树带、tiling.y 6→8 保持密度
-- ✅ 新增 `tools/background_capture`：背景截图工具（视口线性→sRGB 修正后存 PNG）——**后随 3D 背景重构删除（`54d7758`），见「验证流程」的说明**
+- ✅ **E+G（现役版；回退后于 `54d7758` 重写）**：`screen_fog.gdshader` 全屏不透明氛围 pass —— 蒙眼雾云斑 + 太阳处羽化浓雾 + 渐晕/呼吸感（`fog_dark 0.65` 等 uniform 由 `ScreenFogFX` 组件 `@export` 注入） 〔出处 `54d7758`〕
+- ~~✅~~ **C**：`background_plane.gdshader` 距离雾 + 平铺扰动；后续修：`fog_disabled` 摆脱环境黑雾、距离改为 vertex 插值（**fragment 的 VIEW 内置在本项目环境返回 0**，需传 cam_pos uniform）、远缘带渐变到天球色（0.29,0.32,0.35）→ 水平线无缝 ⛔ 已随 `17e928e` 回退：`background_plane.gdshader` 砍 −66 行，今天只有 `base_texture/tiling/uv_offset/modulate`。
+- ~~✅~~ **D3**：`decor_fade.gdshader` 新 shader —— 树按距离融进雾色/天球色，远处树海不再是硬剪影墙；SCISSOR 层改用此 shader，cam_pos 每帧同步 ⛔ 已随 `17e928e` 回退：**文件已删**（`gdshader/decor_fade.gdshader −33`）；今天树是 `StandardMaterial3D`（unshaded + alpha scissor）。
+- ~~✅~~ 地面平面加深 256→340 盖住树带、tiling.y 6→8 保持密度 ⛔ 已随 `17e928e` 回退（今天 `PlaneMesh.size = Vector2(256, 512)`）。
+- ~~✅~~ 新增 `tools/background_capture`：背景截图工具（视口线性→sRGB 修正后存 PNG）——**后随 3D 背景重构删除（`54d7758`），见「验证流程」的说明** ⛔ 原版随 `54d7758` 删除；**重建版见文末 ✅**。
 
 ### 性能优化（2026-08-10）
 
-- ✅ `decor_manager.gd`：逐实例更新 → 节点整体平移（O(n)→O(1)）；砍每帧排序/数组分配；死亡槽位复用池；分块扩容
-- ✅ 修复：`Transform3D.scaled()` 连 origin 一起缩放的 bug
-- ✅ 新增 `test/test_decor_manager.gd`（6 个回归测试）
+- ✅ `decor_manager.gd`：逐实例更新 → 节点整体平移（O(n)→O(1)）；砍每帧排序/数组分配；死亡槽位复用池；分块扩容 〔出处 `ec36c20`〕
+- ✅ 修复：`Transform3D.scaled()` 连 origin 一起缩放的 bug 〔出处 `ec36c20`〕
+- ✅ 新增 `test/test_decor_manager.gd`（6 个回归测试） 〔出处 `ec36c20`〕
 
 ### 工具链（2026-10-02）
 
 - ✅ 按现架构**重建** `tools/background_capture`（原版随 `54d7758` 删除；旧版引用的 `StageManager` 已不存在，重建版改走 `StageRuntime` + `StageContext`）：同种子**可对比截图** + 官方接口**渲染耗时测量**；首份测量基线见「验证流程 + 测量基线」。
-- ✅ 同一次测量拍到的「画面几乎全是蒙眼雾」经作者确认为**故事设定**（保留，不动 `fog_dark`）；由此测得「降分辨率几乎无损」（平均差 0.43~0.69%、省 ≈40% GPU）—— 见「验证流程 + 测量基线」。
+- ✅ 同一次测量拍到的「画面几乎全是蒙眼雾」经作者确认为**故事设定**（保留，不动 `fog_dark`）；由此测得「降分辨率几乎无损」（平均差 0.43~0.69%、省 ≈40% GPU）—— 见「验证流程 + 测量基线」。 〔出处 `768f2ae`〕
