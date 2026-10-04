@@ -206,11 +206,16 @@ func _inject_player_ctx(p_ctx: StageContext) -> void:
 
 
 func add_enemy_to_scene(node: Node2D) -> void:
-	# 注入注册表：Enemy 在 _ready 自注册、Boss 在 start_boss 注册（都在 add_child 之后，故先给引用）
-	if "registry" in node:
-		node.registry = entity_registry
-	if "ui_layer" in node:
-		node.ui_layer = ui_layer
+	# 注入注册表：Enemy 在 _ready 自注册、Boss 在 start_boss 注册（都在 add_child 之后，故先给引用）。
+	# 显式类型化接口（`Enemy.set_registry` / `Boss.set_registry` / `Boss.set_ui_layer`）——
+	# 取代旧实现 `"registry" in node` / `"ui_layer" in node` 的属性名探针。
+	var enemy := node as Enemy
+	if enemy != null:
+		enemy.set_registry(entity_registry)
+	var boss := node as Boss
+	if boss != null:
+		boss.set_registry(entity_registry)
+		boss.set_ui_layer(ui_layer)
 	var parent: Node = null
 	if is_instance_valid(world):
 		parent = world

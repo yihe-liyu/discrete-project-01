@@ -8,8 +8,8 @@ var enemy_data: EnemyData
 ## 运行时上下文（StageRuntime.spawn_enemy_data 注入，用于走服务而非全局）
 var ctx: StageContext
 
-## 战场实体注册表（StageRuntime 注入；直接实例化时为空，跳过注册）
-var registry
+## 战场实体注册表（StageRuntime 注入；直接实例化时为 null，跳过注册）
+var registry: EntityRegistry
 
 var _visual: Node2D          # 外观实例（可能不是 AnimatedSprite2D）
 var max_hp: int
@@ -36,6 +36,12 @@ func _ready():
 func _on_tree_exited():
 	if registry:
 		registry.unregister_enemy(self)
+
+
+## 显式注入战场实体注册表（StageRuntime.add_enemy_to_scene 的唯一入口）。
+## 取代旧实现 `if "registry" in node: node.registry = ...` 的属性名探针。
+func set_registry(p_registry: EntityRegistry) -> void:
+	registry = p_registry
 
 
 ## 是否可作为自机弹的目标（杂兵恒真；预留给"未现形 / 无敌期"敌机覆写）。

@@ -57,7 +57,7 @@ var hitbox_radius: float:
 
 var _stage_context: StageContext
 ## 战场实体注册表（StageRuntime 注入；直接实例化时为 null）——自机 / 资源 / 敌机登记
-var registry
+var registry: EntityRegistry
 ## HUD 层（StageRuntime 注入；工作台/测试可为 null）——位置指示器挂此
 var ui_layer: CanvasLayer
 var _phase_data: PhaseData
@@ -116,6 +116,17 @@ func is_targetable() -> bool:
 
 func set_exit_controlled() -> void:
 	_is_exit_controlled = true
+
+
+## 显式注入战场实体注册表（StageRuntime.add_enemy_to_scene 的唯一入口）。
+## 取代旧实现 `if "registry" in node: node.registry = ...` 的属性名探针。
+func set_registry(p_registry: EntityRegistry) -> void:
+	registry = p_registry
+
+
+## 显式注入 HUD 层（同上，取代 `"ui_layer" in node` 探针）。
+func set_ui_layer(p_ui_layer: CanvasLayer) -> void:
+	ui_layer = p_ui_layer
 
 
 func setup(data: BossData, p_ctx: StageContext = null) -> void:
