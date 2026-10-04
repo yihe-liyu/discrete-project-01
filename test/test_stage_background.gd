@@ -131,6 +131,20 @@ func test_background_finds_camera_by_type_not_name():
 	assert_eq(cam_count, 1, "不许自建第二台相机（按名字找的旧实现改名后会多出一台）")
 
 
+## 回归（P1-B3）：背景的 `DecorManager` 必须是**场景声明的子节点**
+## （`StageBackground.get_decor_manager()` 按类型解析）—— 旧实现 `StageContext.get_decor()`
+## 按名字 `get_node_or_null("DecorManager")` 找、找不到再运行时 `add_child` 动态建：
+## 行为绑在节点名上，还在内容脚本里偷偷改场景树。
+func test_stage01_background_declares_decor_manager():
+	var bg: StageBackground = preload("res://data/stages/stage01/background/stage01_background.tscn").instantiate()
+	add_child_autofree(bg)
+	var mgr := bg.get_decor_manager()
+	assert_not_null(mgr, "背景场景必须声明 DecorManager 子节点（否则 ctx.decor 为 null）")
+	if mgr != null:
+		assert_eq(mgr.get_parent(), bg, "声明的 DecorManager 应是背景子节点（随背景存亡）")
+		assert_eq(bg.get_decor_manager(), mgr, "二次访问返回同一实例（懒解析缓存）")
+
+
 ## 回归（BG12-fix）：两个宿主的**背景视口必须 `own_world_3d = true`**。
 ## 实测（2026-10-02 探针）：`false` 时背景视口**与根视口共享同一个 World3D**，而一个 World3D 只有一份生效的
 ## Environment ⇒ 后进的 `WorldEnvironment` **被静默忽略**（塞红雾无效）。⇒ 各自持有世界才不会被抢。

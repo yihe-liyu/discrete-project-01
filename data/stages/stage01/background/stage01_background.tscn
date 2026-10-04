@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://c3a5hfx0ggmx5" path="res://data/stages/stage01/background/stage01_decor.gd" id="5_2145v"]
 [ext_resource type="Script" uid="uid://b5ytro1ivmhjt" path="res://scripts/background/background_sun.gd" id="6_sun"]
 [ext_resource type="Script" uid="uid://cesyonb11jo8h" path="res://scripts/background/screen_fog_fx.gd" id="7_fog"]
+[ext_resource type="Script" uid="uid://b459a24bf582" path="res://scripts/background/decor_manager.gd" id="8_decor"]
 
 [sub_resource type="ShaderMaterial" id="Mat_Ground"]
 render_priority = 0
@@ -22,6 +23,9 @@ size = Vector2(256, 512)
 
 [node name="Stage01Background" type="Node3D" unique_id=1763472797]
 script = ExtResource("1_4oxri")
+
+[node name="DecorManager" type="Node3D" parent="." unique_id=812460391]
+script = ExtResource("8_decor")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=650303097]
 

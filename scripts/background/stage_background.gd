@@ -4,8 +4,25 @@ class_name StageBackground
 ## 公开：背景脚本可直接读写
 var camera: Camera3D
 var world_environment: WorldEnvironment
+## 装饰物管理器（**场景声明式**：背景场景里放一个 DecorManager 子节点即可）。
+## 首次访问时按**类型**解析并缓存 —— 不按节点名找、也不运行时动态建节点（与 `_find_camera()` 同一套思路）。
+## ⚠️ 别用 node 类型 `@export` + `.tscn` 的 `NodePath("...")`：本引擎实测该写法**不解析**（恒为 null，
+## `scenes/ui/game_over_menu.tscn` 的 `title_label` 同样中招），所以走类型解析。
+var decor_manager: DecorManager
 var _elapsed: float = 0.0
 var _is_active: bool = false
+
+
+## 装饰物管理器（懒解析：`Decor` 子节点的 `_ready` 早于父节点，但 `start()` 在父 `_ready` 之后，
+## 这里仍做成用时就查，任何调用点都安全）。无声明节点 ⇒ null（旧实现会偷偷 add_child 建一个）。
+func get_decor_manager() -> DecorManager:
+	if decor_manager != null:
+		return decor_manager
+	for child in get_children():
+		if child is DecorManager:
+			decor_manager = child
+			break
+	return decor_manager
 
 func _ready():
 	if camera == null:

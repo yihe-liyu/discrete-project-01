@@ -9,7 +9,6 @@ const EnemyService = preload("res://scripts/coroutine/services/enemy_service.gd"
 var runner: CoroutineRunner
 ## 关卡运行时（由 StageRuntime 创建 ctx 时回填；内容经此拿注入槽/工厂）
 var stage: StageRuntime
-var _decor_manager: DecorManager
 
 # 服务懒加载（高频路径优化：每颗协程弹 new 一次 ctx，只创建用到的服务）
 # 大多数子弹协程只用 bullets/player —— 从 8 个对象降到 2 个
@@ -107,18 +106,14 @@ var objects: StageObjects:
 func _init(p_runner: CoroutineRunner) -> void:
 	runner = p_runner
 
-## 装饰物管理器（树附着，懒加载）
+## 装饰物管理器（**背景场景声明式持有**：`StageBackground.get_decor_manager()` 按类型取声明的子节点）。
+## 旧实现按名字 `get_node_or_null("DecorManager")` 找、找不到就运行时 `add_child` 动态建 ——
+## 既把行为绑在节点名上，又在内容脚本里偷偷改场景树；现在只读声明的类型化引用。
 func get_decor() -> DecorManager:
-	if _decor_manager: return _decor_manager
 	var background: StageBackground = stage.current_background if stage else null
-	if not is_instance_valid(background): return null
-	var mgr: DecorManager = background.get_node_or_null("DecorManager") as DecorManager
-	if not mgr:
-		mgr = DecorManager.new()
-		mgr.name = "DecorManager"
-		background.add_child(mgr)
-	_decor_manager = mgr
-	return mgr
+	if not is_instance_valid(background):
+		return null
+	return background.get_decor_manager()
 
 ## 便捷属性
 var decor: DecorManager:

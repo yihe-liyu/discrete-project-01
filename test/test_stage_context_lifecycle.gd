@@ -37,3 +37,34 @@ func test_stage_context_with_item_service_is_freed():
 	await get_tree().process_frame
 	assert_null(ctx_ref.get_ref(), "StageContext 应被释放（无 RefCounted 环）")
 	assert_null(svc_ref.get_ref(), "ItemService 应随 ctx 释放")
+
+
+## ═══ B3 守卫：DecorManager 由背景**声明式持有**，不按名字找、不动态建节点 ═══
+
+func _decor_child_count(parent: Node) -> int:
+	var n := 0
+	for child in parent.get_children():
+		if child is DecorManager:
+			n += 1
+	return n
+
+
+func test_ctx_decor_reads_declared_manager_not_name_lookup():
+	var bg := StageBackground.new()
+	autofree(bg)
+	var mgr := DecorManager.new()
+	mgr.name = "Deco"      # 故意不叫 DecorManager：旧实现按名字找不到就会另建一个
+	bg.add_child(mgr)
+
+	var rt := StageRuntime.new()
+	autofree(rt)
+	rt.current_background = bg
+	var runner := CoroutineRunner.new()
+	autofree(runner)
+	var ctx := StageContext.new(runner)
+	ctx.stage = rt
+
+	assert_eq(ctx.get_decor(), mgr, "应返回背景声明的 DecorManager（按类型解析，不按名字）")
+	assert_eq(ctx.decor, mgr, "便捷属性与 get_decor() 同源")
+	assert_eq(_decor_child_count(bg), 1, "不得运行时 add_child 另建（旧实现会多出一个 DecorManager）")
+
