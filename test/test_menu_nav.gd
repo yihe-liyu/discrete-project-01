@@ -72,3 +72,19 @@ func test_game_manager_applies_requested_state_deferred():
 	assert_eq(GameManager.current_state, GameManager.AppState.PLAYING, "帧末应切回 PLAYING")
 
 	GameManager.current_state = old
+
+
+## ═══ B5 守卫：暂停菜单路径是**唯一来源常量**，不许散落字面量 ═══
+
+func test_pause_menu_path_is_single_source_constant():
+	assert_eq(GameManager.PAUSE_MENU_SCENE, "res://scenes/ui/pause_menu.tscn", "常量值 = 暂停菜单场景")
+
+	var f := FileAccess.open("res://scripts/autoload/game_manager.gd", FileAccess.READ)
+	assert_not_null(f, "应能读到 game_manager.gd 源码")
+	if f == null:
+		return
+	var src := f.get_as_text()
+	f.close()
+	assert_eq(src.count("res://scenes/ui/pause_menu.tscn"), 1,
+		"路径字面量只允许出现在常量定义处（旧实现两处硬编码 = 改一处漏一处）")
+	assert_eq(src.count("push_overlay(PAUSE_MENU_SCENE)"), 2, "两处覆盖层入口都应引用常量")

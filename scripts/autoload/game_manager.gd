@@ -3,6 +3,9 @@ extends Node
 
 enum AppState {MENU, PLAYING, PAUSED, TRANSITIONING}
 
+## 暂停菜单场景路径（**唯一来源**：覆盖层入口只引用这个常量，不再散落字面量）
+const PAUSE_MENU_SCENE := "res://scenes/ui/pause_menu.tscn"
+
 signal game_state_changed(old_state: int, new_state: int)
 signal scene_entered(scene_path: String)
 signal scene_left(scene_path: String)
@@ -50,7 +53,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _menu_nav.is_overlay_open():
 		return
 	if event.is_action_pressed("ui_pause"):
-		_menu_nav.push_overlay("res://scenes/ui/pause_menu.tscn")
+		_menu_nav.push_overlay(PAUSE_MENU_SCENE)
 		get_viewport().set_input_as_handled()
 
 
@@ -164,7 +167,7 @@ func pop_overlay_menu(menu) -> void:
 func pause_game():
 	if current_state != AppState.PLAYING:
 		return
-	_menu_nav.push_overlay("res://scenes/ui/pause_menu.tscn")
+	_menu_nav.push_overlay(PAUSE_MENU_SCENE)
 
 func resume_game():
 	if current_state != AppState.PAUSED:
