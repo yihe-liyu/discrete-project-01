@@ -6,6 +6,9 @@ extends GutTest
 ##
 ## 相关：`StageDirector.finish_stage()`（内容动词）→ 本方法。
 
+const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
+const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
+
 
 func _runtime() -> StageRuntime:
 	var rt := StageRuntime.new()
@@ -94,4 +97,24 @@ func test_add_enemy_to_scene_does_not_probe_property_names():
 	assert_null(lookalike.registry, "非 Enemy/Boss 不该凭属性名 `registry` 被写入（旧 `in` 探针会写）")
 	assert_null(lookalike.ui_layer, "非 Boss 不该凭属性名 `ui_layer` 被写入")
 	assert_eq(lookalike.get_parent(), rt.world, "节点仍应正常入场景（行为不变）")
+
+
+## ═══ B2 守卫：自机由组合根**注入**，不再按名字在 World 下找 ═══
+
+## 自机故意挂在 world **之外**（但名字仍叫 "Player"）：旧实现 `world.get_node_or_null("Player")`
+## 会找不到 ⇒ ctx 注入静默丢失；新实现只认组合根注入的 `player` 引用。
+func test_inject_player_ctx_uses_injected_player_not_world_name_lookup():
+	var rt := _runtime()
+	var holder := Node2D.new()
+	add_child_autofree(holder)
+	var player := StageHost.make_player(holder, GHOST_SCRIPT, "Player", REIMU_DATA)
+
+	rt.player = player
+	rt.load_stage(_stage_data())
+
+	assert_not_null(player.ctx, "组合根注入的 Player 应拿到关卡 ctx（旧实现按 World/Player 名找会漏）")
+	assert_eq(player.ctx.stage, rt, "ctx 应绑到本运行时")
+	assert_eq(rt.entity_registry.player, player, "注册表也应绑到同一自机")
+	assert_null(rt.world.get_node_or_null("Player"), "（前提）World 下确实没有叫 Player 的子节点")
+
 

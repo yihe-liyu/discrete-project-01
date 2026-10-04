@@ -171,6 +171,7 @@ func _exit_tree():
 	_bullet_manager.fx_parent = null
 	_stage_runtime.fx_pool = null
 	_stage_runtime.ui_layer = null
+	_stage_runtime.player = null      # 解除自机注入（节点随本场景释放）
 	if PracticeSession.is_practice_mode:
 		PracticeSession.finish()
 	if _background_instance and is_instance_valid(_background_instance):
@@ -188,6 +189,9 @@ func _setup_player() -> void:
 		preload("res://data/player_data/marisa_data.tres"),
 	]
 	var player: Player = %Player
+	# 组合根显式注入自机：StageRuntime._inject_player_ctx 只认这个引用（不再按名字找 World/Player）。
+	# 放在分支**之前**：异常路径（角色下标越界）也要能注入关卡 ctx，行为与旧名字查找一致。
+	_stage_runtime.player = player
 	if player and SaveData.selected_character < data_map.size():
 		player.setup_character(data_map[SaveData.selected_character])
 		# 自机 → 本次关卡世界的实体注册表；注册表 → 内核弹幕后端（同一条 StageHost 接线）

@@ -2,7 +2,7 @@ class_name StageRuntime
 extends Node
 ## 关卡运行时 —— 关卡生命周期 + 生成敌人/Boss（World 下的场景节点）。
 ## StageManager autoload 已删除；本节点是关卡生命周期的唯一实现（World 下声明）。
-## 依赖由组合根注入 `world`（敌人生成 / 自机 ctx 注入的父节点），不再 get_tree().current_scene 全树找（R2）。
+## 依赖由组合根注入 `world`（敌人生成目标）与 `player`（自机 ctx 注入对象），不再 get_tree().current_scene 全树找 / 按名字找 Player（R2）。
 ## 运行时引用归 EntityRegistry / SaveData，运行时字段已清空。
 
 signal stage_started()
@@ -14,6 +14,8 @@ const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
 
 
 var world: Node2D							## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
+## 本关自机（组合根注入的显式引用）——`_inject_player_ctx` 只认它，不再按名字在 World 下找。
+var player: Player
 var entity_registry := EntityRegistry.new()	## 战场实体注册表（自机 / 敌机 / Boss 的单一真源）
 var bullet_manager: BulletManager			## 弹幕世界（组合根注入；供关卡发弹 / 清弹）
 var miss_layer: MissCircleLayer				## 注入槽（组合根 / 工作台设置）
@@ -195,14 +197,14 @@ func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: St
 	return boss
 
 
-## 把关卡上下文注入给场景中的自机（供系统操作服务）
+## 把关卡上下文注入给**组合根注入**的自机（供系统操作服务）。
+## 旧实现 `world.get_node_or_null("Player")` 把行为绑在节点名 / 父子关系上 —— 自机换个名字
+## 或挂到别处就静默不注入；现在只认 `player` 这个显式引用。
 func _inject_player_ctx(p_ctx: StageContext) -> void:
-	if not is_instance_valid(world):
+	if not is_instance_valid(player):
 		return
-	var player := world.get_node_or_null("Player") as Player
-	if player:
-		player.bind_ctx(p_ctx)   # 把 stage 一并转发给射击 ctx
-		entity_registry.bind_player(player)
+	player.bind_ctx(p_ctx)   # 把 stage 一并转发给射击 ctx
+	entity_registry.bind_player(player)
 
 
 func add_enemy_to_scene(node: Node2D) -> void:

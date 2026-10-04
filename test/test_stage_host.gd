@@ -57,6 +57,7 @@ func test_wire_player_binds_registry_and_kernel_backend() -> void:
 	StageHost.wire_world(_stage_runtime, bm, _world)
 	var player := StageHost.make_player(_world, GHOST, "GhostPlayer", REIMU)
 	StageHost.wire_player(_stage_runtime, player)
+	assert_eq(_stage_runtime.player, player, "运行时显式认领自机（_inject_player_ctx 只认它）")
 	assert_eq(_stage_runtime.entity_registry.player, player, "自机进注册表")
 	assert_eq(bm.entity_registry, _stage_runtime.entity_registry, "内核后端拿到注册表")
 

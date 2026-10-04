@@ -54,11 +54,12 @@ static func wire_world(runtime: StageRuntime, bullet_manager: BulletManager, fx_
 	bullet_manager.inject_stage_runtime(runtime)
 
 
-## 自机接上舞台：实体注册表 + 内核弹幕后端。
+## 自机接上舞台：显式认领自机引用（`_inject_player_ctx` 只认它）+ 实体注册表 + 内核弹幕后端。
 ## 真游戏在**选好机体之后**才接（`setup_character()` 先跑）——所以这两步与 `wire_world` 分开。
 static func wire_player(runtime: StageRuntime, player: Player) -> void:
 	if not _registry_ready(runtime, "wire_player"):
 		return          # 前置没满足就**什么都不做**（不许只绑自机、后端却没接）
+	runtime.player = player
 	runtime.entity_registry.bind_player(player)
 	runtime.bullet_manager.inject_entity_registry(runtime.entity_registry)
 
