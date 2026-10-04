@@ -30,6 +30,18 @@ func _ready():
 
 	_menu_nav = MenuNav.new()
 	_menu_nav.setup(self)
+	# 覆盖层进出的状态切换走显式信号；`CONNECT_DEFERRED` 保持旧 `set_state.call_deferred(...)` 的时序
+	# （本帧末才切状态，避免在 push/pop 的半途触发 game_state_changed 的监听者）。
+	_menu_nav.pause_requested.connect(_on_pause_requested, CONNECT_DEFERRED)
+	_menu_nav.resume_requested.connect(_on_resume_requested, CONNECT_DEFERRED)
+
+
+func _on_pause_requested() -> void:
+	set_state(AppState.PAUSED)
+
+
+func _on_resume_requested() -> void:
+	set_state(AppState.PLAYING)
 
 
 func _unhandled_input(event: InputEvent) -> void:

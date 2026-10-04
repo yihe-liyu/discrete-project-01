@@ -20,6 +20,10 @@ class_name MenuNav
 extends RefCounted
 
 signal page_changed(current: Node, previous: Node)
+## 请求宿主切到「暂停 / 恢复」状态（显式接口，取代旧的动态方法名 `_parent.set_state(...)` + `call_deferred`）。
+## 由 GameManager 以 `CONNECT_DEFERRED` 连接 —— 保持原来"状态切换推迟到本帧末"的时序。
+signal pause_requested()
+signal resume_requested()
 
 # ═══ 过渡设置 ═══
 
@@ -154,7 +158,7 @@ func push_overlay(page_path: String) -> BasePage:
 	tree.root.add_child(wrapper)
 	_connect_signals(page)
 
-	_parent.set_state.call_deferred(GameManager.AppState.PAUSED)
+	pause_requested.emit()
 	tree.paused = true
 
 	page.on_enter()
@@ -175,7 +179,7 @@ func add_overlay_instance(page: BasePage) -> void:
 
 	_parent.get_tree().root.add_child(wrapper)
 	_connect_signals(page)
-	_parent.set_state.call_deferred(GameManager.AppState.PAUSED)
+	pause_requested.emit()
 	_parent.get_tree().paused = true
 	page.on_enter()
 
@@ -199,7 +203,7 @@ func pop_overlay() -> void:
 	# 恢复游戏
 	if _overlay_stack.is_empty():
 		_parent.get_tree().paused = false
-		_parent.set_state.call_deferred(GameManager.AppState.PLAYING)
+		resume_requested.emit()
 
 
 ## 弹出指定覆盖层
@@ -214,7 +218,7 @@ func pop_specific_overlay(page: BasePage) -> void:
 		wrapper.queue_free()
 	if _overlay_stack.is_empty():
 		_parent.get_tree().paused = false
-		_parent.set_state.call_deferred(GameManager.AppState.PLAYING)
+		resume_requested.emit()
 
 
 func is_overlay_open() -> bool:
