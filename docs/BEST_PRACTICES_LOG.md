@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 79 条（本文件留最近 79 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 80 条（本文件留最近 80 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-02 — P1 收口：字符串接口 / 隐藏契约（B1–B6）
 - 2026-10-02 — N8 收尾：workbench 单字母清零
 - 2026-10-02 — BG12-fix 落地：三个宿主的背景视口各自持有 World3D
 - 2026-10-02 — BG12 确认：背景 SubViewport 与根视口**共享** World3D（"第二个 WorldEnvironment 被忽略"风险**成立**）
@@ -109,6 +110,60 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-10-02 — P1 收口：字符串接口 / 隐藏契约（B1–B6）
+
+- **目标**：把「靠属性名 / 节点名 / 动态方法名 / 路径字面量维系」的 6 条隐藏契约换成编译期可见的
+  显式接口 —— **行为不变** + 每条都有会红的守卫。一提交一条（`78fb43a` / `46e3918` / `af69ddd` /
+  `bfcf86d` / `57c39df` / `50b8438`）。
+- **B1 入场景依赖注入**（`scripts/stage/stage_runtime.gd`）：原 `"registry" in node` / `"ui_layer" in node`
+  属性名探针 → `Enemy.set_registry()` / `Boss.set_registry()` / `Boss.set_ui_layer()` 显式类型化 setter，
+  `add_enemy_to_scene` 改 `node as Enemy` / `node as Boss` 类型分支；`registry` 字段同时收窄成 `EntityRegistry`。
+  守卫 `test_stage_runtime.gd::test_add_enemy_to_scene_does_not_probe_property_names`
+  （内联 `ProbeLookalike`：不是 Enemy/Boss 就一个字段都不许碰）；退回探针 ⇒ 红（2 断言）。
+- **B2 自机注入**（同文件 + `stage_host.gd` / `game_scene.gd`）：原 `world.get_node_or_null("Player")`
+  按节点名 + 父子关系找 → `StageRuntime.player: Player` 显式引用，`StageHost.wire_player()` 统一认领，
+  `game_scene._setup_player()` 在分支前注入（异常路径行为不变）。守卫
+  `test_stage_runtime.gd::test_inject_player_ctx_uses_injected_player_not_world_name_lookup`
+  （自机故意挂在 World 之外、名字仍叫 Player）；退回名字查找 ⇒ 红。
+- **B3 背景装饰**（`stage_context.gd` + `stage_background.gd` + `stage01_background.tscn`）：
+  原 `bg.get_node_or_null("DecorManager")` + 运行时 `add_child(DecorManager.new())` →
+  场景**声明** `DecorManager` 子节点，`StageBackground.get_decor_manager()` 按**类型**解析
+  （BG6 相机同思路），`ctx.decor` 只转发。守卫
+  `test_stage_context_lifecycle.gd::test_ctx_decor_reads_declared_manager_not_name_lookup`（节点故意叫 `Deco`）
+  与 `test_stage_background.gd::test_stage01_background_declares_decor_manager`；
+  退回名字查找 + 动态建 ⇒ 红（含子节点 1→2），删场景节点 ⇒ 红。
+  **踩坑（重要）**：先试了 node 类型 `@export var decor_manager: DecorManager` + `.tscn` 的
+  `decor_manager = NodePath("DecorManager")` —— **本引擎 4.7.2 实测不解析**，实例化后恒为 `null`；
+  `scenes/ui/game_over_menu.tscn` 的 `title_label`（同样的既有写法）也是 `null`。⇒ node 类型 `@export`
+  在本项目**不可用**，声明式节点引用要走「场景放节点 + 代码按类型解析」。顺带发现 `game_over_menu`
+  的标题更新是**静默 no-op**（有 `if title_label:` 兜底所以不报错），**本次未动**，留作独立条目。
+- **B4 覆盖层状态切换**（`menu_nav.gd` / `game_manager.gd`）：原
+  `_parent.set_state.call_deferred(GameManager.AppState.X)` 动态方法名 → `MenuNav` 新增
+  `pause_requested()` / `resume_requested()` 信号，`GameManager` 以 `CONNECT_DEFERRED` 连接
+  （保留「帧末才切状态」时序）。守卫 `test_menu_nav.gd`：行为（宿主无 `set_state` 也能收到信号）
+  + 源码机械判据（不许出现 `set_state.call_deferred`）+ 端到端（`GameManager.pause_game()` 帧末才变 PAUSED）；
+  **完整**退回（动态调用 + 信号声明 + 接线）⇒ 2/4 红。
+  **踩坑**：只退"调用点"而不退信号声明 ⇒ warning-as-error「signal declared but never used」把
+  `check_syntax` 弄红 —— 反向验证必须**整条契约一起退**，否则红是编译错、不是守卫抓的。
+- **B5 暂停菜单路径**（`game_manager.gd`）：原两处硬编码 `res://scenes/ui/pause_menu.tscn` →
+  `const PAUSE_MENU_SCENE`（唯一来源）。守卫 `test_menu_nav.gd::test_pause_menu_path_is_single_source_constant`
+  （路径字面量只许 1 处 + 常量引用 2 处）；退回字面量（常量保留，编译不受影响）⇒ 红。
+- **B6 自机资源读取**（`entity_registry.gd` / 新增 `scripts/player/player_base.gd`）：原
+  `player.get("resources")` 字符串键 → 新增接口基类 `PlayerBase`（`Player extends PlayerBase`，
+  `resources` 及其惰性 getter/setter 上移），getter 改 `player as PlayerBase` 后读类型化属性。
+  守卫 `test_entity_registry.gd`：裸 Node2D（有同名 `resources`）必须被拒 + 真 Player 取同一实例；
+  退回 `get("resources")` ⇒ 红。
+  **踩坑**：新增 `class_name` 后 `.godot/global_script_class_cache.cfg` 还是旧的 ⇒ `check_syntax` 瞬间
+  35 失败（全是 "Could not find type PlayerBase"）；本地要补跑一次
+  `godot --headless --path . --import`（CI / 全新检出由 `check_syntax.sh` 自动做）。
+- **行为不变性 / 验收**：每步 `check_syntax` **0 失败**；B1–B3 额外跑启动哨兵 `game_scene.tscn` +
+  `workbench.tscn` 各 `--headless --quit`，**零 SCRIPT ERROR**（工作台默认 `show_bg = true`，会真跑
+  `stage01_decor` 的 `ctx.decor.add_layer/batch_spawn`，覆盖 B3 的真实路径）；`./tools/verify.sh`
+  **七步全过（exit 0）**；GUT **742 用例 / 742 通过 / 6824 断言 / 115 脚本**（较基线 731 / 6791
+  **+11 用例 / +33 断言**，全部是新守卫），`TEST_INDEX` 现状行 / C1·C5·C·D 小计 / 分层表与
+  README 徽章已同步。
+- **TODO**：删 P1 整组（B1–B6 全完成）。
 
 ### 2026-10-02 — N8 收尾：workbench 单字母清零
 
