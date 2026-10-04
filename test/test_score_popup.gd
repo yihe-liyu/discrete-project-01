@@ -7,9 +7,8 @@ const ITEM_SCENE = preload("res://scenes/item.tscn")
 const LINE := 256.0
 
 
-## 轻量假自机：EntityRegistry.get_player_resources() 走 player.get("resources")。
-class FakePlayer extends Node2D:
-	var resources: PlayerResources
+## 轻量假自机：实现 `PlayerBase` 类型化接口（EntityRegistry 经 `resources` 属性读，不认字符串键）。
+class FakePlayer extends PlayerBase:
 	var is_focused: bool = false
 
 

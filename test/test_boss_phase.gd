@@ -452,10 +452,9 @@ func test_play_defeat_spawns_miss_style_inverted_rings():
 
 # ═══════════ 奖励分作废（miss / 用 bomb） ═══════════
 
-## 轻量玩家桩：`EntityRegistry.get_player_resources()` 只认 `player.get("resources")`
+## 轻量玩家桩：实现 `PlayerBase` 类型化接口（EntityRegistry 经 `resources` 属性读）
 class PlayerResStub:
-	extends Node2D
-	var resources: PlayerResources
+	extends PlayerBase
 
 
 ## 接一个能读分数的 registry（`Boss._refs()` 优先用它）

@@ -54,3 +54,32 @@ func test_context_refs_read_bound_stage():
 	assert_eq(ctx.player.get_player(), p, "自机射击 ctx 能解析到自机")
 	runner.free()
 	p.free()
+
+
+## ═══ B6 守卫：资源读取走 `PlayerBase` **类型化接口**，不认 `get("resources")` 字符串键 ═══
+
+## 长得像（有同名 `resources` 属性）、但**不是** PlayerBase 的节点：
+## 旧实现 `player.get("resources")` 会认它，新实现必须拒绝。
+class BareNodeWithResources extends Node2D:
+	var resources: PlayerResources
+
+
+func test_player_resources_require_typed_player_interface():
+	var reg := EntityRegistry.new()
+	var bare := BareNodeWithResources.new()
+	bare.resources = PlayerResources.new()
+	add_child_autofree(bare)
+	reg.bind_player(bare)
+	assert_null(reg.get_player_resources(),
+		"裸 Node2D 不该凭 `resources` 属性名被当成自机接口（旧 get(\"resources\") 会认）")
+
+
+## 真自机走 `PlayerBase.resources`：取到同一实例
+func test_player_resources_come_from_typed_interface():
+	var reg := EntityRegistry.new()
+	var p: Player = load("res://scenes/player.tscn").instantiate()
+	autofree(p)
+	var res := PlayerResources.new()
+	p.resources = res
+	reg.bind_player(p)
+	assert_eq(reg.get_player_resources(), res, "应经 PlayerBase.resources 取到同一实例")

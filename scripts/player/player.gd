@@ -1,5 +1,5 @@
 # entities/player/player.gd
-extends Area2D
+extends PlayerBase
 class_name Player
 
 @onready var _hit_point_display: HitPointDisplay = $HitPointDisplay
@@ -14,16 +14,7 @@ const MIN_MARGIN: int = 8
 
 ## 关卡上下文（StageRuntime/game_scene 注入，系统操作走服务）
 var ctx: StageContext
-## 单局资源（Player 是 owner；消费者经 EntityRegistry 取同一实例）。
-## 惰性创建：任何读取都保证非 null（无需 _ready 判空自建），也允许入树前预注入。
-var _player_resources: PlayerResources
-var resources: PlayerResources:
-	get:
-		if _player_resources == null:
-			_player_resources = PlayerResources.new()
-		return _player_resources
-	set(v):
-		_player_resources = v
+## 单局资源（`resources`）在接口基类 `PlayerBase` 上 —— 消费者经 EntityRegistry 类型化读取。
 
 
 const IDLE = &"idle"

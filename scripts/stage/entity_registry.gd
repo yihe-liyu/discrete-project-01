@@ -5,7 +5,7 @@ extends RefCounted
 ## 过渡期宿主门面（自机 / active_enemies 属性）转发到本对象，
 ## 迁移完成后删除转发；内核/实体改经注入读取。
 
-## 当前自机（Player / GhostPlayer）；未注入 = null。
+## 当前自机（Player / GhostPlayer / 其他 PlayerBase 子类）；未注入 = null。
 ## 用内建 Node2D 类型：对象释放时 Godot 自动置 null（无类型 Variant 会残留"已释放实例"）。
 var player: Node2D
 
@@ -40,11 +40,14 @@ func get_targetable_enemies() -> Array:
 	return targets
 
 
-## 当前自机的单局资源（无自机 = null）——消费者统一经此读，避免 unsafe 属性访问
+## 当前自机的单局资源（无自机 / 非 PlayerBase 接口 = null）——消费者统一经此读。
+## 走 `PlayerBase.resources` **类型化属性**，不再 `player.get("resources")` 字符串键
+## （属性名打错/改名会静默变 null；现在只认类型，编译期即可查）。
 func get_player_resources() -> PlayerResources:
 	if not is_instance_valid(player):
 		return null
-	return player.get("resources")
+	var actor := player as PlayerBase
+	return actor.resources if actor != null else null
 
 
 ## 当前场上的 Boss（无 → null）。按类型识别。
