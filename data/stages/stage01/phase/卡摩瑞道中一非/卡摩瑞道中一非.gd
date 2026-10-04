@@ -25,6 +25,10 @@ func _on_start() -> void:
 	lifecycle.until_near(BulletLifecycle.T_BOSS, diff_pick([175.0, 150.0, 125.0, 100.0]))
 	lifecycle.every_ticks(3)
 	lifecycle.sfx(&"kira")
+	# 每次开花现场重抽一次相位：random_dir 每次求值抽 1 次内核 RNG，先把本弹朝向随机化；
+	# 紧随其后的整圈 emit 都读这份朝向（forward = 沿自身朝向）⇒ 整圈共享同一个新相位，
+	# 而下一颗声呐弹开花时再抽一次 ⇒ 每次开花相位都不同。别把随机烘进 dir 常量（建造期只抽一次 = 整卡固定）。
+	lifecycle.on_end_heading(BulletLifecycle.random_dir(PI))
 	for i in 开花弹个数:
 		lifecycle.emit(开花弹, BulletLifecycle.forward(TAU * i / 开花弹个数), 400.0)
 	if SaveData.selected_difficulty == 2:
