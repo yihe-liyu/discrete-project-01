@@ -2,13 +2,36 @@
 @tool
 extends NavPage
 
-@export var title_label: Label
+## 标题 Label 在场景里的声明路径。
+## 本引擎**不解析节点类型 @export**（`.tscn` 里写的 `title_label = NodePath(...)` 会被丢弃），
+## 故运行时按「路径 + 类型」兜底解析 —— 与 B3/BG6 的「场景声明 + 代码按类型/路径解析」同一风格。
+const TITLE_LABEL_PATH: String = "Panel/TitleLabel"
+
+@export var title_label: Label          ## 引擎不解析：留作编辑器声明 + 未来引擎修好后的兼容；运行时靠 _resolve_title_label()
 @export var title_text: String = "Game Over"
+
+
+func _ready() -> void:
+	super._ready()
+	_resolve_title_label()
+
+
+## 节点类型 export 解析失败时，按 TITLE_LABEL_PATH 兜底（路径缺失 / 类型不符 → 保持 null）
+func _resolve_title_label() -> void:
+	if title_label == null:
+		title_label = get_node_or_null(TITLE_LABEL_PATH) as Label
+
+
+## 设置标题文字（唯一写入口；on_enter 与测试都走这里）
+func set_title(text_value: String) -> void:
+	title_text = text_value
+	if title_label:
+		title_label.text = title_text
 
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := super()
-	if title_label == null:
+	if title_label == null and get_node_or_null(TITLE_LABEL_PATH) == null:
 		warnings.append("GameOverMenu：title_label 未设置（Game Over 标题不会更新）。")
 	return warnings
 
@@ -16,8 +39,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 func on_enter() -> void:
 	super.on_enter()
 	_fade_overlay_in(0.3)
-	if title_label:
-		title_label.text = title_text
+	set_title(title_text)
 
 
 func on_leave() -> void:

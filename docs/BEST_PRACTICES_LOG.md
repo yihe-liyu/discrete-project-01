@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 80 条（本文件留最近 80 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 81 条（本文件留最近 81 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-02 — 修 Game Over 标题静默 no-op：节点类型 @export 在本引擎不解析
 - 2026-10-02 — P1 收口：字符串接口 / 隐藏契约（B1–B6）
 - 2026-10-02 — N8 收尾：workbench 单字母清零
 - 2026-10-02 — BG12-fix 落地：三个宿主的背景视口各自持有 World3D
@@ -111,6 +112,50 @@
 
 ## 记录
 
+### 2026-10-02 — 修 Game Over 标题静默 no-op：节点类型 @export 在本引擎不解析
+
+- **目标**：让 `scenes/ui/game_over_menu.tscn` 的 Game Over 标题**真的能更新**（此前
+  `scripts/scenes/game_over_menu.gd` 里 `if title_label:` 恒假 = 静默 no-op），同时保留编辑器里的节点声明位。
+- **现象**：`game_over_menu.gd:5` 的 `@export var title_label: Label` 在本引擎 4.7.2 **不解析**；
+  `.tscn` 里写的 `title_label = NodePath("Panel/TitleLabel")` 被丢弃，实例化后恒为 `null`。
+  它自己 `_get_configuration_warnings()` 那条「GameOverMenu：title_label 未设置（Game Over 标题不会更新）」
+  就是这条静默 no-op 的**痕证** —— 游戏里"看起来正常"，因为 `if title_label:` 把整次更新吞掉了。
+- **实测证据**（作者用 `.godot/probe/` 的临时探针测得，探针脚本已删）：加载 `res://scenes/ui/game_over_menu.tscn`、
+  `instantiate()` 后**入树并等一帧**再读属性：
+
+  | 探针项 | 结果 |
+  |---|---|
+  | `title_label`（**节点类型** export；`.tscn` 写 `NodePath("Panel/TitleLabel")`） | **null** ❌ |
+  | `title_text`（普通 `String` export） | `Game Over` ✅ |
+  | `container_path`（`NodePath` export） | `Panel/Container` ✅ |
+  | `entrance_stagger`（普通 `float` export） | `0.08` ✅ |
+  | `get_node_or_null("Panel/TitleLabel")` | 节点**存在**（`Label`）✅ |
+
+  ⇒ **精确结论：只有「节点类型」export 失效**；普通 export 与 `NodePath` export 均正常解析。
+- **修法**（`scripts/scenes/game_over_menu.gd`，**未动 `.tscn`** ⇒ 不影响任何别的节点）：
+  保留 `@export var title_label: Label`（编辑器声明位 + 未来引擎修好后的兼容），新增唯一来源常量
+  `TITLE_LABEL_PATH := "Panel/TitleLabel"`；`_ready()` 调 `_resolve_title_label()`，在 export 为 `null` 时
+  `get_node_or_null(TITLE_LABEL_PATH) as Label` **按路径 + 类型**兜底（路径缺失 / 类型不符 → 保持 null）。
+  新增 `set_title(text)` 作为**唯一写入口**，`on_enter()` 改调 `set_title(title_text)`。
+  `_get_configuration_warnings()` 改成「**真的找不到**（export 为 null **且**路径也无节点）才报」，
+  不再对可解析的场景误报。风格与 B3/BG6「场景声明 + 代码按类型/路径解析」一致。
+- **守卫**（新增 `test/test_game_over_menu.gd`，2 用例 / 3 断言）：
+  `test_title_label_resolves_on_ready`（实例化 + 入树等一帧后断言 `title_label != null`）+
+  `test_set_title_writes_into_resolved_label`（`set_title("EXTRA CLEAR")` 后 `title_label.text` 真变）。
+- **反向验证**：临时把 `_ready()` 里的 `_resolve_title_label()` 调用退回（方法保留，语法不动）⇒
+  守卫 **0/2 通过 / 0/2 断言 / exit=1**（`[Failed] Expected [<null>] to be anything but NULL`），
+  同时 `./tools/check_syntax.sh` 仍 **384 脚本 / 0 失败**（证明红是守卫抓的，不是补丁语法错）；
+  还原后守卫 **2/2 通过 / 3 断言 / exit=0**。
+- **同类排查**：全仓 `@export var …: <节点类型>` 扫描（`grep -rn "@export var .*: *[A-Z]" --include=*.gd scripts/ data/`）
+  ⇒ **Node 派生类型的 export 全仓只有这 1 处**（`scripts/scenes/game_over_menu.gd:title_label`）。
+  其余 `Script` / `PackedScene` / `Texture2D` / `SpriteFrames` / `Environment` / `BombData` 等都是
+  **`Resource` 派生（非 Node）**，`Vector2/3` / `Rect2` 是值类型，`NodePath` 是内置类型 —— 均实测正常。
+  **只修 `game_over_menu` 这一处**，其余留给作者拍板（结论：无其它受影响点）。
+- **验收**：`check_syntax` **384 脚本 / 0 失败**；`check_naming --fail` **0 条**；`check_structure --fail` **✅**；
+  `check_docs.py` **✅**；`./tools/verify.sh` **exit 0（七步全过）**；
+  GUT **116 脚本 / 744 用例（744 通过 / 0 红）/ 6827 断言 / 19 orphans / 0 pending**
+  （较基线 115 / 742 / 6824：**+1 脚本 / +2 用例 / +3 断言**，`TEST_INDEX` / README 徽章已同步）。
+
 ### 2026-10-02 — P1 收口：字符串接口 / 隐藏契约（B1–B6）
 
 - **目标**：把「靠属性名 / 节点名 / 动态方法名 / 路径字面量维系」的 6 条隐藏契约换成编译期可见的
@@ -138,6 +183,9 @@
   `scenes/ui/game_over_menu.tscn` 的 `title_label`（同样的既有写法）也是 `null`。⇒ node 类型 `@export`
   在本项目**不可用**，声明式节点引用要走「场景放节点 + 代码按类型解析」。顺带发现 `game_over_menu`
   的标题更新是**静默 no-op**（有 `if title_label:` 兜底所以不报错），**本次未动**，留作独立条目。
+  **精确化（2026-10-02 复验）**：实测**只有「节点类型」export 失效**；普通 export（`String` / `float` / …）
+  与 `NodePath` export 都**正常解析**。证据是 5 行探针表，见上一条
+  `### 2026-10-02 — 修 Game Over 标题静默 no-op：节点类型 @export 在本引擎不解析`。
 - **B4 覆盖层状态切换**（`menu_nav.gd` / `game_manager.gd`）：原
   `_parent.set_state.call_deferred(GameManager.AppState.X)` 动态方法名 → `MenuNav` 新增
   `pause_requested()` / `resume_requested()` 信号，`GameManager` 以 `CONNECT_DEFERRED` 连接

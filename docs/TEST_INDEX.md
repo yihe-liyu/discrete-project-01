@@ -1,6 +1,6 @@
 # 测试索引（改哪里 → 看哪条）
 
-> **这是什么**：115 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
+> **这是什么**：116 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
 > **这不是**：规格说明、待办清单、覆盖率报告（本项目**没有**覆盖率度量）。
 >
 > **怎么用**：改动前扫一眼对应层的表，改动后跑门禁。
@@ -17,7 +17,7 @@
 ./tools/verify.sh                                    # 七步门禁（文档哨兵+语法+命名+结构+启动+GUT+所有权）
 ```
 
-**现状**：115 脚本 / **742 用例（742 通过 / 0 红 —— ✅ 全绿）/ 6824 断言 / 37.482s** / 19 orphans / **0 pending**。
+**现状**：116 脚本 / **744 用例（744 通过 / 0 红 —— ✅ 全绿）/ 6827 断言 / 37.576s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -26,7 +26,7 @@
 | **A 元守卫 · 工程契约** | 10 | 35 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 176 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 43 | 340 | `scripts/**` 的实体/系统/服务 |
-| **D UI / 菜单** | 14 | 100 | `scenes/ui/**` 与 HUD |
+| **D UI / 菜单** | 15 | 102 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 12 | 66 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
@@ -188,7 +188,7 @@
 | [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块** · **阶段按 uid 升序（符卡优先、非符路径定序）** · `@role` 补空缺不算冲突 · **角色标签只在敌人脚本里砍、前缀要「标签形状」** | 9 | 0 |
 | [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` | 3 | 0 |
 
-## D · UI / 菜单（14 / 100）
+## D · UI / 菜单（15 / 102）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -206,6 +206,7 @@
 | [test_option_menu](../test/test_option_menu.gd) | 选项菜单「清空数据」：无 `def` 崩溃回归 + 二次确认 | 2 | 14 |
 | [test_dialogue_pause](../test/test_dialogue_pause.gd) | 暂停菜单期间对话 WAIT/auto_advance 计时应冻结 | 1 | 8 |
 | [test_menu_nav](../test/test_menu_nav.gd) | `MenuNav` 子页面容器注入契约（R2：不再字符串搜 `PageHost`） + **B4：覆盖层暂停/恢复走显式信号（不再 `set_state.call_deferred` 动态方法名）** + **B5：暂停菜单路径唯一来源常量** | 5 | 0 |
+| [test_game_over_menu](../test/test_game_over_menu.gd) | **GameOverMenu 标题不再静默 no-op**：本引擎不解析节点类型 `@export`（`.tscn` 的 `title_label = NodePath(...)` 被丢弃）⇒ 入树一帧后按路径/类型兜底解析出 `title_label` + `set_title()` 真把文字写进那个 `Label` | 2 | 0 |
 
 ## E · 内容（4 / 22）
 
