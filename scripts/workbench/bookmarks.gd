@@ -46,8 +46,8 @@ func open(stage: StageData) -> Dictionary:
 ## 静态提取：扫关卡脚本的 `timeline.at()` 时刻 → [{t}]
 func extract(script: Script) -> Array:
 	var out: Array = []
-	for b in EXTRACTOR.extract_from_script(script):
-		out.append({"t": b.t})
+	for bookmark in EXTRACTOR.extract_from_script(script):
+		out.append({"t": bookmark.t})
 	return out
 
 
@@ -73,13 +73,13 @@ func merged() -> Array:
 static func merged_of(auto_bm: Array, manual_bm: Array) -> Array:
 	var items: Array = []
 	for bm in manual_bm:
-		var t: float = bm.t if bm is Dictionary else float(bm)
-		var label: String = bm.label if bm is Dictionary and bm.has("label") else "t=%.1fs" % t
-		items.append({"t": t, "label": label, "is_manual": true})
+		var bookmark_time: float = bm.t if bm is Dictionary else float(bm)
+		var label: String = bm.label if bm is Dictionary and bm.has("label") else "t=%.1fs" % bookmark_time
+		items.append({"t": bookmark_time, "label": label, "is_manual": true})
 	for bm in auto_bm:
-		var t: float = bm.t if bm is Dictionary else float(bm)
-		if items.any(func(m: Dictionary) -> bool: return absf(m.t - t) < 0.01):
+		var bookmark_time: float = bm.t if bm is Dictionary else float(bm)
+		if items.any(func(m: Dictionary) -> bool: return absf(m.t - bookmark_time) < 0.01):
 			continue  # 被人工书签覆盖（改名）
-		items.append({"t": t, "label": "t=%.1fs" % t, "is_manual": false})
+		items.append({"t": bookmark_time, "label": "t=%.1fs" % bookmark_time, "is_manual": false})
 	items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.t < b.t)
 	return items

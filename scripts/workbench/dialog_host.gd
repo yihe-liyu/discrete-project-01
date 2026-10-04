@@ -70,9 +70,9 @@ func confirm() -> void:
 	var vb: VBoxContainer = _panel.get_child(0)
 	for child in vb.get_children():
 		if child is HBoxContainer:
-			for b in child.get_children():
-				if b is Button and b.text == "确定":
-					b.pressed.emit()
+			for button in child.get_children():
+				if button is Button and button.text == "确定":
+					button.pressed.emit()
 					return
 
 
@@ -82,7 +82,7 @@ func is_open() -> bool:
 
 
 func close() -> void:
-	for c in get_children():
-		c.queue_free()
+	for child in get_children():
+		child.queue_free()
 	_panel = null
 	_content = null

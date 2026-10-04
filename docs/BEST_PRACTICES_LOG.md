@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 78 条（本文件留最近 78 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 79 条（本文件留最近 79 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-02 — N8 收尾：workbench 单字母清零
 - 2026-10-02 — BG12-fix 落地：三个宿主的背景视口各自持有 World3D
 - 2026-10-02 — BG12 确认：背景 SubViewport 与根视口**共享** World3D（"第二个 WorldEnvironment 被忽略"风险**成立**）
 - 2026-10-02 — BG10 拍板：**留 3D 视口**（真机实测背景只花 1.03 ms）
@@ -108,6 +109,38 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-10-02 — N8 收尾：workbench 单字母清零
+
+- **现状核对**：`check_naming` ⑥ 只兜底「**类字段**不得单字母」（workbench 早已 0）；跨行/跨函数的
+  局部变量·形参·循环变量靠基线「标识符命名契约」人工守。为拿完整清单写了临时探针（`.godot/probe/`，用完已删），
+  按「声明处」口径：workbench 原有 **170 处**单字母声明（var/const · for · func/lambda 形参 · signal 形参 ·
+  `_t` 字段 · `_x` 函数名）。
+- **清理：27 个文件、144 处改名**（只改标识符，零行为改动）。按文件（处）：
+  `phase_bench`·`timeline_bar` 各 17、`bookmark_cache`·`enemy_bench` 各 10、`catalog_panel`·`workbench` 各 9、
+  `bullet_bench`·`workbench_ui` 各 8、`bookmark_extractor` 7、`bullet_shell`·`hot_reload_service` 各 6、
+  `creation_station` 5、`bench_common`·`param_panel` 各 4、`bookmark_panel`·`bookmarks`·`playback` 各 3、
+  `dialog_host`·`enemy_shell`·`frame_overlay`·`ghost_player`·`workbench_theme` 各 2、
+  `bench_base`·`phase_shell`·`playback_bar`·`status_bar`·`hitbox_overlay` 各 1。
+  命名取「角色/类名 snake」：`e`→`entry`、`d`(dict)→`data`、`d`(DirAccess)→`dir_access`、`d`(难度)→`difficulty`、
+  `v`→`value`、`w`→`width`、`h`→`height`/`hash_value`、`p`→`pos`/`phase`/`property`、`k`→`key`、
+  `t`→`target_time`/`bookmark_time`/`event_time`、`l`→`label`/`text_label`、`_t`→`_elapsed`、`H`→`BAR_HEIGHT`、
+  `_x`(死函数)→`_time_to_pixel_x`。
+- **保留例外 26 处（全部合规，已在基线「标识符命名契约」登记）**：
+  ① 循环索引 `i` 19 处（如 `for i in list.size()`，纯索引/计数）；
+  ② **单行表达式** lambda 形参 7 处（`_s`×2 / `a`×2 / `b`×2 / `m`×1，如
+  `items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.t < b.t)`，生命周期不跨行）。
+  workbench **无热路径模块、无链式 DSL**，故不涉 ③。`check_naming` 没有「单字母白名单表」——
+  例外只由基线规则 + ⑥ 类字段兜底共同登记，本轮不额外加白名单、也不放宽守卫。
+- **踩坑**：① 按行范围改名时**漏掉函数末尾的 use**（`bullet_shell` 的 `a`、`bullet_bench` 的 `p`）→
+  `check_syntax` 报 `Identifier not declared`，补齐范围后过；② 行范围替换**误伤成员访问** `size.x` →
+  timeline `_x_to_time` 里变成 `size.pixel_x`，已改回；③ `label` 当局部名会 **shadow 同类 `label()` 函数**、
+  `enemy_shell` 的循环变量 `visual_key` shadow 成员 → 分别改 `text_label` / `key`（warning-as-error 抓到）。
+- **行为不变性**：只改标识符。启动哨兵：`workbench.tscn` + `creation_station` + 三个组合台场景各
+  `--headless --quit` 零 `SCRIPT ERROR`。
+- **验收**：`check_syntax` **0 失败**；`check_naming --fail` **0 条**；`./tools/verify.sh` **七步全过（exit 0）**；
+  GUT **731 用例 / 731 通过 / 6791 断言 / 115 脚本**（与基线一致 ⇒ `TEST_INDEX`/README 数字不动）。
+- **TODO**：删 N8（TODO_TEMP 的 N 组只剩可选的 N16）。
 
 ### 2026-10-02 — BG12-fix 落地：三个宿主的背景视口各自持有 World3D
 

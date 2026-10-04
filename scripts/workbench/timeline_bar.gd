@@ -12,8 +12,8 @@
 extends Control
 class_name TimelineBar
 
-signal jump_to(t: float)
-signal right_clicked(t: float)
+signal jump_to(time_sec: float)
+signal right_clicked(time_sec: float)
 
 var time: float = 0.0                 ## 当前游戏内时间（秒）
 var window_start: float = 0.0         ## 时间窗口起点（滚动/缩放后）
@@ -22,7 +22,7 @@ var bookmarks: Array[Dictionary] = [] ## [{t, label}]，升序
 ## 演出事件标记（bgm=绿 / dialogue=紫 / custom=黄）
 var events: Array = []
 
-const H := 32.0
+const BAR_HEIGHT := 32.0
 
 # 平移状态（空白拖动浏览时间窗口）
 var _panning := false
@@ -34,8 +34,8 @@ const PAN_CLICK_TOLERANCE := 4.0  # 超过该像素位移才算拖动（否则�
 
 func _ready() -> void:
 	set_process(true)  # 播放跟随窗口平移
-	custom_minimum_size = Vector2(0, H)
-	offset_top = -H
+	custom_minimum_size = Vector2(0, BAR_HEIGHT)
+	offset_top = -BAR_HEIGHT
 
 
 ## 播放跟随：播放头接近窗口边缘时平移窗口
@@ -60,8 +60,8 @@ func set_window(seconds: float) -> void:
 	queue_redraw()
 
 
-func add_bookmark(t: float, label: String, bm_type: String = "") -> void:
-	bookmarks.append({"t": t, "label": label, "type": bm_type})
+func add_bookmark(bookmark_time: float, label: String, bm_type: String = "") -> void:
+	bookmarks.append({"t": bookmark_time, "label": label, "type": bm_type})
 	bookmarks.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.t < b.t)
 	queue_redraw()
 
@@ -74,25 +74,25 @@ func clear_bookmarks() -> void:
 # ═══ 绘制 ═══
 
 func _draw() -> void:
-	var w := size.x
+	var width := size.x
 	var cy := size.y / 2.0
 	# 背景
-	draw_rect(Rect2(0, 0, w, size.y), Color(0.07, 0.07, 0.11))
-	_draw_ticks(w, 0.0, size.y)
-	_draw_events(w, 0.0, size.y)
-	_draw_bookmark_diamonds(w, cy)
+	draw_rect(Rect2(0, 0, width, size.y), Color(0.07, 0.07, 0.11))
+	_draw_ticks(width, 0.0, size.y)
+	_draw_events(width, 0.0, size.y)
+	_draw_bookmark_diamonds(width, cy)
 	# 播放头（唯一移动的东西，贯穿全高）
-	var hx := clampf((time - window_start) / maxf(window_len, 0.001), 0.0, 1.0) * w
+	var hx := clampf((time - window_start) / maxf(window_len, 0.001), 0.0, 1.0) * width
 	draw_line(Vector2(hx, 0), Vector2(hx, size.y), Color(1.0, 0.9, 0.4, 0.95), 2.0)
 
 
 ## 演出事件标记（小方块：bgm 绿 / 对话 紫 / 自定义 黄）
-func _draw_events(w: float, y0: float, y1: float) -> void:
+func _draw_events(width: float, y0: float, y1: float) -> void:
 	var cy := y0 + (y1 - y0) / 2.0
 	for ev in events:
-		var t := float(ev.get("t", 0.0))
-		var x := (t - window_start) / maxf(window_len, 0.001) * w
-		if x < -6.0 or x > w + 6.0:
+		var event_time := float(ev.get("t", 0.0))
+		var pixel_x := (event_time - window_start) / maxf(window_len, 0.001) * width
+		if pixel_x < -6.0 or pixel_x > width + 6.0:
 			continue
 		var col := Color(0.4, 1.0, 0.5, 0.9)
 		match str(ev.get("type", "")):
@@ -100,37 +100,37 @@ func _draw_events(w: float, y0: float, y1: float) -> void:
 				col = Color(0.75, 0.5, 1.0, 0.9)
 			"custom":
 				col = Color(1.0, 0.8, 0.3, 0.9)
-		draw_rect(Rect2(x - 3, cy - 3, 6, 6), col)
+		draw_rect(Rect2(pixel_x - 3, cy - 3, 6, 6), col)
 
 
-func _draw_ticks(w: float, y0: float, y1: float) -> void:
+func _draw_ticks(width: float, y0: float, y1: float) -> void:
 	var ticks := int(ceil(window_len))
 	for i in ticks + 1:
-		var x := i / maxf(window_len, 0.001) * w
-		draw_line(Vector2(x, y0), Vector2(x, y1), Color(1, 1, 1, 0.04))
+		var pixel_x := i / maxf(window_len, 0.001) * width
+		draw_line(Vector2(pixel_x, y0), Vector2(pixel_x, y1), Color(1, 1, 1, 0.04))
 		if i % 5 == 0:
-			_draw_tick_label(x, int(window_start) + i)
+			_draw_tick_label(pixel_x, int(window_start) + i)
 
 
-func _draw_bookmark_diamonds(w: float, cy: float) -> void:
+func _draw_bookmark_diamonds(width: float, cy: float) -> void:
 	# 颜色：自动书签统一青色；人工书签（用户右键标记）金色区分
 	for bm in bookmarks:
-		var x := (float(bm.t) - window_start) / maxf(window_len, 0.001) * w
-		if x < -6.0 or x > w + 6.0:
+		var pixel_x := (float(bm.t) - window_start) / maxf(window_len, 0.001) * width
+		if pixel_x < -6.0 or pixel_x > width + 6.0:
 			continue
 		var col: Color = Color(0.4, 0.8, 1.0, 0.9)
 		if str(bm.get("type", "")) == "manual":
 			col = Color(1.0, 0.8, 0.3, 0.9)
 		draw_colored_polygon(PackedVector2Array([
-			Vector2(x, cy - 5), Vector2(x + 5, cy), Vector2(x, cy + 5), Vector2(x - 5, cy)
+			Vector2(pixel_x, cy - 5), Vector2(pixel_x + 5, cy), Vector2(pixel_x, cy + 5), Vector2(pixel_x - 5, cy)
 		]), col)
 
 
-func _draw_tick_label(x: float, sec: int) -> void:
+func _draw_tick_label(pixel_x: float, sec: int) -> void:
 	var font: Font = _font()
 	if font == null:
 		return
-	draw_string(font, Vector2(x + 2, 10), str(sec), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.6, 0.6, 0.7))
+	draw_string(font, Vector2(pixel_x + 2, 10), str(sec), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.6, 0.6, 0.7))
 
 
 func _font() -> Font:
@@ -141,8 +141,8 @@ func _font() -> Font:
 
 
 ## 时刻 → 像素 x（当前窗口）
-func _x(t: float, w: float) -> float:
-	return (t - window_start) / maxf(window_len, 0.001) * w
+func _time_to_pixel_x(time_sec: float, width: float) -> float:
+	return (time_sec - window_start) / maxf(window_len, 0.001) * width
 
 
 # ═══ 输入 ═══
@@ -214,6 +214,6 @@ func _zoom(mouse_x: float, factor: float) -> void:
 
 
 ## 像素 x → 时刻（含窗口起点）
-func _x_to_time(x: float) -> float:
+func _x_to_time(pixel_x: float) -> float:
 	var total := maxf(window_len, 0.001)
-	return window_start + clampf(x / maxf(size.x, 1.0), 0.0, 1.0) * total
+	return window_start + clampf(pixel_x / maxf(size.x, 1.0), 0.0, 1.0) * total

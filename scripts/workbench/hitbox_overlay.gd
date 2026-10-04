@@ -10,10 +10,10 @@ var entity_registry: EntityRegistry
 var bullet_manager: BulletManager
 
 var is_enabled: bool = false:
-	set(v):
-		is_enabled = v
-		visible = v
-		set_process(v)  # 关键：开启时才运行 _process（每帧跟随子弹刷新）
+	set(value):
+		is_enabled = value
+		visible = value
+		set_process(value)  # 关键：开启时才运行 _process（每帧跟随子弹刷新）
 		if is_enabled:
 			queue_redraw()
 

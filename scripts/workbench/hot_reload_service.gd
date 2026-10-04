@@ -47,18 +47,18 @@ func setup(collect: Callable, main_path: Callable) -> void:
 static func with_dir_scripts(p_paths: Array) -> Array[String]:
 	var out: Array[String] = []
 	var dirs := {}
-	for p in p_paths:
-		if p == "":
+	for script_path in p_paths:
+		if script_path == "":
 			continue
-		if not out.has(p):
-			out.append(p)
-		dirs[p.get_base_dir()] = true
-	for d in dirs:
-		var da := DirAccess.open(d)
+		if not out.has(script_path):
+			out.append(script_path)
+		dirs[script_path.get_base_dir()] = true
+	for dir_path in dirs:
+		var da := DirAccess.open(dir_path)
 		if da:
-			for f in da.get_files():
-				if f.ends_with(".gd"):
-					var full: String = d.path_join(f)
+			for file_name in da.get_files():
+				if file_name.ends_with(".gd"):
+					var full: String = dir_path.path_join(file_name)
 					if not out.has(full):
 						out.append(full)
 	return out
@@ -85,8 +85,8 @@ func set_paths(p_paths: Array[String]) -> void:
 
 ## 记录全部监听路径的当前 mtime（重载完成后调用：避免同一改动反复触发）
 func refresh_mtimes() -> void:
-	for p in _paths:
-		_mtimes[p] = int(FileAccess.get_modified_time(p))
+	for script_path in _paths:
+		_mtimes[script_path] = int(FileAccess.get_modified_time(script_path))
 
 
 ## 把"上次看到的 mtime"往回拨 seconds 秒 —— 等价于"这个文件刚被改过"
@@ -106,8 +106,8 @@ func poll(delta: float) -> void:
 		return
 	_poll = 0.0
 	var changed := false
-	for p in _paths:
-		if int(FileAccess.get_modified_time(p)) != int(_mtimes.get(p, 0)):
+	for script_path in _paths:
+		if int(FileAccess.get_modified_time(script_path)) != int(_mtimes.get(script_path, 0)):
 			changed = true
 			# 注意：检测期间【不】刷新基线！刷新会把防抖清零导致永不重载；重载完成后统一刷新
 	if changed:
@@ -127,14 +127,14 @@ func force() -> void:
 	var main_path: String = _main_path.call() if _main_path.is_valid() else ""
 	var main_new: Script = null
 	var bad := ""
-	for p in _paths:
-		if p == main_path:
+	for script_path in _paths:
+		if script_path == main_path:
 			continue
-		if not FileAccess.file_exists(p):
-			bad = p
+		if not FileAccess.file_exists(script_path):
+			bad = script_path
 			break
-		if ResourceLoader.load(p, "GDScript", ResourceLoader.CACHE_MODE_REPLACE) == null:
-			bad = p
+		if ResourceLoader.load(script_path, "GDScript", ResourceLoader.CACHE_MODE_REPLACE) == null:
+			bad = script_path
 			break
 	if bad == "" and main_path != "":
 		if FileAccess.file_exists(main_path):

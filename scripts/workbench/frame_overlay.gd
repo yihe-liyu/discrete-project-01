@@ -29,9 +29,9 @@ func _draw() -> void:
 	draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
 	if not draw_grid:
 		return
-	for x in range(64, 833, 64):
-		draw_line(Vector2(x, 32 - stage_shift_y), Vector2(x, 928 - stage_shift_y), Color(1, 1, 1, 0.05))
-	for y in range(32, 929, 64):
-		draw_line(Vector2(64, y - stage_shift_y), Vector2(832, y - stage_shift_y), Color(1, 1, 1, 0.05))
+	for grid_x in range(64, 833, 64):
+		draw_line(Vector2(grid_x, 32 - stage_shift_y), Vector2(grid_x, 928 - stage_shift_y), Color(1, 1, 1, 0.05))
+	for grid_y in range(32, 929, 64):
+		draw_line(Vector2(64, grid_y - stage_shift_y), Vector2(832, grid_y - stage_shift_y), Color(1, 1, 1, 0.05))
 	# 幽灵玩家路径参考（纵向漂移中线）
 	draw_line(Vector2(64, 620 - stage_shift_y), Vector2(832, 620 - stage_shift_y), Color(0.3, 0.9, 0.5, 0.15))

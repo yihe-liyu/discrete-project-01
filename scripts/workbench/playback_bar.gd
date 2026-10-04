@@ -63,8 +63,8 @@ func _init() -> void:
 	row3.add_theme_constant_override("separation", 6)
 	var speed := OptionButton.new()
 	speed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for s in PLAYBACK.SPEEDS:
-		speed.add_item("×" + str(s))
+	for speed_value in PLAYBACK.SPEEDS:
+		speed.add_item("×" + str(speed_value))
 	speed.selected = 2
 	speed.item_selected.connect(func(idx: int): speed_selected.emit(idx))
 	row3.add_child(speed)

@@ -16,24 +16,24 @@ var item_bomb_full: int = 0
 
 ## 组装 EnemyData（外形/数值 → 行为脚本；与游戏内容同款字段）
 func build(behavior_script: Script = null) -> EnemyData:
-	var d := EnemyData.new()
-	d.visual(visual_key)
-	d.hp(max_hp)
-	d.hbox(hitbox_radius)
-	d.power(item_power)
-	d.point(item_point)
-	d.life(item_life)
-	d.bomb(item_bomb)
-	d.life_full(item_life_full)
-	d.bomb_full(item_bomb_full)
+	var enemy_data := EnemyData.new()
+	enemy_data.visual(visual_key)
+	enemy_data.hp(max_hp)
+	enemy_data.hbox(hitbox_radius)
+	enemy_data.power(item_power)
+	enemy_data.point(item_point)
+	enemy_data.life(item_life)
+	enemy_data.bomb(item_bomb)
+	enemy_data.life_full(item_life_full)
+	enemy_data.bomb_full(item_bomb_full)
 	if behavior_script:
-		d.with_script(behavior_script)
-	return d
+		enemy_data.with_script(behavior_script)
+	return enemy_data
 
 
 ## 外观清单（来自 AssetRegistry，顺序稳定）
 static func visual_keys() -> Array[String]:
 	var keys: Array[String] = []
-	for k in AssetRegistry.enemy_visuals:
-		keys.append(k)
+	for key in AssetRegistry.enemy_visuals:
+		keys.append(key)
 	return keys

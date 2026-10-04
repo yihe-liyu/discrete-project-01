@@ -13,69 +13,69 @@ const CACHE_VERSION := 5  # v5: script_hash 存字符串——大整数 JSON 精
 ## 关卡内容哈希：主脚本 + 关卡目录下所有 .gd 文件文本聚合
 ## （改任何子脚本/敌人/Boss 逻辑都会使书签缓存失效重收集）
 static func stage_content_hash(stage: StageData) -> int:
-	var h := CACHE_VERSION
+	var hash_value := CACHE_VERSION
 	if stage and stage.create_script:
-		h = h * 31 + stage.create_script.source_code.hash()
+		hash_value = hash_value * 31 + stage.create_script.source_code.hash()
 		var stage_dir: String = stage.create_script.resource_path.get_base_dir().get_base_dir()
-		h = _hash_dir_files(stage_dir, h)
-	return h
+		hash_value = _hash_dir_files(stage_dir, hash_value)
+	return hash_value
 
 
-static func _stable_dict_str(d: Dictionary) -> String:
-	var keys := d.keys()
+static func _stable_dict_str(dict_data: Dictionary) -> String:
+	var keys := dict_data.keys()
 	keys.sort()
 	var parts: Array = []
-	for k in keys:
-		parts.append("%s=%s" % [str(k), _stable_value_str(d[k])])
+	for key in keys:
+		parts.append("%s=%s" % [str(key), _stable_value_str(dict_data[key])])
 	return "|".join(parts)
 
 
 ## 值稳定表示：Vector2/Color 显式格式化（避免默认 str 精度差异）
-static func _stable_value_str(v: Variant) -> String:
-	if v is Vector2:
-		return "V2(%.6f,%.6f)" % [v.x, v.y]
-	if v is Vector3:
-		return "V3(%.6f,%.6f,%.6f)" % [v.x, v.y, v.z]
-	if v is Color:
-		return "C(%.6f,%.6f,%.6f,%.6f)" % [v.r, v.g, v.b, v.a]
-	if typeof(v) == TYPE_FLOAT:
-		return "F%.6f" % v
-	if v is Dictionary:
-		return _stable_dict_str(v)
-	if v is Array:
+static func _stable_value_str(value: Variant) -> String:
+	if value is Vector2:
+		return "V2(%.6f,%.6f)" % [value.x, value.y]
+	if value is Vector3:
+		return "V3(%.6f,%.6f,%.6f)" % [value.x, value.y, value.z]
+	if value is Color:
+		return "C(%.6f,%.6f,%.6f,%.6f)" % [value.r, value.g, value.b, value.a]
+	if typeof(value) == TYPE_FLOAT:
+		return "F%.6f" % value
+	if value is Dictionary:
+		return _stable_dict_str(value)
+	if value is Array:
 		var parts: Array = []
-		for e in v:
-			parts.append(_stable_value_str(e))
+		for element in value:
+			parts.append(_stable_value_str(element))
 		return "[" + ",".join(parts) + "]"
-	return str(v)
+	return str(value)
 
 
-static func _hash_dir_files(dir_path: String, h: int) -> int:
-	var d := DirAccess.open(dir_path)
-	if d == null:
-		return h
+static func _hash_dir_files(dir_path: String, hash_value: int) -> int:
+	var dir_access := DirAccess.open(dir_path)
+	if dir_access == null:
+		return hash_value
 	# 先收集再排序：目录遍历顺序不稳定 → 不排序则哈希每次不同 → 缓存永不命中
 	var sub_dirs: Array[String] = []
 	var files: Array[String] = []
-	d.list_dir_begin()
-	var f := d.get_next()
-	while f != "":
-		if d.current_is_dir():
-			sub_dirs.append(f)
-		elif f.ends_with(".gd"):
-			files.append(f)
-		f = d.get_next()
-	d.list_dir_end()
+	dir_access.list_dir_begin()
+	var file_name := dir_access.get_next()
+	while file_name != "":
+		if dir_access.current_is_dir():
+			sub_dirs.append(file_name)
+		elif file_name.ends_with(".gd"):
+			files.append(file_name)
+		file_name = dir_access.get_next()
+	dir_access.list_dir_end()
 	files.sort()
 	sub_dirs.sort()
 	for fn in files:
 		var fa := FileAccess.open(dir_path + "/" + fn, FileAccess.READ)
 		if fa:
-			h = h * 31 + fa.get_as_text().hash()
+			hash_value = hash_value * 31 + fa.get_as_text().hash()
 			fa.close()
 	for sd in sub_dirs:
-		h = _hash_dir_files(dir_path + "/" + sd, h)
-	return h
+		hash_value = _hash_dir_files(dir_path + "/" + sd, hash_value)
+	return hash_value
 
 
 static func _path(stage_id: int) -> String:
@@ -93,11 +93,11 @@ static func load(stage_id: int, script_hash: int) -> Dictionary:
 	var path := _path(stage_id)
 	if not FileAccess.file_exists(path):
 		return {"ok": false, "auto": [], "manual": []}
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
 		return {"ok": false, "auto": [], "manual": []}
-	var data: Variant = JSON.parse_string(f.get_as_text())
-	f.close()
+	var data: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
 	if typeof(data) != TYPE_DICTIONARY or data.get("stage_id", -1) != stage_id:
 		return {"ok": false, "auto": [], "manual": []}
 	# script_hash 以字符串存储：哈希 ~8.6e18 超 2^53，JSON 数字往返会精度丢失
@@ -114,14 +114,14 @@ static func load(stage_id: int, script_hash: int) -> Dictionary:
 
 static func save(stage_id: int, script_hash: int, auto: Array, manual: Array) -> void:
 	DirAccess.make_dir_recursive_absolute("user://bookmarks")
-	var f := FileAccess.open(_path(stage_id), FileAccess.WRITE)
-	if f == null:
+	var file := FileAccess.open(_path(stage_id), FileAccess.WRITE)
+	if file == null:
 		push_warning("BookmarkCache: 无法写入 " + _path(stage_id))
 		return
-	f.store_string(JSON.stringify({
+	file.store_string(JSON.stringify({
 		"stage_id": stage_id,
 		"script_hash": str(script_hash),  # 哈希 ~8.6e18 超 2^53：JSON 数字往返丢精度 → 存字符串
 		"auto": auto,
 		"manual": manual,
 	}, "\t"))
-	f.close()
+	file.close()

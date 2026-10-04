@@ -15,7 +15,7 @@ var path_y_amp: float = 110.0
 enum Mode { AUTO, MOUSE, STATIC }
 var mode: int = Mode.AUTO
 
-var _t: float = 0.0
+var _elapsed: float = 0.0
 
 
 ## 不启动射击脚本（预览只关心敌方弹幕，玩家子弹会干扰视野）
@@ -27,19 +27,19 @@ func _init_shoot_script() -> void:
 func _physics_process(delta: float) -> void:
 	match mode:
 		Mode.MOUSE:
-			var m := get_global_mouse_position()
+			var mouse_pos := get_global_mouse_position()
 			position = Vector2(
-				clampf(m.x, GameConfig.FIELD_LEFT + 12.0, GameConfig.FIELD_RIGHT - 12.0),
-				clampf(m.y, GameConfig.FIELD_TOP + 12.0, GameConfig.FIELD_BOTTOM - 60.0))
+				clampf(mouse_pos.x, GameConfig.FIELD_LEFT + 12.0, GameConfig.FIELD_RIGHT - 12.0),
+				clampf(mouse_pos.y, GameConfig.FIELD_TOP + 12.0, GameConfig.FIELD_BOTTOM - 60.0))
 		Mode.STATIC:
 			position = Vector2(GameConfig.FIELD_CENTER_X, path_center_y)
 		_:
-			_t += delta
+			_elapsed += delta
 			position.x = clampf(
-				GameConfig.FIELD_CENTER_X + sin(_t * 0.55) * path_amplitude,
+				GameConfig.FIELD_CENTER_X + sin(_elapsed * 0.55) * path_amplitude,
 				GameConfig.FIELD_LEFT + 12.0, GameConfig.FIELD_RIGHT - 12.0)
 			position.y = clampf(
-				path_center_y + sin(_t * 0.9) * path_y_amp,
+				path_center_y + sin(_elapsed * 0.9) * path_y_amp,
 				GameConfig.FIELD_TOP + 12.0, GameConfig.FIELD_BOTTOM - 60.0)
 	# 无敌：bullet_physics 命中判定读 is_invincible，预览不死亡
 	is_invincible = true
@@ -47,5 +47,5 @@ func _physics_process(delta: float) -> void:
 
 ## 重跑时复位（重头开始走路径）
 func reset() -> void:
-	_t = 0.0
+	_elapsed = 0.0
 	position = Vector2(GameConfig.FIELD_CENTER_X, path_center_y)

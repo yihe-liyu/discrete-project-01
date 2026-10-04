@@ -12,18 +12,18 @@ const HINT_SIZE := 15     ## 提示行（左键=… · 鼠标=自机）
 const FIXED_SEED := 20260801
 
 static func label(text: String, font_size: int) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", font_size)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return l
+	var text_label := Label.new()
+	text_label.text = text
+	text_label.add_theme_font_size_override("font_size", font_size)
+	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return text_label
 
 
 ## 二级标题（行为/外形/参数/操作/开发…）：金色小字，统一层级
 static func section_label(text: String) -> Label:
-	var l := label(text, SECTION_SIZE)
-	l.modulate = Color(1.0, 0.83, 0.5, 0.92)
-	return l
+	var text_label := label(text, SECTION_SIZE)
+	text_label.modulate = Color(1.0, 0.83, 0.5, 0.92)
+	return text_label
 
 
 ## 提示行（左键=… · 鼠标=自机 等弱化说明）
@@ -33,8 +33,8 @@ static func hint_label(text: String) -> Label:
 
 ## 主操作按钮（发射/生成/开演）：金底，与其他按钮区分
 static func accent_button(text: String) -> Button:
-	var b := Button.new()
-	b.text = text
+	var button := Button.new()
+	button.text = text
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.83, 0.68, 0.35)
 	normal.set_corner_radius_all(6)
@@ -47,12 +47,12 @@ static func accent_button(text: String) -> Button:
 	pressed.bg_color = Color(0.72, 0.56, 0.26)
 	pressed.set_corner_radius_all(6)
 	pressed.set_content_margin_all(6)
-	b.add_theme_stylebox_override("normal", normal)
-	b.add_theme_stylebox_override("hover", hover)
-	b.add_theme_stylebox_override("pressed", pressed)
-	b.add_theme_stylebox_override("disabled", normal)
-	b.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
-	return b
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("disabled", normal)
+	button.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
+	return button
 
 
 static func panel_style() -> StyleBoxFlat:
@@ -78,14 +78,14 @@ static func add_stage_bg(parent: Control) -> void:
 
 
 static func make_panel() -> PanelContainer:
-	var p := PanelContainer.new()
-	p.anchor_left = 1.0
-	p.anchor_right = 1.0
-	p.anchor_top = 0.0
-	p.anchor_bottom = 1.0
-	p.offset_left = -440.0
-	p.offset_top = 8.0
-	p.offset_right = -8.0
-	p.offset_bottom = -8.0
-	p.add_theme_stylebox_override("panel", panel_style())
-	return p
+	var panel := PanelContainer.new()
+	panel.anchor_left = 1.0
+	panel.anchor_right = 1.0
+	panel.anchor_top = 0.0
+	panel.anchor_bottom = 1.0
+	panel.offset_left = -440.0
+	panel.offset_top = 8.0
+	panel.offset_right = -8.0
+	panel.offset_bottom = -8.0
+	panel.add_theme_stylebox_override("panel", panel_style())
+	return panel

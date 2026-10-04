@@ -62,10 +62,10 @@ func slot_count() -> int:
 
 
 ## 第 i 个页签按钮（用户点的就是这个；测试也走它，不去摸节点路径）
-func slot_button(i: int) -> Button:
-	if i < 0 or i >= _slot_buttons.size():
+func slot_button(slot_index: int) -> Button:
+	if slot_index < 0 or slot_index >= _slot_buttons.size():
 		return null
-	return _slot_buttons[i]
+	return _slot_buttons[slot_index]
 
 
 ## 当前槽位下标（-1 = 还没打开过）
@@ -79,27 +79,27 @@ func current_view() -> Control:
 
 
 ## 常驻试验台实例（0=弹幕台 / 1=敌人台 / 2=阶段台；没建过 → null）
-func bench_instance(i: int) -> BenchBase:
-	if i < 0 or i >= _bench_instances.size():
+func bench_instance(slot_index: int) -> BenchBase:
+	if slot_index < 0 or slot_index >= _bench_instances.size():
 		return null
-	return _bench_instances[i]
+	return _bench_instances[slot_index]
 
 
 ## 打开某个槽位（同步页签高亮 + 切换视图）
-func open_slot(i: int) -> void:
-	_on_slot(i)
+func open_slot(slot_index: int) -> void:
+	_on_slot(slot_index)
 
 
 ## 页签切换
-func _on_slot(i: int) -> void:
-	if _current_slot == i and _view != null:
+func _on_slot(slot_index: int) -> void:
+	if _current_slot == slot_index and _view != null:
 		return
 	_clear_view()
-	_current_slot = i
-	if i == 0:
+	_current_slot = slot_index
+	if slot_index == 0:
 		_view = WORKBENCH.instantiate()
 	else:
-		var bench_i: int = i - 1
+		var bench_i: int = slot_index - 1
 		if _bench_instances[bench_i] == null:
 			_bench_instances[bench_i] = BENCHS[bench_i].instantiate() as BenchBase
 		_view = _bench_instances[bench_i]
@@ -110,21 +110,21 @@ func _on_slot(i: int) -> void:
 	var content: Control = $Root/Content
 	content.add_child(_view)
 	# 目录双击 → 组合台直达（整关页内目录）
-	if i == 0:
+	if slot_index == 0:
 		var wb = _view
 		var catalog = wb.get("_catalog")
 		if catalog and not catalog.preset_requested.is_connected(route_preset):
 			catalog.preset_requested.connect(route_preset)
 	# 工作区恢复
-	if i > 0:
-		var ri := i - 1
+	if slot_index > 0:
+		var ri := slot_index - 1
 		var bench := _view as BenchBase
 		var saved: Dictionary = _workspace_restores[ri]
 		if not saved.is_empty():
 			bench.restore(saved)
 	_save_workspace()
-	for t in _slot_buttons.size():
-		_slot_buttons[t].button_pressed = t == i
+	for button_index in _slot_buttons.size():
+		_slot_buttons[button_index].button_pressed = button_index == slot_index
 
 
 ## 目录双击条目 → 切对应台并装配

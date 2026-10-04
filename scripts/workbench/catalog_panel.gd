@@ -130,9 +130,9 @@ func _ready() -> void:
 	_info_path = Label.new()
 	_info_desc = Label.new()
 	_info_refs = Label.new()
-	for l in [_info_name, _info_role, _info_path, _info_desc, _info_refs]:
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		info_box.add_child(l)
+	for label in [_info_name, _info_role, _info_path, _info_desc, _info_refs]:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		info_box.add_child(label)
 
 	refresh()
 	_apply_split.call_deferred()
@@ -147,9 +147,9 @@ func refresh() -> void:
 
 
 func _update_stats() -> void:
-	var s = _catalog.get_stats()
-	_stats_label.text = "共 %d 条 · 警告 %d" % [s["total"], s["warnings"]]
-	_stats_roles.text = _roles_summary(s["by_role"])
+	var stats = _catalog.get_stats()
+	_stats_label.text = "共 %d 条 · 警告 %d" % [stats["total"], stats["warnings"]]
+	_stats_roles.text = _roles_summary(stats["by_role"])
 
 
 func _roles_summary(roles: Dictionary) -> String:
@@ -169,16 +169,16 @@ func _rebuild_tree() -> void:
 	var want_role: String = ""
 	if _role_filter and _role_filter.selected > 0:
 		want_role = CAT.ROLE_ORDER[_role_filter.selected - 1]
-	var q: String = _search.text.strip_edges().to_lower()
+	var query: String = _search.text.strip_edges().to_lower()
 	for role in CAT.ROLE_ORDER:
 		if want_role != "" and role != want_role:
 			continue
 		var items = _catalog.by_role(role)
-		if q != "":
+		if query != "":
 			var filtered := []
-			for e in items:
-				if String(e.name).to_lower().contains(q) or String(e.path).to_lower().contains(q):
-					filtered.append(e)
+			for entry in items:
+				if String(entry.name).to_lower().contains(query) or String(entry.path).to_lower().contains(query):
+					filtered.append(entry)
 			items = filtered
 		if items.is_empty():
 			continue
@@ -188,22 +188,22 @@ func _rebuild_tree() -> void:
 		head.set_selectable(0, false)
 		# 重名消歧：同名条目后缀 uid（符卡）或文件名（兜底）
 		var name_count := {}
-		for e in items:
-			var key: String = e.name if e.name != "" else e.path.get_file()
+		for entry in items:
+			var key: String = entry.name if entry.name != "" else entry.path.get_file()
 			name_count[key] = (name_count.get(key, 0) as int) + 1
-		for e in items:
+		for entry in items:
 			var it := _tree.create_item(head)
-			var display: String = e.name if e.name != "" else e.path.get_file()
+			var display: String = entry.name if entry.name != "" else entry.path.get_file()
 			if (name_count.get(display, 0) as int) > 1:
-				var uid: int = e.extra.get("uid", 0)
+				var uid: int = entry.extra.get("uid", 0)
 				if uid > 0:
 					display += " · uid" + str(uid)
 				else:
-					display += "（" + e.path.get_file().get_basename() + "）"
+					display += "（" + entry.path.get_file().get_basename() + "）"
 			it.set_text(0, display)
-			var full_title: String = e.extra.get("full_title", e.name)
-			it.set_tooltip_text(0, full_title + "\n" + e.path)
-			it.set_metadata(0, e)
+			var full_title: String = entry.extra.get("full_title", entry.name)
+			it.set_tooltip_text(0, full_title + "\n" + entry.path)
+			it.set_metadata(0, entry)
 
 
 ## 拖动分隔条：分隔条位置跟随鼠标（树/信息卡以它划分）
@@ -258,18 +258,18 @@ func _on_info_sep_input(event: InputEvent) -> void:
 
 ## 应用分隔条位置：树 = 上部，分隔条 = 中部，信息卡 = 下部
 func _apply_split() -> void:
-	var h := _split_area.size.y
-	if h <= 0.0:
+	var height := _split_area.size.y
+	if height <= 0.0:
 		return
 	if _divider_y <= 0.0:
-		_divider_y = clampf(h - 170.0, 100.0, maxf(100.0, h - 120.0))
+		_divider_y = clampf(height - 170.0, 100.0, maxf(100.0, height - 120.0))
 	else:
-		_divider_y = clampf(_divider_y, 100.0, maxf(100.0, h - 120.0))
+		_divider_y = clampf(_divider_y, 100.0, maxf(100.0, height - 120.0))
 	_tree.offset_bottom = _divider_y
 	_sep_divider.offset_top = _divider_y
 	_sep_divider.offset_bottom = _divider_y + 6.0
 	# 注意：信息卡锚点=底边（BOTTOM_WIDE），offset 相对底锚点 → 必须为负
-	_info_panel.offset_top = _divider_y + 6.0 - h
+	_info_panel.offset_top = _divider_y + 6.0 - height
 	_info_panel.offset_bottom = 0.0
 
 
@@ -280,9 +280,9 @@ func _on_tree_input(event: InputEvent) -> void:
 		var item := _tree.get_selected()
 		if item == null:
 			return
-		var e = item.get_metadata(0)
-		if e != null:
-			preset_requested.emit(e)
+		var entry = item.get_metadata(0)
+		if entry != null:
+			preset_requested.emit(entry)
 
 
 func _on_item_selected() -> void:
@@ -311,5 +311,5 @@ func _on_item_selected() -> void:
 
 func _clear_info() -> void:
 	_info_name.text = "← 选中条目查看详情"
-	for l in [_info_role, _info_path, _info_desc, _info_refs]:
-		l.text = ""
+	for label in [_info_role, _info_path, _info_desc, _info_refs]:
+		label.text = ""

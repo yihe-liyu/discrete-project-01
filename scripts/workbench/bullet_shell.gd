@@ -48,31 +48,31 @@ func get_dir() -> Vector2:
 
 
 ## 方位显示名：最接近的 8 方位名；非正方位加"自选"前缀
-static func dir_name(v: Vector2) -> String:
-	if v.length() < 0.001:
+static func dir_name(vec: Vector2) -> String:
+	if vec.length() < 0.001:
 		return "（未设）"
 	var best := 0
 	var best_dot := -2.0
 	for i in DIR_NAMES.size():
-		var d: float = dir_dot(v, preset(i))
-		if d > best_dot:
-			best_dot = d
+		var dot_value: float = dir_dot(vec, preset(i))
+		if dot_value > best_dot:
+			best_dot = dot_value
 			best = i
 	var exact := best_dot > 0.999
 	return DIR_NAMES[best] if exact else "自选·" + DIR_NAMES[best]
 
 
-static func dir_dot(a: Vector2, b: Vector2) -> float:
-	return a.normalized().dot(b.normalized())
+static func dir_dot(vec_a: Vector2, vec_b: Vector2) -> float:
+	return vec_a.normalized().dot(vec_b.normalized())
 
 
 ## 角度（自"下"顺时针，0~360，用于面板显示）
-static func angle_text(v: Vector2) -> String:
-	if v.length() < 0.001:
+static func angle_text(vec: Vector2) -> String:
+	if vec.length() < 0.001:
 		return "—"
 	# angle_to 是数学符号（逆时针正）→ 翻转成"自下顺时针"（视觉方向）
-	var a := rad_to_deg(Vector2.DOWN.angle_to(v))
-	if a < 0.0:
-		a += 360.0
-	a = fmod(360.0 - a, 360.0)
-	return "%d°" % roundi(a)
+	var angle := rad_to_deg(Vector2.DOWN.angle_to(vec))
+	if angle < 0.0:
+		angle += 360.0
+	angle = fmod(360.0 - angle, 360.0)
+	return "%d°" % roundi(angle)

@@ -92,10 +92,10 @@ func _build_ui() -> void:
 	_script_sel.add_item("（无）直线弹")
 	# 注意：选项只放短名（OptionButton 最小宽=最长选项宽；文件名后缀曾把面板顶到 469）
 	var script_idx := 0
-	for e in _catalog.by_role("bullet"):
-		var item_text: String = e.name if e.name != "" else e.path.get_file()
+	for entry in _catalog.by_role("bullet"):
+		var item_text: String = entry.name if entry.name != "" else entry.path.get_file()
 		_script_sel.add_item(item_text)
-		_script_sel.set_item_tooltip(script_idx + 1, e.path)
+		_script_sel.set_item_tooltip(script_idx + 1, entry.path)
 		script_idx += 1
 	_script_sel.selected = 0
 	_script_sel.item_selected.connect(_on_script_changed)
@@ -103,8 +103,8 @@ func _build_ui() -> void:
 
 	box.add_child(RIG_COMMON.section_label("难度（即时生效）"))
 	_diff_sel = OptionButton.new()
-	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
-		_diff_sel.add_item(d)
+	for difficulty in ["Easy", "Normal", "Hard", "Lunatic"]:
+		_diff_sel.add_item(difficulty)
 	_diff_sel.selected = SaveData.selected_difficulty
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
@@ -147,8 +147,8 @@ func _build_ui() -> void:
 	box.add_child(_label("方向（右键=指向）"))
 	_dir_sel = OptionButton.new()
 	_dir_sel.add_item("自选（右键场地）")
-	for d in SHELL.DIR_NAMES:
-		_dir_sel.add_item(d)
+	for dir_name in SHELL.DIR_NAMES:
+		_dir_sel.add_item(dir_name)
 	_dir_sel.item_selected.connect(_on_dir_preset)
 	box.add_child(_dir_sel)
 	_dir_angle_label = _hint("")
@@ -182,8 +182,8 @@ func _build_ui() -> void:
 	_seed_btn = Button.new()
 	_seed_btn.text = "换种子"
 	_seed_btn.pressed.connect(_next_seed)
-	for c in [_fire_btn, _burst_chk, _clear_btn, _seed_btn]:
-		ops.add_child(c)
+	for button in [_fire_btn, _burst_chk, _clear_btn, _seed_btn]:
+		ops.add_child(button)
 	box.add_child(ops)
 
 	var itv := HBoxContainer.new()
@@ -226,28 +226,28 @@ func snapshot() -> Dictionary:
 	}
 
 
-func restore(d: Dictionary) -> void:
-	if d.has("seed"):
-		_seed = d.seed
-	if d.has("diff"):
-		SaveData.selected_difficulty = d.diff
-		_diff_sel.selected = int(d.diff)
-	if d.has("tex"):
-		_shell.tex_key = d.tex
+func restore(data: Dictionary) -> void:
+	if data.has("seed"):
+		_seed = data.seed
+	if data.has("diff"):
+		SaveData.selected_difficulty = data.diff
+		_diff_sel.selected = int(data.diff)
+	if data.has("tex"):
+		_shell.tex_key = data.tex
 		for i in _tex_sel.item_count:
-			if _tex_sel.get_item_text(i) == d.tex:
+			if _tex_sel.get_item_text(i) == data.tex:
 				_tex_sel.selected = i
 				break
-	if d.has("tint"):
-		_shell.tint = d.tint
-		_color_btn.color = d.tint
-	if d.has("speed"):
-		_shell.speed = d.speed
-		_speed_spin.value = d.speed
-	if d.has("script") and str(d.script) != "":
+	if data.has("tint"):
+		_shell.tint = data.tint
+		_color_btn.color = data.tint
+	if data.has("speed"):
+		_shell.speed = data.speed
+		_speed_spin.value = data.speed
+	if data.has("script") and str(data.script) != "":
 		var list = _catalog.by_role("bullet")
 		for i in list.size():
-			if list[i].path == str(d.script):
+			if list[i].path == str(data.script):
 				_script_sel.selected = i + 1
 				_on_script_changed(i + 1)
 				break
@@ -272,9 +272,9 @@ func _clear_all() -> void:
 	_update_stats()
 
 
-func _set_seed(s: int) -> void:
-	_seed = s
-	RNG.set_seed(s)
+func _set_seed(seed_value: int) -> void:
+	_seed = seed_value
+	RNG.set_seed(seed_value)
 
 
 func _next_seed() -> void:
@@ -364,15 +364,15 @@ func _on_field_draw() -> void:
 	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 	_field.draw_rect(field, Color(0.62, 0.52, 0.28, 0.5), false, 2.0)
-	var p := _emitter_pos
-	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.85, 0.3), 2.0)
-	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.85, 0.3), 2.0)
+	var emitter_pos := _emitter_pos
+	_field.draw_line(emitter_pos + Vector2(-12, 0), emitter_pos + Vector2(12, 0), Color(1, 0.85, 0.3), 2.0)
+	_field.draw_line(emitter_pos + Vector2(0, -12), emitter_pos + Vector2(0, 12), Color(1, 0.85, 0.3), 2.0)
 	# 发射方向箭头（绿色，从发射点指向）
 	if _shell and _shell.dir.length() > 0.001:
-		var d: Vector2 = _shell.dir
-		var tip := p + d * 56.0
-		_field.draw_line(p, tip, Color(0.35, 0.95, 0.45), 2.0)
-		var side := d.rotated(2.6) * 10.0
+		var direction: Vector2 = _shell.dir
+		var tip := emitter_pos + direction * 56.0
+		_field.draw_line(emitter_pos, tip, Color(0.35, 0.95, 0.45), 2.0)
+		var side := direction.rotated(2.6) * 10.0
 		_field.draw_line(tip, tip + side, Color(0.35, 0.95, 0.45), 2.0)
 		_field.draw_line(tip, tip + _shell.dir.rotated(-2.6) * 10.0, Color(0.35, 0.95, 0.45), 2.0)
 

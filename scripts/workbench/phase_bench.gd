@@ -73,13 +73,13 @@ func _build_ui() -> void:
 	box.add_child(RIG_COMMON.section_label("阶段（目录）"))
 	_phase_sel = OptionButton.new()
 	var phase_idx := 0
-	for e in _catalog.by_role("phase"):
-		var uid: int = e.extra.get("uid", 0)
-		var display: String = e.name if e.name != "" else e.path.get_file()
+	for entry in _catalog.by_role("phase"):
+		var uid: int = entry.extra.get("uid", 0)
+		var display: String = entry.name if entry.name != "" else entry.path.get_file()
 		if uid > 0:
 			display += " · uid" + str(uid)
 		_phase_sel.add_item(display)
-		_phase_sel.set_item_tooltip(phase_idx, e.path)
+		_phase_sel.set_item_tooltip(phase_idx, entry.path)
 		phase_idx += 1
 	_phase_sel.item_selected.connect(_select_phase)
 	box.add_child(_phase_sel)
@@ -129,8 +129,8 @@ func _build_ui() -> void:
 
 	box.add_child(RIG_COMMON.section_label("难度（即时生效）"))
 	_diff_sel = OptionButton.new()
-	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
-		_diff_sel.add_item(d)
+	for difficulty in ["Easy", "Normal", "Hard", "Lunatic"]:
+		_diff_sel.add_item(difficulty)
 	_diff_sel.selected = SaveData.selected_difficulty
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
@@ -156,8 +156,8 @@ func _build_ui() -> void:
 	_seed_btn = Button.new()
 	_seed_btn.text = "换种子"
 	_seed_btn.pressed.connect(_next_seed)
-	for c in [_play_btn, _clear_btn, _seed_btn]:
-		ops.add_child(c)
+	for button in [_play_btn, _clear_btn, _seed_btn]:
+		ops.add_child(button)
 	box.add_child(ops)
 
 	_stats_label = _label("")
@@ -174,9 +174,9 @@ func _num_spin(mn: float, mx: float, val: float) -> SpinBox:
 
 func _fill_script_options(sel: OptionButton, role: String) -> void:
 	var idx := 1
-	for e in _catalog.by_role(role):
-		sel.add_item(e.name if e.name != "" else e.path.get_file())
-		sel.set_item_tooltip(idx, e.path)
+	for entry in _catalog.by_role(role):
+		sel.add_item(entry.name if entry.name != "" else entry.path.get_file())
+		sel.set_item_tooltip(idx, entry.path)
 		idx += 1
 
 
@@ -185,19 +185,19 @@ func _select_phase(idx: int) -> void:
 	var phases = _catalog.by_role("phase")
 	if phases.is_empty() or idx < 0 or idx >= phases.size():
 		return
-	var e = phases[idx]
-	var p: PhaseData = load(e.path)
-	if p == null:
+	var entry = phases[idx]
+	var phase: PhaseData = load(entry.path)
+	if phase == null:
 		return
-	_hp_spin.value = float(p.hp)
-	_time_spin.value = p.time_limit
-	_name_label.text = "%s · uid=%d · %s" % [p.name if p.name != "" else e.path.get_file(), p.uid,
-		"符卡" if p.uid != 0 else "非符"]
+	_hp_spin.value = float(phase.hp)
+	_time_spin.value = phase.time_limit
+	_name_label.text = "%s · uid=%d · %s" % [phase.name if phase.name != "" else entry.path.get_file(), phase.uid,
+		"符卡" if phase.uid != 0 else "非符"]
 	# 双槽默认 = 阶段现值；在目录脚本列表中定位
-	_move_sel.selected = _script_index("boss_move", p.move_script)
-	_shoot_sel.selected = _script_index("boss_shoot", p.shoot_script)
-	_move_path = p.move_script.resource_path if p.move_script else ""
-	_shoot_path = p.shoot_script.resource_path if p.shoot_script else ""
+	_move_sel.selected = _script_index("boss_move", phase.move_script)
+	_shoot_sel.selected = _script_index("boss_shoot", phase.shoot_script)
+	_move_path = phase.move_script.resource_path if phase.move_script else ""
+	_shoot_path = phase.shoot_script.resource_path if phase.shoot_script else ""
 	_rebuild_watch()
 	_update_slot_desc()
 
@@ -213,7 +213,7 @@ func _script_index(role: String, script: Script) -> int:
 
 
 ## 槽位手动变更：刷新监听 + 刷新描述
-func _on_slots_changed(_i: int) -> void:
+func _on_slots_changed(_index: int) -> void:
 	var mv: Script = _resolve_slot(_move_sel, "boss_move")
 	var sh: Script = _resolve_slot(_shoot_sel, "boss_shoot")
 	_move_path = mv.resource_path if mv else ""
@@ -224,9 +224,9 @@ func _on_slots_changed(_i: int) -> void:
 
 ## 描述 Label：16 号（同字段标签）+ 弱化金色，与可交互项区分
 func _desc_label() -> Label:
-	var l := _label("")
-	l.modulate = Color(0.82, 0.78, 0.7, 1.0)
-	return l
+	var label := _label("")
+	label.modulate = Color(0.82, 0.78, 0.7, 1.0)
+	return label
 
 
 ## 刷新两个脚本槽位的描述（来自目录 entry.description = @desc / const META）
@@ -237,27 +237,27 @@ func _update_slot_desc() -> void:
 
 ## 取某槽位当前选项的描述；无选项/无描述给占位
 func _slot_desc(sel: OptionButton, role: String) -> String:
-	var i := sel.selected
-	if i <= 0:
+	var index := sel.selected
+	if index <= 0:
 		return "（无脚本）"
 	var list = _catalog.by_role(role)
-	if i - 1 >= list.size():
+	if index - 1 >= list.size():
 		return ""
-	var e = list[i - 1]
-	if e.description == "":
+	var entry = list[index - 1]
+	if entry.description == "":
 		return "（无描述）"
-	return e.description
+	return entry.description
 
 
 ## 双槽 → 当前脚本路径（空=null）
 func _resolve_slot(sel: OptionButton, role: String) -> Script:
-	var i := sel.selected
-	if i <= 0:
+	var index := sel.selected
+	if index <= 0:
 		return null
 	var list = _catalog.by_role(role)
-	if i - 1 >= list.size():
+	if index - 1 >= list.size():
 		return null
-	return load(list[i - 1].path)
+	return load(list[index - 1].path)
 
 
 # ═══ 目录直达 / 工作区恢复 ═══
@@ -284,23 +284,23 @@ func snapshot() -> Dictionary:
 	}
 
 
-func restore(d: Dictionary) -> void:
-	if d.has("seed"):
-		_seed = d.seed
-	if d.has("diff"):
-		SaveData.selected_difficulty = d.diff
-		_diff_sel.selected = int(d.diff)
-	if d.has("hp"):
-		_hp_spin.value = d.hp
-	if d.has("time"):
-		_time_spin.value = d.time
-	if d.has("pos_x"):
-		_boss_pos = Vector2(d.pos_x, d.pos_y)
+func restore(data: Dictionary) -> void:
+	if data.has("seed"):
+		_seed = data.seed
+	if data.has("diff"):
+		SaveData.selected_difficulty = data.diff
+		_diff_sel.selected = int(data.diff)
+	if data.has("hp"):
+		_hp_spin.value = data.hp
+	if data.has("time"):
+		_time_spin.value = data.time
+	if data.has("pos_x"):
+		_boss_pos = Vector2(data.pos_x, data.pos_y)
 		_field.queue_redraw()
-	if d.has("phase") and str(d.phase) != "":
+	if data.has("phase") and str(data.phase) != "":
 		var phases = _catalog.by_role("phase")
 		for i in phases.size():
-			if phases[i].path == str(d.phase):
+			if phases[i].path == str(data.phase):
 				_phase_sel.selected = i
 				_select_phase(i)
 				break
@@ -313,8 +313,8 @@ func _play() -> void:
 	if phases.is_empty():
 		return
 	var idx: int = _phase_sel.selected
-	var e = phases[idx]
-	var base: PhaseData = load(e.path)
+	var entry = phases[idx]
+	var base: PhaseData = load(entry.path)
 	if base == null:
 		return
 	_clear_all()  # 防叠
@@ -366,12 +366,12 @@ func move_slot_index() -> int:
 
 
 ## 设 move/shoot 槽的下标（0 = 空槽；测试与创作台恢复工作区用）
-func set_move_slot_index(i: int) -> void:
-	_move_sel.selected = i
+func set_move_slot_index(index: int) -> void:
+	_move_sel.selected = index
 
 
-func set_shoot_slot_index(i: int) -> void:
-	_shoot_sel.selected = i
+func set_shoot_slot_index(index: int) -> void:
+	_shoot_sel.selected = index
 
 
 func shoot_slot_index() -> int:
@@ -415,9 +415,9 @@ func _clear_all() -> void:
 	_update_stats()
 
 
-func _set_seed(s: int) -> void:
-	_seed = s
-	RNG.set_seed(s)
+func _set_seed(seed_value: int) -> void:
+	_seed = seed_value
+	RNG.set_seed(seed_value)
 
 
 func _next_seed() -> void:
@@ -454,9 +454,9 @@ func _on_click(game_pos: Vector2) -> void:
 
 ## Boss 落点标记（紫十字；rig_base 已画金框）
 func _draw_marker() -> void:
-	var p := _boss_pos
-	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(0.7, 0.5, 0.95), 2.0)
-	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(0.7, 0.5, 0.95), 2.0)
+	var pos := _boss_pos
+	_field.draw_line(pos + Vector2(-12, 0), pos + Vector2(12, 0), Color(0.7, 0.5, 0.95), 2.0)
+	_field.draw_line(pos + Vector2(0, -12), pos + Vector2(0, 12), Color(0.7, 0.5, 0.95), 2.0)
 
 
 # ═══ 热更新钩子（管线在 BenchBase）═══

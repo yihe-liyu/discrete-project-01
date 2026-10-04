@@ -30,8 +30,8 @@ func _ready() -> void:
 
 ## 重建参数行（脚本为 null = 清空）
 func rebuild(script: Script) -> void:
-	for c in body.get_children():
-		c.queue_free()
+	for child in body.get_children():
+		child.queue_free()
 	_rows.clear()
 	if script == null:
 		_header.text = "参数（选择脚本后显示）"
@@ -40,13 +40,13 @@ func rebuild(script: Script) -> void:
 	var inst = script.new()
 	var prop_list: Array = script.get_script_property_list()
 	var skipped := 0
-	for p in prop_list:
-		var nm: String = p.get("name", "")
+	for property in prop_list:
+		var nm: String = property.get("name", "")
 		if nm == "" or nm.begins_with("_"):
 			continue
-		if not (int(p.get("usage", 0)) & PROPERTY_USAGE_SCRIPT_VARIABLE):
+		if not (int(property.get("usage", 0)) & PROPERTY_USAGE_SCRIPT_VARIABLE):
 			continue
-		var pt: int = p.get("type", TYPE_NIL)
+		var pt: int = property.get("type", TYPE_NIL)
 		match pt:
 			TYPE_FLOAT, TYPE_INT:
 				var sp := _new_spin(0.5, -100000.0, 100000.0, inst.get(nm))
@@ -150,14 +150,14 @@ func _add_row(nm: String, kind: String, ctrl: Control) -> Label:
 
 
 func _add_note(text: String, color: Color) -> void:
-	var l := _mk_label(text, RIG_COMMON.HINT_SIZE)
-	l.modulate = color
-	body.add_child(l)
+	var label := _mk_label(text, RIG_COMMON.HINT_SIZE)
+	label.modulate = color
+	body.add_child(label)
 
 
 func _mk_label(text: String, font_size: int) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", font_size)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return l
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", font_size)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return label

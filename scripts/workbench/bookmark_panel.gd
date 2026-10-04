@@ -9,7 +9,7 @@ extends VBoxContainer
 ##   data_changed        —— 书签被编辑 → 持久化 + 刷时间轴
 ##   log_requested(text) —— 操作日志（转交 EventLog）
 
-signal jump_requested(t: float)
+signal jump_requested(time_sec: float)
 signal data_changed
 signal log_requested(text: String)
 
@@ -91,10 +91,10 @@ func _on_menu_id(id: int) -> void:
 
 
 ## 添加书签弹窗（t < 0 = 用当前播放时刻；时间轴右键传指定时刻）
-func open_add(t: float = -1.0) -> void:
+func open_add(at_time: float = -1.0) -> void:
 	if store == null:
 		return
-	var cur: float = t
+	var cur: float = at_time
 	if cur < 0.0:
 		var runner: CoroutineScript = stage_runtime.current_stage_script() if is_instance_valid(stage_runtime) else null
 		cur = runner.game_time() if runner else 0.0
@@ -177,8 +177,8 @@ func _delete_at(index: int) -> void:
 
 
 ## 追加人工书签（唯一入口：`store.manual` 只有这里写）
-func _manual_add(t: float, label: String) -> void:
-	store.manual.append({"t": t, "label": label})
+func _manual_add(time_value: float, label: String) -> void:
+	store.manual.append({"t": time_value, "label": label})
 
 
 ## 数据变化：刷新列表 + 通知主控制器（落盘 + 刷时间轴）

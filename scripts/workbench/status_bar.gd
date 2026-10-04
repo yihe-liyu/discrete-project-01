@@ -19,8 +19,8 @@ func _init() -> void:
 	add_child(_status_label)
 
 
-func set_time(t: float, is_ff: bool) -> void:
-	_time_label.text = "t = %.1f s%s" % [t, " ▶" if is_ff else ""]
+func set_time(time_value: float, is_ff: bool) -> void:
+	_time_label.text = "t = %.1f s%s" % [time_value, " ▶" if is_ff else ""]
 
 
 func set_status(bullets: int, enemies: int, boss_alive: bool, fps: int) -> void:

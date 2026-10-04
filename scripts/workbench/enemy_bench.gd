@@ -73,17 +73,17 @@ func _build_ui() -> void:
 	_script_sel = OptionButton.new()
 	_script_sel.add_item("（无）移动")
 	var idx := 0
-	for e in _catalog.by_role("enemy"):
-		_script_sel.add_item(e.name if e.name != "" else e.path.get_file())
-		_script_sel.set_item_tooltip(idx + 1, e.path)
+	for entry in _catalog.by_role("enemy"):
+		_script_sel.add_item(entry.name if entry.name != "" else entry.path.get_file())
+		_script_sel.set_item_tooltip(idx + 1, entry.path)
 		idx += 1
 	_script_sel.item_selected.connect(_on_script_changed)
 	box.add_child(_script_sel)
 
 	box.add_child(RIG_COMMON.section_label("难度（即时生效）"))
 	_diff_sel = OptionButton.new()
-	for d in ["Easy", "Normal", "Hard", "Lunatic"]:
-		_diff_sel.add_item(d)
+	for difficulty in ["Easy", "Normal", "Hard", "Lunatic"]:
+		_diff_sel.add_item(difficulty)
 	_diff_sel.selected = SaveData.selected_difficulty
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	box.add_child(_diff_sel)
@@ -91,8 +91,8 @@ func _build_ui() -> void:
 	box.add_child(RIG_COMMON.section_label("外形/属性"))
 	box.add_child(_label("外观"))
 	_visual_sel = OptionButton.new()
-	for k in SHELL.visual_keys():
-		_visual_sel.add_item(k)
+	for visual_key in SHELL.visual_keys():
+		_visual_sel.add_item(visual_key)
 	box.add_child(_visual_sel)
 	box.add_child(_label("HP · 判定半径"))
 	var hrow := HBoxContainer.new()
@@ -154,19 +154,19 @@ func _build_ui() -> void:
 	_seed_btn = Button.new()
 	_seed_btn.text = "换种子"
 	_seed_btn.pressed.connect(_next_seed)
-	for c in [_spawn_btn, _clear_btn, _seed_btn]:
-		ops.add_child(c)
+	for button in [_spawn_btn, _clear_btn, _seed_btn]:
+		ops.add_child(button)
 	box.add_child(ops)
 
 	_stats_label = _label("")
 	box.add_child(_stats_label)
 
 
-func _drop_spin(v: float) -> SpinBox:
+func _drop_spin(value: float) -> SpinBox:
 	var sp := SpinBox.new()
 	sp.min_value = 0.0
 	sp.max_value = 99.0
-	sp.value = v
+	sp.value = value
 	sp.custom_minimum_size = Vector2(70, 0)
 	return sp
 
@@ -190,28 +190,28 @@ func snapshot() -> Dictionary:
 	}
 
 
-func restore(d: Dictionary) -> void:
-	if d.has("seed"):
-		_seed = d.seed
-	if d.has("diff"):
-		SaveData.selected_difficulty = d.diff
-		_diff_sel.selected = int(d.diff)
-	if d.has("visual"):
-		_shell.visual_key = d.visual
+func restore(data: Dictionary) -> void:
+	if data.has("seed"):
+		_seed = data.seed
+	if data.has("diff"):
+		SaveData.selected_difficulty = data.diff
+		_diff_sel.selected = int(data.diff)
+	if data.has("visual"):
+		_shell.visual_key = data.visual
 		for i in _visual_sel.item_count:
-			if _visual_sel.get_item_text(i) == d.visual:
+			if _visual_sel.get_item_text(i) == data.visual:
 				_visual_sel.selected = i
 				break
-	if d.has("hp"):
-		_shell.max_hp = int(d.hp)
-		_hp_spin.value = d.hp
-	if d.has("pos_x"):
-		_spawn_pos = Vector2(d.pos_x, d.pos_y)
+	if data.has("hp"):
+		_shell.max_hp = int(data.hp)
+		_hp_spin.value = data.hp
+	if data.has("pos_x"):
+		_spawn_pos = Vector2(data.pos_x, data.pos_y)
 		_field.queue_redraw()
-	if d.has("script") and str(d.script) != "":
+	if data.has("script") and str(data.script) != "":
 		var list = _catalog.by_role("enemy")
 		for i in list.size():
-			if list[i].path == str(d.script):
+			if list[i].path == str(data.script):
 				_script_sel.selected = i + 1
 				_on_script_changed(i + 1)
 				break
@@ -233,24 +233,24 @@ func _spawn() -> void:
 	# 参数注入（与游戏 params 同路径：ParamValidator.apply 同名 var 注入）
 	# 注意：for-in 字典迭代的是键（GDScript 语义）
 	var params = _param_panel.collect()
-	for k in params:
-		data.param(k, params[k])
+	for key in params:
+		data.param(key, params[key])
 	data.pos(_spawn_pos)
 	RNG.set_seed(_seed)
 	_stage_runtime.spawn_enemy_data(data, _bullet_manager.get_bullet_ctx())
 	_update_stats()
 
 func _clear_all() -> void:
-	for e in _stage_runtime.entity_registry.get_active_enemies():
-		if is_instance_valid(e):
-			e.queue_free()
+	for enemy in _stage_runtime.entity_registry.get_active_enemies():
+		if is_instance_valid(enemy):
+			enemy.queue_free()
 	_bullet_manager.reset_world()  # 清场 + 回收内核 program/弹型（反复刷怪会积累）
 	_update_stats()
 
 
-func _set_seed(s: int) -> void:
-	_seed = s
-	RNG.set_seed(s)
+func _set_seed(seed_value: int) -> void:
+	_seed = seed_value
+	RNG.set_seed(seed_value)
 
 
 func _next_seed() -> void:
@@ -309,9 +309,9 @@ func _on_click(game_pos: Vector2) -> void:
 
 ## 出生点标记（橙十字；rig_base 已画金框）
 func _draw_marker() -> void:
-	var p := _spawn_pos
-	_field.draw_line(p + Vector2(-12, 0), p + Vector2(12, 0), Color(1, 0.6, 0.2), 2.0)
-	_field.draw_line(p + Vector2(0, -12), p + Vector2(0, 12), Color(1, 0.6, 0.2), 2.0)
+	var pos := _spawn_pos
+	_field.draw_line(pos + Vector2(-12, 0), pos + Vector2(12, 0), Color(1, 0.6, 0.2), 2.0)
+	_field.draw_line(pos + Vector2(0, -12), pos + Vector2(0, 12), Color(1, 0.6, 0.2), 2.0)
 
 
 # ═══ 热更新钩子（管线在 BenchBase）═══

@@ -238,8 +238,8 @@ func _build_ui() -> void:
 	_stage_grid.add_child(WorkbenchUI.label("关卡"))
 	_stage_grid.add_child(_stage_sel)
 	_diff_sel = OptionButton.new()
-	for d in DIFFICULTIES:
-		_diff_sel.add_item(d)
+	for difficulty in DIFFICULTIES:
+		_diff_sel.add_item(difficulty)
 	_diff_sel.selected = 1  # Normal
 	_diff_sel.item_selected.connect(_on_difficulty_changed)
 	_stage_grid.add_child(WorkbenchUI.label("难度"))
@@ -298,16 +298,16 @@ func _build_ui() -> void:
 
 
 ## 页签切换：只显示对应页，按钮高亮同步
-func _set_tab(i: int) -> void:
-	_catalog.visible = i == 0
-	%PageBookmarks.visible = i == 1
-	%PageLog.visible = i == 2
-	for b in _tab_btns.size():
-		_tab_btns[b].button_pressed = b == i
+func _set_tab(index: int) -> void:
+	_catalog.visible = index == 0
+	%PageBookmarks.visible = index == 1
+	%PageLog.visible = index == 2
+	for tab_index in _tab_btns.size():
+		_tab_btns[tab_index].button_pressed = tab_index == index
 
 
-func _on_tab_selected(i: int) -> void:
-	_set_tab(i)
+func _on_tab_selected(index: int) -> void:
+	_set_tab(index)
 
 
 ## 舞台世界：幽灵自机（真实 player.tscn + GhostPlayer 脚本）+ 弹幕世界 + 命中框覆盖层
@@ -455,10 +455,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	# 物理键优先（键盘布局无关）；无物理键时退回 keycode
-	var k: int = event.physical_keycode
-	if k == 0:
-		k = event.keycode
-	match k:
+	var keycode: int = event.physical_keycode
+	if keycode == 0:
+		keycode = event.keycode
+	match keycode:
 		KEY_SPACE:
 			_playback.toggle_play()
 			get_viewport().set_input_as_handled()
@@ -470,13 +470,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		KEY_LEFT, KEY_RIGHT:
 			var step := 5.0 if event.ctrl_pressed else 1.0
-			_jump_to(maxf(_current_time() + (step if k == KEY_RIGHT else -step), 0.0))
+			_jump_to(maxf(_current_time() + (step if keycode == KEY_RIGHT else -step), 0.0))
 			get_viewport().set_input_as_handled()
 		KEY_B:
 			_bookmark_panel.open_add()
 			get_viewport().set_input_as_handled()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7:
-			var idx: int = k - KEY_1
+			var idx: int = keycode - KEY_1
 			if idx >= 0 and idx < Playback.SPEEDS.size():
 				_playback.select_speed(idx)  # 播放控制行的下拉由 changed 回落同步
 				get_viewport().set_input_as_handled()
@@ -490,12 +490,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## 跳转（时间轴点击 / 书签列表 / ←→ 键）：协程关卡不能倒带 → 目标在过去时先重跑
-func _jump_to(t: float) -> void:
+func _jump_to(target_time: float) -> void:
 	var cur := _current_time()
-	if _playback.jump_reload_needed(t, cur):
-		_log_line("＊ 目标 %.1fs 在过去（当前 %.1fs），重跑后快进" % [t, cur])
+	if _playback.jump_reload_needed(target_time, cur):
+		_log_line("＊ 目标 %.1fs 在过去（当前 %.1fs），重跑后快进" % [target_time, cur])
 		_load_stage()
-	_playback.jump_to(t)
+	_playback.jump_to(target_time)
 
 
 ## 当前游戏内时刻（无 runner = 0）
@@ -529,7 +529,7 @@ func _on_bg_toggled(on: bool) -> void:
 	_restart()
 
 
-func _on_difficulty_changed(_i: int) -> void:
+func _on_difficulty_changed(_index: int) -> void:
 	_restart()
 
 
@@ -567,11 +567,11 @@ func _redraw_stage() -> void:
 # ═══ UI 刷新 / 日志 ═══
 
 func _update_ui() -> void:
-	var t := _current_time()
-	_status_bar.set_time(t, _playback.ff_active())
-	if absf(t - _prev_time) >= 0.05:
-		_prev_time = t
-		_timeline.time = t
+	var current_time := _current_time()
+	_status_bar.set_time(current_time, _playback.ff_active())
+	if absf(current_time - _prev_time) >= 0.05:
+		_prev_time = current_time
+		_timeline.time = current_time
 		_timeline.queue_redraw()
 	var boss = _stage_runtime.entity_registry.get_boss()
 	_status_bar.set_status(
@@ -612,13 +612,13 @@ func _check_phase_uid_conflicts() -> void:
 		var pda := DirAccess.open(phase_dir)
 		if not pda:
 			continue
-		for f in pda.get_files():
-			if not f.ends_with(".tres"):
+		for file_name in pda.get_files():
+			if not file_name.ends_with(".tres"):
 				continue
-			var phase: PhaseData = load("%s/%s" % [phase_dir, f])
+			var phase: PhaseData = load("%s/%s" % [phase_dir, file_name])
 			if not phase or phase.uid <= 0:
 				continue
-			var path := "%s/%s" % [phase_dir, f]
+			var path := "%s/%s" % [phase_dir, file_name]
 			if seen.has(phase.uid):
 				_log_line("⚠ uid 冲突：%d 同时用于 %s 和 %s" % [phase.uid, seen[phase.uid], path])
 			else:

@@ -178,11 +178,11 @@ func build_panel_scroll() -> VBoxContainer:
 
 ## 字段标签（默认 LABEL_SIZE）
 func _label(text: String, font_size: int = RIG_COMMON.LABEL_SIZE) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", font_size)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # 换行：不撑宽（面板 432 内）
-	return l
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", font_size)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # 换行：不撑宽（面板 432 内）
+	return label
 
 
 ## 提示行（左键=… · 鼠标=自机 等）

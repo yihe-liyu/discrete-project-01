@@ -88,24 +88,24 @@ func ff_active() -> bool:
 
 
 ## 目标时刻在过去吗（返回 true = 宿主必须先重跑关卡才能快进到它）
-func jump_reload_needed(t: float, cur: float) -> bool:
+func jump_reload_needed(target_time: float, cur: float) -> bool:
 	stop_fast_forward()
-	return t < cur - JUMP_BACK_TOLERANCE
+	return target_time < cur - JUMP_BACK_TOLERANCE
 
 
 ## 执行跳转：先收掉进行中的快进（两个入口都安全），太早的目标等价于回开头
-func jump_to(t: float) -> void:
+func jump_to(target_time: float) -> void:
 	stop_fast_forward()
-	if t <= MIN_JUMP_TARGET:
+	if target_time <= MIN_JUMP_TARGET:
 		return
-	start_fast_forward(t)
+	start_fast_forward(target_time)
 
 
-func start_fast_forward(t: float) -> void:
+func start_fast_forward(target_time: float) -> void:
 	if paused:
 		resume()  # 快进要走时间，暂停中先解开（resume 自己发 changed）
-	ff_target = t
-	logged.emit("▶ 快进到 %.1fs ..." % t)
+	ff_target = target_time
+	logged.emit("▶ 快进到 %.1fs ..." % target_time)
 	changed.emit()
 
 
