@@ -232,7 +232,7 @@ def check_log() -> None:
 
 # ── [6] 视觉计划清单：✅ 必须有出处；✅ 提到的文件必须存在（"回退也要更新清单"）──
 
-PLAN = "docs/BACKGROUND_VISUAL_PLAN.md"
+PLAN = "docs/archive/BACKGROUND_VISUAL_PLAN.md"
 COMMIT_RE = re.compile(r"\b[0-9a-f]{7}\b")
 DOC_PATH_RE = re.compile(r"((?:[\w.-]+/)*[\w.-]+\.(?:gdshader|tscn|tres|gd|py|sh|png|md))(?![\w])")
 

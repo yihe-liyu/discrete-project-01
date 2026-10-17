@@ -20,8 +20,11 @@
 | [CREATION_STATION_V1.md](CREATION_STATION_V1.md) | 创作台（工作台）设计 V1：与作者逐条拍板 —— **预览沙盒，不是编辑器** | 🕰 已被实现/演进取代 | —（工作台现状看 `scripts/workbench/`） |
 | [REBUILD_REPO_STATUS.md](REBUILD_REPO_STATUS.md) | 重建版仓库归档登记：`1-st-touhou-star-rebuild` 完成历史使命；**「重建版改 → tag → vendor」流程已废止** | 📦 归档登记 | `TODO_TEMP.md`（内核方向） |
 | [BEST_PRACTICES_BASELINE_OLD_AUDIT.md](BEST_PRACTICES_BASELINE_OLD_AUDIT.md) | 当前基线的前身（只记状态 + 旧 🔴 TODO 审计）—— 与今天基线对照可看出判据怎么演进的 | 🕰 已被取代 | 基线头部（说明出处） |
+| [BACKGROUND_VISUAL_PLAN.md](BACKGROUND_VISUAL_PLAN.md) | 背景视觉计划（**2026-10-04 已冻结**）：现役 3D 背景 + 已完成记录 + 未做项留痕；**§A–§I 不再投入** | ⛔ 已冻结 | `START_HERE.md`、`ARCHITECTURE.md` §7 |
+| [DIALOGUE.md](DIALOGUE.md) | 对白全集（**剧本原稿**，2026-08 已代码化）—— 已实现的面以 `data/dialogue/stage/*.gd` 为准 | 🕰 原稿（非权威） | `DIALOGUE_SYSTEM.md`、`CONTENT_GUIDE.md`、`START_HERE.md` |
 | [LOG_2026-09.md](LOG_2026-09.md) | 滚动日志按月归档（**内文时间正序**，可 `grep`） | 📚 历史底账 | `BEST_PRACTICES_LOG.md` 顶部索引 |
 | [LOG_2026-09_kernel_migration.md](LOG_2026-09_kernel_migration.md) | 内核迁移期日志（L1–L3.5 / N2，2026-09-13~16）：含已废止的 vendor 流程与当时的踩坑 | 📚 历史底账 | `BEST_PRACTICES_LOG.md` 顶部索引 |
+| [LOG_2026-10.md](LOG_2026-10.md) | 2026-10 滚动日志归档（由 `tools/log_archive.py --archive` 迁出） | 📚 历史底账 | `BEST_PRACTICES_LOG.md` 顶部索引 |
 | [gdext_spike_probe/](gdext_spike_probe/) | 原生内核**探针**存档（2026-09-22）：从 216M 的 `_gdext_spike/` 与一个误建目录里抽出的纯源码 | 📦 归档登记 | — |
 
 ## 怎么往里加

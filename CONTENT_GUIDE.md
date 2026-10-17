@@ -500,7 +500,7 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
   `enter()` 返回 `ActorHandle`（`h.line/move/flip/dim/portrait/bubble/exit`，可链式）。
   台词住在 `data/dialogue/stage/<面>_dialogue.gd`（`static` 构建函数，战前/战后各一支），
   由 `data/stages/<面>/stage_script/*.gd` 在时间线里调用。
-  参考：`docs/DIALOGUE_SYSTEM.md`、剧本原稿 `docs/DIALOGUE.md`（已实现的面以代码为准）
+  参考：`docs/DIALOGUE_SYSTEM.md`、剧本原稿 `docs/archive/DIALOGUE.md`（已实现的面以代码为准）
 
 ---
 
