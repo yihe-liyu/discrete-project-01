@@ -228,7 +228,7 @@ func _build_ui() -> void:
 
 
 	_composer_panel = COMPOSER_PANEL.new()
-	_composer_panel.setup(_composer_spawn)
+	_composer_panel.setup(_composer_spawn, _composer_base_spec, _apply_composer_base)
 	_composer_panel.preview_requested.connect(_on_composer_preview)
 	_composer_panel.difficulty_changed.connect(_on_composer_difficulty)
 	_composer_panel.status.connect(_on_composer_status)
@@ -248,6 +248,44 @@ func _on_mode_changed(index: int) -> void:
 
 func _composer_spawn() -> Variant:
 	return _shell.build(null)
+
+
+## 拼装页“初始弹”外观 → 当前 shell；同时同步直射控件，避免切回直射时被旧值覆盖。
+func _composer_base_spec() -> Dictionary:
+	var dir_index := -1
+	for i in SHELL.DIR_NAMES.size():
+		if SHELL.dir_dot(_shell.dir, SHELL.preset(i)) > 0.999:
+			dir_index = i
+			break
+	return {
+		"tex": _shell.tex_key, "tint": _shell.tint, "blend": _shell.is_blend,
+		"speed": _shell.speed, "dir_index": dir_index,
+	}
+
+
+func _apply_composer_base(spec: Dictionary) -> void:
+	_shell.tex_key = str(spec.get("tex", _shell.tex_key))
+	_shell.tint = spec.get("tint", _shell.tint)
+	_shell.is_blend = bool(spec.get("blend", _shell.is_blend))
+	_shell.speed = float(spec.get("speed", _shell.speed))
+	var dir_index := int(spec.get("dir_index", -1))
+	if dir_index >= 0:
+		_shell.dir = SHELL.preset(dir_index)
+		if _dir_sel != null:
+			_dir_sel.selected = dir_index + 1
+		_refresh_dir_label()
+	# 直射页的控件也同步：否则切回直射发射会拿旧 tex/color/speed 覆盖。
+	if _tex_sel != null:
+		for i in _tex_sel.item_count:
+			if _tex_sel.get_item_text(i) == _shell.tex_key:
+				_tex_sel.selected = i
+				break
+	if _color_btn != null:
+		_color_btn.color = _shell.tint
+	if _blend_chk != null:
+		_blend_chk.button_pressed = _shell.is_blend
+	if _speed_spin != null:
+		_speed_spin.value = _shell.speed
 
 
 func _on_composer_preview(lifecycle: BulletLifecycle) -> void:
@@ -288,6 +326,7 @@ func snapshot() -> Dictionary:
 		"script": _cur_script_path, "seed": _seed,
 		"diff": SaveData.selected_difficulty,
 		"tex": _shell.tex_key, "tint": _shell.tint, "speed": _shell.speed,
+		"dir": _shell.dir,
 		"mode": _mode_sel.selected, "composer": _composer_panel.dump(),
 	}
 
@@ -317,6 +356,9 @@ func restore(data: Dictionary) -> void:
 				_script_sel.selected = i + 1
 				_on_script_changed(i + 1)
 				break
+	if data.has("dir"):
+		_shell.dir = data.dir
+		_refresh_dir_label()
 	if data.has("composer"):
 		_composer_panel.load_from(data.composer)
 	if data.has("mode"):

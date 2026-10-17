@@ -86,6 +86,8 @@ func test_composer_mode_builds_code_and_previews():
 	if cp == null:
 		return
 	cp.set_difficulty(0)
+	cp.set_base_spec({"tex": "米弹", "tint": Color.RED, "blend": true, "speed": 123.0, "dir_index": 2})
+	assert_eq(cp.base_spec().get("tex", ""), "米弹", "初始弹外观应回写到 bench shell")
 	cp.add_op(&"move", &"accel_heading")
 	cp.add_op(&"until", &"never")
 	cp.add_op(&"action", &"sfx")

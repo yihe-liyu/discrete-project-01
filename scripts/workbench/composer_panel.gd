@@ -12,6 +12,7 @@ signal status(text: String, color: Color)
 const COMPOSER := preload("res://scripts/workbench/bullet_composer.gd")
 const CATALOG := preload("res://scripts/workbench/descriptor_catalog.gd")
 const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
+const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 
 const KINDS := [&"move", &"until", &"action"]
 const KIND_LABELS := {&"move": "Move", &"until": "Until", &"action": "Action"}
@@ -23,7 +24,10 @@ var _difficulty: int = 0
 var _phase_index: int = 0
 var _selected: Dictionary = {}
 var _spawn_provider: Callable
+var _base_get: Callable
+var _base_apply: Callable
 var _building: bool = false
+var _suppress_base: bool = false
 ## 替换弹模板 A/B（emit / emit_variant 用）；代码里是 _spawn_a/_spawn_b 占位。
 var _templates: Array = []
 var _template_keys: Array[String] = ["", ""]
@@ -32,6 +36,11 @@ var _template_color_btn: Array = []
 var _template_blend_chk: Array = []
 var _template_speed_spin: Array = []
 var _suppress_template: bool = false
+var _base_tex_sel: OptionButton
+var _base_color_btn: ColorPickerButton
+var _base_blend_chk: CheckBox
+var _base_speed_spin: SpinBox
+var _base_dir_sel: OptionButton
 
 var _difficulty_sel: OptionButton
 var _kind_sel: OptionButton
@@ -54,15 +63,20 @@ func _ready() -> void:
 	_init_templates()
 	_build_ui()
 	_apply_template_ui()
+	_apply_base_ui()
 	_rebuild_all()
 
 
 ## 由弹幕台注入：返回当前“子弹外形”BulletData（emit/spawn 的预览载体）。
-func setup(spawn_provider: Callable) -> void:
+func setup(spawn_provider: Callable, base_get: Callable = Callable(), base_apply: Callable = Callable()) -> void:
 	_spawn_provider = spawn_provider
-	if is_node_ready() and _templates.is_empty():
-		_init_templates()
-		_apply_template_ui()
+	_base_get = base_get
+	_base_apply = base_apply
+	if is_node_ready():
+		if _templates.is_empty():
+			_init_templates()
+			_apply_template_ui()
+		_apply_base_ui()
 
 
 func _build_ui() -> void:
@@ -81,6 +95,10 @@ func _build_ui() -> void:
 	_difficulty_sel.item_selected.connect(_on_difficulty_changed)
 	diff_row.add_child(_difficulty_sel)
 	add_child(diff_row)
+
+	add_child(RIG_COMMON.section_label("初始弹（发射的这颗）"))
+	add_child(_build_base_row())
+	add_child(_build_base_dir_row())
 
 	add_child(RIG_COMMON.section_label("替换弹模板（A/B）"))
 	for slot in 2:
@@ -197,6 +215,102 @@ func _copy_current() -> BulletData:
 	d.coroutine_script = null
 	d.params = {}
 	return d
+
+
+func _build_base_row() -> Control:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 4)
+	var lb := RIG_COMMON.label("外观", RIG_COMMON.HINT_SIZE)
+	lb.custom_minimum_size = Vector2(40, 0)
+	row.add_child(lb)
+
+	_base_tex_sel = OptionButton.new()
+	_base_tex_sel.fit_to_longest_item = false
+	_base_tex_sel.custom_minimum_size = Vector2(100, 0)
+	for key in BulletCatalog.keys():
+		_base_tex_sel.add_item(key)
+		_base_tex_sel.set_item_metadata(_base_tex_sel.item_count - 1, key)
+	row.add_child(_base_tex_sel)
+
+	_base_color_btn = ColorPickerButton.new()
+	_base_color_btn.custom_minimum_size = Vector2(36, 0)
+	_base_color_btn.text = "色"
+	row.add_child(_base_color_btn)
+
+	_base_blend_chk = CheckBox.new()
+	_base_blend_chk.text = "加色"
+	row.add_child(_base_blend_chk)
+
+	_base_speed_spin = SpinBox.new()
+	_base_speed_spin.min_value = 0.0
+	_base_speed_spin.max_value = 4000.0
+	_base_speed_spin.step = 5.0
+	_base_speed_spin.custom_minimum_size = Vector2(64, 0)
+	row.add_child(_base_speed_spin)
+
+	_base_tex_sel.item_selected.connect(func(_i): _on_base_edit())
+	_base_color_btn.color_changed.connect(func(_c): _on_base_edit())
+	_base_blend_chk.toggled.connect(func(_v): _on_base_edit())
+	_base_speed_spin.value_changed.connect(func(_v): _on_base_edit())
+	return row
+
+
+func _build_base_dir_row() -> Control:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 4)
+	var lb := RIG_COMMON.label("方向", RIG_COMMON.HINT_SIZE)
+	lb.custom_minimum_size = Vector2(40, 0)
+	row.add_child(lb)
+	_base_dir_sel = OptionButton.new()
+	_base_dir_sel.fit_to_longest_item = false
+	_base_dir_sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_base_dir_sel.add_item("自选（右键场地）")
+	_base_dir_sel.set_item_metadata(0, -1)
+	for i in SHELL.DIR_NAMES.size():
+		_base_dir_sel.add_item(SHELL.DIR_NAMES[i])
+		_base_dir_sel.set_item_metadata(i + 1, i)
+	_base_dir_sel.item_selected.connect(func(_i): _on_base_edit())
+	row.add_child(_base_dir_sel)
+	return row
+
+
+func _apply_base_ui() -> void:
+	if _base_tex_sel == null:
+		return
+	var spec: Dictionary = {}
+	if _base_get.is_valid():
+		var got = _base_get.call()
+		if got is Dictionary:
+			spec = got
+	_suppress_base = true
+	var tex_key := str(spec.get("tex", ""))
+	var tex_idx := 0
+	for i in _base_tex_sel.item_count:
+		if str(_base_tex_sel.get_item_metadata(i)) == tex_key:
+			tex_idx = i
+	_base_tex_sel.selected = tex_idx
+	_base_color_btn.color = spec.get("tint", Color.WHITE)
+	_base_blend_chk.button_pressed = bool(spec.get("blend", false))
+	_base_speed_spin.value = float(spec.get("speed", 300.0))
+	var dir_index := int(spec.get("dir_index", -1))
+	_base_dir_sel.selected = 0 if dir_index < 0 else dir_index + 1
+	_suppress_base = false
+
+
+func _on_base_edit() -> void:
+	if _suppress_base or _base_tex_sel == null:
+		return
+	var spec := {
+		"tex": str(_base_tex_sel.get_item_metadata(_base_tex_sel.selected)),
+		"tint": _base_color_btn.color,
+		"blend": _base_blend_chk.button_pressed,
+		"speed": _base_speed_spin.value,
+		"dir_index": int(_base_dir_sel.get_item_metadata(_base_dir_sel.selected)),
+	}
+	if _base_apply.is_valid():
+		_base_apply.call(spec)
 
 
 func _build_template_row(slot: int) -> Control:
@@ -389,6 +503,32 @@ func preview_lifecycle() -> BulletLifecycle:
 					spawns.append(_spawn_for(str(s)))
 				a["spawns"] = spawns
 	return composer().to_lifecycle()
+
+
+func base_spec() -> Dictionary:
+	if _base_get.is_valid():
+		var got = _base_get.call()
+		if got is Dictionary:
+			return got
+	return {}
+
+
+## 外部/测试设定初始弹外观；会同步到 bench shell（通过 _base_apply）。
+func set_base_spec(spec: Dictionary) -> void:
+	if _base_tex_sel == null:
+		return
+	_suppress_base = true
+	var tex_key := str(spec.get("tex", _base_tex_sel.get_item_metadata(_base_tex_sel.selected)))
+	for i in _base_tex_sel.item_count:
+		if str(_base_tex_sel.get_item_metadata(i)) == tex_key:
+			_base_tex_sel.selected = i
+	_base_color_btn.color = spec.get("tint", _base_color_btn.color)
+	_base_blend_chk.button_pressed = bool(spec.get("blend", _base_blend_chk.button_pressed))
+	_base_speed_spin.value = float(spec.get("speed", _base_speed_spin.value))
+	var dir_index := int(spec.get("dir_index", -1))
+	_base_dir_sel.selected = 0 if dir_index < 0 else dir_index + 1
+	_suppress_base = false
+	_on_base_edit()
 
 
 func dump() -> Dictionary:
