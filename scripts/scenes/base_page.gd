@@ -27,7 +27,8 @@ const OVERLAY_FADE_OUT: float = 0.15
 ## ⚠️ 它**不会**自动淡入 —— 子类入场时**必须自己调 `_fade_overlay_in()`**，否则遮罩会一直停在
 ##    `modulate.a = 0` ⇒ 有效 alpha = `color.a × 0` = **黑幕看不见**（stage 练习菜单 2026-10-04 实测）。
 ## 场景里设 `false` = 本页面**自己管**遮罩（如符卡练习菜单），BasePage 完全不碰它。
-## ⚠️ `_fade_overlay_in(duration)` 的默认值 `-1.0` **不是** `OVERLAY_FADE_IN` —— 调用时要显式传时长。
+## ⚠️ `_fade_overlay_in()` / `_fade_overlay_out()` 的默认时长就是 `OVERLAY_FADE_IN` / `OVERLAY_FADE_OUT`；
+## 调用时不传也有正常动画（旧默认 `-1.0` = 负时长，淡入瞬间完成）。
 @export var is_auto_overlay: bool = true
 
 var overlay_color: Color = Color(0, 0, 0, 0.5)
@@ -100,7 +101,7 @@ func go_back() -> void:
 # ═══ 遮罩动画 ═══
 
 ## 淡入遮罩
-func _fade_overlay_in(duration: float = -1.0) -> void:
+func _fade_overlay_in(duration: float = OVERLAY_FADE_IN) -> void:
 	if not _overlay:
 		return
 	_overlay.modulate.a = 0.0
@@ -111,7 +112,7 @@ func _fade_overlay_in(duration: float = -1.0) -> void:
 
 
 ## 淡出遮罩
-func _fade_overlay_out(duration: float = -1.0) -> Tween:
+func _fade_overlay_out(duration: float = OVERLAY_FADE_OUT) -> Tween:
 	if not _overlay:
 		return null
 	var tween := _overlay.create_tween()

@@ -17,14 +17,14 @@
 ./tools/verify.sh                                    # 七步门禁（文档哨兵+语法+命名+结构+启动+GUT+所有权）
 ```
 
-**现状**：118 脚本 / **807 用例（807 通过 / 0 红 —— ✅ 全绿）/ 7048 断言 / 53.883s** / 19 orphans / **0 pending**。
+**现状**：118 脚本 / **814 用例（814 通过 / 0 红 —— ✅ 全绿）/ 7062 断言 / 53.939s** / 19 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 58 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 30 | 176 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **B 内核 · 原生 C++ + 桥接** | 30 | 183 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 44 | 366 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
@@ -50,15 +50,15 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：类型不匹配 / **严格模式未知键** / **多脚本并集未知键**要响亮报错 | 10 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（30 / 176）
+## B · 内核 · 原生 C++ + 桥接（30 / 183）
 
-### B1 parity 套件（13 文件 / 93 用例）—— 依赖 `test/reference/` 冻结 oracle
+### B1 parity 套件（13 文件 / 100 用例）—— 依赖 `test/reference/` 冻结 oracle
 
 > 这一组是整个套件**最值钱**的部分：原生 C++ 逐帧/逐位对照它取代的那份 GDScript 实现。
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限），每条原语一条最小 lifecycle 逐帧对比 | 46 | 1 |
+| [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限）+ **编译守卫（DSL3/4/6/8/13）**，每条原语一条最小 lifecycle 逐帧对比 | 53 | 1 |
 | [test_lifecycle_presets](../test/test_lifecycle_presets.gd) | 其余 preset 逐帧 parity（见 `docs/DANMAKU_API.md（附录 A）` §9） | 7 | 1 |
 | [test_lifecycle_model](../test/test_lifecycle_model.gd) | `BulletLifecycle` 描述符 ↔ 参考解释器 parity | 3 | 1 |
 | [test_native_executor](../test/test_native_executor.gd) | 原生 `behavior_tick`（packed program）↔ 参考解释器**逐位** parity | 9 | 1 |

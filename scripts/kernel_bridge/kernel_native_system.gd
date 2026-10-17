@@ -9,6 +9,8 @@
 class_name KernelNativeSystem
 extends Node
 const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
+## 未注册的 on_end_call hook 名只告警一次（每帧/每弹重复会刷屏）
+static var _warned_hooks: Dictionary = {}
 ## 消弹消散特效（与出生雾同一套 EffectType 模型）——「消弹消散」的唯一来源：
 ## 死亡清弹圈扫掠（KernelBulletPhysics）与生命周期 `clear_fx()` / `despawn_clear()` 都走 play_clear_fx。
 const CLEAR_FX: EffectType = preload("res://data/fx/enemy_clear_fx.tres")
@@ -562,6 +564,11 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 				var fn: Callable = hook if hook is Callable else LIFECYCLE_HOOKS_SCRIPT.resolve(hook)
 				if fn.is_valid():
 					fn.call(Vector2(xs[k], ys[k]), boss_pos, has_boss, behavior_host)
+				else:
+					var hook_key := str(hook)
+					if not _warned_hooks.has(hook_key):
+						_warned_hooks[hook_key] = true
+						push_warning("[KernelNativeSystem] on_end_call 未注册 hook '%s'（静默不调）" % hook_key)
 			3:
 				# op 47（clear_fx / despawn_clear）：原地播消散，颜色用**该弹自己的色**（原生随事件回传）。
 				# 行此刻可能已被 swap-remove，所以颜色只能来自事件载荷 —— 不能用 res.bullet[k] 回查。

@@ -738,3 +738,77 @@ func test_combo_cross_phase_slots_reset_parity() -> void:
 	lc.until_turned()
 	lc.despawn()
 	_parity("combo:phase-reset", lc, 90, _spread(4, 400.0), BehaviorContext.new())
+
+
+# ═══════════════════════════════════════════════ 编译期守卫（DSL 坑）═══
+
+func test_every_before_until_is_preserved() -> void:
+	## DSL3：`.every()` / `.every_ticks()` 写在 `until_*` 之前不能被 `_set_until` 清掉。
+	var lc := BulletLifecycle.new()
+	lc.every(0.1).every_ticks(3)
+	lc.until_elapsed(1.0)
+	var c := lc.compile()
+	var base: int = int(c[&"until_idx"][0]) * BulletLifecycle.ARGS
+	assert_almost_eq(c[&"args"][base], 0.1, 1e-6, "every 应保留")
+	assert_almost_eq(c[&"args"][base + 1], 3.0, 1e-6, "every_ticks 应保留")
+	assert_almost_eq(c[&"args"][base + 2], 1.0, 1e-6, "until_elapsed 参数应正确")
+
+
+func test_unknown_move_op_fails_closed() -> void:
+	## DSL4：未知 Move 不再静默编成 op 0；返回“立即 despawn”的兜底 program。
+	var lc := BulletLifecycle.new()
+	lc.phases = [{&"moves": [{&"op": &"bogus_move"}], &"until": {&"op": &"never"}, &"on_end": []}]
+	var c := lc.compile()
+	assert_push_error("未知 Move op")
+	assert_eq(c[&"phase_count"], 1, "失败时编成单相位兜底")
+	assert_eq(c[&"slots"], 0, "兜底 program 不占状态槽")
+	assert_true(c[&"ops"].has(BulletLifecycle.OP_A_DESPAWN), "兜底应立即回收")
+
+
+func test_unknown_target_fails_closed() -> void:
+	## DSL4：`_target_code` 的 -1 在编译期报错，而不是让原生按无效目标跑。
+	var lc := BulletLifecycle.new()
+	lc.set_heading(BulletLifecycle.toward(&"nope"))
+	lc.until_never()
+	var c := lc.compile()
+	assert_push_error("未知 target")
+	assert_eq(c[&"phase_count"], 1, "失败时编成单相位兜底")
+
+
+func test_radial_accel_sfx_db_default_is_sfx_level() -> void:
+	## DSL6：radial_accel 的 sfx_db 默认必须是总电平，不是 0 dB（满音量）。
+	var lc := BulletLifecycle.radial_accel(100.0, func() -> BulletData: return BulletData.new(), &"kira")
+	var c := lc.compile()
+	var base: int = int(c[&"act_start"][0]) * BulletLifecycle.ARGS
+	assert_almost_eq(c[&"args"][base + 1], AudioManager.SFX_LEVEL_DB, 1e-6, "默认 sfx_db 应为总电平")
+
+
+func test_anchor_base_invalid_anchor_warns() -> void:
+	## DSL8：锚点失效不再静默贴自机；告警一次后退回 player。
+	var anchor := Node2D.new()
+	var bad_id := anchor.get_instance_id()
+	anchor.free()   # 真实“锚点已释放”场景；instance_from_id 会返回 null
+	var player := Vector2(10.0, 20.0)
+	var base := BulletLifecycle.anchor_base(bad_id, Vector2(1.0, 2.0), true, player)
+	assert_push_error("锚点")
+	assert_eq(base, player + Vector2(1.0, 2.0), "应退回 player + offset")
+
+
+func test_last_phase_never_with_actions_warns() -> void:
+	## DSL13：最后相位 until=never + on_end = 永不执行的死代码。
+	var lc := BulletLifecycle.new()
+	lc.until_never()
+	lc.despawn()
+	lc.compile()
+	assert_push_warning("最后相位 until=never")
+
+
+func test_non_last_phase_never_warns() -> void:
+	## DSL13：非最后相位 never → 下一相位永远进不去。
+	var lc := BulletLifecycle.new()
+	lc.until_never()
+	lc.then()
+	lc.until_elapsed(1.0)
+	lc.despawn()
+	lc.compile()
+	assert_push_warning("下一相位永远不会进入")

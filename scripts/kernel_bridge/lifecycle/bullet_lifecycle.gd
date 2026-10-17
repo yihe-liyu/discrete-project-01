@@ -93,6 +93,10 @@ var phases: Array = []
 var slots: int = 0
 ## 结构签名缓存（content_signature；0 = 未算）
 var _content_sig: int = 0
+## 编译期致命错误（未知 op/target/dir）→ compile() 返回“立即回收”的兜底 program
+var _compile_failed: bool = false
+## never 相位警告只报一次（compile() 可能被 content_signature / spawn 多次调用）
+var _warned_never: bool = false
 
 var _moves: Array = []
 var _until: Dictionary = {}
@@ -130,8 +134,16 @@ func _alloc() -> int:
 
 
 func _set_until(op: StringName, extra: Dictionary = {}) -> void:
+	# V6 节流是相位级横切属性：`.every()` / `.every_ticks()` 可能写在 until_* 之前，
+	# 这里必须先保住修饰键再 clear；否则“先 every 再 until”会被静默清空。
+	var every_sec: float = float(_until.get(&"every", 0.0))
+	var ticks_mod: int = int(_until.get(&"every_ticks", 0))
 	_until.clear()
 	_until[&"op"] = op
+	if every_sec > 0.0:
+		_until[&"every"] = every_sec
+	if ticks_mod > 0:
+		_until[&"every_ticks"] = ticks_mod
 	for k in extra:
 		_until[k] = extra[k]
 
@@ -424,7 +436,7 @@ static func homing(angle_per_sec := deg_to_rad(720.0), accel_time := 2.0, min_sp
 
 
 ## 沿初向加速 accel_rate；碰顶后向下发射替换弹 spawn 并自灭。
-static func radial_accel(accel_rate: float, spawn: Variant, sfx_key: StringName = &"", sfx_db: float = 0.0) -> BulletLifecycle:
+static func radial_accel(accel_rate: float, spawn: Variant, sfx_key: StringName = &"", sfx_db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecycle:
 	return LifecycleCatalog.build(&"radial_accel", {
 		&"accel_rate": accel_rate, &"spawn": spawn, &"sfx": sfx_key, &"sfx_db": sfx_db,
 	})
@@ -453,11 +465,16 @@ static func marisa_laser(anchor_id: int, offset: Vector2, angle: float, drift_sp
 	})
 
 
+## 失效锚点告警去重（id -> true）：只报一次，避免每帧每弹刷屏。
+static var _anchor_warned_ids: Dictionary = {}
+
+
 ## 锚点解析（**唯一真相**；原生/参考解释器/测试都走它，避免两套语义漂移）：
 ##   anchor_id=0       → player + offset
 ##   use_global=true   → 锚点 global_position + offset（marisa 子机是 World 兄弟）
 ##   use_global=false  → player + 锚点局部 position（focus 子机是 player 子节点；
 ##                       **不读 global**，父级移动后 global 会滞后一帧 → 根部多偏 v·dt）
+## 失效锚点（节点已释放 / 不是 Node2D）→ **响亮告警一次**再退回自机；别静默把整批激光贴到自机。
 static func anchor_base(anchor_id: int, offset: Vector2, use_global: bool, player: Vector2) -> Vector2:
 	if anchor_id != 0:
 		var node: Object = instance_from_id(anchor_id)
@@ -465,6 +482,9 @@ static func anchor_base(anchor_id: int, offset: Vector2, use_global: bool, playe
 			if use_global:
 				return (node as Node2D).global_position + offset
 			return player + (node as Node2D).position
+		if not _anchor_warned_ids.has(anchor_id):
+			_anchor_warned_ids[anchor_id] = true
+			push_error("BulletLifecycle.anchor_base(): 锚点 id=%d 已失效/不是 Node2D，退回自机（激光会贴到自机）" % anchor_id)
 	return player + offset
 
 
@@ -512,6 +532,7 @@ const DK_REFLECT := 6   ## 镜面（与内核 _resolve_dir 的 dk 编号对齐�
 ## 编译为扁平 packed program。actions / sfx 是**程序级**表：事件回传 (program, local_id)，
 ## 由宿主查这两张表（Callable 永不进原生）。
 func compile() -> Dictionary:
+	_compile_failed = false
 	if slots > MAX_SLOTS:
 		push_warning("BulletLifecycle: 状态槽 %d 超过内核上限 %d（减少同相位有状态 unit；program 会被原生拒绝）" % [slots, MAX_SLOTS])
 	var ops := PackedInt32Array()
@@ -536,6 +557,12 @@ func compile() -> Dictionary:
 		act_count.append(acts.size())
 		for a in acts:
 			_emit(ops, args, _op_act(a[&"op"]), _args_act(a, actions, sfx_keys))
+	if _compile_failed:
+		# fail-closed：未知 op/target/dir 不再静默编成 op 0；返回“下一帧立即 despawn”的兜底 program。
+		return _failed_program()
+	if not _warned_never:
+		_warned_never = true
+		_warn_unreachable_phases()
 	return {
 		&"ops": ops, &"args": args,
 		&"move_start": move_start, &"move_count": move_count,
@@ -544,6 +571,44 @@ func compile() -> Dictionary:
 		&"phase_count": phases.size(), &"slots": slots,
 		&"actions": actions, &"sfx": sfx_keys,
 	}
+
+
+## 编译失败兜底：一个相位、until_elapsed(0) → despawn。子弹会立刻消失（可见、不静默错行为）。
+func _failed_program() -> Dictionary:
+	var ops := PackedInt32Array()
+	var args := PackedFloat32Array()
+	_emit(ops, args, OP_C_ELAPSED, [0.0, 0.0, 0.0])
+	_emit(ops, args, OP_A_DESPAWN, [])
+	return {
+		&"ops": ops, &"args": args,
+		&"move_start": PackedInt32Array([0]), &"move_count": PackedInt32Array([0]),
+		&"until_idx": PackedInt32Array([0]),
+		&"act_start": PackedInt32Array([1]), &"act_count": PackedInt32Array([1]),
+		&"phase_count": 1, &"slots": 0,
+		&"actions": [], &"sfx": [] as Array[StringName],
+	}
+
+
+## DSL13：never 相位上的 on_end 是死代码；非最后相位的 never 会让下一相位永远进不去。
+## 只 warning 不 error —— `until_never()` 仍是合法写法（靠外部触发 / 后续相位），但必须让人看见。
+func _warn_unreachable_phases() -> void:
+	for i in phases.size():
+		var phase: Dictionary = phases[i]
+		if phase[&"until"][&"op"] != C_NEVER:
+			continue
+		var acts: Array = phase[&"on_end"]
+		if i < phases.size() - 1:
+			push_warning("BulletLifecycle: 相位 %d 的 until=never，下一相位永远不会进入" % (i + 1))
+		elif not acts.is_empty():
+			var has_despawn := false
+			var has_emit := false
+			for action in acts:
+				var op: StringName = action[&"op"]
+				if op == A_DESPAWN or op == A_CLEAR_FX:
+					has_despawn = true
+				elif op == A_EMIT or op == A_EMIT_VARIANT:
+					has_emit = true
+			push_warning("BulletLifecycle: 最后相位 until=never，on_end 的 %d 个 action 永远不会执行（despawn=%s / emit=%s）" % [acts.size(), str(has_despawn), str(has_emit)])
 
 
 ## 结构签名（内容哈希，**不含实例身份**）：相同结构的 lifecycle 共用一个原生 program。
@@ -601,6 +666,8 @@ func _op_move(op: StringName) -> int:
 		M_SET_HEADING: return OP_M_SET_HEADING
 		M_SET_SPEED: return OP_M_SET_SPEED
 		M_POSITION: return OP_M_POSITION
+	push_error("BulletLifecycle.compile(): 未知 Move op '%s'" % str(op))
+	_compile_failed = true
 	return 0
 
 
@@ -612,6 +679,8 @@ func _op_cond(op: StringName) -> int:
 		C_AT_WALL: return OP_C_AT_WALL
 		C_STATE: return OP_C_STATE
 		C_SPEED: return OP_C_SPEED
+	push_error("BulletLifecycle.compile(): 未知 Until op '%s'" % str(op))
+	_compile_failed = true
 	return 0
 
 
@@ -625,6 +694,8 @@ func _op_act(op: StringName) -> int:
 		A_SET_SPEED: return OP_A_SET_SPEED
 		A_CALL: return OP_A_CALL
 		A_CLEAR_FX: return OP_A_CLEAR_FX
+	push_error("BulletLifecycle.compile(): 未知 Action op '%s'" % str(op))
+	_compile_failed = true
 	return 0
 
 
@@ -633,24 +704,31 @@ func _target_code(t: StringName) -> int:
 		T_PLAYER: return TG_PLAYER
 		T_NEAREST_ENEMY: return TG_NEAREST
 		T_BOSS: return TG_BOSS
+		&"": return -1   # heading/forward/random/reflect 不用 target，空是合法值
+	push_error("BulletLifecycle.compile(): 未知 target '%s'" % str(t))
+	_compile_failed = true
 	return -1
 
 
 func _dir_args(d: Dictionary) -> Array:
-	var dk := DK_HEADING
-	if d[&"kind"] == D_TOWARD:
-		dk = DK_TOWARD
-	elif d[&"kind"] == D_AWAY:
-		dk = DK_AWAY
-	elif d[&"kind"] == D_FORWARD:
-		dk = DK_FORWARD
-	elif d[&"kind"] == D_RANDOM:
-		dk = DK_RANDOM
-	elif d[&"kind"] == D_CHANCE:
-		dk = DK_CHANCE
-	elif d[&"kind"] == D_REFLECT:
-		dk = DK_REFLECT
-	return [dk, _target_code(d[&"target"]), float(d[&"angle"]), float(d.get(&"p", 0.0))]
+	var dk := -1
+	match d[&"kind"]:
+		D_HEADING: dk = DK_HEADING
+		D_TOWARD: dk = DK_TOWARD
+		D_AWAY: dk = DK_AWAY
+		D_FORWARD: dk = DK_FORWARD
+		D_RANDOM: dk = DK_RANDOM
+		D_CHANCE: dk = DK_CHANCE
+		D_REFLECT: dk = DK_REFLECT
+		_:
+			push_error("BulletLifecycle.compile(): 未知方向 kind '%s'" % str(d.get(&"kind", &"")))
+			_compile_failed = true
+			dk = DK_HEADING
+	var target: StringName = d[&"target"]
+	if target == &"" and dk in [DK_TOWARD, DK_AWAY, DK_CHANCE]:
+		push_error("BulletLifecycle.compile(): %s 的 target 为空（打错目标？）" % str(d[&"kind"]))
+		_compile_failed = true
+	return [dk, _target_code(target), float(d[&"angle"]), float(d.get(&"p", 0.0))]
 
 
 func _args_move(m: Dictionary) -> Array:
@@ -658,7 +736,11 @@ func _args_move(m: Dictionary) -> Array:
 		M_ACCEL_WORLD: return [Vector2(m[&"vec"]).x, Vector2(m[&"vec"]).y]
 		M_ACCEL_HEADING: return [float(m[&"a"])]
 		M_ROTATE: return [float(m[&"w"]), float(m[&"limit"]), float(m[&"slot"]), float(m[&"mode"])]
-		M_STEER: return [_target_code(m[&"target"]), float(m[&"max_turn"]), float(m[&"ramp"]), float(m[&"dist_weight"]), float(m[&"steer_until"])]
+		M_STEER:
+			if m[&"target"] == &"":
+				push_error("BulletLifecycle.compile(): steer 的 target 为空（打错目标？）")
+				_compile_failed = true
+			return [_target_code(m[&"target"]), float(m[&"max_turn"]), float(m[&"ramp"]), float(m[&"dist_weight"]), float(m[&"steer_until"])]
 		M_SPEED_LERP: return [float(m[&"from"]), float(m[&"to"]), float(m[&"ramp"])]
 		M_SPEED_MUL: return [float(m[&"f"])]
 		M_SET_HEADING: return _dir_args(m[&"dir"])
@@ -680,7 +762,11 @@ func _args_cond(c: Dictionary) -> Array:
 	var head: Array = [float(c.get(&"every", 0.0)), float(c.get(&"every_ticks", 0))]
 	match c[&"op"]:
 		C_ELAPSED: return head + [float(c[&"t"])]
-		C_NEAR: return head + [_target_code(c[&"target"]), float(c[&"r"])]
+		C_NEAR:
+			if c[&"target"] == &"":
+				push_error("BulletLifecycle.compile(): until_near 的 target 为空（打错目标？）")
+				_compile_failed = true
+			return head + [_target_code(c[&"target"]), float(c[&"r"])]
 		C_AT_WALL: return head + [float(c[&"mask"])]
 		C_STATE: return head + [float(c[&"slot"]), float(c[&"cmp"]), float(c[&"value"])]
 		C_SPEED: return head + [float(c[&"cmp"]), float(c[&"value"])]
@@ -699,6 +785,9 @@ func _args_act(a: Dictionary, actions: Array, sfx_keys: Array[StringName]) -> Ar
 			var vid := actions.size()
 			actions.append(a[&"spawns"])
 			var ch: Dictionary = a[&"chance"]
+			if ch[&"target"] == &"":
+				push_error("BulletLifecycle.compile(): emit_variant 的 chance target 为空（打错目标？）")
+				_compile_failed = true
 			return [float(vid), float(ch[&"p"]), float(DK_TOWARD), float(_target_code(ch[&"target"])), 0.0,
 				float(DK_FORWARD), -1.0, float(ch[&"angle"]), float(a[&"speed"]), float(a[&"at"])]
 		A_SFX:

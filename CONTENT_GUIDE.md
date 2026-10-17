@@ -156,6 +156,18 @@ timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))         
 **直接引用**：关卡脚本 `preload()` 敌人行为，`EnemyData.new().with_script(ENEMY01)...` 构建——
 无注册表、无中间层（EnemyTemplateRegistry/BossScriptRegistry 已随编辑器移除，2026-08）。
 
+### 回收：三条路径（别裸 `queue_free()`）
+
+| 路径 | 动词 | 语义 |
+|---|---|---|
+| **静默回收** | `ctx.enemies.despawn(enemy)` | 不掉道具 / 不计分 / 不发 `enemy_killed` / 不播死亡音效；用于飞出屏、超时、清场 |
+| **击破** | `Enemy.die()`（引擎内部） | 掉落 + 死亡特效 + 计分 + `enemy_killed`；内容**不要**直接调 |
+| **Boss 退场** | `BossHandle.retreat()` / `defeat()` | `retreat` 受控飞走；`defeat` 全破演出 + 回收 |
+
+- **注销是自动的**：敌人入树注册、死亡 / despawn 后从 `EntityRegistry` 移除；内容不要手改注册表。
+- `ctx.enemies.despawn_all()`：只收杂兵、不动 Boss；`EntityRegistry.clear()`：拆关卡（连 Boss 一起释放 + 清空名单）。
+- 想「静默回收 + 击破特效」：`ctx.enemies.despawn_clear(enemy)`（仍不算战果）。
+
 ---
 
 ## 四、Boss（阶段数据 + 脚本目录）

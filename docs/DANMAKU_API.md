@@ -148,7 +148,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 
 | Action | 签名 | 语义 |
 |---|---|---|
-| sfx | `sfx(key, db=0)` | 播音效（key 见 §7.2） |
+| sfx | `sfx(key, db=AudioManager.SFX_LEVEL_DB)` | 播音效（key 见 §7.2；默认是总电平，不是 0 dB） |
 | emit | `emit(spawn, dir, speed=0, at=AT_CURRENT)` | 生成替换弹；`spawn` = BulletData / Callable / 数组；`at` = AT_CURRENT / AT_PHASE_END |
 | emit_variant | `emit_variant(spawns, dir, speed=0, at=AT_CURRENT)` | 内核抽一次 RNG 定分支（0=未中→spawns[0]，1=命中→spawns[1]）；`dir` 必须是 `chance_toward(...)` |
 | despawn | `despawn()` | 回收自己（静默，不播特效） |
@@ -159,6 +159,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 
 > **`despawn` vs `despawn_clear`**：默认 `despawn()`；只有**确实想让人看见消散**时才用 `despawn_clear()`。
 > 撞墙/屏外回收别用（屏外闪光 + 特效风暴）；消散特效与死亡清弹圈共用同一实现。
+> **`on_end` 按 append 顺序执行**；`on_end_heading` 即时改写朝向，`despawn` 后同一相位后续 action 不再有意义。
 > `emit` 细则：`speed<=0` 继承当前速度；`at=AT_PHASE_END` 用 until 落点；模板永不进原生。
 
 ### 3.5 方向表达式（静态构造；供 steer / emit / set_heading / on_end_heading 用）
@@ -202,7 +203,7 @@ BulletLifecycle.accel(a: float)
 BulletLifecycle.curve(w: float, limit: float)                         # rotate + until_turned + then
 BulletLifecycle.homing(angle_per_sec=720°, accel_time=2, min_speed=500, max_speed=2000, duration=2, proximity_boost=150)
 BulletLifecycle.bounce(accel_rate, bounce_angle, spawn_speed, spawn, sfx_key=&"kira", sfx_db=-8.0)
-BulletLifecycle.radial_accel(accel_rate, spawn, sfx_key=&"", sfx_db=0.0)
+BulletLifecycle.radial_accel(accel_rate, spawn, sfx_key=&"", sfx_db=AudioManager.SFX_LEVEL_DB)
 BulletLifecycle.avoid_player(proximity, jump, flee_time)
 BulletLifecycle.laser_follow(anchor_id, offset, angle, drift_speed, initial_drift)
 BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drift)
@@ -322,7 +323,7 @@ tl.loop()
 | `ctx.boss` | `current()` / `exists()` |
 | `ctx.enemies` | `spawn(data)` / `despawn(enemy)` / `despawn_all()` / `despawn_clear(enemy)` |
 | `ctx.diff` | `picked()` / `pick(arr)` / `pick_from(dict, key, def)` / `at_least(n)` |
-| `ctx.audio` | `play_bgm(stream, gap=0)` / `stop_bgm()` / `play_sfx(stream, db=0)` |
+| `ctx.audio` | `play_bgm(stream, gap=0)` / `stop_bgm()` / `play_sfx(stream, db=AudioManager.SFX_LEVEL_DB)` |
 | `ctx.effects` | `add_miss_circle(...)` / `play_hit_effect(scene, pos)` |
 | `ctx.items` | `spawn(type, position)` |
 | `ctx.dialogue` | `play_steps(steps)`（经 `ctx.play_dialogue_steps` 更常用） |
