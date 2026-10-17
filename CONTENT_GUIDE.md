@@ -9,11 +9,13 @@
 1. 在 Godot 编辑器里打开 `data/stages/stage01/stage_script/stage01.gd`（Timeline 编排）
 2. 加 `timeline.at(时刻).do(func(): ctx.enemies.spawn(EnemyData.new().with_script(...).pos(...)))`
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
-3. F6 运行工作台 → 命中框/固定种子/逐帧看效果；改完代码**重启工作台**生效
-4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完同样重启工作台看
+3. F6 运行 `scenes/workbench/creation_station.tscn`（四页签：整关预览 / 弹幕台 / 敌人台 / 阶段台）→ 命中框/固定种子/逐帧看效果
+   - **弹幕 / 敌人 / 阶段三个组合台有热更新**（改脚本约 1.3s 自动重载）；**整关预览没有**，改关卡脚本/时间线后切页或重启
+4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完在「阶段台」看（热更新）；也可在「整关预览」按时间线看
 5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`BulletData.trajectory(lc)` 直接挂现成 preset，或自己用 builder 拼相位）
 
-> 工作台**不是编辑器**：不写数据、不热重载，是「跑真实代码看效果」的预览沙盒。
+> 创作台/工作台**不是编辑器**：不写数据、不保存 `.tres`，是「跑真实代码看效果」的预览沙盒。
+> 三个组合台**有脚本热更新**；整关预览没有（改时间线/关卡脚本要重启）。
 > 数据（关卡/Boss/阶段）全部以代码 + .tres 形式存在，由 AI/人直接写。
 
 ---
@@ -107,7 +109,7 @@ timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))         
 
 > **要在"击破之后、关卡结束之前"插对话** → 插在 ① 与收尾之间，**收尾交给对话的行间事件**：
 > ```gdscript
-> # 对话文件（data/dialogue/<角色>/<面>_dialogue.gd，static 构建函数）
+> # 对话文件（data/dialogue/stage/<面>_dialogue.gd，static 构建函数；角色/战前战后用函数名区分）
 > static func 战斗后() -> DialogueSteps:
 >     var d := DialogueSteps.new()
 >     d.screen([[KA, "叹气", "……"]])
@@ -163,6 +165,10 @@ timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))         
 - `BossData`（`data/stages/stage01/phase/` 参照）：`boss_name` / `visual` / `phases_normal`（Normal 组）/ `phases_easy/hard/lunatic/extra`（各难度独立、不回退） / `enter_script` / `exit_script` / `score_value` / **`practice_bgm_key`**（见下）
 - `PhaseData`：`name`（空串 = 非符）、`uid`（0 = 非符不记；真符卡全局唯一）、`hp` / `time_limit` / `is_timeout_only`（时符）、`move_script` / `shoot_script`、掉落 item 系列、`params`
 
+> **新 Boss 要登记**：在 `data/stages/<面>/boss/` 建 `BossData.tres` 后，加入 `data/registry/boss_registry.tres`。
+> `BossCatalog` 在注册表非空时**只读注册表**（目录扫描只在注册表缺失/为空时兜底）——只建 `.tres` 不登记 = 符卡册/练习里看不见。
+> **新面同理**：`StageData` 要加入 `data/registry/stage_registry.tres`，否则关卡练习菜单的 `StageCatalog.playable()` 看不到它。
+
 > **符卡练习放哪首 BGM（每 Boss 一首）**：练习是按「单张卡」打的、一场只面对一只 Boss，
 > 所以配曲的粒度是 **Boss** 而不是面：
 > - `BossData.practice_bgm_key`（key 取自 `AssetRegistry.BGM_PATHS`）→ **填了就用它**；
@@ -207,11 +213,13 @@ shoot_script = ExtResource("...spell053_shoot.gd")
 > **分化优先级（2026-09-22 立）**：
 > **① `diff_pick()`（难度轴，首选）→ ② 另写一个脚本（内容轴，最直白）→ ③ `params`（只在"脚本几乎相同、复制很浪费"时）**
 >
-> 实测（2026-09-22）：全项目 53 个 `.tres` **没有一个用 `params`**；难度轴有 29 处 `diff_pick`。
+> 实测（2026-10-17）：`data/stages` 下 50 个 `.tres`，仅 2 张 3B 测试卡用了 `params`；难度轴 `diff_pick` 45 处。
 > 内容轴**确实存在脚本复用**（`random_dir_move.gd` 撑 9 个阶段、`spell053_shoot.gd` 与 `spell001_shoot.gd` 各撑 4 张），
-> 但**从未用 `params` 去分化它们** —— 也就是说这条通路至今一次都没派上用场。
+> 但**很少用 `params` 去分化它们** —— 这条通路仍不是主流。
 
-**为什么排最后**：值离逻辑远（脚本里默认 175、`.tres` 里覆盖 400，得两头看）、键名写错要到运行期才报、
+**为什么排最后**：值离逻辑远（脚本里默认 175、`.tres` 里覆盖 400，得两头看）、
+**键名打错曾经是静默的**（`ParamValidator` 对未知键只跳过；2026-10-17 起 `EnemyData.params` 严格校验、
+`PhaseData.params` 按三脚本并集校验，但共享字典的同名键仍会互相干扰）、
 手感散在 `.tres` 里不进 diff —— 而 `diff_pick` 把这些值放在**逻辑旁边**。**能内联就别外置。**
 
 **它唯一的独门能力**（`diff_pick` 表达不了）：同一脚本 × 多张 PhaseData × 只差两三个数值
@@ -229,7 +237,7 @@ params = {
 }
 ```
 
-**三条隐性约束（违反时都不报错，只是"没生效"）**：
+**隐性约束（违反时大多不报错，只是"没生效"）**：
 
 1. **只认 `var`，不认 `const`**：`const` 键的 `"X" in target` 为 **true**、但 `set()` **静默无效**
    —— 可调项必须是 `var`（实测：`BulletLifecycle.MAX_SLOTS` 应用后值不变、无任何报错）。
@@ -237,6 +245,9 @@ params = {
 3. **注入发生在 `start()` 之前**（`boss.gd`：`new()` → `apply` → `start()`）；
    若脚本在 `_on_start()` 里建弹型（如 `spell053_shoot.gd`），把注入挪到 `start()` 之后会让
    `_on_start()` 读的那批变量**静默失效**（而 `_tick()` 读的那批照旧生效 → 一半失灵最难查）。
+4. **未知键**：2026-10-17 起 `EnemyData.params` 严格校验（只灌一个行为脚本），
+   `PhaseData.params` 按 `pre_move/move/shoot` 三脚本属性并集校验；但**共享字典里同名的合法键**
+   仍会同时改两边（如 `move_time`），这条仍不报错。
 
 ### Boss 阶段脚本（协程 .gd + .tres 显式引用）
 
@@ -445,6 +456,7 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 
 | 工具 | 用法 |
 |------|------|
+| **创作台** | F6 `scenes/workbench/creation_station.tscn`：整关预览 / 弹幕台 / 敌人台 / 阶段台；目录双击直达对应台 |
 | **对话预览** | `godot --path . scenes/ui/dialogue_preview.tscn -- --func=战斗后`（`--list` 列目录 / `--dry` 无头打印整段 / `--shot=x.png` 截图）—— 不用打关卡就能看对话 |
 | 固定种子 | 播放区开关：重跑弹幕序列可复现（调参必备） |
 | 命中框 | 播放区开关：红=敌弹判定、绿=敌人、青=自机、蓝=擦弹 |
@@ -456,7 +468,8 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 快捷键：`Space` 暂停/继续 · `R` 重跑 · `F` 逐帧 · `1~7` 速度 · `←/→` ±1s（Ctrl ±5s）·
 `B` 书签 · `Home` 回开头
 
-> 改代码后**重启工作台**生效（无热重载）。写代码在 Godot 编辑器，看效果在工作台。
+> 整关预览改关卡脚本/时间线后**重启**（无热重载）；弹幕 / 敌人 / 阶段三个组合台**有热更新**（约 1.3s）。
+> 写代码在 Godot 编辑器，看效果在创作台。
 
 ---
 
@@ -515,7 +528,8 @@ pre_move_script = <走位脚本>     # 它跑完 → 才宣言 → 再进入这�
 {"dest": Vector2(448, 240), "move_time": 1.2}
 ```
 
-✅ 已验证生效（`_run_pre_move()` 在 `start()` 之前注入，错键名/类型由 `ParamValidator` 响亮报错）。
+✅ 已验证生效（`_run_pre_move()` 在 `start()` 之前注入；错键名由 `PhaseData.params` 的三脚本并集校验、
+类型不匹配由 `ParamValidator` 报错）。
 
 ⚠️ **但 `params` 是同一阶段**共用的一份字典** —— `pre_move_script` / `move_script` / `shoot_script`
 拿到的是**同一个 `data.params`**。所以**键名会互相干扰**：本示例的 `move_time` 与

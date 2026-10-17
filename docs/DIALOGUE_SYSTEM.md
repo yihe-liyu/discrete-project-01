@@ -2,13 +2,13 @@
 
 > 本文件原为《对话系统重构专项计划》，阶段 0-5 已完成（台词库/.tres/旧 lines 模型已退役）。
 > 这里改为当前对话系统的架构与用法说明。对白内容（剧本）见 docs/DIALOGUE.md（归档），
-> 实际台词写在 data/dialogue/<角色>/<面>_dialogue.gd 的**构建函数**里（`static`，函数名随内容，如 `战斗前()` / `战斗后()`）。
+> 实际台词写在 data/dialogue/stage/<面>_dialogue.gd 的**构建函数**里（`static`，函数名随内容，如 `灵梦战斗前()` / `灵梦战斗后()`）。
 
 ---
 
 ## 一、分层
 
-1. 编排（内容）：data/dialogue/<角色>/<面>_dialogue.gd -> `static <构建函数>()` -> DialogueSteps
+1. 编排（内容）：data/dialogue/stage/<面>_dialogue.gd -> `static <构建函数>()` -> DialogueSteps
    纯逻辑、不碰 ctx；行间事件只作步骤标记，交由 stage 消费
    ⚠️ **必须 `static`**：调用点是 `const INTRO = preload("…/xxx.gd")` + `INTRO.战斗前()` —— 在**脚本类**上调用只认静态函数
    （非 static 会 `Parse Error: Static function "…" not found in base …`）。非要用非静态就得 `INTRO.new().战斗前()`
@@ -39,7 +39,8 @@
 
 关卡脚本只需一行：`_stage_director.dialogue(STAGE01_REIMU.战斗前())`
 （**收 `DialogueSteps` 本身**，不是它的 `.steps` 数组 —— 参数有类型，传错在编译期就被拦住；
-`stage01.gd` 里就是这么接的；路径现按**角色**分目录：`data/dialogue/<角色>/<面>_dialogue.gd`）。
+`stage01.gd` 里就是这么接的；路径按**面**分目录：`data/dialogue/stage/<面>_dialogue.gd`，
+一个文件里用 `static` 构建函数分角色/战前战后（如 `灵梦战斗前` / `魔理沙战斗前`）。
 
 ### 战后对话 / 用对话收尾（推荐写法）
 

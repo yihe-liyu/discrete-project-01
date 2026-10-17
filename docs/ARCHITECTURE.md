@@ -148,7 +148,7 @@
 > 做内容前先问：**这是系统能力（全关卡可复用）还是这关内容（只这关）？**
 
 ### 新增 Boss
-- 内容：`boss_catalog.gd` 加 `BossData`（名字/视觉/阶段）+ `PhaseData` 资源。
+- 内容：`data/stages/<面>/boss/*.tres` 建 `BossData`（名字/视觉/阶段）+ `PhaseData` 资源；**新 Boss 必须加入 `data/registry/boss_registry.tres`**（注册表非空时 `BossCatalog` 只读注册表，不会自动扫描新文件）。
 - 身份/记录：**不用碰**——`resolve_identity` / `RecordService` 自动生效。
 - 运行时：`boss.gd` 如需新“演”逻辑，加方法；**别在 Boss 里写身份/记录**。
 - 引用：关卡 spawn 后 `StageObjects.register("boss_xxx", b, Boss)` 用名字引用。
@@ -173,6 +173,7 @@
 
 ### 新增关卡
 - `StageData` + 关卡脚本（`CoroutineScript`）；内容=数据；boss 用槽位；记录走服务；编排声明式。
+- **新面必须加入 `data/registry/stage_registry.tres`**（`StageCatalog.all()` 在注册表非空时只读注册表；不登记 = 关卡练习菜单看不到）。
 
 ### 新增“系统能力”（新动作）
 - 给**系统**加方法（如 `Boss.start_phase`），或给 `StageObjects` / 服务加操作；**别在关卡脚本里临时实现**。

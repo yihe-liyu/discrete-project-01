@@ -3,6 +3,8 @@
 extends Resource
 class_name PhaseData
 
+const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
+
 @export var name: String = ""            ## 符卡名（空串=非符）
 @export var uid: int = 0                  ## 全局唯一符卡编号，0=非符不记
 @export var time_limit: float = 30.0     ## 时限（秒）
@@ -27,11 +29,19 @@ class_name PhaseData
 
 
 ## 配置校验：返回错误列表（空 = 合法）。加载/开战前调用，防除零
-## 注意：不校验脚本（纯移动/演示阶段可能无脚本，属合法）
+## 注意：不校验脚本类型（纯移动/演示阶段可能无脚本，属合法）
+## `params`：按 pre_move/move/shoot 三脚本属性并集校验未知键（同名键仍会互相干扰，见 CONTENT_GUIDE §四）
 func validate() -> Array[String]:
 	var errs: Array[String] = []
 	if time_limit <= 0.0:
 		errs.append("PhaseData[%s].time_limit = %s 必须 > 0（会除零/立即超时）" % [name, time_limit])
 	if hp <= 0:
 		errs.append("PhaseData[%s].hp = %s 必须 > 0" % [name, hp])
+	if not params.is_empty():
+		var param_scripts: Array = []
+		for param_script in [pre_move_script, move_script, shoot_script]:
+			if param_script != null:
+				param_scripts.append(param_script)
+		for warning in PARAM_VALIDATOR_SCRIPT.validate_unknown_keys_union(param_scripts, params):
+			errs.append("PhaseData[%s].params: %s" % [name, warning])
 	return errs

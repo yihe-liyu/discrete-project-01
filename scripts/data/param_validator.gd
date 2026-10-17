@@ -6,6 +6,8 @@ extends RefCounted
 ##       替换成 `ParamValidator.apply(script, params)`。
 ## - 未在脚本属性列表里的键 → 静默跳过（共享字典跨脚本合法：PhaseData.params 同灌 move+shoot，
 ##   未知键通常属于兄弟脚本，无法与"打错键名"可靠区分，故不警告以免刷屏——validate_unknown_keys 仍保留供按需用）。
+## - `apply(..., p_strict=true)`：未知键也 push_error（只灌一个脚本时用，如 EnemyData.params）。
+## - `validate_unknown_keys_union(scripts, params)`：多脚本共享 params 的并集校验（如 PhaseData.params）。
 ## - 类型明显不匹配（数字/向量/颜色等互不兼容）→ push_error。
 ## - 宽松放行：int↔float、String↔数字（Godot 会 coerce），避免误报。
 ## 返回错误列表（供测试/更细处理；apply 会 push_error）。
@@ -34,16 +36,38 @@ static func validate_unknown_keys(target: Object, params: Dictionary) -> Array[S
 		types[prop.name] = prop.type
 	for key in params:
 		if not types.has(key):
-			warns.append("参数 '%s' 不是 %s 的属性（共享字典跨脚本属正常；若确实打错请检查）" % [str(key), target.get_class()])
+			warns.append("参数 '%s' 不是 %s 的属性（打错键名？共享字典跨脚本时请用并集校验）" % [str(key), target.get_class()])
 	return warns
 
 
-## 校验 + 只设合法键 + 类型错响亮报错。未知键不再警告（共享字典跨脚本合法，见文件头）。
-static func apply(target: Object, params: Dictionary) -> void:
+## 多脚本共享 params 的并集校验（PhaseData: pre_move/move/shoot 同一份字典）。
+## 键必须至少属于其中一个脚本；同名键仍会同时注入多个脚本（这条不报）。
+static func validate_unknown_keys_union(scripts: Array, params: Dictionary) -> Array[String]:
+	var warns: Array[String] = []
+	if params.is_empty():
+		return warns
+	var known := {}
+	for script_resource in scripts:
+		if not (script_resource is Script):
+			continue
+		for prop in (script_resource as Script).get_script_property_list():
+			known[prop.get("name", "")] = true
+	for key in params:
+		if not known.has(key):
+			warns.append("参数 '%s' 不属于本阶段 pre_move/move/shoot 任一脚本（打错键名？）" % str(key))
+	return warns
+
+
+## 校验 + 只设合法键 + 类型错响亮报错。
+## `p_strict=true` 时未知键也 push_error（只灌一个脚本的场景，如 EnemyData.params）。
+static func apply(target: Object, params: Dictionary, p_strict: bool = false) -> void:
 	if target == null:
 		return
 	for err in validate(target, params):
 		push_error("ParamValidator: " + err)
+	if p_strict:
+		for warning in validate_unknown_keys(target, params):
+			push_error("ParamValidator（严格）: " + warning)
 	for key in params:
 		if key in target:
 			target.set(key, params[key])

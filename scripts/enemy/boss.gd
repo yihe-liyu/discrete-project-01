@@ -532,5 +532,6 @@ func _drop_items() -> void:
 ## 阶段脚本参数注入（工作台编辑的 PhaseData.params → 脚本同名属性）
 ## 注意：这里只有参数注入，掉落逻辑在 _drop_items（clear_phase 击破时）——
 ## 曾经残留过一份掉落代码导致 start_phase 时误掉道具（已删，勿再贴回）
+## 未知键由 `PhaseData.validate()` 按 pre_move/move/shoot 三脚本并集校验；这里只报类型不匹配。
 func _apply_phase_params(script: Node, params: Dictionary) -> void:
-	PARAM_VALIDATOR_SCRIPT.apply(script, params)   # 校验 + 只设合法键 + 打错键名/类型响亮报错
+	PARAM_VALIDATOR_SCRIPT.apply(script, params)   # 类型不匹配 push_error；未知键见 PhaseData.validate()

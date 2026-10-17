@@ -137,7 +137,7 @@ func spawn_enemy_data(data: EnemyData, p_ctx: StageContext = null) -> Enemy:
 		return null
 	cs.target = enemy
 	var params: Dictionary = data.get_params()
-	PARAM_VALIDATOR_SCRIPT.apply(cs, params)   # 校验 + 只设合法键 + 打错键名/类型响亮报错
+	PARAM_VALIDATOR_SCRIPT.apply(cs, params, true)   # 严格：EnemyData.params 只灌一个行为脚本，未知键 = 打错
 	if cs.has_method("setup_custom"):
 		cs.setup_custom(params)
 	enemy.add_child(cs)

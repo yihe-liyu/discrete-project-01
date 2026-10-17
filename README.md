@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-802%20tests%20/%20118%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-807%20tests%20/%20118%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -132,16 +132,19 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 # 添加新符卡/Boss → 见 CONTENT_GUIDE.md 第四章
 ```
 
-### 内容工作台（预览/调试沙盒）
+### 内容创作台（四页签：整关预览 / 弹幕台 / 敌人台 / 阶段台）
 
 ```bash
-# F6 运行 scenes/workbench.tscn —— 跑真实关卡看弹幕效果
+# F6 运行 scenes/workbench/creation_station.tscn —— 内容创作总入口
+# 只跑整关预览：scenes/workbench.tscn（就是创作台的「整关预览」页签）
 ```
 
 - 真实运行时沙盒：跑的就是游戏代码（`StageRuntime` / `BulletManager` / 协程），非模拟
 - **写代码在 Godot 编辑器**：关卡编排 = stage01.gd（Timeline API）；Boss 弹幕 = PhaseData.tres 显式引用脚本
 - **调参工具**：固定种子（可复现）· 命中框 · 逐帧（F）· 12x 快进跳转 · 书签（静态提取 + 人工打点）
-- 幽灵玩家提供自机狙目标；静音/背景开关/事件日志/实时状态；改完脚本重启工作台生效
+- 幽灵玩家提供自机狙目标；静音/背景开关/事件日志/实时状态
+- **弹幕 / 敌人 / 阶段三个组合台有热更新**（改脚本约 1.3s 自动重载）；**整关预览没有**，改关卡脚本/时间线后切页或重启
+- 目录自动扫描 `res://data/`，双击条目直达对应组合台（面板显示条数 / 警告数）
 - 创作流程见 [CONTENT_GUIDE.md](CONTENT_GUIDE.md)；架构决策见 [docs/archive/ARCHITECTURE_ROADMAP.md](docs/archive/ARCHITECTURE_ROADMAP.md)「内容工作台演进」专节（已归档）
 
 ---
