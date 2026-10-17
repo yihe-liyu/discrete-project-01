@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 16 条（本文件留最近 16 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 17 条（本文件留最近 17 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-17 — F10b：弹幕台拼装页 + 描述符目录组 + 代码生成
 - 2026-10-17 — 创作台 Phase 1：全局目录抽屉 + 公开接缝
 - 2026-10-17 — F10a：拼装器模型 + 现有内容 golden
 - 2026-10-17 — verify 提速：GUT 并行分片（~60s → 18.8s）
@@ -46,6 +47,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-17 — F10b：弹幕台拼装页 + 描述符目录组 + 代码生成
+
+- **入口**：弹幕台「模式：直射 / 拼装」；全局目录「弹道描述符（33）」组放在最前，双击 Move/Until/Action → 切拼装页并加入当前相位。
+- **拼装页**：难度（4 个 composer 各存一档）· Move/Until/Action 下拉 · 相位树（+相位/删除/上移/下移）· 参数表单（数值/向量/目标/相位落点/key/dir 编辑器）· 代码框（`_spawn` 占位）· 复制 / 预览发射。
+- **代码**：`BulletComposer.to_code()` 从同一份 spec 生成 `var lc := BulletLifecycle.new()` … `data.trajectory(lc)`，不执行字符串。
+- **边界**：仍只拼 trajectory，不拼 `_tick` / 波次；预设没删（内容迁移后再删，见 TODO）。
+- **测试**：`test_bullet_rig` 加拼装模式/代码/预览；`test_creation_station` 加描述符组路由；`test_bullet_composer_golden` 加 to_code。全量 **829 / 7713**。
 
 ### 2026-10-17 — 创作台 Phase 1：全局目录抽屉 + 公开接缝
 

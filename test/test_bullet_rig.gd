@@ -72,3 +72,36 @@ func test_hot_reload_replays_and_keeps_old_on_failure():
 	assert_eq(rig.current_script(), old_script, "失败时保留旧脚本")
 	assert_true(rig.reload_status_text().contains("失败"), "状态显示失败")
 	rig.queue_free()
+
+
+## F10b：拼装页能加 Move/Until/Action、生成代码、预览发射。
+func test_composer_mode_builds_code_and_previews():
+	var rig = RIG.new()
+	add_child_autofree(rig)
+	await get_tree().process_frame
+	rig.set_composer_mode(true)
+	assert_true(rig.composer_mode(), "应切到拼装模式")
+	var cp = rig.composer_panel()
+	assert_not_null(cp, "拼装面板应存在")
+	if cp == null:
+		return
+	cp.set_difficulty(0)
+	cp.add_op(&"move", &"accel_heading")
+	cp.add_op(&"until", &"never")
+	cp.add_op(&"action", &"sfx")
+	var code: String = cp.code()
+	assert_true(code.contains("lc.accel_heading"), "代码含 Move")
+	assert_true(code.contains("lc.until_never"), "代码含 Until")
+	assert_true(code.contains("lc.sfx"), "代码含 Action")
+	assert_true(code.contains("data.trajectory(lc)"), "代码以 trajectory 收尾")
+	cp.add_op(&"action", &"emit")   # 带 BulletData spawn，验证快照可序列化
+	BulletManager.current.clear_all()
+	rig.fire_once()
+	assert_true(BulletManager.current.active_count() >= 1, "拼装页预览应发射")
+	var snap: Dictionary = rig.snapshot()
+	var cfg := ConfigFile.new()
+	cfg.set_value("x", "data", snap)
+	var cfg_path := "user://composer_snapshot_test.cfg"
+	assert_eq(cfg.save(cfg_path), OK, "拼装工作区快照应能写入 ConfigFile（不能塞 BulletData 实例）")
+	DirAccess.remove_absolute(cfg_path)
+	rig.queue_free()

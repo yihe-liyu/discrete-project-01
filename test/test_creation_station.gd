@@ -221,3 +221,32 @@ func test_catalog_drawer_routes_from_bench_tab():
 	assert_eq(cs.current_slot(), 2, "从弹幕台点敌人条目应切敌人台")
 	assert_false(cs.catalog_open(), "路由后目录应关闭")
 	assert_eq(cs.bench_instance(1).selected_index(), 1, "敌人台选中条目 0（下拉 +1）")
+
+
+## F10b：全局目录出现“弹道描述符”组；双击 Move → 切弹幕台拼装页并加入该 op。
+func test_catalog_descriptor_group_routes_to_composer():
+	DirAccess.remove_absolute("user://creation_station.cfg")
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var panel = cs.catalog_panel()
+	assert_not_null(panel, "全局目录应存在")
+	if panel == null:
+		return
+	assert_true(panel.show_descriptors, "创作台目录应开启描述符组")
+	var entries: Array = panel.descriptor_entries()
+	assert_gt(entries.size(), 0, "描述符组应有条目")
+	if entries.is_empty():
+		return
+	cs.open_slot(1)
+	await get_tree().process_frame
+	cs.set_catalog_open(true)
+	panel.preset_requested.emit(entries[0])
+	await get_tree().process_frame
+	assert_eq(cs.current_slot(), 1, "描述符路由到弹幕台")
+	assert_true(cs.bench_instance(0).composer_mode(), "应切到拼装模式")
+	var cp = cs.bench_instance(0).composer_panel()
+	assert_not_null(cp, "拼装面板应存在")
+	if cp != null:
+		assert_true(cp.code().contains("lc.accel_world"), "代码应含被加入的 accel_world")

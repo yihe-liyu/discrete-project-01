@@ -259,6 +259,32 @@ func test_composer_validate_emit_variant_requires_chance() -> void:
 	assert_gt(errors.size(), 0, "emit_variant 的 dir 不是 chance_toward 必须报错")
 
 
+func test_composer_codegen_contains_ops() -> void:
+	var spawn = BulletData.new().enemy().tex("米弹")
+	var c = COMPOSER.new()
+	c.from_spec({"phases": [
+		_phase(
+			[{"op": "accel_heading", "a": -150.0},
+			 {"op": "speed_lerp", "from": 100.0, "to": 300.0, "ramp": 1.0}],
+			{"op": "elapsed", "t": 2.0, "every_ticks": 3},
+			[
+				{"op": "sfx", "key": &"kira", "db": -12.0},
+				{"op": "emit", "spawn": spawn, "dir": BulletLifecycle.toward(BulletLifecycle.T_BOSS),
+				 "speed": 150.0, "at": BulletLifecycle.AT_PHASE_END},
+				{"op": "despawn"},
+			]),
+	]})
+	var code := c.to_code()
+	assert_true(code.contains("var lc := BulletLifecycle.new()"), "代码应有 lifecycle 声明")
+	assert_true(code.contains("lc.accel_heading(-150.0)"), "代码应含 accel_heading")
+	assert_true(code.contains("lc.until_elapsed(2.0)"), "代码应含 until_elapsed")
+	assert_true(code.contains(".every_ticks(3)"), "代码应含 every_ticks")
+	assert_true(code.contains("lc.emit(_spawn, BulletLifecycle.toward(BulletLifecycle.T_BOSS"),
+		"代码应含 emit + 占位 spawn")
+	assert_true(code.contains("lc.despawn()"), "代码应含 despawn")
+	assert_true(code.contains("data.trajectory(lc)"), "代码应以 trajectory 收尾")
+
+
 func test_catalog_covers_content_ops() -> void:
 	for id in [&"accel_world", &"accel_heading", &"rotate", &"steer", &"speed_lerp",
 			&"anchor_drift", &"set_heading", &"set_speed", &"speed_mul", &"drift"]:

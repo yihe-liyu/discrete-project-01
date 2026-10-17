@@ -7,6 +7,7 @@ const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const PARAM_PANEL := preload("res://scripts/workbench/param_panel.gd")
 const STATUS_TOAST := preload("res://scripts/workbench/status_toast.gd")  # WorkbenchTheme 构建器
 const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
+const COMPOSER_PANEL := preload("res://scripts/workbench/composer_panel.gd")
 
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
 const VERSION_TAG := "v3.4-ui"
@@ -31,6 +32,9 @@ var _clear_btn: Button
 var _seed_btn: Button
 var _stats_label: Label
 var _dir_angle_label: Label
+var _mode_sel: OptionButton
+var _direct_box: VBoxContainer
+var _composer_panel
 
 
 var _hot_chk: CheckBox
@@ -86,7 +90,25 @@ func _build_ui() -> void:
 	panel_scroll.add_child(box)
 
 	box.add_child(RIG_COMMON.section_label("弹幕组合台 %s" % VERSION_TAG))
-	box.add_child(RIG_COMMON.section_label("行为脚本"))
+	var mode_row := HBoxContainer.new()
+	mode_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_row.add_theme_constant_override("separation", 6)
+	var mode_lb := RIG_COMMON.label("模式", RIG_COMMON.HINT_SIZE)
+	mode_lb.custom_minimum_size = Vector2(40, 0)
+	mode_row.add_child(mode_lb)
+	_mode_sel = OptionButton.new()
+	_mode_sel.add_item("直射")
+	_mode_sel.add_item("拼装")
+	_mode_sel.selected = 0
+	_mode_sel.item_selected.connect(_on_mode_changed)
+	mode_row.add_child(_mode_sel)
+	box.add_child(mode_row)
+	_direct_box = VBoxContainer.new()
+	_direct_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_direct_box.add_theme_constant_override("separation", 6)
+	box.add_child(_direct_box)
+	var direct := _direct_box
+	direct.add_child(RIG_COMMON.section_label("行为脚本"))
 
 	_script_sel = OptionButton.new()
 	_script_sel.add_item("（无）直线弹")
@@ -99,19 +121,19 @@ func _build_ui() -> void:
 		script_idx += 1
 	_script_sel.selected = 0
 	_script_sel.item_selected.connect(_on_script_changed)
-	box.add_child(_script_sel)
+	direct.add_child(_script_sel)
 
-	box.add_child(RIG_COMMON.section_label("难度（即时生效）"))
+	direct.add_child(RIG_COMMON.section_label("难度（即时生效）"))
 	_diff_sel = OptionButton.new()
 	for difficulty in ["Easy", "Normal", "Hard", "Lunatic"]:
 		_diff_sel.add_item(difficulty)
 	_diff_sel.selected = SaveData.selected_difficulty
 	_diff_sel.item_selected.connect(_on_diff_changed)
-	box.add_child(_diff_sel)
+	direct.add_child(_diff_sel)
 
-	box.add_child(RIG_COMMON.section_label("外形"))
+	direct.add_child(RIG_COMMON.section_label("外形"))
 
-	box.add_child(_label("贴图（含判定）"))
+	direct.add_child(_label("贴图（含判定）"))
 	_tex_sel = OptionButton.new()
 	var tex_idx := 0
 	for key in BulletCatalog.keys():
@@ -122,19 +144,19 @@ func _build_ui() -> void:
 		else:
 			_tex_sel.set_item_tooltip(tex_idx, "判定：矩形 %s×%s" % [str(bt.hitbox_size.x), str(bt.hitbox_size.y)])
 		tex_idx += 1
-	box.add_child(_tex_sel)
+	direct.add_child(_tex_sel)
 
-	box.add_child(_label("染色"))
+	direct.add_child(_label("染色"))
 	_color_btn = ColorPickerButton.new()
 	_color_btn.color = Color.WHITE
 	_color_btn.text = "染色"
-	box.add_child(_color_btn)
+	direct.add_child(_color_btn)
 
 	_blend_chk = CheckBox.new()
 	_blend_chk.text = "加色混合"
-	box.add_child(_blend_chk)
+	direct.add_child(_blend_chk)
 
-	box.add_child(_label("初速（px/s）"))
+	direct.add_child(_label("初速（px/s）"))
 	_speed_spin = SpinBox.new()
 	_speed_spin.min_value = 10.0
 	_speed_spin.max_value = 4000.0
@@ -142,30 +164,30 @@ func _build_ui() -> void:
 	_speed_spin.value = 300.0
 	_speed_spin.custom_minimum_size = Vector2(160, 0)
 	_speed_spin.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	box.add_child(_speed_spin)
+	direct.add_child(_speed_spin)
 
-	box.add_child(_label("方向（右键=指向）"))
+	direct.add_child(_label("方向（右键=指向）"))
 	_dir_sel = OptionButton.new()
 	_dir_sel.add_item("自选（右键场地）")
 	for dir_name in SHELL.DIR_NAMES:
 		_dir_sel.add_item(dir_name)
 	_dir_sel.item_selected.connect(_on_dir_preset)
-	box.add_child(_dir_sel)
+	direct.add_child(_dir_sel)
 	_dir_angle_label = _hint("")
-	box.add_child(_dir_angle_label)
+	direct.add_child(_dir_angle_label)
 
 	_param_panel = PARAM_PANEL.new()
-	box.add_child(_param_panel)
+	direct.add_child(_param_panel)
 
-	box.add_child(RIG_COMMON.section_label("开发"))
+	direct.add_child(RIG_COMMON.section_label("开发"))
 	_hot_chk = CheckBox.new()
 	_hot_chk.text = "热更新"
 	_hot_chk.button_pressed = true
 	_hot_chk.toggled.connect(_on_hot_toggled)
-	box.add_child(_hot_chk)
-	box.add_child(_hint("左键=发射点 · 右键=指向 · 鼠标=自机"))
+	direct.add_child(_hot_chk)
+	direct.add_child(_hint("左键=发射点 · 右键=指向 · 鼠标=自机"))
 
-	box.add_child(RIG_COMMON.section_label("操作"))
+	direct.add_child(RIG_COMMON.section_label("操作"))
 
 	# 操作按钮 2×2 网格：横排 4 个会把面板最小宽顶爆（489>432）
 	var ops := GridContainer.new()
@@ -184,7 +206,7 @@ func _build_ui() -> void:
 	_seed_btn.pressed.connect(_next_seed)
 	for button in [_fire_btn, _burst_chk, _clear_btn, _seed_btn]:
 		ops.add_child(button)
-	box.add_child(ops)
+	direct.add_child(ops)
 
 	var itv := HBoxContainer.new()
 	itv.add_theme_constant_override("separation", 8)
@@ -199,16 +221,59 @@ func _build_ui() -> void:
 	_interval_spin.value = 0.5
 	_interval_spin.custom_minimum_size = Vector2(140, 0)
 	itv.add_child(_interval_spin)
-	box.add_child(itv)
+	direct.add_child(itv)
 
 	_stats_label = _label("")
-	box.add_child(_stats_label)
+	direct.add_child(_stats_label)
 
+
+	_composer_panel = COMPOSER_PANEL.new()
+	_composer_panel.setup(_composer_spawn)
+	_composer_panel.preview_requested.connect(_on_composer_preview)
+	_composer_panel.difficulty_changed.connect(_on_composer_difficulty)
+	_composer_panel.status.connect(_on_composer_status)
+	_composer_panel.visible = false
+	box.add_child(_composer_panel)
+
+
+# ═══ 拼装页接线 ═══
+
+func _on_mode_changed(index: int) -> void:
+	var composing := index == 1
+	if _direct_box != null:
+		_direct_box.visible = not composing
+	if _composer_panel != null:
+		_composer_panel.visible = composing
+
+
+func _composer_spawn() -> Variant:
+	return _shell.build(null)
+
+
+func _on_composer_preview(lifecycle: BulletLifecycle) -> void:
+	_launch_lifecycle(lifecycle)
+
+
+func _on_composer_difficulty(index: int) -> void:
+	_diff_sel.selected = index
+	SaveData.selected_difficulty = index
+
+
+func _on_composer_status(text: String, color: Color) -> void:
+	if _toast != null:
+		_toast.show_msg(text, color)
 
 # ═══ 目录直达 / 工作区恢复 ═══
 
 ## 目录双击直达：自动选脚本 + 重建参数 + 立即发射
 func preset_from_entry(entry) -> void:
+	# 描述符目录组：切拼装页，把该 Move/Until/Action 加到当前相位。
+	if entry.role == "descriptor" or entry.extra.has("descriptor_kind"):
+		set_composer_mode(true)
+		_composer_panel.add_op(
+			StringName(entry.extra.get("descriptor_kind", &"")),
+			StringName(entry.extra.get("descriptor_id", &"")))
+		return
 	var list = _catalog.by_role("bullet")
 	for i in list.size():
 		if list[i].path == entry.path:
@@ -223,6 +288,7 @@ func snapshot() -> Dictionary:
 		"script": _cur_script_path, "seed": _seed,
 		"diff": SaveData.selected_difficulty,
 		"tex": _shell.tex_key, "tint": _shell.tint, "speed": _shell.speed,
+		"mode": _mode_sel.selected, "composer": _composer_panel.dump(),
 	}
 
 
@@ -251,18 +317,41 @@ func restore(data: Dictionary) -> void:
 				_script_sel.selected = i + 1
 				_on_script_changed(i + 1)
 				break
+	if data.has("composer"):
+		_composer_panel.load_from(data.composer)
+	if data.has("mode"):
+		set_composer_mode(int(data.mode) == 1)
 	_refresh_dir_label()
 
 
 # ═══ 发射 ═══
 
 func _fire() -> void:
+	if _mode_sel != null and _mode_sel.selected == 1:
+		_launch_lifecycle(_composer_panel.preview_lifecycle())
+		return
 	_shell.tex_key = _tex_sel.get_item_text(_tex_sel.selected)
 	_shell.tint = _color_btn.color
 	_shell.is_blend = _blend_chk.button_pressed
 	_shell.speed = _speed_spin.value
 	var data: BulletData = _shell.build(_cur_script)
+	# 直射模式若没有脚本，必须清掉拼装页可能留在同一个缓存实例上的 lifecycle
+	if _cur_script == null:
+		data.lifecycle = null
 	data.params = _param_panel.collect()
+	_bullet_manager.shoot_bullet(data, _emitter_pos, _shell.get_dir())
+	_update_stats()
+
+
+## 拼装页发射：外形取当前 shell，弹道用 composer 生成的 lifecycle。
+func _launch_lifecycle(lifecycle: BulletLifecycle) -> void:
+	_shell.tex_key = _tex_sel.get_item_text(_tex_sel.selected)
+	_shell.tint = _color_btn.color
+	_shell.is_blend = _blend_chk.button_pressed
+	_shell.speed = _speed_spin.value
+	var data: BulletData = _shell.build(null)
+	data.params = {}
+	data.trajectory(lifecycle)
 	_bullet_manager.shoot_bullet(data, _emitter_pos, _shell.get_dir())
 	_update_stats()
 
@@ -307,6 +396,8 @@ func _on_script_changed(_idx: int) -> void:
 
 func _on_diff_changed(idx: int) -> void:
 	SaveData.selected_difficulty = idx
+	if _composer_panel != null and _composer_panel.difficulty() != idx:
+		_composer_panel.set_difficulty(idx)
 
 
 # ═══ 公开接缝（创作台 / 测试；用户操作走的是同一条实现）═══
@@ -319,6 +410,20 @@ func _primary_selector() -> OptionButton: return _script_sel
 ## 打一次（= 用户按 F / 点"发射"）
 func fire_once() -> void:
 	_fire()
+
+
+## 切直射/拼装（用户点模式下拉走同一条）
+func set_composer_mode(on: bool) -> void:
+	_mode_sel.selected = 1 if on else 0
+	_on_mode_changed(_mode_sel.selected)
+
+
+func composer_mode() -> bool:
+	return _mode_sel.selected == 1
+
+
+func composer_panel():
+	return _composer_panel
 
 
 ## 连发开关（同步勾选框，UI 与内部状态不会各说各话）

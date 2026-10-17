@@ -7,6 +7,7 @@ extends VBoxContainer
 
 const CAT = preload("res://scripts/data/content_catalog.gd")
 const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
+const DESCRIPTOR := preload("res://scripts/workbench/descriptor_catalog.gd")
 
 signal preset_requested(entry)  # 双击条目 → 组合台直达
 
@@ -23,6 +24,9 @@ var _info_refs: Label
 var _catalog: Variant
 ## 扫描根（组合根 / 测试可注入；默认 res://data）—— 测试不拿真实内容当标准。
 var catalog_root: String = CAT.DEFAULT_ROOT
+## 全局目录抽屉开启：额外显示 BulletLifecycle 原语（不写进 ContentCatalog 文件索引）。
+var show_descriptors: bool = false
+var _descriptor_entries: Array = []
 var _info_panel: PanelContainer
 var _split_area: Control
 var _sep_divider: ColorRect
@@ -57,6 +61,8 @@ func _ready() -> void:
 	_role_filter.add_item("全部角色")
 	for role in CAT.ROLE_ORDER:
 		_role_filter.add_item(CAT.ROLE_LABELS[role])
+	if show_descriptors:
+		_role_filter.add_item("弹道描述符")
 	_role_filter.item_selected.connect(func(_i): _rebuild_tree())
 	filter_row.add_child(_role_filter)
 	# 关键：必须进 box（box 才是纵向流式根）；之前 add_child 到 CatalogPanel 根，
@@ -170,9 +176,15 @@ func _rebuild_tree() -> void:
 		root_item = _tree.create_item()
 	var want_role: String = ""
 	if _role_filter and _role_filter.selected > 0:
-		want_role = CAT.ROLE_ORDER[_role_filter.selected - 1]
+		var selected_role := _role_filter.selected - 1
+		want_role = CAT.ROLE_ORDER[selected_role] if selected_role < CAT.ROLE_ORDER.size() else "descriptor"
 	var query: String = _search.text.strip_edges().to_lower()
+	_descriptor_entries.clear()
+	# 描述符组放最前：创作台打开目录通常是来找“怎么拼”，别让 78 条文件把它埋到底部。
+	_add_descriptor_group(root_item, want_role, query)
 	for role in CAT.ROLE_ORDER:
+		if want_role == "descriptor":
+			break
 		if want_role != "" and role != want_role:
 			continue
 		var items = _catalog.by_role(role)
@@ -206,6 +218,61 @@ func _rebuild_tree() -> void:
 			var full_title: String = entry.extra.get("full_title", entry.name)
 			it.set_tooltip_text(0, full_title + "\n" + entry.path)
 			it.set_metadata(0, entry)
+
+
+## 描述符虚拟组条目（测试/路由用；每次重建树时刷新）
+func descriptor_entries() -> Array:
+	return _descriptor_entries.duplicate()
+
+
+## F10b：把 Move/Until/Action/Dir 原语作为虚拟组挂到目录树；不进 ContentCatalog。
+func _add_descriptor_group(root_item: TreeItem, want_role: String, query: String) -> void:
+	if not show_descriptors:
+		return
+	if want_role != "" and want_role != "descriptor":
+		return
+	var groups := [
+		{"kind": &"move", "label": "Move", "defs": DESCRIPTOR.move_defs()},
+		{"kind": &"until", "label": "Until", "defs": DESCRIPTOR.until_defs()},
+		{"kind": &"action", "label": "Action", "defs": DESCRIPTOR.action_defs()},
+		{"kind": &"dir", "label": "Dir", "defs": DESCRIPTOR.dir_defs()},
+	]
+	var shown: Array = []
+	var total := 0
+	for group in groups:
+		var items: Array = []
+		for d in group["defs"]:
+			var text := "%s · %s" % [str(d["id"]), d["label"]]
+			if query != "" and not (text.to_lower().contains(query) or str(d["id"]).to_lower().contains(query)):
+				continue
+			items.append(d)
+		if not items.is_empty():
+			shown.append({"kind": group["kind"], "label": group["label"], "items": items})
+			total += items.size()
+	if total == 0:
+		return
+	var head := _tree.create_item(root_item)
+	head.set_text(0, "弹道描述符（%d）" % total)
+	head.set_custom_color(0, Color(1.0, 0.83, 0.5, 0.8))
+	head.set_selectable(0, false)
+	for group in shown:
+		var sub := _tree.create_item(head)
+		sub.set_text(0, "%s（%d）" % [group["label"], group["items"].size()])
+		sub.set_custom_color(0, Color(1, 1, 1, 0.45))
+		sub.set_selectable(0, false)
+		for d in group["items"]:
+			var e := CAT.Entry.new()
+			e.role = "descriptor"
+			e.path = "descriptor://%s/%s" % [str(group["kind"]), str(d["id"])]
+			e.name = "%s · %s" % [d["label"], str(d["id"])]
+			e.description = str(d["signature"])
+			e.extra = {"descriptor_kind": str(group["kind"]), "descriptor_id": str(d["id"])}
+			var it := _tree.create_item(sub)
+			it.set_text(0, e.name)
+			it.set_tooltip_text(0, e.description + "
+" + e.path)
+			it.set_metadata(0, e)
+			_descriptor_entries.append(e)
 
 
 ## 拖动分隔条：分隔条位置跟随鼠标（树/信息卡以它划分）
@@ -296,7 +363,8 @@ func _on_item_selected() -> void:
 		return
 	_info_name.text = "名称：" + entry.name
 	var uid: int = entry.extra.get("uid", 0)
-	_info_role.text = "角色：" + CAT.ROLE_LABELS.get(entry.role, entry.role) + (
+	var role_label: String = "弹道描述符" if entry.role == "descriptor" else str(CAT.ROLE_LABELS.get(entry.role, entry.role))
+	_info_role.text = "角色：" + role_label + (
 		("　uid %d" % uid) if uid > 0 else "")
 	_info_path.text = "路径：" + entry.path
 	_info_path.tooltip_text = entry.path

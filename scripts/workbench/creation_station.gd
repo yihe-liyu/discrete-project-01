@@ -121,6 +121,7 @@ func _build_catalog_drawer() -> void:
 	root.add_child(_catalog_drawer)
 
 	_catalog_panel = CATALOG_PANEL.new()
+	_catalog_panel.show_descriptors = true
 	_catalog_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_catalog_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_catalog_panel.preset_requested.connect(_on_catalog_preset)
@@ -251,7 +252,7 @@ func _on_slot(slot_index: int) -> void:
 func route_preset(entry) -> void:
 	var slot := 1
 	match entry.role:
-		"bullet":
+		"bullet", "descriptor":
 			slot = 1
 		"enemy":
 			slot = 2

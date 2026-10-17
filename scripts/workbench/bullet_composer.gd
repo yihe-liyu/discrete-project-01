@@ -94,6 +94,175 @@ func to_lifecycle() -> BulletLifecycle:
 	return lc
 
 
+## 生成可粘贴的 GDScript。`_spawn` 是占位：内容里换成自己的 BulletData（或当前弹）。
+## 只生成“弹道”这段，不生成 `_tick` / 波次调度 —— 与 F10 的边界一致。
+func to_code() -> String:
+	var lines: Array[String] = ["var lc := BulletLifecycle.new()"]
+	for i in phases.size():
+		if i > 0:
+			lines.append("lc.then()")
+		var p: Dictionary = phases[i]
+		for m in p["moves"]:
+			lines.append("lc." + _move_code(m))
+		lines.append("lc." + _until_code(p["until"]))
+		for a in p["on_end"]:
+			lines.append("lc." + _action_code(a))
+	lines.append("data.trajectory(lc)")
+	return "\n".join(lines)
+
+
+func _move_code(op_call: Dictionary) -> String:
+	var op := StringName(op_call.get("op", &""))
+	match op:
+		&"accel_world":
+			return "accel_world(%s)" % _vec2_code(op_call.get("v", Vector2.ZERO))
+		&"accel_heading":
+			return "accel_heading(%s)" % _num_code(op_call.get("a", 0.0))
+		&"rotate":
+			return "rotate(%s, %s)" % [_num_code(op_call.get("w", 0.0)), _num_code(op_call.get("limit", 0.0))]
+		&"rotate_velocity":
+			return "rotate_velocity(%s, %s)" % [_num_code(op_call.get("w", 0.0)), _num_code(op_call.get("limit", 0.0))]
+		&"rotate_heading":
+			return "rotate_heading(%s, %s)" % [_num_code(op_call.get("w", 0.0)), _num_code(op_call.get("limit", 0.0))]
+		&"steer":
+			return "steer(%s, %s, %s, %s, %s)" % [
+				_target_code(op_call.get("target", BulletLifecycle.T_NEAREST_ENEMY)),
+				_num_code(op_call.get("max_turn", 0.0)), _num_code(op_call.get("ramp", 0.0)),
+				_num_code(op_call.get("dist_weight", 0.0)), _num_code(op_call.get("steer_until", 0.0))]
+		&"speed_lerp":
+			return "speed_lerp(%s, %s, %s)" % [_num_code(op_call.get("from", 0.0)), _num_code(op_call.get("to", 0.0)), _num_code(op_call.get("ramp", 0.0))]
+		&"speed_mul":
+			return "speed_mul(%s)" % _num_code(op_call.get("f", 1.0))
+		&"set_heading":
+			return "set_heading(%s)" % _dir_code(op_call.get("dir", {}))
+		&"set_speed":
+			return "set_speed(%s)" % _num_code(op_call.get("speed", 0.0))
+		&"anchor_drift":
+			return "anchor_drift(%s, %s, %s, %s, %s, %s, %s)" % [
+				str(int(op_call.get("anchor_id", 0))), _vec2_code(op_call.get("offset", Vector2.ZERO)),
+				_num_code(op_call.get("angle", 0.0)), _num_code(op_call.get("speed", 0.0)),
+				str(bool(op_call.get("use_global", true))), _num_code(op_call.get("initial", 0.0)),
+				str(bool(op_call.get("render_heading", false)))]
+		&"drift":
+			return "drift(%s, %s, %s)" % [_num_code(op_call.get("angle", 0.0)), _num_code(op_call.get("speed", 0.0)), _num_code(op_call.get("initial", 0.0))]
+	return "pass  # 未知 Move %s" % op
+
+
+func _until_code(op_call: Dictionary) -> String:
+	var op := StringName(op_call.get("op", &"never"))
+	var base := ""
+	match op:
+		&"never": base = "until_never()"
+		&"elapsed": base = "until_elapsed(%s)" % _num_code(op_call.get("t", 0.0))
+		&"near": base = "until_near(%s, %s)" % [_target_code(op_call.get("target", &"")), _num_code(op_call.get("r", 0.0))]
+		&"at_wall": base = "until_at_wall(%s)" % _wall_code(int(op_call.get("mask", 0)))
+		&"speed": base = "until_speed(%s, %s)" % [_cmp_code(int(op_call.get("cmp", BulletLifecycle.CMP_LE))), _num_code(op_call.get("value", 0.0))]
+		&"turned": base = "until_turned()"
+		_: return "pass  # 未知 Until %s" % op
+	if op_call.has("every"):
+		base += ".every(%s)" % _num_code(op_call["every"])
+	if op_call.has("every_ticks"):
+		base += ".every_ticks(%d)" % int(op_call["every_ticks"])
+	return base
+
+
+func _action_code(op_call: Dictionary) -> String:
+	var op := StringName(op_call.get("op", &""))
+	match op:
+		&"emit":
+			return "emit(%s, %s, %s, %s)" % [
+				_spawn_code(op_call.get("spawn")), _dir_code(op_call.get("dir", {})),
+				_num_code(op_call.get("speed", 0.0)), _at_code(op_call.get("at", BulletLifecycle.AT_CURRENT))]
+		&"emit_variant":
+			var spawns: Array = op_call.get("spawns", [])
+			var parts: Array[String] = []
+			for s in spawns:
+				parts.append(_spawn_code(s))
+			var arr_code := "[" + ", ".join(parts) + "]"
+			return "emit_variant(%s, %s, %s, %s)" % [
+				arr_code, _dir_code(op_call.get("dir", {})),
+				_num_code(op_call.get("speed", 0.0)), _at_code(op_call.get("at", BulletLifecycle.AT_CURRENT))]
+		&"sfx":
+			var key := _string_name_code(op_call.get("key", &""))
+			if op_call.has("db"):
+				return "sfx(%s, %s)" % [key, _num_code(op_call["db"])]
+			return "sfx(%s)" % key
+		&"despawn": return "despawn()"
+		&"clear_fx": return "clear_fx()"
+		&"despawn_clear": return "despawn_clear()"
+		&"on_end_heading": return "on_end_heading(%s)" % _dir_code(op_call.get("dir", {}))
+		&"on_end_call": return "on_end_call(%s)" % _string_name_code(op_call.get("hook", &""))
+	return "pass  # 未知 Action %s" % op
+
+
+func _dir_code(dir: Dictionary) -> String:
+	if dir.is_empty():
+		return "BulletLifecycle.heading(0.0)"
+	match StringName(dir.get(&"kind", &"")):
+		BulletLifecycle.D_HEADING:
+			return "BulletLifecycle.heading(%s)" % _num_code(dir.get(&"angle", 0.0))
+		BulletLifecycle.D_TOWARD:
+			return "BulletLifecycle.toward(%s, %s)" % [_target_code(dir.get(&"target", &"")), _num_code(dir.get(&"angle", 0.0))]
+		BulletLifecycle.D_AWAY:
+			return "BulletLifecycle.away(%s, %s)" % [_target_code(dir.get(&"target", &"")), _num_code(dir.get(&"angle", 0.0))]
+		BulletLifecycle.D_FORWARD:
+			return "BulletLifecycle.forward(%s)" % _num_code(dir.get(&"angle", 0.0))
+		BulletLifecycle.D_RANDOM:
+			return "BulletLifecycle.random_dir(%s)" % _num_code(dir.get(&"spread", 0.0))
+		BulletLifecycle.D_CHANCE:
+			return "BulletLifecycle.chance_toward(%s, %s, %s)" % [
+				_target_code(dir.get(&"target", &"")), _num_code(dir.get(&"p", 1.0)), _num_code(dir.get(&"spread", 0.0))]
+		BulletLifecycle.D_REFLECT:
+			return "BulletLifecycle.reflect(%s)" % _num_code(dir.get(&"angle", 0.0))
+	return "BulletLifecycle.heading(0.0)"
+
+
+func _target_code(target: Variant) -> String:
+	match StringName(target):
+		BulletLifecycle.T_PLAYER: return "BulletLifecycle.T_PLAYER"
+		BulletLifecycle.T_NEAREST_ENEMY: return "BulletLifecycle.T_NEAREST_ENEMY"
+		BulletLifecycle.T_BOSS: return "BulletLifecycle.T_BOSS"
+	return "StringName(\"%s\")" % str(target)
+
+
+func _at_code(at: Variant) -> String:
+	return "BulletLifecycle.AT_PHASE_END" if int(at) == BulletLifecycle.AT_PHASE_END else "BulletLifecycle.AT_CURRENT"
+
+
+func _cmp_code(cmp: int) -> String:
+	return "BulletLifecycle.CMP_GE" if cmp == BulletLifecycle.CMP_GE else "BulletLifecycle.CMP_LE"
+
+
+func _wall_code(mask: int) -> String:
+	var parts: Array[String] = []
+	if mask & BulletLifecycle.WALL_LEFT: parts.append("BulletLifecycle.WALL_LEFT")
+	if mask & BulletLifecycle.WALL_RIGHT: parts.append("BulletLifecycle.WALL_RIGHT")
+	if mask & BulletLifecycle.WALL_TOP: parts.append("BulletLifecycle.WALL_TOP")
+	return " | ".join(parts) if not parts.is_empty() else "0"
+
+
+func _spawn_code(_spawn: Variant) -> String:
+	# 代码里不写真实例；统一占位，作者替换成自己的 BulletData。
+	return "_spawn"
+
+
+func _vec2_code(v: Variant) -> String:
+	var vec: Vector2 = v if v is Vector2 else Vector2.ZERO
+	return "Vector2(%s, %s)" % [_num_code(vec.x), _num_code(vec.y)]
+
+
+func _num_code(v: Variant) -> String:
+	if v is int:
+		return str(v)
+	if v is float:
+		return String.num(float(v), 6)
+	return str(v)
+
+
+func _string_name_code(v: Variant) -> String:
+	return "&\"%s\"" % str(v)
+
+
 ## 静态校验：只查“拼装器能提前发现”的坑；编译期的 op/target 守卫仍在 BulletLifecycle。
 ## 返回 [] = 没发现问题；非空 = 人话错误列表。
 func validate() -> Array[String]:
