@@ -90,14 +90,20 @@
 ### 跑测试（重构/改动后的安全带）
 
 ```bash
-# 一键运行全部测试（GUT）
-./test/run_tests.sh
+./test/run_tests_sharded.sh        # 全量并行（默认 min(nproc,8) 片，~15s；覆盖 = 全量）
+./test/run_tests.sh                # 全量串行（排查顺序/共享状态用，~54s）
+./test/run_tests.sh -gtest=res://test/test_x.gd   # 单文件
 ```
+
+> 分片仍是同一批 `test/test_*.gd`（每个文件恰好进一片）；`test_sfx_mix` / `test_stage_background`
+> 这两个慢文件各占一片，避免一片拖住整个墙钟。`GUT_SHARDS=4 ./test/run_tests_sharded.sh` 可指定片数。
 
 ### 一键验证（文档哨兵 + 语法 + 命名 + 结构 + 启动 + 测试 + 所有权）
 
 ```bash
-./tools/verify.sh
+./tools/verify.sh            # 全量（默认并行分片，~18s）
+./tools/verify.sh --fast     # 快速冒烟（~8s，不全量；提交前记得跑全量）
+./tools/verify.sh --serial   # 全量串行（排查用）
 ```
 
 > 第 1 步是**文档哨兵**（`tools/check_docs.py`）：TEST_INDEX 的测试清单 / 抬头数字 / **各层小节小计** /

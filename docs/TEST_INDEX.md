@@ -10,11 +10,13 @@
 ## 怎么跑
 
 ```bash
-./test/run_tests.sh                                  # GUT 全量（~22s）
+./test/run_tests_sharded.sh                          # GUT 全量并行（min(nproc,8) 片，~15s）
+./test/run_tests.sh                                  # GUT 全量串行（~54s，排查用）
 ./test/run_tests.sh -gtest=res://test/test_laser.gd  # 单文件（~1.4s）
 ./test/run_tests.sh -gtest=res://test/test_x.gd -gtest_func=test_xxx   # 单用例
 ./tools/check_structure.sh                          # 结构契约（组合台/白盒预算/唯一来源/接线唯一）
-./tools/verify.sh                                    # 七步门禁（文档哨兵+语法+命名+结构+启动+GUT+所有权）
+./tools/verify.sh                                    # 七步门禁（默认并行分片，~18s）
+./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
 **现状**：118 脚本 / **814 用例（814 通过 / 0 红 —— ✅ 全绿）/ 7062 断言 / 53.939s** / 19 orphans / **0 pending**。

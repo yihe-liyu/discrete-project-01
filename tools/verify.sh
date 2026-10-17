@@ -1,19 +1,53 @@
 #!/usr/bin/env bash
 # 一键验证：文档哨兵 + 语法 + 命名契约 + 结构契约 + 真实启动零错误 + GUT 全绿 + 文件所有权恢复 + git 状态
-# 用法: ./tools/verify.sh [可选: 启动验证的场景]
-#   默认验证 res://scenes/game_scene.tscn
-#   例:  ./tools/verify.sh res://scenes/workbench.tscn
-#        ./tools/verify.sh scenes/workbench.tscn
+# 用法: ./tools/verify.sh [选项] [可选: 启动验证的场景]
+#   默认全量 GUT（并行分片，~15s）；--serial 串行；--fast 只跑冒烟（~8s，不全量）
+#   例:  ./tools/verify.sh
+#        ./tools/verify.sh --fast
+#        ./tools/verify.sh --serial
+#        ./tools/verify.sh --shards=4
+#        ./tools/verify.sh res://scenes/workbench.tscn
 set -e
 cd "$(dirname "$0")/.."
 
-TARGET_SCENE="${1:-res://scenes/game_scene.tscn}"
+FAST=0
+SERIAL=0
+TARGET_SCENE=""
+for arg in "$@"; do
+	case "$arg" in
+		--fast) FAST=1 ;;
+		--serial) SERIAL=1 ;;
+		--shards=*) export GUT_SHARDS="${arg#*=}" ;;
+		--help|-h)
+			echo "用法: ./tools/verify.sh [--fast|--serial|--shards=N] [场景]"
+			echo "  --fast      只跑文档/语法/命名/结构/启动 + 4 个冒烟测试（不全量，~8s）"
+			echo "  --serial    全量 GUT 串行（默认按 min(nproc,8) 并行分片）"
+			echo "  --shards=N  指定并行片数（<3 自动串行）"
+			exit 0
+			;;
+		res://*|scenes/*|*.tscn) TARGET_SCENE="$arg" ;;
+		*)
+			echo "❌ 未知参数: $arg（--help 看用法）"
+			exit 2
+			;;
+	esac
+done
+TARGET_SCENE="${TARGET_SCENE:-res://scenes/game_scene.tscn}"
 if [[ "$TARGET_SCENE" != res://* ]]; then
 	TARGET_SCENE="res://$TARGET_SCENE"
 fi
 
+if [ "$FAST" = 1 ]; then
+	MODE="快速冒烟（不全量）"
+elif [ "$SERIAL" = 1 ]; then
+	MODE="全量串行"
+else
+	MODE="全量并行分片（GUT_SHARDS=${GUT_SHARDS:-auto}）"
+fi
+
 echo "═══════════════════════════════════════"
 echo "  🔧 一键验证（场景: $TARGET_SCENE）"
+echo "  GUT: $MODE"
 echo "═══════════════════════════════════════"
 
 echo ""
@@ -48,10 +82,27 @@ fi
 echo "✅ 启动零错误"
 
 echo ""
-echo "== [6/7] GUT 全量测试 =="
-if ! ./test/run_tests.sh; then
-	echo "❌ GUT 测试失败"
-	exit 1
+if [ "$FAST" = 1 ]; then
+	echo "== [6/7] GUT 快速冒烟（--fast，不全量） =="
+	SMOKE="res://test/test_data_validity.gd,res://test/test_param_validator.gd,res://test/test_lifecycle_primitives.gd,res://test/test_native_storage.gd"
+	if ! ./test/run_tests.sh -gtest="$SMOKE"; then
+		echo "❌ GUT 冒烟测试失败"
+		exit 1
+	fi
+	echo "⚠️ 快速模式只跑 4 个冒烟文件；提交前请跑 ./tools/verify.sh（全量）"
+else
+	echo "== [6/7] GUT 全量测试 =="
+	if [ "$SERIAL" = 1 ]; then
+		if ! ./test/run_tests.sh; then
+			echo "❌ GUT 测试失败"
+			exit 1
+		fi
+	else
+		if ! ./test/run_tests_sharded.sh; then
+			echo "❌ GUT 分片测试失败"
+			exit 1
+		fi
+	fi
 fi
 echo "✅ GUT 全绿"
 
