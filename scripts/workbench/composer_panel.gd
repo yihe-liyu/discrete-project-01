@@ -505,6 +505,10 @@ func preview_lifecycle() -> BulletLifecycle:
 	return composer().to_lifecycle()
 
 
+func refresh_base_ui() -> void:
+	_apply_base_ui()
+
+
 func base_spec() -> Dictionary:
 	if _base_get.is_valid():
 		var got = _base_get.call()

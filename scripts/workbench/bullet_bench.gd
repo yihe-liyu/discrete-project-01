@@ -10,7 +10,7 @@ const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
 const COMPOSER_PANEL := preload("res://scripts/workbench/composer_panel.gd")
 
 ## 标题版本号：每次改版递增；截图对照可立刻确认运行的是不是最新脚本
-const VERSION_TAG := "v3.4-ui"
+const VERSION_TAG := "v3.5-ui"
 
 
 var _shell: Variant      # BulletShell（preload 构造，规避新 class 全局缓存）
@@ -35,6 +35,10 @@ var _dir_angle_label: Label
 var _mode_sel: OptionButton
 var _direct_box: VBoxContainer
 var _composer_panel
+var _has_legacy_scripts: bool = false
+var _behavior_label: Label
+var _dev_label: Label
+var _dev_hint: Label
 
 
 var _hot_chk: CheckBox
@@ -59,7 +63,8 @@ func _ready() -> void:
 	_refresh_dir_label()
 	_set_current_script()
 	_param_panel.rebuild(_cur_script)
-	_toast.show_msg("热更新：开", Color(0.5, 0.95, 0.6))
+	if _has_legacy_scripts:
+		_toast.show_msg("热更新：开", Color(0.5, 0.95, 0.6))
 
 
 # ═══ 世界 ═══
@@ -108,7 +113,10 @@ func _build_ui() -> void:
 	_direct_box.add_theme_constant_override("separation", 6)
 	box.add_child(_direct_box)
 	var direct := _direct_box
-	direct.add_child(RIG_COMMON.section_label("行为脚本"))
+	_has_legacy_scripts = _catalog.by_role("bullet").size() > 0
+	direct.add_child(RIG_COMMON.hint_label("弹道形状在「拼装」页编辑；这里只调发射的这颗"))
+	_behavior_label = RIG_COMMON.section_label("旧行为脚本（兼容）")
+	direct.add_child(_behavior_label)
 
 	_script_sel = OptionButton.new()
 	_script_sel.add_item("（无）直线弹")
@@ -131,7 +139,7 @@ func _build_ui() -> void:
 	_diff_sel.item_selected.connect(_on_diff_changed)
 	direct.add_child(_diff_sel)
 
-	direct.add_child(RIG_COMMON.section_label("外形"))
+	direct.add_child(RIG_COMMON.section_label("初始弹（外形）"))
 
 	direct.add_child(_label("贴图（含判定）"))
 	_tex_sel = OptionButton.new()
@@ -179,13 +187,15 @@ func _build_ui() -> void:
 	_param_panel = PARAM_PANEL.new()
 	direct.add_child(_param_panel)
 
-	direct.add_child(RIG_COMMON.section_label("开发"))
+	_dev_label = RIG_COMMON.section_label("旧行为脚本 / 热更新")
+	direct.add_child(_dev_label)
 	_hot_chk = CheckBox.new()
 	_hot_chk.text = "热更新"
 	_hot_chk.button_pressed = true
 	_hot_chk.toggled.connect(_on_hot_toggled)
 	direct.add_child(_hot_chk)
-	direct.add_child(_hint("左键=发射点 · 右键=指向 · 鼠标=自机"))
+	_dev_hint = _hint("左键=发射点 · 右键=指向 · 鼠标=自机")
+	direct.add_child(_dev_hint)
 
 	direct.add_child(RIG_COMMON.section_label("操作"))
 
@@ -226,6 +236,13 @@ func _build_ui() -> void:
 	_stats_label = _label("")
 	direct.add_child(_stats_label)
 
+	if not _has_legacy_scripts:
+		_behavior_label.visible = false
+		_script_sel.visible = false
+		_param_panel.visible = false
+		_dev_label.visible = false
+		_hot_chk.visible = false
+
 
 	_composer_panel = COMPOSER_PANEL.new()
 	_composer_panel.setup(_composer_spawn, _composer_base_spec, _apply_composer_base)
@@ -244,6 +261,9 @@ func _on_mode_changed(index: int) -> void:
 		_direct_box.visible = not composing
 	if _composer_panel != null:
 		_composer_panel.visible = composing
+		if composing:
+			_sync_shell_from_direct()
+			_composer_panel.refresh_base_ui()
 
 
 func _composer_spawn() -> Variant:
@@ -372,10 +392,7 @@ func _fire() -> void:
 	if _mode_sel != null and _mode_sel.selected == 1:
 		_launch_lifecycle(_composer_panel.preview_lifecycle())
 		return
-	_shell.tex_key = _tex_sel.get_item_text(_tex_sel.selected)
-	_shell.tint = _color_btn.color
-	_shell.is_blend = _blend_chk.button_pressed
-	_shell.speed = _speed_spin.value
+	_sync_shell_from_direct()
 	var data: BulletData = _shell.build(_cur_script)
 	# 直射模式若没有脚本，必须清掉拼装页可能留在同一个缓存实例上的 lifecycle
 	if _cur_script == null:
@@ -386,11 +403,17 @@ func _fire() -> void:
 
 
 ## 拼装页发射：外形取当前 shell，弹道用 composer 生成的 lifecycle。
-func _launch_lifecycle(lifecycle: BulletLifecycle) -> void:
+func _sync_shell_from_direct() -> void:
+	if _tex_sel == null:
+		return
 	_shell.tex_key = _tex_sel.get_item_text(_tex_sel.selected)
 	_shell.tint = _color_btn.color
 	_shell.is_blend = _blend_chk.button_pressed
 	_shell.speed = _speed_spin.value
+
+
+func _launch_lifecycle(lifecycle: BulletLifecycle) -> void:
+	_sync_shell_from_direct()
 	var data: BulletData = _shell.build(null)
 	data.params = {}
 	data.trajectory(lifecycle)
