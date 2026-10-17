@@ -74,7 +74,7 @@
 - **权威存储** = 原生 `DanmakuStore`（`gdextension/src/danmaku_store.{h,cpp}`）；GDScript 只是每帧只读快照。
 - **行为** = `LifecycleCatalog` 把 `move+params` 映射成 `BulletLifecycle` → `compile()` 成 packed program → 原生 `behavior_tick`。
 - **事件**（发射 / 音效 / 回调）→ `KernelNativeSystem._drain_events` → `KernelBehaviorHost` / `AudioManager` / 内容回调。
-- 改哪看哪：行为词汇 → `docs/DANMAKU_API.md（附录 A）`；参数表 → `CONTENT_GUIDE.md`「弹幕行为接口」；执行/判定 → `gdextension/src/`。
+- 改哪看哪：行为词汇 → `docs/DANMAKU_API.md` §3（Move/Until/Action）；参数表 → `CONTENT_GUIDE.md`「弹幕行为接口」；执行/判定 → `gdextension/src/`。
 
 ### 2.2 使用层（接口）—— 动词，不是协程/Timeline
 

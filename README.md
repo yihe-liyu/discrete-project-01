@@ -51,7 +51,7 @@
 | 层 | 文档 | 什么时候看 |
 |---|---|---|
 | **日常** | [CONTENT_GUIDE](CONTENT_GUIDE.md) · [TEST_INDEX](docs/TEST_INDEX.md) | 每次动手前 |
-| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期 / 弹道路径附录） | 改对应系统时 |
+| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/弹道路径**速查**） | 改对应系统时 |
 | **历史 / 附录** | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md)（只看索引） · [archive](docs/archive/ARCHIVE_INDEX.md) | 查“为什么/当时怎么想” |
 
 ### 我在做什么？看哪份？
@@ -69,7 +69,7 @@
 | 查“为什么当初这么改” | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md) 索引 → [archive](docs/archive/ARCHIVE_INDEX.md) | 正文只留最近 12 条 |
 
 > **分工（同一信息只写一处）**：规则/状态 = [BASELINE](docs/BEST_PRACTICES_BASELINE.md)；架构 = [ARCHITECTURE](docs/ARCHITECTURE.md)；
-> 弹幕参考 = [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/路径附录）；内容 = [CONTENT_GUIDE](CONTENT_GUIDE.md)（含对话附录）；
+> 弹幕参考 = [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/路径速查）；内容 = [CONTENT_GUIDE](CONTENT_GUIDE.md)（含对话附录）；
 > 测试 = [TEST_INDEX](docs/TEST_INDEX.md)；历史 = [LOG](docs/BEST_PRACTICES_LOG.md) + [archive](docs/archive/ARCHIVE_INDEX.md)。
 > 原始设定资料 = `docs/reference/*.txt`；`TODO_TEMP.md` 是作者本地临时待办（不进 Git）。
 

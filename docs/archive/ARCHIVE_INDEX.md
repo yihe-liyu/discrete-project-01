@@ -14,7 +14,7 @@
 | [ARCHITECTURE_ROADMAP.md](ARCHITECTURE_ROADMAP.md) | 2026-07-31 全系统图景 + 改进路线 v5（阶段 0–3 完成时的横切视图）；**「内容工作台演进」专节**是工作台设计的来龙去脉 | 🕰 已完成 | `README.md`（内容工作台一节，注明"已归档"） |
 | [STAGE_FLOW_PLAN.md](STAGE_FLOW_PLAN.md) | 编排 / 对象自治 / 身份归位 / 注入服务的**七步路线**：Step 1 / 3 / 4 已落，**Step 2（书签原生）、Step 6（`ctx.background`）仍是待办出处**，5 / 7 暂缓 | 🚧 部分未做（**仍活**） | 基线「🔴 待改进」、`ARCHITECTURE.md` §7 |
 | [NEW_KERNEL_REFACTOR_PLAN.md](NEW_KERNEL_REFACTOR_PLAN.md) | 内核迁移的**方案 / 契约 / 决策**（Strangler 绞杀者）：§15.6 触发条件、§16 / §16.5 **结构性判据**（0 类型映射 / 0 内容签名侧表）至今是判据 | ✅ 方案已执行完 | `archive/GDEXTENSION_KERNEL_DESIGN.md`、`archive/BASELINE_EVIDENCE.md` |
-| [N2_NATIVE_INTEGRATION_PLAN.md](N2_NATIVE_INTEGRATION_PLAN.md) | 原生弹幕系统替换 `BulletSystem` 的**接入 + 拆除清单 + 终局决策**；L3.5 每一步的验收数字（4a / 4b-pre / 4e / 4f） | ✅ 已完成（2026-09-14） | `archive/GDEXTENSION_KERNEL_DESIGN.md`、`DANMAKU_API.md` 附录 A、`ARCHITECTURE.md` §7、`kernel_bullet_host.gd` 的报错文案 |
+| [N2_NATIVE_INTEGRATION_PLAN.md](N2_NATIVE_INTEGRATION_PLAN.md) | 原生弹幕系统替换 `BulletSystem` 的**接入 + 拆除清单 + 终局决策**；L3.5 每一步的验收数字（4a / 4b-pre / 4e / 4f） | ✅ 已完成（2026-09-14） | `archive/GDEXTENSION_KERNEL_DESIGN.md`、`DANMAKU_API.md` §3、`ARCHITECTURE.md` §7、`kernel_bullet_host.gd` 的报错文案 |
 | [M3_TEXTURE_OWNERSHIP_DECISION.md](M3_TEXTURE_OWNERSHIP_DECISION.md) | M3 决策记录：**纹理插座不是债**（拍板 ③ 纹理句柄）—— 防止后人"顺手修掉"设计 seam | ✅ 已拍板 | 基线「其他契约」、`TODO_TEMP` |
 | [SPELL_SYSTEM_TARGET.md](SPELL_SYSTEM_TARGET.md) | 符卡系统目标蓝图：卡定义 / 卡记录分离 + **uid 当身份证** + 三张表各司其职 | 🕰 蓝图早于实现（核心已由 `boss_catalog.gd` 落地） | `ARCHITECTURE.md` §7 |
 | [CREATION_STATION_V1.md](CREATION_STATION_V1.md) | 创作台（工作台）设计 V1：与作者逐条拍板 —— **预览沙盒，不是编辑器** | 🕰 已被实现/演进取代 | —（工作台现状看 `scripts/workbench/`） |
@@ -23,10 +23,10 @@
 | [BACKGROUND_VISUAL_PLAN.md](BACKGROUND_VISUAL_PLAN.md) | 背景视觉计划（**2026-10-04 已冻结**）：现役 3D 背景 + 已完成记录 + 未做项留痕；**§A–§I 不再投入** | ⛔ 已冻结 | `README.md`、`ARCHITECTURE.md` §7 |
 | [DIALOGUE.md](DIALOGUE.md) | 对白全集（**剧本原稿**，2026-08 已代码化）—— 已实现的面以 `data/dialogue/stage/*.gd` 为准 | 🕰 原稿（非权威） | `CONTENT_GUIDE.md`（附录 D） |
 | [BASELINE_EVIDENCE.md](BASELINE_EVIDENCE.md) | 基线证据附录（逐条 `[x]` 出处、决策旁注、K0 实测审计）—— 规则/状态仍看 `BEST_PRACTICES_BASELINE.md` | 🕰 附录（只增不改） | `BEST_PRACTICES_BASELINE.md` |
-| [GDEXTENSION_KERNEL_DESIGN.md](GDEXTENSION_KERNEL_DESIGN.md) | 原生内核北极星设计（已落地；§5 通用 VM 已作废）—— 设计动机与当时取舍 | 🕰 设计原稿 | `ARCHITECTURE.md` §7、`DANMAKU_API.md` 附录 B |
+| [GDEXTENSION_KERNEL_DESIGN.md](GDEXTENSION_KERNEL_DESIGN.md) | 原生内核北极星设计（已落地；§5 通用 VM 已作废）—— 设计动机与当时取舍 | 🕰 设计原稿 | `ARCHITECTURE.md` §7、`DANMAKU_API.md` §11 |
 | [merged/START_HERE.md](merged/START_HERE.md) | 2026-10-17 的一页入口原稿；内容已并入 `README.md` | 📦 已并入 | `README.md` |
-| [merged/LIFECYCLE_MODEL.md](merged/LIFECYCLE_MODEL.md) | 生命周期模型原稿；全文已并入 `docs/DANMAKU_API.md` 附录 A | 📦 已并入 | `docs/DANMAKU_API.md` 附录 A |
-| [merged/BULLET_PIPELINE.md](merged/BULLET_PIPELINE.md) | 一颗弹的完整路径原稿；全文已并入 `docs/DANMAKU_API.md` 附录 B | 📦 已并入 | `docs/DANMAKU_API.md` 附录 B |
+| [merged/LIFECYCLE_MODEL.md](merged/LIFECYCLE_MODEL.md) | 生命周期模型原稿；全文在本归档，`docs/DANMAKU_API.md` 附录 A 为速查 | 📦 已并入 | `docs/DANMAKU_API.md` 附录 A |
+| [merged/BULLET_PIPELINE.md](merged/BULLET_PIPELINE.md) | 一颗弹的完整路径原稿；全文在本归档，`docs/DANMAKU_API.md` 附录 B 为速查 | 📦 已并入 | `docs/DANMAKU_API.md` 附录 B |
 | [merged/DIALOGUE_SYSTEM.md](merged/DIALOGUE_SYSTEM.md) | 对话系统说明原稿；全文已并入 `CONTENT_GUIDE.md` 附录 D | 📦 已并入 | `CONTENT_GUIDE.md` 附录 D |
 | [LOG_2026-09.md](LOG_2026-09.md) | 滚动日志按月归档（**内文时间正序**，可 `grep`） | 📚 历史底账 | `BEST_PRACTICES_LOG.md` 顶部索引 |
 | [LOG_2026-09_kernel_migration.md](LOG_2026-09_kernel_migration.md) | 内核迁移期日志（L1–L3.5 / N2，2026-09-13~16）：含已废止的 vendor 流程与当时的踩坑 | 📚 历史底账 | `BEST_PRACTICES_LOG.md` 顶部索引 |
