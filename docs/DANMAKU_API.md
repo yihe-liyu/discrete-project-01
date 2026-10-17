@@ -218,8 +218,9 @@ data.trajectory(lc)
 | 躲避自机 | `until_near(T_PLAYER, prox).every(jump)` + `on_end_heading(away(T_PLAYER))` + `then()` + `until_elapsed(flee)` + `despawn()` |
 | 锚定激光 | `anchor_drift(anchor, offset, angle, speed, use_global, initial, render_heading)` + `until_never()` |
 
-> 不再新增 preset：组合由内容直接写，或由工作台拼装器生成。`LifecycleCatalog` 只保留
-> `{lifecycle: BulletLifecycle}` 的兼容入口；旧 `{move: ...}` preset 名一律返回 null。
+> 不再新增 preset：组合由内容直接写，或由工作台拼装器生成。拼装页的 `emit` / `emit_variant`
+> 有 A/B 替换弹模板；生成的代码里 `_spawn` / `_spawn_a` / `_spawn_b` 是占位，填自己的 `BulletData`。
+> `LifecycleCatalog` 只保留 `{lifecycle: BulletLifecycle}` 的兼容入口；旧 `{move: ...}` preset 名一律返回 null。
 
 ### 3.9 编译与共享
 

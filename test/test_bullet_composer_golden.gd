@@ -286,6 +286,23 @@ func test_composer_codegen_contains_ops() -> void:
 	assert_true(code.contains("data.trajectory(lc)"), "代码应以 trajectory 收尾")
 
 
+func test_composer_codegen_template_slots() -> void:
+	var spawn = BulletData.new().enemy().tex("米弹")
+	var c = COMPOSER.new()
+	c.from_spec({"phases": [
+		_phase([], {}, [
+			{"op": "emit", "spawn": spawn, "spawn_slot": "a",
+			 "dir": BulletLifecycle.heading(0.0), "speed": 60.0},
+			{"op": "emit_variant", "spawns": [spawn, spawn], "spawn_slots": ["a", "b"],
+			 "dir": BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, 0.5, 0.1), "speed": 60.0},
+			{"op": "despawn"},
+		]),
+	]})
+	var code := c.to_code()
+	assert_true(code.contains("lc.emit(_spawn_a, "), "emit 用 _spawn_a")
+	assert_true(code.contains("lc.emit_variant([_spawn_a, _spawn_b]"), "emit_variant 用 A/B 两个占位")
+
+
 func test_catalog_covers_content_ops() -> void:
 	for id in [&"accel_world", &"accel_heading", &"rotate", &"steer", &"speed_lerp",
 			&"anchor_drift", &"set_heading", &"set_speed", &"speed_mul", &"drift"]:

@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 18 条（本文件留最近 18 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 19 条（本文件留最近 19 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-17 — F10 模板选择器：emit / emit_variant 的 A/B 替换弹
 - 2026-10-17 — F10c：删掉 9 个 bullet preset，内容改手写原语
 - 2026-10-17 — F10b：弹幕台拼装页 + 描述符目录组 + 代码生成
 - 2026-10-17 — 创作台 Phase 1：全局目录抽屉 + 公开接缝
@@ -48,6 +49,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-17 — F10 模板选择器：emit / emit_variant 的 A/B 替换弹
+
+- 拼装页加 A/B 两个模板槽：贴图（当前贴图 / BulletCatalog key）、染色、加色、速度。
+- `emit` 选“当前 / A / B”；`emit_variant` 分别选 A/B；预览真的用两个不同 BulletData。
+- 代码生成按槽位输出 `_spawn` / `_spawn_a` / `_spawn_b` 占位；快照把模板存成贴图/色/加色/速度，不塞实例。
+- `ComposerPanel.preview_lifecycle` 不再把所有 spawn 覆盖成当前弹；模板编辑会同步引用该槽的 action。
+- 测试：codegen A/B、emit_variant 默认 A/B、快照恢复；全量 830 / 7698。
 
 ### 2026-10-17 — F10c：删掉 9 个 bullet preset，内容改手写原语
 

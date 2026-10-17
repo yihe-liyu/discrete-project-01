@@ -95,6 +95,9 @@ func test_composer_mode_builds_code_and_previews():
 	assert_true(code.contains("lc.sfx"), "代码含 Action")
 	assert_true(code.contains("data.trajectory(lc)"), "代码以 trajectory 收尾")
 	cp.add_op(&"action", &"emit")   # 带 BulletData spawn，验证快照可序列化
+	cp.add_op(&"action", &"emit_variant")
+	assert_true(cp.code().contains("_spawn_a"), "emit_variant 默认模板 A")
+	assert_true(cp.code().contains("_spawn_b"), "emit_variant 默认模板 B")
 	BulletManager.current.clear_all()
 	rig.fire_once()
 	assert_true(BulletManager.current.active_count() >= 1, "拼装页预览应发射")
@@ -104,4 +107,8 @@ func test_composer_mode_builds_code_and_previews():
 	var cfg_path := "user://composer_snapshot_test.cfg"
 	assert_eq(cfg.save(cfg_path), OK, "拼装工作区快照应能写入 ConfigFile（不能塞 BulletData 实例）")
 	DirAccess.remove_absolute(cfg_path)
+	var dump: Dictionary = cp.dump()
+	cp.load_from(dump)
+	assert_true(cp.code().contains("_spawn_a"), "模板快照恢复后 emit_variant 仍用 A")
+	assert_true(cp.code().contains("_spawn_b"), "模板快照恢复后 emit_variant 仍用 B")
 	rig.queue_free()

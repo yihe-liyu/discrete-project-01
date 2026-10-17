@@ -396,6 +396,7 @@ func _fire(p_ctx: StageContext) -> void:
 ```
 
 > 不想手写？F6 创作台 → 弹幕台 → **拼装**：选 Move/Until/Action、调参数、预览、复制代码。
+> `emit` / `emit_variant` 可分别用 A/B 两个替换弹模板（贴图/染色/加色/速度）。
 
 #### ② 常见组合（preset 已删，照着拼）
 

@@ -3,7 +3,7 @@ extends VBoxContainer
 ##
 ## 边界：只拼 `BulletLifecycle`（trajectory），不拼 `_tick` / 波次调度。
 ## 难度：4 个 BulletComposer 各存一档（Easy/Normal/Hard/Lunatic），切难度不丢。
-## 代码里的 `_spawn` 是占位：作者替换成自己的 BulletData。
+## 代码里的 `_spawn` / `_spawn_a` / `_spawn_b` 是占位：作者替换成自己的 BulletData。
 
 signal preview_requested(lifecycle: BulletLifecycle)
 signal difficulty_changed(index: int)
@@ -24,6 +24,14 @@ var _phase_index: int = 0
 var _selected: Dictionary = {}
 var _spawn_provider: Callable
 var _building: bool = false
+## 替换弹模板 A/B（emit / emit_variant 用）；代码里是 _spawn_a/_spawn_b 占位。
+var _templates: Array = []
+var _template_keys: Array[String] = ["", ""]
+var _template_tex_sel: Array = []
+var _template_color_btn: Array = []
+var _template_blend_chk: Array = []
+var _template_speed_spin: Array = []
+var _suppress_template: bool = false
 
 var _difficulty_sel: OptionButton
 var _kind_sel: OptionButton
@@ -43,13 +51,18 @@ func _ready() -> void:
 	_difficulty = clampi(SaveData.selected_difficulty, 0, 3)
 	for i in 4:
 		_composers.append(COMPOSER.new())
+	_init_templates()
 	_build_ui()
+	_apply_template_ui()
 	_rebuild_all()
 
 
 ## 由弹幕台注入：返回当前“子弹外形”BulletData（emit/spawn 的预览载体）。
 func setup(spawn_provider: Callable) -> void:
 	_spawn_provider = spawn_provider
+	if is_node_ready() and _templates.is_empty():
+		_init_templates()
+		_apply_template_ui()
 
 
 func _build_ui() -> void:
@@ -68,6 +81,10 @@ func _build_ui() -> void:
 	_difficulty_sel.item_selected.connect(_on_difficulty_changed)
 	diff_row.add_child(_difficulty_sel)
 	add_child(diff_row)
+
+	add_child(RIG_COMMON.section_label("替换弹模板（A/B）"))
+	for slot in 2:
+		add_child(_build_template_row(slot))
 
 	var add_row := HBoxContainer.new()
 	add_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -127,7 +144,7 @@ func _build_ui() -> void:
 	_preview_btn.pressed.connect(_preview)
 	code_head.add_child(_preview_btn)
 	add_child(code_head)
-	add_child(RIG_COMMON.hint_label("_spawn 是占位；替换成你的 BulletData"))
+	add_child(RIG_COMMON.hint_label("_spawn / _spawn_a / _spawn_b 是占位；替换成你的 BulletData"))
 
 	_code_edit = TextEdit.new()
 	_code_edit.editable = false
@@ -149,6 +166,151 @@ func _refresh_op_list() -> void:
 		_op_sel.add_item(str(d["id"]))
 		_op_sel.set_item_metadata(_op_sel.item_count - 1, d["id"])
 		_op_sel.set_item_tooltip(_op_sel.item_count - 1, str(d["label"]))
+
+
+func _init_templates() -> void:
+	_templates = [_copy_current(), _copy_current()]
+	_template_keys = ["", ""]
+
+
+## 从当前弹型复制一份“外形模板”（不带 lifecycle / 脚本 / params）。
+func _copy_current() -> BulletData:
+	var d := BulletData.new()
+	var src = _spawn_provider.call() if _spawn_provider.is_valid() else null
+	if src is BulletData:
+		d.texture = src.texture
+		d.tint = src.tint
+		d.tint_mode = src.tint_mode
+		d.velocity = src.velocity
+		d.faction = src.faction
+		d.hitbox_shape = src.hitbox_shape
+		d.hitbox_offset = src.hitbox_offset
+		d.hitbox_radius = src.hitbox_radius
+		d.hitbox_size = src.hitbox_size
+		d.follow_dir = src.follow_dir
+		d.dir_offset = src.dir_offset
+		d.is_spawn_fog = src.is_spawn_fog
+	else:
+		d.tex("小玉")
+	d.enemy()
+	d.lifecycle = null
+	d.coroutine_script = null
+	d.params = {}
+	return d
+
+
+func _build_template_row(slot: int) -> Control:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 4)
+	var lb := RIG_COMMON.label("A" if slot == 0 else "B", RIG_COMMON.HINT_SIZE)
+	lb.custom_minimum_size = Vector2(16, 0)
+	row.add_child(lb)
+
+	var tex := OptionButton.new()
+	tex.fit_to_longest_item = false
+	tex.custom_minimum_size = Vector2(92, 0)
+	tex.add_item("当前贴图")
+	tex.set_item_metadata(0, "")
+	for key in BulletCatalog.keys():
+		tex.add_item(key)
+		tex.set_item_metadata(tex.item_count - 1, key)
+	row.add_child(tex)
+
+	var color := ColorPickerButton.new()
+	color.custom_minimum_size = Vector2(36, 0)
+	color.text = "色"
+	row.add_child(color)
+
+	var blend := CheckBox.new()
+	blend.text = "加色"
+	row.add_child(blend)
+
+	var speed := SpinBox.new()
+	speed.min_value = 0.0
+	speed.max_value = 4000.0
+	speed.step = 5.0
+	speed.custom_minimum_size = Vector2(64, 0)
+	row.add_child(speed)
+
+	tex.item_selected.connect(func(_i): _on_template_edit(slot))
+	color.color_changed.connect(func(_c): _on_template_edit(slot))
+	blend.toggled.connect(func(_v): _on_template_edit(slot))
+	speed.value_changed.connect(func(_v): _on_template_edit(slot))
+	_template_tex_sel.append(tex)
+	_template_color_btn.append(color)
+	_template_blend_chk.append(blend)
+	_template_speed_spin.append(speed)
+	return row
+
+
+func _apply_template_ui() -> void:
+	if _template_tex_sel.size() < 2:
+		return
+	_suppress_template = true
+	for slot in 2:
+		var tex: OptionButton = _template_tex_sel[slot]
+		var key := _template_keys[slot]
+		var idx := 0
+		for i in tex.item_count:
+			if str(tex.get_item_metadata(i)) == key:
+				idx = i
+		tex.selected = idx
+		var tmpl: BulletData = _templates[slot]
+		(_template_color_btn[slot] as ColorPickerButton).color = tmpl.tint
+		(_template_blend_chk[slot] as CheckBox).button_pressed = tmpl.tint_mode == BulletData.TintMode.BLEND
+		(_template_speed_spin[slot] as SpinBox).value = tmpl.velocity.y
+	_suppress_template = false
+
+
+func _on_template_edit(slot: int) -> void:
+	if _suppress_template or _template_tex_sel.size() < 2:
+		return
+	var tex: OptionButton = _template_tex_sel[slot]
+	var key := str(tex.get_item_metadata(tex.selected))
+	_template_keys[slot] = key
+	var d: BulletData
+	if key == "":
+		d = _copy_current()
+	else:
+		d = BulletData.new().tex(key)
+	d.color((_template_color_btn[slot] as ColorPickerButton).color)
+	d.blend((_template_blend_chk[slot] as CheckBox).button_pressed)
+	d.speed((_template_speed_spin[slot] as SpinBox).value)
+	d.enemy()
+	d.lifecycle = null
+	d.coroutine_script = null
+	d.params = {}
+	_templates[slot] = d
+	_sync_actions_for_template(slot)
+	_refresh_code()
+	_refresh_selected_label()
+
+
+func _spawn_for(slot: Variant) -> Variant:
+	match str(slot):
+		"a":
+			return _templates[0] if _templates.size() > 0 else _current_spawn()
+		"b":
+			return _templates[1] if _templates.size() > 1 else _current_spawn()
+	return _current_spawn()
+
+
+## 模板被编辑后，把所有引用该槽的 emit/emit_variant spawn 同步成新实例。
+func _sync_actions_for_template(slot: int) -> void:
+	var key := "a" if slot == 0 else "b"
+	for p in composer().phases:
+		for a in p["on_end"]:
+			var op := StringName(a.get("op", &""))
+			if op == &"emit" and str(a.get("spawn_slot", "current")) == key:
+				a["spawn"] = _spawn_for(key)
+			elif op == &"emit_variant":
+				var slots: Array = a.get("spawn_slots", [])
+				if slots.find(key) != -1:
+					var spawns: Array = []
+					for s in slots:
+						spawns.append(_spawn_for(str(s)))
+					a["spawns"] = spawns
 
 
 # ═══ 公开接缝（测试/创作台）═══
@@ -215,14 +377,17 @@ func add_op(kind: StringName, op_id: StringName) -> void:
 
 
 func preview_lifecycle() -> BulletLifecycle:
-	var spawn = _current_spawn()
 	for p in composer().phases:
 		for a in p["on_end"]:
 			var op := StringName(a.get("op", &""))
 			if op == &"emit":
-				a["spawn"] = spawn
+				a["spawn"] = _spawn_for(a.get("spawn_slot", "current"))
 			elif op == &"emit_variant":
-				a["spawns"] = [spawn, spawn] if spawn != null else []
+				var slots: Array = a.get("spawn_slots", ["a", "b"])
+				var spawns: Array = []
+				for s in slots:
+					spawns.append(_spawn_for(str(s)))
+				a["spawns"] = spawns
 	return composer().to_lifecycle()
 
 
@@ -230,7 +395,16 @@ func dump() -> Dictionary:
 	var variants: Array = []
 	for c in _composers:
 		variants.append(_serializable_spec(c))
-	return {"difficulty": _difficulty, "variants": variants}
+	var templates: Array = []
+	for i in 2:
+		var t: BulletData = _templates[i]
+		templates.append({
+			"tex": _template_keys[i],
+			"tint": t.tint,
+			"blend": t.tint_mode == BulletData.TintMode.BLEND,
+			"speed": t.velocity.y,
+		})
+	return {"difficulty": _difficulty, "variants": variants, "templates": templates}
 
 
 ## ConfigFile 不能存 BulletData 实例：spawn/spawns 存占位，载入后再用当前子弹补。
@@ -252,6 +426,26 @@ func load_from(data: Dictionary) -> void:
 	var variants: Array = data.get("variants", [])
 	for i in mini(4, variants.size()):
 		_composers[i].from_spec(variants[i])
+	var tpls: Array = data.get("templates", [])
+	for i in 2:
+		var spec: Dictionary = tpls[i] if i < tpls.size() else {}
+		var key := str(spec.get("tex", ""))
+		var d: BulletData
+		if spec.is_empty():
+			d = _copy_current()
+		else:
+			d = _copy_current() if key == "" else BulletData.new().tex(key)
+			if spec.has("tint"):
+				d.color(spec["tint"])
+			d.blend(bool(spec.get("blend", false)))
+			d.speed(float(spec.get("speed", 0.0)))
+			d.enemy()
+			d.lifecycle = null
+			d.coroutine_script = null
+			d.params = {}
+		_templates[i] = d
+		_template_keys[i] = key
+	_apply_template_ui()
 	_difficulty = clampi(int(data.get("difficulty", SaveData.selected_difficulty)), 0, 3)
 	if _difficulty_sel != null:
 		_difficulty_sel.selected = _difficulty
@@ -430,19 +624,24 @@ func _add_param_row(param: Dictionary, op_call: Dictionary) -> void:
 			row.add_child(opt)
 		"dir":
 			row.add_child(_make_dir_editor(op_call))
-		"spawn", "spawns":
-			var note_text := "当前子弹（_spawn）" if ptype == "spawn" \
-				else "两组模板：都暂用 _spawn（代码里换 A/B）"
-			var note := RIG_COMMON.label(note_text, RIG_COMMON.HINT_SIZE)
-			note.modulate = Color(1, 1, 1, 0.6)
-			note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			row.add_child(note)
-			if ptype == "spawn":
-				op_call[key] = _current_spawn()
-			else:
-				var s = _current_spawn()
-				op_call[key] = [s, s] if s != null else []
+		"spawn":
+			var opt := _spawn_picker(str(op_call.get("spawn_slot", "current")))
+			opt.item_selected.connect(func(i): _on_spawn_slot_chosen(i, opt, op_call))
+			row.add_child(opt)
+			_set_spawn_slot(op_call, str(op_call.get("spawn_slot", "current")))
+		"spawns":
+			var h := HBoxContainer.new()
+			h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			h.add_theme_constant_override("separation", 4)
+			var slots: Array = op_call.get("spawn_slots", ["a", "b"])
+			for i in 2:
+				var which := i
+				var opt := _spawn_picker(str(slots[i]) if i < slots.size() else ("a" if i == 0 else "b"))
+				opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				opt.item_selected.connect(func(idx): _on_variant_slot_chosen(idx, opt, op_call, which))
+				h.add_child(opt)
+			row.add_child(h)
+			_set_variant_slots(op_call, slots)
 		"hook", "sfx", "string":
 			var le := LineEdit.new()
 			le.text = str(op_call.get(key, param.get("default", "")))
@@ -587,6 +786,51 @@ func _refresh_code() -> void:
 		_code_edit.text = composer().to_code()
 
 
+func _spawn_picker(current_slot: String) -> OptionButton:
+	var opt := OptionButton.new()
+	opt.fit_to_longest_item = false
+	opt.add_item("当前子弹")
+	opt.set_item_metadata(0, "current")
+	opt.add_item("模板 A")
+	opt.set_item_metadata(1, "a")
+	opt.add_item("模板 B")
+	opt.set_item_metadata(2, "b")
+	var idx := 0
+	for i in opt.item_count:
+		if str(opt.get_item_metadata(i)) == current_slot:
+			idx = i
+	opt.selected = idx
+	return opt
+
+
+func _on_spawn_slot_chosen(index: int, opt: OptionButton, op_call: Dictionary) -> void:
+	_set_spawn_slot(op_call, str(opt.get_item_metadata(index)))
+
+
+func _on_variant_slot_chosen(index: int, opt: OptionButton, op_call: Dictionary, which: int) -> void:
+	var slots: Array = (op_call.get("spawn_slots", ["a", "b"]) as Array).duplicate()
+	while slots.size() < 2:
+		slots.append("a" if slots.is_empty() else "b")
+	slots[which] = str(opt.get_item_metadata(index))
+	_set_variant_slots(op_call, slots)
+
+
+func _set_spawn_slot(op_call: Dictionary, slot: String) -> void:
+	op_call["spawn_slot"] = slot
+	op_call["spawn"] = _spawn_for(slot)
+	_refresh_code()
+	_refresh_selected_label()
+
+
+func _set_variant_slots(op_call: Dictionary, slots: Array) -> void:
+	var pair: Array = [str(slots[0]) if slots.size() > 0 else "a",
+		str(slots[1]) if slots.size() > 1 else "b"]
+	op_call["spawn_slots"] = pair
+	op_call["spawns"] = [_spawn_for(pair[0]), _spawn_for(pair[1])]
+	_refresh_code()
+	_refresh_selected_label()
+
+
 func _current_spawn() -> Variant:
 	if _spawn_provider.is_valid():
 		return _spawn_provider.call()
@@ -623,7 +867,13 @@ func _default_args(def: Dictionary) -> Dictionary:
 				args[key] = [s, s] if s != null else []
 			"hook", "sfx": args[key] = StringName(default) if default != null else &""
 			_: args[key] = default
-	if StringName(def.get("id", &"")) == &"emit_variant":
+	var def_id := StringName(def.get("id", &""))
+	if def_id == &"emit":
+		args["spawn_slot"] = "current"
+		args["spawn"] = _spawn_for("current")
+	elif def_id == &"emit_variant":
+		args["spawn_slots"] = ["a", "b"]
+		args["spawns"] = [_spawn_for("a"), _spawn_for("b")]
 		args["dir"] = BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, 1.0, 0.0)
 	return args
 

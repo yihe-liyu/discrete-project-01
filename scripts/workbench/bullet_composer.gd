@@ -171,13 +171,16 @@ func _action_code(op_call: Dictionary) -> String:
 	match op:
 		&"emit":
 			return "emit(%s, %s, %s, %s)" % [
-				_spawn_code(op_call.get("spawn")), _dir_code(op_call.get("dir", {})),
+				_spawn_code(op_call.get("spawn_slot", "current")), _dir_code(op_call.get("dir", {})),
 				_num_code(op_call.get("speed", 0.0)), _at_code(op_call.get("at", BulletLifecycle.AT_CURRENT))]
 		&"emit_variant":
 			var spawns: Array = op_call.get("spawns", [])
+			var slots: Array = op_call.get("spawn_slots", [])
+			# 快照会把 spawns 存成空数组（BulletData 不可序列化），所以按 slots 也要能生成 A/B。
+			var count := maxi(maxi(spawns.size(), slots.size()), 2)
 			var parts: Array[String] = []
-			for s in spawns:
-				parts.append(_spawn_code(s))
+			for i in count:
+				parts.append(_spawn_code(slots[i] if i < slots.size() else "current"))
 			var arr_code := "[" + ", ".join(parts) + "]"
 			return "emit_variant(%s, %s, %s, %s)" % [
 				arr_code, _dir_code(op_call.get("dir", {})),
@@ -241,8 +244,11 @@ func _wall_code(mask: int) -> String:
 	return " | ".join(parts) if not parts.is_empty() else "0"
 
 
-func _spawn_code(_spawn: Variant) -> String:
-	# 代码里不写真实例；统一占位，作者替换成自己的 BulletData。
+func _spawn_code(slot: Variant) -> String:
+	# 代码里不写真实例；按模板槽位给占位，作者替换成自己的 BulletData。
+	match str(slot):
+		"a": return "_spawn_a"
+		"b": return "_spawn_b"
 	return "_spawn"
 
 
