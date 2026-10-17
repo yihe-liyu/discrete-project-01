@@ -50,7 +50,6 @@ var _param_box: VBoxContainer
 var _param_title: Label
 var _code_edit: TextEdit
 var _copy_btn: Button
-var _preview_btn: Button
 var _add_btn: Button
 
 
@@ -158,9 +157,6 @@ func _build_ui() -> void:
 	_copy_btn.text = "复制"
 	_copy_btn.pressed.connect(_copy_code)
 	code_head.add_child(_copy_btn)
-	_preview_btn = RIG_COMMON.accent_button("预览发射")
-	_preview_btn.pressed.connect(_preview)
-	code_head.add_child(_preview_btn)
 	add_child(code_head)
 	add_child(RIG_COMMON.hint_label("_spawn / _spawn_a / _spawn_b 是占位；替换成你的 BulletData"))
 

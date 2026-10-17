@@ -222,7 +222,31 @@ func _build_ui() -> void:
 	_dev_hint = _hint("左键=发射点 · 右键=指向 · 鼠标=自机")
 	direct.add_child(_dev_hint)
 
-	direct.add_child(RIG_COMMON.section_label("操作"))
+
+
+	if not _has_legacy_scripts:
+		_behavior_label.visible = false
+		_script_sel.visible = false
+		_param_panel.visible = false
+		_dev_label.visible = false
+		_hot_chk.visible = false
+
+
+	_composer_panel = COMPOSER_PANEL.new()
+	_composer_panel.setup(_composer_spawn, _composer_base_spec, _apply_composer_base)
+	_composer_panel.preview_requested.connect(_on_composer_preview)
+	_composer_panel.difficulty_changed.connect(_on_composer_difficulty)
+	_composer_panel.status.connect(_on_composer_status)
+	_composer_panel.visible = false
+	box.add_child(_composer_panel)
+
+	# 操作底栏：直射/拼装共用（连发/清场/种子状态一致）
+	var ops_parent := VBoxContainer.new()
+	ops_parent.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ops_parent.add_theme_constant_override("separation", 6)
+	box.add_child(ops_parent)
+
+	ops_parent.add_child(RIG_COMMON.section_label("操作"))
 
 	# 操作按钮一行：紧凑化后 4 个按钮总宽已能放进 432；每键均分剩余宽。
 	var ops := HBoxContainer.new()
@@ -241,7 +265,7 @@ func _build_ui() -> void:
 	for button in [_fire_btn, _burst_chk, _clear_btn, _seed_btn]:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ops.add_child(button)
-	direct.add_child(ops)
+	ops_parent.add_child(ops)
 
 	var itv := HBoxContainer.new()
 	itv.add_theme_constant_override("separation", 8)
@@ -256,26 +280,12 @@ func _build_ui() -> void:
 	_interval_spin.value = 0.5
 	_interval_spin.custom_minimum_size = Vector2(140, 0)
 	itv.add_child(_interval_spin)
-	direct.add_child(itv)
+	ops_parent.add_child(itv)
 
 	_stats_label = _label("")
-	direct.add_child(_stats_label)
-
-	if not _has_legacy_scripts:
-		_behavior_label.visible = false
-		_script_sel.visible = false
-		_param_panel.visible = false
-		_dev_label.visible = false
-		_hot_chk.visible = false
-
-
-	_composer_panel = COMPOSER_PANEL.new()
-	_composer_panel.setup(_composer_spawn, _composer_base_spec, _apply_composer_base)
-	_composer_panel.preview_requested.connect(_on_composer_preview)
-	_composer_panel.difficulty_changed.connect(_on_composer_difficulty)
-	_composer_panel.status.connect(_on_composer_status)
-	_composer_panel.visible = false
-	box.add_child(_composer_panel)
+	ops_parent.add_child(_stats_label)
+	# 操作栏常驻在模式行下方：拼装页也能直接发射/连发/清场/换种子，不必滚到代码框下面。
+	box.move_child(ops_parent, 2)
 
 
 # ═══ 拼装页接线 ═══
