@@ -448,22 +448,32 @@ tl.loop()
 
 | key | texture_key | 判定 | 备注 |
 |---|---|---|---|
-| 点弹 | 点弹 | circle 4 | 微型 |
+| 点弹 | 点弹 | circle 5 | 微型 |
 | 点棱弹 | 点棱弹 | circle 4 | 微型 |
-| 菌弹 | 菌弹 | circle 4 | 微型 |
-| 小玉 | 小玉 | circle 6 | 小型（最常用） |
-| 星弹 | 星弹 | circle 6 | 小型 |
+| 菌弹 | 菌弹 | circle 5 | 微型 |
+| 小玉 | 小玉 | circle 8 | 小型（最常用） |
+| 星弹 | 星弹 | circle 6 + offset x−1 | 小型，判定随朝向 |
 | 枪弹 | 枪弹 | circle 6 | 小型 |
 | 棱弹 | 棱弹 | circle 6 | 小型 |
-| 滴弹 | 滴弹 | circle 6 | 小型 |
-| 环玉 | 环玉 | circle 6 | 小型 |
+| 滴弹 | 滴弹 | circle 5 + offset x+4 | 小型，判定随朝向 |
+| 环玉 | 环玉 | circle 8 | 小型 |
 | 符札 | 符札 | circle 6 | 小型 |
 | 米弹 | 米弹 | circle 6 | 小型 |
-| 苦无 | 苦无 | circle 6 | 小型 |
+| 苦无 | 苦无 | circle 5 | 小型 |
 | 长菌弹 | 长菌弹 | circle 6 | 小型 |
 | 鳞弹 | 鳞弹 | circle 6 | 小型 |
-| 小光玉 | 小光玉 | circle 12 | 中型 |
+| 刀弹 | 刀弹 | circle 6 | 小型（有向） |
+| 箭弹 | 箭弹 | circle 6 + offset x+20 | 中型，判定随朝向 |
+| 蝶弹 | 蝶弹 | circle 8 + offset x−3.5 | 中型，判定随朝向 |
+| 火弹 | 火弹 | circle 8 + offset x+11 | 中型，判定随朝向 |
+| 小光玉 | 小光玉 | circle 16 | 中型 |
+| 椭弹 | 椭弹 | circle 12 | 中型（有向） |
+| 大星弹 | 大星弹 | circle 16 + offset x−3 | 中型，判定随朝向 |
+| 心弹 | 心弹 | circle 20 | 大型 |
+| 矩弹 | 矩弹 | circle 20 | 大型（有向） |
 | 中玉 | 中玉 | circle 24 | 中型 |
+| 光玉 | 光玉 | circle 28 | 大型 |
+| 大玉 | 大玉 | circle 36 | 大型 |
 | reimu_main | 灵梦自机主弹 | rect 48×24 | 自机弹 |
 | reimu_opt1 | 灵梦子机高速弹 | circle 12 | 自机弹 |
 | reimu_opt2 | 灵梦子机低速弹 | rect 120×24 | 自机弹 |
@@ -486,6 +496,16 @@ tl.loop()
 > 每个 key 都要在 `SFX_DB` 有音量项（`test_sfx_mix` 会红）。**加 key 时顺手改上面这一行。**
 > `get_card` = **正常流程干净收取一张符卡**的回报音（`Boss.CAPTURE_SFX`；非符 / 练习模式 / miss·bomb 作废都不播）。
 > `get_player` = 拿到**完整残机**的回报音（`Item.EXTEND_SFX`；碎片集满 5 片 / 吃到整命道具，且**只在真的多了一条命时播** —— 已满 8 命不播）。
+>
+> **音量与护栏（2026-10-10）**：BGM 换曲 = **新曲满音量直入、旧曲淡出 0.6s**（`BGM_FADE_IN = 0`，作者拍板不要淡入；
+> 想要渐入就把它设回 0.6）；同一首**永远只有一路**（重开复用那一路，不会自己叠自己）。音量一律走总线 `Master → BGM / SE / UI`（布局 `res://default_bus_layout.tres`；
+> 缺总线**响亮告警**，见 `AudioManager._require_bus`）。SE 总线挂 `AudioEffectHardLimiter`（防多声叠加削波），
+> 另有 `AudioManager` 里三道护栏：**密度压制**（`density_cut_db()`：同时响的声部 > `DENSITY_KNEE` 时压**新起**的密集音，
+> 上限 `DENSITY_MAX_CUT_DB`，重要音不吃）、**优先级驱逐**（池满时踢最不重要而非最老）、
+> **BGM 让位**（`BGM_DUCK_ON_SFX` 里的音响起时 BGM 自动压 6 dB 再回落）。
+> 新音效要归类就去 `AudioManager.SFX_PRIORITY_HIGH` / `SFX_PRIORITY_LOW`（不写 = 一般，安全）。
+> 想量「这一关到底多吵」：`godot --headless --path . res://tools/audio_density_probe.tscn -- --seconds 30`
+> （默认**按住射击** —— headless 没有人类输入，不按会量到假低的数字）。
 
 ### 7.3 阵营 / 混合
 

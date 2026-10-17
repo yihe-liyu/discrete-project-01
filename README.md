@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-744%20tests%20/%20116%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-802%20tests%20/%20118%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -38,7 +38,7 @@
 | 叙事 | ██████████ 50% |
 | 打磨/QoL | ██████████████ 70% |
 
-已知待做：Stage 2~6 内容（面脚本 / Boss / 符卡）、Stage Practice、Replay 播放器、结算画面、各页面逐页核验。
+已知待做：Stage 2~6 内容（面脚本 / Boss / 符卡）、Replay 播放器、结算画面、各页面逐页核验。
 待办逐条清单在 [docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md) 的「🔴 待改进」与本地 `TODO_TEMP.md`。
 
 ---
@@ -63,7 +63,7 @@
 | **[CONTENT_GUIDE.md](CONTENT_GUIDE.md)** | 内容制作流程 —— 怎么加关卡/敌人/Boss/符卡 | 关卡设计师 |
 | **[docs/DIALOGUE_SYSTEM.md](docs/DIALOGUE_SYSTEM.md)** | 对话系统 —— 分层 / DSL / 播放器 / 预览与干跑 | 编剧 |
 | **[docs/DIALOGUE.md](docs/DIALOGUE.md)** | 对白全集（**剧本原稿**）—— 已实现关卡（Stage 1）以 `data/dialogue/stage/*.gd` 为准 | 编剧 |
-| **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（未做项 + 已完成记录） | 维护者 |
+| **[docs/BACKGROUND_VISUAL_PLAN.md](docs/BACKGROUND_VISUAL_PLAN.md)** | 背景视觉计划（**已冻结**：现役 3D 背景 + 已完成记录 + 未做项留痕，不再投入） | 维护者 |
 | **[docs/TEST_INDEX.md](docs/TEST_INDEX.md)** | **测试索引** —— 114 个测试文件「改哪里 → 看哪条」+ 分层 + D3 白盒债清单 + 已知门禁坑（计数口径以本文为准） | 维护者 |
 | `docs/*.txt` | 原始设定资料：[omake.txt](docs/omake.txt)（附言 / Extra Story / 全角色设定）· [music.txt](docs/music.txt)（曲目）· [SpellCard.txt](docs/SpellCard.txt)（符卡名）· [FrontData.txt](docs/FrontData.txt) | 玩家/作者 |
 | `TODO_TEMP.md` | 作者**本地**临时待办（`.gitignore` 忽略、**不进 Git**、非权威） | 作者本人 |

@@ -1,6 +1,6 @@
 # 测试索引（改哪里 → 看哪条）
 
-> **这是什么**：116 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
+> **这是什么**：118 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
 > **这不是**：规格说明、待办清单、覆盖率报告（本项目**没有**覆盖率度量）。
 >
 > **怎么用**：改动前扫一眼对应层的表，改动后跑门禁。
@@ -17,17 +17,17 @@
 ./tools/verify.sh                                    # 七步门禁（文档哨兵+语法+命名+结构+启动+GUT+所有权）
 ```
 
-**现状**：116 脚本 / **744 用例（744 通过 / 0 红 —— ✅ 全绿）/ 6827 断言 / 37.576s** / 19 orphans / **0 pending**。
+**现状**：118 脚本 / **802 用例（802 通过 / 0 红 —— ✅ 全绿）/ 7040 断言 / 53.750s** / 19 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
-| **A 元守卫 · 工程契约** | 10 | 35 | 跨层的红线/约定，不属任何功能 |
+| **A 元守卫 · 工程契约** | 10 | 53 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 176 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 43 | 340 | `scripts/**` 的实体/系统/服务 |
-| **D UI / 菜单** | 15 | 102 | `scenes/ui/**` 与 HUD |
-| **E 内容** | 4 | 22 | `data/**` 的形状与合法性 |
+| **C 宿主 · 运行时系统** | 44 | 366 | `scripts/**` 的实体/系统/服务 |
+| **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
+| **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 12 | 66 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
 
@@ -35,7 +35,7 @@
 
 ---
 
-## A · 元守卫 / 工程契约（10 / 35）
+## A · 元守卫 / 工程契约（10 / 53）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -44,7 +44,7 @@
 | [test_config_validation](../test/test_config_validation.gd) | 配置校验层 | 7 | 0 |
 | [test_session_state](../test/test_session_state.gd) | per-run static 必须能被 `SaveData.reset_session()` 一次清干净 | 3 | 0 |
 | [test_asset_registry](../test/test_asset_registry.gd) | `AssetRegistry` 去 autoload（→ static 表）后静态访问仍可用 | 2 | 0 |
-| [test_sfx_mix](../test/test_sfx_mix.gd) | **音效均衡表**不变量：每个音效都有基准 dB / 整表中心化（均值≈0）/ ±12dB 内 | 3 | 0 |
+| [test_sfx_mix](../test/test_sfx_mix.gd) | **音效均衡表**不变量：每个音效都有基准 dB / 整表中心化（均值≈0）/ ±12dB 内；**音量总线**：三条总线存在 / 三段音量各自落到自己的总线（**主音量也管 SE**）/ 拉到 0 = 静音 / per-player 只留均衡偏移 / UI 音走独立总线 / 缺总线响亮告警；**密度护栏**：SE 总线挂硬限幅 / 压制随声部升高且有上限、散开自动归零 / 池满时踢的是最不重要而非最老；**动态混音**：让位有起落且自动回落 / 关键音自动触发让位 / 换曲交叉淡入淡出 / 同曲不重头播 / 停止默认淡出 / **同一首重开只允许一路在响**（复用正在淡出的那一路）/ **新曲不淡入**（满音量直入，重开同理） | 21 | 0 |
 | [test_native_extension_loads](../test/test_native_extension_loads.gd) | 扩展**已构建**时必须真的注册成功 | 2 | 0 |
 | [test_coroutine_start](../test/test_coroutine_start.gd) | `CoroutineScript._on_start()` 时机（start 后、首次 `_tick` 前一次） | 2 | 0 |
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：打错键名 / 类型不匹配要**响亮报错** | 5 | 0 |
@@ -103,7 +103,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（43 / 340）
+## C · 宿主 · 运行时系统（44 / 366）
 
 ### C1 组合根 / 服务 / 时间线（9 / 52）
 
@@ -112,7 +112,8 @@
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |
 | [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 四个宿主（真游戏 / 工作台 / 组合台）真的在用它 —— 注册表里有自机 / **运行时显式认领 `player`（B2）** / 内核后端拿到同一张注册表 / fx 挂舞台 / 异常路径只交注册表 | 11 | 0 |
 | [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop | 9 | 0 |
-| [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 | 4 | 0 |
+| [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 | 10 | 0 |
+| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：**即时全屏清敌弹**（当帧清空、与距离无关）—— 与 `death_clear()` 的**膨胀圈**语义差是本文件重点（把它写成膨胀圈 ⇒ 两条断言红）+ **每颗被清的弹各留一条消弹特效**（退回裸清 ⇒ 报 0 vs 2）；无管理器 = 静默 no-op。⚠️ 数弹只数 `get_type(i) != null` 的真弹 —— 特效行与弹**共用同一个 store** | 2 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 | 11 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** | 6 | 0 |
@@ -124,10 +125,10 @@
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_player_resources](../test/test_player_resources.gd) | `PlayerResources` 数值系统：分数/火力/记忆/残机/Bomb（不经全局转发）+ **`use_bombs(n)` 一次扣多、不足扣光** + **残机碎片/整命的返回值 = 「真的多了一条命」** + **`add_bombs(n)` 直接加雷（绕过碎片、封顶）** | 15 | 0 |
-| [test_player](../test/test_player.gd) | `Player`：移动 / focus 低速 / 被弹（扣火力 + **复位两步** + **被弹炸弹窗口**：定格/按 bomb 抵消扣 2 雷/只剩 1 扣 1/没雷不开窗/过期照常结算/**窗口内按暂停也能收尾**）/ 数据应用 / 无敌时长链接 DEATH_MENU_DELAY / 无敌闪烁只闪贴图 / 扇形半径与左右边界契约 + **miss 补偿：直接 +2 雷（碎片不动、封顶、被弹炸弹抵消的不给）** | 26 | 4 |
+| [test_player_resources](../test/test_player_resources.gd) | `PlayerResources` 数值系统：分数/火力/记忆/残机/Bomb（不经全局转发）+ **`use_bombs(n)` 一次扣多、不足扣光** + **残机碎片/整命的返回值 = 「真的多了一条命」** + **`add_bombs(n)` 直接加雷（绕过碎片、封顶）** + **miss 雷惩罚：扣 2、下限 3**（先扣再抬 ⇒ 少于 3 反而被补到 3） | 16 | 0 |
+| [test_player](../test/test_player.gd) | `Player`：移动 / focus 低速 / 被弹（扣火力 + **复位两步** + **被弹炸弹窗口**：定格/按 bomb 抵消扣 2 雷/只剩 1 扣 1/没雷不开窗/过期照常结算/**窗口内按暂停也能收尾**）/ 数据应用 / 无敌时长链接 DEATH_MENU_DELAY / 无敌闪烁只闪贴图 / 扇形半径与左右边界契约 + **miss 雷惩罚：扣 2 / 下限 3（满仓不越界；少于 3 中弹反而净增）/ 雷碎片不动 / 被弹炸弹抵消的那次不做惩罚** | 26 | 4 |
 | [test_item](../test/test_item.gd) | 道具系统：掉落收集 / 类型效果 / 防重复 / **拿到完整残机播 `get_player`**（碎片第 5 片 / 整命道具播；没集满 / 满 8 命不播）/ **miss 扇形爆发**（宽限不被吸附 + 等半径弧 + 均匀 20° + 飞完**竖直下落** + **左右夹进框**） | 17 | 3 |
-| [test_practice_mode](../test/test_practice_mode.gd) | 练习模式：残机/bomb 归零、火力拉满（须在自机绑定后生效） | 4 | 0 |
+| [test_practice_mode](../test/test_practice_mode.gd) | 练习模式：残机/bomb 归零、火力拉满（须在自机绑定后生效） + **关卡练习起始火力：第 1 面例外、第 2 面起拉满**（纯判定 + 真场景端到端两条；回归：落点必须在 `load_stage` 的 `reset_all` **之后**，否则被它冲掉） | 7 | 0 |
 | [test_float_damage](../test/test_float_damage.gd) | 小数伤害累积器 | 2 | 4 |
 
 ### C3 激光（2 / 25）
@@ -152,8 +153,8 @@
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_miss_circle_layer](../test/test_miss_circle_layer.gd) | Miss 圈特效：autoload → 场景节点 + 组合根注入 | 8 | 7 |
-| [test_decor_manager](../test/test_decor_manager.gd) | `DecorManager`：静态路径（SCISSOR 层）性能优化后行为不变 | 6 | 1 |
-| [test_stage_background](../test/test_stage_background.gd) | 背景环境接线：**父节点 `_ready` 之前应用预设也必须生效**（子节点 `_ready` 先于父节点 ⇒ 旧实现静默 no-op，练习模式改预设不变）+ `build_environment()` 每次全新实例（防「越重跑越暗」）+ **预设必须带真天球且不被 `fog_sky_affect` 洗掉** + **地平线联动真的生效** + **`Sky.radiance_size` 必须压低**（默认 256 ⇒ 每帧重算立方图，实测 8.9 → 44.8 ms）+ **雾色不许是亮灰**（`Color.DARK_GRAY` = CSS #A9A9A9 = 0.663 会把远处洗亮）+ **相机按类型找**（不按名字：改名不再静默改变行为）+ **背景视口必须 `own_world_3d = true`**（否则与根视口共享 World3D，环境被同 world 的另一个 `WorldEnvironment` 抢） + **B3：场景必须声明 `DecorManager` 子节点**（`get_decor_manager()` 按类型解析） | 9 | 0 |
+| [test_decor_manager](../test/test_decor_manager.gd) | `DecorManager`：静态路径（SCISSOR 层）性能优化后行为不变 + **「树与地面同速」**（跟随速度取平面 `world_scroll_per_second()`，**含加速倍率** ——回归：2026-10-04 作者实测「树和地面的速度不一样了」，比值 1.0002 vs 期望 7） | 8 | 1 |
+| [test_stage_background](../test/test_stage_background.gd) | 背景环境接线：**父节点 `_ready` 之前应用预设也必须生效**（子节点 `_ready` 先于父节点 ⇒ 旧实现静默 no-op，练习模式改预设不变）+ `build_environment()` 每次全新实例（防「越重跑越暗」）+ **预设必须带真天球且不被 `fog_sky_affect` 洗掉** + **地平线联动真的生效** + **`Sky.radiance_size` 必须压低**（默认 256 ⇒ 每帧重算立方图，实测 8.9 → 44.8 ms）+ **雾色不许是亮灰**（`Color.DARK_GRAY` = CSS #A9A9A9 = 0.663 会把远处洗亮）+ **相机按类型找**（不按名字：改名不再静默改变行为）+ **背景视口必须 `own_world_3d = true`**（否则与根视口共享 World3D，环境被同 world 的另一个 `WorldEnvironment` 抢） + **B3：场景必须声明 `DecorManager` 子节点**（`get_decor_manager()` 按类型解析） + **相机复位回初始姿态（不只 fov）** + **`env_preset` 由场景声明、入树即应用**（环境不再依赖内容脚本的 `_ready`；练习模式同样覆盖） + **蒙眼雾：可见部分场景声明、参数唯一来源 = 材质**（旧实现三份默认 + 编辑器里看不见） + **`setup()` 不依赖父节点是 `StageBackground`**（旧实现 `get_parent()` ⇒ 挪层级就静默拿 null、雾不再跟相机） + **雾材质每实例独立**（`.tscn` sub_resource 默认跨实例共享 ⇒ 需 `resource_local_to_scene`） + **太阳 `SunSprite` 场景声明且纹理来自场景**（裸 `Image` 资源 ⇒ 编辑器里是空白，连位置都没法拖；实测圆心在画面顶边外 7 像素） + **宿主自动接线故事演出层**（`_resolve_showcase()` 按类型接相机+太阳 ⇒ **内容脚本零调用**；旧设计"记得调 setup() 才显示"已废止 —— 忘了就隐形且零报错，stage02 实况） + **太阳对准取"画出来的 sprite"而非 `Sun` 节点**（`SunSprite` 有局部位移 ⇒ 旧实现一改 y 就与黑雾错位） + **相机初始姿态可由背景声明**（`override_camera_home`，在抓 home **之前**应用 ⇒ `reset_camera()` 回**声明的**那套） + **相机动词绝对/相对分名 + 目标记忆**（相对动词从"上一条指令的**目标**"累加而非实时值，并先杀同属性旧 tween ⇒ 重叠不漂移；作者实测「Y 没回到 0」已成回归） | 20 | 0 |
 | [test_screen_shake](../test/test_screen_shake.gd) | `ScreenShake`：trauma 按 DECAY 衰减、sustain 保持到清零、强度封顶 1 | 6 | 6 |
 | [test_hit_effect](../test/test_hit_effect.gd) | 通用击中特效：一个类驱动所有特效场景（数据驱动验证） | 6 | 0 |
 | [test_spawn_fx](../test/test_spawn_fx.gd) | 出生雾 / 消弹消散统一特效模型（`EffectType` + 行 `fx_type`） | 5 | 2 |
@@ -186,9 +187,9 @@
 | [test_dialogue_preview](../test/test_dialogue_preview.gd) | 对话预览交互契约：**默认不自动播**（进场景预选但不播 / 换段只选中并停演出 / 换脚本同理） | 3 | 0 |
 | [test_dialogue_steps](../test/test_dialogue_steps.gd) | 对话系统：`StageState` / `DialogueSteps` DSL / `DialogueRunner`（纯逻辑，不进树） | 28 | 0 |
 | [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块** · **阶段按 uid 升序（符卡优先、非符路径定序）** · `@role` 补空缺不算冲突 · **角色标签只在敌人脚本里砍、前缀要「标签形状」** | 9 | 0 |
-| [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` | 3 | 0 |
+| [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` + **`playable()`（可玩清单）在扫描兜底下滤掉无关卡脚本的面** | 4 | 0 |
 
-## D · UI / 菜单（15 / 102）
+## D · UI / 菜单（16 / 113）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -196,7 +197,8 @@
 | [test_phase_result_banner](../test/test_phase_result_banner.gd) | **符卡结算横幅**：干净收取 / 失败（超时 / miss·bomb 作废）的文案与分数行显隐 + 渐显→停→渐隐顺序 + 落点（倒计时之下、报幕大字之上 —— 时长因此自由） | 12 | 3 |
 | [test_announce_label](../test/test_announce_label.gd) | `AnnounceLabel`：右停落点（视觉盒贴边）+ 场景声明的底衬/Bonus/Capture 子节点 | 12 | 0 |
 | [test_boss_hud](../test/test_boss_hud.gd) | `BossHud`：名字文字/显隐 + 阶段进度点显隐 | 10 | 10 |
-| [test_spell_practice_menu](../test/test_spell_practice_menu.gd) | 符卡练习菜单：难度槽（锁定 "?"、导航跳过）+ 切 stage 重建二级 + 非符三级不显名字但保持等高 + **舞台名走 `StageCatalog`** + **二级超长开窗滚动 + 滚动提示** + **人物选择：进场取上次选的、从练习返回回到同一个人** | 19 | **45** |
+| [test_spell_practice_menu](../test/test_spell_practice_menu.gd) | 符卡练习菜单：难度槽（锁定 "?"、导航跳过）+ 切 stage 重建二级 + 非符三级不显名字但保持等高 + **舞台名走 `StageCatalog`** + **二级超长开窗滚动 + 滚动提示** + **人物选择：进场取上次选的、从练习返回回到同一个人** + **黑幕守卫：本场景 `is_auto_overlay = false` ⇒ 遮罩不被 BasePage 归零、有效 alpha = 0.5** | 20 | **45** |
+| [test_stage_practice_menu](../test/test_stage_practice_menu.gd) | 关卡练习菜单：一级列表 = **可玩清单**（逐行对应 `create_script` 非空的面）+ **确认进二级要真建出难度列**（回归：二级不显示；一条走 `confirm_current()`、一条**真按 `ui_accept`** 走 `_input`）+ **确认先播闪烁反馈再进下一级**（时间窗断言）+ 二级难度槽（普通面 Easy~Lunatic / **EX 面仅 Extra**，纯函数喂夹具）+ 进页置 `is_stage_practice` 且先过 `reset_session()` + 选择写回全局（面 / 难度 / 自机） + **黑幕守卫：`is_auto_overlay` 默认 true ⇒ 入场必须 `_fade_overlay_in()`，有效 alpha 回到 0.55**（回归：只 tween `self.modulate` ⇒ 0.55 × 0 = 黑幕消失） | 10 | 0 |
 | [test_player_data_menu](../test/test_player_data_menu.gd) | 玩家数据菜单·符卡记录页：**列全部符卡**（来源=花名册）+ **三档显示**（未遇见 ？？？ / 遇见过真名 / 收取过蓝）+ 分页按面板实测 | 4 | 0 |
 | [test_dialogue](../test/test_dialogue.gd) | 对话播放层：`DialogueBox` 步骤驱动（台词内联 DSL） | 4 | 7 |
 | [test_bgm_hint](../test/test_bgm_hint.gd) | BGM 提示：曲名解析 + 播放时提示显示 | 3 | 0 |
@@ -208,13 +210,13 @@
 | [test_menu_nav](../test/test_menu_nav.gd) | `MenuNav` 子页面容器注入契约（R2：不再字符串搜 `PageHost`） + **B4：覆盖层暂停/恢复走显式信号（不再 `set_state.call_deferred` 动态方法名）** + **B5：暂停菜单路径唯一来源常量** | 5 | 0 |
 | [test_game_over_menu](../test/test_game_over_menu.gd) | **GameOverMenu 标题不再静默 no-op**：本引擎不解析节点类型 `@export`（`.tscn` 的 `title_label = NodePath(...)` 被丢弃）⇒ 入树一帧后按路径/类型兜底解析出 `title_label` + `set_title()` 真把文字写进那个 `Label` | 2 | 0 |
 
-## E · 内容（4 / 22）
+## E · 内容（4 / 25）
 
 > 只测**形状与合法性**，不测数值。数值该在 Godot 里调，不该在测试里锁。
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_data_validity](../test/test_data_validity.gd) | **内容校验**：遍历全部阶段数据（hp/时限/双脚本槽/uid 全局唯一）+ 舞台显示名（只锁"配了名"，不锁叫什么）+ Boss 符卡背景可加载—— 不写死路径，改名不红、数据违规才红 | 7 | 0 |
+| [test_data_validity](../test/test_data_validity.gd) | **内容校验**：遍历全部阶段数据（hp/时限/双脚本槽/uid 全局唯一）+ 舞台显示名（只锁"配了名"，不锁叫什么）+ Boss 符卡背景可加载 + **舞台注册表 = 可玩清单**（每项都要有 `create_script`，把"不可玩的关混进注册表"挡在数据层）+ **每关背景树形状 + 入树实例化不报错**（根必须是 `StageBackground`、须声明 `DecorManager`）+ **敌弹素材 ↔ 弹型数据的脱节哨兵**（`assets/Textures/bullet/*.png` 每张弹贴图都要有同名 `data/bullets/<名>.tres`，白名单 = 图集本体/激光/出生雾/消弹特效）—— 不写死路径，改名不红、数据违规才红 | 10 | 0 |
 | [test_probe_descriptor](../test/test_probe_descriptor.gd) | spell053「哆来咪三符」→ 原生描述符的形状（单相位 / 变体两模板 / 难度分派） | 5 | 1 |
 | [test_stage01_dialogue](../test/test_stage01_dialogue.gd) | 第一面战前对话构建：台词/说话者/表情/事件顺序 | 9 | 0 |
 | [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断） | 1 | 0 |

@@ -6,4 +6,4 @@
 script = ExtResource("1_def")
 id = &"小光玉"
 texture_key = &"小光玉"
-hitbox_radius = 12.0
+hitbox_radius = 16.0

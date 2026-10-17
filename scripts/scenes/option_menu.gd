@@ -3,6 +3,7 @@
 extends BasePage
 
 const ITEMS: Array[Dictionary] = [
+	{"key": "volume_master", "zh": "主音量", "type": "range", "min": 0.0, "max": 1.0, "step": 0.1, "def": 1.0},
 	{"key": "volume_bgm", "zh": "ＢＧＭ音量", "type": "range", "min": 0.0, "max": 1.0, "step": 0.1, "def": 1.0},
 	{"key": "volume_sfx", "zh": "ＳＥ音量",  "type": "range", "min": 0.0, "max": 1.0, "step": 0.1, "def": 0.7},
 	{"key": "fullscreen", "zh": "全屏",     "type": "toggle", "def": false},
@@ -187,6 +188,8 @@ func _activate_action() -> void:
 ## 应用设置到运行时
 func _apply_setting(key: String, value: Variant) -> void:
 	match key:
+		"volume_master":
+			AudioManager.master_volume = float(value)
 		"volume_bgm":
 			AudioManager.bgm_volume = float(value)
 		"volume_sfx":

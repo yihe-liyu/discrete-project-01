@@ -165,3 +165,34 @@ func test_stage_bgm_keys_resolve():
 	if b3:
 		assert_eq(b3.bgm_key, "stage3B", "3B 的 BGM key")
 	assert_gt(checked, 0, "至少应有一个关卡配了 bgm_key")
+
+
+## 敌弹素材 ↔ 弹型数据的**脱节哨兵**：`assets/Textures/bullet/` 下每张**弹**贴图都应有同名弹型资源
+## （`data/bullets/<名>.tres`，且它的 `texture_key` 指向同名图集格）。
+## 白名单 = 「不是弹」的那几张：图集本体 `bullet`、激光 `laser`、出生雾 `弹雾`、消弹特效 `消弹`。
+## 用途：素材先落地、数据没跟上的「数量不对」要**响亮**报出来（2026-10-10 实测漏了 10 个）。
+func test_enemy_bullet_textures_have_defs():
+	const NOT_BULLETS: Array[String] = ["bullet", "laser", "弹雾", "消弹"]
+	var known := {}
+	for key in BulletCatalog.keys():
+		known[key] = true
+	var dir := DirAccess.open("res://assets/Textures/bullet/")
+	assert_not_null(dir, "应能打开敌弹贴图目录")
+	if dir == null:
+		return
+	var scanned := 0
+	var missing: Array[String] = []
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+	while file_name != "":
+		if not dir.current_is_dir() and file_name.ends_with(".png"):
+			var key := file_name.get_basename()
+			if not NOT_BULLETS.has(key):
+				scanned += 1
+				if not known.has(key):
+					missing.append(key)
+		file_name = dir.get_next()
+	dir.list_dir_end()
+	assert_gt(scanned, 0, "应扫到敌弹贴图（否则这条在空转）")
+	missing.sort()
+	assert_eq(missing.size(), 0, "这些敌弹贴图没有同名弹型资源 data/bullets/<名>.tres：%s" % str(missing))

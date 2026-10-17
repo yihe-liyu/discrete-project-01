@@ -26,8 +26,28 @@
 
 ## 索引
 
-> 共 82 条（本文件留最近 82 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 102 条（本文件留最近 102 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-10 — 音量管理补骨架：**真总线 + SE 密度护栏 + BGM 让位/交叉淡入**
+- 2026-10-10 — 补齐 10 个缺失弹型：**重建版的弹型资源在 git 里没丢**
+- 2026-10-04 — 清场要看得见：敌人**击破特效** + 弹幕**消弹特效**
+- 2026-10-04 — 补「即时清弹」内容动词：`ctx.bullets.clear_enemy_bullets()`
+- 2026-10-04 — 敌人回收**动词化**：`ctx.enemies.despawn` / `despawn_all`
+- 2026-10-04 — Miss 的雷：从「+2 补偿」改为「−2、下限 3」
+- 2026-10-04 — 关卡练习：第 2 面起**满火力**起步
+- 2026-10-04 — 修「关卡练习菜单的黑幕没有了」（我的回归）+ 扫同款
+- 2026-10-04 — 相机动词改名 + 目标记忆（作者实测「摄像机的 y 角度最后没回到 0」）
+- 2026-10-04 — 相机初始姿态改由**背景自己声明**（`override_camera_home`）
+- 2026-10-04 — 修「一改太阳 y，黑雾的太阳对准就不准」（投影的是节点，画的是 sprite）
+- 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
+- 2026-10-04 — 太阳也提成节点 + 纹理改 `ImageTexture`（编辑器里终于看得见）
+- 2026-10-04 — 蒙眼雾「提成节点」+ 去掉组件里的 `get_parent()`
+- 2026-10-04 — 修 BGA 自身引入的回归：「树和地面的速度不一样了」
+- 2026-10-04 — BGA 第一批：背景接口收口（`ctx.background` / 环境声明化 / 缺件响亮）
+- 2026-10-04 — 背景创作工具收口：工作台可切关卡 + 抓图工具认任意面（BGT1–BGT3）
+- 2026-10-04 — stage02 背景树纠正 + 背景形状机械守卫（抄背景别抄漏一层）
+- 2026-10-04 — 关卡入口收口：注册表只收可玩的 + 关卡练习菜单实装
+- 2026-10-04 — BG 线冻结：整条背景视觉线不再投入（保留现役 3D 背景）
 - 2026-10-04 — 卡摩瑞道中一非：开花相位改为每次重抽
 - 2026-10-02 — 修 Game Over 标题静默 no-op：节点类型 @export 在本引擎不解析
 - 2026-10-02 — P1 收口：字符串接口 / 隐藏契约（B1–B6）
@@ -112,6 +132,459 @@
 - 2026-09-26 — 阶段身份「槽位数」口径：`phases_normal` 长度 → 各难度列最大长度（EX 面解锁）
 
 ## 记录
+
+### 2026-10-10 — 音量管理补骨架：**真总线 + SE 密度护栏 + BGM 让位/交叉淡入**
+
+- **作者报**：「音效的音量管理还是不怎么好」——"还是"说明前面那几轮（`SFX_DB` 均衡表 / 逐流 `min_interval` / `sfx_trim_db` 练习压低）只是**在调数值**，没治结构。
+- **实测三处硬伤（探针 `AudioServer` 直读，不是读代码猜的）**：
+  1. **总线是假的**：`bus_count = 1`（只有 Master），而 `ProjectSettings` 指的 `res://default_bus_layout.tres` **文件不存在** —— `_find_bus("BGM"/"SFX")` 每次静默回退 Master，所以「BGM/SE 总线」只是两个字符串（挂不了效果器、也没有总线级音量）。
+  2. **主音量是半死的旋钮**：`play_sfx` 的算式缺 `master_volume`（只有 BGM 乘了），而且它**没有 UI、不进存档** → 恒等于 1.0。「BGM 滑杆 = BGM×主音量，SE 滑杆 = SE×0 dB」两条路口径都不一样。
+  3. **多声叠加没有护栏**：16 路池 + 同帧去重 + 每条流各自的 `min_interval`（`0.05` / `0.03` 写死在调用点），**不同流会叠加**；池满就踢「最老的」= 掐断正在响的声音。
+- **A · 真总线**：新增 `default_bus_layout.tres`（`Master → BGM / SE / UI`，用引擎 `generate_bus_layout()` 生成而不是手写格式）；音量**一律走总线**（`AudioServer.set_bus_volume_db`），per-player 只剩均衡偏移 ⇒ 改滑杆当场对所有在响的声音生效；**缺总线响亮告警**（`_require_bus`，只报一次）；`master_volume` 补上对 SE 的作用 + 选项菜单加「主音量」+ 进存档。
+  - UI 音独立一条总线（与 SE 共用同一根滑杆）：SE 的密度护栏/限幅不该泵到菜单音。
+- **B · 先量再调**：新增 `tools/audio_density_probe.tscn`（跑真实关卡，量每秒起声部数 / 单帧峰值 / 同时在响 / 驱逐 / 去重与节流挡掉多少 / **密度压制动了多少**）。
+  - **实测（stage01，按住射击 25s）**：**545 路 / 25s ≈ 21.8 路/秒**，单帧最多 3 路，**同时在响峰值 14 / 16**，驱逐 **0** 次，同帧去重挡掉 93 次。
+  - 两个反直觉的结论：① 密度主力是**自机自己的射击音**（~20/s），不是敌弹；② **池根本没满过** ⇒ "踢最老的"不是当下的病根，**响度总和**才是。
+  - 据此落三道护栏：**SE 总线挂 `AudioEffectHardLimiter`（ceiling −1 dB，14 路叠加必削波）**；**密度压制** `density_cut_db()`（按**平滑后**的在响声部数，knee 8、每路 0.75 dB、上限 −3 dB，**只压新起的密集音**，正在响的不动 ⇒ 不引入"泵"，重要音不吃）；**优先级驱逐**（池满时踢「最不重要且最老」，而不是「最老」）。
+  - 复测：密度与驱逐不变（护栏不丢音），**压制峰值 −3.00 dB / 均值 −0.09 dB** —— 它只在拥挤的瞬间出手，平时一个数都不动。
+  - 探针的**诚实边界**：headless 里自机不会躲弹，差不多 35~60s 就 Game Over（75s 那轮实测在 **35.2s** 被"整棵树 paused"截断）⇒ 探针 `process_mode = ALWAYS` + paused 检测，**报告后退出而不是挂死**（第一版就是这么挂到 `timeout 300` 的）；想看 Boss 战的数字得再加「不死」开关。
+- **D · 动态混音**：BGM 两路（**新曲满音量直入、旧曲淡出** —— 作者随后拍板"不要淡入"，见 `BGM_FADE_IN`；换曲不再硬切；同一首正在响仍不重头播，工作台重跑照旧）、`stop_bgm` 默认淡出（`fade=0` 才立即停）；**BGM 让位** —— `BGM_DUCK_ON_SFX`（`player_card` / `boss_die`）响起时 BGM 自动压 6 dB、保持 0.9s 再自动回落，调用点不必知道 duck 存在。
+- **为什么这样分**：A 是骨架（后面两个都要踩在总线上）、B 治"叠加"（治并发，不是继续压 dB）、D 治"互相抢"（音乐让位给人声/关键音）。**没有动任何已调好的 `SFX_DB` 数值**。
+- **⚠️ 同日回归（我造的，作者当场发现）**：作者报「关卡重开后音乐播放会重叠」。
+  - 根因：`pause_menu` 的重开是「`stop_bgm()`（**我新改成淡出**）→ 立刻 reload → 新场景又播**同一首**」；
+    而 `_play_bgm_at` 判「同一首正在响」用的是 `volume_db > SILENT_DB` —— 淡出中的那一路**不算数**，
+    于是它另起一路同曲：**同一首歌自己叠自己**（两路播放位置差 ~0.3s = 合唱/回声）。
+  - 修法：新增 `_bgm_stopping` 标记 + `_find_bgm_player_with(stream)` + `_adopt_bgm()` —— **同一首永远只有一路**：
+    正在正常播（且不是刚被停）→ 续播；正在淡出 / 被叫起重开 → **复用那一路**从头播，其余各路淡出。
+  - 教训：**「淡出」是一种状态**，不能用「音量是否 > −80」反推 —— 状态要用状态变量记，别拿观测量猜。
+  - 回归测试先红后绿：`[2] expected to equal [1]`（两路同曲在响）→ 修后 `19/19` 全绿。
+- **同日追加（作者拍板）**：**不要淡入** —— 新曲（含重开同一首）**满音量直入**，只有旧曲淡出。
+  落成常量 `BGM_FADE_IN := 0.0`（改回 0.6 就恢复渐入），`_play_bgm_at` / `_adopt_bgm` 两处共用。
+  新增 2 条回归（刚起就是 0 dB / 重开也是 0 dB），先红（`−79.97 expected to equal 0.0`）后绿 ⇒ `21/21`。
+- **验证**：`test_sfx_mix.gd` 从 3 条扩到 21 条（总线存在 / 三段音量各自落地 / 主音量管 SE / 0 = 静音 / per-player 只剩偏移 / UI 独立总线 / 缺总线告警 / 限幅在 SE 上 / 压制随声部起伏且自动归零 / 池满保重要音 / 让位有起落且自动回落 / 关键音自动让位 / 交叉淡入淡出 / 同曲不重播 / 停止淡出 / **重开同一首只允许一路在响**）—— 全量 **802 用例 / 7040 断言**、`./tools/verify.sh` 七步全绿。
+  - ⚠️ 用例耗时 +12s（让位/淡出要等真实时间），全量 41s → **53.8s**；这是"测真实时间行为"的代价，没拿 `Engine.time_scale` 取巧。
+
+### 2026-10-10 — 补齐 10 个缺失弹型：**重建版的弹型资源在 git 里没丢**
+
+- **作者报**：「bulletdef 资源数量不对 😭，我之前有个重建版里面的弹幕是全的，但是没有全部拿到主项目来」。
+- **实测缺口**：`data/bullets/*.tres` 只有 **23** 个（16 敌弹 + 7 自机），而 `assets/Textures/bullet/` 有 **26** 张敌弹贴图、`data/atlas/bullet_shapes.tres` 有这些格 —— **素材与图集都在，只有数据没来**：
+  `光玉 / 刀弹 / 大星弹 / 大玉 / 心弹 / 椭弹 / 火弹 / 矩弹 / 箭弹 / 蝶弹`（正好 10 个，2026-09-20 迁移那次只搬了旧 `bullet_configs` 表里有的 16 个）。
+- **重建版在哪**：目录 `1-st-touhou-star-rebuild/` **已被删除**（盘上 / 回收站 / DSH 会话备份都没有），但它的提交**就在本仓库的对象库里**——`git log --all -- '*大玉*'` 命中 `0901249`（2026-09-10，重建版把工程放在仓库根的那一版），`data/bullets/*.tres` 27 个文件（26 敌弹 + `fx_cancel`）一个不少。
+  - **教训**：「那个版本没了」先别认命 —— `git log --all -- <特征名>` / `git fsck --lost-found` 常常还在；**内容在 git 里，删的只是工作区**。
+- **改动**：`git show 0901249:data/bullets/<名>.tres` 逐个取回，按主项目资源类转写（`BulletType` → `BulletDef`，只留 `id` / `texture_key` / `hitbox_radius` / `hitbox_offset`），判定值**照抄重建版**（如 `大玉` 36 / `光玉` 28 / `矩弹` 20 / `箭弹` 6 + offset x+20）；`follow_dir` 用默认 true —— 与主项目既有 `中玉` / `小光玉` 一致。
+  - 注：重建版对**已有的 16 个**给的值与主项目现值**不同**（主项目沿用的是更早的 `bullet_configs`）。作者拍板「**全部对齐重建版**」，同批改掉其中 8 个：`点弹` 4→5、`菌弹` 4→5、`小玉` 6→8、`环玉` 6→8、`苦无` 6→5、`小光玉` 12→16、`星弹` 补 offset x−1、`滴弹` 6→5 补 offset x+4（其余 8 个本就同值）。
+  - 连带：`test_bullet_shell.gd` 那条钉死的「小玉判定 6.0」改 8.0 —— 断言口径从「engine 现行为」改成「内容资源 `data/bullets/小玉.tres`」，**钉数据不钉代码**。
+- **为什么加测试**：光靠人眼看「数量不对」正是本条发生的原因。新增哨兵 `test_data_validity.test_enemy_bullet_textures_have_defs`：
+  **`assets/Textures/bullet/` 下每张弹贴图都必须有同名 `data/bullets/<名>.tres`**；白名单 = 不是弹的四张（图集本体 `bullet`、`laser`、出生雾 `弹雾`、消弹特效 `消弹`）。
+- **验证（红→绿）**：先写哨兵跑 → 红且**恰好点出那 10 个名字**（`["光玉","刀弹","大星弹","大玉","心弹","椭弹","火弹","矩弹","箭弹","蝶弹"]`）；补资源后同条转绿。全量 GUT **784 用例 / 6996 断言**；`./tools/verify.sh` 七步全绿。
+- **文档同步**：`docs/DANMAKU_API.md` §7.1 弹型表（哨兵按它比对 `data/bullets/*.tres`）、`docs/TEST_INDEX.md`（E 层 4/25）、README 徽章。
+
+### 2026-10-04 — 清场要看得见：敌人**击破特效** + 弹幕**消弹特效**
+
+- **需求（作者）**：「敌人清场要有击破特效，弹幕清场要有消弹特效」。
+- **弹幕侧**：我先前包的 `BulletManager.clear_bullets()` 是**裸清**（`system.clear()`：无特效、无事件）。
+  而**同一份代码里早有带特效那条路**：`sweep_enemy_bullets(center, radius, on_clear, inside)` 会
+  **先收集 `(pos, tint)` → 逐颗 `despawn` → 逐颗 `play_clear_fx`**（同色提亮 1.5×，与死亡清弹圈 / `clear_fx()` **同一套**），
+  且**只清 ENEMY 阵营** ✓ ⇒ 新增 `BulletManager.clear_enemy_bullets_with_fx()` = **一次罩住全场的 sweep**
+  （圆心 `GameConfig.SCREEN_CENTER`、半径取**场地对角线** ≈1600 ⇒ 比 cull 范围只大不小），`ctx.bullets.clear_enemy_bullets()` 改走它。
+  **零原生改动**（不必动 C++ / 不必重编扩展）✓。分工保留：`clear_bullets()` 仍是关卡收尾的裸清（`StageRuntime` 在用）。
+- **敌人侧**：`EnemyService` 新增 **`despawn_clear(enemy)`** = `despawn()` + `ctx.effects.play_hit_effect(death_effect, 位置)`
+  —— 正好对应子弹那边的 `despawn()` / `despawn_clear()` 之分（静默 vs 看得见）；
+  **`despawn_all()` 改为逐只播击破特效**（"清场"本来就是可见事件）；没配 `death_effect` ⇒ 只回收、不报错。
+  **仍不算战果**：不掉道具 / 不计分 / 不发 `enemy_killed` / 不播死亡音效（那些是 `die()`）。
+- **中途发现的两件事（都直接影响测试写法，值得记）**：
+  1. **内核把"纯特效行"和弹放在同一个 store**（特效行 `_type_index = -1`）⇒ **`active_count()` 是"弹 + 特效"的总数**，
+     不能当弹数用。`sweep_enemy_bullets` 自己就用 `get_type(i) == null` 区分 ✓ 照抄同一条判据 ⇒ 测试改成「数真弹 + 数特效行」。
+  2. **`ctx.effects` 的 getter 每次访问都重刷** `fx_pool = stage.fx_pool`（"每取一次保持最新"）⇒
+     **直接往服务里注入特效池会被覆盖**，注入点是 **`stage`**（`StageRuntime.fx_pool`）。测试已按这条改（顺带 `autofree(rt)` 消掉一个孤儿）。
+- **回归测试（4 条，都反向验证过会红）**：
+  - 弹幕：2 颗弹 ⇒ 清空 + **恰好 2 条消弹特效**（退回裸清 ⇒ 报 `0 vs 2`）；
+  - 敌人 `despawn_clear` ⇒ **恰好 1 次**击破特效（位置 = 敌人位置、用它的 `death_effect`）**且仍不发 `enemy_killed`**；
+  - 敌人 `despawn_all` ⇒ 2 只杂兵 = 2 次特效、**假 Boss 不播**；
+  - 敌人没配 `death_effect` ⇒ 只回收不报错。
+- **⚠️ 自查披露（同一个坑第二次，教训升级）**：反向验证后的还原脚本，我用 `'play_hit_effect' not in t` 当守卫 ——
+  而那个词**也出现在文档注释里** ⇒ 守卫误判、**敌人那处一度没还原**（是随后跑全量前检查文件状态才发现的）。
+  上一轮（README 徽章的 `base_texture = ExtResource` 撞 `texture = ExtResource`）已经踩过同款。
+  ⇒ 教训升级为：**还原 / 存在性判据一律用「带缩进的整行代码」，绝不用裸词。**
+- **验收**：`./tools/verify.sh` 七步；GUT **118 脚本 / 783 用例 / 6973 断言**全绿。
+
+### 2026-10-04 — 补「即时清弹」内容动词：`ctx.bullets.clear_enemy_bullets()`
+
+- **起因**：作者问「有弹幕清场动词么」。查清**四个层级**：
+
+| 层级 | 动词 | 有动画 | 内容够得着 |
+|---|---|---|---|
+| 单颗弹 | `BulletLifecycle.despawn()` / `despawn_clear()` | 否 | ✅ |
+| 清激光 | `ctx.bullets.clear_all_lasers()` | 否 | ✅ |
+| 圈内清弹 | `ctx.bullets.death_clear(...)` | ✅ **膨胀圈** | ✅ |
+| **即时全屏** | ❌ **缺** | — | 底层有、内容够不着 |
+| 全清（含特效池 / MultiMesh） | `BulletManager.clear_all()` | 否 | ✗ 引擎级 |
+| 工具级清场 + 回收内核表 | `BulletManager.reset_world()` | 否 | ✗ 注释写明"**仅工具 / 工作台**用" |
+
+- **缺口的证据**：底层 `clear_bullets()`（只清内核弹 + 炸弹）**存在**，但调用者只有 `stage_runtime.gd:89`（关卡收尾）；
+  `clear_enemy_bullets_in_circle/shape` 只有**炸弹**在用（`kernel_bomb.gd:98` / `kernel_mist_bomb.gd:125`）⇒
+  内容想"此刻清屏"只能写 `ctx.bullets.bullet_manager.clear_bullets()`，**绕过服务层** —— 与敌人回收**同一个病**。
+- **改法（作者选"只加全屏那条"）**：`BulletService.clear_enemy_bullets()` → 直转 `BulletManager.clear_bullets()`。
+  - **纯清除**：不给分 / 不给道具（与 `clear_all_lasers()` 一致；要"炸弹式计分清弹"走炸弹那条路）。
+  - **只清敌弹**：不动激光（用 `clear_all_lasers()`）、不动特效池（那是 `clear_all()`，内容别碰）。
+  - 与 `death_clear()` 的分工写进注释：那个有半径上限 + 分帧扫 + `on_clear`，适合"死亡 / 炸弹的可见冲击"。
+- **测试**：**新建 `test/test_bullet_service.gd`** —— `ctx.bullets` 原本**没有专用测试文件**
+  （`shoot_spread` / `death_clear` / `clear_all_lasers` 都只有间接覆盖）。两条：
+  - 即时全屏 ⇒ 当帧一颗不剩（与距离无关）；
+  - **与膨胀圈的语义差**：`death_clear(ZERO, 100, 1s, 30)` 当帧清不到 300px 外的弹，而本动词清得掉。
+  - **反向验证**：把本动词临时写成 `start_death_clear(...)` ⇒ **两条断言红**（`2 expected to equal 0`）——
+    正是它要防的那种混淆。
+- **验收**：`./tools/verify.sh` 七步；GUT **118 脚本 / 781 用例 / 6963 断言**全绿。
+
+### 2026-10-04 — 敌人回收**动词化**：`ctx.enemies.despawn` / `despawn_all`
+
+- **起因**：作者问「敌人的回收怎么调用」。查下来**没有动词**（`StageRuntime`/`StageDirector`/`StageObjects` 全无），
+  文档也**一个字没写**，而子弹那边有整套（`DANMAKU_API.md` 的 `despawn()` / `out_grace` + `BULLET_PIPELINE §5 回收`）
+  ⇒ 内容只能裸调 `target.queue_free()`（`fly_away.gd` / `enemy04.gd` 两处）。
+- **加的两个动词**（落在已有的 `EnemyService` = `ctx.enemies`，与 `spawn()` 对称）：
+  - `despawn(enemy) -> bool` —— **静默**：不掉道具、不计分、不发 `enemy_killed`、不播死亡特效
+    （对齐子弹 `despawn()` 的口径；"被打死"走 `Enemy.die()`）。
+  - `despawn_all() -> int` —— 只收杂兵、**不动 Boss**（`Boss` 是 `Area2D` 的**兄弟类**不是 `Enemy` 子类 ⇒ 天然筛掉），返回数量。
+    与 `EntityRegistry.clear()` 的分工：那个是"拆关卡"语义（连 Boss 一起释放 + 清空名单）。
+- **实现中途被测试顶出两个真问题（都改了）**：
+  1. **签名从 `Enemy` 改成 `Node2D`**：原设计收 `Enemy` ⇒ 内容得写 `target as Enemy`，而 `as` 在**不是** Enemy 时
+     **静默变 null**，我的报错会说"敌人为空/已释放"——**误诊**了真正的原因。现在收 `Node2D`
+     （= `CoroutineScript.target` 的静态类型 ⇒ 内容直传 `despawn(target)`），类型不对时**响亮报出它到底是什么**。
+     ⇒ 教训：**内容侧静态类型是基类时，用 `as` 换"类型安全"会换来更差的诊断**。
+  2. **`test_enemy04_move.gd` 原本用 `cs.start(null, tgt)`**（null ctx）⇒ 内容改走 `ctx.enemies` 后当场炸
+     `Invalid access to property or key 'enemies' on a base object of type 'Nil'`。真游戏里 `spawn_enemy_data`
+     **保证 ctx 非空** ⇒ 那个 null 只是"这条测试恰好只跑到移动"的巧合；已改为提供 ctx + 用真 `Enemy` 当 target。
+     ⚠️ **这条只有跑全量才抓到**（单跑该文件是绿的）—— 又一次证明门禁必须跑全量。
+- **内容已改走动词**：`data/stages/stage01/enemy/{fly_away,enemy04}.gd` 的裸 `target.queue_free()` → `ctx.enemies.despawn(target)`。
+- **回归测试**（`test_ctx_services` +4，**都反向验证过会红**）：
+  - 静默 ⇒ 把回收临时写成 `die()` 时，报 `Expected ... to NOT emit signal [enemy_killed]`；
+  - **类型守卫** ⇒ 去掉守卫时，3 条断言红（返回 true / 无 push_error / 假 Boss 真被回收了）；
+  - 容错（空与已释放**响亮**+false；重复回收静默 false）；
+  - 批量（只收杂兵、跳过 Boss 位、返回数量）。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 779 用例 / 6958 断言**全绿。
+
+### 2026-10-04 — Miss 的雷：从「+2 补偿」改为「−2、下限 3」
+
+- **需求（作者）**：「miss 后改为减少 2 个 bomb，减少后如果不足 3 个 bomb 则设置为 3 个 bomb」。
+- **这是改既有口径**：原先 miss 是**补偿 +2 个雷**（`Player.MISS_BOMB_GAIN = 2` → `PlayerResources.add_bombs()`，
+  到 `MAX_BOMBS` 封顶；当时的理由写作"作者要求：不撒掉落物、雷碎片不动"）。现在改成**惩罚**：
+  扣 `MISS_BOMB_PENALTY`(2)，再抬到下限 `MISS_BOMB_FLOOR`(3)。
+- **⚠️ 明确记下这条副作用（作者口径，非 bug）**：规则是"**先扣、再把不足的抬到下限**"，**不是**"扣不动" ⇒
+  `bomb < 3` 时中弹**反而净增**（1 → 3）。写进代码注释 + 基线文档 + 测试断言三处，
+  免得以后有人当 bug"修掉"。
+- **落点**：
+  - `PlayerResources`：两个常量 + `on_miss_bomb_penalty()`（`changed.emit()` 让 HUD 刷新）；
+  - `Player._apply_miss()`：`add_bombs(MISS_BOMB_GAIN)` → `on_miss_bomb_penalty()`；删掉 `MISS_BOMB_GAIN`（全仓已无引用）；
+  - **雷碎片那条线不动** ✓（与原口径一致）。
+- **同批更新的既有断言与文档**（旧口径散在多处，漏一处就是"文档在骗人"）：
+  - `test_player.gd`：两条 `+MISS_BOMB_GAIN` 断言改成"扣 2 / 下限 3 / 满仓不越界"，
+    并把两处过时措辞（"不补"、"不发补偿"）改成"不做雷惩罚"；
+  - `test_player_resources.gd`：新增纯规则单测（与 `on_miss_power_penalty` 的测法对称）；
+  - `docs/BASELINE_EVIDENCE.md`：miss 管线描述改写 + 那条"2026-09-28 补雷补偿"的历史注记改成
+    "→ **2026-10-04 改为雷惩罚**"（保留历史，不篡改）。
+- **回归测试（反向验证过会红）**：把下限拿掉（`maxi(..., 0)`）⇒ 两个测试文件共 **5 条**断言红，
+  报 `2 / 0 / 1 expected to equal 3`。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 775 用例 / 6942 断言**全绿。
+
+### 2026-10-04 — 关卡练习：第 2 面起**满火力**起步
+
+- **需求（作者）**：「让关卡练习除了第一面的其他面都设置火力为满」。
+- **现状**：`PlayerResources.reset_practice()`（= **符卡练习**）本来就 `power_raw = 300`（4.00）；
+  而**关卡练习**走的是 `reset_all()`（`power_raw = 0` = 1.00）⇒ 练后面几面得从 1.00 攒起，练不到该面的弹幕。
+- **改法**：
+  - `PlayerResources`：抽出 `const MAX_POWER_RAW := 300`（原先写死 3 处），新增 `set_max_power()`
+    （**必须 `changed.emit()`** —— 它是在 `reset_all()` **之后**单独调的，HUD 等不到下一次 reset）；
+  - `SaveData`：`const PRACTICE_FULL_POWER_FROM_STAGE := 2` + `practice_starts_at_full_power()`（纯判定）
+    + `apply_stage_practice_power(registry)`。⚠️ 判定比的是**面序号**（`StageCatalog.stage_no_of`）而不是 `stage_id`
+    —— 3B 面 id=4、EX 面 id=9，"是不是第一面"要按面序号判（`stage_catalog.gd` 专门警告过别混用两套编号）。
+  - `StageRuntime.load_stage()`：**紧跟在 `SaveData.reset_all()` 之后**调用它。
+- **⚠️ 踩到的坑（第一次接错了位置）**：我最初把调用放在 `game_scene._ready()` 的 `reset_all()` 之后，
+  端到端测试报 **`0 expected to equal 300`** —— 因为 `_start_normal_game()` → **`load_stage()` 内部还会
+  `SaveData.reset_all()` 一次**，把满火力**冲掉**了。⇒ 落点改到**那次复位之后**（单点、且不吃调用顺序）。
+  教训：**"复位"只有一个权威点时，规则要贴在它旁边**，否则会被下一次复位悄悄擦掉。
+- **回归测试（3 条，端到端那条反向验证过会红）**：
+  - `test_practice_full_power_rule`（纯判定：面 1 不拉满 / 面 2 起拉满 / **普通流程**不拉满）；
+  - `test_stage_practice_stage_two_starts_at_full_power`（真场景 ⇒ `power_raw == MAX_POWER_RAW`；
+    撤掉落点 ⇒ 报 `0 vs 300`）；
+  - `test_stage_practice_stage_one_keeps_normal_power`（第 1 面例外 ⇒ 仍是 0）。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 774 用例 / 6937 断言**全绿。
+
+### 2026-10-04 — 修「关卡练习菜单的黑幕没有了」（我的回归）+ 扫同款
+
+- **症状（作者实测）**：关卡练习菜单的黑幕不见了。
+- **根因（我的回归）**：`BasePage._create_overlay()` 会按名字**复用**场景里的 `Overlay` 并把它的
+  `modulate.a` **归 0**；HEAD 的 `on_enter()` 会把 `Overlay.modulate.a` 拉回 1（黑幕可见），
+  而我重写时改成"整页 `self.modulate` 淡入"、**再没碰过 `Overlay.modulate`** ⇒ 有效 alpha = `0.55 × 0` = **0**。
+- **修法**：`on_enter()` 调 **`_fade_overlay_in(0.35)`**（BasePage 自带动词）；遮罩**颜色**归场景
+  （`Overlay.color`），代码里那句写死的 `0.55` 删掉 —— 颜色不该有两个来源。
+- **⚠️ 顺带修了一句假文档**：`is_auto_overlay` 的注释写着"设为 true 则 on_enter 时**自动淡入**暗色遮罩"，
+  但代码**只创建 + 归零、不会淡入** ⇒ 子类不调 `_fade_overlay_in()` 就是黑幕不可见。
+  这句承诺很可能就是原作者和我都只写 `self.modulate` 的原因。已改成实话，并注明
+  `_fade_overlay_in(duration)` 的默认 `-1.0` **不是** `OVERLAY_FADE_IN`（调用要显式传时长）。
+- **扫同款（`extends BasePage` × 5）—— 我的扫描错了两次，值得记**：
+  1. 先用正则判"有没有碰 `overlay.modulate`"⇒ **假阳性 `replay_menu`**（它用的变量名是 `ov`，
+     而它 `tween_property(ov, "modulate:a", 1.0, 0.5)` 本来就是对的）；
+  2. 只查脚本、**漏了场景级 `is_auto_overlay = false`** ⇒ **假阳性 `spell_practice_menu`**
+     （它明确关掉了自动遮罩、自己管，从来没坏）。
+  ⇒ **最终靠"跑起来量有效 alpha"才定案**（测试的前提断言当场把假阳性顶了出来）。
+  教训：**可机械判定的东西不一定适合用正则判**；能跑出数值的就跑数值。
+- **回归测试（两条，都反向验证过会红）**：
+  - `test_stage_practice_menu::test_overlay_curtain_is_restored_after_enter` —— 去掉 `_fade_overlay_in()`
+    ⇒ 报 **`0.0 expected to equal 0.55`**（正是作者看到的"黑幕没有了"）；
+  - `test_spell_practice_menu::test_overlay_curtain_stays_visible_with_self_managed_overlay` ——
+    守"本场景自己管遮罩"这条：**若有人把 `is_auto_overlay` 打开却不补 `_fade_overlay_in()`，它会红**。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 771 用例 / 6928 断言**全绿。
+
+### 2026-10-04 — 相机动词改名 + 目标记忆（作者实测「摄像机的 y 角度最后没回到 0」）
+
+- **症状**：作者的 `stage02_decor.gd` 里 4 条 Y 旋转（−10/+25/−30/+15，**和 = 0**）跑完后 Y 停在 **+15°**。
+- **根因（一对动词两种语义、名字看不出来）**：旧 `rotate_camera` 是**绝对**（`tween_property(camera, "rotation", target_rot)` = 设成它）、
+  旧 `pan_camera` 是**相对**（`camera.transform.origin + offset`）。作者按 `pan_camera` 的心智模型写 Y **增量** ⇒ 期望回 0，
+  实际"最后一条赢" ⇒ +15°。顺带三个坑：
+  1. `rotate_camera` 的注释写着"Euler 角度, **度**"，而它 tween 的是 `camera.rotation`（**弧度**）⇒ **注释是错的**（作者写 `deg_to_rad()` 反而是对的）；
+  2. 这些动词各自 `create_tween()`、**不杀旧 tween** ⇒ 重叠时同一属性两条 tween 同时写（谁赢看创建顺序）；
+  3. `pan_camera` 读的是**实时** `transform.origin` ⇒ 重叠时以"飞行途中的位置"为基准 ⇒ 漂移。
+- **改法（作者选 a+b）**：
+  - **(a) 名字自解释**：`rotate_camera` → `set_camera_rotation`（绝对）· `pan_camera` → `move_camera_by`（相对）·
+    `move_camera` → `set_camera_position`（绝对）· `tween_env_fov` → `tween_camera_fov`（它 tween 的是**相机 fov**，旧名里的 "env" 是错的）；
+    **新增** `rotate_camera_by(delta)`（相对旋转）⇒ 能写"转过去再转回来"。
+  - **(b) 目标记忆 + 杀旧 tween**：内部保存"上一条指令的**目标**"（pos/rot/fov），相对动词从**目标**累加（**不是**实时值）；
+    每个属性只留一条活动 tween，新指令先 `kill()` 旧的；`reset_camera()` 杀光 tween 并把目标也拉回初始姿态。
+    ⚠️ **不改变单条调用的画面**（作者那种不重叠的写法结果一致）⇒ 已冻结的画面线不受影响。
+- **作者的脚本按其本意转写**：4 条 `rotate_camera` → `rotate_camera_by`（他只提 Y，但 pitch 也一起成了增量：
+  终态 **−15° 俯视**，而不是原来的 **+10° 抬头**）—— 脚本里已写明，想改终态只动最后一行的数。
+- **回归测试（两条，都反向验证过会红）**：
+  - `test_relative_camera_moves_accumulate_from_target_not_live_value`：两条重叠的相对移动，第二条不得丢掉第一段（退成读实时值 ⇒ 报 `0.0 vs 5.0`）；
+  - `test_relative_yaw_deltas_summing_to_zero_return_to_zero`：**把作者的 bug 原样编码** —— Y 增量 −10/+25/−30/+15 ⇒ 必须回到 0
+    （退成读实时值 ⇒ 报 **`15.0 expected to equal 0.0`**，正是他的现象）。
+- **📌 顺带发现（记进 TODO）**：命名仍轻微不一致 —— `set_camera_position`/`set_camera_rotation` 是**动画**（带 duration），
+  而 `set_camera_fov` 是**瞬时**（无 duration）；同一个 `set_` 前缀两种行为。
+- **📌 一个教训**：`ctx` 在内容脚本里是**无类型**的 ⇒ 调**不存在**的动词**语法检查抓不到**，只会在运行时报错。
+  本次改名是靠**全仓 grep + 测试**兜住的（不是靠门禁）。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 769 用例 / 6921 断言**全绿。
+
+### 2026-10-04 — 相机初始姿态改由**背景自己声明**（`override_camera_home`）
+
+- **起因**：作者问「3D 摄像头的初始值能设置吗」。查明现状：
+  - `StageBackground._find_camera()` **只看父节点的子节点**（宿主 SubViewport 里那台）⇒ **背景场景里放自己的 `Camera3D` 会被完全无视**；
+  - 初始姿态有**四个来源**：`game_scene.tscn` / `workbench.tscn` 的相机、抓图工具的 `CAM_POS`/`CAM_ROT_DEG`/`CAM_FOV` 常量、以及 `_own_camera()` 里写死的一组字面量 —— **同一组 `(0,10,6)`/`(−30,0,0)`/`90` 抄了四遍**（正是 `check_structure.sh` 规则③「唯一来源常量」要防的漂移）。
+- **改法（作者选方案 1）**：`StageBackground` 新增 `@export override_camera_home` + `camera_home_position`/`camera_home_rotation_degrees`/`camera_home_fov`，
+  在 `_ready` 里**抓 home 之前**应用到解析到的那台相机 ⇒ `reset_camera()` 天然复位到**声明的**那套。
+  两个背景场景都已打开它（值 = 今天的默认 ⇒ **零视觉变化**），于是"每面自己的初始构图"变成**场景里可改的三个数**。
+  - 不建第二台相机、不碰 `Camera3D.current`、与宿主那台不冲突 ⇒ 没有"渲染用一台、逻辑动另一台"的错配风险。
+- **降险事实（grep 过全仓）**：只有 `screen_fog_fx.gd` 读这台相机（做太阳投影），`game_scene.gd` **零处引用**
+  ⇒ 3D 相机纯粹是"背景的画法"，**不影响弹幕 / 判定 / 坐标**。
+- **回归测试**：`test_camera_home_override_applies_and_is_the_reset_target` —— 宿主相机故意摆成别的姿态，
+  断言入树后是**声明的**姿态、且演出跑过（pan/rotate/zoom）后 `reset_camera()` 回的也是**声明的**。
+  反向验证：去掉 `_apply_camera_home_override()` ⇒ 报 `(0,10,6)` vs 期望 `(0,20,-3)`、`−30` vs `−22`、`90` vs `68`。
+- **顺带**：抓图工具在 `--headless`（dummy 渲染器）下原先是 `linear_to_srgb` 的**空指针堆栈**；
+  现在改成**响亮报错 + 退出**（"本工具需要真实渲染后端"）—— 它每次冒烟测试都在污染输出，而静默继续等于拿假数据当结论。
+- **遗留（记进 TODO）**：那组相机值仍写在 4 处；两个背景开了 override 之后，**宿主那两台已冗余**（只剩"没开 override 的场景"用得到）。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 767 用例 / 6918 断言**全绿。
+
+### 2026-10-04 — 修「一改太阳 y，黑雾的太阳对准就不准」（投影的是节点，画的是 sprite）
+
+- **症状（作者实测）**：「我一改太阳的 y 坐标，黑雾的太阳的对准就不准了」。
+- **根因**：`ScreenFogFX._update_sun_pos()` 投影的是 **`Sun` 节点**的 `global_position`，而**看得见、拖得动的是它的子节点 `SunSprite`** —— `SunSprite` 带自己的局部位移（stage02 里就有一段）⇒ 两者不是同一个点，**偏移越大、错得越远**。旧实现**恰好**只在"`SunSprite` 位移为零"时对齐。
+- **修法**：
+  - `BackgroundSun` 新增 `drawn_position()` = **`sprite.global_position`**（没有 sprite 才回落 `global_position`）——
+    把"我到底画在哪儿"这件事留给太阳组件自己回答；
+  - `ScreenFogFX` 投影时优先用它。**改 `Sun` 的 y 或改 `SunSprite` 的 y 都会对齐**。
+- **实测（探针 `.godot/probe/sun_align.gd`）**：两个背景的"雾 `sun_pos` vs sprite 归一化位置"误差 **0.00 px**。
+  反向验证：把投影退回 `Sun` 节点 ⇒ 报 `sun_pos.y = -0.0076` vs 期望 `0.0273`（错位 **≈34 px**），正是作者看到的现象。
+- **顺带（给作者的量程表）**：`Sun` 在 `z=-500`、`SunSprite` 位移清零时，`Sun.y` → 屏幕归一化 y：
+  `0→0.224`、`40→0.170`、`60→0.141`、`80→0.111`、**`87→0.100`**、`100→0.079`、`120→0.046`、`160→-0.027`（出框）。
+  ⚠️ 作者当时的 `Sun.y=100` **加** `SunSprite.y=+106` = 全局 206 ⇒ 归一化 **-0.121（顶边外 116 px）** ——
+  也就是说**只要把 sprite 位移清零、`Sun.y` 保持 100，太阳就进画面了**（距顶边 7.9%）。
+- **回归测试**：`test_fog_aligns_to_the_drawn_sprite_not_the_sun_node` —— 给 `SunSprite` 一个明显的局部位移，
+  断言雾写入的 `sun_pos` 等于 **sprite** 的投影、且与 `Sun` 节点的投影差得够远（用例前提自检，防空转）。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 766 用例 / 6912 断言**全绿。
+
+### 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
+
+- **起因**：作者问「为什么二面道中**现在**看不见太阳和黑雾」。查明是**我上一轮的设计造的坑**：两个组件在 `_ready()` 里藏起来、只由 `setup()` 显示 ⇒ **场景里声明了、脚本忘了调 = 永远隐形 + 零报错**。作者其实**已经把节点都摆好了**（`Sun`/`SunSprite`/`FogFX`/`FogLayer`/`FogRect`，材质/纹理/`resource_local_to_scene` 都齐，连 `SunSprite` 的局部位移都在编辑器里调过），只是 `stage02_decor.gd` 没调 `setup()`。
+- **作者拍板**：**练习模式也开黑雾** ⇒ 「藏起来等 `setup()`」这个机制**连存在理由都没了** ⇒ 整条废止。结果是**删 API**而不是加 API。
+- **改法**：
+  1. **声明即显示**：`BackgroundSun` 删 `_ready` 隐藏与 `setup()`（`_ready` 只留"缺 `SunSprite` 就响亮"）；`ScreenFogFX` 同样删隐藏，`setup(sun, camera)` → **`bind(camera, sun)`**。
+  2. **宿主接线**：`StageBackground._resolve_showcase()` 在 `_ready` 里**按类型**（不按名字 —— 同 `DecorManager`/`WorldEnvironment`）找 `ScreenFogFX`/`BackgroundSun`，并 `fog.bind(camera, sun)` ⇒ **内容脚本一个调用都不需要，也就没有"忘"的机会**。
+  3. 两个内容脚本删掉 `setup()` 调用与随之无用的局部变量。
+  4. **练习模式一行都不用改**：它走 `_load_background(PracticeSession.background)`（**不调 `load_stage`**），背景一入树就显示 ⇒ 练习自然有黑雾 + 太阳。
+- **顺带一个安心结论**：雾层在**背景 SubViewport 内** ⇒ 只压暗背景、**不挡弹幕/自机**（"草地隐约可见"就是这么来的）⇒ 练习模式开它不影响可玩性。
+- **回归测试**（`test_stage_background` 16 例）：
+  - 新增 `test_host_auto_binds_fog_without_any_content_call` —— 背景入树后 `fog.camera` 已接上、`sun_pos` 已算出、雾层与太阳都可见，**全程零内容调用**。反向验证：去掉 `_resolve_showcase()` ⇒ 报相机为 `<null>` 且 `sun_pos` 停在哨兵。
+  - `test_fog_setup_...` → 改名 `test_fog_bind_does_not_need_background_parent`（**注入而非摸爹**这条不变量仍在）。
+  - 两条断言从"未 setup 前不显示"翻成"**声明即显示**"；其中一条我**漏翻了** —— 测试立刻报 15/16（`未 setup 前不显示`），补齐后 16/16。
+- **教训**：**别把"显示"绑在"记得调用"上**。默认方向应是"声明了就看得见"，要例外就**显式**关（而不是靠漏调）。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 765 用例 / 6910 断言**全绿；抓图工具 `--stage 1` / `--stage 2` 都跑通。
+
+### 2026-10-04 — 太阳也提成节点 + 纹理改 `ImageTexture`（编辑器里终于看得见）
+
+- **起因**：作者问「创作台怎么看不见太阳的痕迹」。定位分三支（**都记下来，免得下次重新查**）：
+  1. **创作台 = 4 页签三合一**（`creation_station.gd` 的 `SLOTS = ["整关预览", "弹幕台", "敌人台", "阶段台"]`），**只有「整关预览」有 3D 背景**；三个组合台的 `.tscn` 没有 `SubViewport`、脚本也不碰 `StageBackground` —— 它们的"背景"是 `BenchCommon.add_stage_bg()` 放的一块深黑 `ColorRect`。而且**创作台会恢复上次页签**（`_load_slot_override()` 默认 **1 = 弹幕台**）。
+  2. **stage02 的背景场景根本没有 `Sun`/`FogFX` 节点**（只有 `DecorManager`/`WorldEnvironment`/`Ground`/`Decor`），`stage02_decor.gd` 里 `sun.setup()`/`fog.setup()` 是注释掉的。
+  3. **stage01 有太阳，但圆心在画面顶边之外 7 像素** —— 探针实测（`.godot/probe/sun_probe.gd`，忽略区，非交付物）：
+     ```
+     相机 pos=(0,10,6) rot=(-30,0,0) fov=90 ｜ 视口 1280x960
+     太阳 (0,100,-320) → 屏幕像素 (640.0, -7.32) → 归一化 (0.5, -0.0076) ｜ 在画面内 = false
+     ```
+     手算复核：太阳在视轴上方 **45.4°**，而竖直半 FOV = **45°** ⇒ 刚好出框。
+     工作台与游戏相机**逐字节相同**（`Transform3D(1,0,0, 0,0.866,0.5, 0,-0.5,0.866, 0,10,6)` + `fov = 90`）⇒ 真游戏一样。
+     太阳 sprite 约 13° 高 ⇒ 只有下沿一条露在顶边；雾里的亮环画在 `sun_pos` 上 ⇒ 也只剩一丝。演到 **t ≥ 60s**（俯角转到 −22°）才整个进画面。
+- **本轮改动（作者选「太阳提成节点」）**：
+  - **纹理资源改类型**：`tools/regenerate_fog_tex.gd` 现在存 **`ImageTexture`**（原先存裸 `Image`）⇒ `.tscn` 能当 `ExtResource` 直接引用 ⇒ **编辑器里就看得见**雾/太阳。裸 `Image` 只能运行时 `create_from_image()`，编辑器里是白的 —— **这正是"提成节点"却还是看不见的原因**。
+  - **太阳**：`Sun` 节点带 `transform`（位置 = 太阳位置，编辑器里直接拖）+ 子节点 `SunSprite`（`Sprite3D`，billboard，`texture` + `material_override = Mat_SunSprite`）。删掉 `@export sun_position`/`pixel_size`（改由**节点 transform** 与 `Sprite3D` 属性承载 ⇒ 少两处镜像）；`setup()` 退化为"显示 + 响亮"。
+  - **雾**：`Mat_ScreenFog` 加 `shader_parameter/noise_tex = cloud_noise.tres` ⇒ `setup()` 不再运行时读盘，也去掉"缺纹理兜底"那条路。
+  - 两个组件仍在 `_ready()` 里隐藏、`setup()` 才显示 ⇒ **练习模式无太阳/无雾的行为不变**（各一行可翻转，代码里写明）。
+- **回归测试**（`test_stage_background` 15 例，新增 `test_sun_sprite_is_scene_declared_with_texture`）：场景声明 `Sun/SunSprite` + **纹理来自场景**（这是"编辑器里看得见"的机械代理）+ billboard + 位置来自 transform + `setup()` 前后可见性。反向验证：去掉 `texture = ExtResource(...)` ⇒ 报 `[<null>] expected to be anything but NULL`。
+- **⚠️ 自查披露**：反向验证后的**还原脚本被我自己的断言拦住** —— 判据写成 `'texture = ExtResource' not in t`，而它**误匹配了 `shader_parameter/base_texture = ExtResource(...)`**，于是文件一度停在"缺 texture"的状态。**下一轮测试立刻显红（14/15）把它暴露出来**，已按精确 needle 还原并复绿。教训：**还原断言要匹配唯一 needle，别用会撞上别处的子串**。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 764 用例 / 6907 断言**全绿；抓图工具 `--stage 1` 实测跑通 `start()`（无脚本错误）。
+
+### 2026-10-04 — 蒙眼雾「提成节点」+ 去掉组件里的 `get_parent()`
+
+- **起因（作者问）**：「一面目前有的黑雾，需要提成节点吗？」
+- **先答清楚现状**：它**已经是节点**（`FogFX` 在背景场景里，12 个 `@export` 可在 Inspector 调，`.tscn` 已覆盖 5 个真值）。没提的是**看得见的那部分**。
+- **旧实现的三个具体代价**：
+  1. `CanvasLayer` / `ColorRect` / `ShaderMaterial` 都是 `setup()` 里 `new()` 出来的 ⇒ **编辑器里看不见、点不到**这层雾；
+  2. 12 个参数靠 `_apply_params()` **手抄**进 shader（14 行镜像）；
+  3. 同一个 uniform **三份默认值**（`screen_fog.gdshader` / `@export` / `.tscn`），而运行时真值只有 `.tscn` 那份 ⇒
+     **改 shader 文件里的数字是静默 no-op**（shader 第 7 行的注释也承认"全部由组件注入"）。
+- **改法（B 方案：把看得见的提进 `.tscn`）**：
+  - `stage01_background.tscn` 里声明 `FogFX → FogLayer(CanvasLayer, layer 5) → FogRect(ColorRect 全屏) + ShaderMaterial(Mat_ScreenFog)`；
+  - **参数真值搬进材质的 `shader_parameter/*`**（`fog_dark=0.8` / `sun_fog_extra=1.2` / `breath_amplitude=0.1` / `ring_strength=0.5` / `ring_radius=0.08` 等）⇒ **一份来源**；
+  - 删掉 12 个 shader 参数 `@export` + `_apply_params()` 镜像；`setup()` 退化为"填噪声纹理 + 幂等 + 显示 + 同步太阳位置"；
+  - 只保留 `texture_size` / `texture_contrast` 两个 `@export`（**仅预生成工具用**，并注明"改它不影响已生成的纹理"）。
+- **独立修掉一条同款脆弱**：`screen_fog_fx.gd` 原先用 `get_parent() as StageBackground` 拿相机（给太阳做 `unproject_position`）
+  ⇒ 把 `FogFX` 挪个层级/嵌套一层就**静默拿到 null**、雾不再跟相机、**零报错** —— 与 stage02 那次崩溃同款，只是发生在**引擎组件**里。
+  改成 `setup(sun, camera)`（内容传 `ctx.background.camera`）+ `self.get_viewport()` ⇒ `_get_bg()` 整个删掉。
+  （对照：`BackgroundSun` 本来就自包含、不摸父节点 —— 两个组件两种风格，雾那个是少数派。）
+- **保留的行为（明确化，不是靠调用时机侥幸）**：未 `setup()` 前 `_ready()` 里 `_layer.visible = false` ⇒
+  **练习模式无雾，与旧行为一致**。⚠️ 想改成"练习也有雾"，删那一行 + 改注释即可（已在代码里写明）。
+- **回归测试（13 例，两条新增，都反向验证过会红）**：
+  - `test_fog_layer_and_params_are_scene_declared`：`FogLayer`/`FogRect` 存在 + **真值在材质里** + 未 setup 不可见；
+  - `test_fog_setup_does_not_need_background_parent`：把 `FogFX` **挪到普通 `Node3D` 下**再 `setup(sun, cam)`，
+    用哨兵 `sun_pos = (-1,-1)` 确认真的写入了 —— 塞回 `get_parent()` 后该断言报 `[-1,-1] expected to not equal [-1,-1]`。
+- **⚠️ 自查补正（同日晚，两条都是我自己差点埋的雷）**：
+  1. **雾材质必须每实例独立**：旧实现是 `ShaderMaterial.new()` ⇒ **天然独立**；而 `.tscn` 的 `[sub_resource]`
+     **默认跨实例共享** ⇒ 两个背景实例同时存在时 `sun_pos` 互相覆盖（雾跟错相机）。
+     加 `resource_local_to_scene = true`（**这正是本项目已踩过的「Environment 是场景 SubResource ⇒ 越重跑越暗」同款**）。
+     反向验证：去掉后两个实例解析到**同一个对象**（同 `ShaderMaterial#…` 哈希）⇒ 测试红。
+  2. **`tools/regenerate_fog_tex.gd` 的注释是假的**：它写着"改 `ScreenFogFX.texture_size/texture_contrast`
+     或 `BackgroundSun.texture_size` 后重跑本脚本"，但参数**写死**在脚本里（`512, 1.8` / `256`）
+     ⇒ 改 `@export` 完全不影响产物。已改成**读那两个 `@export`**（注释这才成立），并打印实际用量。
+  3. 📌 **顺带发现（未改，同类隐患）**：`Mat_Ground` 也是 `.tscn` sub_resource、也被逐帧写 `uv_offset`
+     ⇒ 同样跨实例共享。**现在恰好无害**（`uv_offset` 只随时间走，两个同速实例写的是同一个值），
+     但只要出现"一个暂停一个在跑"（工作台 + 游戏同时）就会串。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 763 用例 / 6900 断言**全绿（`test_stage_background` 14 例）。
+
+### 2026-10-04 — 修 BGA 自身引入的回归：「树和地面的速度不一样了」
+
+- **症状（作者实测）**：地面加速之后，**树还在按基准速度走**。
+- **根因（我的锅，就在上面那条 BGA 里）**：把"地面加速"从**改 `scroll_speed`**（旧内容脚本 `_camera_accel` 的写法）换成**乘内部倍率 `_scroll_mult`**（`BackgroundPlane.speed_ramp`，本意是保住作者填的基准值），
+  但 `DecorManager` 跟随地面的速度是**直接读裸 `scroll_speed`** 的（两处内联：静态层 `_process_static`、动态层 `_process_dynamic`，还各自抄了一遍 `plane_size / tiling` 换算）⇒ 倍率一变，**地面加速、树不动**。
+  ⇒ 教训：把"速度"从一个**公开字段**降级成"字段 × 内部倍率"时，**所有读过那个字段的地方都成了隐式契约方**。
+- **修法（收成单一来源）**：`BackgroundPlane` 新增
+  - `effective_scroll_speed()` = `scroll_speed × 倍率`；
+  - `world_scroll_per_second()` = **世界位移的唯一换算点**（`plane_size / tiling` 只写一次）。
+  `DecorManager` 两处内联全部改成 `follow.world_scroll_per_second() * delta` —— **换算与倍率都在平面一侧**，谁也别再自己算。
+- **回归测试（都反向验证过会红）**，故意用**比值**判据（同一段帧数跑两次）⇒ 与帧数抖动无关，且**不摸私有成员**（白盒预算 463/463 不许涨）：
+  - `test_world_scroll_includes_speed_multiplier`：忽略倍率时报 `85.33` vs 期望 `597.33`；
+  - `test_decor_motion_tracks_plane_multiplier`：忽略倍率时比值报 **`1.0002`** vs 期望 `7.0` —— **就是作者看到的现象被数值钉死**。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 760 用例 / 6886 断言**全绿。
+
+### 2026-10-04 — BGA 第一批：背景接口收口（`ctx.background` / 环境声明化 / 缺件响亮）
+
+- **动机（作者原话）**：「背景创作自由度很高，我不知道该怎么规范」「以后可能想做几层 3D 节点叠的地面、山、彩色天空、彩色球形膜」。
+- **先修正一个框架性错误**：这不是"自由度 vs 规范"的取舍，是**约束加错了地方**。约束该加在**接口**上，**结构**该完全不约束。判据 = 每加一条约束要能回答"它买到了什么"：
+  - 「根挂 `StageBackground`」→ 买到"引擎能把它交给 `StageRuntime`" ✅ 值；
+  - 「必须有名为 `Ground` 的子节点」→ 买到"内容能拿到地面"，**而内容自己就能持有它** ❌ 不值。
+  今天这套规范里 ✅ 只有一条，其余都是 ❌ ⇒ 才会"束手束脚还容易崩"。
+- **本轮落地五件**：
+  1. **`ctx.background` 服务**（`StageContext.get_background()` + `background` 属性，照抄已验证的 `ctx.decor` 写法）⇒ 内容**不再** `get_parent() as StageBackground`（R2 禁往上摸）。**并且明确**：背景场景 = **你自己的**场景 ⇒ `ctx.background.get_node("Ground")` 这类按名字访问**是允许的**（同 `main_menu.gd` 用 `$Logo`）；**引擎不碰你的树** ⇒ 想叠几层地面 / 放山 / 球膜都行。
+  2. **环境声明化**：`StageBackground.@export var env_preset`（在背景 `.tscn` 里声明），`_ready()` 自动应用。**这堵掉一个真实漏洞**：旧实现靠**内容子节点的 `_ready`** 调 `apply_env_preset` ⇒ 内容脚本缺失或练习模式（不跑 `start()`）时**就没有环境**（此前只靠"子节点 `_ready` 早于父节点"这条顺序侥幸成立，`_env_node()` 懒查找就是为它打的补丁）。两个背景场景已声明。
+  3. **`reset()` 完整复位**（环境从声明预设重建 + 相机回初始姿态）。⚠️ **修正**：旧 `reset_camera()` **只把 `fov` 写回 90**，position/rotation 不管 ⇒ `pan_camera`/`rotate_camera` 跑过之后的重跑**不会回正**。现在 `_ready` 抓一次"初始姿态"（外部注入的相机也照抓，不写死 90）再复位于它。
+  4. **缺件响亮**：① `DecorManager` 未声明 ⇒ 首次取用时 `push_warning`（否则 `ctx.decor` 为 null、内容每调一次静默空转）；② `WorldEnvironment` 未声明 ⇒ `_ready` 报；③ **`DecorManager` 未知层名 ⇒ 响亮**（`_require_layer`，列出已声明的层）—— 旧行为是静默 `return`，于是"漏 `add_layer` / 层名打错"表现为**背景空着 + 控制台一句话没有**（stage02 实况）；④ 同名层重复声明也报。
+  5. **`BackgroundPlane.speed_ramp(from, to, dur)`**：地面加速的**意图动词**，内容不再自己 `create_tween()` 改 `scroll_speed`（那是"怎么做"，还要求调用方懂「地面速度 = scroll_speed × plane_size/tiling」）。顺带把一直**零调用点**的 `set_scroll_mult` 用起来了。
+- **两个背景内容脚本已迁移**（`stage01_decor.gd` / `stage02_decor.gd`）：`get_parent()` 与 `create_tween()` **双双清零**（脚本里的 `_ready` 整段删掉 —— 环境归宿主）。
+- **限流（实测踩到）**：未知层警告最初 **2 帧刷 4 条**（`spawn` 被演出按帧调用）⇒ 改成**每个层名只报一次**（实测 4 → 1）。响亮 ≠ 刷屏。
+- **刻意没做：`Stage`+`Visuals` 那套树重构**（原 BGA3）。原因：**`CoroutineScript extends CoroutineRunner extends Node`** —— 演出脚本是 `Node` 不是 `Node3D`，而 Godot 的 `Node3D` **只认直接父节点**（`_get_parent_node_3d()`），所以"让演出脚本成为 3D 内容的祖先"**必然要多插一层 `Node3D`**。而 `ctx.background.get_node(...)` 已经把"内容访问自己的场景"解决得同样干净 ⇒ **不值得为一句 `$Ground` 改两棵树**。BGA3 据此降级为"可选便利"。
+- **反向验证（两条新回归都证明会红）**：
+  - `test_reset_camera_restores_pose_not_only_fov`：退回 fov-only ⇒ 报 `位置要回初始 / 朝向要回初始`；
+  - `test_ready_applies_declared_env_preset`：`_ready` 不应用预设 ⇒ 报环境为 `<null>`。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 758 用例 / 6880 断言**全绿；抓图工具 `--stage 1` / `--stage 2` 实测都跑通内容 `start()`（无 null 解引用）。
+
+### 2026-10-04 — 背景创作工具收口：工作台可切关卡 + 抓图工具认任意面（BGT1–BGT3）
+
+- **症状（作者原话）**：「背景测试既要看又要频繁地看，我也不知道怎么办」—— 而**两个工具都写死 stage01**：`workbench.gd` 的关卡下拉只有一条写死的 `"Stage 1 协程版"`、回调还**忽略 `idx`**（无条件 `_stage_data = STAGE1_COROUTINE`）；`background_capture.gd` 直接 `preload(stage01_background.tscn)`。⇒ **做 stage03A 时手上一个能看的工具都没有**，这才是"背景没法测"的直接来源（不是缺工具）。
+- **改法**：
+  - **单一来源**：新增 `StageCatalog.playable()`（`all()` 里真有 `create_script` 的）。关卡练习菜单与工作台关卡下拉**共用**它 —— 原先"可玩过滤"已在菜单里手写了一份，**抄第二遍就会漂**。
+  - **工作台**（BGT1）：`_stage_sel` 由 `playable()` 填（显示名走 `StageCatalog.display_name_of`）、`_on_stage_selected` 真的用 `_stages[idx]`；`selected` 设在 `connect` **之前**（程序化赋值也会发 `item_selected`，否则启动白重跑一次）。切面后 `_restart()` 会按新 `_stage_data` 重建背景 + 重载**该面**书签（这条链路本来就写对了）。
+  - **抓图工具**（BGT2/BGT3）：加 `--stage <id>`（走 `StageCatalog.find()`，带目录扫描兜底）；**缺面 / 缺背景 / 背景根不是 `StageBackground` / 没有 `CoroutineScript` 直接子节点 ⇒ 响亮退出**；`--shrink` 默认 **1 → 2**（对齐出厂口径）；出图文件名加 stage（同目录跑多面不再互相覆盖 —— 静默丢图比报错更坏）。
+  - **顺带去掉一处「按名字找」**：工具原先用 `_bg.get_node_or_null("Decor")` 找演出脚本 → 改成照抄**引擎自己的规则**（`StageRuntime.load_stage()` 启动背景**直接子节点**里所有 `CoroutineScript`）。既去掉名字依赖（BGA3 之后那个脚本会改名成 `Stage`），也顺手支持"一个背景挂多个演出脚本"。
+- **验收（全部实测）**：
+  - 工作台 headless 冒烟 **零错误**；
+  - `--stage 99` → `找不到关卡 stage_id=99`；`--stage 4` → `关卡 Stage３Ｂ（id=4）没配 background_scene`（**响亮**，且显示名证明确实走了 `StageCatalog`）；
+  - `--stage 2` → 打印头 `Stage２（id=2）｜ 视口 400x464（shrink=2）` ⇒ **一次证明四件事**：面解析到、背景根是 `StageBackground`、**演出脚本按类型找到（不靠名字）**、`shrink` 默认已 = 2。
+  - 新增 `test_stage_catalog.gd::test_playable_filters_scriptless_from_scan_fallback`：判据落在**扫描兜底**路径上（注册表已是"可玩清单"，走注册表会空转）—— 断言"扫描**能看到**无关卡脚本的面"（`scriptless > 0`）**且** `playable()` 把它们滤掉。`scriptless > 0` 那条防的就是"用例自己空转还显绿"。
+- **本轮没做**（仍在 `TODO_TEMP`）：BGT4 `bg_metrics.py` 三件套 · BGT5 工作台暂停时停背景视口 · BGT6 抓图工具里那句陈注释。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 756 用例 / 6874 断言**全绿。
+
+### 2026-10-04 — stage02 背景树纠正 + 背景形状机械守卫（抄背景别抄漏一层）
+
+- **症状**：进第 2 面崩 —— `stage02_decor.gd:5 @ @implicit_ready: Cannot call method 'get_node' on a null value`，栈 `game_scene._load_background()` → `add_child()`。
+- **根因（一条错、连带三条）**：
+  1. `stage02_background.tscn` 把**内容装饰脚本挂在了根节点**，根上就没有 `stage_background.gd` ⇒ 内容脚本 `get_parent() as StageBackground` 得到 **null** ⇒ 第 5 行 `get_node("Ground")` 崩。
+  2. 更根本：根不是 `StageBackground` ⇒ `game_scene.gd:142` 的 `_background_instance is StageBackground` 为 false ⇒ `StageRuntime.current_background` 不设 ⇒ **`ctx.decor` 为 null**（就算第 5 行不崩，`start()` 里的 `ctx.decor.batch_spawn(...)` 也会崩）。
+  3. `decor_manager.gd` 的 UID 抄成了**手误值** `b46aa24bf582`（正确 `b459a24bf582`）—— 与同日早些时候修 `stage01_background.tscn` 的是同一个错值，说明它是**被复制传播**的。
+  4. `oak.tres` 只在 stage01；stage02 的 `add_layer(OAK_LAYER)` 被注释掉，但 `start()`/timeline 仍在调 `batch_spawn/spawn("橡树", …)` ⇒ 层不存在 ⇒ **静默 return、一棵树都不出、零日志**（`decor_manager.gd:53,62` 的静默面，正是评审里点过的那条）。
+- **修法**：`stage02_background.tscn` 对齐 stage01 的形状 —— 根挂 `stage_background.gd`、新增 `Decor` 子节点承接 `stage02_decor.gd`、`decor_manager.gd` 的 UID 改回 `b459a24bf582`。**作者的内容脚本一个字没动。**
+- **守卫（generic，不只 stage01）**：`test/test_data_validity.gd::test_stage_backgrounds_are_well_formed` —— 遍历 `StageCatalog.all()`，配了背景的每关：① 根必须是 `StageBackground`；② 必须声明 `DecorManager` 子节点；③ **真 `add_child` 一次**（入树才会跑内容脚本的 `@onready`，引用不存在的子节点会炸成引擎错）。只验形状，不数数量、不写死路径。
+  - **反向验证**：修之前它报 `Stage２ 的背景**根节点**必须挂 StageBackground（抄背景时最容易把内容脚本挂到根上）` ✅
+- **没动的**（属作者的内容决定，只报告）：`oak.tres` 未建 + `add_layer` 仍注释 ⇒ 树不会出现且**静默**；`Sun`/`FogFX` 节点不存在（脚本里已注释引用）；`stage02.gd` 是 24 行脚手架（只有 BGM + `dispose`）。
+- **教训**：既有那条 `test_stage01_background_declares_decor_manager` **写死了 stage01 路径**，于是"复制一份背景"这条**最常见的**加面动作完全没被覆盖。⇒ 加新面的第一条机械守卫就该是"新背景的形状与老的一致"。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 755 用例 / 6870 断言**全绿；全仓 UID 扫描 **430 条自洽**。
+
+### 2026-10-04 — 关卡入口收口：注册表只收可玩的 + 关卡练习菜单实装
+
+- **目标**：两件事 —— ① `stage_registry.tres` 只留**可玩**的面（把 3B / EX 摘出去）；② `stage_practice_menu` 从**占位**变成真菜单（选面 + 难度 → 直接开这一面）。
+- **为什么（①）**：`StageCatalog` 的分工注释写着「注册表 = **可玩清单**（`StageData.validate` 要求 create_script）；还没做关卡脚本的 B 线**不进注册表**，走扫描兜底」。但 3B（id 4）/ EX（id 9）实际就躺在注册表里、且**没有 `create_script`**：`StageCatalog.find()` 找得到、`GameScene._resolve_stage_data()` 也交得出去，直到 `StageRuntime.load_stage()` 才 `push_error` 拒启（黑场）。而**全仓没有任何地方调 `StageRegistry.validate()`**，`test_data_validity` 也只断言 stage 1 有脚本 ⇒ 这个偏差机械上无人管。
+- **为什么（②）**：本页是占位（只设旗标 + 淡入标题，没有任何列表）⇒ 菜单里「Stage Practice」可点、进去**选不了任何关**。补它的时机也到了：能进的面从 1 个变成 2 个（stage01 + 新加的 stage02）后，"直接开某一面"才有意义。
+- **新落点**：
+  - 注册表：`data/registry/stage_registry.tres`（只留 stage01 / stage02）。
+  - 守卫：`test/test_data_validity.gd::test_stage_registry_is_playable_only` —— `reg.validate()` 必须为空。**已反向验证会红**：把 3B 注回去，它报 `StageData[4] 缺少 create_script（关卡无法生成）`。
+  - 菜单：`scripts/scenes/stage_practice_menu.gd`（一级 = 可玩清单 → 二级 = 难度；`←→` 换自机；`Z` 确认；`X` 退回）+ `scenes/ui/stage_practice_menu.tscn`（补 `StageBox` / `DiffBox` / `CharPanel` / `Hint`）。
+  - 测试：`test/test_stage_practice_menu.gd`（9 用例）。它当场抓到实现漏了 `_build_stage_list()`（一级列表 0 行）—— 这条测试不是摆设。
+- **补丁（同日，作者实机报「没有显示第二级菜单」）**：`ui_accept` 进二级时只改 `_section`、**没重建 `_diff_box`**，而停留一级期间 `_highlight()` 已把那列清空（免得"看着能选"）⇒ 进二级是**空的**、选不了难度。
+  - 修法：把确认键抽成公开的 `confirm_current()`（一级 → **建二级列** + `_highlight()`；二级 → `_launch()`），状态机可脱输入单测。
+  - 顺带去掉一处无用功：`_rebuild_diffs()` 拆成 `_select_diffs_for_current_stage()`（**只重算**难度槽，不建 UI）—— 原先在一级每按一次键就"建 4 个 Label 再全部 free"。
+  - 回归测试**两条**：`test_confirm_enters_secondary_and_shows_difficulties`（调状态机）+ `test_accept_key_reaches_secondary`（**真注入 `ui_accept`** 走 `_input`，挡「按键名写错 / 忘接线 / `_is_input_ready` 没放行」）。两条**都反向验证过会红**：撤掉 `_build_diff_list()` 报 `进二级后必须有难度行`（与作者现象一模一样）；把 `_input` 的按键名改错报 `按确认键应进二级并建出难度列`。
+  - 教训：我原来的测试只断言了「停在一级时二级**是空的**」，**没断言「进二级后有行」** —— 正好把 bug 夹在两条断言中间放过去了。**"空"和"该有却空"是两回事**：状态机每一条转移都该有一条断言。
+- **补丁 2（同日，作者问「为什么选项没有确认后闪烁」）**：确认反馈**漏搬了** —— 闪烁本是两处既有约定：`NavPage.accept_current()`（基类，给标题/难度/角色那些 NavPage 页面）与 `SpellPracticeMenu._flash_then()`（同继承 `BasePage` 的兄弟菜单）。我写 `confirm_current()` 时只做了 `sfx_confirm()` + 转状态。
+  - 修法：补 `_flash_selected()`，**参数对齐符卡练习**（`set_loops(2)` / 暗 `Color(0.25,0.25,0.25)` / 各 0.06s），并用 `await` 到闪完再进下一级。**末级确认不闪**（立刻切场景，闪了看不见）——与符卡练习的末级同口径。
+  - 顺手修掉兄弟菜单的一个瑕疵：它闪烁前**没有 `_stop_pulse()`**，而呼吸脉冲与闪烁都在写同一个 `modulate` ⇒ 互相盖、闪得发虚。本页先停脉冲再闪。
+  - 另加 `_is_confirming` 闸门：闪的 0.24s 内重复按确认一律丢弃（免得连按一下直接跳到底）。
+  - 回归测试：`test_confirm_plays_feedback_before_advancing`（**时间窗**判据：确认后 0.1s 内二级仍不该出现、过 0.4s 才出现）。**已反向验证会红**：把 `await _flash_selected(...)` 去掉（= 恢复成立刻跳级），它报 `确认后应先播闪烁反馈，二级不是立刻出现`。
+- **三个设计决定（写下来免得下次再问）**：
+  - **BGM / 背景不用菜单管**：本页开的是**完整一面** ⇒ 走正常 `game_scene` → `StageRuntime.load_stage()`，BGM / 背景 / 道中 / Boss 全由**该面的关卡脚本**负责。这与符卡练习相反 —— 那边**没有**关卡脚本，所以 BGM 必须随载荷带（`PracticeSession.bgm_key`）。
+  - **自机资源不清点**：`game_scene._ready()` 的 `SaveData.reset_all()` 发**全套**（练习与新开一局同一起点），不做续命 / 继承。
+  - 难度槽是**纯函数**（`menu_diffs_for(stage)`）：普通面 Easy~Lunatic、**EX 面（`stage_no == 7`）只有 Extra**；"提交选择"（`commit_selection()`）与"切场景"（`_launch()`）拆开 —— 意图与副作用分离，选择写回可脱场景单测。
+- **通关行为**：`game_scene._on_stage_cleared()` 早有 `is_stage_practice` 分支（回标题、**不推进下一面**），本次一个字没动。
+- **会话契约**：`is_stage_practice` 的**置位点** = 本页 `on_enter()`，**复位点**仍只有 `reset_session()`。取消路径**自己清**，不放在 `on_leave`：`MenuNav.clear_pages()` 是 `queue_free()`（**不调 `on_leave`**），把清标志放那里会把"开局"耦合到 `clear_pages` 的实现细节上。
+- **顺带修正**：`docs/ARCHITECTURE.md` §8.3 与 `README` 的"Stage Practice 仍是占位"已删；`TODO_TEMP` 的 F1 条整行删掉。
+- **验收**：`./tools/verify.sh` 七步；GUT **117 脚本 / 754 用例 / 6860 断言**全绿（含上面两条补丁的回归用例）。
+
+### 2026-10-04 — BG 线冻结：整条背景视觉线不再投入（保留现役 3D 背景）
+
+- **目标**：把「背景视觉」这条线**整体收口** —— 保留现役 3D 背景与全部已落地成果（BG1 / BG2+BG3 / BG5 / BG6 / BG7 / BG9 / BG10 / BG12 / BG13 + 测量工具），**不再投入**：`BACKGROUND_VISUAL_PLAN.md` §A–§I **任一项都不做**（含 BG4「远处渐淡进雾色」与 BG11 `CompositorEffect`）。
+- **为什么**：作者 2026-10-04 拍板「整个 BG 线都不要了」。评审支撑：背景系统本身**是健康的**（真机背景视口 **1.03 ms**、三宿主 `own_world_3d` 隔离到位、成本与回退都留了实测），剩下的 §A–§I 全是**画面打磨**、没有**功能缺口**；唯一还有产品价值的 BG4，价值只在「雾最薄那一刻 / 未来关卡」，却要新建 shader + 单一 haze owner + 三条验收度量脚本 —— **投入产出比不划算**。
+- **关键澄清（避免以后误判 BG4 的定位）**：BG4 **不是**作者当年报的「远方硬边」的解 —— 那条是 **BG2 的回归**（`fog_sky_affect = 0`），已由 `0b9c714`（0 → 1.0）修掉。BG4 治的是**几何体那一侧**（地面/树随距离融进雾色）。两者别混。
+- **落地形态**：
+  - `docs/BACKGROUND_VISUAL_PLAN.md` 抬头改「**已冻结（2026-10-04）**」；§A–§I 整段加 ⛔ 冻结横幅 —— **原文一字不删**，只改成"历史原稿 + 将来捡回的起点"。
+  - `TODO_TEMP.md` 的 `## BG · 3D 背景系统` **整段删除**（本地文件、不进 Git；按 TODO 自身规矩"整组删空"，**BG 编号不复用**）。
+  - `README.md` 文档索引该行改注「已冻结」。
+- **刻意没做什么**：① **不拆 3D 背景**回 2D —— 1.03 ms 的成本已证明可接受，回 2D 等于把已付过学费的真相机/真视差/真雾重做一遍；② **不删 §A–§I 原稿与实测数字** —— BG4 的 DEPTH 实测（远端跳变 0.0046 → 0.0326）、`fog_density` 是弱旋钮、8 月 `decor_fade.gdshader` 的存在与回退原因，都是花了时间才拿到的结论，删了就得重学。
+- **顺带修正（按本文档硬规矩②「回退/修正必须留痕」）**：`BACKGROUND_VISUAL_PLAN.md` 的「BG2+BG3 ✅」条目仍写 `fog_sky_affect = 0`，而该值早已定案 **1.0**（`0b9c714`：0.0 在 t=15s 露 **Δ=0.078** 硬边）—— **不改原条目**，就地补 ⚠️ 修正说明。
+  ⚠️ **本次未动代码**：`scripts/background/stage_background.gd:204` 的注释同样写着 `fog_sky_affect = 0`（现状 1.0），留作单独清理。
+- **验收**：`./tools/verify.sh` 七步（文档哨兵 / 语法 / 命名 / 结构 / 启动 / GUT / 所有权）。
 
 ### 2026-10-04 — 卡摩瑞道中一非：开花相位改为每次重抽
 

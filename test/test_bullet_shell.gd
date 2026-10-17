@@ -14,7 +14,7 @@ func test_shell_builds_enemy_bullet_bundle():
 	assert_eq(d.faction, BulletData.Faction.ENEMY, "敌弹阵营")
 	assert_eq(d.texture, BulletShapes.atlas_texture(&"小玉"), "贴图对应")
 	assert_eq(d.hitbox_shape, BulletData.HitboxShape.CIRCLE, "小玉判定=圆")
-	assert_eq(d.hitbox_radius, 6.0, "贴图≡判定：小玉判定 6.0（engine 现行为，enemy() 不覆盖）")
+	assert_eq(d.hitbox_radius, 8.0, "贴图≡判定：小玉判定 8.0（内容资源 data/bullets/小玉.tres，enemy() 不覆盖）")
 	assert_eq(d.tint_mode, BulletData.TintMode.BLEND, "加色混合模式")
 	assert_eq(d.velocity.length(), 500.0, "初速")
 	assert_null(d.coroutine_script, "无行为脚本 = 纯直线弹")
