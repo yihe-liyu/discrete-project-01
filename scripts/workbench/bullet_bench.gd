@@ -224,11 +224,10 @@ func _build_ui() -> void:
 
 	direct.add_child(RIG_COMMON.section_label("操作"))
 
-	# 操作按钮 2×2 网格：横排 4 个会把面板最小宽顶爆（489>432）
-	var ops := GridContainer.new()
-	ops.columns = 2
-	ops.add_theme_constant_override("h_separation", 8)
-	ops.add_theme_constant_override("v_separation", 4)
+	# 操作按钮一行：紧凑化后 4 个按钮总宽已能放进 432；每键均分剩余宽。
+	var ops := HBoxContainer.new()
+	ops.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ops.add_theme_constant_override("separation", 6)
 	_fire_btn = RIG_COMMON.accent_button("发射")
 	_fire_btn.pressed.connect(_fire)
 	_burst_chk = CheckBox.new()
@@ -240,6 +239,7 @@ func _build_ui() -> void:
 	_seed_btn.text = "换种子"
 	_seed_btn.pressed.connect(_next_seed)
 	for button in [_fire_btn, _burst_chk, _clear_btn, _seed_btn]:
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ops.add_child(button)
 	direct.add_child(ops)
 
