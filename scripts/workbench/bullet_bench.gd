@@ -131,18 +131,35 @@ func _build_ui() -> void:
 	_script_sel.item_selected.connect(_on_script_changed)
 	direct.add_child(_script_sel)
 
-	direct.add_child(RIG_COMMON.section_label("难度（即时生效）"))
+	# 难度：一行，和初始弹的紧凑行同风格
+	var diff_row := HBoxContainer.new()
+	diff_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	diff_row.add_theme_constant_override("separation", 6)
+	var diff_lb := _label("难度", RIG_COMMON.HINT_SIZE)
+	diff_lb.custom_minimum_size = Vector2(40, 0)
+	diff_row.add_child(diff_lb)
 	_diff_sel = OptionButton.new()
+	_diff_sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for difficulty in ["Easy", "Normal", "Hard", "Lunatic"]:
 		_diff_sel.add_item(difficulty)
 	_diff_sel.selected = SaveData.selected_difficulty
 	_diff_sel.item_selected.connect(_on_diff_changed)
-	direct.add_child(_diff_sel)
+	diff_row.add_child(_diff_sel)
+	direct.add_child(diff_row)
 
-	direct.add_child(RIG_COMMON.section_label("初始弹（外形）"))
+	direct.add_child(RIG_COMMON.section_label("初始弹（发射的这颗）"))
 
-	direct.add_child(_label("贴图（含判定）"))
+	# 外观：贴图 / 染色 / 加色 / 速度 一行（同拼装页的初始弹）
+	var app_row := HBoxContainer.new()
+	app_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	app_row.add_theme_constant_override("separation", 4)
+	var app_lb := _label("外观", RIG_COMMON.HINT_SIZE)
+	app_lb.custom_minimum_size = Vector2(40, 0)
+	app_row.add_child(app_lb)
+
 	_tex_sel = OptionButton.new()
+	_tex_sel.fit_to_longest_item = false
+	_tex_sel.custom_minimum_size = Vector2(100, 0)
 	var tex_idx := 0
 	for key in BulletCatalog.keys():
 		_tex_sel.add_item(key)
@@ -152,35 +169,43 @@ func _build_ui() -> void:
 		else:
 			_tex_sel.set_item_tooltip(tex_idx, "判定：矩形 %s×%s" % [str(bt.hitbox_size.x), str(bt.hitbox_size.y)])
 		tex_idx += 1
-	direct.add_child(_tex_sel)
+	app_row.add_child(_tex_sel)
 
-	direct.add_child(_label("染色"))
 	_color_btn = ColorPickerButton.new()
 	_color_btn.color = Color.WHITE
-	_color_btn.text = "染色"
-	direct.add_child(_color_btn)
+	_color_btn.text = "色"
+	_color_btn.custom_minimum_size = Vector2(36, 0)
+	app_row.add_child(_color_btn)
 
 	_blend_chk = CheckBox.new()
-	_blend_chk.text = "加色混合"
-	direct.add_child(_blend_chk)
+	_blend_chk.text = "加色"
+	app_row.add_child(_blend_chk)
 
-	direct.add_child(_label("初速（px/s）"))
 	_speed_spin = SpinBox.new()
 	_speed_spin.min_value = 10.0
 	_speed_spin.max_value = 4000.0
 	_speed_spin.step = 5.0
 	_speed_spin.value = 300.0
-	_speed_spin.custom_minimum_size = Vector2(160, 0)
-	_speed_spin.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	direct.add_child(_speed_spin)
+	_speed_spin.custom_minimum_size = Vector2(64, 0)
+	_speed_spin.tooltip_text = "初速 px/s"
+	app_row.add_child(_speed_spin)
+	direct.add_child(app_row)
 
-	direct.add_child(_label("方向（右键=指向）"))
+	# 方向：一行，自选/8 方位；场地右键仍可指向
+	var dir_row := HBoxContainer.new()
+	dir_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dir_row.add_theme_constant_override("separation", 6)
+	var dir_lb := _label("方向", RIG_COMMON.HINT_SIZE)
+	dir_lb.custom_minimum_size = Vector2(40, 0)
+	dir_row.add_child(dir_lb)
 	_dir_sel = OptionButton.new()
+	_dir_sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_dir_sel.add_item("自选（右键场地）")
 	for dir_name in SHELL.DIR_NAMES:
 		_dir_sel.add_item(dir_name)
 	_dir_sel.item_selected.connect(_on_dir_preset)
-	direct.add_child(_dir_sel)
+	dir_row.add_child(_dir_sel)
+	direct.add_child(dir_row)
 	_dir_angle_label = _hint("")
 	direct.add_child(_dir_angle_label)
 
