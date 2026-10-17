@@ -431,7 +431,9 @@ func _add_param_row(param: Dictionary, op_call: Dictionary) -> void:
 		"dir":
 			row.add_child(_make_dir_editor(op_call))
 		"spawn", "spawns":
-			var note := RIG_COMMON.label("当前子弹（_spawn）", RIG_COMMON.HINT_SIZE)
+			var note_text := "当前子弹（_spawn）" if ptype == "spawn" \
+				else "两组模板：都暂用 _spawn（代码里换 A/B）"
+			var note := RIG_COMMON.label(note_text, RIG_COMMON.HINT_SIZE)
 			note.modulate = Color(1, 1, 1, 0.6)
 			note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -514,7 +516,11 @@ func _make_dir_editor(op_call: Dictionary) -> Control:
 	spread.value = float(dir.get(&"spread", 0.0))
 	spread.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row2.add_child(spread)
+	angle.tooltip_text = "角度（弧度）"
+	p.tooltip_text = "概率 p（仅 chance 使用）"
+	spread.tooltip_text = "散布（仅 chance / random 使用）"
 	box.add_child(row2)
+	box.add_child(RIG_COMMON.hint_label("角度 · 概率 p · 散布"))
 
 	var apply := func(_v = null):
 		var k := StringName(kind_sel.get_item_metadata(kind_sel.selected))
@@ -617,6 +623,8 @@ func _default_args(def: Dictionary) -> Dictionary:
 				args[key] = [s, s] if s != null else []
 			"hook", "sfx": args[key] = StringName(default) if default != null else &""
 			_: args[key] = default
+	if StringName(def.get("id", &"")) == &"emit_variant":
+		args["dir"] = BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, 1.0, 0.0)
 	return args
 
 
@@ -701,4 +709,8 @@ func _copy_code() -> void:
 
 
 func _preview() -> void:
+	var errors: Array = composer().validate()
+	if not errors.is_empty():
+		status.emit("先修：%s" % errors[0], Color(1, 0.6, 0.3))
+		return
 	preview_requested.emit(preview_lifecycle())
