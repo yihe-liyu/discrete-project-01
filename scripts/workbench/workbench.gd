@@ -95,6 +95,7 @@ var _tab_btns: Array[Button] = []
 ## 嵌入创作台时：隐藏内部“目录”页签，统一走创作台的全局目录抽屉。
 var _embedded: bool = false
 var _stage_shift_y := 0.0    # 嵌入创作台页面偏移；舞台视觉归一回游戏坐标用
+var _ui_page_y := 0.0        # 页面在窗口里的 y（用于同步去重）
 var _ui_offset_applied: bool = false  # 防止 _ready 的首次同步 + deferred 同步重复下移
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
@@ -200,10 +201,17 @@ func _draw() -> void:
 ## CanvasLayer 平移到页面全局位置（独立运行 = 0，嵌入创作台 = 页签横栏下方）
 func _sync_ui_layer_offset() -> void:
 	var pos := get_global_rect().position
-	if _ui_offset_applied and is_equal_approx(pos.y, _stage_shift_y):
+	if _ui_offset_applied and is_equal_approx(pos.y, _ui_page_y):
 		return
 	_ui_offset_applied = true
-	_stage_shift_y = pos.y
+	_ui_page_y = pos.y
+	# 嵌入时不要把舞台整体上移 pos.y：那会把 32px 的场地顶边裁到页面外，
+	# 只剩左右竖线（截图里的“悬空金线”）。只上移 FIELD_TOP，让顶边正好落到
+	# 页签栏下方（内容区 y=pos.y），顶/左/右金边形成完整框。
+	var stage_shift := pos.y
+	if _embedded and pos.y != 0.0:
+		stage_shift = GameConfig.FIELD_TOP
+	_stage_shift_y = stage_shift
 	if pos.y != 0.0:
 		# 【重要】不能用 $UI.offset = pos（CanvasLayer.offset）——它会对锚定视口的
 		# 控件（时间轴）二次平移：时间轴被推到窗外（962..994）→ 底部露灰边。
@@ -213,17 +221,17 @@ func _sync_ui_layer_offset() -> void:
 		rp.offset_top += pos.y
 		# 舞台（幽灵/背景/边框/网格/命中/计时器）归一到游戏坐标（视口空间）：
 		# 子弹/敌人在 autoload 根空间=游戏坐标，页面偏移会让瞄准/绘制差 page_y 像素
-		$World.position.y -= pos.y
+		$World.position.y -= stage_shift
 		# 3D 背景按**真游戏的 over-scan 规格**铺（场地每边外扩 `BACKGROUND_OVERSCAN`）⇒ 与
 		# `game_scene.tscn` 的容器同尺寸（800×928），预览与真游戏同构图。
 		# 金边由 `FrameOverlay` 画在背景**之上**，所以这里不必再为"别盖住金边"而内缩。
 		var over := GameConfig.BACKGROUND_OVERSCAN
 		$BgContainer.position = Vector2(
-			GameConfig.FIELD_LEFT - over, GameConfig.FIELD_TOP - over - pos.y)
+			GameConfig.FIELD_LEFT - over, GameConfig.FIELD_TOP - over - stage_shift)
 		$BgContainer.size = Vector2(
 			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT + over * 2.0,
 			GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP + over * 2.0)
-		_phase_timer_label.position.y -= pos.y
+		_phase_timer_label.position.y -= stage_shift
 	# 画框层随页面偏移一起走（它是独立节点，不会自动跟着根 `_draw` 的坐标）
 	_redraw_stage()
 

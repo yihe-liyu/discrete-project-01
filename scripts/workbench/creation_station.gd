@@ -47,6 +47,25 @@ func _build_ui() -> void:
 	# MOUSE_FILTER_STOP；整关预览的 BgContainer 被嵌页归一时移到 y≈1、宽 762）→
 	# 整关预览/弹幕台/敌人台（x<832~963 一带）点不动。GUI 拾取按**画布层从高到低** →
 	# 横栏必须在更高的层上，且**必须显式挂主题**（CanvasLayer 会断 Control 主题链）。
+	# 顶栏底板：原来按钮之间的空隙直接透出场地，场地的金色左边框会像一根“悬空竖线”。
+	# 加一条 36px 的深色 header + 底部金线，给页签/内容一个明确的接缝。
+	var bar_layer: CanvasLayer = $BarLayer
+	var header_bg := ColorRect.new()
+	header_bg.color = Color(0.035, 0.035, 0.05, 0.98)
+	header_bg.anchor_right = 1.0
+	header_bg.offset_bottom = 36.0
+	header_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar_layer.add_child(header_bg)
+	bar_layer.move_child(header_bg, 0)
+	var header_line := ColorRect.new()
+	header_line.color = Color(0.62, 0.52, 0.28, 0.55)
+	header_line.anchor_right = 1.0
+	header_line.offset_top = 35.0
+	header_line.offset_bottom = 36.0
+	header_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar_layer.add_child(header_line)
+	bar_layer.move_child(header_line, 1)
+
 	var bar: HBoxContainer = $BarLayer/Bar
 	bar.theme = theme
 	for i in SLOTS.size():
