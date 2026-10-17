@@ -55,6 +55,7 @@
 - **代码**：`BulletComposer.to_code()` 从同一份 spec 生成 `var lc := BulletLifecycle.new()` … `data.trajectory(lc)`，不执行字符串。
 - **边界**：仍只拼 trajectory，不拼 `_tick` / 波次；预设没删（内容迁移后再删，见 TODO）。
 - **测试**：`test_bullet_rig` 加拼装模式/代码/预览；`test_creation_station` 加描述符组路由；`test_bullet_composer_golden` 加 to_code。全量 **829 / 7713**。
+- **截图后补**：`spawn` 说明占满剩余宽（不再竖排）；`dir` 编辑器拆两行（kind/target + angle/p/spread），不再溢出 432 面板。截图放 `docs/screenshots/`。
 
 ### 2026-10-17 — 创作台 Phase 1：全局目录抽屉 + 公开接缝
 

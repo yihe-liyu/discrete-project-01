@@ -433,6 +433,8 @@ func _add_param_row(param: Dictionary, op_call: Dictionary) -> void:
 		"spawn", "spawns":
 			var note := RIG_COMMON.label("当前子弹（_spawn）", RIG_COMMON.HINT_SIZE)
 			note.modulate = Color(1, 1, 1, 0.6)
+			note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			row.add_child(note)
 			if ptype == "spawn":
 				op_call[key] = _current_spawn()
@@ -452,11 +454,18 @@ func _add_param_row(param: Dictionary, op_call: Dictionary) -> void:
 
 func _make_dir_editor(op_call: Dictionary) -> Control:
 	var dir: Dictionary = op_call.get("dir", {})
-	var box := HBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
+	# 两行：kind/target 一行，angle/p/spread 一行；5 个控件挤一行会超出 432。
+	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 2)
+
+	var row1 := HBoxContainer.new()
+	row1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row1.add_theme_constant_override("separation", 4)
 	var kind_sel := OptionButton.new()
-	kind_sel.custom_minimum_size = Vector2(88, 0)
+	kind_sel.fit_to_longest_item = false
+	kind_sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	kind_sel.custom_minimum_size = Vector2(120, 0)
 	for d in CATALOG.dir_defs():
 		kind_sel.add_item(d["label"])
 		kind_sel.set_item_metadata(kind_sel.item_count - 1, d["id"])
@@ -466,39 +475,46 @@ func _make_dir_editor(op_call: Dictionary) -> Control:
 		if StringName(kind_sel.get_item_metadata(i)) == cur_kind:
 			cur_idx = i
 	kind_sel.selected = cur_idx
-	box.add_child(kind_sel)
+	row1.add_child(kind_sel)
 
 	var target_sel := OptionButton.new()
-	target_sel.custom_minimum_size = Vector2(78, 0)
+	target_sel.fit_to_longest_item = false
+	target_sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	target_sel.custom_minimum_size = Vector2(100, 0)
 	for i in TARGETS.size():
 		target_sel.add_item(TARGET_LABELS[i])
 		target_sel.set_item_metadata(i, TARGETS[i])
 	target_sel.selected = maxi(0, TARGETS.find(dir.get(&"target", BulletLifecycle.T_PLAYER)))
-	box.add_child(target_sel)
+	row1.add_child(target_sel)
+	box.add_child(row1)
 
+	var row2 := HBoxContainer.new()
+	row2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row2.add_theme_constant_override("separation", 4)
 	var angle := SpinBox.new()
 	angle.min_value = -TAU * 4.0
 	angle.max_value = TAU * 4.0
 	angle.step = 0.05
 	angle.value = float(dir.get(&"angle", 0.0))
-	angle.custom_minimum_size = Vector2(64, 0)
-	box.add_child(angle)
+	angle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row2.add_child(angle)
 
 	var p := SpinBox.new()
 	p.min_value = 0.0
 	p.max_value = 1.0
 	p.step = 0.05
 	p.value = float(dir.get(&"p", 1.0))
-	p.custom_minimum_size = Vector2(58, 0)
-	box.add_child(p)
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row2.add_child(p)
 
 	var spread := SpinBox.new()
 	spread.min_value = -TAU * 4.0
 	spread.max_value = TAU * 4.0
 	spread.step = 0.05
 	spread.value = float(dir.get(&"spread", 0.0))
-	spread.custom_minimum_size = Vector2(64, 0)
-	box.add_child(spread)
+	spread.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row2.add_child(spread)
+	box.add_child(row2)
 
 	var apply := func(_v = null):
 		var k := StringName(kind_sel.get_item_metadata(kind_sel.selected))
@@ -514,7 +530,6 @@ func _make_dir_editor(op_call: Dictionary) -> Control:
 	p.value_changed.connect(func(_v): apply.call())
 	spread.value_changed.connect(func(_v): apply.call())
 	return box
-
 
 func _selected_call() -> Dictionary:
 	if _selected.is_empty():
