@@ -1,113 +1,83 @@
 class_name ScreenFogFX
 extends Node
 
-## 全屏蒙眼雾组件：CanvasLayer + ColorRect + screen_fog shader（canvas_item）
-## 太阳屏幕位置每帧 unproject（相机动雾跟动）
-## 由演出脚本调用 setup(sun) 创建（practice 模式不调 → 无雾层，与旧行为一致）
-## setup() 幂等：重复调用不重复创建（重跑安全）
-## 全部参数 @export → 场景里选中本节点即可在 Inspector 调（每关可配不同雾）
-## 噪声纹理：预生成资源（cloud_noise.tres），setup 即用 → 零生成等待/零卡顿/无过渡期
-## 改纹理参数（texture_size/contrast）后重跑 tools/regenerate_fog_tex.gd
+## 全屏蒙眼雾组件。**看得见的部分全部场景声明**（2026-10-04 BGA/B）：
+##   FogFX（本节点，只装逻辑）
+##   └── FogLayer（CanvasLayer，layer = 5 —— 背景 SubViewport 内叠在 3D 之上）
+##       └── FogRect（ColorRect 全屏）+ ShaderMaterial(screen_fog.gdshader)
+##
+## 参数**就在 Inspector 里调材质的 `shader_parameter/*`**（唯一来源）。
+## 旧实现是 `new()` 出来 + `@export` × 12 + `_apply_params()` 镜像 ⇒ 同一个值有三份默认
+## （shader 文件 / `@export` / `.tscn`），而运行时真值只有 `.tscn` 那份 ⇒
+## **改 shader 文件里的数字是静默 no-op**。那套镜像与 12 个 `@export` 已删。
+##
+## 太阳屏幕位置每帧 unproject（相机动雾跟动）：**相机与太阳由宿主接进来**
+## （`StageBackground._resolve_showcase()` 按类型找本组件后调 `bind(camera, sun)`）——
+## 内容脚本**不需要**任何调用；本组件也不 `get_parent()` 摸宿主（挪层级/嵌套都不会静默失效）。
+##
+## ⚠️ **声明即显示**。旧写法是内容脚本调 `setup(sun, camera)` + `_ready` 藏起来等调用
+## ⇒ **忘了调就永远隐形、且零报错**（stage02 2026-10-04 实况）。那套"记得调用才显示"已废止。
+## 噪声纹理也在场景里（材质的 `shader_parameter/noise_tex` = `cloud_noise.tres`）。
+## ⚠️ 本层在**背景 SubViewport 内** ⇒ 只压暗背景，**不挡弹幕/自机**。
 
-const CLOUD_NOISE_PATH := "res://assets/Textures/background/stage01/cloud_noise.tres"
+# ── 仅**预生成工具**用（运行时纹理在场景里；改这两个值要重跑
+#    tools/regenerate_fog_tex.gd，**不影响已生成的纹理**）──
+@export var texture_size: int = 512          ## 云斑纹理分辨率
+@export var texture_contrast: float = 1.8    ## 云斑对比度
 
-# ── 雾纹理（预生成资源；参数供 regenerate 工具用，运行时读资源）──
-@export var texture_size: int = 512          ## 云斑纹理分辨率（预生成用）
-@export var texture_contrast: float = 1.8    ## 云斑对比度（预生成用）
+@onready var _layer: CanvasLayer = get_node_or_null("FogLayer") as CanvasLayer
+@onready var _rect: ColorRect = get_node_or_null("FogLayer/FogRect") as ColorRect
 
-# ── 整体蒙眼 ──
-@export var fog_dark: float = 0.65           ## 整体蒙眼浓度
-@export var fog_color: Color = Color(0.02, 0.02, 0.03)  ## 雾色（暗蓝灰）
-@export var flow_speed: float = 0.03         ## 流动速度
-@export var noise_scale: float = 1.0         ## 云斑大小
-
-# ── 太阳处 ──
-@export var sun_fog_radius: float = 0.1      ## 太阳处雾团范围
-@export var sun_fog_extra: float = 1.0       ## 太阳处额外浓度
-
-# ── 精细化效果 ──
-@export var detail_scale: float = 3.0        ## 第二层噪声频率倍率
-@export var detail_strength: float = 0.35    ## 第二层混合权重（0=关）
-@export var vignette_strength: float = 0.15  ## 边缘渐晕（0=关）
-@export var breath_amplitude: float = 0.03   ## 呼吸感幅度（0=关）
-@export var ring_strength: float = 0.0       ## 太阳漏光亮环（0=关）
-@export var ring_radius: float = 0.16        ## 亮环半径
-@export var ring_width: float = 0.03         ## 亮环宽度
-
-var _rect: ColorRect
+var sun: Node3D          ## 太阳（把它的世界位置投影到屏幕）
+var camera: Camera3D     ## 投影用相机（宿主注入）
 var _mat: ShaderMaterial
-var sun: Node3D
-var _stage_background: StageBackground
+var _is_bound := false
 
 
-func setup(p_sun: Node3D = null) -> void:
+func _ready() -> void:
 	if _rect:
-		return
+		_mat = _rect.material as ShaderMaterial
+	elif _layer:
+		push_error("ScreenFogFX: 场景里没声明 FogLayer/FogRect —— 雾不会出现（见本文件头）")
+
+
+## 由**宿主**调用：注入投影用相机与太阳（`StageBackground._resolve_showcase()`）。
+## 幂等，重跑安全（`_process` 在 `bind` 之前不做事）。
+func bind(p_camera: Camera3D, p_sun: Node3D = null) -> void:
+	camera = p_camera
 	sun = p_sun
-	var layer := CanvasLayer.new()
-	layer.name = "FogLayer"
-	layer.layer = 5  # 背景 SubViewport 内叠在 3D 之上
-	add_child(layer)
-	var rect := ColorRect.new()
-	rect.name = "FogRect"
-	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var mat := ShaderMaterial.new()
-	mat.shader = preload("res://gdshader/screen_fog.gdshader")
-	# 预生成纹理：毫秒级就绪，雾层一次性完整出现（无均匀雾过渡/无卡顿）
-	var img: Image = load(CLOUD_NOISE_PATH)
-	if img == null:
-		push_error("ScreenFogFX: 预生成纹理缺失，请运行 tools/regenerate_fog_tex.gd；本次用同步生成兜底")
-		img = _make_cloud_image(texture_size, texture_contrast)
-	mat.set_shader_parameter("noise_tex", ImageTexture.create_from_image(img))
-	rect.material = mat
-	layer.add_child(rect)
-	_rect = rect
-	_mat = mat
-	_apply_params()
+	if _rect == null or _mat == null:
+		push_error("ScreenFogFX: 场景里没声明 FogLayer/FogRect（或材质不是 ShaderMaterial）—— 雾不会出现")
+		return
+	_is_bound = true
 	_update_sun_pos()  # 立即同步太阳位置（不等 _process 首帧，消除覆盖延迟）
 
 
 func _process(_delta: float) -> void:
+	if not _is_bound:
+		return
 	_update_sun_pos()
 
 
+## 把太阳的世界位置投影到屏幕（归一化）。**相机由外部注入**（`bind()`），
+## viewport 用 `self.get_viewport()` ⇒ 本组件**不再需要知道自己的父节点是谁**。
+##
+## ⚠️ 取的是 **`BackgroundSun.drawn_position()`**（真正被画出来的 `SunSprite`），
+## **不是** `sun.global_position`（本节点）—— 两者在 `SunSprite` 有局部位移时不同，
+## 而作者**在编辑器里拖的正是那个 sprite**。旧实现用本节点 ⇒ 太阳一改 y 就与黑雾错位
+## （2026-10-04 作者实测：「一改太阳的 y 坐标，黑雾的对准就不准了」）。
 func _update_sun_pos() -> void:
-	if not _mat:
+	if _mat == null:
 		return
-	var background := _get_bg()
-	if not background or not background.camera:
+	if not is_instance_valid(camera) or not is_instance_valid(sun):
 		return
-	if sun and is_instance_valid(sun):
-		var sp: Vector2 = background.camera.unproject_position(sun.global_position)
-		var vp: Vector2 = background.get_viewport().get_visible_rect().size
-		if vp.x > 0 and vp.y > 0:
-			_mat.set_shader_parameter("sun_pos", sp / vp)
-
-
-## 把 @export 参数写入 shader（setup 时调用一次；改参数后重跑/重挂即生效）
-func _apply_params() -> void:
-	if not _mat:
-		return
-	_mat.set_shader_parameter("fog_dark", fog_dark)
-	_mat.set_shader_parameter("fog_color", fog_color)
-	_mat.set_shader_parameter("flow_speed", flow_speed)
-	_mat.set_shader_parameter("noise_scale", noise_scale)
-	_mat.set_shader_parameter("sun_fog_radius", sun_fog_radius)
-	_mat.set_shader_parameter("sun_fog_extra", sun_fog_extra)
-	_mat.set_shader_parameter("detail_scale", detail_scale)
-	_mat.set_shader_parameter("detail_strength", detail_strength)
-	_mat.set_shader_parameter("vignette_strength", vignette_strength)
-	_mat.set_shader_parameter("breath_amplitude", breath_amplitude)
-	_mat.set_shader_parameter("ring_strength", ring_strength)
-	_mat.set_shader_parameter("ring_radius", ring_radius)
-	_mat.set_shader_parameter("ring_width", ring_width)
-
-
-func _get_bg() -> StageBackground:
-	if _stage_background and is_instance_valid(_stage_background):
-		return _stage_background
-	_stage_background = get_parent() as StageBackground
-	return _stage_background
+	var target: Vector3 = sun.global_position
+	if sun is BackgroundSun:
+		target = (sun as BackgroundSun).drawn_position()
+	var sp: Vector2 = camera.unproject_position(target)
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	if vp.x > 0 and vp.y > 0:
+		_mat.set_shader_parameter("sun_pos", sp / vp)
 
 
 ## 云斑纹理（主线程入口，测试用）：生成 + 上传

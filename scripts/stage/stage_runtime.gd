@@ -48,6 +48,9 @@ func load_stage(data: StageData) -> void:
 		return
 
 	SaveData.reset_all(entity_registry)   # 注册表显式传入，不再读全局
+	# 关卡练习的起始火力：**紧跟在复位之后**（复位会把火力归 0；放别处会被这里冲掉）。
+	# 非关卡练习 / 第 1 面 ⇒ 空跑。
+	SaveData.apply_stage_practice_power(entity_registry)
 
 	current_stage = data
 	_is_stage_active = true

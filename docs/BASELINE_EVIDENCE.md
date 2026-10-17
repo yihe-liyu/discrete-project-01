@@ -61,9 +61,9 @@
       **最大点 / 捡点** `item.gd:125` → `PlayerResources.add_max_point()`（`max_point` 恒 +10，入账当前值；深位递减）；
       **擦弹** `kernel_bullet_physics.gd:178 on_graze()` → `graze_count += 1` + `add_score(10)` + `add_memory(MEMORY_GRAZE)`；
       **记忆** —— 修正旧措辞：它不是**分数**来源，而是**资源**（0–100）：擦弹 +0.25、miss +25、每秒自然回复，`memory_release`（`player.gd:242`）消耗它强收道具，并决定 Stage 3A / 3B 路线。
-- [x] **miss 语义完整**（2026-09-27 接上缺口 + 当日再补被弹炸弹 + 2026-09-28 补雷补偿）：`miss()` = 先判**被弹炸弹窗口** → 否则 `_apply_miss()`。
-      `_apply_miss()` = 清弹 + 记忆 +25 + **火力 −50**（`on_miss_power_penalty()`，clamp 0..300）+ **直接 +2 个雷**（`MISS_BOMB_GAIN` → `PlayerResources.add_bombs()`：不撒掉落物、**雷碎片不动**、到 `MAX_BOMBS` 封顶）+ **撒 10 个 P 点扇形** + 扣残机 + **自机复位两步** + 3 秒无敌。
-      （被弹炸弹窗口在 `miss()` 里**先**判定 ⇒ 这 2 个雷抢不了这一次命；窗口里抵消掉的那次不算 miss，不发补偿。）
+- [x] **miss 语义完整**（2026-09-27 接上缺口 + 当日再补被弹炸弹 + 2026-09-28 补雷补偿 → **2026-10-04 改为雷惩罚**）：`miss()` = 先判**被弹炸弹窗口** → 否则 `_apply_miss()`。
+      `_apply_miss()` = 清弹 + 记忆 +25 + **火力 −50**（`on_miss_power_penalty()`，clamp 0..300）+ **雷 −2、下限 3**（`on_miss_bomb_penalty()`：先扣 `MISS_BOMB_PENALTY`(2)、不足 `MISS_BOMB_FLOOR`(3) 就**抬到 3** ⇒ *bomb 本来少于 3 时中弹反而净增*；不撒掉落物、**雷碎片不动**）+ **撒 10 个 P 点扇形** + 扣残机 + **自机复位两步** + 3 秒无敌。
+      （被弹炸弹窗口在 `miss()` 里**先**判定 ⇒ 这次扣雷抢不了这一次命；窗口里抵消掉的那次不算 miss，不做雷惩罚。）
       **被弹炸弹（deathbomb）窗口**：有雷（≥ `DEATHBOMB_MIN_BOMBS`）且机体配了 `BombData` 时，被弹瞬间 `Engine.time_scale = 0` **全局定格** `DEATHBOMB_FRAMES`(12) 帧 ≈ 0.2s
       （**保存/恢复倍率**，与 Boss 全破定格同一套；出树有安全阀，切场景/测试回收都不会把 `time_scale` 留在 0）。
       **收尾走真实时间计时器**（`create_timer(…, process_always=true, ignore_time_scale=true)`）—— 定格中 delta=0、玩家按暂停时 `tree.paused` 也照样到点。

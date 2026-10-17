@@ -134,33 +134,45 @@ func test_miss_without_ctx_is_safe():
 	assert_true(player.is_invincible, "无 ctx 也照常进无敌")
 
 
-## Miss 补偿：**直接 +2 个完整雷**（作者："不用掉落物，直接加"）—— 且**雷碎片那条线不动**
-func test_miss_grants_two_bombs_without_touching_fragments():
+## Miss 雷惩罚：**扣 2 个**（2026-10-04 作者改口径，原先是"+2 补偿"）—— 且**雷碎片那条线不动**
+func test_miss_costs_two_bombs_without_touching_fragments():
 	var player := _make_player()
-	player.resources.bomb_count = 1
+	player.resources.bomb_count = 6          # 6−2=4 > 下限 3 ⇒ 干净地只验"扣 2"
 	player.resources.bomb_fragments = 3
 	player.miss()   # 不能用 `_miss_now`（它为了绕开窗口会先把雷清零）
-	assert_eq(player.resources.bomb_count, 1 + Player.MISS_BOMB_GAIN, "miss 直接补 2 个雷（不撒道具）")
+	assert_eq(player.resources.bomb_count, 6 - PlayerResources.MISS_BOMB_PENALTY, "miss 扣 2 个雷（不撒道具）")
 	assert_eq(player.resources.bomb_fragments, 3, "雷碎片不动（碎片是另一条线）")
 
 
-## 补偿受上限约束：到 `MAX_BOMBS` 就停住，不越界
-func test_miss_bomb_gain_respects_cap():
+## 雷惩罚的**下限**：扣完不足 3 就抬到 3 —— 注意 ⇒ bomb 本来 < 3 时中弹反而**净增**
+## （作者口径："减少后如果不足 3 个 bomb 则设置为 3 个"；这条副作用是有意的）
+func test_miss_bomb_penalty_floors_at_three():
 	var player := _make_player()
-	player.resources.bomb_count = PlayerResources.MAX_BOMBS - 1
-	player.miss()   # 夹具没配 `PlayerData.bomb` → 不会开被弹炸弹窗口
-	assert_eq(player.resources.bomb_count, PlayerResources.MAX_BOMBS,
-			"补到 %d 封顶" % PlayerResources.MAX_BOMBS)
+	player.resources.bomb_count = 4          # 4−2=2 < 3 ⇒ 抬到 3
+	player.miss()
+	assert_eq(player.resources.bomb_count, PlayerResources.MISS_BOMB_FLOOR, "扣完不足 3 ⇒ 设置为 3")
+
+	var poor := _make_player()
+	poor.resources.bomb_count = 1            # 1−2 = −1 ⇒ 抬到 3（净增 2）
+	poor.miss()
+	assert_eq(poor.resources.bomb_count, PlayerResources.MISS_BOMB_FLOOR,
+		"bomb 少于下限时中弹会被补到 3（口径如此，不是 bug）")
+
+	var full := _make_player()
+	full.resources.bomb_count = PlayerResources.MAX_BOMBS
+	full.miss()
+	assert_eq(full.resources.bomb_count, PlayerResources.MAX_BOMBS - PlayerResources.MISS_BOMB_PENALTY,
+			"满仓被弹也只扣 %d（不越界）" % PlayerResources.MISS_BOMB_PENALTY)
 
 
-## 被弹炸弹**抵消**掉的那次不算 miss ⇒ **不发补偿**（没真的被弹，不能白拿雷）
-func test_deathbomb_cancel_grants_no_bomb_compensation():
+## 被弹炸弹**抵消**掉的那次不算 miss ⇒ **不做雷惩罚**（没真的被弹）
+func test_deathbomb_cancel_applies_no_bomb_penalty():
 	var player := _make_player()
 	_arm_bomb(player)
 	player.resources.bomb_count = 4
 	player.miss()
 	player._unhandled_input(_bomb_event())
-	assert_eq(player.resources.bomb_count, 4 - Player.DEATHBOMB_COST, "只付被弹炸弹的代价，不补")
+	assert_eq(player.resources.bomb_count, 4 - Player.DEATHBOMB_COST, "只付被弹炸弹的代价，不再叠加 miss 的雷惩罚")
 
 
 ## 契约：扇形半径必须**大于**道具吸附半径 —— 否则弧飞完那一刻就被吸走，"竖直下落"看不到
@@ -294,7 +306,7 @@ func test_no_deathbomb_window_without_bombs():
 	assert_eq(Engine.time_scale, 1.0, "不定格")
 
 
-## 窗口到点没按 bomb → 这次 miss 照常结算（掉命、**不扣雷**（还倒给 miss 补偿 +2）、定格解开）
+## 窗口到点没按 bomb → 这次 miss 照常结算（掉命、**走 miss 的雷惩罚**（扣 2 ⇒ 本例抬到下限 3）、定格解开）
 func test_deathbomb_window_expiry_applies_miss():
 	var player := _make_player()
 	_arm_bomb(player)
@@ -306,8 +318,9 @@ func test_deathbomb_window_expiry_applies_miss():
 	for _i in Player.DEATHBOMB_FRAMES + 6:
 		await get_tree().physics_frame
 	assert_eq(player.resources.lives, 2, "窗口过期 → 掉命")
-	assert_eq(player.resources.bomb_count, 3 + Player.MISS_BOMB_GAIN,
-			"没按 bomb → 不扣雷；miss 补偿照给（+%d）" % Player.MISS_BOMB_GAIN)
+	# 3−2=1 < 下限 3 ⇒ 抬到 3 ⇒ 观感是"没扣"（口径如此）
+	assert_eq(player.resources.bomb_count, PlayerResources.MISS_BOMB_FLOOR,
+			"没按 bomb → 不算被弹炸弹；miss 的雷惩罚扣完不足下限 ⇒ 仍是 3")
 	assert_eq(Engine.time_scale, 1.0, "定格解开")
 	assert_signal_emitted(GameEvents, "player_missed", "这才是真的 miss")
 	assert_signal_emitted(GameEvents, "deathbomb_ended", "窗口结束信号（滤镜渐隐靠它）")

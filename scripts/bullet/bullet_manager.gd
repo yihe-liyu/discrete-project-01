@@ -179,6 +179,16 @@ func clear_bullets():
 		_kernel_bullet_host.clear_bombs()
 
 
+## 全屏清敌弹 **并逐颗播消弹消散特效**（= 一次罩住全场的 sweep；**即时、无动画**）。
+## 与 `clear_bullets()` 的分工：那个是**裸清**（无特效）—— 关卡收尾（`StageRuntime` 停/通关）用；
+## 本方法是**内容"清屏"要看得见**时用的（`ctx.bullets.clear_enemy_bullets()`）。
+## 半径取**场地对角线**（≈1600）⇒ 比 cull 范围只大不小，界外等 cull 的弹也一起清掉 ✓
+## （`sweep_enemy_bullets` 只清 ENEMY 阵营、且先收集后统一 `despawn` + `play_clear_fx`）。
+func clear_enemy_bullets_with_fx() -> void:
+	var r: float = Vector2(GameConfig.VIEW_WIDTH, GameConfig.VIEW_HEIGHT).length()
+	clear_enemy_bullets_in_circle(GameConfig.SCREEN_CENTER, r)
+
+
 ## 清场 + 回收内核注册表（program / 弹型 / 纹理句柄）。**仅工具 / 工作台**用：
 ## 原生 store 的 program 表只增不减，反复重开演（每次重建内容脚本 → 新 BulletData）会积累；
 ## 正常游戏靠换 scene 重建 BulletManager 天然重置，不需要它。

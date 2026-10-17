@@ -101,17 +101,17 @@ func white_huge_fairy() -> EnemyData:
 	return self
 
 func red_yin_yang_jade() -> EnemyData:
-	self.visual("red_yin_yang_jade").hbox(40).hp(150).power(5)
+	self.visual("red_yin_yang_jade").hbox(40).hp(90).power(4)
 	return self
 
 func green_yin_yang_jade() -> EnemyData:
-	self.visual("green_yin_yang_jade").hbox(40).hp(150).power(2).point(3)
+	self.visual("green_yin_yang_jade").hbox(40).hp(90).power(2).point(2)
 	return self
 
 func blue_yin_yang_jade() -> EnemyData:
-	self.visual("blue_yin_yang_jade").hbox(40).hp(150).point(5)
+	self.visual("blue_yin_yang_jade").hbox(40).hp(90).point(4)
 	return self
 
 func purple_yin_yang_jade() -> EnemyData:
-	self.visual("purple_yin_yang_jade").hbox(40).hp(150).power(3).point(2)
+	self.visual("purple_yin_yang_jade").hbox(40).hp(90).power(2).point(2)
 	return self

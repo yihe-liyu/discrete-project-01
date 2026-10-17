@@ -1,42 +1,36 @@
 class_name BackgroundSun
 extends Node3D
 
-## 日食太阳组件：Sprite3D + 程序化圆盘纹理 + sun_sprite shader
-## 由演出脚本调用 setup() 创建（practice 模式不调 → 无太阳，与旧行为一致）
-## setup() 幂等：重复调用不重复创建（重跑安全）
-## 圆盘纹理：预生成资源（sun_disc.tres），setup 即用 → 零生成等待/零卡顿
-## 改纹理尺寸后重跑 tools/regenerate_fog_tex.gd
+## 日食太阳组件。**可见部分全部场景声明**（2026-10-04）：
+##   Sun（本节点 Node3D —— **位置就是太阳位置**，编辑器里直接拖）
+##   └── SunSprite（Sprite3D，billboard）+ 圆盘纹理 + ShaderMaterial(sun_sprite.gdshader)
+## 参数在 Inspector 里调（节点位置 / `pixel_size` / 材质 `shader_parameter/*`）。
+##
+## ⚠️ **声明即显示**：没有 `setup()`，也不需要任何人调用。
+## 旧实现（`setup()` 里 `Sprite3D.new()` + 运行时 `load()` 纹理 + `_ready` 藏起来等调用）
+## 有两个后果：① 编辑器里**空白**（无纹理的 Sprite3D 什么都不画）⇒ 连"把太阳拖进画面"都做不到；
+## ② **忘了调 `setup()` 就永远隐形、且零报错** —— stage02 2026-10-04 实况（作者摆好了节点却看不见）。
+## 教训：**别把"显示"绑在"记得调用"上**（练习模式要不要它也定了：要）。
+## ⚠️ `SunSprite` 是子节点 ⇒ 它的**局部位移叠加**在本节点上（两处都能摆，合并即最终位置）。
 
-const SUN_DISC_PATH := "res://assets/Textures/background/stage01/sun_disc.tres"
+@export var texture_size: int = 256      ## **仅预生成工具用**（运行时纹理在场景里，见文件头）
 
-@export var sun_position: Vector3 = Vector3(0, 100, -320)
-@export var pixel_size: float = 0.31
-@export var texture_size: int = 256          ## 圆盘纹理尺寸（预生成用）
-
-var sprite: Sprite3D
+@onready var sprite: Sprite3D = get_node_or_null("SunSprite") as Sprite3D
 
 
-func setup() -> void:
-	if sprite:
-		return
-	position = sun_position
-	var sun := Sprite3D.new()
-	sun.name = "SunSprite"
-	sun.pixel_size = pixel_size
-	sun.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	var smat := ShaderMaterial.new()
-	smat.shader = preload("res://gdshader/sun_sprite.gdshader")
-	# 预生成纹理：毫秒级就绪，太阳一次性完整出现
-	var img: Image = load(SUN_DISC_PATH)
-	if img == null:
-		push_error("BackgroundSun: 预生成纹理缺失，请运行 tools/regenerate_fog_tex.gd；本次用同步生成兜底")
-		img = _make_sun_disc(texture_size)
-	var tex := ImageTexture.create_from_image(img)
-	sun.texture = tex
-	smat.set_shader_parameter("sun_tex", tex)
-	sun.material_override = smat
-	add_child(sun)
-	sprite = sun
+func _ready() -> void:
+	if sprite == null:
+		push_error("BackgroundSun: 场景里没声明 SunSprite —— 太阳不会出现（见本文件头）")
+
+
+## **被画出来的**太阳位置 = `SunSprite` 的全局位置。
+## ⚠️ 与 `global_position`（本节点）**可能不同**：`SunSprite` 带自己的局部位移，而在编辑器里
+## 拖得动的正是那个 sprite。**要对准太阳的地方（如蒙眼雾的太阳雾团/亮环）必须用这个** ——
+## 2026-10-04 作者实测：「一改太阳的 y 坐标，黑雾的对准就不准了」（旧实现投影的是本节点）。
+func drawn_position() -> Vector3:
+	if sprite and is_instance_valid(sprite):
+		return sprite.global_position
+	return global_position
 
 
 ## 规则圆太阳纹理：中心亮暖白、边缘柔和、外圈光晕——干净的正圆（黑雾层负责遮）

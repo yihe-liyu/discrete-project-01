@@ -8,6 +8,11 @@
 [ext_resource type="Script" uid="uid://b5ytro1ivmhjt" path="res://scripts/background/background_sun.gd" id="6_sun"]
 [ext_resource type="Script" uid="uid://cesyonb11jo8h" path="res://scripts/background/screen_fog_fx.gd" id="7_fog"]
 [ext_resource type="Script" uid="uid://b459a24bf582" path="res://scripts/background/decor_manager.gd" id="8_decor"]
+[ext_resource type="Resource" uid="uid://c5wl6rndndrau" path="res://data/stages/stage01/background/stage01_env.tres" id="9_env"]
+[ext_resource type="Shader" uid="uid://y1jcpktwc4ja" path="res://gdshader/screen_fog.gdshader" id="10_fogsh"]
+[ext_resource type="Shader" uid="uid://tmw7nt1t7v41" path="res://gdshader/sun_sprite.gdshader" id="11_sunsh"]
+[ext_resource type="Texture2D" path="res://assets/Textures/background/stage01/sun_disc.tres" id="12_sundisc"]
+[ext_resource type="Texture2D" path="res://assets/Textures/background/stage01/cloud_noise.tres" id="13_cloud"]
 
 [sub_resource type="ShaderMaterial" id="Mat_Ground"]
 render_priority = 0
@@ -21,8 +26,33 @@ shader_parameter/modulate = Color(1, 1, 1, 1)
 material = SubResource("Mat_Ground")
 size = Vector2(256, 512)
 
+[sub_resource type="ShaderMaterial" id="Mat_ScreenFog"]
+resource_local_to_scene = true
+shader = ExtResource("10_fogsh")
+shader_parameter/fog_dark = 0.8
+shader_parameter/sun_pos = Vector2(0.5, 0.18)
+shader_parameter/sun_fog_radius = 0.1
+shader_parameter/sun_fog_extra = 1.2
+shader_parameter/flow_speed = 0.03
+shader_parameter/noise_scale = 1.0
+shader_parameter/fog_color = Color(0.02, 0.02, 0.03, 1)
+shader_parameter/detail_scale = 3.0
+shader_parameter/detail_strength = 0.35
+shader_parameter/vignette_strength = 0.15
+shader_parameter/breath_amplitude = 0.1
+shader_parameter/ring_strength = 0.5
+shader_parameter/ring_radius = 0.08
+shader_parameter/ring_width = 0.03
+shader_parameter/noise_tex = ExtResource("13_cloud")
+
+[sub_resource type="ShaderMaterial" id="Mat_SunSprite"]
+shader = ExtResource("11_sunsh")
+shader_parameter/sun_tex = ExtResource("12_sundisc")
+
 [node name="Stage01Background" type="Node3D" unique_id=1763472797]
 script = ExtResource("1_4oxri")
+env_preset = ExtResource("9_env")
+override_camera_home = true
 
 [node name="DecorManager" type="Node3D" parent="." unique_id=812460391]
 script = ExtResource("8_decor")
@@ -42,13 +72,26 @@ base_texture = ExtResource("2_4oxri")
 script = ExtResource("5_2145v")
 
 [node name="Sun" type="Node3D" parent="." unique_id=1833933599]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 100, -320)
 script = ExtResource("6_sun")
+
+[node name="SunSprite" type="Sprite3D" parent="Sun"]
+pixel_size = 0.31
+texture = ExtResource("12_sundisc")
+billboard = 1
+material_override = SubResource("Mat_SunSprite")
 
 [node name="FogFX" type="Node" parent="." unique_id=1583144616]
 script = ExtResource("7_fog")
-fog_dark = 0.8
-sun_fog_extra = 1.2
-breath_amplitude = 0.1
-ring_strength = 0.5
-ring_radius = 0.08
+
+[node name="FogLayer" type="CanvasLayer" parent="FogFX"]
+layer = 5
+
+[node name="FogRect" type="ColorRect" parent="FogFX/FogLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+material = SubResource("Mat_ScreenFog")
 ring_width = 0.015

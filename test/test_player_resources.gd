@@ -36,6 +36,18 @@ func test_power_penalty():
 	_player_resources.on_miss_power_penalty()
 	assert_eq(_player_resources.power_raw, 0, "被弹到 0 不再降")
 
+func test_miss_bomb_penalty_and_floor():
+	_player_resources.bomb_count = 8
+	_player_resources.on_miss_bomb_penalty()
+	assert_eq(_player_resources.bomb_count, 8 - PlayerResources.MISS_BOMB_PENALTY, "被弹扣 2 个雷")
+	_player_resources.bomb_count = 4
+	_player_resources.on_miss_bomb_penalty()
+	assert_eq(_player_resources.bomb_count, PlayerResources.MISS_BOMB_FLOOR, "扣完不足 3 ⇒ 设置为 3")
+	_player_resources.bomb_count = 2
+	_player_resources.on_miss_bomb_penalty()
+	assert_eq(_player_resources.bomb_count, PlayerResources.MISS_BOMB_FLOOR,
+		"本来就少于 3 ⇒ 反而被补到 3（口径如此）")
+
 ## ── 记忆值 ──
 
 func test_memory_clamped():

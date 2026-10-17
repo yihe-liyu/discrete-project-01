@@ -52,7 +52,7 @@ func _tick(_ctx: StageContext) -> Variant:
 		target.global_position.y += move_speed * get_dt()
 		# 离开屏幕（下缘 + 90px 宽限）：销毁
 		if target.global_position.y > GameConfig.VIEW_HEIGHT + 32.0:
-			target.queue_free()
+			ctx.enemies.despawn(target)   # 静默回收（内容动词）
 			return false
 	# 弹幕 timeline 照常推进（事件发完即停，但移动持续到出屏）
 	if _timeline:

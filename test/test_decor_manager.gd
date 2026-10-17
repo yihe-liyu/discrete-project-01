@@ -141,3 +141,54 @@ func test_dynamic_path_still_works():
 	await wait_physics_frames(2)
 	var z1: float = g["blend"].entries[0].position.z
 	assert_gt(z1, z0, "动态层应保持逐实例位移（与静态层不同）")
+
+
+# ═══ ⑦「树与地面同速」——2026-10-04 作者实测回归 ═══
+
+## 层节点（`MultiMeshInstance3D` 是 `DecorManager` 的子节点）——按**类型**取，走公开面、不摸私有。
+func _layer_node() -> MultiMeshInstance3D:
+	for c in _decor_manager.get_children():
+		if c is MultiMeshInstance3D:
+			return c
+	return null
+
+
+## 换算单一来源：`world_scroll_per_second()` 必须**含加速倍率**。
+## 旧实现把 `plane_size / tiling` 内联在 `DecorManager` 两处、且读的是**裸** `scroll_speed`
+## ⇒ `speed_ramp`（改倍率）一加速，树还按基准速度走 = 作者实测的「树和地面的速度不一样了」。
+func test_world_scroll_includes_speed_multiplier():
+	_background_plane.scroll_speed = Vector2(0, -2.0)
+	_background_plane.plane_size = Vector2(256, 256)
+	_background_plane.tiling = Vector2(6, 6)
+	var base := _background_plane.world_scroll_per_second()
+	# 256/6 ≈ 42.67；-(-2.0) × 42.67 ≈ +85.3 m/s
+	assert_almost_eq(base.z, 85.3, 0.5, "基准换算：-scroll_speed.y × (plane_size.y / tiling.y)")
+	_background_plane.set_scroll_mult(7.0)
+	assert_almost_eq(_background_plane.world_scroll_per_second().z, base.z * 7.0, 1.0,
+		"倍率必须进到世界位移里（装饰物跟随读的就是它）")
+
+
+## **行为**回归：同样的帧数里，倍率 7 的位移必须是倍率 1 的 ~7 倍。
+## 判据用**比值**（两次跑同一段帧数）⇒ 与帧数抖动无关；且不摸任何私有成员。
+func test_decor_motion_tracks_plane_multiplier():
+	_background_plane.scroll_speed = Vector2(0, -2.0)
+	_background_plane.plane_size = Vector2(256, 256)
+	_background_plane.tiling = Vector2(6, 6)
+	var node := _layer_node()
+	assert_not_null(node, "DECOR 应已建出层节点")
+	if node == null:
+		return
+
+	_decor_manager.batch_spawn("test", 4, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
+	await wait_physics_frames(20)
+	var z_slow: float = node.position.z
+	assert_gt(z_slow, 0.0, "倍率 1 时应确实在往前滚")
+
+	_decor_manager.clear_layer("test")          # 复位 scroll_offset 与 mmi.position
+	_background_plane.set_scroll_mult(7.0)
+	_decor_manager.batch_spawn("test", 4, Vector2(-90, 90), Vector2(-220, -180), _background_plane)
+	await wait_physics_frames(20)
+	var z_fast: float = node.position.z
+	assert_gt(z_fast, 0.0, "倍率 7 时也应确实在滚")
+	assert_almost_eq(z_fast / z_slow, 7.0, 2.0,
+		"树必须跟着地面的加速走（旧 bug：树仍按基准速度 ⇒ 比值≈1）")

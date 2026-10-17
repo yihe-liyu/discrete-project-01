@@ -40,6 +40,18 @@ static func all() -> Array[StageData]:
 	return _load_all()
 
 
+## **可玩清单**：`all()` 里**真有 `create_script`** 的那些。
+## ⚠️ `all()` 在注册表缺失时会回退目录扫描，而那个回退**会**带上没做关卡脚本的面（如 3B / EX）
+## ⇒ 凡是要问"这面能不能开局"的地方（关卡练习菜单 / 工作台关卡下拉）一律走这里，
+## 别再各写一遍过滤（抄第二遍就会漂）。
+static func playable() -> Array[StageData]:
+	var out: Array[StageData] = []
+	for stage in all():
+		if stage != null and stage.create_script != null:
+			out.append(stage)
+	return out
+
+
 ## 某关卡的背景场景（练习用）
 static func background(stage_id: int) -> PackedScene:
 	var stage_data := find(stage_id)

@@ -110,14 +110,31 @@ func _init(p_runner: CoroutineRunner) -> void:
 ## 旧实现按名字 `get_node_or_null("DecorManager")` 找、找不到就运行时 `add_child` 动态建 ——
 ## 既把行为绑在节点名上，又在内容脚本里偷偷改场景树；现在只读声明的类型化引用。
 func get_decor() -> DecorManager:
-	var background: StageBackground = stage.current_background if stage else null
-	if not is_instance_valid(background):
+	var bg := get_background()
+	if not is_instance_valid(bg):
 		return null
-	return background.get_decor_manager()
+	return bg.get_decor_manager()
 
 ## 便捷属性
 var decor: DecorManager:
 	get: return get_decor()
+
+
+## **背景宿主**（背景场景声明的 `StageBackground`）：相机 / 环境 / 雾 / FOV 的意图动词都在它上面
+## （`apply_env_preset` / `reset` / `tween_env_fog` / 相机：`set_camera_position` / `move_camera_by` /
+##   `set_camera_rotation` / `rotate_camera_by` / `tween_camera_fov`）。
+## ⚠️ 相机动词**绝对 / 相对**分得很清（旧名 `rotate_camera` 绝对、`pan_camera` 相对，名字看不出来 ⇒ 已改名）；
+##   `*rotation*` 一律**弧度**。
+## 内容**不再** `get_parent() as StageBackground`（R2 禁往上摸）—— 拿它就够。
+## ⚠️ 背景场景 = **你自己的场景**：`ctx.background.get_node("Ground")` 这类按名字访问**是允许的**
+##   （同 `main_menu.gd` 用 `$Logo`）；**引擎不碰你的树** ⇒ 你想搭几层、放山/球膜/多层地面都随便。
+func get_background() -> StageBackground:
+	return stage.current_background if stage else null
+
+
+## 便捷属性
+var background: StageBackground:
+	get: return get_background()
 
 func active() -> bool:
 	return is_instance_valid(runner) and runner.is_running

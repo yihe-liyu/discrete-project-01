@@ -1,5 +1,5 @@
 extends CoroutineScript
-## 第一面——新的 Timeline API
+## 1面
 
 const ENEMY01 = preload("res://data/stages/stage01/enemy/enemy01.gd")
 const ENEMY02 = preload("res://data/stages/stage01/enemy/enemy02.gd")

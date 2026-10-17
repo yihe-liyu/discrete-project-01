@@ -23,7 +23,11 @@ signal sfx_requested(kind: String)   # 音效意图：只喊，不碰音频；�
 const OVERLAY_FADE_IN: float = 0.2
 const OVERLAY_FADE_OUT: float = 0.15
 
-## 设为 true 则 on_enter 时自动淡入暗色遮罩
+## true = `_ready` 时**自动创建/复用** `Overlay`，并把它的 `modulate.a` 归 0。
+## ⚠️ 它**不会**自动淡入 —— 子类入场时**必须自己调 `_fade_overlay_in()`**，否则遮罩会一直停在
+##    `modulate.a = 0` ⇒ 有效 alpha = `color.a × 0` = **黑幕看不见**（stage 练习菜单 2026-10-04 实测）。
+## 场景里设 `false` = 本页面**自己管**遮罩（如符卡练习菜单），BasePage 完全不碰它。
+## ⚠️ `_fade_overlay_in(duration)` 的默认值 `-1.0` **不是** `OVERLAY_FADE_IN` —— 调用时要显式传时长。
 @export var is_auto_overlay: bool = true
 
 var overlay_color: Color = Color(0, 0, 0, 0.5)

@@ -27,3 +27,26 @@ func test_bgm_key_of_reads_stage_data():
 	assert_eq(StageCatalog.bgm_key_of(1), "stage1", "1 面的默认 BGM = stage1")
 	assert_eq(StageCatalog.bgm_key_of(9), "stageEX", "EX 面的默认 BGM = stageEX")
 	assert_eq(StageCatalog.bgm_key_of(-99), "", "未收录的面 → 空串（不是崩 / 不是乱猜）")
+
+
+## **可玩清单**（关卡练习菜单 / 工作台关卡下拉的共同数据源）：必须有 `create_script`。
+## ⚠️ 判据要落在**扫描兜底**路径上：注册表是"可玩清单"（已由 `test_data_validity` 守卫），
+## 所以走注册表时本用例会空转；而 `all()` 的**目录扫描**回退**会**带上无关卡脚本的面
+## （3B / EX 就在盘上）—— `playable()` 的价值正是在这里把它们滤掉。
+func test_playable_filters_scriptless_from_scan_fallback():
+	var saved: StageRegistry = StageCatalog.registry
+	StageCatalog.registry = null          # 强制走目录扫描（能看见无关卡脚本的面）
+	var all_stages := StageCatalog.all()
+	var playable := StageCatalog.playable()
+	StageCatalog.registry = saved
+
+	var scriptless := 0
+	for stage in all_stages:
+		if stage.create_script == null:
+			scriptless += 1
+	assert_gt(scriptless, 0, "扫描兜底应能看见无关卡脚本的面（否则本用例空转、等于没测）")
+
+	for stage in playable:
+		assert_not_null(stage.create_script,
+			"可玩清单只许收能开局的：%s" % StageCatalog.display_name_of(stage.stage_id))
+	assert_eq(playable.size(), all_stages.size() - scriptless, "可玩数应 = 全部 − 无关卡脚本的")

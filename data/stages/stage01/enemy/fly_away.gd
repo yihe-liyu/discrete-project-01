@@ -27,6 +27,6 @@ func _tick(_ctx: StageContext) -> Variant:
 	if target.global_position.x < -margin or target.global_position.x > r.size.x + margin \
 		or target.global_position.y < -margin or target.global_position.y > r.size.y + margin:
 		if is_instance_valid(target):
-			target.queue_free()
+			ctx.enemies.despawn(target)   # 静默回收（内容动词；注销由 Enemy 自动做）
 		return false
 	return true

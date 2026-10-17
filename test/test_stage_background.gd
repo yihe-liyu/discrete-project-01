@@ -131,6 +131,47 @@ func test_background_finds_camera_by_type_not_name():
 	assert_eq(cam_count, 1, "不许自建第二台相机（按名字找的旧实现改名后会多出一台）")
 
 
+## 相机复位要**回初始姿态**，不只是 fov：旧实现只写回 `fov = 90` ⇒
+## 相机动词跑过之后的重跑**不会回正**（位置/朝向一路漂）。
+func test_reset_camera_restores_pose_not_only_fov():
+	var host := Node.new()
+	add_child_autofree(host)
+	var cam := Camera3D.new()
+	cam.position = Vector3(0, 10, 6)
+	cam.rotation_degrees = Vector3(-30, 0, 0)
+	cam.fov = 90.0
+	host.add_child(cam)
+	var bg := StageBackground.new()
+	host.add_child(bg)                 # 入树 ⇒ `_ready` 抓"初始姿态"
+	await wait_frames(1)
+
+	cam.position = Vector3(0, 30, 3)   # 模拟演出跑过（pan + rotate + zoom）
+	cam.rotation_degrees = Vector3(0, 0, 0)
+	cam.fov = 68.0
+	bg.reset_camera()
+
+	assert_eq(cam.transform.origin, Vector3(0, 10, 6), "位置要回初始（旧实现只复位 fov）")
+	assert_eq(cam.rotation_degrees, Vector3(-30, 0, 0), "朝向要回初始")
+	assert_eq(cam.fov, 90.0, "fov 要回初始")
+
+
+## 环境**不由内容脚本负责**：背景场景声明 `env_preset` 后，**入树即有环境**
+## （旧实现靠内容子节点的 `_ready` 调 `apply_env_preset` ⇒ 练习模式 / 内容脚本缺失时就没有环境）。
+func test_ready_applies_declared_env_preset():
+	var bg: StageBackground = preload("res://data/stages/stage01/background/stage01_background.tscn").instantiate()
+	assert_not_null(bg.env_preset, "本场景应在 .tscn 里声明 env_preset（环境唯一来源）")
+	if bg.env_preset == null:
+		bg.free()
+		return
+	add_child_autofree(bg)
+	await wait_frames(1)
+	assert_not_null(bg.world_environment, "场景应有 WorldEnvironment")
+	if bg.world_environment == null:
+		return
+	assert_not_null(bg.world_environment.environment,
+		"入树后环境必须已被应用（不再依赖内容脚本的 _ready）")
+
+
 ## 回归（P1-B3）：背景的 `DecorManager` 必须是**场景声明的子节点**
 ## （`StageBackground.get_decor_manager()` 按类型解析）—— 旧实现 `StageContext.get_decor()`
 ## 按名字 `get_node_or_null("DecorManager")` 找、找不到再运行时 `add_child` 动态建：
@@ -165,3 +206,234 @@ func test_background_viewports_own_their_world():
 			assert_true(vp.own_world_3d,
 				"%s 的背景视口必须 own_world_3d = true（否则它与根视口共享 World3D，环境会被同 world 的另一个 WorldEnvironment 抢）" % path)
 		host.free()
+
+
+# ═══ 蒙眼雾：可见部分场景声明 + 不再摸父节点（2026-10-04 BGA/B）═══
+
+## 蒙眼雾的**可见部分**必须在场景里声明，参数唯一来源 = **材质**。
+## 旧实现 `new()` 出 CanvasLayer/ColorRect/材质 + 12 个 `@export` + `_apply_params()` 镜像
+## ⇒ 同一个值三份默认（shader 文件 / `@export` / `.tscn`），改 shader 里的数字是静默 no-op；
+## 且编辑器里看不见/点不到这层雾。
+func test_fog_layer_and_params_are_scene_declared():
+	var bg: StageBackground = preload("res://data/stages/stage01/background/stage01_background.tscn").instantiate()
+	add_child_autofree(bg)
+	await wait_frames(1)
+	var layer := bg.get_node_or_null("FogFX/FogLayer") as CanvasLayer
+	var rect := bg.get_node_or_null("FogFX/FogLayer/FogRect") as ColorRect
+	assert_not_null(layer, "FogLayer 必须场景声明（不再 new()）—— 否则编辑器里看不见")
+	assert_not_null(rect, "FogRect 必须场景声明")
+	if rect == null:
+		return
+	assert_true(layer.visible, "**声明即显示**（练习模式也开黑雾 —— 2026-10-04 作者拍板）")
+	var mat := rect.material as ShaderMaterial
+	assert_not_null(mat, "FogRect 应挂 ShaderMaterial")
+	if mat == null:
+		return
+	# 真值（原先是 FogFX 节点上的 @export 覆盖，现搬进材质 ⇒ 只剩这一处）
+	assert_almost_eq(mat.get_shader_parameter("fog_dark"), 0.8, 0.001, "fog_dark 真值应在材质里")
+	assert_almost_eq(mat.get_shader_parameter("ring_strength"), 0.5, 0.001, "ring_strength 真值应在材质里")
+	assert_almost_eq(mat.get_shader_parameter("ring_radius"), 0.08, 0.001, "ring_radius 真值应在材质里")
+
+
+## 雾材质必须**每实例独立**：旧实现是 `ShaderMaterial.new()`（天然独立），而 `.tscn` 的
+## `[sub_resource]` **默认跨实例共享** ⇒ 必须 `resource_local_to_scene = true`，
+## 否则两个背景实例同时存在时 `sun_pos` 互相覆盖（雾跟错相机）。
+## ⚠️ 这正是本项目已踩过的「Environment 是场景 SubResource、多实例共享 ⇒ 越重跑越暗」同款。
+func test_fog_material_is_per_instance():
+	var packed: PackedScene = preload("res://data/stages/stage01/background/stage01_background.tscn")
+	var a: Node = packed.instantiate()
+	var b: Node = packed.instantiate()
+	add_child_autofree(a)
+	add_child_autofree(b)
+	var ma := (a.get_node("FogFX/FogLayer/FogRect") as ColorRect).material as ShaderMaterial
+	var mb := (b.get_node("FogFX/FogLayer/FogRect") as ColorRect).material as ShaderMaterial
+	assert_not_null(ma, "实例 a 应有雾材质")
+	assert_not_null(mb, "实例 b 应有雾材质")
+	assert_ne(ma, mb, "两个实例的雾材质必须各自独立（sub_resource 默认共享 ⇒ 需 resource_local_to_scene）")
+
+
+## 太阳的可见部分必须场景声明，**且圆盘纹理来自场景**（不是运行时 `load()`）。
+## 否则编辑器里是个"无纹理的 Sprite3D" = **什么都不画**，连"把太阳拖进画面"都做不到 ——
+## 而 2026-10-04 实测太阳圆心在画面顶边**外 7 像素**（屏幕像素 640, -7.3），正需要能在编辑器里调位置。
+func test_sun_sprite_is_scene_declared_with_texture():
+	var bg: StageBackground = preload("res://data/stages/stage01/background/stage01_background.tscn").instantiate()
+	add_child_autofree(bg)
+	await wait_frames(1)
+	var sun := bg.get_node_or_null("Sun") as BackgroundSun
+	var sprite := bg.get_node_or_null("Sun/SunSprite") as Sprite3D
+	assert_not_null(sun, "场景应有 Sun 节点")
+	assert_not_null(sprite, "SunSprite 必须场景声明（旧实现是 setup() 里 new()）")
+	if sun == null or sprite == null:
+		return
+	assert_not_null(sprite.texture, "圆盘纹理必须来自场景 ⇒ 编辑器里才看得见（裸 Image 资源做不到）")
+	assert_eq(sprite.billboard, BaseMaterial3D.BILLBOARD_ENABLED, "太阳要 billboard")
+	assert_eq(sun.position, Vector3(0, 100, -320), "位置应由**节点 transform** 决定（不再是 @export sun_position）")
+	assert_true(sprite.visible, "**声明即显示**：不需要任何人调 setup()（练习模式也要它）")
+
+
+## 回归（2026-10-04 作者实测「二面道中看不见太阳和黑雾」）：
+## **宿主自动接线** —— 背景场景一入树，雾就该拿到相机并把太阳投影到屏幕，
+## **完全不需要内容脚本调用**。旧设计要靠内容脚本 `setup()`，忘一次就隐形/不跟相机且零报错。
+func test_host_auto_binds_fog_without_any_content_call():
+	var host := Node.new()
+	add_child_autofree(host)
+	var cam := Camera3D.new()
+	cam.position = Vector3(0, 10, 6)
+	cam.rotation_degrees = Vector3(-30, 0, 0)
+	cam.fov = 90.0
+	host.add_child(cam)                      # 相机是背景的**兄弟**（宿主按类型找得到）
+
+	var bg: StageBackground = preload("res://data/stages/stage01/background/stage01_background.tscn").instantiate()
+	var rect := bg.get_node("FogFX/FogLayer/FogRect") as ColorRect
+	var mat := rect.material as ShaderMaterial
+	mat.set_shader_parameter("sun_pos", Vector2(-1, -1))   # 哨兵：确认宿主真的写了它
+	host.add_child(bg)                       # 入树 ⇒ `_ready` ⇒ `_resolve_showcase()` 接线
+	await wait_frames(1)
+
+	var fog := bg.get_node("FogFX") as ScreenFogFX
+	assert_eq(fog.camera, cam, "宿主应把（按类型找到的）相机接进雾里")
+	assert_ne(mat.get_shader_parameter("sun_pos"), Vector2(-1, -1),
+		"入树后太阳屏幕位置就该被算出来（**没有任何内容脚本调用**）")
+	assert_true((fog.get_node("FogLayer") as CanvasLayer).visible, "雾层应可见（声明即显示）")
+	assert_true((bg.get_node("Sun/SunSprite") as Sprite3D).visible, "太阳也应可见（声明即显示）")
+
+
+## 回归：`bind()` **不需要**自己的父节点是 `StageBackground`（注入而非摸爹）。
+## 旧实现靠 `get_parent() as StageBackground` 拿相机 ⇒ 把 FogFX 挪个层级/嵌套一层就**静默拿到 null**，
+## 于是雾不再跟相机（太阳位置不更新）且**零报错** —— 与 stage02 那次崩溃同款脆弱，只是发生在引擎组件里。
+func test_fog_bind_does_not_need_background_parent():
+	var bg: StageBackground = preload("res://data/stages/stage01/background/stage01_background.tscn").instantiate()
+	add_child_autofree(bg)
+	await wait_frames(1)
+	var fog: ScreenFogFX = bg.get_node("FogFX")
+	assert_not_null(fog, "场景里应有 FogFX")
+	if fog == null:
+		return
+
+	# 挪到**任意**父节点下（故意不是 StageBackground）
+	var plain := Node3D.new()
+	add_child_autofree(plain)
+	bg.remove_child(fog)
+	plain.add_child(fog)
+	var cam := Camera3D.new()
+	cam.position = Vector3(0, 10, 6)
+	cam.rotation_degrees = Vector3(-30, 0, 0)
+	plain.add_child(cam)
+	var sun := Node3D.new()
+	sun.position = Vector3(0, 100, -320)
+	plain.add_child(sun)
+
+	var rect := fog.get_node_or_null("FogLayer/FogRect") as ColorRect
+	var mat := rect.material as ShaderMaterial
+	mat.set_shader_parameter("sun_pos", Vector2(-1, -1))   # 哨兵：确认 bind 真的写了它
+	fog.bind(cam, sun)
+
+	assert_true((fog.get_node("FogLayer") as CanvasLayer).visible, "雾层声明即显示（与父节点是谁无关）")
+	assert_not_null(mat.get_shader_parameter("noise_tex"), "噪声纹理来自场景（材质里，不靠运行时读盘）")
+	assert_ne(mat.get_shader_parameter("sun_pos"), Vector2(-1, -1),
+		"太阳屏幕位置应被投影写入（旧实现此时静默不动：拿不到相机）")
+
+
+## 回归（2026-10-04 作者实测「一改太阳的 y 坐标，黑雾的对准就不准了」）：
+## 雾的太阳对准必须跟**画出来的那个 sprite**（`SunSprite`），**不是** `Sun` 节点 ——
+## 作者在编辑器里拖的正是 sprite，而它带自己的局部位移（stage02 里就有一段）。
+func test_fog_aligns_to_the_drawn_sprite_not_the_sun_node():
+	var host := Node.new()
+	add_child_autofree(host)
+	var cam := Camera3D.new()
+	cam.position = Vector3(0, 10, 6)
+	cam.rotation_degrees = Vector3(-30, 0, 0)
+	cam.fov = 90.0
+	host.add_child(cam)
+
+	var bg: StageBackground = preload("res://data/stages/stage01/background/stage01_background.tscn").instantiate()
+	var sprite := bg.get_node("Sun/SunSprite") as Sprite3D
+	var sun_node := bg.get_node("Sun") as Node3D
+	sprite.position = Vector3(0, -60, 200)     # 模拟作者把太阳往下拖
+	host.add_child(bg)                          # 入树 ⇒ 宿主接线
+	await wait_frames(1)
+
+	var mat := (bg.get_node("FogFX/FogLayer/FogRect") as ColorRect).material as ShaderMaterial
+	var vp: Vector2 = bg.get_viewport().get_visible_rect().size
+	var want: Vector2 = cam.unproject_position(sprite.global_position) / vp
+	var wrong: Vector2 = cam.unproject_position(sun_node.global_position) / vp
+	assert_gt(absf(want.y - wrong.y), 0.02, "本用例的前提：sprite 与节点的投影确实差得够远")
+	var got: Vector2 = mat.get_shader_parameter("sun_pos")
+	assert_almost_eq(got.y, want.y, 0.001,
+		"对准必须跟 `SunSprite`（作者拖的就是它），不是 `Sun` 节点")
+
+
+
+
+## 相机**初始姿态**可由背景自己声明（`override_camera_home` + 三个值）。
+## 语义关键：它在**抓 home 之前**应用 ⇒ `reset_camera()` 复位到**声明的**那套，
+## **不是**宿主相机的原姿态（否则"重跑回正"会把构图带回别的关的样子）。
+func test_camera_home_override_applies_and_is_the_reset_target():
+	var host := Node.new()
+	add_child_autofree(host)
+	var cam := Camera3D.new()
+	cam.position = Vector3(0, 10, 6)          # 宿主相机：故意与下面声明的不同
+	cam.rotation_degrees = Vector3(-30, 0, 0)
+	cam.fov = 90.0
+	host.add_child(cam)
+
+	var bg := StageBackground.new()
+	bg.override_camera_home = true
+	bg.camera_home_position = Vector3(0, 20, -3)
+	bg.camera_home_rotation_degrees = Vector3(-22, 0, 0)
+	bg.camera_home_fov = 68.0
+	host.add_child(bg)                        # 入树 ⇒ `_ready` 应用 + 抓 home
+	await wait_frames(1)
+
+	assert_eq(cam.transform.origin, Vector3(0, 20, -3), "入树后相机应被摆成声明的初始姿态")
+	assert_almost_eq(cam.rotation_degrees.x, -22.0, 0.01, "朝向也应是声明的")
+	assert_eq(cam.fov, 68.0, "fov 也应是声明的")
+
+	cam.position = Vector3(9, 9, 9)           # 模拟演出跑过（pan/rotate/zoom）
+	cam.rotation_degrees = Vector3.ZERO
+	cam.fov = 120.0
+	bg.reset_camera()
+	assert_eq(cam.transform.origin, Vector3(0, 20, -3), "reset 必须回**声明的**初始姿态（不是宿主原姿态）")
+	assert_almost_eq(cam.rotation_degrees.x, -22.0, 0.01, "reset 后朝向也应是声明的")
+	assert_eq(cam.fov, 68.0, "reset 后 fov 也应是声明的")
+
+
+# ═══ 相机动词：绝对 / 相对 + 目标记忆（2026-10-04 作者实测「Y 没回到 0」）═══
+
+## (b) 相对动词从**上一条指令的目标**累加，**不是**从 `camera.transform.origin`（实时值）。
+## 反例（旧 `pan_camera`）：两条重叠的相对移动会以"飞行途中的位置"为基准 ⇒ 漂移、丢段。
+func test_relative_camera_moves_accumulate_from_target_not_live_value():
+	var host := Node.new()
+	add_child_autofree(host)
+	var cam := Camera3D.new()
+	host.add_child(cam)
+	var bg := StageBackground.new()
+	host.add_child(bg)
+	await wait_frames(1)
+
+	bg.set_camera_position(Vector3.ZERO, 0.001)
+	bg.move_camera_by(Vector3(5, 0, 0), 0.5)     # 立刻
+	bg.move_camera_by(Vector3(0, 7, 0), 0.5)     # **不等第一条跑完** —— 旧实现会在这里丢掉 +5
+	await wait_physics_frames(45)
+
+	assert_almost_eq(bg.get_camera_offset().x, 5.0, 0.02, "第二条相对移动必须从**目标**累加（+5 不能丢）")
+	assert_almost_eq(bg.get_camera_offset().y, 7.0, 0.02, "第二条自己那段也要到位")
+
+
+## 作者实况：4 条 Y 增量 −10/+25/−30/+15 **和 = 0**，本意是"转过去再转回来"
+## ⇒ 用**相对**动词后必须回到 Y = 0（旧名 `rotate_camera` 是**绝对**，最后一条 +15° 就是终态）。
+func test_relative_yaw_deltas_summing_to_zero_return_to_zero():
+	var host := Node.new()
+	add_child_autofree(host)
+	var cam := Camera3D.new()
+	host.add_child(cam)
+	var bg := StageBackground.new()
+	host.add_child(bg)
+	await wait_frames(1)
+
+	for deg in [-10.0, 25.0, -30.0, 15.0]:
+		bg.rotate_camera_by(Vector3(0, deg_to_rad(deg), 0), 0.2)
+	await wait_physics_frames(30)
+
+	assert_almost_eq(rad_to_deg(cam.rotation.y), 0.0, 0.5,
+		"增量序列和为 0 ⇒ 必须转回正前方（这正是作者要的「最后回到 0」）")

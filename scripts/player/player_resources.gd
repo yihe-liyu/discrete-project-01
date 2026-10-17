@@ -16,12 +16,19 @@ const MEMORY_MISS: float = 25.0
 const MAX_LIVES: int = 8
 const MAX_BOMBS: int = 8
 
+## Miss 的**雷惩罚**：扣 `MISS_BOMB_PENALTY`(2) 个，且**不低于** `MISS_BOMB_FLOOR`(3)。
+## ⚠️ 语义是"**先扣、再把不足的抬到下限**"，**不是**"扣不动" ⇒ bomb 本来少于 3 时，
+##    中弹反而会被**补到 3**（作者口径 2026-10-04，见 `on_miss_bomb_penalty()`）。
+const MISS_BOMB_PENALTY: int = 2
+const MISS_BOMB_FLOOR: int = 3
+
 var current_score: int = 0
 var graze_count: int = 0
 var max_point: int = 10000
 var memory_value: float = 50.0
 
-## 火力值内部表示：0 = 1.00, 300 = 4.00，每 1 单位 = 0.01
+## 火力值内部表示：0 = 1.00, `MAX_POWER_RAW` = 4.00，每 1 单位 = 0.01
+const MAX_POWER_RAW: int = 300
 var power_raw: int = 0
 
 ## 残机 / 雷（0~8）+ 碎片（0~4）
@@ -39,13 +46,29 @@ func get_power_float() -> float:
 	return 1.00 + power_raw * 0.01
 
 
+## 火力直接拉满（关卡练习第 2 面起的起始约定；调试也方便）。
+## ⚠️ 必须 `changed.emit()` —— HUD 靠它刷新；本方法是在 `reset_all()` **之后**单独调的，
+## 等不到下一次 reset。
+func set_max_power() -> void:
+	power_raw = MAX_POWER_RAW
+	changed.emit()
+
+
 func add_power(amount: int) -> void:
-	power_raw = clampi(power_raw + amount, 0, 300)
+	power_raw = clampi(power_raw + amount, 0, MAX_POWER_RAW)
 	changed.emit()
 
 
 func on_miss_power_penalty() -> void:
-	power_raw = clampi(power_raw - 50, 0, 300)
+	power_raw = clampi(power_raw - 50, 0, MAX_POWER_RAW)
+	changed.emit()
+
+
+## Miss 的雷惩罚：扣 `MISS_BOMB_PENALTY`，再抬到下限 `MISS_BOMB_FLOOR`。
+## ⚠️ "先扣、再抬"⇒ bomb < 3 时中弹是**净增**（作者已知/已确认的口径）。
+## ⚠️ 雷**碎片**是另一条线，本方法不动它。
+func on_miss_bomb_penalty() -> void:
+	bomb_count = maxi(bomb_count - MISS_BOMB_PENALTY, MISS_BOMB_FLOOR)
 	changed.emit()
 
 
@@ -178,7 +201,7 @@ func reset_practice() -> void:
 	current_score = 0
 	max_point = 10000
 	graze_count = 0
-	power_raw = 300
+	power_raw = MAX_POWER_RAW
 	lives = 0
 	life_fragments = 0
 	bomb_count = 0

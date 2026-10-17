@@ -491,3 +491,22 @@ func test_enter_starts_from_last_selected_character():
 
 	SaveData.spell_book = saved_book
 	SaveData.selected_character = saved_char
+
+
+## 黑幕守卫：本场景在 .tscn 里**明确关掉了** `is_auto_overlay` ⇒ 遮罩由本菜单自己管，
+## `BasePage` **不该**把它的 `modulate.a` 归 0，入场后有效 alpha 必须 = 0.5。
+## ⚠️ 若哪天有人把 `is_auto_overlay` 打开却不补 `_fade_overlay_in()`，这条会红 ——
+##    stage 练习菜单 2026-10-04 正是那么坏掉的（有效 alpha = 0.55 × 0 = 黑幕看不见）。
+func test_overlay_curtain_stays_visible_with_self_managed_overlay():
+	var menu := _mk_menu()
+	await wait_frames(1)
+	var ov := menu.get_node("Overlay") as ColorRect
+	assert_not_null(ov, "场景里应有 Overlay（黑幕）")
+	if ov == null:
+		return
+	assert_almost_eq(ov.modulate.a, 1.0, 0.01,
+		"本场景自己管遮罩（is_auto_overlay = false）⇒ 不该被 BasePage 归 0")
+	menu.on_enter()
+	await wait_frames(40)
+	assert_almost_eq(menu.modulate.a * ov.modulate.a * ov.color.a, 0.5, 0.02,
+		"黑幕有效 alpha 应 = 0.5（= 0 就是「黑幕没有了」）")

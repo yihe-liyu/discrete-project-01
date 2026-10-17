@@ -1,0 +1,99 @@
+[gd_scene format=3 uid="uid://eh3nliuullul"]
+
+[ext_resource type="Script" uid="uid://voqjqe6tw5cm" path="res://scripts/background/stage_background.gd" id="0_base"]
+[ext_resource type="Script" uid="uid://c4u0dhfc4g85c" path="res://data/stages/stage02/background/stage02_decor.gd" id="1_3meq4"]
+[ext_resource type="Shader" uid="uid://dk0cc5a6lkcd0" path="res://gdshader/background_plane.gdshader" id="1_chdio"]
+[ext_resource type="Texture2D" uid="uid://ca1r30cua01ig" path="res://assets/Textures/background/stage01/grass.jpeg" id="2_3meq4"]
+[ext_resource type="Script" uid="uid://b46aa24bf582" path="res://scripts/background/decor_manager.gd" id="2_cla8d"]
+[ext_resource type="Script" uid="uid://cys5ctkx6l5h8" path="res://scripts/background/background_plane.gd" id="3_cla8d"]
+[ext_resource type="Script" uid="uid://b5ytro1ivmhjt" path="res://scripts/background/background_sun.gd" id="8_ncidr"]
+[ext_resource type="Shader" uid="uid://tmw7nt1t7v41" path="res://gdshader/sun_sprite.gdshader" id="9_16310"]
+[ext_resource type="Resource" uid="uid://bhwj4ku14826a" path="res://data/stages/stage02/background/stage02_env.tres" id="9_env"]
+[ext_resource type="Texture2D" path="res://assets/Textures/background/stage01/sun_disc.tres" id="10_stpjf"]
+[ext_resource type="Script" uid="uid://cesyonb11jo8h" path="res://scripts/background/screen_fog_fx.gd" id="11_7gvtf"]
+[ext_resource type="Shader" uid="uid://y1jcpktwc4ja" path="res://gdshader/screen_fog.gdshader" id="12_i0ych"]
+[ext_resource type="Texture2D" path="res://assets/Textures/background/stage01/cloud_noise.tres" id="13_uyjky"]
+
+[sub_resource type="ShaderMaterial" id="Mat_Ground"]
+render_priority = 0
+shader = ExtResource("1_chdio")
+shader_parameter/base_texture = ExtResource("2_3meq4")
+shader_parameter/tiling = Vector2(6, 12)
+shader_parameter/uv_offset = Vector2(0, 0)
+shader_parameter/modulate = Color(1, 1, 1, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_bmrc3"]
+material = SubResource("Mat_Ground")
+size = Vector2(256, 512)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_e7bmq"]
+render_priority = 0
+shader = ExtResource("9_16310")
+shader_parameter/sun_tex = ExtResource("10_stpjf")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_v7fpu"]
+resource_local_to_scene = true
+shader = ExtResource("12_i0ych")
+shader_parameter/noise_tex = ExtResource("13_uyjky")
+shader_parameter/fog_dark = 0.8
+shader_parameter/sun_pos = Vector2(0.5, 0.18)
+shader_parameter/sun_fog_radius = 0.1
+shader_parameter/sun_fog_extra = 1.0
+shader_parameter/flow_speed = 0.050000002375
+shader_parameter/noise_scale = 1.5
+shader_parameter/fog_color = Color(0.02, 0.02, 0.03, 1)
+shader_parameter/detail_scale = 3.0
+shader_parameter/detail_strength = 0.35
+shader_parameter/vignette_strength = 0.15
+shader_parameter/breath_amplitude = 0.1
+shader_parameter/ring_strength = 0.800000038
+shader_parameter/ring_radius = 0.03
+shader_parameter/ring_width = 0.02
+
+[node name="Stage02Background" type="Node3D" unique_id=996613432]
+script = ExtResource("0_base")
+env_preset = ExtResource("9_env")
+override_camera_home = true
+camera_home_rotation_degrees = Vector3(0, 0, 0)
+
+[node name="DecorManager" type="Node3D" parent="." unique_id=646159382]
+script = ExtResource("2_cla8d")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=522210262]
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=220355058]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -62)
+mesh = SubResource("PlaneMesh_bmrc3")
+script = ExtResource("3_cla8d")
+plane_size = Vector2(256, 512)
+tiling = Vector2(6, 12)
+scroll_speed = Vector2(0, -0.1)
+base_texture = ExtResource("2_3meq4")
+
+[node name="Decor" type="Node" parent="." unique_id=711165667]
+script = ExtResource("1_3meq4")
+
+[node name="Sun" type="Node3D" parent="." unique_id=1259516642]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 100, -500)
+script = ExtResource("8_ncidr")
+
+[node name="SunSprite" type="Sprite3D" parent="Sun" unique_id=635687219]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 287, 186)
+material_override = SubResource("ShaderMaterial_e7bmq")
+pixel_size = 0.31
+billboard = 1
+texture = ExtResource("10_stpjf")
+
+[node name="FogFX" type="Node" parent="." unique_id=2015857599]
+script = ExtResource("11_7gvtf")
+
+[node name="FogLayer" type="CanvasLayer" parent="FogFX" unique_id=1346232722]
+layer = 5
+
+[node name="FogRect" type="ColorRect" parent="FogFX/FogLayer" unique_id=778492399]
+material = SubResource("ShaderMaterial_v7fpu")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2

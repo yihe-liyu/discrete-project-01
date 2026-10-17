@@ -10,11 +10,15 @@ const ENEMY04 = preload("res://data/stages/stage01/enemy/enemy04.gd")
 func test_moves_down_until_offscreen() -> void:
 	var cs: CoroutineScript = ENEMY04.new()
 	autofree(cs)  # CoroutineScript 是 Node，不挂树也不释放会成孤儿
-	var tgt := Node2D.new()
+	# target 用真 `Enemy`（游戏里 `spawn_enemy_data` 保证是它）—— 回收动词只收杂兵，裸 Node2D 会被响亮拒绝
+	var tgt := Enemy.new()
 	add_child_autofree(tgt)
 	tgt.global_position = Vector2(448, 100)
 	cs.target = tgt
-	cs.start(null, tgt)
+	# ctx **必须给**：enemy04 的回收走 `ctx.enemies.despawn(...)`（内容动词），且它本来就用 `ctx.bullets`。
+	# 真游戏里 `spawn_enemy_data` 保证 ctx 非空 ⇒ 原先传 null 只是"这条测试恰好只跑到移动"的巧合
+	#（2026-10-04 内容改走回收动词后，这个巧合就露出来了）。无 stage ⇒ 子弹服务静默 no-op，回收不需要 stage。
+	cs.start(StageContext.new(null), tgt)
 
 	# 匀速下移 120px/s：每 0.1s 推进 12px。前 50 帧（y=100→700）应仍在屏内
 	var frames := 0

@@ -17,6 +17,7 @@ extends MeshInstance3D
 @export var base_texture: Texture2D
 
 var _scroll_mult: float = 1.0
+var _speed_tween: Tween
 
 
 func _ready() -> void:
@@ -65,3 +66,33 @@ func _process(delta: float) -> void:
 
 func set_scroll_mult(m: float) -> void:
 	_scroll_mult = m
+
+
+## **有效滚动速度** = 作者在 .tscn 填的 `scroll_speed` × 当前倍率。
+## ⚠️ 跟随本平面的装饰物**必须**读它。读裸 `scroll_speed` 会在倍率变化时**与地面分家** ——
+## 2026-10-04 作者实测「树和地面的速度不一样了」就是这么来的（`speed_ramp` 改的是倍率，
+## 而 `DecorManager` 直接读 `scroll_speed`）。
+func effective_scroll_speed() -> Vector2:
+	return scroll_speed * _scroll_mult
+
+
+## 本平面每秒的**世界位移**（跟随它的装饰物用的**唯一换算点**）。
+## `plane_size / tiling` 这条换算只写在这里**一次** —— 旧实现把它抄在 `DecorManager` 的两处内联里，
+## 而"读 `scroll_speed` 还是读倍率后"正是那两处与地面分家的根因。
+func world_scroll_per_second() -> Vector3:
+	var rx: float = plane_size.x / maxf(tiling.x, 1.0)
+	var ry: float = plane_size.y / maxf(tiling.y, 1.0)
+	var v := effective_scroll_speed()
+	return Vector3(v.x * rx, 0.0, -v.y * ry)
+
+
+## 滚动速度的**意图动词**：`dur` 秒内把速度倍率从 `from` 平滑推到 `to`（缓入 + QUAD）。
+## 内容**不再自己 `create_tween()` 改 `scroll_speed`** —— 那是"怎么做"，而且调用方得懂
+## 「地面速度 = scroll_speed ×（plane_size / tiling）」这条换算才敢写常数。
+## 倍率只乘在 `_process` 的 uv 增量上 ⇒ 作者在 .tscn 里填的 `scroll_speed` 保持为**基准值**。
+func speed_ramp(from: float, to: float, dur: float) -> void:
+	if _speed_tween and _speed_tween.is_valid():
+		_speed_tween.kill()          # 同一实例被重复调用（重跑）时别让两个 tween 抢同一个倍率
+	_speed_tween = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	_speed_tween.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_speed_tween.tween_method(set_scroll_mult, from, to, dur)

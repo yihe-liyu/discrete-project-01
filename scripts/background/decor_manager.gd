@@ -25,6 +25,8 @@ class _LayerGroup:
 
 var _groups: Dictionary = {}
 var _elapsed: float = 0.0
+## 已报过"未声明层"的层名（限流：每个名字只报一次，见 `_require_layer`）
+var _warned_missing_layers: Dictionary = {}
 
 ## 实例 transform 写入计数（调试/回归测试用）：
 ## 静态路径稳态（无生成/无死亡）必须为 0 —— 保证"节点平移代替逐实例更新"不被回归
@@ -41,15 +43,31 @@ func debug_take_writes() -> int:
 
 func add_layer(layer: DecorLayer) -> void:
 	var key := layer.name if layer.name != "" else layer.texture.resource_path
-	if _groups.has(key): return
+	if _groups.has(key):
+		# 两个不同 DecorLayer 同名（或都没填 name 且同贴图）会**静默合并**成一个 MultiMesh 层
+		push_warning("DecorManager: 层 key '%s' 已声明过 —— 忽略这次的重复声明" % key)
+		return
 	var g := _LayerGroup.new()
 	g.layer = layer
 	_build_mesh(g, layer)
 	_groups[key] = g
 
 
-func spawn(layer_name: String, pos: Vector3, tex_scale: Vector2, follow: BackgroundPlane, lifetime: float = -1.0) -> void:
+## 取层；**找不到就响亮**（报出已声明的层名），但**每个层名只报一次**。
+## 旧行为是静默 `return` —— 于是"漏了 add_layer / 层名打错"表现为**背景空着 + 控制台一句话没有**
+## （stage02 2026-10-04 实况）。限流是必须的：`spawn` 会被演出按帧调用，
+## 不限流时一个漏配的层名会把控制台刷爆（实测 2 帧 4 条）。
+func _require_layer(layer_name: String) -> _LayerGroup:
 	var g: _LayerGroup = _groups.get(layer_name)
+	if g == null and not _warned_missing_layers.has(layer_name):
+		_warned_missing_layers[layer_name] = true
+		push_warning("DecorManager: 未声明的层 '%s'（已声明：%s）—— 本次调用不生效"
+			% [layer_name, ", ".join(PackedStringArray(_groups.keys()))])
+	return g
+
+
+func spawn(layer_name: String, pos: Vector3, tex_scale: Vector2, follow: BackgroundPlane, lifetime: float = -1.0) -> void:
+	var g := _require_layer(layer_name)
 	if not g: return
 	var sz := tex_scale
 	if sz == Vector2.ZERO:
@@ -58,7 +76,7 @@ func spawn(layer_name: String, pos: Vector3, tex_scale: Vector2, follow: Backgro
 
 
 func batch_spawn(layer_name: String, count: int, x_range: Vector2, z_range: Vector2, follow: BackgroundPlane, lifetime: float = -1.0) -> void:
-	var g: _LayerGroup = _groups.get(layer_name)
+	var g := _require_layer(layer_name)
 	if not g: return
 	var layer := g.layer
 	var band := z_range if z_range != Vector2.ZERO else layer.spawn_band
@@ -71,7 +89,7 @@ func batch_spawn(layer_name: String, count: int, x_range: Vector2, z_range: Vect
 		_alloc_slot(g, pos - g.scroll_offset, tex_scale, follow, lifetime)
 
 func clear_layer(layer_name: String) -> void:
-	var g: _LayerGroup = _groups.get(layer_name)
+	var g := _require_layer(layer_name)
 	if not g: return
 	g.entries.clear()
 	g.free_slots.clear()
@@ -81,7 +99,7 @@ func clear_layer(layer_name: String) -> void:
 		g.multi_mesh.instance_count = 0
 
 func fade_out_layer(layer_name: String, duration: float) -> void:
-	var g: _LayerGroup = _groups.get(layer_name)
+	var g := _require_layer(layer_name)
 	if not g or not g.mmi: return
 	var tw := create_tween()
 	tw.tween_property(g.mmi, "transparency", 1.0, duration)
@@ -108,11 +126,10 @@ func _process(delta: float) -> void:
 ## 淘汰用槽位复用（死亡槽 0 缩放隐藏 + free_slots 复用），无数组重建、无排序。
 func _process_static(g: _LayerGroup, delta: float) -> void:
 	# ① 节点整体平移（等价于旧版逐实例位移的合力）
+	# ⚠️ 速度与换算都取 `BackgroundPlane.world_scroll_per_second()`（**含加速倍率**）——
+	#    别在这里内联读 `scroll_speed`，否则 `speed_ramp` 一加速，树就与地面分家（2026-10-04 实测过）。
 	if g.follow:
-		var rx: float = g.follow.plane_size.x / maxf(g.follow.tiling.x, 1.0)
-		var ry: float = g.follow.plane_size.y / maxf(g.follow.tiling.y, 1.0)
-		var step := Vector3(g.follow.scroll_speed.x * rx, 0, -g.follow.scroll_speed.y * ry) * delta
-		g.scroll_offset += step
+		g.scroll_offset += g.follow.world_scroll_per_second() * delta
 		g.mmi.position = g.scroll_offset
 	# ② 淘汰：生命周期 / 超视野（原位标记死亡 → 槽位复用，无数组重建）
 	var entries := g.entries
@@ -133,9 +150,7 @@ func _process_dynamic(g: _LayerGroup, delta: float) -> void:
 	var entries: Array[DecorEntry] = g.entries
 	for e in entries:
 		if e.follow:
-			var rx: float = e.follow.plane_size.x / maxf(e.follow.tiling.x, 1.0)
-			var ry: float = e.follow.plane_size.y / maxf(e.follow.tiling.y, 1.0)
-			e.position += Vector3(e.follow.scroll_speed.x * rx, 0, -e.follow.scroll_speed.y * ry) * delta
+			e.position += e.follow.world_scroll_per_second() * delta
 		if e.lifetime > 0 and (e.spawn_time > 0 and _elapsed - e.spawn_time >= e.lifetime):
 			e.is_alive = false
 		if e.position.z > 100 or e.position.z < -400:

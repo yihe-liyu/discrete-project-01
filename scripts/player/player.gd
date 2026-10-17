@@ -359,9 +359,9 @@ func _find_item_pool() -> ItemPool:
 
 # ═══ Miss ═══
 
-## Miss 补偿：**直接 +N 个完整雷**（不撒掉落物、不动雷碎片；0 = 关掉补偿）。
-## 走 `PlayerResources.add_bombs()` —— 到 `MAX_BOMBS` 就加不上（满了不越界）。
-const MISS_BOMB_GAIN: int = 2
+## ⚠️ Miss 的雷**不再是"补偿 +2"**（2026-10-04 作者改口径）：现在走
+## `PlayerResources.on_miss_bomb_penalty()` = **扣 2、且不低于 3**（不撒掉落物、不动雷碎片）。
+## 规则与"少于 3 会被补到 3"这条副作用见 `PlayerResources.MISS_BOMB_PENALTY/FLOOR`。
 ## Miss 撒出的 P 点数量（绕自机、向上均匀半圆）
 const MISS_POWER_COUNT: int = 10
 ## 扇形总张角：180° = 向上半圆（含两端点 → 相邻 20°）
@@ -434,9 +434,9 @@ func _apply_miss() -> void:
 	# 火力惩罚（原作口径）：miss 削 50 火力（clamp 0..300）
 	resources.on_miss_power_penalty()
 
-	# 雷补偿：**直接 +2 个完整雷**（作者要求：不撒掉落物、雷碎片不动）——
-	# 到 8 个上限就加不上；被弹炸弹窗口在 `miss()` 里**先**判定，所以这 2 个雷抢不了这次命。
-	resources.add_bombs(MISS_BOMB_GAIN)
+	# 雷惩罚：**扣 2、不低于 3**（作者口径 2026-10-04；原先这里是"+2 补偿"）——
+	# 不撒掉落物、雷碎片不动；被弹炸弹窗口在 `miss()` 里**先**判定，所以这次扣雷抢不了这次命。
+	resources.on_miss_bomb_penalty()
 
 	# 在自机处撒 10 个 P 点：绕自机、向上 180° 均匀弧形（宽限内不被吸走，先飞成弧）
 	_spawn_miss_power_fan(pos)

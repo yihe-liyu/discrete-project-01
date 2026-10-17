@@ -8,7 +8,7 @@
 ## 能力：
 ##   · 播放/暂停/重跑（真实引擎时钟）
 ##   · 跳转：12x 快进到目标时刻（真实关卡不支持任意 seek）
-##   · 难度切换 / 静音 / 背景开关 / 固定种子（重跑弹幕序列可复现）
+##   · 关卡切换（`StageCatalog.playable()`）+ 难度切换 / 静音 / 背景开关 / 固定种子（重跑弹幕序列可复现）
 ##   · 实时状态（时间/子弹数/敌人/Boss/FPS）+ 事件日志
 ##   · 逐帧推进（暂停中 F）：弹幕排布/碰撞细节逐帧检查
 ##   · 书签（协程关卡静态提取 + 人工打点）+ 12x 快进跳转
@@ -96,6 +96,8 @@ var _stage_shift_y := 0.0    # 嵌入创作台页面偏移；舞台视觉归一�
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
 var _diff_sel: OptionButton
+## 关卡下拉的数据源 = `StageCatalog.playable()`（**下标 = 下拉项下标**）
+var _stages: Array[StageData] = []
 
 
 # ═══ 初始化 ═══
@@ -232,8 +234,14 @@ func _exit_tree() -> void:
 
 func _build_ui() -> void:
 	# ── 关卡/难度（.tscn 的 StageGrid，代码填控件）──
+	# 关卡列表 = **可玩清单**（`StageCatalog.playable()`：注册表里真有 create_script 的面）。
+	# ⚠️ 旧实现只有一条写死的 "Stage 1 协程版"、回调还忽略 idx ⇒ 下拉是摆设、换面切不动。
+	# `selected` 必须设在 `connect` **之前**：程序化赋值也会触发 `item_selected`，否则白重跑一次。
+	_stages = StageCatalog.playable()
 	_stage_sel = OptionButton.new()
-	_stage_sel.add_item("Stage 1 协程版")
+	for stage in _stages:
+		_stage_sel.add_item(StageCatalog.display_name_of(stage.stage_id))
+	_stage_sel.selected = _index_of_stage(_stage_data.stage_id)
 	_stage_sel.item_selected.connect(_on_stage_selected)
 	_stage_grid.add_child(WorkbenchUI.label("关卡"))
 	_stage_grid.add_child(_stage_sel)
@@ -506,10 +514,20 @@ func _current_time() -> float:
 
 # ═══ 选项回调 ═══
 
+## `stage_id` 在 `_stages` 里的下标（找不到 → 0，别越界）
+func _index_of_stage(stage_id: int) -> int:
+	for i in _stages.size():
+		if _stages[i].stage_id == stage_id:
+			return i
+	return 0
+
+
 func _on_stage_selected(idx: int) -> void:
-	_stage_data = STAGE1_COROUTINE
-	_restart()
-	_log_line("＊ 切换关卡：%s" % (_stage_sel.get_item_text(idx)))
+	if idx < 0 or idx >= _stages.size():
+		return
+	_stage_data = _stages[idx]
+	_restart()   # 重跑会按新 `_stage_data` 重建背景、并重载**该面**的书签
+	_log_line("＊ 切换关卡：%s" % StageCatalog.display_name_of(_stage_data.stage_id))
 
 
 ## 固定种子：重跑复用同一随机序列（弹幕可复现）

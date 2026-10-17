@@ -27,6 +27,55 @@ func test_stage_registry_has_stage1():
 		assert_true(has_stage1, "注册表应包含 Stage 1")
 
 
+## 注册表 = **可玩清单**（见 `StageCatalog` 的分工约定）：每一项都必须真能开局。
+## 回归：3B / EX 曾以「无关卡脚本」的状态混在注册表里 —— 它们既不可玩，又让
+## `GameScene._resolve_stage_data()` 看起来"找得到"，直到 `StageRuntime.load_stage()`
+## 才报错并拒绝启动（黑场）。**这条把那个偏差挡在数据层**。
+## 只验不变量：加面 / 改名 / 重排都不该红，**混进不可玩的才红**。
+func test_stage_registry_is_playable_only():
+	var reg: StageRegistry = load("res://data/registry/stage_registry.tres")
+	assert_not_null(reg, "stage_registry.tres 应存在")
+	if reg == null:
+		return
+	var errs := reg.validate()
+	assert_true(errs.is_empty(),
+		"注册表只许收**可玩**的关卡（每项要有 create_script 且 stage_id ≥ 1、不重复）；实际：%s" % str(errs))
+
+
+## 配了背景的关卡，**背景树的形状**必须对，且**入树实例化不得报错**：
+##   ① 根节点是 `StageBackground` —— 否则 `game_scene` 不认它（`_background_instance is StageBackground`
+##      为 false）⇒ `StageRuntime.current_background` 不设 ⇒ `ctx.decor` 为 null；
+##   ② 根下声明 `DecorManager` 子节点（`StageBackground.get_decor_manager()` 按类型解析）；
+##   ③ 真正 `add_child` 一次 —— 内容脚本的 `@onready`（`get_parent() as StageBackground` +
+##      `get_node("Ground"/"Sun"/…)`）只有在入树时才跑；**引用了不存在的子节点会在这里炸成引擎错误**。
+##
+## 回归：stage02 抄 stage01 背景时把**内容装饰脚本挂到了根节点**、根上就没了 `stage_background.gd`，
+## 于是 `get_parent() as StageBackground` 得到 null ⇒ `stage02_decor.gd:5` 的 `get_node("Ground")` 崩
+## （`game_scene._load_background()` → `add_child()` 那条栈）。**复制背景是加新面的第一步，这条挡"抄漏一层"。**
+##
+## 只验形状，不数数量、不写死路径：改内容不红，抄错结构才红。
+func test_stage_backgrounds_are_well_formed():
+	var checked := 0
+	for stage in StageCatalog.all():
+		if stage == null or stage.background_scene == null:
+			continue
+		checked += 1
+		var label: String = stage.display_name if stage.display_name != "" else str(stage.stage_id)
+		var bg: Node = stage.background_scene.instantiate()
+		assert_not_null(bg, "%s 的背景场景应能实例化" % label)
+		if bg == null:
+			continue
+		assert_true(bg is StageBackground,
+			"%s 的背景**根节点**必须挂 StageBackground（抄背景时最容易把内容脚本挂到根上）" % label)
+		var has_manager := false
+		for child in bg.get_children():
+			if child is DecorManager:
+				has_manager = true
+		assert_true(has_manager, "%s 的背景必须声明 DecorManager 子节点（否则 ctx.decor 为 null）" % label)
+		add_child_autofree(bg)   # 入树 = 跑一遍内容脚本的 @onready（引用错节点会在这里报引擎错）
+	assert_gt(checked, 0, "至少应有一关配了背景（否则本用例空转）")
+
+
 ## 全部阶段数据（不数数量、不写死路径）：
 ## - `hp > 0` / `time_limit > 0`（注意 time_limit 可能走默认值，故不能只查 .tres 文本）
 ## - 双脚本槽都在（move + shoot）

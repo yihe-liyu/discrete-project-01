@@ -77,8 +77,12 @@ func on_enter() -> void:
 	_highlight()
 
 	var overlay: ColorRect = $"Overlay"
-	overlay.color = Color(0, 0, 0, 0.5)
+	overlay.color = Color(0, 0, 0, 0.5)   # ⚠️ 本场景的 Overlay **没在 .tscn 里声明颜色**（默认白）⇒ 这行是必需的
 
+	# ⚠️ 本场景在 .tscn 里**明确关掉了** `is_auto_overlay` ⇒ `BasePage._create_overlay()` 早退，
+	#    **不会**把本遮罩的 `modulate.a` 归 0 ⇒ 这里**不需要** `_fade_overlay_in()`，遮罩由本菜单自己管。
+	#    （stage 练习菜单是 `is_auto_overlay` 默认 true 的另一种情况：那里**必须**调 `_fade_overlay_in()`，
+	#      否则有效 alpha = 0.55 × 0 = 黑幕看不见 —— 2026-10-04 实测。）
 	var tw := create_tween()
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "modulate:a", 1.0, 0.35)

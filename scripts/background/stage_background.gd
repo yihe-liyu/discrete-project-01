@@ -9,12 +9,70 @@ var world_environment: WorldEnvironment
 ## ⚠️ 别用 node 类型 `@export` + `.tscn` 的 `NodePath("...")`：本引擎实测该写法**不解析**（恒为 null，
 ## `scenes/ui/game_over_menu.tscn` 的 `title_label` 同样中招），所以走类型解析。
 var decor_manager: DecorManager
+## **环境唯一来源**（在背景场景里声明）：`_ready()` 自动应用，重跑/开演前 `reset()` 再应用一次。
+## 有了它，内容脚本**不必**在 `_ready` 里摸背景（旧写法 `get_parent() as StageBackground` = R2 禁的往上摸）；
+## 练习模式（不跑内容 `start()`）也照样有环境 —— 旧实现正是靠内容子节点的 `_ready` 才成立的。
+@export var env_preset: BackgroundEnvPreset
+## **初始相机姿态**（在背景场景里声明）：勾上 `override_camera_home` 后，`_ready` 会把解析到的
+## 那台相机摆成下面这套值 —— **在抓"初始姿态"之前**应用 ⇒ `reset_camera()` 天然复位到**这套**。
+## 不勾 = 沿用**宿主**相机的姿态（`game_scene.tscn` / `workbench.tscn` 里那台）。
+## ⚠️ 勾了之后**改宿主的相机不再影响这一面** —— 构图归本背景所有（这就是"每面自己定构图"）。
+## ⚠️ 只在**进树时**应用一次：`move_camera_by` / `set_camera_rotation` / `tween_camera_fov` 照常叠加在它之上。
+@export var override_camera_home := false
+@export var camera_home_position := Vector3(0, 10, 6)
+@export var camera_home_rotation_degrees := Vector3(-30, 0, 0)
+@export var camera_home_fov := 90.0
+## 相机初始姿态（`_ready` 抓一次）——`reset_camera()` 复位到**它**，而不是写死 `fov = 90`
+var _cam_home_pos := Vector3.ZERO
+var _cam_home_rot := Vector3.ZERO
+var _cam_home_fov := 90.0
+## 相机动词的**目标记忆**（**不是**实时值）：相对动词从这里累加，见 `move_camera_by`
+var _cam_target_pos := Vector3.ZERO
+var _cam_target_rot := Vector3.ZERO
+var _cam_target_fov := 90.0
+## 每个属性只留一条活动 tween（新指令先杀旧的）——见 `_replace_camera_tween`
+var _cam_tween_pos: Tween
+var _cam_tween_rot: Tween
+var _cam_tween_fov: Tween
+var _warned_no_decor := false
 var _elapsed: float = 0.0
 var _is_active: bool = false
 
 
-## 装饰物管理器（懒解析：`Decor` 子节点的 `_ready` 早于父节点，但 `start()` 在父 `_ready` 之后，
-## 这里仍做成用时就查，任何调用点都安全）。无声明节点 ⇒ null（旧实现会偷偷 add_child 建一个）。
+## 目标记忆 ← 相机当前实际值（入树 / 复位时调用：让"相对"从真实起点开始累加）
+func _sync_camera_targets() -> void:
+	if camera == null:
+		return
+	_cam_target_pos = camera.transform.origin
+	_cam_target_rot = camera.rotation
+	_cam_target_fov = camera.fov
+
+
+## 建一条用**物理帧时钟**的相机 tween（相机演出随暂停冻结），并**先杀掉同属性的旧 tween**。
+## ⚠️ 不杀就会两条 tween 同时写同一个属性 ⇒ 谁赢取决于创建顺序（不是"后一条接管"）。
+func _replace_camera_tween(prop: NodePath, value: Variant, duration: float,
+		ease_type: int, trans_type: int, old: Tween) -> Tween:
+	if old and old.is_valid():
+		old.kill()
+	var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	tw.set_ease(ease_type).set_trans(trans_type)
+	tw.tween_property(camera, prop, value, duration)
+	return tw
+
+
+## 把相机摆成场景声明的初始姿态（仅在 `override_camera_home` 打开时）。
+## **必须在 `_capture_camera_home()` 之前调用** —— 这样 `reset_camera()` 复位到的就是这套值。
+func _apply_camera_home_override() -> void:
+	if not override_camera_home or camera == null:
+		return
+	camera.transform.origin = camera_home_position
+	camera.rotation_degrees = camera_home_rotation_degrees
+	camera.fov = camera_home_fov
+
+
+## 装饰物管理器（懒解析：内容子节点的 `_ready` 早于父节点，但 `start()` 在父 `_ready` 之后，
+## 这里仍做成用时就查，任何调用点都安全）。无声明节点 ⇒ null + **响亮一次**
+## （否则 `ctx.decor` 为 null，内容每调一次就静默空转/崩，且看不出缺什么）。
 func get_decor_manager() -> DecorManager:
 	if decor_manager != null:
 		return decor_manager
@@ -22,6 +80,9 @@ func get_decor_manager() -> DecorManager:
 		if child is DecorManager:
 			decor_manager = child
 			break
+	if decor_manager == null and not _warned_no_decor:
+		_warned_no_decor = true
+		push_warning("StageBackground(%s): 没声明 DecorManager 子节点 —— `ctx.decor` 会是 null" % name)
 	return decor_manager
 
 func _ready():
@@ -39,7 +100,44 @@ func _ready():
 	# 这样重跑时旧相机随背景销毁、新背景拿初始相机，零残留、无需手动复位
 	if camera == null:
 		_own_camera()
+	if world_environment == null:
+		push_warning("StageBackground(%s): 场景里没声明 WorldEnvironment —— 环境/雾动词不会生效" % name)
+	_apply_camera_home_override()   # 必须在抓 home **之前**：reset 要回"声明的"那套
+	_capture_camera_home()
+	if env_preset:
+		apply_env_preset(env_preset)
+	_resolve_showcase()
 	_on_setup()
+
+
+## 故事演出层（蒙眼雾 / 太阳）：**按类型**解析（不按名字 —— 同 `DecorManager` / `WorldEnvironment`），
+## 并把**相机与太阳**接进雾里（雾要靠它们把太阳投影到屏幕）。
+##
+## ⚠️ 为什么必须由宿主接线：这两个组件"声明即显示"，但雾还需要相机 + 太阳。
+## 旧设计让**内容脚本**调 `fog.setup(sun, camera)` —— 忘一次就隐形 / 不跟相机，**且零报错**
+## （stage02 2026-10-04 实况：作者把节点都摆好了，却看不见太阳和黑雾）。
+## 接线是宿主的活，内容脚本不该有机会忘。
+func _resolve_showcase() -> void:
+	var fog: ScreenFogFX = null
+	var sun: BackgroundSun = null
+	for child in get_children():
+		if child is ScreenFogFX:
+			fog = child
+		elif child is BackgroundSun:
+			sun = child
+	if fog:
+		fog.bind(camera, sun)
+
+
+## 抓相机初始姿态：`reset_camera()` 的复位目标（外部注入的相机也照抓，所以别写死 90）
+func _capture_camera_home() -> void:
+	if camera == null:
+		return
+	_cam_home_pos = camera.transform.origin
+	_cam_home_rot = camera.rotation
+	_cam_home_fov = camera.fov
+	_sync_camera_targets()   # 目标起点 = 初始姿态（相对动词从这里累加）
+
 
 
 ## 自建相机：初始姿态与真游戏 SubViewport 相机一致；随本背景实例销毁
@@ -79,7 +177,9 @@ func _find_world_environment() -> WorldEnvironment:
 			return child
 	return null
 
-func set_camera_fov(fov: float):
+## 相机 FOV：立即设置（无 tween）。也要同步目标记忆，否则后续相对动词会从旧目标算。
+func set_camera_fov(fov: float) -> void:
+	_cam_target_fov = fov
 	if camera:
 		camera.fov = fov
 
@@ -106,26 +206,54 @@ func get_camera_offset() -> Vector3:
 		return camera.transform.origin
 	return Vector3.ZERO
 
-## 相机旋转 (Euler 角度, 度)
-func rotate_camera(target_rot: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE):
-	if not camera:
-		return
-	var tween: Tween = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tween.set_ease(ease_type).set_trans(trans_type)
-	tween.tween_property(camera, "rotation", target_rot, duration)
+# ═══ 相机动词（**绝对 / 相对**，名字里写清楚）═══
+# ⚠️ 历史坑（2026-10-04 作者实测「摄像机的 y 角度最后没回到 0」）：旧名 `rotate_camera` 是
+# **绝对**、旧名 `pan_camera` 是**相对** —— 一对动词两种语义、名字看不出来；作者按增量写了 4 条
+# （−10/+25/−30/+15，和 = 0）却停在 +15°。现在：
+#   `set_camera_position` / `set_camera_rotation` / `tween_camera_fov` = **绝对**
+#   `move_camera_by`       / `rotate_camera_by`                        = **相对**（在上一条指令的**目标**上累加）
+# ⚠️ 单位：所有 `*rotation*` 一律 **弧度**（与 `Node3D.rotation` 一致）⇒ 写 `deg_to_rad(...)`。
+#    （场景里那两个 `Camera Home Rotation Degrees` 是**度** —— 别搞混。）
 
-## 推移相机 (相对移动)
-func pan_camera(offset: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE):
-	if not camera:
+## 相机位置：**绝对**（tween 到 `target_pos`）
+func set_camera_position(target_pos: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
+	if camera == null:
 		return
-	move_camera(camera.transform.origin + offset, duration, ease_type, trans_type)
+	_cam_target_pos = target_pos
+	_cam_tween_pos = _replace_camera_tween("position", target_pos, duration, ease_type, trans_type, _cam_tween_pos)
 
-func move_camera(target_pos: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE):
-	if not camera:
+
+## 相机位置：**相对**（在上一条指令的**目标**上再加 `offset`）
+## ⚠️ 从**目标**累加、**不是**从 `camera.transform.origin`（实时值）：否则两条重叠调用会以
+## "飞行途中的位置"为基准 ⇒ 漂移（旧 `pan_camera` 的坑）。
+func move_camera_by(offset: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
+	if camera == null:
 		return
-	var tween: Tween = create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tween.set_ease(ease_type).set_trans(trans_type)
-	tween.tween_property(camera, "position", target_pos, duration)
+	set_camera_position(_cam_target_pos + offset, duration, ease_type, trans_type)
+
+
+## 相机旋转：**绝对**（弧度）
+func set_camera_rotation(target_rot: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
+	if camera == null:
+		return
+	_cam_target_rot = target_rot
+	_cam_tween_rot = _replace_camera_tween("rotation", target_rot, duration, ease_type, trans_type, _cam_tween_rot)
+
+
+## 相机旋转：**相对**（弧度；在上一条指令的**目标**上再加 `delta_rot`）
+## 用途：写"转过去再转回来"—— 增量序列和为 0 就自然回正（旧 `rotate_camera` 是绝对，做不到）。
+func rotate_camera_by(delta_rot: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
+	if camera == null:
+		return
+	set_camera_rotation(_cam_target_rot + delta_rot, duration, ease_type, trans_type)
+
+
+## 相机 FOV：**绝对**（tween）
+func tween_camera_fov(fov: float, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
+	if camera == null:
+		return
+	_cam_target_fov = fov
+	_cam_tween_fov = _replace_camera_tween("fov", fov, duration, ease_type, trans_type, _cam_tween_fov)
 
 func _on_setup():
 	# 子 CoroutineScript 由 StageRuntime 统一 start()
@@ -186,18 +314,28 @@ func tween_env_fog(color: Color, amount: float, duration: float, ease_type: int 
 	tw.set_ease(ease_type).set_trans(trans_type)
 
 ## FOV tween（相机）
-func tween_env_fov(fov: float, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
-	if not camera:
-		return
-	var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_ease(ease_type).set_trans(trans_type)
-	tw.tween_property(camera, "fov", fov, duration)
-
-## 重置相机 FOV 到初始值（重跑防 tween 残留；position/rotation 由场景/自建相机保持，与旧行为一致）
+## 相机复位到 `_ready` 抓的初始姿态（重跑防 tween 残留）。
+## ⚠️ 旧实现只把 `fov` 写回 90、不管 position/rotation ⇒ 相机动词跑过之后的重跑**不会回正**（现同时**杀光活动 tween**）。
 func reset_camera() -> void:
 	if not camera:
 		return
-	camera.fov = 90.0
+	# 先杀光活动 tween：否则复位后旧 tween 还在写同一属性 ⇒ "复位了但又被拉走"
+	for tw in [_cam_tween_pos, _cam_tween_rot, _cam_tween_fov]:
+		if tw and tw.is_valid():
+			tw.kill()
+	camera.transform.origin = _cam_home_pos
+	camera.rotation = _cam_home_rot
+	camera.fov = _cam_home_fov
+	_sync_camera_targets()   # 目标也回初始姿态
+
+
+## 开演 / 重跑前的**完整复位**：环境从**场景声明的** `env_preset` 重建 + 相机回初始姿态。
+## 内容脚本只写这一句，不必再各自 `apply_env_preset(...)` + `reset_camera()` 两连，
+## 更不必为了拿本节点而在 `_ready` 里 `get_parent()`（R2 禁往上摸）。
+func reset() -> void:
+	if env_preset:
+		apply_env_preset(env_preset)
+	reset_camera()
 
 ## 取天球材质（`ProceduralSkyMaterial`）：`tween_env_fog()` 靠它把地平线色跟着雾色走。
 ## ⚠️ **天球配在内容预设里**（`data/stages/stage01/background/stage01_env.tres`：`background_mode = BG_SKY`

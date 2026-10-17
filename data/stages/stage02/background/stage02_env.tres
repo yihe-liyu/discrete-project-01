@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="BackgroundEnvPreset" format=3 uid="uid://bhwj4ku14826a"]
+
+[ext_resource type="Script" uid="uid://d8soul1cjjam" path="res://scripts/background/background_env_preset.gd" id="1_28nkx"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_stage01"]
+sky_top_color = Color(0.2, 0.24, 0.3, 1)
+sky_horizon_color = Color(0.42, 0.44, 0.46, 1)
+sky_curve = 0.35
+ground_bottom_color = Color(0.16, 0.18, 0.14, 1)
+ground_horizon_color = Color(0.3, 0.33, 0.3, 1)
+
+[sub_resource type="Sky" id="Sky_stage01"]
+sky_material = SubResource("SkyMat_stage01")
+radiance_size = 0
+
+[sub_resource type="Environment" id="Environment_tngsl"]
+background_mode = 2
+sky = SubResource("Sky_stage01")
+fog_enabled = true
+fog_light_color = Color(0.61138725, 0.7845677, 0.8911433, 1)
+
+[resource]
+script = ExtResource("1_28nkx")
+environment = SubResource("Environment_tngsl")
