@@ -1,6 +1,6 @@
 extends GutTest
 ## L1：BulletLifecycle 描述符 + GDScript 参考解释器 ↔ 现有 GDScript 行为 **parity**。
-## 见 docs/LIFECYCLE_MODEL.md §9（L1）。bounce = 条件性最强；curve = 状态机 + 钳位。
+## 见 docs/DANMAKU_API.md（附录 A） §9（L1）。bounce = 条件性最强；curve = 状态机 + 钳位。
 
 const DT := 1.0 / 60.0
 

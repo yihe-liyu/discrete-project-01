@@ -7,7 +7,7 @@ extends RefCounted
 ## test/reference/behavior/*.gd 只是冻结参照，不驱动 schema）。新增 move 见 CONTENT_GUIDE.md「弹幕行为接口」。
 
 ## 预拼描述符入口：内容 `kernel_port()` 直接给 `{lifecycle: BulletLifecycle}`（可选 `anchor`）。
-## 对应 docs/LIFECYCLE_MODEL.md §7「`*_bullet.gd` → builder sugar」。
+## 对应 docs/DANMAKU_API.md（附录 A） §7「`*_bullet.gd` → builder sugar」。
 const MOVE_LIFECYCLE := &"lifecycle"
 
 

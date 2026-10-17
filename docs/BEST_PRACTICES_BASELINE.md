@@ -3,7 +3,7 @@
 > **改动前先扫这一份**：这里**只留规则与状态**，所以它应该越读越薄。
 > - 主轴 **STG 品质需求（S1–S13）** = 目的地；横切 **工程红线库（R1–R22）** = 护栏，服务于上面的需求。
 > - **改状态** → 只改下面「状态总表」的**一行**；**补证据**（文件/方法/实测数字）→ 写进
->   [`BASELINE_EVIDENCE.md`](BASELINE_EVIDENCE.md)（附录，可查不必通读）；
+>   [`archive/BASELINE_EVIDENCE.md`](archive/BASELINE_EVIDENCE.md)（附录，可查不必通读）；
 >   **记心得 / 为什么这样改 / 没抄旧版什么** → `BEST_PRACTICES_LOG.md`。
 > - 目标：随项目成熟**只收敛、不膨胀**；「待改进」小节最终清空。
 > - 旧项目改造前审计快照：`docs/archive/BEST_PRACTICES_BASELINE_OLD_AUDIT.md`（留底，不随重建更新）。
@@ -24,7 +24,7 @@
 ## 状态总表（S1–S13）
 
 > 图例：`✔` 已落地且有代码证据 ｜ `🚧` 部分落地 / 待核 ｜ `✘` 未做。
-> 「还差什么」只写**结论**；逐条证据（`[x] —— 文件/方法`）在 [BASELINE_EVIDENCE.md](BASELINE_EVIDENCE.md#stg-品质需求主轴做一款好玩的东方弹幕游戏)。
+> 「还差什么」只写**结论**；逐条证据（`[x] —— 文件/方法`）在 [archive/BASELINE_EVIDENCE.md](archive/BASELINE_EVIDENCE.md#stg-品质需求主轴做一款好玩的东方弹幕游戏)。
 
 | # | 需求 | 状态 | 适用红线 | 还差什么 |
 |---|---|---|---|---|
@@ -187,7 +187,7 @@
 
 ## 踩坑铁律（改动前扫一眼）
 
-> 从滚动日志蒸馏的**跨子系统**教训；内核 / lifecycle 专项见 `DANMAKU_API.md` / `LIFECYCLE_MODEL.md`，过程见 `docs/archive/LOG_*`。
+> 从滚动日志蒸馏的**跨子系统**教训；内核 / lifecycle 专项见 `DANMAKU_API.md`（含附录 A），过程见 `docs/archive/LOG_*`。
 
 - **池化/复用对象加字段 → `setup()`/`reset()` 必须归零**（`Item` 漏 `_is_highlight` → 回池复用误金色；原生行同理）。
 - **遍历中 `despawn` 必须倒序**（swap-with-last；dead 重放降序，升序丢大 id）。
@@ -214,7 +214,7 @@
 
 # 🔴 待改进（达标后清空）
 
-> 每修一条删一条。长版细节（行数、实测数字、决策经过）见 [BASELINE_EVIDENCE.md](BASELINE_EVIDENCE.md)。
+> 每修一条删一条。长版细节（行数、实测数字、决策经过）见 [archive/BASELINE_EVIDENCE.md](archive/BASELINE_EVIDENCE.md)。
 
 - [ ] **R16**：47MB 二进制未配 Git LFS（`.gitattributes` 仅 EOL 规范化）
 - [ ] **R18/R19**：`workbench.gd`(611，2026-09-30 S3/S4 后；原 695) / `spell_practice_menu.gd`(754) 上帝对象 + 3 个超长 `_build_ui`（**行数只是提示，判据是"一个类只做一件事"**；2026-09-27 实测）
@@ -223,4 +223,4 @@
 - [ ] **编排路线**（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生 / Step 6 `ctx.background` 注入服务 待做；Step 5/7 暂缓（产品决定）
 - [ ] **内核融合（M3）**：M1/M2 已完成、M3 已拍板「纹理句柄」；判据已改为**结构性**（0 类型映射 / 0 内容签名侧表）—— 经过见证据文档
 
-> 曾经的"重审说明 + K0 实测审计表"已移入 [BASELINE_EVIDENCE.md](BASELINE_EVIDENCE.md)（历史快照，只增不改）。
+> 曾经的"重审说明 + K0 实测审计表"已移入 [archive/BASELINE_EVIDENCE.md](archive/BASELINE_EVIDENCE.md)（历史快照，只增不改）。

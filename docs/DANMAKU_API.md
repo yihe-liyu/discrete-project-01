@@ -1,7 +1,7 @@
 # 弹幕内核接口（DANMAKU API）
 
 > **一句话**：给一颗弹写飞行规律 = `BulletData.trajectory(BulletLifecycle)`；发射 = `ctx.bullets.shoot_spread(...)`。
-> 发射后每一跳经过谁（宿主 ↔ 原生内核 ↔ 渲染）：见 `docs/BULLET_PIPELINE.md`。
+> 发射后每一跳经过谁（宿主 ↔ 原生内核 ↔ 渲染）：见本文附录 B。
 > 本文是弹幕创作的**唯一权威参考**：BulletData / BulletLifecycle 全词汇 + 原生语义 + 发射 API + ctx 服务 + 素材表 + 文件接线 + 陷阱。
 > 由浅入深的教学路径见 `CONTENT_GUIDE.md` `六·弹幕行为`；本文是它的**完整字典**。
 > 原生执行器：`gdextension/src/danmaku_store.cpp`（唯一存储/执行）；桥接：`scripts/kernel_bridge/`。
@@ -646,6 +646,405 @@ lc.emit_variant([_青玉, _红玉],
 |---|---|
 | 教学 / 由浅入深 | `CONTENT_GUIDE.md` `六·弹幕行为` |
 | 关卡 / 敌人 / Boss 编排 | `CONTENT_GUIDE.md` 二~四 |
-| 描述符设计动机 / 边界 | `docs/LIFECYCLE_MODEL.md` |
-| 原生执行细节（op / 事件 / 同步点） | `docs/GDEXTENSION_KERNEL_DESIGN.md` + `gdextension/src/danmaku_store.cpp` |
+| 描述符设计动机 / 边界 | 本文附录 A |
+| 原生执行细节（op / 事件 / 同步点） | `docs/archive/GDEXTENSION_KERNEL_DESIGN.md` + `gdextension/src/danmaku_store.cpp` |
 | 架构 / 命名契约 | `docs/ARCHITECTURE.md` + `docs/BEST_PRACTICES_BASELINE.md` |
+
+
+---
+
+> **附录 A（2026-10-17 并入）**：以下为原 `LIFECYCLE_MODEL.md` 全文；小节编号沿用原文，与正文 §1–§11 无关。
+
+# 附录 A · 弹幕生命周期模型（LIFECYCLE MODEL）—— 已落地（L1–L4）
+
+> **状态**：**已落地（2026-09-14，L1–L4）**。B 路线（N3）的形态 = **一套词汇，三种 runtime**
+> （低频 GDScript / 高频 per-bullet 固定描述符 / 原生执行）。
+> **相关**：`docs/archive/GDEXTENSION_KERNEL_DESIGN.md` §1/§5/§5.7；`docs/archive/N2_NATIVE_INTEGRATION_PLAN.md`。
+> **由来（2026-09-13 决策）**：放弃「通用 opcode VM」，改为「频率分层 + 固定 schema 相位描述符」。理由见 §8。
+>
+> **本文怎么读**：**当前模型（权威）= §0–§6 + §11 的 unit 表**；**决策理由（只增不改）= §7 映射 · §8 与 VM 的关系**；
+> **历史记录（已完成，不再更新）= §9 落地步骤 · §10 L1 实测 · §11 末尾的 L2/更新脚注**。逐条状态与待办见基线 S 表。
+
+---
+
+## 0. 一句话
+
+**按频率分层：低频（关卡 / 敌人 / Boss / spawn 编排）用时间线写（GDScript，方便）；高频（per-bullet）用「相位 + 数学原语 + 条件」的固定描述符（原生，便宜）。两者共用同一套生命周期词汇。**
+
+**铁律**：
+1. **GDScript 不进每帧每弹路径**（§1 分层）。
+2. **不引入通用 opcode VM**：无 `pc` / `goto` / 表达式 / 任意循环。描述符是**固定 schema**，可静态校验。
+3. **统一的是「词汇 + 创作面」，不是「引擎」**：三种 runtime 本来就不同，硬合成一个会变成 leaky abstraction，**反而更难追溯**。
+
+---
+
+## 1. 生命周期词汇（唯一一套）
+
+| 词 | 含义 | 三处都用 |
+|---|---|---|
+| **Phase 相位** | 生命周期的一段：进入时一次，之后每 tick 跑 moves，直到 until 成立 | ✅ |
+| **Move 原语** | 每 tick 施加的**数学**变换 | per-bullet（低频层用时间线事件替代） |
+| **Until 条件** | 结束当前相位的判据（时间 / 位置 / 距离 / 事件） | ✅ |
+| **Action 动作** | 相位结束（或时刻到）时的**一次性**动作：emit / emit_variant / sfx / on_end_heading / despawn | ✅ |
+| **Timer 计时** | 秒或 tick 倒计时 | ✅ |
+| **Emit 发射** | 生成子弹（低频=直接 spawn；高频=入延后队列） | ✅ |
+
+**刻意不在词汇里的**：任意表达式、任意循环、跨弹共享可变状态、跳转表。
+> 需要这些 → 说明它是**低频**逻辑，用 GDScript 时间线写。
+
+---
+
+## 2. 三种 runtime（按频率分层）
+
+| 层 | 频率 | 生命周期形态 | runtime | 位置 |
+|---|---|---|---|---|
+| 关卡 / Boss 阶段 / 敌人 AI | 每波 / 每事件 | 时间线（`at` / `every` / `wait` + 条件） | `Timeline`（**已有**） | `scripts/coroutine/timeline/` |
+| 弹幕 **spawn 编排** | 每波 | 时间线 + pattern builder（ring / fan / spiral / wall / aimed） | `Timeline` + `StageDirector` / `BulletService` | `scripts/coroutine/` |
+| **per-bullet 行为** | 每帧每颗 | **相位 + 数学原语 + 条件** | **原生描述符执行器（待建）** | `gdextension/src/` |
+
+> 现有 `CoroutineScript` 的**快速模式**（`coroutine_script.gd:44`，"子弹协程专用，快 2-3 倍"）是**per-bullet 时间线的尝试** —— 仍不够快，才搬到原生 behavior。**这条历史结论就是本模型分层的依据。**
+
+---
+
+## 3. per-bullet 描述符（固定 schema，可原生执行）
+
+```
+BulletLifecycle {
+  phases: [ Phase ]              # 有序，不跳转
+}
+Phase {
+  moves:  [ Move ]               # 每 tick 顺序施加
+  until:  Condition              # 缺省 = 永续
+  on_end: [ Action ]             # 相位结束的一次性动作
+}
+Move      = { kind, f0..f3 }             # 纯数值参数
+Condition = { kind, f0..f3 }
+Action    = { kind, action_id, f0..f3 }  # action_id → 宿主表（模板 / sfx / 内容回调）
+
+每弹另有：phase_index(PackedInt32) + state 行块
+```
+
+- **状态槽静态分配**：每个 Move 声明所需行状态（`rotate`→`turned`、`aim`→`elapsed`、`anchor`→`drift`）；编译期算好总 stride，运行期零分配、零哈希。
+- **per-shot 参数**（弹速 / 反弹角 / 难度值）在发射时绑定到描述符实例的数值槽；**结构**（phases）是共享只读的。
+- **Callable / BulletData 不进原生**：emit 模板 / 内容回调注册成 `action_id`，原生只回传 id；变体发射另回传概率分支号。
+
+> **关键原则（让描述符封闭）**：**Move 与 Condition 必须原生**（每帧每颗）；**Action / Emit 是一次性（低频）→ 可以回调 GDScript 内容**。
+> 所以「复杂散圈 / 难度 / RNG / 多弹型」全部落在 Action，**天然不进热路径** —— 这是本模型能既封闭又精简的原因。
+
+### Move 首批（9 个 op）
+
+| Move | 参数 | 行状态 |
+|---|---|---|
+| `accel_world` | vec | — |
+| `accel_heading` | a | — |
+| `rotate` / `rotate_velocity` / `rotate_heading` | w, limit, mode | turned |
+| `steer` | target, max_turn/s, ramp, dist_weight, steer_until | elapsed |
+| `position`(ANCHOR) | anchor_id, offset, angle, speed, use_global, initial | drift |
+| `position`(PHASE_START) | angle, speed, initial | 起点 + 位移 |
+| `speed_lerp` | from, to, ramp | elapsed |
+| `set_heading` | dir | — |
+| `set_speed` | speed | — |
+| `speed_mul` | f | — |
+
+> **状态槽上限 8**（原生 `SLOT_STRIDE`）：`_pslots` 固定 stride 分行；`slots > 8` 的 program 会被 `register_program` 拒绝。
+
+### Condition 首批
+
+| Condition | 参数 | 用于 |
+|---|---|---|
+| `never` | — | accel / 直线 |
+| `elapsed` | t | homing_duration / avoid flee_time |
+| `near` | target, r | bounce / avoid / non_mid（`near_boss(r)` 已闭合，见 §5.2） |
+| `at_wall` | mask | radial_accel / bounce（纯谓词；输出相位结束落点） |
+| `state` | slot, cmp, value | curve（不公开；`until_turned()` 是糖） |
+| `speed` | cmp, value | V21：`|v|` 比较（撞墙后减速到某速度等） |
+| （通用节流） | every / every_ticks | 任何 condition 可链式 `.every()` / `.every_ticks()`（V6） |
+
+### Action 首批
+`emit` / `emit_variant` / `sfx` / `on_end_heading` / `despawn` / `on_end_call` / `clear_fx` / `despawn_clear`。
+
+> `clear_fx`（op 47）是**纯 action** —— 只回传「此刻位置 + 弹色」给宿主播消散特效，不改任何列式状态；
+> `despawn_clear()` 只是 `clear_fx().despawn()` 的组合糖。`despawn()` 保持**静默**（默认语义）。
+
+---
+
+## 4. 创作者面
+
+**内容创作者写的是 `BulletData.trajectory(lc)`** —— 直接挂 `BulletLifecycle`（builder），**不碰 opcode**。权威用法见 `CONTENT_GUIDE.md`「弹幕行为」：
+```gdscript
+# 现成 preset
+_bullet.trajectory(BulletLifecycle.homing())
+
+# 预设不够：自己拼相位
+var lc := BulletLifecycle.new()
+lc.rotate(2.0, 0.5).until_turned().then().accel_heading(300.0).until_elapsed(1.0).despawn()
+_bullet.trajectory(lc)
+```
+
+**引擎侧**（`LifecycleCatalog.build()` **就地展开**）用 fluent builder → 描述符（真实方法名）：
+```gdscript
+BulletLifecycle.new()\
+    .accel_heading(100.0)                                   # Move\
+    .until_at_wall(WALL_LEFT | WALL_RIGHT | WALL_TOP)       # Until\
+    .sfx(&"kira", -8.0).emit(_replacement, toward(T_BOSS, 0.3), 0.0, true).despawn()   # Action
+```
+- **Move**：`accel_world` `accel_heading` `rotate` / `rotate_velocity` / `rotate_heading` `steer` `speed_lerp` `speed_mul` `set_heading` `set_speed` `position`
+- **Until**：`until_never` `until_elapsed` `until_near` `until_at_wall` `until_speed` `until_turned`（+ 通用 `.every` / `.every_ticks`）；`then()` 开新相位
+- **Action**：`sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call`
+- **方向糖**：`heading(angle)` `toward(target, angle)` `away(target, angle)` `forward(angle)` `random_dir(spread)` `chance_toward(target, p, spread)` `reflect(angle)`
+
+**Canned preset**（9 个 `move` 的**类型化薄包装**，组合在 `build()`）：
+```gdscript
+BulletLifecycle.bounce(accel_rate, bounce_angle, spawn_speed, spawn, sfx_key := &"kira", sfx_db := -8.0)
+BulletLifecycle.homing(angle_per_sec, accel_time, min_speed, max_speed, duration, proximity_boost)
+BulletLifecycle.curve(w, limit)
+BulletLifecycle.radial_accel(accel_rate, spawn, sfx_key := &"", sfx_db := 0.0)
+BulletLifecycle.avoid_player(proximity, jump, flee_time)
+BulletLifecycle.world_accel(v)   /   BulletLifecycle.accel(a)
+BulletLifecycle.laser_follow(anchor_id, offset, angle, drift_speed, initial_drift)
+BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drift)
+```
+
+> **创作者两条路**：现成 preset（`move` 的糖）或自定义相位组合（builder），都不碰 opcode —— 没有原语泄漏（满足"创作者方便"硬约束）。
+> 旧 `kernel_port` 端口（`*_bullet.gd`）已弃用，仅测试夹具保留（见 §7）。
+
+---
+
+## 5. 表达力试金石
+
+> **本节是设计期试金石（2026-09-13）**：用当时的草稿名（`accel_along_vel` / `wall_hit` / `near_player` / `set_vel`…）证明描述符能覆盖 10 个行为。**当前实现名以 §3 / §11 为准。**
+
+### 5.1 `bounce`（最有条件性的一个）
+
+现有 `bounce_behavior.gd` 逐条 → 描述符：
+
+| 现有步骤 | 描述符落点 |
+|---|---|
+| `v += v.normalized() * accel * dt` | `moves: [accel_along_vel(accel)]` |
+| 碰左/右/上框（下墙穿出） | `until: wall_hit(LEFT\|RIGHT\|TOP)` |
+| 碰框时把 pos 夹到框上 | `wall_hit` 语义内含（原生在触发帧夹位） |
+| `speed = v.length()`；`spawn_speed>0` 则替换 | 数值槽（发射时绑定） |
+| `aim = (boss - at).normalized()`，无 Boss 退 DOWN | `aim_boss(angle, fallback := DOWN)` |
+| `dir = aim.rotated(bounce_angle)` | 同上（角度入参） |
+| 播 `kira` sfx | `sfx("kira", -8.0)` |
+| `host.queue_spawn(b, at, dir)` + `request_despawn` | `emit_action(factory)` + `despawn` |
+
+```
+bounce → phases: [
+  { moves: [accel_along_vel(accel)],
+    until: wall_hit(LEFT|RIGHT|TOP),
+    on_end: [ sfx("kira", -8.0),
+              emit(action_id=factory, target=boss, angle=bounce_angle, fallback=DOWN, speed=spawn_speed),
+              despawn ] }
+]
+```
+**一相位 + 一条件 + 三动作，全部可表达。** ✅
+
+> **✅ 已验闭合（2026-09-13，读 `non_mid01_bullet.gd`）**：它的 burst 条件确实是 `pos.distance_to(boss) < diff_pick([175,150,125,100])` → 就是 `near_boss(r)`（r 随难度）。散圈本身（难度 / RNG / 小玉+红棱）是**一次性内容逻辑** → `emit_action(burst_action_id)` 回调宿主即可。**描述符在最有条件性的两条上都封闭。**
+
+| 行为 | 描述符 |
+|---|---|
+| `accel` | `[{moves:[accel_along_vel(a)], until:never}]` |
+| `curve` | `[{moves:[rotate(w)], until:turned(limit)}]` → `[{moves:[]}]` |
+| `world_accel` | `[{moves:[accel_world(v)], until:never}]` |
+| `radial_accel` | `[{moves:[accel_along_vel(rate)], until:top_edge, on_end:[sfx, emit(dir=DOWN), despawn]}]` |
+| `homing` | `[{moves:[aim(nearest, angle_per_sec, dist_weight), speed_ramp(min,top,accel_time)], until:timeout(duration)}]` |
+| `avoid_player` | `[{until:near_player(r), on_end:[set_vel(away)]}, {until:timeout(flee_time), on_end:[despawn]}]` |
+| `laser_follow` / `marisa_laser` | `[{moves:[anchor(ref, offset, drift, angle)], until:never}]`（`use_global` 区分两者） |
+
+---
+
+## 6. 追溯指南（"我要改 X → 看哪"）
+
+| 我要改… | 看 |
+|---|---|
+| 某关的波次时序 / BGM / 对话 / Boss 进出 | `data/stages/<stage>/stage_script/*.gd` + `Timeline` |
+| 某种 spawn 形状（环 / 扇 / 螺旋 / 墙） | pattern builder（`StageDirector` / `BulletService`） |
+| 某颗弹的**生命周期** | `BulletLifecycle` 描述符 / preset |
+| 敌机 AI / 移动 | `data/stages/<stage>/enemy/*.gd`（`CoroutineScript`） |
+| Boss 阶段时长 / 血量 / 掉落 / 脚本 | `PhaseData`（`.tres`） |
+| 内核执行 / 性能 / 判定几何 | `gdextension/src/` |
+
+**这张表就是"快追溯"的承诺**：任何一处都能落到"频率 → 词汇 → 文件"三格。
+
+---
+
+## 7. 与现有代码的映射（保留 / 迁移 / 删）
+
+| 现有 | 处置 |
+|---|---|
+| `Timeline` / `TimelineEvent` | **保留**（低频 runtime 主体） |
+| `CoroutineScript` / `StageDirector` / `PhaseData` | **保留**（低频） |
+| `*_shoot.gd`（波编排） | **保留** + 加 pattern builder |
+| `kernel_bridge/behavior/*.gd`（10 个） | → **描述符 preset**（L2）→ 删 GDScript 实现（L4）✅ |
+| `*_bullet.gd`（`kernel_port`：命名 `move` / 自定义 `{lifecycle}`） | **载体已删**：`data/**` 全部直接 `trajectory(lc)`；桥接端口仅测试夹具保留（待清 b2c） |
+| `BulletData.lifecycle` / `.trajectory(lc, anchor)`（**b0/b1/b2a**：直接挂描述符，不经 port） | ✅ 全部迁移（gravity / homing / marisa_laser / world_accel / bounce / radial_accel）；`content_signature` 结构去重 |
+| 内容回调 + 变体发射（**b2b / 变体**） | ✅ **hook 名注册表**（`LIFECYCLE_HOOKS_SCRIPT.register`）+ `emit_variant`（内核回传概率分支号，宿主按分支选模板） |
+| 内核随机 / 朝向（**K1/K2**） | ✅ 原生 PRNG（`set_seed` 由宿主种子派生）+ per-bullet 朝向（`accel_heading` 与速度解耦） |
+| `CoroutineScript` 快速模式（子弹协程） | 已废，随 GDScript 内核拆除 |
+
+---
+
+## 8. 与 §5 通用 VM 的关系（为什么改）
+
+| §5.3 原案 | 本模型 |
+|---|---|
+| 通用 opcode：`wait/goto/call/fx/sfx/emit/rotate/aim/...` + pc + 表达式 | **固定 schema 相位描述符**：无 pc / goto / 表达式 |
+| 试图用一份 VM 同时跑 spawn 与 per-bullet | **频率分层**：低频 `Timeline`、高频描述符 |
+| op 集欠定、混层、无带参子程序 | **词汇正交**（Phase/Move/Until/Action）+ preset 复用 |
+| 序列化 `Array[String/字典]` | **纯数值结构**（可校验、可紧打包） |
+
+§5.7「**先迁数据、后换实现**」**仍成立** —— 只是"数据"从"程序"变成"生命周期描述符"。
+
+---
+
+## 9. 落地步骤
+
+| 步 | 做什么 | 产出 |
+|---|---|---|
+| **L0** | 本文档评审定稿 | 词汇 + schema 冻结 |
+| **L1 ✅（2026-09-13）** | `BulletLifecycle` builder（GDScript）+ **参考解释器**（跑描述符；现冻结在 `test/reference/lifecycle_behavior.gd`） | 2/2 parity：bounce/curve 逐位 |
+| **L2 ✅（2026-09-13）** | 10 行为写成 preset，**parity** vs 现有 GDScript 行为 | 10/10 逐位 parity（bounce/curve + 8 个） |
+| **L3 ✅（2026-09-14）** | **原生描述符执行器**（C++ `behavior_tick`），换执行器；parity vs 参考解释器 | `test_native_executor` 9/9 |
+| **L4 ✅（2026-09-14，4f）** | 拆 GDScript 行为 + GDScript 内核（按拆除清单） | `scripts/kernel/**` 1225 行从生产删除；oracle 冻结进 `test/reference/` |
+
+> 依赖：L3 需要 **N2 存储段**（原生 SoA）—— 否则重演 110ns 的坑。
+
+---
+
+## 10. L1 实测记录（2026-09-13）
+
+- ✅ **通过**：`bounce` + `curve` 与现有行为**逐位 parity**（`test_lifecycle_model` 2/2 / 33 断言）。
+- **结论**：描述符 schema + Phase/Move/Until/Action 词汇**足以表达**条件性最强的行为 —— 模型成立。
+- **暴露的引擎 bug**：`BehaviorProcessor` **升序** drain despawn → 多弹同帧回收**丢一个**（详见 `BEST_PRACTICES_LOG.md`）。**已修**（2026-09-13 降序 drain：重建版 `2466a93` / 主工程 `16645d0`）；`BehaviorProcessor` 本身已随 L3.5-4f 删除。
+- **待办（L2）**：其余 8 个 preset + parity（homing / radial / non_mid / laser / avoid / world_accel / accel）。
+
+---
+
+## 11. L1.5：正交 unit 集（实现，2026-09-13）
+
+> §3 的 Move/Condition 表是初稿；L1.5 按「**状态显式 + unit 正交**」定型为下表。**状态由 builder 按相位自动分配槽，相位切换清零**；创作者看不到槽。
+
+| 类 | unit | 说明 |
+|---|---|---|
+| Move | `accel_world(v)` | v += v_world·dt |
+| | `accel_heading(a)` | 沿航向加速 |
+| | `rotate(w, limit=0)` / `rotate_velocity` / `rotate_heading` | 同时 / 只速度 / 只朝向转（V12）；limit>0 钳到累计转角（自带槽） |
+| | `steer(target, max_turn, ramp=0, dist_weight=0, steer_until=0)` | 朝目标转向（只转向，速度另配 `speed_lerp`）；限时转向 |
+| | `speed_lerp(from, to, ramp)` | 速度按相位 elapsed 插值 |
+| | `speed_mul(f)` / `set_speed(s)` / `set_heading(dir)` | 速度三算子：每帧乘（复利）/ 瞬时设 / 设向 |
+| | `position(mode, anchor_id, offset, angle, speed, use_global, initial)` | **位置来源模式**：ANCHOR（外部节点）/ PHASE_START（本弹相位起点）；只写 `pos` |
+| Condition | `never` / `elapsed(t)` | — |
+| | `near(target, r)` | 距离；节流走通用 `.every/.every_ticks` |
+| | `at_wall(mask)` | 纯谓词；输出相位结束落点（供 `emit(at=AT_PHASE_END)`） |
+| | `state(slot, cmp, v)` | 读槽（不公开；`until_turned()` 是糖） |
+| | `speed(cmp, v)` | V21：`|v|` 比较（撞墙减速到某速） |
+| Action | `emit(spawn, dir, speed, at)` | spawn = BulletData / Callable / 数组；at = AT_CURRENT / AT_PHASE_END |
+| | `emit_variant([t0, t1], dir, speed, at)` | 概率分支（`chance_toward`）选模板：0=未命中 t0，1=命中 t1；内核只回传分支号 |
+| | `sfx(key, db)` / `despawn` / `on_end_heading(dir)` / `on_end_call(fn)` | 内容回调（散圈）用 call |
+| 方向表达式 | `toward(t, angle)` / `away(t, angle)` / `heading(angle)` | t = player / nearest_enemy / boss |
+
+**边界**：unit 停在**语义**层（上表 ~15 个）；不下沉到微 op（否则变回 §5 大 VM）。
+**位置来源是模式（V18）**：`position` 只写 `pos`（ANCHOR / PHASE_START 二选一），不与速度 op 叠加；多个 position op 是「后写者胜」的模式切换；模式只改 `pos`，`v`/`h` 保持（释放后按速度轴飞）。要分段用 `then()`。
+
+**踩坑**：`then()` 生成的新相位 `until=never`；在其上挂 `on_end` 动作**永不触发**。
+
+**L2 实测（2026-09-13）**：10 个行为全部逐位 parity（`test_lifecycle_model` + `test_lifecycle_presets`）。为 parity 追加的语义化 unit 细节：`steer` 的 `speed_from/speed_to`（融合速度）与 `steer_until`（限时转向）、`near` 的 `every_ticks`（帧门控）、`on_end_call`（内容回调）、`T_NEAREST_ENEMY` 跳过时符 Boss。
+**更新（V2，2026-09-16）**：`speed_from/speed_to` 已从 `steer` 拆出，`homing` 改为 `steer + speed_lerp` 组合；`steer` 现在是纯角转向。
+
+
+---
+
+> **附录 B（2026-10-17 并入）**：以下为原 `BULLET_PIPELINE.md` 全文；小节编号沿用原文。
+
+# 附录 B · 一颗弹幕的完整路径（内容 → 原生内核 → 渲染）
+
+> 口径：**宿主（GDScript）负责内容 / 规则 / 渲染；内核（原生 `DanmakuStore`）负责存储 / 积分 / 行为 / 判定几何。**
+> 行号会漂，**以函数名为准**。配套：`docs/archive/GDEXTENSION_KERNEL_DESIGN.md`、`docs/ARCHITECTURE.md`、`docs/DANMAKU_API.md`。
+
+## 0. 总览
+
+```
+内容 .gd
+ └ ctx.bullets.shoot_spread(data, count, spread, dir, at)   bullet_service.gd:12
+    └ BulletManager.shoot_bullet                             bullet_manager.gd:100
+       └ KernelBulletHost.shoot                              kernel_bullet_host.gd:162
+          ├ prepare_shot → 快照(type/pos/vel/tint/move/params/texture)   :113
+          └ spawn_prepared                                       :153
+             ├ KernelNativeSystem.spawn(type, …)                 kernel_native_system.gd:141
+             │   ├ 类型表去重 → ti                                  :142
+             │   ├ 写 GDScript 只读快照行 + 出生雾                    :146-157
+             │   └ 原生 store.spawn + set_hitbox/life/program/fx     :158-171
+             └ _sync_host_tables(id, texture)                    kernel_bullet_host.gd:230
+
+每物理帧（process_physics_priority）
+ -10  KernelNativeSystem._physics_process   integrate → behavior_tick → pull 快照   kernel_native_system.gd:410
+  -4  KernelBulletHost._physics_process      flush 延后行为（re_fire / 分裂）          kernel_bullet_host.gd:98
+   0  BulletManager._physics_process         DeathClear / LaserEngine / 宿主碰撞       bullet_manager.gd:87
+         └ KernelBulletPhysics.process       overlap_pairs + hit_test → 伤害/miss/擦弹  kernel_bullet_physics.gd:49
+
+每渲染帧
+ BulletMultiMesh._process → _sync → _sync_kernel → _sync_native   bullet_multi_mesh.gd:31 / 45 / 68
+   └ DanmakuRenderBridge.group(...)                                danmaku_render_bridge.cpp:44
+       → 分桶（tex_key_base<含图集 region> × 阵营 × tint_mode）+ 每弹 rot/alpha
+   └ 每组 _get_or_create_group + fill                               bullet_multi_mesh.gd:258 / 111
+```
+
+## 1. 定义（发射之前）
+
+| 步骤 | 位置 | 干什么 |
+|---|---|---|
+| 弹型定义 | `data/bullets/<key>.tres`（`BulletDef`） | **外观 + 碰撞 + 朝向**：`texture_key`（图集格）+ `hitbox_*` + `follow_dir`/`dir_offset` |
+| 载入 | `BulletData.tex(key)` / `.def(d)`（`bullet_data.gd`） | 经 `BulletCatalog` 取 `BulletDef`，把外观/碰撞/朝向灌进 builder |
+| 构造链 | `BulletData.speed/color/blend/enemy/player/trajectory/…` | per-shot（`velocity`/`tint`/`lifecycle`）与其余类型级（阵营/伤害/特效/出生雾） |
+| 快照成内核类型 | `BulletData.to_bullet_type()` | 首次发射时把类型级字段快照成 `BulletType` 并**缓存在 BulletData 实例**上（复用实例 = 共用弹型） |
+
+> 图集格坐标：`data/atlas/bullet_shapes.tres`（`AtlasLayout`）→ `BulletShapes.pixel_rect/atlas_texture`。
+
+## 2. 发射（同一次调用内，同步）
+
+1. **`BulletService.shoot_spread`**（`bullet_service.gd:12`）：`count==1` 直发；否则按 `spread_angle` 旋转 `base_dir` 逐发。
+2. **`BulletManager.shoot_bullet`**（`bullet_manager.gd:100`）→ **`KernelBulletHost.shoot`**（`kernel_bullet_host.gd:162`）。
+3. **`prepare_shot(data,pos,dir)`**（`:113`）—— **入队瞬间快照**（内容复用同一 `BulletData` 改速度再发时不会被后续写覆盖）：
+   `type = data.to_bullet_type()`、`vel = direction.normalized() * data.velocity.length()`、`tint`（自机记忆 <50 时往红 lerp）、
+   `move`（有 `lifecycle` → `MOVE_LIFECYCLE` + `{lifecycle, anchor}`；否则旧端口）、`texture = data.texture`。
+4. **`KernelNativeSystem.spawn(type, pos, vel, tint, move, params)`**（`kernel_native_system.gd:141`）：
+   - `_type_registry_index_of(type)`：按**同一 `BulletType` 实例**去重 → `ti`（所以内容必须复用 `BulletData`）；
+   - 写 GDScript **只读快照行**（pos/vel/color/type/faction/life/fx/timer/render_rot）；
+   - 出生雾：`is_spawn_fog ? (spawn_fx ?? 阵营默认) : 无`（`:155-157`）；
+   - **原生权威行**：`_accel.spawn(...)`（`DanmakuStore`）+ `set_hitbox`（判定几何）/`set_life`/`set_program`（lifecycle program）/`set_fx`。
+5. **回宿主**：`spawn_prepared` → **`_sync_host_tables(id, texture)`**（`:230`）把 `_texture_by_index[ti] = texture`（**渲染插座**，M3 ③）。
+
+## 3. 每物理帧（按 `process_physics_priority` 定序）
+
+- **-10 · 内核积分**（`kernel_native_system.gd:410`）：`_accel.integrate(delta)` 走原生 move（含 lifecycle 描述符）；`_run_native_behaviors` 调 `_accel.behavior_tick(...)` 执行 until/action 并 `_drain_events`（emit / sfx / call）。最后 `_pull_snapshot()` 把原生 SoA 拉成只读快照。
+- **-4 · 行为宿主**（`kernel_bullet_host.gd:98`）：只在**非**原生行为模式下存在，`flush` 延后的 `re_fire` / 分裂（内核契约：行为循环中途禁止增删行）。
+- **0 · 宿主碰撞 + 子系统**（`bullet_manager.gd:87`）：`DeathClear` / `LaserEngine` / `KernelBulletPhysics.process()`（`kernel_bullet_physics.gd:49`）。
+  - `_enemy_bullets_vs_player`：`overlap_pairs`（宽相 + `hit_test`）→ 命中 `player.miss()`，否则擦弹（每弹一次）+ 记忆随机清弹；
+  - `_player_bullets_vs_enemies`：命中读 `BulletType.damage` 结算、`add_memory`、`hit_sfx`、`hit_fx`、`despawn`。
+  - 两处都**倒序**遍历：`despawn` 是 swap-with-last。
+
+## 4. 渲染（每 `_process`）
+
+`BulletMultiMesh._process → _sync → _sync_kernel → _sync_native`（`bullet_multi_mesh.gd:31/45/68`）：
+1. `DanmakuRenderBridge.group(...)`（`danmaku_render_bridge.cpp:44`）在原生侧分组：
+   - 键 = `tex_key_base`（宿主按纹理 RID + `AtlasTexture.region` hash 算，`bullet_multi_mesh.gd:156-159`）× 阵营 × `tint_mode`（`== tint_mode` 是 shader 模式位）；
+   - 每弹 `rot`：`follow_dir ? (render_rot ?? atan2(vel)) + dir_offset : 0`（V19 render 朝向通道优先）；`alpha` 按 kind 淡出。
+2. 回 GDScript 按组：`_get_or_create_group(key, texture_for_index(ti), …)`（`:258`，`AtlasTexture` 解包成「图集 + UV region」）→ `bridge.fill(mm, …)`（`:111`）写 MultiMesh 实例。
+
+## 5. 回收
+
+- **原生 cull**：`cull_rect`（场地 `(64,32,768,896)`）+ `cull_margin=90`（`bullet_manager.gd:219-222`）。
+  逐弹 **`out_grace`（秒）> 0** 时改为「累计连续出界时长、超时才回收」，**回到界内即归零** ——
+  这是「出界再回来」的弹（往返探针）能活下来的唯一机制。寿命 / 特效到期也由原生回收。
+- **宿主 despawn**：命中 / 擦弹清弹 / 死亡清弹圈；swap-with-last（见上）。
+
+## 6. 谁负责什么（边界）
+
+| 层 | 负责 |
+|---|---|
+| 内容 `.gd`（`data/**`） | `BulletDef` + 构造链、`trajectory`、难度/时序 |
+| 宿主 GDScript（`scripts/**`） | `BulletData → BulletType`、纹理插座、伤害 / miss / 擦弹 / 记忆、bomb 节点、渲染、清理 |
+| 原生内核（`gdextension/src/**`） | SoA 存储、积分、lifecycle 行为、判定几何、cull、内核 RNG |
+
+> 一句话：**内容给「这份配置 + 规律」，宿主把配置翻成内核弹型并把规则结算掉，内核只认列式数据和 program。**

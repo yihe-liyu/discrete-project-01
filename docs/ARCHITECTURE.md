@@ -2,7 +2,7 @@
 
 > 本文是项目的**架构单一真源**：告诉你“这是什么、分几层、每层放什么、每个系统归谁管、改/加东西该去哪”。
 > 用途：让架构“看得见、可照做、防止回头路”。改/加任何东西前，先对一下本文。
-> 子系统详细见 `docs/DIALOGUE_SYSTEM.md`（对话系统）+ `docs/archive/DIALOGUE.md`（剧本）、`docs/archive/BACKGROUND_VISUAL_PLAN.md`；架构改进路线（对象自治/身份归位/命令化）见已归档的 `docs/archive/STAGE_FLOW_PLAN.md`。
+> 子系统详细见 `CONTENT_GUIDE.md`（根目录，附录 D：对话系统）+ `docs/archive/DIALOGUE.md`（剧本）、`docs/archive/BACKGROUND_VISUAL_PLAN.md`；架构改进路线（对象自治/身份归位/命令化）见已归档的 `docs/archive/STAGE_FLOW_PLAN.md`。
 
 ---
 
@@ -74,7 +74,7 @@
 - **权威存储** = 原生 `DanmakuStore`（`gdextension/src/danmaku_store.{h,cpp}`）；GDScript 只是每帧只读快照。
 - **行为** = `LifecycleCatalog` 把 `move+params` 映射成 `BulletLifecycle` → `compile()` 成 packed program → 原生 `behavior_tick`。
 - **事件**（发射 / 音效 / 回调）→ `KernelNativeSystem._drain_events` → `KernelBehaviorHost` / `AudioManager` / 内容回调。
-- 改哪看哪：行为词汇 → `docs/LIFECYCLE_MODEL.md`；参数表 → `CONTENT_GUIDE.md`「弹幕行为接口」；执行/判定 → `gdextension/src/`。
+- 改哪看哪：行为词汇 → `docs/DANMAKU_API.md（附录 A）`；参数表 → `CONTENT_GUIDE.md`「弹幕行为接口」；执行/判定 → `gdextension/src/`。
 
 ### 2.2 使用层（接口）—— 动词，不是协程/Timeline
 
@@ -185,9 +185,9 @@
 
 - **总纲（本文）**：分层/系统地图/所有权/边界/债/操作指南。
 - **内核迁移（历史，已完成）**：`docs/archive/NEW_KERNEL_REFACTOR_PLAN.md`（Strangler→融合 M1–M3）。
-- **弹幕内核（现状 ✅）**：原生 GDExtension `DanmakuStore` 为**唯一存储**（L3.5-4e/4f，`KernelNativeSystem` 桥接）；设计见 `docs/GDEXTENSION_KERNEL_DESIGN.md`，接入/拆除见 `docs/archive/N2_NATIVE_INTEGRATION_PLAN.md`；冻结参照 `test/reference/`。
+- **弹幕内核（现状 ✅）**：原生 GDExtension `DanmakuStore` 为**唯一存储**（L3.5-4e/4f，`KernelNativeSystem` 桥接）；设计见 `docs/archive/GDEXTENSION_KERNEL_DESIGN.md`，接入/拆除见 `docs/archive/N2_NATIVE_INTEGRATION_PLAN.md`；冻结参照 `test/reference/`。
 - **路线**：`docs/archive/STAGE_FLOW_PLAN.md`（(b) 规划：对象自治/身份归位/命令化 + 七步；Step 1 / 3 / 4 已完成）。
-- **对话**：`docs/DIALOGUE_SYSTEM.md`（当前系统）+ `docs/archive/DIALOGUE.md`（剧本归档）。
+- **对话**：`CONTENT_GUIDE.md`（根目录，附录 D：当前系统）+ `docs/archive/DIALOGUE.md`（剧本归档）。
 - **符卡**：`docs/archive/SPELL_SYSTEM_TARGET.md`（目标蓝图，核心已由 `boss_catalog.gd` 落地）。
 - **背景**：`docs/archive/BACKGROUND_VISUAL_PLAN.md`（已冻结）。
 

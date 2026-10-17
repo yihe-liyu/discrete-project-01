@@ -1,5 +1,5 @@
 extends GutTest
-## L2：其余 preset 与现有 GDScript 行为 parity（见 docs/LIFECYCLE_MODEL.md §9）。
+## L2：其余 preset 与现有 GDScript 行为 parity（见 docs/DANMAKU_API.md（附录 A） §9）。
 
 const DT := 1.0 / 60.0
 

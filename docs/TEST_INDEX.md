@@ -59,7 +59,7 @@
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限），每条原语一条最小 lifecycle 逐帧对比 | 46 | 1 |
-| [test_lifecycle_presets](../test/test_lifecycle_presets.gd) | 其余 preset 逐帧 parity（见 `docs/LIFECYCLE_MODEL.md` §9） | 7 | 1 |
+| [test_lifecycle_presets](../test/test_lifecycle_presets.gd) | 其余 preset 逐帧 parity（见 `docs/DANMAKU_API.md（附录 A）` §9） | 7 | 1 |
 | [test_lifecycle_model](../test/test_lifecycle_model.gd) | `BulletLifecycle` 描述符 ↔ 参考解释器 parity | 3 | 1 |
 | [test_native_executor](../test/test_native_executor.gd) | 原生 `behavior_tick`（packed program）↔ 参考解释器**逐位** parity | 9 | 1 |
 | [test_native_integrate](../test/test_native_integrate.gd) | 原生积分器 `integrate_batch` ↔ vendored 参照 | 2 | 8 |

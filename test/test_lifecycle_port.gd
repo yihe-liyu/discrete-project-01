@@ -1,6 +1,6 @@
 extends GutTest
 ## 预拼描述符入口（`{lifecycle}`）：内容自己拼 BulletLifecycle，不经过命名 move、不涨 build()。
-## 见 docs/LIFECYCLE_MODEL.md §7「`*_bullet.gd` → builder sugar」。
+## 见 docs/DANMAKU_API.md（附录 A） §7「`*_bullet.gd` → builder sugar」。
 
 const DT := 1.0 / 60.0
 const CULL := Rect2(-100000.0, -100000.0, 200000.0, 200000.0)

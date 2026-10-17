@@ -1,6 +1,6 @@
 ## LifecycleBehavior —— BulletLifecycle 描述符的 GDScript 参考解释器（L1.5）。
 ##
-## 见 docs/LIFECYCLE_MODEL.md §3。它是 Behavior 的一个 tenant：从 params.lifecycle 取描述符。
+## 见 docs/DANMAKU_API.md（附录 A） §3。它是 Behavior 的一个 tenant：从 params.lifecycle 取描述符。
 ## 状态**显式**：每弹一个 slots 数组（由 builder 按相位自动分配），相位切换清零 →
 ## unit 组合不互相污染。L3 由原生执行器替换（schema 不变）。
 class_name LifecycleBehavior

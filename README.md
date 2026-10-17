@@ -20,7 +20,7 @@
 - 使用 **Godot 4.7** + GDScript 从零搭建
 - 已实现完整的弹幕引擎：对象池、空间哈希碰撞、MultiMesh 批量渲染、激光系统、协程时间线
 - 已有一个可玩的 **Stage 1**（道中 + Boss 卡摩瑞）
-- 世界观与角色设定完整（共 9 位 Boss），见 [omake.txt](docs/omake.txt)
+- 世界观与角色设定完整（共 9 位 Boss），见 [omake.txt](docs/reference/omake.txt)
 - 这是作者 **YiHe** 的 **Discrete Project（离散系列）** 第一作
 
 > 本仓库是作者在 AI 辅助下设计、开发与维护的东方同人 STG 引擎。代码与工程文档均由作者最终验收负责。
@@ -43,20 +43,35 @@
 
 ---
 
-## 📖 文档（先看 START_HERE）
+## 📖 文档（7 份主文档）
 
-> 日常只需要 3 份；其余是按需查的契约/参考和不必通读的历史。完整任务索引见 **[docs/START_HERE.md](docs/START_HERE.md)**。
+> 日常只需要 2 份：**[CONTENT_GUIDE](CONTENT_GUIDE.md)**（写内容）+ **[TEST_INDEX](docs/TEST_INDEX.md)**（改哪里看哪条）。
+> 其余是按需查的契约/参考和不必通读的历史；`docs/archive/` 是历史，不是待读清单。
 
 | 层 | 文档 | 什么时候看 |
 |---|---|---|
-| **日常必读** | [START_HERE](docs/START_HERE.md) · [CONTENT_GUIDE](CONTENT_GUIDE.md) · [TEST_INDEX](docs/TEST_INDEX.md) | 每次动手前 |
-| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md) · [LIFECYCLE_MODEL](docs/LIFECYCLE_MODEL.md) · [BULLET_PIPELINE](docs/BULLET_PIPELINE.md) · [DIALOGUE_SYSTEM](docs/DIALOGUE_SYSTEM.md) · [GDEXTENSION_KERNEL_DESIGN](docs/GDEXTENSION_KERNEL_DESIGN.md) | 改对应系统时按需查 |
-| **历史 / 附录** | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md)（只看索引） · [BASELINE_EVIDENCE](docs/BASELINE_EVIDENCE.md) · [archive](docs/archive/ARCHIVE_INDEX.md) | 查“为什么/当时怎么想”时才翻 |
+| **日常** | [CONTENT_GUIDE](CONTENT_GUIDE.md) · [TEST_INDEX](docs/TEST_INDEX.md) | 每次动手前 |
+| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期 / 弹道路径附录） | 改对应系统时 |
+| **历史 / 附录** | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md)（只看索引） · [archive](docs/archive/ARCHIVE_INDEX.md) | 查“为什么/当时怎么想” |
+
+### 我在做什么？看哪份？
+
+| 任务 | 打开 | 提醒 |
+|---|---|---|
+| 跑游戏 / 跑测试 | 本页 · [TEST_INDEX](docs/TEST_INDEX.md) | `./tools/verify.sh` 是总门禁 |
+| 加一个波次 / 一张符卡 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §0 / §四 / §六 | 阶段台有热更新；整关预览要重启 |
+| 加敌人 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §三 | `EnemyData` 构造链 + 行为脚本 + `AssetRegistry` |
+| 加一面 / 新 Boss | [CONTENT_GUIDE](CONTENT_GUIDE.md) §四 / §八 · [ARCHITECTURE](docs/ARCHITECTURE.md) §6 | **必须进 `stage_registry.tres` / `boss_registry.tres`** |
+| 改某颗弹的飞行规律 | [DANMAKU_API](docs/DANMAKU_API.md) · [CONTENT_GUIDE](CONTENT_GUIDE.md) §六 | 先看 preset，再自己拼相位；`until` 顺序有坑 |
+| 写对话 | [CONTENT_GUIDE](CONTENT_GUIDE.md) 附录 D | `--list` / `--dry` / `--shot` |
+| 改背景 | [archive/BACKGROUND_VISUAL_PLAN.md](docs/archive/BACKGROUND_VISUAL_PLAN.md)（已冻结） | 现役 3D 背景；别重开视觉线 |
+| 改引擎 / 内核 | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [archive/GDEXTENSION_KERNEL_DESIGN.md](docs/archive/GDEXTENSION_KERNEL_DESIGN.md) | 改 C++ 必须重编扩展 |
+| 查“为什么当初这么改” | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md) 索引 → [archive](docs/archive/ARCHIVE_INDEX.md) | 正文只留最近 12 条 |
 
 > **分工（同一信息只写一处）**：规则/状态 = [BASELINE](docs/BEST_PRACTICES_BASELINE.md)；架构 = [ARCHITECTURE](docs/ARCHITECTURE.md)；
-> 历史 = [LOG](docs/BEST_PRACTICES_LOG.md) + [archive](docs/archive/ARCHIVE_INDEX.md)；参考资料 = [DANMAKU_API](docs/DANMAKU_API.md) /
-> [LIFECYCLE_MODEL](docs/LIFECYCLE_MODEL.md) / [BULLET_PIPELINE](docs/BULLET_PIPELINE.md) / [TEST_INDEX](docs/TEST_INDEX.md) / [CONTENT_GUIDE](CONTENT_GUIDE.md)。
-> 内容原稿 = [archive/DIALOGUE.md](docs/archive/DIALOGUE.md) / `docs/*.txt`（随实现走，非权威）。`TODO_TEMP.md` 是作者本地临时待办（不进 Git）。
+> 弹幕参考 = [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/路径附录）；内容 = [CONTENT_GUIDE](CONTENT_GUIDE.md)（含对话附录）；
+> 测试 = [TEST_INDEX](docs/TEST_INDEX.md)；历史 = [LOG](docs/BEST_PRACTICES_LOG.md) + [archive](docs/archive/ARCHIVE_INDEX.md)。
+> 原始设定资料 = `docs/reference/*.txt`；`TODO_TEMP.md` 是作者本地临时待办（不进 Git）。
 
 ---
 
