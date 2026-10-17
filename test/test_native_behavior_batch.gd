@@ -1,4 +1,5 @@
 extends GutTest
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## L3.5-3a：无状态 behavior_batch（数组进/出）与有状态 behavior_tick 1:1；并验证 dead 返回。
 
 const DT := 1.0 / 60.0
@@ -33,7 +34,7 @@ func _seeds(n: int) -> Array:
 
 func test_batch_curve_matches_tick() -> void:
 	if not _available(): pending("无扩展"); return
-	var lc := BulletLifecycle.curve(2.0, 1.0)
+	var lc := FIX.curve(2.0, 1.0)
 	var st_tick = _store()
 	var rt: Array = _reg(st_tick, lc)
 	var st_batch = _store()
@@ -79,7 +80,7 @@ func test_batch_bounce_returns_dead() -> void:
 	boss.position = Vector2(448.0, 100.0)
 	var factory := func() -> BulletData:
 		var d := BulletData.new(); d.velocity = Vector2(1, 1); return d
-	var lc := BulletLifecycle.bounce(100.0, 0.3, 0.0, factory, &"")
+	var lc := FIX.bounce(100.0, 0.3, 0.0, factory, &"")
 	var st = _store()
 	var r: Array = _reg(st, lc)
 	var pid: int = r[0]
@@ -129,7 +130,7 @@ func test_batch_anchor_drift_first_frame_uses_initial() -> void:
 	if not _available(): pending("无扩展"); return
 	# 新弹首帧必须用 initial_drift（不是 0 + speed·dt）；batch 路径没有 set_program，
 	# 内部状态（_pfresh/_pnext/_phasend...）要在 tick==0 时初始化。
-	var lc := BulletLifecycle.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 50.0)
+	var lc := FIX.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 50.0)
 	var st = _store()
 	var r: Array = _reg(st, lc)
 	var pid: int = r[0]

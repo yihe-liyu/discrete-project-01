@@ -10,8 +10,16 @@ func _ready() -> void:
 		get_tree().quit()
 		return
 	print("=== 原生 behavior_tick N=%d ===" % N)
-	_bench("world_accel", BulletLifecycle.world_accel(Vector2(0.0, 200.0)))
-	_bench("homing", BulletLifecycle.homing(deg_to_rad(720.0), 1.0, 200.0, 500.0, 2.0, 150.0))
+	_bench("world_accel", BulletLifecycle.new().accel_world(Vector2(0.0, 200.0)))
+	_bench("homing", _homing())
+
+func _homing() -> BulletLifecycle:
+	var lc := BulletLifecycle.new()
+	lc.steer(BulletLifecycle.T_NEAREST_ENEMY, deg_to_rad(720.0), 1.0, 150.0, 2.0)
+	lc.speed_lerp(200.0, 500.0, 1.0)
+	lc.until_never()
+	return lc
+
 
 func _bench(tag: String, lc: BulletLifecycle) -> void:
 	var c := lc.compile()

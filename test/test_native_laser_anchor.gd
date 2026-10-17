@@ -1,4 +1,5 @@
 extends GutTest
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## L3.5-3b 回归（端到端桥接）：魔理沙激光段必须贴在**子机锚点**上，而不是自机。
 ## 历史 bug：原生 anchor_drift 完全忽略 anchor_id / use_global，段全粘在 player 上。
 
@@ -23,7 +24,7 @@ func test_marisa_laser_segments_track_anchor() -> void:
 	# no_spawn_fog：本用例只验锚点漂移，别被出生雾冻结 0.3s 干扰
 	var d := BulletData.new().enemy().no_spawn_fog().blend(true).tex("小玉")
 	d.velocity = Vector2.UP * 100.0
-	d.trajectory(BulletLifecycle.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 0.0),
+	d.trajectory(FIX.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 0.0),
 		{&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})
 	BulletManager.current.shoot_bullet(d, Vector2(200.0, 700.0), Vector2.UP)
 	assert_eq(ns.get_active_count(), 1, "激光段应进内核池")

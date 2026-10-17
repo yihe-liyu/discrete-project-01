@@ -1,9 +1,10 @@
 extends GutTest
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## 最小原语覆盖（9 Move op / 6 Until / 5 Action）—— 每个原语一条最小 lifecycle，
 ## 与参考解释器 LifecycleBehavior 逐位对照。它同时是「原语能干什么」的活文档。
 ##
-## 为什么单独一份：预设级 parity 只覆盖"被 preset 用到"的原语。实测 9 个 Move 里有 4 个
-## （speed_lerp / speed_mul / set_heading / set_speed）**没有任何 preset 使用 → 零覆盖**。
+## 为什么单独一份：组合级 parity 只覆盖"被某个组合用到"的原语。speed_lerp / speed_mul /
+## set_heading / set_speed 在旧 preset 里覆盖很少，这里逐条补最小 lifecycle。
 ## 这里按原语逐条锚定；预设级 parity 仍留在 test_native_executor.gd（集成层）。
 
 const DT := 1.0 / 60.0
@@ -775,9 +776,9 @@ func test_unknown_target_fails_closed() -> void:
 	assert_eq(c[&"phase_count"], 1, "失败时编成单相位兜底")
 
 
-func test_radial_accel_sfx_db_default_is_sfx_level() -> void:
+func test_radial_composition_sfx_db_default_is_sfx_level() -> void:
 	## DSL6：radial_accel 的 sfx_db 默认必须是总电平，不是 0 dB（满音量）。
-	var lc := BulletLifecycle.radial_accel(100.0, func() -> BulletData: return BulletData.new(), &"kira")
+	var lc := FIX.radial_accel(100.0, func() -> BulletData: return BulletData.new(), &"kira")
 	var c := lc.compile()
 	var base: int = int(c[&"act_start"][0]) * BulletLifecycle.ARGS
 	assert_almost_eq(c[&"args"][base + 1], AudioManager.SFX_LEVEL_DB, 1e-6, "默认 sfx_db 应为总电平")

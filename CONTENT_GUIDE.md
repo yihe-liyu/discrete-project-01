@@ -12,7 +12,7 @@
 3. F6 运行 `scenes/workbench/creation_station.tscn`（四页签：整关预览 / 弹幕台 / 敌人台 / 阶段台）→ 命中框/固定种子/逐帧看效果
    - **弹幕 / 敌人 / 阶段三个组合台有热更新**（改脚本约 1.3s 自动重载）；**整关预览没有**，改关卡脚本/时间线后切页或重启
 4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完在「阶段台」看（热更新）；也可在「整关预览」按时间线看
-5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`BulletData.trajectory(lc)` 直接挂现成 preset，或自己用 builder 拼相位）
+5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`BulletData.trajectory(lc)` 直接用 builder 拼原语，或用工作台拼装页生成代码）
 
 > 创作台/工作台**不是编辑器**：不写数据、不保存 `.tres`，是「跑真实代码看效果」的预览沙盒。
 > 三个组合台**有脚本热更新**；整关预览没有（改时间线/关卡脚本要重启）。
@@ -377,36 +377,41 @@ extends CoroutineScript
 ### 弹幕行为（由浅入深）
 
 一颗弹的飞行规律**只有一个入口**：`BulletData.trajectory(lc)`（`lc` = `BulletLifecycle`，fluent builder）。
-**不改 C++** 就能拼出绝大多数弹幕 —— 下面从"直接用现成 preset"讲到"自己排相位"。
+**不改 C++** 就能拼出绝大多数弹幕 —— 下面从"直接拼原语 / 工作台拼装"讲到"自己排相位"。
 > 完整字典（每个函数的精确签名 / 原生语义 / 素材 key 表 / 陷阱清单）见 **[docs/DANMAKU_API.md](docs/DANMAKU_API.md)**；本节是教学路径。
 
-#### ① 最简：挂一个现成 preset
+#### ① 最简：直接拼原语（或工作台拼装）
 
 ```gdscript
 var _bullet: BulletData          # 成员：复用实例（见「弹型实例复用」）
 
 func _fire(p_ctx: StageContext) -> void:
 	if _bullet == null:
-		_bullet = BulletData.new().tex("小玉").speed(300).enemy() \
-			.trajectory(BulletLifecycle.homing())     # ← 追踪最近敌人
+		var lc := BulletLifecycle.new()
+		lc.steer(BulletLifecycle.T_NEAREST_ENEMY, deg_to_rad(720.0), 2.0, 150.0, 2.0)
+		lc.speed_lerp(500.0, 2000.0, 2.0)
+		lc.until_never()
+		_bullet = BulletData.new().tex("小玉").speed(300).enemy().trajectory(lc)
 	p_ctx.bullets.shoot_spread(_bullet, 8, TAU, Vector2.RIGHT, global_position)
 ```
 
-#### ② 常用：9 个命名 preset
+> 不想手写？F6 创作台 → 弹幕台 → **拼装**：选 Move/Until/Action、调参数、预览、复制代码。
 
-| preset | 参数（括号内为默认） | 说明 |
-|---|---|---|
-| `world_accel(v)` | `v: Vector2` | 恒定世界加速度 |
-| `accel(a)` | `a: float` | 沿当前方向加速 |
-| `curve(w, limit)` | `w`（角速度）、`limit`（累计转角上限，0=无限） | 边飞边转 |
-| `homing(...)` | `angle_per_sec`(720°)、`accel_time`(2)、`min_speed`(500)、`max_speed`(2000)、`duration`(2)、`proximity_boost`(150) | 追踪最近敌人 |
-| `bounce(accel_rate, bounce_angle, spawn_speed, spawn, sfx, sfx_db)` | `spawn: BulletData`（替换弹）、`sfx`("kira")、`sfx_db`(-8) | 碰框朝 Boss 转 `bounce_angle` 后换弹 |
-| `radial_accel(accel_rate, spawn, sfx, sfx_db)` | `spawn: BulletData`、`sfx`("")、`sfx_db`(0) | 沿初向加速 + 碰顶换向下弹 |
-| `avoid_player(proximity, jump, flee_time)` | — | 靠近自机逃 |
-| `marisa_laser(...)` / `laser_follow(...)` | `anchor_id`、`offset`、`angle`、`drift_speed`、`initial_drift` | 子机锚定激光（前者 World 兄弟用 global，后者子节点用局部） |
+#### ② 常见组合（preset 已删，照着拼）
 
-> **权威真相 = `scripts/kernel_bridge/lifecycle/lifecycle_catalog.gd` 的 `build()`**（组合定义唯一在此）；上表是它的类型化薄包装。
-> **新增 preset** = 在 `build()` 加分支、用已有原语拼，**不用写 `*_bullet.gd`，也不用改 C++**。
+| 想要 | 原语组合 |
+|---|---|
+| 世界加速 | `accel_world(v)` + `until_never()` |
+| 沿朝向加速 | `accel_heading(a)` + `until_never()` |
+| 弧线 | `rotate(w, limit)` + `until_turned()` + `then()` |
+| 追踪 | `steer(T_NEAREST_ENEMY, angle, accel, prox, duration)` + `speed_lerp(min, max, accel)` + `until_never()` |
+| 碰框换弹 | `accel_heading(accel)` + `until_at_wall(L\|R\|T)` + `sfx` + `emit(spawn, toward(T_BOSS, angle), speed, AT_PHASE_END)` + `despawn()` |
+| 碰顶分裂 | `accel_heading(rate)` + `until_at_wall(TOP)` + `sfx` + `emit(spawn, heading(PI), 0, AT_PHASE_END)` + `despawn()` |
+| 躲避自机 | `until_near(T_PLAYER, prox).every(jump)` + `on_end_heading(away(T_PLAYER))` + `then()` + `until_elapsed(flee)` + `despawn()` |
+| 锚定激光 | `anchor_drift(anchor, offset, angle, speed, use_global, initial, render_heading)` + `until_never()` |
+
+> `BulletLifecycle` 不再有 9 个 preset；`LifecycleCatalog` 只保留 `{lifecycle}` 兼容入口。
+> 组合的**唯一真相**是内容里的这段 builder 代码，拼装器只是帮你生成它。
 
 #### ③ 不够用：自己拼相位
 
@@ -429,9 +434,9 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 
 | 类 | 成员 |
 |---|---|
-| Move | `accel_world` `accel_heading` `rotate` `steer` `speed_lerp` `scale_speed` `set_heading` `set_speed` `anchor_drift` |
-| Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_speed` `until_state` `until_turned`；`then()` 开新相位 |
-| Action | `sfx` `emit` `emit_variant` `despawn` `on_end_heading` `on_end_call` |
+| Move | `accel_world` `accel_heading` `rotate` / `rotate_velocity` / `rotate_heading` `steer` `speed_lerp` `speed_mul` `set_heading` `set_speed` `drift` `anchor_drift` |
+| Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_speed` `until_turned`；`then()` 开新相位 |
+| Action | `sfx` `emit` `emit_variant` `despawn` `clear_fx` `despawn_clear` `on_end_heading` `on_end_call` |
 | 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` / **`reflect(angle)`** |
 
 > - `target` = `T_PLAYER` / `T_BOSS` / `T_NEAREST_ENEMY`。
@@ -452,14 +457,14 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 
 #### ⑤ 什么时候才动 C++
 
-只有要**新的数学原语**（现 Move 9 / Until 5 / Action 6 之外）时才动 `gdextension/src/danmaku_store.cpp`：
+只有要**新的数学原语**（现 Move 9 / Until 6 / Action 8 之外）时才动 `gdextension/src/danmaku_store.cpp`：
 新增一个 op 要同时改**原生执行分支**与**编译端编码**（若回传事件，还要加事件数组项），并补 parity 测试。
-其余一切 —— 新 preset、新组合、新颜色分支 —— 都在宿主侧完成。
+其余一切 —— 新组合、新颜色分支 —— 都在宿主侧完成（组合不再进 `LifecycleCatalog`）。
 
 #### ⑥ 旧通路：`kernel_port` / `*_bullet.gd`（已弃用）
 
 `data/**` 里**已经没有** `*_bullet.gd` 载体了：飞行规律一律直接 `trajectory(lc)`。
-桥接层仍保留 `kernel_port` 通路（返回 `{"move": ..., "params": ...}` 或 `{"lifecycle": ...}`），但它**只服务测试夹具**
+桥接层仍保留 `kernel_port` 通路（现在只认 `{"lifecycle": ...}`；旧 `{"move": ...}` preset 名已删），但它**只服务测试夹具**
 （`test/fixtures/lifecycle_port_behavior.gd` + `test/test_lifecycle_port.gd`），新内容不要再用；待清（TODO b2c）。
 
 ---

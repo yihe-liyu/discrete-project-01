@@ -1,5 +1,6 @@
 extends GutTest
-## L2：其余 preset 与现有 GDScript 行为 parity（见 docs/DANMAKU_API.md（附录 A） §9）。
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
+## F10c：手写原语组合与 GDScript 行为 parity（原 preset 测试；preset 已删）。
 
 const DT := 1.0 / 60.0
 
@@ -83,18 +84,18 @@ func _spawns_spread(n: int, y: float) -> Array:
 	return out
 
 
-func test_accel_preset_parity() -> void:
-	_parity("accel", AccelBehavior.new(), {&"accel": 90.0}, BulletLifecycle.accel(90.0),
+func test_accel_composition_parity() -> void:
+	_parity("accel", AccelBehavior.new(), {&"accel": 90.0}, FIX.accel(90.0),
 		null, null, BehaviorContext.new(), _spawns_spread(6, 300.0), 120)
 
 
-func test_world_accel_preset_parity() -> void:
+func test_world_accel_composition_parity() -> void:
 	var beh = preload("res://test/reference/behavior/world_accel_behavior.gd").new()
-	_parity("world_accel", beh, {&"world_accel": Vector2(0.0, 300.0)}, BulletLifecycle.world_accel(Vector2(0.0, 300.0)),
+	_parity("world_accel", beh, {&"world_accel": Vector2(0.0, 300.0)}, FIX.world_accel(Vector2(0.0, 300.0)),
 		null, null, BehaviorContext.new(), _spawns_spread(6, 300.0), 120)
 
 
-func test_radial_accel_preset_parity() -> void:
+func test_radial_accel_composition_parity() -> void:
 	var boss: Node2D = add_child_autofree(Node2D.new())
 	boss.position = Vector2(448.0, 100.0)
 	var factory := func() -> BulletData:
@@ -104,26 +105,26 @@ func test_radial_accel_preset_parity() -> void:
 	var beh = preload("res://test/reference/behavior/radial_accel_behavior.gd").new()
 	beh.host = ha
 	_parity("radial_accel", beh, {&"accel_rate": 120.0, &"spawn_factory": factory, &"sfx": "", &"sfx_db": 0.0},
-		BulletLifecycle.radial_accel(120.0, factory, &""), ha, hb, BehaviorContext.new(), _spawns_spread(6, 400.0), 200)
+		FIX.radial_accel(120.0, factory, &""), ha, hb, BehaviorContext.new(), _spawns_spread(6, 400.0), 200)
 	assert_gt(ha.spawns.size(), 0, "应至少一次顶边换弹")
 	assert_eq(hb.spawns.size(), ha.spawns.size(), "换弹数一致")
 
 
-func test_laser_follow_preset_parity() -> void:
+func test_laser_follow_composition_parity() -> void:
 	var player: Node2D = add_child_autofree(Node2D.new())
 	player.position = Vector2(448.0, 600.0)
 	var ctx := BehaviorContext.new()
 	ctx.setup(player)
 	var beh := LaserFollowBehavior.new()
 	var params := {&"anchor_id": 0, &"anchor_offset": Vector2(0.0, 0.0), &"drift_speed": 1000.0, &"angle": 0.0, &"initial_drift": 0.0}
-	var lc := BulletLifecycle.laser_follow(0, Vector2.ZERO, 0.0, 1000.0, 0.0)
+	var lc := FIX.laser_follow(0, Vector2.ZERO, 0.0, 1000.0, 0.0)
 	var spawns: Array = []
 	for i in 4:
 		spawns.append([Vector2(400.0 + i * 10.0, 600.0), Vector2.ZERO])
 	_parity("laser_follow", beh, params, lc, null, null, ctx, spawns, 60)
 
 
-func test_homing_preset_parity() -> void:
+func test_homing_composition_parity() -> void:
 	var enemy: Node2D = add_child_autofree(Node2D.new())
 	enemy.position = Vector2(448.0, 100.0)
 	var provider := func() -> Array: return [enemy]
@@ -133,7 +134,7 @@ func test_homing_preset_parity() -> void:
 	var beh = preload("res://test/reference/behavior/homing_behavior.gd").new()
 	var params := {&"homing_angle_per_sec": deg_to_rad(720.0), &"accel_time": 1.0, &"min_speed": 200.0,
 		&"max_speed": 500.0, &"homing_duration": 2.0, &"proximity_boost": 150.0}
-	var lc := BulletLifecycle.homing(deg_to_rad(720.0), 1.0, 200.0, 500.0, 2.0, 150.0)
+	var lc := FIX.homing(deg_to_rad(720.0), 1.0, 200.0, 500.0, 2.0, 150.0)
 	var spawns: Array = []
 	for i in 6:
 		spawns.append([Vector2(300.0 + i * 50.0, 500.0), Vector2(0.0, -150.0).rotated((i - 3) * 0.2)])
@@ -144,26 +145,26 @@ func test_homing_preset_parity() -> void:
 	_parity("homing", beh, params, lc, null, null, ctx, spawns, 60, 0.01)
 
 
-func test_avoid_player_preset_parity() -> void:
+func test_avoid_player_composition_parity() -> void:
 	var player: Node2D = add_child_autofree(Node2D.new())
 	player.position = Vector2(448.0, 500.0)
 	var ctx := BehaviorContext.new()
 	ctx.setup(player)
 	var beh := AvoidPlayerBehavior.new(150.0, 0.6)
-	var lc := BulletLifecycle.avoid_player(150.0, 0.05, 0.6)
+	var lc := FIX.avoid_player(150.0, 0.05, 0.6)
 	var spawns: Array = []
 	for i in 6:
 		spawns.append([Vector2(448.0 + (i - 3) * 30.0, 500.0 + (i - 3) * 20.0), Vector2(0.0, -120.0)])
 	_parity("avoid_player", beh, {}, lc, null, null, ctx, spawns, 120)
 
-func test_marisa_laser_preset_parity() -> void:
+func test_marisa_laser_composition_parity() -> void:
 	var player: Node2D = add_child_autofree(Node2D.new())
 	player.position = Vector2(300.0, 600.0)
 	var ctx := BehaviorContext.new()
 	ctx.setup(player)
 	var beh = preload("res://test/reference/behavior/marisa_laser_behavior.gd").new()
 	var params := {&"anchor_id": 0, &"anchor_offset": Vector2(10.0, 0.0), &"drift_speed": 800.0, &"angle": 0.3, &"initial_drift": 5.0}
-	var lc := BulletLifecycle.marisa_laser(0, Vector2(10.0, 0.0), 0.3, 800.0, 5.0)
+	var lc := FIX.marisa_laser(0, Vector2(10.0, 0.0), 0.3, 800.0, 5.0)
 	var spawns: Array = []
 	for i in 3:
 		spawns.append([Vector2(280.0 + i * 5.0, 600.0), Vector2(0.0, -200.0)])

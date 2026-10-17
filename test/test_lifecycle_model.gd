@@ -1,4 +1,5 @@
 extends GutTest
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## L1：BulletLifecycle 描述符 + GDScript 参考解释器 ↔ 现有 GDScript 行为 **parity**。
 ## 见 docs/DANMAKU_API.md（附录 A） §9（L1）。bounce = 条件性最强；curve = 状态机 + 钳位。
 
@@ -72,7 +73,7 @@ func test_bounce_lifecycle_parity() -> void:
 		&"accel": 100.0, &"bounce_angle": 0.3, &"spawn_factory": factory,
 		&"spawn_speed": 0.0, &"sfx": "", &"sfx_db": 0.0,
 	}
-	var lc := BulletLifecycle.bounce(100.0, 0.3, 0.0, factory, &"")
+	var lc := FIX.bounce(100.0, 0.3, 0.0, factory, &"")
 	var params_b := {&"lifecycle": lc}
 
 	var n := 10
@@ -117,7 +118,7 @@ func test_curve_lifecycle_parity() -> void:
 	var w := 2.0
 	var limit := 1.0
 	var params_a := {&"curve": w, &"curve_limit": limit}
-	var params_b := {&"lifecycle": BulletLifecycle.curve(w, limit)}
+	var params_b := {&"lifecycle": FIX.curve(w, limit)}
 
 	for i in 6:
 		var pos := Vector2(300.0 + i * 20.0, 400.0)

@@ -4,6 +4,7 @@ extends GutTest
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
 ## 夹具自建（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
 const FIXTURES = preload("res://test/fixtures/fixture_lib.gd")
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 
 
 func before_each() -> void:
@@ -101,7 +102,7 @@ func test_bomb_spawns_host_node() -> void:
 func test_radial_accel_via_manager() -> void:
 	var d := BulletData.new().enemy().blend(true).tex("棱弹")
 	d.velocity = Vector2.UP * 300.0
-	d.lifecycle = BulletLifecycle.radial_accel(150.0, BulletData.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA), &"kira", -6.0)
+	d.lifecycle = FIX.radial_accel(150.0, BulletData.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA), &"kira", -6.0)
 	BulletManager.current.shoot_bullet(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
 	for i in 30:
 		await get_tree().physics_frame

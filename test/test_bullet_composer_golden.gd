@@ -1,4 +1,5 @@
 extends GutTest
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## F10a golden：用真实内容脚本的 lifecycle 对照 BulletComposer。
 ##
 ## 取 4 张最复杂的卡（含难度分支 / 表达式 / emit 循环 / emit_variant）：
@@ -186,14 +187,14 @@ func test_doremy_golden() -> void:
 
 # ═══════════════════════════════════════════════ 简单内容 / 预设 ═══
 
-func test_world_and_radial_preset_golden() -> void:
-	var world := BulletLifecycle.world_accel(Vector2(0.0, 300.0))
+func test_world_and_radial_composition_golden() -> void:
+	var world := FIX.world_accel(Vector2(0.0, 300.0))
 	_assert_same("world_accel", world, _compose({"phases": [
 		_phase([{"op": "accel_world", "v": Vector2(0.0, 300.0)}], {}, []),
 	]}))
 
 	var spawn = BulletData.new().enemy().tex("米弹")
-	var radial := BulletLifecycle.radial_accel(150.0, spawn, &"kira", -18.0)
+	var radial := FIX.radial_accel(150.0, spawn, &"kira", -18.0)
 	var radial_phase := _phase(
 		[{"op": "accel_heading", "a": 150.0}],
 		{"op": "at_wall", "mask": BulletLifecycle.WALL_TOP},
@@ -206,8 +207,8 @@ func test_world_and_radial_preset_golden() -> void:
 	_assert_same("radial_accel", radial, _compose({"phases": [radial_phase]}))
 
 
-func test_homing_and_laser_preset_golden() -> void:
-	var homing := BulletLifecycle.homing()
+func test_homing_and_laser_composition_golden() -> void:
+	var homing := FIX.homing()
 	var homing_phase := _phase(
 		[
 			{"op": "steer", "target": BulletLifecycle.T_NEAREST_ENEMY,
@@ -216,7 +217,7 @@ func test_homing_and_laser_preset_golden() -> void:
 		], {}, [])
 	_assert_same("homing", homing, _compose({"phases": [homing_phase]}))
 
-	var laser := BulletLifecycle.marisa_laser(0, Vector2.ZERO, 0.3, 800.0, 0.0)
+	var laser := FIX.marisa_laser(0, Vector2.ZERO, 0.3, 800.0, 0.0)
 	var laser_phase := _phase(
 		[{"op": "anchor_drift", "anchor_id": 0, "offset": Vector2.ZERO,
 		  "angle": 0.3, "speed": 800.0, "use_global": true,

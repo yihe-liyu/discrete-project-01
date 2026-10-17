@@ -28,7 +28,13 @@ func _init_enemy() -> void:
 			_radial_spawn_bullet_data = BulletData.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA)
 		_radial_bullet_data = BulletData.new().enemy().blend(true).tex("棱弹").color(Color.FUCHSIA)
 		# 沿各自发射角度加速扩散（替换弹共享实例）
-		_radial_bullet_data.trajectory(BulletLifecycle.radial_accel(150.0, _radial_spawn_bullet_data, &"kira", -18.0))
+		var radial_lc := BulletLifecycle.new()
+		radial_lc.accel_heading(150.0)
+		radial_lc.until_at_wall(BulletLifecycle.WALL_TOP)
+		radial_lc.sfx(&"kira", -18.0)
+		radial_lc.emit(_radial_spawn_bullet_data, BulletLifecycle.heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
+		radial_lc.despawn()
+		_radial_bullet_data.trajectory(radial_lc)
 
 	var timeline := start_timeline()
 

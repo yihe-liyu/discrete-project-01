@@ -1,4 +1,5 @@
 extends GutTest
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## KernelBulletHost —— BulletData→BulletType 映射 / 内容签名复用 / 纹理旁表 / 速度语义。
 ## 目的：证明「原项目内容 API」能被内核驱动，而不改原项目任何现有路径（纯增量）。
 
@@ -74,7 +75,7 @@ func test_rect_hitbox_only_when_rect_shape() -> void:
 func test_lifecycle_mapped() -> void:
 	var b := _make_backend()
 	var d := _enemy_data()
-	d.lifecycle = BulletLifecycle.world_accel(Vector2(0, -100))
+	d.lifecycle = FIX.world_accel(Vector2(0, -100))
 	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
 	assert_eq(b.unmapped_behavior_count, 0, "lifecycle 已映射，不应计未映射")
 	assert_eq(b.system._program_data.size(), 1, "应注册 world_accel program")

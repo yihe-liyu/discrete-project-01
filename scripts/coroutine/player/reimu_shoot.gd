@@ -58,6 +58,10 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 			_spread_bullet_data.color(Color(1, 1, 1, 0.5))
 			_spread_bullet_data.damage = 3.5
 			_spread_bullet_data.hit_effect = preload("res://scenes/effect/hit_effect_reimu_option01.tscn")
-			_spread_bullet_data.trajectory(BulletLifecycle.homing())
+			var homing := BulletLifecycle.new()
+			homing.steer(BulletLifecycle.T_NEAREST_ENEMY, deg_to_rad(720.0), 2.0, 150.0, 2.0)
+			homing.speed_lerp(500.0, 2000.0, 2.0)
+			homing.until_never()
+			_spread_bullet_data.trajectory(homing)
 		_shoot_options(ctx, _spread_bullet_data, 1, 0.0, Vector2.UP, Vector2.ZERO)
 		return ctx.clock.wait_frames(6)

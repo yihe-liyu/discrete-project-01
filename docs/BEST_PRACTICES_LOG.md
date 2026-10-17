@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 17 条（本文件留最近 17 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 18 条（本文件留最近 18 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-17 — F10c：删掉 9 个 bullet preset，内容改手写原语
 - 2026-10-17 — F10b：弹幕台拼装页 + 描述符目录组 + 代码生成
 - 2026-10-17 — 创作台 Phase 1：全局目录抽屉 + 公开接缝
 - 2026-10-17 — F10a：拼装器模型 + 现有内容 golden
@@ -47,6 +48,15 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-17 — F10c：删掉 9 个 bullet preset，内容改手写原语
+
+- **7 处生产调用迁移**：enemy01/02/03 的 world_accel、enemy04 的 radial_accel、reimu 的 homing、marisa 的 world_accel + marisa_laser。
+- **删除** `BulletLifecycle` 的 9 个 typed preset（bounce/curve/world_accel/accel/homing/radial_accel/avoid_player/laser_follow/marisa_laser）。
+- **LifecycleCatalog 收口**：只剩 `{lifecycle: BulletLifecycle}` 兼容入口；旧 `{move: ...}` 名一律 null，KernelNativeSystem 的旧 anchor 分支也删了。
+- **测试**：`test_lifecycle_presets` 改名 `test_lifecycle_compositions`，用手写原语组合保留逐帧 parity；其余 native/signature/model/tool 调用改 `FIX` 夹具。
+- **文档**：DANMAKU_API §3.8 / CONTENT_GUIDE §六 / README 不再教 preset，改成“组合配方 + 拼装器”。
+- **验证**：全量 829 / 7692；verify 七步全绿。
 
 ### 2026-10-17 — F10b：弹幕台拼装页 + 描述符目录组 + 代码生成
 

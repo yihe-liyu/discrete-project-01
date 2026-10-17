@@ -10,7 +10,7 @@ func _available() -> bool:
 	return ClassDB.class_exists("DanmakuStore")
 
 
-## 非 preset 的两段组合：rotate 到上限 → 沿方向加速 → despawn。
+## 手写两段组合：rotate 到上限 → 沿方向加速 → despawn。
 func _composed() -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
 	lc.rotate(2.0, 0.5)
@@ -33,7 +33,7 @@ func test_port_accepts_prebuilt_lifecycle() -> void:
 	assert_true(spec.get("params", {}).get(&"lifecycle") is BulletLifecycle, "应带上预拼描述符")
 
 
-## 执行层：非 preset 的两段组合被原生跑起来（不是直线）。
+## 执行层：手写两段组合被原生跑起来（不是直线）。
 func test_prebuilt_lifecycle_runs_natively() -> void:
 	if not _available():
 		pending("未构建原生扩展")

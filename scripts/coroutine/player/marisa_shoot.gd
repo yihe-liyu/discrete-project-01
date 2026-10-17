@@ -79,7 +79,7 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 	if Input.is_action_pressed("focus"):
 		# focus：竖直向上匀加速星弹（初速 + 加速度，每秒加速 —— 数值可调）
 		if _focus_bullet_data == null:
-			_focus_bullet_data = BulletData.new().tex("marisa_opt2").speed(1500).trajectory(BulletLifecycle.world_accel(Vector2(0, -5000))).player()
+			_focus_bullet_data = BulletData.new().tex("marisa_opt2").speed(1500).trajectory(BulletLifecycle.new().accel_world(Vector2(0, -5000))).player()
 			_focus_bullet_data.color(Color(1, 1, 1, 0.5))
 			_focus_bullet_data.damage = 4
 			_focus_bullet_data.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
@@ -123,7 +123,9 @@ func _make_laser_segment(i: int) -> AtlasTexture:
 func _laser_trajectory(angle_rad: float) -> BulletLifecycle:
 	var lc: BulletLifecycle = _laser_trajectories.get(angle_rad)
 	if lc == null:
-		lc = BulletLifecycle.marisa_laser(0, Vector2.ZERO, angle_rad, LASER_DRIFT_SPEED, 0.0)
+		lc = BulletLifecycle.new()
+		lc.anchor_drift(0, Vector2.ZERO, angle_rad, LASER_DRIFT_SPEED, true, 0.0, true)
+		lc.until_never()
 		_laser_trajectories[angle_rad] = lc
 	return lc
 

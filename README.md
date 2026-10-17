@@ -62,7 +62,7 @@
 | 加一个波次 / 一张符卡 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §0 / §四 / §六 | 阶段台有热更新；整关预览要重启 |
 | 加敌人 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §三 | `EnemyData` 构造链 + 行为脚本 + `AssetRegistry` |
 | 加一面 / 新 Boss | [CONTENT_GUIDE](CONTENT_GUIDE.md) §四 / §八 · [ARCHITECTURE](docs/ARCHITECTURE.md) §6 | **必须进 `stage_registry.tres` / `boss_registry.tres`** |
-| 改某颗弹的飞行规律 | [DANMAKU_API](docs/DANMAKU_API.md) · [CONTENT_GUIDE](CONTENT_GUIDE.md) §六 | 先看 preset，再自己拼相位；`until` 顺序有坑 |
+| 改某颗弹的飞行规律 | [DANMAKU_API](docs/DANMAKU_API.md) · [CONTENT_GUIDE](CONTENT_GUIDE.md) §六 | 直接拼原语或用弹幕台拼装页；`until` 顺序有坑 |
 | 写对话 | [CONTENT_GUIDE](CONTENT_GUIDE.md) 附录 D | `--list` / `--dry` / `--shot` |
 | 改背景 | [archive/BACKGROUND_VISUAL_PLAN.md](docs/archive/BACKGROUND_VISUAL_PLAN.md)（已冻结） | 现役 3D 背景；别重开视觉线 |
 | 改引擎 / 内核 | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [archive/GDEXTENSION_KERNEL_DESIGN.md](docs/archive/GDEXTENSION_KERNEL_DESIGN.md) | 改 C++ 必须重编扩展 |

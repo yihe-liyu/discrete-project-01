@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：119 脚本 / **829 用例（829 通过 / 0 红 —— ✅ 全绿）/ 7713 断言 / 54.517s** / 19 orphans / **0 pending**。
+**现状**：119 脚本 / **829 用例（829 通过 / 0 红 —— ✅ 全绿）/ 7692 断言 / 54.560s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -61,7 +61,7 @@
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限）+ **编译守卫（DSL3/4/6/8/13）**，每条原语一条最小 lifecycle 逐帧对比 | 53 | 1 |
-| [test_lifecycle_presets](../test/test_lifecycle_presets.gd) | 其余 preset 逐帧 parity（见 `docs/DANMAKU_API.md（附录 A）` §9） | 7 | 1 |
+| [test_lifecycle_compositions](../test/test_lifecycle_compositions.gd) | **手写原语组合**逐帧 parity（accel / world / radial / bounce / curve / homing / avoid / laser） | 7 | 1 |
 | [test_lifecycle_model](../test/test_lifecycle_model.gd) | `BulletLifecycle` 描述符 ↔ 参考解释器 parity | 3 | 1 |
 | [test_native_executor](../test/test_native_executor.gd) | 原生 `behavior_tick`（packed program）↔ 参考解释器**逐位** parity | 9 | 1 |
 | [test_native_integrate](../test/test_native_integrate.gd) | 原生积分器 `integrate_batch` ↔ vendored 参照 | 2 | 8 |
@@ -95,7 +95,7 @@
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_lifecycle_signature](../test/test_lifecycle_signature.gd) | b0：结构签名 —— 同结构共用一个原生 program（防 per-instance 爆炸） | 7 | 3 |
-| [test_lifecycle_catalog](../test/test_lifecycle_catalog.gd) | L3.5-2：`LifecycleCatalog` —— move+params → `BulletLifecycle` 的映射与缓存 | 5 | 0 |
+| [test_lifecycle_catalog](../test/test_lifecycle_catalog.gd) | F10c：`LifecycleCatalog` 只剩 `{lifecycle}` 兼容入口；旧 move preset 已删 / 未知 move 返回 null / 缓存按内容签名 | 5 | 0 |
 | [test_emit_variant](../test/test_emit_variant.gd) | 变体发射：`chance_toward` 概率分支号随 emit 事件回传，宿主据此选模板 | 6 | 0 |
 | [test_heading_state](../test/test_heading_state.gd) | K2：弹道「朝向」状态化 —— `accel_heading` 与速度解耦 + `forward()` 糖 | 4 | 0 |
 | [test_lifecycle_hooks](../test/test_lifecycle_hooks.gd) | b2b：`LifecycleHooks` 名字注册表 + `on_end_call` 用名字 | 3 | 0 |
@@ -250,7 +250,7 @@
 | [test_bookmarks](../test/test_bookmarks.gd) | **书签模型**（无树）：人工覆盖同刻自动并排序 / adopt 存副本 / 静态提取 / **人工打点重开还在**（只写不读的回归）/ 哈希不符保人工 / 串档不认 / 内容哈希可复现 | 11 | 0 |
 | [test_param_panel](../test/test_param_panel.gd) | **参数面板键名列**：不换行 / 不截断 / 悬停看全名 / 列宽放得下最长键名（作者报的 `move_spee`/`d` 断词回归；夹具带长键名哨兵） | 2 | 0 |
 | [test_bookmark_extractor](../test/test_bookmark_extractor.gd) | 书签提取器：字面量 + 循环展开 | 4 | 0 |
-| [test_bullet_composer_golden](../test/test_bullet_composer_golden.gd) | **F10a 拼装器 golden**：4 张复杂符卡（难度分支 / 表达式 / emit 循环 / emit_variant）+ 简单 preset / 双相位，与真实内容 `compile()` 逐字段一致；另验 `until_turned` 前置、`emit_variant` chance、**to_code 生成** | 11 | 0 |
+| [test_bullet_composer_golden](../test/test_bullet_composer_golden.gd) | **F10a 拼装器 golden**：4 张复杂符卡（难度分支 / 表达式 / emit 循环 / emit_variant）+ 简单组合 / 双相位，与真实内容 `compile()` 逐字段一致；另验 `until_turned` 前置、`emit_variant` chance、**to_code 生成** | 11 | 0 |
 
 ## G · 性能基准（2 / 3）
 

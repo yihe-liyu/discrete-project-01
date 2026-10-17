@@ -1,4 +1,5 @@
 extends GutTest
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## L3：原生 behavior_tick（packed program）↔ GDScript 参考解释器 LifecycleBehavior 逐位 parity。
 
 const DT := 1.0 / 60.0
@@ -126,17 +127,17 @@ func _spread(n: int, y: float) -> Array:
 
 func test_native_curve() -> void:
 	if not _available(): pending("无扩展"); return
-	_run("curve", BulletLifecycle.curve(2.0, 1.0), CurveBehavior.new(), {&"curve": 2.0, &"curve_limit": 1.0}, FakeHost.new(), BehaviorContext.new(), _spread(6, 300.0), 120, Vector2.ZERO, null, false, [])
+	_run("curve", FIX.curve(2.0, 1.0), CurveBehavior.new(), {&"curve": 2.0, &"curve_limit": 1.0}, FakeHost.new(), BehaviorContext.new(), _spread(6, 300.0), 120, Vector2.ZERO, null, false, [])
 
 
 func test_native_accel() -> void:
 	if not _available(): pending("无扩展"); return
-	_run("accel", BulletLifecycle.accel(90.0), AccelBehavior.new(), {&"accel": 90.0}, FakeHost.new(), BehaviorContext.new(), _spread(6, 300.0), 120, Vector2.ZERO, null, false, [])
+	_run("accel", FIX.accel(90.0), AccelBehavior.new(), {&"accel": 90.0}, FakeHost.new(), BehaviorContext.new(), _spread(6, 300.0), 120, Vector2.ZERO, null, false, [])
 
 
 func test_native_world_accel() -> void:
 	if not _available(): pending("无扩展"); return
-	_run("world_accel", BulletLifecycle.world_accel(Vector2(0, 300.0)), preload("res://test/reference/behavior/world_accel_behavior.gd").new(), {&"world_accel": Vector2(0, 300.0)}, FakeHost.new(), BehaviorContext.new(), _spread(6, 300.0), 120, Vector2.ZERO, null, false, [])
+	_run("world_accel", FIX.world_accel(Vector2(0, 300.0)), preload("res://test/reference/behavior/world_accel_behavior.gd").new(), {&"world_accel": Vector2(0, 300.0)}, FakeHost.new(), BehaviorContext.new(), _spread(6, 300.0), 120, Vector2.ZERO, null, false, [])
 
 
 func test_native_bounce() -> void:
@@ -148,7 +149,7 @@ func test_native_bounce() -> void:
 	var beh = preload("res://test/reference/behavior/bounce_behavior.gd").new()
 	beh.host = ha
 	var params := {&"accel": 100.0, &"bounce_angle": 0.3, &"spawn_factory": factory, &"spawn_speed": 0.0, &"sfx": "", &"sfx_db": 0.0}
-	_run("bounce", BulletLifecycle.bounce(100.0, 0.3, 0.0, factory, &""), beh, params, ha, BehaviorContext.new(), _spread(8, 300.0), 300, Vector2.ZERO, boss, true, [])
+	_run("bounce", FIX.bounce(100.0, 0.3, 0.0, factory, &""), beh, params, ha, BehaviorContext.new(), _spread(8, 300.0), 300, Vector2.ZERO, boss, true, [])
 
 
 func test_native_avoid_player() -> void:
@@ -158,7 +159,7 @@ func test_native_avoid_player() -> void:
 	var spawns: Array = []
 	for i in 6:
 		spawns.append([Vector2(448.0 + (i - 3) * 30.0, 500.0 + (i - 3) * 20.0), Vector2(0.0, -120.0)])
-	_run("avoid_player", BulletLifecycle.avoid_player(150.0, 0.05, 0.6), AvoidPlayerBehavior.new(150.0, 0.6), {}, FakeHost.new(), ctx, spawns, 120, player.global_position, null, false, [])
+	_run("avoid_player", FIX.avoid_player(150.0, 0.05, 0.6), AvoidPlayerBehavior.new(150.0, 0.6), {}, FakeHost.new(), ctx, spawns, 120, player.global_position, null, false, [])
 
 func _spread_at(n: int, y: float, vel_y: float) -> Array:
 	var out: Array = []
@@ -172,7 +173,7 @@ func test_native_homing() -> void:
 	var enemy: Node2D = add_child_autofree(Node2D.new()); enemy.position = Vector2(448.0, 100.0)
 	var ctx := BehaviorContext.new(); ctx.setup(null, WorldQuery.new())
 	ctx.get_world().setup(func() -> Array: return [enemy])
-	var lc := BulletLifecycle.homing(deg_to_rad(720.0), 1.0, 200.0, 500.0, 2.0, 150.0)
+	var lc := FIX.homing(deg_to_rad(720.0), 1.0, 200.0, 500.0, 2.0, 150.0)
 	# 注意：steer 是反馈环（转向→位置→角度），32 位↔64 位浮点差会被放大成方向翻转。
 	# 故在「加速未饱和（ramp=1s）、反馈尚未放大」的地平线内对照。
 	_run("homing", lc, CurveBehavior.new(), {}, FakeHost.new(), ctx, _spread_at(6, 500.0, -150.0), 45, Vector2.ZERO, null, false, [enemy])
@@ -182,7 +183,7 @@ func test_native_radial_accel() -> void:
 	if not _available(): pending("无扩展"); return
 	var factory := func() -> BulletData:
 		var d := BulletData.new(); d.velocity = Vector2(1, 1); return d
-	var lc := BulletLifecycle.radial_accel(120.0, factory, &"")
+	var lc := FIX.radial_accel(120.0, factory, &"")
 	_run("radial_accel", lc, CurveBehavior.new(), {}, FakeHost.new(), BehaviorContext.new(), _spread_at(6, 400.0, -180.0), 200, Vector2.ZERO, null, false, [])
 
 
@@ -215,7 +216,7 @@ func test_native_marisa_laser() -> void:
 	var anchor: Node2D = add_child_autofree(Node2D.new()); anchor.position = Vector2(340.0, 560.0)
 	var ctx := BehaviorContext.new(); ctx.setup(player)
 	var off := Vector2(10.0, 0.0)
-	var lc := BulletLifecycle.marisa_laser(anchor.get_instance_id(), off, 0.3, 800.0, 5.0)
+	var lc := FIX.marisa_laser(anchor.get_instance_id(), off, 0.3, 800.0, 5.0)
 	var spawns: Array = []
 	for i in 3:
 		spawns.append([Vector2(280.0 + i * 5.0, 600.0), Vector2(0.0, -200.0)])

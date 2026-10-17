@@ -195,31 +195,31 @@ BulletLifecycle.CMP_GE / CMP_LE                       # 0 / 1
 - 相位切换清零；创作者看不到槽。
 - **同相位上限 8**：超出会被内核拒绝注册，该弹退化为直线。
 
-### 3.8 preset（9 个类型化薄包装；组合定义在 `LifecycleCatalog.build()`）
+### 3.8 弹道组合（preset 已删除，直接拼原语）
+
+F10c 删掉了 9 个 typed preset；`BulletLifecycle` 只保留原语。工作台「弹幕台 → 拼装」生成同样的代码，可复制回内容。
 
 ```gdscript
-BulletLifecycle.world_accel(v: Vector2)
-BulletLifecycle.accel(a: float)
-BulletLifecycle.curve(w: float, limit: float)                         # rotate + until_turned + then
-BulletLifecycle.homing(angle_per_sec=720°, accel_time=2, min_speed=500, max_speed=2000, duration=2, proximity_boost=150)
-BulletLifecycle.bounce(accel_rate, bounce_angle, spawn_speed, spawn, sfx_key=&"kira", sfx_db=-8.0)
-BulletLifecycle.radial_accel(accel_rate, spawn, sfx_key=&"", sfx_db=AudioManager.SFX_LEVEL_DB)
-BulletLifecycle.avoid_player(proximity, jump, flee_time)
-BulletLifecycle.laser_follow(anchor_id, offset, angle, drift_speed, initial_drift)
-BulletLifecycle.marisa_laser(anchor_id, offset, angle, drift_speed, initial_drift)
+var lc := BulletLifecycle.new()
+lc.steer(BulletLifecycle.T_NEAREST_ENEMY, deg_to_rad(720.0), 2.0, 150.0, 2.0)
+lc.speed_lerp(500.0, 2000.0, 2.0)
+lc.until_never()
+data.trajectory(lc)
 ```
 
-| preset | 展开 |
+| 想要 | 原语组合 |
 |---|---|
-| world_accel / accel | `[accel_world(v)]` / `[accel_heading(a)]`，until never |
-| curve | 相位1 `[rotate(w, limit)]` until turned → 相位2 空 |
-| homing | `[steer(T_NEAREST_ENEMY, angle_per_sec, accel_time, proximity_boost, duration), speed_lerp(min_speed, max_speed, accel_time)]` |
-| bounce | `[accel_heading(accel)]`，until at_wall(LEFT\|RIGHT\|TOP)，on_end [sfx, emit(spawn, toward(T_BOSS, bounce_angle), spawn_speed, AT_PHASE_END), despawn] |
-| radial_accel | `[accel_heading(rate)]`，until at_wall(TOP)，on_end [sfx?, emit(spawn, heading(PI), 0, AT_PHASE_END), despawn] |
-| avoid_player | 相位1 until near(T_PLAYER, proximity, every=jump)，on_end 背对自机 → 相位2 until elapsed(flee_time)，despawn |
-| laser_follow / marisa_laser | `[anchor_drift(...)]`，until never（local / global + render_heading） |
+| 世界加速 | `accel_world(v)` + `until_never()` |
+| 沿朝向加速 | `accel_heading(a)` + `until_never()` |
+| 弧线 | `rotate(w, limit)` + `until_turned()` + `then()` |
+| 追踪 | `steer(T_NEAREST_ENEMY, angle, accel, prox, duration)` + `speed_lerp(min, max, accel)` + `until_never()` |
+| 碰框换弹 | `accel_heading(accel)` + `until_at_wall(L\|R\|T)` + `sfx` + `emit(spawn, toward(T_BOSS, angle), speed, AT_PHASE_END)` + `despawn()` |
+| 碰顶分裂 | `accel_heading(rate)` + `until_at_wall(TOP)` + `sfx` + `emit(spawn, heading(PI), 0, AT_PHASE_END)` + `despawn()` |
+| 躲避自机 | `until_near(T_PLAYER, prox).every(jump)` + `on_end_heading(away(T_PLAYER))` + `then()` + `until_elapsed(flee)` + `despawn()` |
+| 锚定激光 | `anchor_drift(anchor, offset, angle, speed, use_global, initial, render_heading)` + `until_never()` |
 
-> **新增 preset** = 在 `lifecycle_catalog.gd` 的 `build()` 加分支，用已有原语拼，**不用改 C++**。
+> 不再新增 preset：组合由内容直接写，或由工作台拼装器生成。`LifecycleCatalog` 只保留
+> `{lifecycle: BulletLifecycle}` 的兼容入口；旧 `{move: ...}` preset 名一律返回 null。
 
 ### 3.9 编译与共享
 
@@ -474,7 +474,10 @@ var _b: BulletData
 func _tick(p_ctx: StageContext) -> Variant:
 	if _b == null:
 		_b = BulletData.new().tex("小玉").speed(160).color(Color.AQUA).blend(true).enemy()
-	_b.trajectory(BulletLifecycle.world_accel(Vector2(0, 60)))
+	var lc := BulletLifecycle.new()
+	lc.accel_world(Vector2(0, 60))
+	lc.until_never()
+	_b.trajectory(lc)
 	p_ctx.bullets.shoot_spread(_b, 12, TAU, Vector2.RIGHT, target.global_position)
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"], -10.0)
 	return p_ctx.clock.wait(1.2)
@@ -507,7 +510,7 @@ lc.despawn()
 ## 附录 A · 弹幕生命周期模型（速查）
 
 - 核心：**一套词汇**（Move / Until / Action）+ **三种 runtime**（低频 GDScript / 高频 per-bullet 描述符 / 原生执行）。
-- 相位模型就是 §3.1；9 Move / 5 Until / 8 Action 见 §3.2–§3.4；9 preset 见 §3.8。
+- 相位模型就是 §3.1；Move / Until / Action 见 §3.2–§3.4；组合配方见 §3.8。
 - 设计动机：为什么放弃通用 opcode VM、固定 schema 的边界 —— 全文见 [`archive/merged/LIFECYCLE_MODEL.md`](archive/merged/LIFECYCLE_MODEL.md)（原 `LIFECYCLE_MODEL.md`）。
 - 当前模型 = 原文 §0–§6 + §11 的 unit 表；决策理由 = §7–§8。
 

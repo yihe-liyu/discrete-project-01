@@ -1,4 +1,5 @@
 extends GutTest
+const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## L3.5-3b 回归：行为事件必须按**事件自己的 program**（`eprog`）派发。
 ##
 ## 历史 bug：`res.program`（per-bullet 快照）与宿主 `_program` 成员共享底层缓冲，
@@ -31,8 +32,8 @@ func _reg(store, lc: BulletLifecycle) -> int:
 func test_event_program_is_per_event_and_independent() -> void:
 	if not _available(): pending("无扩展"); return
 	var st = _store()
-	var pid_bounce: int = _reg(st, BulletLifecycle.bounce(0.0, 0.3, 0.0, Callable()))
-	var pid_accel: int = _reg(st, BulletLifecycle.accel(0.0))
+	var pid_bounce: int = _reg(st, FIX.bounce(0.0, 0.3, 0.0, Callable()))
+	var pid_accel: int = _reg(st, FIX.accel(0.0))
 	assert_eq(pid_bounce, 0, "bounce 应为 program 0（有 sfx）")
 	assert_eq(pid_accel, 1, "accel 应为 program 1（无 sfx）")
 	var pos := PackedVector2Array([Vector2(300, 10), Vector2(500, 500)])
