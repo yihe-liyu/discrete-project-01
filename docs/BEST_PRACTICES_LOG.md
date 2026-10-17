@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 14 条（本文件留最近 14 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 15 条（本文件留最近 15 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-17 — F10a：拼装器模型 + 现有内容 golden
 - 2026-10-17 — verify 提速：GUT 并行分片（~60s → 18.8s）
 - 2026-10-17 — DSL 静默坑：编译期 fail-closed + 四处响亮
 - 2026-10-10 — 音量管理补骨架：**真总线 + SE 密度护栏 + BGM 让位/交叉淡入**
@@ -44,6 +45,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-17 — F10a：拼装器模型 + 现有内容 golden
+
+- **背景**：F10 不做“预设下拉”；预设是结果，原语才是产品。先证明 `BulletComposer` 能容纳现有弹幕，再谈 UI。
+- **新增**：`descriptor_catalog.gd`（Move/Until/Action/Dir 元数据 + apply）、`bullet_composer.gd`（线性相位模型 + `to_lifecycle` + 校验）。
+- **golden**：卡摩瑞一符 / 二符 / 道中一非 / 哆来咪三符（Easy / Lunatic）+ `world_accel` / `radial_accel` / `homing` / `marisa_laser` / stage02 双相位；与真实内容 `compile()` 的 ops/args/phase/actions 逐字段一致。
+- **结果**：10 用例 / 604 断言；全量 824 / 7666。
+- **结论**：9/6/8/7 词汇无缺口；难度变体、表达式、emit 循环由 spec/UI 层承载；下一步才是弹幕台拼装页 + 代码生成。
 
 ### 2026-10-17 — verify 提速：GUT 并行分片（~60s → 18.8s）
 

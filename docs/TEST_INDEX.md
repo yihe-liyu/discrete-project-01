@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：118 脚本 / **814 用例（814 通过 / 0 红 —— ✅ 全绿）/ 7062 断言 / 53.939s** / 19 orphans / **0 pending**。
+**现状**：119 脚本 / **824 用例（824 通过 / 0 红 —— ✅ 全绿）/ 7666 断言 / 53.745s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -30,7 +30,7 @@
 | **C 宿主 · 运行时系统** | 44 | 366 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
-| **F 工具 · 开发台** | 12 | 66 | `scripts/workbench/**`、创作站 |
+| **F 工具 · 开发台** | 13 | 76 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
 
 > 「白盒」列 = 私有成员访问次数（`._xxx`，粗计）。**它越高，重构时越容易断。**
@@ -223,7 +223,7 @@
 | [test_stage01_dialogue](../test/test_stage01_dialogue.gd) | 第一面战前对话构建：台词/说话者/表情/事件顺序 | 9 | 0 |
 | [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断） | 1 | 0 |
 
-## F · 工具 · 开发台（12 / 66）
+## F · 工具 · 开发台（13 / 76）
 
 > ✅ **这一层已接缝化**（2026-09-30，S1）：原先 26 个用例里 181 处私有成员访问，现在**0**——
 > 六个文件全部改走 `BenchBase` / `CreationStation` / `CatalogPanel` 的**公开接口**（见下节）。
@@ -250,6 +250,7 @@
 | [test_bookmarks](../test/test_bookmarks.gd) | **书签模型**（无树）：人工覆盖同刻自动并排序 / adopt 存副本 / 静态提取 / **人工打点重开还在**（只写不读的回归）/ 哈希不符保人工 / 串档不认 / 内容哈希可复现 | 11 | 0 |
 | [test_param_panel](../test/test_param_panel.gd) | **参数面板键名列**：不换行 / 不截断 / 悬停看全名 / 列宽放得下最长键名（作者报的 `move_spee`/`d` 断词回归；夹具带长键名哨兵） | 2 | 0 |
 | [test_bookmark_extractor](../test/test_bookmark_extractor.gd) | 书签提取器：字面量 + 循环展开 | 4 | 0 |
+| [test_bullet_composer_golden](../test/test_bullet_composer_golden.gd) | **F10a 拼装器 golden**：4 张复杂符卡（难度分支 / 表达式 / emit 循环 / emit_variant）+ 简单 preset / 双相位，与真实内容 `compile()` 逐字段一致；另验 `until_turned` 前置与 `emit_variant` 的 chance 约束 | 10 | 0 |
 
 ## G · 性能基准（2 / 3）
 
