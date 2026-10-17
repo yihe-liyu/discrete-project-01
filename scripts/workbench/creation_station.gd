@@ -61,9 +61,10 @@ func _build_ui() -> void:
 
 	# 全局目录开关：固定在顶栏右侧；抽屉挂在 layer=3，不挤占 1280 的场地+右面板。
 	_catalog_btn = Button.new()
-	_catalog_btn.text = "目录"
+	_catalog_btn.text = "目录 ▾"
+	_catalog_btn.tooltip_text = "打开全局目录"
 	_catalog_btn.toggle_mode = true
-	_catalog_btn.custom_minimum_size = Vector2(72, 0)
+	_catalog_btn.custom_minimum_size = Vector2(88, 0)
 	_catalog_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_catalog_btn.add_theme_font_size_override("font_size", 16)
 	_catalog_btn.toggled.connect(set_catalog_open)
@@ -165,6 +166,8 @@ func set_catalog_open(open: bool) -> void:
 	_catalog_open = open
 	if _catalog_btn != null:
 		_catalog_btn.set_pressed_no_signal(open)
+		_catalog_btn.text = "目录 ▴" if open else "目录 ▾"
+		_catalog_btn.tooltip_text = "关闭全局目录（Esc）" if open else "打开全局目录"
 	if _catalog_drawer != null:
 		_catalog_drawer.visible = open
 
@@ -206,6 +209,9 @@ func _on_slot(slot_index: int) -> void:
 	content.add_child(_view)
 	# 目录双击 → 组合台直达（整关页内目录）
 	if slot_index == 0:
+		# 嵌入模式：隐藏整关预览自带的“目录”页签，统一走全局抽屉，避免截图里双目录。
+		if _view.has_method("set_embedded"):
+			_view.call("set_embedded", true)
 		var catalog = _view.call("catalog_panel")
 		if catalog and not catalog.preset_requested.is_connected(route_preset):
 			catalog.preset_requested.connect(route_preset)

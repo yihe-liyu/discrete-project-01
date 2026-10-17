@@ -92,7 +92,10 @@ var _prev_time := -1.0   # 时间轴刷新去重
 ## 右侧面板页签：书签（导航）/ 日志（调试）
 const _TABS := ["目录", "书签", "日志"]
 var _tab_btns: Array[Button] = []
+## 嵌入创作台时：隐藏内部“目录”页签，统一走创作台的全局目录抽屉。
+var _embedded: bool = false
 var _stage_shift_y := 0.0    # 嵌入创作台页面偏移；舞台视觉归一回游戏坐标用
+var _ui_offset_applied: bool = false  # 防止 _ready 的首次同步 + deferred 同步重复下移
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
 var _diff_sel: OptionButton
@@ -130,6 +133,7 @@ func _ready() -> void:
 	_build_ui()
 	_setup_phase_timer()
 	_sync_ui_layer_offset()  # 同步执行：首帧渲染即正确（见函数注释）
+	call_deferred("_sync_ui_layer_offset")  # 布局完成后再同步一次：嵌入创作台时首帧 get_global_rect 可能还是 (0,0)
 	_setup_world()
 	_load_stage()
 	_check_phase_uid_conflicts()
@@ -196,6 +200,9 @@ func _draw() -> void:
 ## CanvasLayer 平移到页面全局位置（独立运行 = 0，嵌入创作台 = 页签横栏下方）
 func _sync_ui_layer_offset() -> void:
 	var pos := get_global_rect().position
+	if _ui_offset_applied and is_equal_approx(pos.y, _stage_shift_y):
+		return
+	_ui_offset_applied = true
 	_stage_shift_y = pos.y
 	if pos.y != 0.0:
 		# 【重要】不能用 $UI.offset = pos（CanvasLayer.offset）——它会对锚定视口的
@@ -360,6 +367,23 @@ func bullet_manager() -> BulletManager:
 
 func stage_runtime() -> StageRuntime:
 	return _stage_runtime
+
+
+## 嵌入创作台：隐藏内部“目录”页签（全局抽屉接管），右侧默认落在书签页。
+func set_embedded(on: bool) -> void:
+	_embedded = on
+	if _tab_btns.is_empty():
+		return
+	_tab_btns[0].visible = not on
+	_set_tab(0 if not on else 1)
+
+
+func embedded() -> bool:
+	return _embedded
+
+
+func catalog_tab_visible() -> bool:
+	return _tab_btns.size() > 0 and _tab_btns[0].visible
 
 
 func _load_stage() -> void:

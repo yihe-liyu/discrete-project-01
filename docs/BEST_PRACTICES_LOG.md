@@ -51,7 +51,8 @@
 
 - **审查**：目录只活在整关预览右面板「目录」页签，切到三台就消失；`CreationStation` 还 `get("_bullet_manager")` / `get("_stage_runtime")` / `wb.get("_catalog")` 私摸；顶部 4 页签 + 整关 3 页签两套导航。
 - **改法**：`Workbench` 补 `catalog_panel()` / `bullet_manager()` / `stage_runtime()`；创作台改走公开方法；顶栏加「目录」抽屉（CanvasLayer(3)，四页签可开；双击路由后自动关）；整关预览仍保留自己的目录页签（standalone 用）。
-- **测试**：`test_creation_station` 5 → 7：每页签可开/关目录 + 从弹幕台打开目录双击敌人条目路由；全量 826 / 7690。
+- **测试**：`test_creation_station` 5 → 7：每页签可开/关目录 + 从弹幕台打开目录双击敌人条目路由；全量 826 / 7691。
+- **截图后补**：`CatalogPanel.filter_row` 之前加到根节点、被 EXPAND 的 box 挤到最底部 → 改入 box（搜索/筛选回到顶部）；嵌入预览隐藏内部“目录”页签（避免左右双目录）；右面板延迟到布局完成后同步偏移（不再压在页签栏下）；目录按钮改为 `目录 ▾ / 目录 ▴`。
 - **未做**：整关预览保活、1600 常驻左栏、`PreviewBench extends BenchBase` —— 留 Phase 2/3。
 
 ### 2026-10-17 — F10a：拼装器模型 + 现有内容 golden

@@ -189,6 +189,9 @@ func test_catalog_drawer_available_on_every_slot():
 	for slot in [0, 1, 2, 3]:
 		cs.open_slot(slot)
 		await get_tree().process_frame
+		if slot == 0:
+			assert_false(cs.current_view().call("catalog_tab_visible"),
+				"嵌入预览应隐藏内部目录页签（全局抽屉接管）")
 		cs.set_catalog_open(true)
 		assert_true(cs.catalog_open(), "槽 %d 目录应能打开" % slot)
 		assert_not_null(cs.catalog_panel(), "槽 %d 目录面板应存在" % slot)

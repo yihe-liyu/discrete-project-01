@@ -59,7 +59,9 @@ func _ready() -> void:
 		_role_filter.add_item(CAT.ROLE_LABELS[role])
 	_role_filter.item_selected.connect(func(_i): _rebuild_tree())
 	filter_row.add_child(_role_filter)
-	add_child(filter_row)
+	# 关键：必须进 box（box 才是纵向流式根）；之前 add_child 到 CatalogPanel 根，
+	# 被下方 EXPAND 的 box 挤到最底部（截图里的“搜索框在详情下面”）。
+	box.add_child(filter_row)
 
 	# ── 头行：统计 + 刷新 ──
 	var head := HBoxContainer.new()
