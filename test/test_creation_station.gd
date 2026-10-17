@@ -177,3 +177,44 @@ func test_switch_clears_runtime():
 	await get_tree().process_frame
 	assert_eq(BulletManager.current.active_count(), 0, "切换后清场")
 	cs.queue_free()
+
+
+## 全局目录：不再只活在整关预览的右面板里；四个页签下都能开。
+func test_catalog_drawer_available_on_every_slot():
+	DirAccess.remove_absolute("user://creation_station.cfg")
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	for slot in [0, 1, 2, 3]:
+		cs.open_slot(slot)
+		await get_tree().process_frame
+		cs.set_catalog_open(true)
+		assert_true(cs.catalog_open(), "槽 %d 目录应能打开" % slot)
+		assert_not_null(cs.catalog_panel(), "槽 %d 目录面板应存在" % slot)
+		if cs.catalog_panel() != null:
+			assert_true(cs.catalog_panel().is_visible_in_tree(), "槽 %d 目录应可见" % slot)
+			assert_gt(cs.catalog_panel().size.x, 300.0, "槽 %d 目录抽屉应有宽度" % slot)
+		cs.set_catalog_open(false)
+		assert_false(cs.catalog_open(), "槽 %d 目录应能关闭" % slot)
+
+
+## 从弹幕台打开全局目录，双击敌人条目 → 切敌人台并选中。
+func test_catalog_drawer_routes_from_bench_tab():
+	DirAccess.remove_absolute("user://creation_station.cfg")
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	cs.open_slot(1)
+	await get_tree().process_frame
+	cs.set_catalog_open(true)
+	var enemies: Array = cs.bench_instance(0).catalog().by_role("enemy")
+	assert_gt(enemies.size(), 0, "enemy 组应有内容")
+	if enemies.is_empty():
+		return
+	cs.catalog_panel().preset_requested.emit(enemies[0])
+	await get_tree().process_frame
+	assert_eq(cs.current_slot(), 2, "从弹幕台点敌人条目应切敌人台")
+	assert_false(cs.catalog_open(), "路由后目录应关闭")
+	assert_eq(cs.bench_instance(1).selected_index(), 1, "敌人台选中条目 0（下拉 +1）")

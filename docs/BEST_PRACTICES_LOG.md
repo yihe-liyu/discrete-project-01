@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 15 条（本文件留最近 15 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 16 条（本文件留最近 16 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-17 — 创作台 Phase 1：全局目录抽屉 + 公开接缝
 - 2026-10-17 — F10a：拼装器模型 + 现有内容 golden
 - 2026-10-17 — verify 提速：GUT 并行分片（~60s → 18.8s）
 - 2026-10-17 — DSL 静默坑：编译期 fail-closed + 四处响亮
@@ -45,6 +46,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-17 — 创作台 Phase 1：全局目录抽屉 + 公开接缝
+
+- **审查**：目录只活在整关预览右面板「目录」页签，切到三台就消失；`CreationStation` 还 `get("_bullet_manager")` / `get("_stage_runtime")` / `wb.get("_catalog")` 私摸；顶部 4 页签 + 整关 3 页签两套导航。
+- **改法**：`Workbench` 补 `catalog_panel()` / `bullet_manager()` / `stage_runtime()`；创作台改走公开方法；顶栏加「目录」抽屉（CanvasLayer(3)，四页签可开；双击路由后自动关）；整关预览仍保留自己的目录页签（standalone 用）。
+- **测试**：`test_creation_station` 5 → 7：每页签可开/关目录 + 从弹幕台打开目录双击敌人条目路由；全量 826 / 7690。
+- **未做**：整关预览保活、1600 常驻左栏、`PreviewBench extends BenchBase` —— 留 Phase 2/3。
 
 ### 2026-10-17 — F10a：拼装器模型 + 现有内容 golden
 

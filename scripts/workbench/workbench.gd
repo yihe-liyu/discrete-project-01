@@ -348,6 +348,20 @@ func stop_stage() -> void:
 	_stage_runtime.stop_stage()
 
 
+# ═══ 公开接缝（创作台宿主用；不摸 `_私有`）═══
+
+func catalog_panel():
+	return _catalog
+
+
+func bullet_manager() -> BulletManager:
+	return _bullet_manager
+
+
+func stage_runtime() -> StageRuntime:
+	return _stage_runtime
+
+
 func _load_stage() -> void:
 	# 统一复位运行状态（防残留：快进打断后 time_scale/静音错乱）
 	_playback.stop_fast_forward()

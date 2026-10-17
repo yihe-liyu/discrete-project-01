@@ -1,9 +1,12 @@
 extends Control
-## 创作台（三合一）—— 单窗口统一入口：整关预览 | 弹幕台 | 敌人台 | 阶段台
+## 创作台（四页签）—— 单窗口统一入口：整关预览 | 弹幕台 | 敌人台 | 阶段台
 ## 试验台实例常驻（切换保留选择状态）；切走时清运行时残留（弹/敌人/Boss）
+## 目录是**全局抽屉**：四个页签下都能打开，双击直达对应台（不再只活在整关预览里）。
 
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const WORKBENCH := preload("res://scenes/workbench.tscn")
+const CATALOG_PANEL := preload("res://scripts/workbench/catalog_panel.gd")
+const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
 const BENCHS := [
 	preload("res://scenes/workbench/bullet_bench.tscn"),
 	preload("res://scenes/workbench/enemy_bench.tscn"),
@@ -16,6 +19,13 @@ var _view: Control = null
 var _current_slot: int = -1
 var _bench_instances: Array[BenchBase] = [null, null, null]
 var _workspace_restores: Array = [{}, {}, {}]
+
+# ── 全局目录抽屉（CanvasLayer(3)：高于顶栏(2)与各页自带 UI(1)）──
+var _catalog_btn: Button
+var _catalog_layer: CanvasLayer
+var _catalog_drawer: PanelContainer
+var _catalog_panel               # CatalogPanel（preload 构造，避免 class_name 缓存）
+var _catalog_open: bool = false
 
 const CFG_PATH := "user://creation_station.cfg"
 
@@ -48,6 +58,56 @@ func _build_ui() -> void:
 		button.pressed.connect(_on_slot.bind(i))
 		bar.add_child(button)
 		_slot_buttons.append(button)
+
+	# 全局目录开关：固定在顶栏右侧；抽屉挂在 layer=3，不挤占 1280 的场地+右面板。
+	_catalog_btn = Button.new()
+	_catalog_btn.text = "目录"
+	_catalog_btn.toggle_mode = true
+	_catalog_btn.custom_minimum_size = Vector2(72, 0)
+	_catalog_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_catalog_btn.add_theme_font_size_override("font_size", 16)
+	_catalog_btn.toggled.connect(set_catalog_open)
+	bar.add_child(_catalog_btn)
+	_build_catalog_drawer()
+
+
+## 全局目录抽屉：左覆盖层（不缩场地），四个页签共用。
+## 位置避开顶栏（y=44 起）；打开时只挡左侧 432px，右侧场地仍可点。
+func _build_catalog_drawer() -> void:
+	_catalog_layer = CanvasLayer.new()
+	_catalog_layer.name = "CatalogLayer"
+	_catalog_layer.layer = 3
+	add_child(_catalog_layer)
+
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_catalog_layer.add_child(root)
+
+	_catalog_drawer = PanelContainer.new()
+	_catalog_drawer.name = "CatalogDrawer"
+	_catalog_drawer.anchor_left = 0.0
+	_catalog_drawer.anchor_right = 0.0
+	_catalog_drawer.anchor_top = 0.0
+	_catalog_drawer.anchor_bottom = 1.0
+	_catalog_drawer.offset_left = 8.0
+	_catalog_drawer.offset_top = 44.0
+	_catalog_drawer.offset_right = 440.0
+	_catalog_drawer.offset_bottom = -8.0
+	_catalog_drawer.mouse_filter = Control.MOUSE_FILTER_STOP
+	_catalog_drawer.custom_minimum_size = Vector2(432, 0)
+	_catalog_drawer.add_theme_stylebox_override("panel", RIG_COMMON.panel_style())
+	_catalog_drawer.theme = theme
+	root.add_child(_catalog_drawer)
+
+	_catalog_panel = CATALOG_PANEL.new()
+	_catalog_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_catalog_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_catalog_panel.preset_requested.connect(_on_catalog_preset)
+	_catalog_drawer.add_child(_catalog_panel)
+	# CatalogPanel._ready() 会把 custom_minimum_size 重置成 (0,420) → 必须在入树后再压宽度
+	_catalog_panel.custom_minimum_size = Vector2(408, 420)
+	_catalog_drawer.visible = false
 
 
 # ═══ 公开接缝（测试/外部驱动；用户点页签走的是同一条实现）═══
@@ -85,6 +145,41 @@ func bench_instance(slot_index: int) -> BenchBase:
 	return _bench_instances[slot_index]
 
 
+## 全局目录抽屉是否打开
+func catalog_open() -> bool:
+	return _catalog_open
+
+
+## 全局目录面板（CatalogPanel；测试/外部驱动用）
+func catalog_panel():
+	return _catalog_panel
+
+
+## 顶栏「目录」按钮（测试点它 = 用户点它）
+func catalog_button() -> Button:
+	return _catalog_btn
+
+
+## 开/关全局目录（不递归触发按钮 toggled）
+func set_catalog_open(open: bool) -> void:
+	_catalog_open = open
+	if _catalog_btn != null:
+		_catalog_btn.set_pressed_no_signal(open)
+	if _catalog_drawer != null:
+		_catalog_drawer.visible = open
+
+
+func _on_catalog_preset(entry) -> void:
+	route_preset(entry)
+	set_catalog_open(false)
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if _catalog_open and event.is_action_pressed("ui_cancel"):
+		set_catalog_open(false)
+		get_viewport().set_input_as_handled()
+
+
 ## 打开某个槽位（同步页签高亮 + 切换视图）
 func open_slot(slot_index: int) -> void:
 	_on_slot(slot_index)
@@ -111,8 +206,7 @@ func _on_slot(slot_index: int) -> void:
 	content.add_child(_view)
 	# 目录双击 → 组合台直达（整关页内目录）
 	if slot_index == 0:
-		var wb = _view
-		var catalog = wb.get("_catalog")
+		var catalog = _view.call("catalog_panel")
 		if catalog and not catalog.preset_requested.is_connected(route_preset):
 			catalog.preset_requested.connect(route_preset)
 	# 工作区恢复
@@ -144,6 +238,7 @@ func route_preset(entry) -> void:
 	var bench := _view as BenchBase
 	if bench:
 		bench.preset_from_entry(entry)
+	set_catalog_open(false)
 
 
 # ═══ 工作区自动恢复（user:// 配置）═══
@@ -183,15 +278,17 @@ func _exit_tree() -> void:
 func _clear_view() -> void:
 	if _view == null:
 		return
-	var bullet_manager: BulletManager = _view.get("_bullet_manager")   # 整关/试验台都有 _bullet_manager（不读 .current）
+	var bullet_manager: BulletManager = null
+	if _view.has_method("bullet_manager"):
+		bullet_manager = _view.call("bullet_manager")
 	if _current_slot == 0:
-		_view.stop_stage()
+		_view.call("stop_stage")
 		if bullet_manager: bullet_manager.reset_world()
 		AudioManager.stop_bgm()
 		_view.queue_free()
 	else:
 		if bullet_manager: bullet_manager.reset_world()
-		var rt: StageRuntime = _view.get("_stage_runtime")
+		var rt: StageRuntime = _view.call("stage_runtime") if _view.has_method("stage_runtime") else null
 		var entity_registry: EntityRegistry = rt.entity_registry if rt else null
 		for enemy in (entity_registry.get_active_enemies() if entity_registry else []):
 			if is_instance_valid(enemy):
