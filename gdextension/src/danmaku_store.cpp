@@ -540,11 +540,61 @@ int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFl
 		const PackedInt32Array &p_move_start, const PackedInt32Array &p_move_count,
 		const PackedInt32Array &p_until, const PackedInt32Array &p_act_start,
 		const PackedInt32Array &p_act_count, int p_phase_count, int p_slots) {
-	// V20：`_pslots` 按固定 SLOT_STRIDE 分行索引；p_slots 超行宽会越界写进下一颗弹的行。
-	// 显式拒绝（返回 -1），由宿主跳过注册并报错——不再静默串行。
-	// 注意：这里**不发引擎消息**（原生 warning/error 会被 GUT 记为 Unexpected Errors）； 由调用方按返回值 -1 报告。
-	if (p_slots > SLOT_STRIDE) {
+	// NK4：原生是最后一道边界。所有并行数组 / opcode / slot 操作数先校验，再写任何表。
+	// 注意：这里**不发引擎消息**（原生 warning/error 会被 GUT 记为 Unexpected Errors）；由调用方按 -1 报告。
+	if (p_phase_count <= 0 || p_slots < 0 || p_slots > SLOT_STRIDE) {
 		return -1;
+	}
+	if (p_ops.size() * OPS_ARGS != p_args.size()) {
+		return -1;
+	}
+	if (p_move_start.size() != p_phase_count || p_move_count.size() != p_phase_count ||
+			p_until.size() != p_phase_count || p_act_start.size() != p_phase_count ||
+			p_act_count.size() != p_phase_count) {
+		return -1;
+	}
+	const int op_count = p_ops.size();
+	const auto arg = [&](int op_index, int offset) -> float {
+		return p_args[op_index * OPS_ARGS + offset];
+	};
+	for (int phase = 0; phase < p_phase_count; ++phase) {
+		const int ms = p_move_start[phase];
+		const int mc = p_move_count[phase];
+		if (ms < 0 || mc < 0 || ms + mc > op_count) { return -1; }
+		const int ui = p_until[phase];
+		if (ui < 0 || ui >= op_count) { return -1; }
+		const int as = p_act_start[phase];
+		const int ac = p_act_count[phase];
+		if (as < 0 || ac < 0 || as + ac > op_count) { return -1; }
+		for (int k = ms; k < ms + mc; ++k) {
+			const int op = p_ops[k];
+			if (op < OP_M_ACCEL_WORLD || op > OP_M_POSITION) { return -1; }
+			if (op == OP_M_ROTATE) {
+				const int slot = (int)arg(k, 2);
+				if (slot < 0 || slot >= SLOT_STRIDE) { return -1; }
+			} else if (op == OP_M_POSITION) {
+				const int mode = (int)arg(k, 0);
+				const int slot = (int)arg(k, 8);
+				if (slot < 0 || slot >= SLOT_STRIDE) { return -1; }
+				if (mode == 0) {
+					const int sx = (int)arg(k, 9);
+					const int sy = (int)arg(k, 10);
+					if (sx < 0 || sx >= SLOT_STRIDE || sy < 0 || sy >= SLOT_STRIDE) { return -1; }
+				} else if (mode != 1) {
+					return -1;
+				}
+			}
+		}
+		const int uop = p_ops[ui];
+		if (uop < OP_C_NEVER || uop > OP_C_SPEED) { return -1; }
+		if (uop == OP_C_STATE) {
+			const int slot = (int)arg(ui, 2);
+			if (slot < 0 || slot >= SLOT_STRIDE) { return -1; }
+		}
+		for (int k = as; k < as + ac; ++k) {
+			const int op = p_ops[k];
+			if (op < OP_A_EMIT || op > OP_A_CLEAR_FX) { return -1; }
+		}
 	}
 	const int pid = _p_phase_base.size();
 	const int ops_base = _p_ops.size();

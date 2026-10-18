@@ -44,6 +44,15 @@ class DanmakuStore : public RefCounted {
 
 	// L3：packed program 执行（列式；op/args 全局拼接，program 只存偏移）。
 	static const int SLOT_STRIDE = 8;
+	// NK4：register_program 的 opcode 白名单（与 GDScript LifecycleCompiler 编码一致）。
+	static constexpr int OP_M_ACCEL_WORLD = 1;
+	static constexpr int OP_M_POSITION = 9;
+	static constexpr int OP_C_NEVER = 20;
+	static constexpr int OP_C_SPEED = 25;
+	static constexpr int OP_A_EMIT = 40;
+	static constexpr int OP_A_CLEAR_FX = 47;
+	static constexpr int OP_M_ROTATE = 3;
+	static constexpr int OP_C_STATE = 24;
 	PackedInt32Array _p_ops, _p_move_start, _p_move_count, _p_until, _p_act_start, _p_act_count, _p_phase_base, _p_slots;
 	PackedFloat32Array _p_args;
 	std::vector<int> _program, _pphase, _ptick;

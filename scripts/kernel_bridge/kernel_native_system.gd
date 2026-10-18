@@ -458,7 +458,7 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 		pid = _accel.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
 		if pid < 0:
 			# V20：槽数超上限被原生拒绝 —— 不 append，保持 _program_data 与原生 pid 对齐。
-			push_error("[KernelNativeSystem] program 注册被拒（槽数超过 SLOT_STRIDE）")
+			push_error("[KernelNativeSystem] program 注册被拒（入参校验失败：数组/opcode/slot）")
 		else:
 			if pid != expected:
 				push_error("[KernelNativeSystem] program 对齐失败：native pid=%d, 期望 %d" % [pid, expected])

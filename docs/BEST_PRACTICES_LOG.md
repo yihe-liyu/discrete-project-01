@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 42 条（本文件留最近 42 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 43 条（本文件留最近 43 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — NK4/9：program 入参 fail-closed + 原生 API 对齐
 - 2026-10-18 — NK1/2/3：逐弹 id 守卫 + dead 去重
 - 2026-10-18 — DSL1/7：DirSpec eval_phase + emit_speed_rel
 - 2026-10-18 — DSL10/12：纯编译器 + 宿主表分离 + DirSpec
@@ -107,6 +108,13 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — NK4/9：program 入参 fail-closed + 原生 API 对齐
+
+- NK4：`register_program` 在写任何表前校验 phase_count / 五个并行数组长度 / ops*OPS_ARGS 参数长度 / move/until/action opcode 白名单 / rotate、position、state 的 slot 操作数；失败返回 -1，不产生半个 program。
+- NK9：新增 `tools/check_native_api.gd`；verify 的启动步骤在有原生二进制时校验 ClassDB 方法名与 C++ `_bind_methods` 的 `D_METHOD` 对齐（当前 59 个），无二进制明确 SKIP。
+- 测试：`test_native_guards` 增加到 3 用例（坏 phase_count / 短 args / 未知 opcode / 越界 slot + 拒绝后合法注册仍成功）。
+- 全量 845 / 7836，verify 七步全绿（含原生 API 59 methods）。
 
 ### 2026-10-18 — NK1/2/3：逐弹 id 守卫 + dead 去重
 

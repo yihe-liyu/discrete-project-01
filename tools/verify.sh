@@ -67,7 +67,7 @@ echo "== [4/7] 结构契约（组合台同名场景 / 测试白盒预算 / 唯�
 ./tools/check_structure.sh --fail
 
 echo ""
-echo "== [5/7] 真实启动验证（$TARGET_SCENE） =="
+echo "== [5/7] 真实启动 + 原生 API 对齐（$TARGET_SCENE） =="
 # 隔离 user://（与 run_tests.sh 一致）：启动会写 user://logs 日志，不隔离会污染真实玩家目录。
 # 预建 logs 子目录：避免 godot 打不开 user://logs → SIGSEGV 崩溃出 coredump。
 TMP_USER="$(mktemp -d)"
@@ -80,6 +80,17 @@ if [ -n "$START_ERR" ]; then
 	exit 1
 fi
 echo "✅ 启动零错误"
+
+# NK9：有原生二进制时，运行时 ClassDB 方法必须与 C++ _bind_methods 对齐。
+API_USER="$(mktemp -d)"
+mkdir -p "$API_USER/logs"
+API_OUT=$(XDG_DATA_HOME="$API_USER" godot --headless --path "$PWD" --script res://tools/check_native_api.gd 2>&1 || true)
+rm -rf "$API_USER"
+if echo "$API_OUT" | grep -q "❌"; then
+	echo "$API_OUT" | grep -E "❌"
+	exit 1
+fi
+echo "$API_OUT" | grep -E "✅ 原生 API|⚠️ 未构建原生扩展" || true
 
 echo ""
 if [ "$FAST" = 1 ]; then
