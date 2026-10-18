@@ -191,6 +191,28 @@ func test_preview_keeps_state_across_tab_switch():
 	await get_tree().process_frame
 	var wb = cs.workbench_instance()
 	assert_not_null(wb, "整关预览应创建并常驻")
+	var stage_script = wb.stage_runtime().current_stage_script()
+	assert_not_null(stage_script, "整关应已启动关卡协程")
+	assert_true(stage_script.is_running, "关卡协程应在跑")
+	# 等到第一波敌人（stage01 1.0s 起），验真实敌人协程，而不是只验关卡脚本
+	await wait_seconds(1.2)
+	var enemy_script: CoroutineScript = null
+	for enemy in wb.stage_runtime().entity_registry.get_active_enemies():
+		for child in enemy.get_children():
+			if child is CoroutineScript:
+				enemy_script = child
+				break
+		if enemy_script != null:
+			break
+	assert_not_null(enemy_script, "1.2s 后应已有敌人协程")
+	var bg_script: CoroutineScript = null
+	var bg = wb.stage_runtime().current_background
+	if bg != null:
+		for child in bg.get_children():
+			if child is CoroutineScript:
+				bg_script = child
+				break
+	assert_not_null(bg_script, "stage01 背景应挂 CoroutineScript")
 	var t_before: float = wb.current_time()
 	var nested_layer := CanvasLayer.new()
 	wb.add_child(nested_layer)
@@ -206,6 +228,15 @@ func test_preview_keeps_state_across_tab_switch():
 	assert_false(nested_layer.visible, "嵌套 CanvasLayer（stage logo 同路径）也要隐藏")
 	assert_false(get_tree().paused, "切走后不能把全局暂停留在场上")
 	assert_almost_eq(wb.current_time(), t_before, 0.05, "冻结后关卡时间不应继续走")
+	assert_true(stage_script.is_running, "切走后关卡协程不能被 _exit_tree 停掉")
+	# 反复切换：协程必须始终存活（旧实现 remove_child 会 stop 所有 CoroutineRunner）
+	for i in 2:
+		cs.open_slot(0)
+		await get_tree().process_frame
+		assert_true(stage_script.is_running, "第 %d 次切回关卡协程仍应存活" % (i + 1))
+		cs.open_slot(1)
+		await get_tree().process_frame
+		assert_true(stage_script.is_running, "第 %d 次切走关卡协程仍应存活" % (i + 1))
 	# 切回：同一实例 + 时间不归零
 	cs.open_slot(0)
 	await get_tree().process_frame
@@ -218,6 +249,20 @@ func test_preview_keeps_state_across_tab_switch():
 	assert_true(nested_layer.visible, "切回恢复嵌套 CanvasLayer")
 	nested_layer.queue_free()
 	assert_gte(wb.current_time(), t_before - 0.1, "关卡时间不应归零")
+	# 协程时钟必须真的继续走（不只是 is_running 标志）
+	var gt0: float = stage_script.game_time()
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert_gt(stage_script.game_time(), gt0, "切回后关卡协程时钟应继续推进")
+	if enemy_script != null:
+		var enemy_t0: float = enemy_script.game_time()
+		var bg_t0: float = bg_script.game_time()
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		assert_true(enemy_script.is_running, "切回后敌人协程应存活")
+		assert_gt(enemy_script.game_time(), enemy_t0, "切回后敌人协程时钟应继续推进")
+		assert_true(bg_script.is_running, "切回后背景协程应存活")
+		assert_gt(bg_script.game_time(), bg_t0, "切回后背景协程时钟应继续推进")
 
 
 ## Phase 2：v1 旧配置能读 + 写回 v2；坏 bench 数据降级为空，不半截恢复。

@@ -243,10 +243,14 @@ func _on_slot(slot_index: int) -> void:
 			_bench_instances[bench_i] = BENCHS[bench_i].instantiate() as BenchBase
 			_bench_restored[bench_i] = false
 		_view = _bench_instances[bench_i]
-	if _view.get_parent():
-		_view.get_parent().remove_child(_view)  # 常驻实例：切换前先脱离旧父
 	var content: Control = $Root/Content
-	content.add_child(_view)
+	# 常驻视图不要每次 remove_child + add_child：会触发整棵子树的 _exit_tree/_enter_tree，
+	# CoroutineRunner._exit_tree() 会 stop() 背景/敌人/关卡协程，回来只 _enter_tree 不会重启。
+	# 已挂在 Content 下就只切 visible/process；只有首次/异常父节点才重新挂。
+	if _view.get_parent() != content:
+		if _view.get_parent():
+			_view.get_parent().remove_child(_view)
+		content.add_child(_view)
 	_view.visible = true
 
 	if slot_index == 0:

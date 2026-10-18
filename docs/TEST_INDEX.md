@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：119 脚本 / **832 用例（832 通过 / 0 红 —— ✅ 全绿）/ 7724 断言 / 54.867s** / 19 orphans / **0 pending**。
+**现状**：119 脚本 / **832 用例（832 通过 / 0 红 —— ✅ 全绿）/ 7738 断言 / 56.045s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -240,7 +240,7 @@
 |---|---|---|---|
 | [test_enemy_rig](../test/test_enemy_rig.gd) | 敌人组合台：壳组装 / 真实生成 / 热重载重演（`load_script` / `spawn_at` / `force_hot_reload`） | 4 | 0 |
 | [test_bullet_rig](../test/test_bullet_rig.gd) | 弹幕试验台：热更新成功重演 / 失败保旧版（`poll_hot_reload` / `age_watch_mtime` / `param_panel`）· **F10b 拼装模式加 op / 生成代码 / 预览发射 / 初始弹编辑 / A/B 模板快照** | 4 | 0 |
-| [test_creation_station](../test/test_creation_station.gd) | 创作台（四页签）：页签切换 / 实例保持 / 运行时清理 / 路由切台+装配· **真点击验页签不被子视图吃掉**（作者报的回归）· **全局目录抽屉四页签可开 / 从台子里路由**· **描述符组双击路由到拼装页**· **Phase 2：整关预览冻结保活（时间/实例/process）/ 工作区 v1→v2 迁移与坏数据降级** | 10 | 0 |
+| [test_creation_station](../test/test_creation_station.gd) | 创作台（四页签）：页签切换 / 实例保持 / 运行时清理 / 路由切台+装配· **真点击验页签不被子视图吃掉**（作者报的回归）· **全局目录抽屉四页签可开 / 从台子里路由**· **描述符组双击路由到拼装页**· **Phase 2：整关预览冻结保活（时间/实例/process/关卡+背景+敌人协程继续推进）/ 工作区 v1→v2 迁移与坏数据降级** | 10 | 0 |
 | [test_catalog_panel](../test/test_catalog_panel.gd) | `CatalogPanel` 目录树渲染：组头完整 / 重名消歧 / 拖拽 / **搜索真的在筛**（原先那半条是空转的） | 3 | 0 |
 | [test_phase_rig](../test/test_phase_rig.gd) | 阶段组合台：壳副本 / 双槽默认 / 开演真实生成（`select_phase` / `hp_value` / `selected_shoot_script` / `play`） | 4 | 0 |
 | [test_workbench_align](../test/test_workbench_align.gd) | 工作台坐标一致性：场地 / `BulletManager` / `BenchWorld` 同在画布坐标（`playfield` / `bullet_manager` / `bullet_global_position`） | 1 | 0 |

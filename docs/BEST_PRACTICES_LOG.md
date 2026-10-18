@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 24 条（本文件留最近 24 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 25 条（本文件留最近 25 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — 预览协程卡死：常驻视图不再 remove/re-add
 - 2026-10-18 — 预览冻结修复：雾 shader 本地时间 + 递归 CanvasLayer
 - 2026-10-18 — 创作台 Phase 2：整关预览保活 / 配置 v2 / 页面协议
 - 2026-10-17 — 直射页 UI 紧凑化（对齐拼装页初始弹）
@@ -54,6 +55,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — 预览协程卡死：常驻视图不再 remove/re-add
+
+- 根因：`CreationStation._on_slot()` 每次切页都把常驻 Workbench `remove_child` 再 `add_child`；`remove_child` 触发整棵子树 `_exit_tree`，`CoroutineRunner._exit_tree()` 直接 `stop()`，背景/敌人/关卡协程全被停掉，重新入树不会自动重启。
+- 修法：已挂在 `$Root/Content` 下的常驻视图不再脱离场景树，只切 `visible` / `process_mode`；只有首次或异常父节点才重新挂。
+- 回归：等 stage01 第一波敌人后反复切页，验关卡 / 背景 / 敌人三个 CoroutineRunner 的 `is_running` 与 `game_time` 都继续推进；另保留递归 CanvasLayer、雾本地时间修复。
+- 全量 832 / 7738，verify 七步全绿。
 
 ### 2026-10-18 — 预览冻结修复：雾 shader 本地时间 + 递归 CanvasLayer
 
