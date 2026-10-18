@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 25 条（本文件留最近 25 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 26 条（本文件留最近 26 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — D3 第一批：Workbench 拆出 6 个预览服务
 - 2026-10-18 — 预览协程卡死：常驻视图不再 remove/re-add
 - 2026-10-18 — 预览冻结修复：雾 shader 本地时间 + 递归 CanvasLayer
 - 2026-10-18 — 创作台 Phase 2：整关预览保活 / 配置 v2 / 页面协议
@@ -55,6 +56,19 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — D3 第一批：Workbench 拆出 6 个预览服务
+
+- `workbench.gd` 786 → 598（低于基线旧值 611），一行行为没改，只搬职责。
+- 新服务：
+  - `preview_suspender.gd`（111）：process 子树 / CanvasLayer / BGM / 全局 paused+time_scale
+  - `preview_layout.gd`（71）：嵌入创作台的 World/右栏/背景/计时器坐标归一
+  - `preview_input.gd`（74）：快捷键 → 意图翻译
+  - `preview_stage_world.gd`（54）：BulletManager / Player / HitboxOverlay 构造
+  - `preview_phase_timer.gd`（40）：Boss 符卡倒计时
+  - `preview_debug_tools.gd`（56）：Ctrl+G 强制击破 / phase uid 冲突扫描
+- 剩余在 Workbench：UI 装配、关卡加载/重跑、播放/书签接线、公开接缝；继续拆时按这个边界走。
+- 全量 832 / 7741，verify 七步全绿。
 
 ### 2026-10-18 — 预览协程卡死：常驻视图不再 remove/re-add
 

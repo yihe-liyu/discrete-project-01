@@ -226,7 +226,7 @@
 ### 8.3 现状 / 待补 / 债务（**粗粒度摘要**；逐条权威 = 基线 S 表 + 「🔴 待改进」）
 - ✅ 已实现：引擎核心/Autoload、弹幕（原生权威）、敌人 Boss、玩家与 Bomb（`BombData`/`RingBombData`/`MistBombData` + `PlayerResources.use_bomb`）、协程框架、道具、特效、背景、音频、UI/菜单、对话、记忆释放、数据类、Stage 1。
 - ⏳ 待补：Stage 2~6 内容（面脚本 / Boss / 符卡脚本）、Boss 战多面、部分美术占位、各页面 F6 逐页核验。
-- 🐛 债务：`DifficultyScreen`(287) 与基类 `NavPage`(353) 同名函数 **12/23**（`navigate` / `_nav_directional` / `refresh_colors` / `accept_current` …）→ 抽差分化；`workbench.gd` / `spell_practice_menu.gd` 上帝对象（R18/R19）。
+- 🐛 债务：`DifficultyScreen`(287) 与基类 `NavPage`(353) 同名函数 **12/23**（`navigate` / `_nav_directional` / `refresh_colors` / `accept_current` …）→ 抽差分化；`workbench.gd` 已拆出 6 个预览服务（786→598），剩余 UI/关卡加载/播放接线；`spell_practice_menu.gd` 仍是上帝对象（R18/R19）。
 - 🚧 缺：Replay（只录不放）、Continue/Result 结算。
 
 > 曾经登记的「`PauseMenu`/`GameOverMenu` 的 `_on_leave` 重复」已随基类收口消失（全项目已无 `_on_leave`）；「Bomb 释放未接」也已落地 —— 修完即删，别留在本文。

@@ -38,10 +38,13 @@ extends Control
 
 const VERSION := "v4.7-ui"
 
-const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
-const HITBOX_OVERLAY := preload("res://scripts/workbench/hitbox_overlay.gd")
 const CATALOG_PANEL := preload("res://scripts/workbench/catalog_panel.gd")
-const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
+const PREVIEW_SUSPENDER := preload("res://scripts/workbench/preview_suspender.gd")
+const PREVIEW_LAYOUT := preload("res://scripts/workbench/preview_layout.gd")
+const PREVIEW_INPUT := preload("res://scripts/workbench/preview_input.gd")
+const PREVIEW_STAGE_WORLD := preload("res://scripts/workbench/preview_stage_world.gd")
+const PREVIEW_PHASE_TIMER := preload("res://scripts/workbench/preview_phase_timer.gd")
+const PREVIEW_DEBUG_TOOLS := preload("res://scripts/workbench/preview_debug_tools.gd")
 ## Stage 1 = 协程版（stage01.gd Timeline 编排；数据关卡系统已移除）
 const STAGE1_COROUTINE := preload("res://data/stages/stage01/stage_data/stage01.tres")
 
@@ -62,8 +65,6 @@ const DIFFICULTIES: Array[String] = ["Easy", "Normal", "Hard", "Lunatic"]
 @onready var _bg_viewport: SubViewport = %BgViewport
 ## 画框层（金边/网格）：必须叠在 3D 背景之上，故单独成节点
 @onready var _frame_overlay: FrameOverlay = $FrameOverlay
-## phase 倒计时（与真游戏 BossUI 同款：两位秒数、框顶中央）
-var _phase_timer_label: Label
 
 # ═══ 组件（代码挂载到 .tscn 槽位）═══
 var _playback_bar: PlaybackBar
@@ -94,16 +95,18 @@ const _TABS := ["目录", "书签", "日志"]
 var _tab_btns: Array[Button] = []
 ## 嵌入创作台时：隐藏内部“目录”页签，统一走创作台的全局目录抽屉。
 var _embedded: bool = false
-## 创作台切走时冻结整关预览（不释放舞台/运行时；位置/时间保留）
-var _preview_suspended: bool = false
-## 切走时递归收集的 CanvasLayer + 原可见性（stage logo 等是内容脚本 add_child 的层）
-var _suspended_layers: Array[CanvasLayer] = []
-var _suspended_layer_visibility: Array[bool] = []
-## 冻结时整棵子树的 process_mode 快照（$World/背景显式 PAUSABLE，根节点 DISABLED 压不住）
-var _suspended_process_modes: Dictionary = {}
-var _stage_shift_y := 0.0    # 嵌入创作台页面偏移；舞台视觉归一回游戏坐标用
-var _ui_page_y := 0.0        # 页面在窗口里的 y（用于同步去重）
-var _ui_offset_applied: bool = false  # 防止 _ready 的首次同步 + deferred 同步重复下移
+## 冻结/恢复服务（D3：CanvasLayer + process 子树 + BGM + 全局引擎状态）
+var _preview_suspender
+## 嵌入创作台坐标归一（World/右栏/背景/计时器/画框）
+var _preview_layout
+## 键盘快捷键翻译（D3：输入服务）
+var _preview_input
+## 舞台世界装配（D3：BulletManager/Player/Hitbox）
+var _preview_stage_world
+## Boss 符卡倒计时（D3：phase timer 服务）
+var _phase_timer
+## 调试工具（D3：强制击破 / uid 冲突扫描）
+var _preview_debug
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
 var _diff_sel: OptionButton
@@ -120,6 +123,8 @@ func _ready() -> void:
 	# 服务：先建起来（UI 装配时要把信号接上去）
 	_playback = Playback.new()
 	_playback.changed.connect(_apply_playback_runtime)
+	_preview_suspender = PREVIEW_SUSPENDER.new()
+	_preview_suspender.setup(self, Callable(self, "_apply_playback_runtime"))
 	_playback.logged.connect(_log_line)
 	_bookmarks = Bookmarks.new()
 	# 主题：东方风深色面板（中文字体 + 卡片 + 控件样式）
@@ -139,7 +144,18 @@ func _ready() -> void:
 	get_window().size = Vector2i(1280, 960)
 	%Title.text = "内容工作台 %s" % VERSION
 	_build_ui()
-	_setup_phase_timer()
+	_preview_input = PREVIEW_INPUT.new()
+	_preview_input.setup(self, _playback, _bookmark_panel,
+		Callable(self, "_restart"), Callable(self, "_frame_step"),
+		Callable(self, "_jump_to"), Callable(self, "current_time"),
+		Callable(self, "_debug_force_clear"))
+	_preview_debug = PREVIEW_DEBUG_TOOLS.new()
+	_preview_debug.setup(_stage_runtime, Callable(self, "_log_line"))
+	_phase_timer = PREVIEW_PHASE_TIMER.new()
+	_phase_timer.setup($UI, _stage_runtime)
+	_preview_layout = PREVIEW_LAYOUT.new()
+	_preview_layout.setup(self, _world, %RightPanel as Control, $BgContainer as Control,
+		_phase_timer.label(), Callable(self, "embedded"), Callable(self, "_redraw_stage"))
 	_sync_ui_layer_offset()  # 同步执行：首帧渲染即正确（见函数注释）
 	call_deferred("_sync_ui_layer_offset")  # 布局完成后再同步一次：嵌入创作台时首帧 get_global_rect 可能还是 (0,0)
 	_setup_world()
@@ -147,40 +163,13 @@ func _ready() -> void:
 	_check_phase_uid_conflicts()
 
 
-## phase 倒计时（仿真游戏 BossUI）：两位秒数、框顶中央**符卡名下方**，间隙/无 Boss 隐藏
-func _setup_phase_timer() -> void:
-	_phase_timer_label = Label.new()
-	_phase_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_phase_timer_label.add_theme_font_size_override("font_size", 32)
-	# y 与 BossUI.TimerLabel 对齐（场景 offset_top = 64：场地坐标即 FIELD_TOP + 64）—— 别和符卡名同高
-	_phase_timer_label.position = Vector2(
-		GameConfig.FIELD_LEFT + (GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT) / 2.0 - 16.0,
-		GameConfig.FIELD_TOP + 64.0)
-	_phase_timer_label.visible = false
-	$UI.add_child(_phase_timer_label)
-
-
-## 倒计时更新（与 boss_ui._process 相同逻辑：超时归零、间隙隐藏）
-func _update_phase_timer() -> void:
-	if _phase_timer_label == null:
-		return
-	var boss: Boss = _stage_runtime.entity_registry.get_boss()
-	if boss == null or not is_instance_valid(boss):
-		_phase_timer_label.visible = false
-		return
-	var phase := boss.current_phase()
-	if not phase or phase.time_limit <= 0 or boss.is_in_gap():
-		_phase_timer_label.visible = false
-		return
-	_phase_timer_label.visible = true
-	var rem := maxf(phase.time_limit - boss.get_elapsed(), 0.0)
-	_phase_timer_label.text = "%02d" % int(ceil(rem))
 
 
 func _process(_delta: float) -> void:
 	_poll_playback()
 	_update_ui()
-	_update_phase_timer()
+	if _phase_timer != null:
+		_phase_timer.update()
 
 
 ## 快进到达检测（本节点是 PROCESS_MODE_ALWAYS，暂停中也照检；取不到 runner = 关卡已停 → 收尾）
@@ -193,7 +182,8 @@ func _draw() -> void:
 	# 场景底：有背景时让 3D 背景透出，只在东方框外画暗色；无背景时全屏实心。
 	# 金边 / 网格**不在这里** —— 它们要画在 3D 背景**之上**，见 `FrameOverlay`。
 	var has_bg: bool = _playback.show_bg and _background and is_instance_valid(_background)
-	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - _stage_shift_y,
+	var stage_shift: float = _preview_layout.stage_shift_y() if _preview_layout != null else 0.0
+	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - stage_shift,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT,
 		GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
 	if not has_bg:
@@ -205,43 +195,11 @@ func _draw() -> void:
 	draw_rect(Rect2(0, field.position.y, field.position.x, field.size.y), Color(0.03, 0.03, 0.05))
 	draw_rect(Rect2(field.end.x, field.position.y, size.x - field.end.x, field.size.y), Color(0.03, 0.03, 0.05))
 
-## CanvasLayer 平移到页面全局位置（独立运行 = 0，嵌入创作台 = 页签横栏下方）
+## CanvasLayer 平移到页面全局位置（独立运行 = 0，嵌入创作台 = 页签横栏下方）。
+## 具体坐标归一见 PreviewLayout（D3 拆出的服务）；这里只委托。
 func _sync_ui_layer_offset() -> void:
-	var pos := get_global_rect().position
-	if _ui_offset_applied and is_equal_approx(pos.y, _ui_page_y):
-		return
-	_ui_offset_applied = true
-	_ui_page_y = pos.y
-	# 嵌入时不要把舞台整体上移 pos.y：那会把 32px 的场地顶边裁到页面外，
-	# 只剩左右竖线（截图里的“悬空金线”）。只上移 FIELD_TOP，让顶边正好落到
-	# 页签栏下方（内容区 y=pos.y），顶/左/右金边形成完整框。
-	var stage_shift := pos.y
-	if _embedded and pos.y != 0.0:
-		stage_shift = GameConfig.FIELD_TOP
-	_stage_shift_y = stage_shift
-	if pos.y != 0.0:
-		# 【重要】不能用 $UI.offset = pos（CanvasLayer.offset）——它会对锚定视口的
-		# 控件（时间轴）二次平移：时间轴被推到窗外（962..994）→ 底部露灰边。
-		# 改为【逐节点】下移：面板/分隔条顶部 +pos.y（底边 960 是窗口锚定值，不动）；
-		# 时间轴锚定视口底部 928..960，天然正确。
-		var rp := %RightPanel as Control
-		rp.offset_top += pos.y
-		# 舞台（幽灵/背景/边框/网格/命中/计时器）归一到游戏坐标（视口空间）：
-		# 子弹/敌人在 autoload 根空间=游戏坐标，页面偏移会让瞄准/绘制差 page_y 像素
-		$World.position.y -= stage_shift
-		# 3D 背景按**真游戏的 over-scan 规格**铺（场地每边外扩 `BACKGROUND_OVERSCAN`）⇒ 与
-		# `game_scene.tscn` 的容器同尺寸（800×928），预览与真游戏同构图。
-		# 金边由 `FrameOverlay` 画在背景**之上**，所以这里不必再为"别盖住金边"而内缩。
-		var over := GameConfig.BACKGROUND_OVERSCAN
-		$BgContainer.position = Vector2(
-			GameConfig.FIELD_LEFT - over, GameConfig.FIELD_TOP - over - stage_shift)
-		$BgContainer.size = Vector2(
-			GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT + over * 2.0,
-			GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP + over * 2.0)
-		_phase_timer_label.position.y -= stage_shift
-	# 画框层随页面偏移一起走（它是独立节点，不会自动跟着根 `_draw` 的坐标）
-	_redraw_stage()
-
+	if _preview_layout != null:
+		_preview_layout.sync()
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
@@ -340,27 +298,14 @@ func _on_tab_selected(index: int) -> void:
 	_set_tab(index)
 
 
-## 舞台世界：幽灵自机（真实 player.tscn + GhostPlayer 脚本）+ 弹幕世界 + 命中框覆盖层
-## 接线与真游戏/组合台**同一条实现**（`StageHost`）——预览跑的就是游戏代码那条路。
+## 舞台世界：幽灵自机 + 弹幕世界 + 命中框覆盖层（构造在 PreviewStageWorld，D3）。
 func _setup_world() -> void:
-	_stage_runtime.world = _world   # 先认领舞台：fx_parent / 敌人生成目标都从运行时走
-	_bullet_manager = StageHost.make_bullet_world(self)
-	# 幽灵自机走固定路径（GhostPlayer 默认 AUTO），整关预览不看鼠标
-	_player = StageHost.make_player(_world, GHOST_SCRIPT, "Player", REIMU_DATA)
-	StageHost.wire(_stage_runtime, _bullet_manager, _player, _world)
-	_setup_hitbox_overlay()
-
-
-## 命中框覆盖层：独立 CanvasLayer + 高 z（> 敌弹 10 / 特效 50），画在子弹之上
-## （World 节点在 .tscn 且显式 PAUSABLE！否则继承 root 的 ALWAYS，暂停时敌人照常发弹）
-func _setup_hitbox_overlay() -> void:
-	_hitbox_overlay = HITBOX_OVERLAY.new()
-	_hitbox_overlay.name = "HitboxOverlay"
-	_hitbox_overlay.z_index = LayerConfig.HITBOX_OVERLAY
-	_hitbox_overlay.entity_registry = _stage_runtime.entity_registry
-	_hitbox_overlay.bullet_manager = _bullet_manager
-	$HitboxLayer.add_child(_hitbox_overlay)
-
+	_preview_stage_world = PREVIEW_STAGE_WORLD.new()
+	_preview_stage_world.setup(self, _world, _stage_runtime, $HitboxLayer)
+	_preview_stage_world.build()
+	_bullet_manager = _preview_stage_world.bullet_manager()
+	_player = _preview_stage_world.player()
+	_hitbox_overlay = _preview_stage_world.hitbox_overlay()
 
 # ═══ 关卡加载 / 重跑 ═══
 
@@ -373,86 +318,17 @@ func stop_stage() -> void:
 ## 创作台切走：冻结舞台 + 暂停 BGM，但**保留运行时/时间/书签/播放状态**。
 ## 必须解掉全局 paused / time_scale / 静音，否则切到别的台会被整关预览的暂停状态卡住。
 func suspend_preview() -> void:
-	if _preview_suspended:
-		return
-	_preview_suspended = true
-	visible = false
-	_set_preview_layers_visible(false)
-	_freeze_preview_subtree()
-	AudioManager.pause_bgm()
-	var tree := get_tree()
-	if tree != null:
-		tree.paused = false
-	Engine.time_scale = 1.0
-	Engine.max_physics_steps_per_frame = 8
-	AudioManager.set_bgm_pitch(1.0)
-	var bus := AudioServer.get_bus_index("Master")
-	if bus >= 0:
-		AudioServer.set_bus_mute(bus, false)
-	process_mode = Node.PROCESS_MODE_DISABLED
+	if _preview_suspender != null:
+		_preview_suspender.suspend()
 
 
-## 创作台切回：恢复 process + BGM，再把 Playback 状态投影回引擎（暂停/快进/速度保留）。
 func resume_preview() -> void:
-	if not _preview_suspended:
-		return
-	_preview_suspended = false
-	visible = true
-	_set_preview_layers_visible(true)
-	_restore_preview_process_modes()
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	AudioManager.resume_bgm()
-	_apply_playback_runtime()
+	if _preview_suspender != null:
+		_preview_suspender.resume()
 
 
 func preview_suspended() -> bool:
-	return _preview_suspended
-
-
-## CanvasLayer 不随父 Control 的 visible 隐藏；切走时必须单独关，否则 UI/命中框/舞台 logo
-## 还叠在别的台上。stage logo 是内容脚本在 StageRuntime 里 add_child 的，必须递归找。
-func _set_preview_layers_visible(on: bool) -> void:
-	if on:
-		for i in _suspended_layers.size():
-			var layer: CanvasLayer = _suspended_layers[i]
-			if is_instance_valid(layer):
-				layer.visible = _suspended_layer_visibility[i]
-		_suspended_layers.clear()
-		_suspended_layer_visibility.clear()
-		return
-	_suspended_layers.clear()
-	_suspended_layer_visibility.clear()
-	_collect_canvas_layers(self)
-	for layer in _suspended_layers:
-		_suspended_layer_visibility.append(layer.visible)
-		layer.visible = false
-
-
-func _collect_canvas_layers(node: Node) -> void:
-	for child in node.get_children():
-		if child is CanvasLayer:
-			_suspended_layers.append(child as CanvasLayer)
-		_collect_canvas_layers(child)
-
-
-## 冻结整棵子树：$World/背景等显式 PAUSABLE 的子节点不会自动继承根节点 DISABLED。
-func _freeze_preview_subtree() -> void:
-	_suspended_process_modes.clear()
-	_snapshot_and_disable_process(self)
-
-
-func _snapshot_and_disable_process(node: Node) -> void:
-	_suspended_process_modes[node] = node.process_mode
-	node.process_mode = Node.PROCESS_MODE_DISABLED
-	for child in node.get_children():
-		_snapshot_and_disable_process(child)
-
-
-func _restore_preview_process_modes() -> void:
-	for node in _suspended_process_modes:
-		if is_instance_valid(node):
-			node.process_mode = _suspended_process_modes[node]
-	_suspended_process_modes.clear()
+	return _preview_suspender.is_suspended() if _preview_suspender != null else false
 
 
 ## 当前游戏内时刻（创作台/测试用；不摸私有 runner）
@@ -599,46 +475,8 @@ func _frame_step() -> void:
 
 ## 全局快捷键（输入框聚焦 / 弹窗打开时不拦截）
 func _unhandled_input(event: InputEvent) -> void:
-	# 输入框聚焦：键让给文本编辑
-	var fo := get_viewport().gui_get_focus_owner()
-	if fo and (fo is LineEdit or fo is TextEdit or fo is SpinBox):
-		return
-	if not (event is InputEventKey and event.pressed and not event.echo):
-		return
-	# 物理键优先（键盘布局无关）；无物理键时退回 keycode
-	var keycode: int = event.physical_keycode
-	if keycode == 0:
-		keycode = event.keycode
-	match keycode:
-		KEY_SPACE:
-			_playback.toggle_play()
-			get_viewport().set_input_as_handled()
-		KEY_R:
-			_restart()
-			get_viewport().set_input_as_handled()
-		KEY_F:
-			_frame_step()
-			get_viewport().set_input_as_handled()
-		KEY_LEFT, KEY_RIGHT:
-			var step := 5.0 if event.ctrl_pressed else 1.0
-			_jump_to(maxf(_current_time() + (step if keycode == KEY_RIGHT else -step), 0.0))
-			get_viewport().set_input_as_handled()
-		KEY_B:
-			_bookmark_panel.open_add()
-			get_viewport().set_input_as_handled()
-		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7:
-			var idx: int = keycode - KEY_1
-			if idx >= 0 and idx < Playback.SPEEDS.size():
-				_playback.select_speed(idx)  # 播放控制行的下拉由 changed 回落同步
-				get_viewport().set_input_as_handled()
-		KEY_HOME:
-			_restart()
-			get_viewport().set_input_as_handled()
-		KEY_G:
-			if event.ctrl_pressed:
-				_debug_force_clear()
-			get_viewport().set_input_as_handled()
-
+	if _preview_input != null and _preview_input.handle(event):
+		get_viewport().set_input_as_handled()
 
 ## 跳转（时间轴点击 / 书签列表 / ←→ 键）：协程关卡不能倒带 → 目标在过去时先重跑
 func _jump_to(target_time: float) -> void:
@@ -681,8 +519,8 @@ func _on_seed_toggled(on: bool) -> void:
 
 ## 命中框覆盖层开关（覆盖层不是播放状态，直接设）
 func _on_hitbox_toggled(on: bool) -> void:
-	if _hitbox_overlay:
-		_hitbox_overlay.is_enabled = on
+	if _preview_stage_world != null:
+		_preview_stage_world.set_hitbox_enabled(on)
 
 
 func _on_bg_toggled(on: bool) -> void:
@@ -722,7 +560,8 @@ func _redraw_stage() -> void:
 	if _frame_overlay == null:
 		return
 	var has_bg: bool = _playback.show_bg and _background != null and is_instance_valid(_background)
-	_frame_overlay.sync(_stage_shift_y, not has_bg)
+	var stage_shift: float = _preview_layout.stage_shift_y() if _preview_layout != null else 0.0
+	_frame_overlay.sync(stage_shift, not has_bg)
 
 
 # ═══ UI 刷新 / 日志 ═══
@@ -747,40 +586,13 @@ func _log_line(text: String) -> void:
 		_event_log.log_line(text)
 
 
-## Ctrl+G：强制击破当前 Boss 阶段（调试解锁 + 跳阶段）
-## 配置入记录后：Boss.start_phase 时解锁自动带上战斗配置（无需注册表/CardDef）
-## 工作台跑关卡到 Boss → 按 Ctrl+G 击破当前阶段 → 解锁记录 + 阶段链推进到下一张
+## Ctrl+G：强制击破当前 Boss 阶段（实现见 PreviewDebugTools）
 func _debug_force_clear() -> void:
-	var boss = _stage_runtime.entity_registry.get_boss()
-	if not boss:
-		_log_line("＊ 无 Boss（先跑到 Boss 阶段再按 Ctrl+G）")
-		return
-	var p_name: String = boss._phase_data.name if boss._phase_data else "?"
-	boss.clear_phase(true)
-	_log_line("！ 强制击破：%s（记录已解锁，阶段链继续）" % p_name)
+	if _preview_debug != null:
+		_preview_debug.force_clear()
 
 
-## 启动检查：扫描全部阶段 .tres 的 uid，冲突报日志（防手滑；配置入记录后无注册表兜底）
+## 启动检查：扫描全部阶段 .tres 的 uid（实现见 PreviewDebugTools）
 func _check_phase_uid_conflicts() -> void:
-	var seen := {}
-	var da := DirAccess.open("res://data/stages")
-	if not da:
-		return
-	for stage_dir in da.get_directories():
-		var phase_dir := "res://data/stages/%s/phase" % stage_dir
-		if not DirAccess.dir_exists_absolute(phase_dir):
-			continue
-		var pda := DirAccess.open(phase_dir)
-		if not pda:
-			continue
-		for file_name in pda.get_files():
-			if not file_name.ends_with(".tres"):
-				continue
-			var phase: PhaseData = load("%s/%s" % [phase_dir, file_name])
-			if not phase or phase.uid <= 0:
-				continue
-			var path := "%s/%s" % [phase_dir, file_name]
-			if seen.has(phase.uid):
-				_log_line("⚠ uid 冲突：%d 同时用于 %s 和 %s" % [phase.uid, seen[phase.uid], path])
-			else:
-				seen[phase.uid] = path
+	if _preview_debug != null:
+		_preview_debug.check_phase_uid_conflicts()
