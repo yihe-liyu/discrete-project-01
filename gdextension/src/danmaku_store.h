@@ -61,6 +61,9 @@ class DanmakuStore : public RefCounted {
 	std::vector<Color> _ev_color;
 	int _capacity = 0;
 	int _count = 0;
+
+	// NK1：所有逐弹入口的统一边界守卫。release 下 vector[] 越界是 UB，不依赖容器检查。
+	inline bool _valid(int p_id) const { return p_id >= 0 && p_id < _count; }
 	Rect2 _cull;
 	float _margin = 0.0f;
 

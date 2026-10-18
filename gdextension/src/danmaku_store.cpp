@@ -347,14 +347,14 @@ void DanmakuStore::set_cull(const Rect2 &p_cull) { _cull = p_cull; _grid_dirty =
 void DanmakuStore::set_margin(float p_margin) { _margin = p_margin; }
 // 逐弹出界宽限：设置时把「已出界时长」归零（新弹才算，改宽限不该立刻触发超时）。
 void DanmakuStore::set_out_grace(int p_id, float p_grace) {
-	if (p_id < 0 || p_id >= _count) {
+	if (!_valid(p_id)) {
 		return;
 	}
 	_out_grace[p_id] = p_grace;
 	_out_time[p_id] = 0.0f;
 }
 float DanmakuStore::get_out_grace(int p_id) const {
-	return (p_id >= 0 && p_id < _count) ? _out_grace[p_id] : 0.0f;
+	return _valid(p_id) ? _out_grace[p_id] : 0.0f;
 }
 void DanmakuStore::set_default_life(float p_life) { _default_life = p_life; }
 void DanmakuStore::set_field(float p_left, float p_right, float p_top) { _field_left = p_left; _field_right = p_right; _field_top = p_top; }
@@ -366,7 +366,7 @@ void DanmakuStore::clear() {
 }
 
 int DanmakuStore::despawn(int p_id) {
-	if (p_id < 0 || p_id >= _count) {
+	if (!_valid(p_id)) {
 		return -1;
 	}
 	const int moved = _count - 1;
@@ -374,25 +374,26 @@ int DanmakuStore::despawn(int p_id) {
 	return moved == p_id ? -1 : moved;
 }
 
-void DanmakuStore::set_life(int p_id, float p_life) { _life[p_id] = p_life; }
-void DanmakuStore::set_fx(int p_id, float p_fx) { _fx[p_id] = p_fx; }
-void DanmakuStore::set_fx_type(int p_id, int p_fx_type) { _fx_type[p_id] = p_fx_type; }
-int DanmakuStore::get_fx_type(int p_id) const { return _fx_type[p_id]; }
+void DanmakuStore::set_life(int p_id, float p_life) { if (_valid(p_id)) { _life[p_id] = p_life; } }
+void DanmakuStore::set_fx(int p_id, float p_fx) { if (_valid(p_id)) { _fx[p_id] = p_fx; } }
+void DanmakuStore::set_fx_type(int p_id, int p_fx_type) { if (_valid(p_id)) { _fx_type[p_id] = p_fx_type; } }
+int DanmakuStore::get_fx_type(int p_id) const { return _valid(p_id) ? _fx_type[p_id] : -1; }
 PackedInt32Array DanmakuStore::get_fx_type_indices() const {
 	PackedInt32Array out;
 	out.resize(_count);
 	for (int i = 0; i < _count; ++i) { out[i] = _fx_type[i]; }
 	return out;
 }
-void DanmakuStore::set_timer(int p_id, float p_timer) { _timer[p_id] = p_timer; }
-void DanmakuStore::set_velocity(int p_id, const Vector2 &p_vel) { _vx[p_id] = p_vel.x; _vy[p_id] = p_vel.y; }
+void DanmakuStore::set_timer(int p_id, float p_timer) { if (_valid(p_id)) { _timer[p_id] = p_timer; } }
+void DanmakuStore::set_velocity(int p_id, const Vector2 &p_vel) { if (_valid(p_id)) { _vx[p_id] = p_vel.x; _vy[p_id] = p_vel.y; } }
 void DanmakuStore::set_position(int p_id, const Vector2 &p_pos) {
+	if (!_valid(p_id)) { return; }
 	_x[p_id] = p_pos.x; _y[p_id] = p_pos.y;
 	_grid_dirty = true;
 }
-float DanmakuStore::get_life_left(int p_id) const { return _life[p_id]; }
-float DanmakuStore::get_fx_phase(int p_id) const { return _fx[p_id]; }
-float DanmakuStore::get_timer(int p_id) const { return _timer[p_id]; }
+float DanmakuStore::get_life_left(int p_id) const { return _valid(p_id) ? _life[p_id] : 0.0f; }
+float DanmakuStore::get_fx_phase(int p_id) const { return _valid(p_id) ? _fx[p_id] : 0.0f; }
+float DanmakuStore::get_timer(int p_id) const { return _valid(p_id) ? _timer[p_id] : 0.0f; }
 
 PackedFloat32Array DanmakuStore::get_life_lefts() const {
 	PackedFloat32Array out;
@@ -436,7 +437,7 @@ int DanmakuStore::get_active_count() const {
 }
 
 Vector2 DanmakuStore::get_position(int p_id) const {
-	return Vector2(_x[p_id], _y[p_id]);
+	return _valid(p_id) ? Vector2(_x[p_id], _y[p_id]) : Vector2();
 }
 
 PackedVector2Array DanmakuStore::get_positions() const {
@@ -448,14 +449,15 @@ PackedVector2Array DanmakuStore::get_positions() const {
 	return out;
 }
 
-Vector2 DanmakuStore::get_forward(int p_id) const { return Vector2(_hx[p_id], _hy[p_id]); }
+Vector2 DanmakuStore::get_forward(int p_id) const { return _valid(p_id) ? Vector2(_hx[p_id], _hy[p_id]) : Vector2(); }
 void DanmakuStore::set_forward(int p_id, const Vector2 &p_fwd) {
+	if (!_valid(p_id)) { return; }
 	const Vector2 f = p_fwd.normalized();
 	_hx[p_id] = f.x; _hy[p_id] = f.y;
 }
 
 Vector2 DanmakuStore::get_velocity(int p_id) const {
-	return Vector2(_vx[p_id], _vy[p_id]);
+	return _valid(p_id) ? Vector2(_vx[p_id], _vy[p_id]) : Vector2();
 }
 
 PackedVector2Array DanmakuStore::get_velocities() const {
@@ -467,9 +469,9 @@ PackedVector2Array DanmakuStore::get_velocities() const {
 	return out;
 }
 
-int DanmakuStore::get_type(int p_id) const { return _type[p_id]; }
-int DanmakuStore::get_faction(int p_id) const { return _faction[p_id]; }
-Color DanmakuStore::get_color(int p_id) const { return _color[p_id]; }
+int DanmakuStore::get_type(int p_id) const { return _valid(p_id) ? _type[p_id] : -1; }
+int DanmakuStore::get_faction(int p_id) const { return _valid(p_id) ? _faction[p_id] : -1; }
+Color DanmakuStore::get_color(int p_id) const { return _valid(p_id) ? _color[p_id] : Color(1, 1, 1, 1); }
 
 void DanmakuStore::fill_multimesh(const Ref<MultiMesh> &p_mm) const {
 	if (p_mm.is_null()) {
@@ -565,11 +567,12 @@ int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFl
 }
 
 int DanmakuStore::get_program(int p_id) const {
-	if (p_id < 0 || p_id >= _count) { return -2; }
+	if (!_valid(p_id)) { return -2; }
 	return _program[p_id];
 }
 
 void DanmakuStore::set_program(int p_id, int p_program) {
+	if (!_valid(p_id)) { return; }
 	_program[p_id] = p_program;
 	_pphase[p_id] = 0;
 	_ptick[p_id] = 0;
@@ -989,6 +992,10 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 			for (int s = 0; s < SLOT_STRIDE; ++s) { slots[s] = 0.0f; }
 		}
 	}
+	// NK3：同一行可能因重复 despawn / 重复 action 被 push 多次。
+	// swap-remove 逆序只能解决“搬进来的 id 更大”，不能解决重复 id 删到下一颗无辜弹。
+	std::sort(_tick_dead.begin(), _tick_dead.end(), std::greater<int>());
+	_tick_dead.erase(std::unique(_tick_dead.begin(), _tick_dead.end()), _tick_dead.end());
 }
 
 Dictionary DanmakuStore::_events_dict() const {
@@ -1124,6 +1131,7 @@ static float _hit_rot(const Vector2 &vel, unsigned char follow, float diroff) {
 }
 
 void DanmakuStore::set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset) {
+	if (!_valid(p_id)) { return; }
 	_grid_dirty = true;
 	_hb_radius[p_id] = p_radius;
 	_hb_offx[p_id] = p_offset.x;
@@ -1135,6 +1143,7 @@ void DanmakuStore::set_hitbox(int p_id, float p_radius, const Vector2 &p_offset,
 }
 
 bool DanmakuStore::hit_test(int p_id, const Vector2 &p_center, float p_radius) const {
+	if (!_valid(p_id)) { return false; }
 	if (_fx[p_id] > 0.0f) { return false; }
 	if (_type[p_id] < 0) { return false; }
 	Vector2 hit(_x[p_id], _y[p_id]);
@@ -1285,8 +1294,8 @@ PackedInt32Array DanmakuStore::query_circle(const Vector2 &p_center, float p_sea
 	return out;
 }
 
-bool DanmakuStore::is_grazed(int p_id) const { return _grazed[p_id] != 0; }
-void DanmakuStore::mark_grazed(int p_id) { _grazed[p_id] = 1; }
+bool DanmakuStore::is_grazed(int p_id) const { return _valid(p_id) && _grazed[p_id] != 0; }
+void DanmakuStore::mark_grazed(int p_id) { if (_valid(p_id)) { _grazed[p_id] = 1; } }
 
 DanmakuStore::DanmakuStore() {}
 DanmakuStore::~DanmakuStore() {}

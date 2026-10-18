@@ -100,10 +100,12 @@ func _physics_process(_delta: float) -> void:
 func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return _kernel_bullet_host.shoot(data, pos, direction)
 
-## 按内核行 id 取**全局**位置（id 已回收/无效 → 返回 Vector2.ZERO）。
+## 按内核行 id 取**全局**位置（id 越界/已回收 → 返回 Vector2.ZERO）。
 ## 热路径不查这个；调试/测试（"子弹出生 == 谁"）用它，免得外面去摸内核宿主的私有存储。
 func bullet_global_position(id: int) -> Vector2:
 	if _kernel_bullet_host == null or id < 0:
+		return Vector2.ZERO
+	if id >= _kernel_bullet_host.system.get_active_count():
 		return Vector2.ZERO
 	return global_position + _kernel_bullet_host.system.get_position(id)
 

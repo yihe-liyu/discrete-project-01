@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 41 条（本文件留最近 41 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 42 条（本文件留最近 42 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — NK1/2/3：逐弹 id 守卫 + dead 去重
 - 2026-10-18 — DSL1/7：DirSpec eval_phase + emit_speed_rel
 - 2026-10-18 — DSL10/12：纯编译器 + 宿主表分离 + DirSpec
 - 2026-10-18 — DSL2 契约测试 + DSL9 缓存形状守卫
@@ -106,6 +107,13 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — NK1/2/3：逐弹 id 守卫 + dead 去重
+
+- NK1：原生 `DanmakuStore` 增加 `_valid(id)`；约 20 个逐弹 getter/setter（life/fx/timer/velocity/position/forward/type/faction/color/hitbox/hit_test/grazed/program）越界时返回安全默认或 no-op，release 下不再有 vector[] UB。
+- NK2：`BulletManager.bullet_global_position()` 补 `id >= active_count` 上界并修掉“已回收返回 ZERO”的假注释。
+- NK3：`_run_behavior_pass()` 末尾对 `_tick_dead` sort+unique；重复 despawn 不再二次 swap-remove 误删无辜弹，`behavior_batch` 的 dead 输出也去重。
+- 新增 `test_native_guards`（2 用例/43 断言）；全量 844 / 7830，verify 七步全绿。
 
 ### 2026-10-18 — DSL1/7：DirSpec eval_phase + emit_speed_rel
 
