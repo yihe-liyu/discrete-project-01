@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 22 条（本文件留最近 22 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 23 条（本文件留最近 23 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — 创作台 Phase 2：整关预览保活 / 配置 v2 / 页面协议
 - 2026-10-17 — 直射页 UI 紧凑化（对齐拼装页初始弹）
 - 2026-10-17 — 弹幕台直射页清理：去掉空行为脚本/参数/热更新
 - 2026-10-17 — F10 拼装页补“初始弹”编辑
@@ -52,6 +53,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — 创作台 Phase 2：整关预览保活 / 配置 v2 / 页面协议
+
+- **整关预览保活**：切走 `suspend_preview()`（冻结 process + 暂停 BGM + 解全局 paused/time_scale），切回 `resume_preview()`（恢复 process + BGM + Playback 投影）；不再 `queue_free`，时间/关卡/书签保留。
+- **配置 v2**：`ws.version=2`；v1 旧文件照读并写回 v2；`benchN.data` 非 Dictionary 降级为空；槽位越界钳制。
+- **页面协议**：`CreationStation` 不再用 `has_method/call`；三台统一 `pause_view/resume_view/clear_runtime`，整关统一 `suspend_preview/resume_preview/preview_suspended/current_time`。
+- **试验台保留**：仅首次从配置恢复；切走时把最新快照写回内存，切回不被旧快照覆盖。
+- 测试：预览冻结/时间不归零、v1 迁移、坏数据降级；全量 832 / 7722，verify 七步全绿。
 
 ### 2026-10-17 — 直射页 UI 紧凑化（对齐拼装页初始弹）
 

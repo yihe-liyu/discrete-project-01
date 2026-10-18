@@ -17,8 +17,13 @@ const SLOTS := ["整关预览", "弹幕台", "敌人台", "阶段台"]
 var _slot_buttons: Array[Button] = []
 var _view: Control = null
 var _current_slot: int = -1
+var _workbench_view = null
 var _bench_instances: Array[BenchBase] = [null, null, null]
 var _workspace_restores: Array = [{}, {}, {}]
+var _workspace_slot: int = 1
+var _loaded_workspace_version: int = 0
+## 三台是否已经从配置恢复过（之后保留常驻实例的当前状态，不再用旧快照覆盖）
+var _bench_restored: Array[bool] = [false, false, false]
 
 # ── 全局目录抽屉（CanvasLayer(3)：高于顶栏(2)与各页自带 UI(1)）──
 var _catalog_btn: Button
@@ -28,6 +33,8 @@ var _catalog_panel               # CatalogPanel（preload 构造，避免 class_
 var _catalog_open: bool = false
 
 const CFG_PATH := "user://creation_station.cfg"
+## 工作区配置 schema；v1 = 无 version 的旧文件，v2 = 显式 ws.version + 校验/迁移。
+const WORKSPACE_VERSION := 2
 
 
 func _ready() -> void:
@@ -159,6 +166,11 @@ func current_view() -> Control:
 	return _view
 
 
+## 常驻整关预览（未建过 → null；切页保活，不再 queue_free）
+func workbench_instance():
+	return _workbench_view
+
+
 ## 常驻试验台实例（0=弹幕台 / 1=敌人台 / 2=阶段台；没建过 → null）
 func bench_instance(slot_index: int) -> BenchBase:
 	if slot_index < 0 or slot_index >= _bench_instances.size():
@@ -208,6 +220,13 @@ func open_slot(slot_index: int) -> void:
 	_on_slot(slot_index)
 
 
+## 页面协议（Phase 2）：
+##   整关预览：set_embedded / catalog_panel / suspend_preview / resume_preview /
+##             preview_suspended / current_time / bullet_manager / stage_runtime
+##   试验台：BenchBase.pause_view / resume_view / clear_runtime / snapshot / restore /
+##           preset_from_entry / catalog / stage_runtime / bullet_manager
+## 不再用 has_method/call 猜（动态 call 已从本文件删除）。
+##
 ## 页签切换
 func _on_slot(slot_index: int) -> void:
 	if _current_slot == slot_index and _view != null:
@@ -215,37 +234,41 @@ func _on_slot(slot_index: int) -> void:
 	_clear_view()
 	_current_slot = slot_index
 	if slot_index == 0:
-		_view = WORKBENCH.instantiate()
+		if _workbench_view == null:
+			_workbench_view = WORKBENCH.instantiate()
+		_view = _workbench_view
 	else:
 		var bench_i: int = slot_index - 1
 		if _bench_instances[bench_i] == null:
 			_bench_instances[bench_i] = BENCHS[bench_i].instantiate() as BenchBase
+			_bench_restored[bench_i] = false
 		_view = _bench_instances[bench_i]
-	_view.visible = true
-	_view.process_mode = Node.PROCESS_MODE_INHERIT  # 恢复运转（连发状态保留，只是不再后台跑）
 	if _view.get_parent():
 		_view.get_parent().remove_child(_view)  # 常驻实例：切换前先脱离旧父
 	var content: Control = $Root/Content
 	content.add_child(_view)
-	# 目录双击 → 组合台直达（整关页内目录）
+	_view.visible = true
+
 	if slot_index == 0:
 		# 嵌入模式：隐藏整关预览自带的“目录”页签，统一走全局抽屉，避免截图里双目录。
-		if _view.has_method("set_embedded"):
-			_view.call("set_embedded", true)
-		var catalog = _view.call("catalog_panel")
+		_workbench_view.set_embedded(true)
+		_workbench_view.resume_preview()
+		var catalog = _workbench_view.catalog_panel()
 		if catalog and not catalog.preset_requested.is_connected(route_preset):
 			catalog.preset_requested.connect(route_preset)
-	# 工作区恢复
-	if slot_index > 0:
-		var ri := slot_index - 1
+	else:
 		var bench := _view as BenchBase
-		var saved: Dictionary = _workspace_restores[ri]
-		if not saved.is_empty():
-			bench.restore(saved)
+		bench.resume_view()
+		var ri := slot_index - 1
+		if not _bench_restored[ri]:
+			var saved: Dictionary = _workspace_restores[ri]
+			if not saved.is_empty():
+				bench.restore(saved)
+			_bench_restored[ri] = true
+
 	_save_workspace()
 	for button_index in _slot_buttons.size():
 		_slot_buttons[button_index].button_pressed = button_index == slot_index
-
 
 ## 目录双击条目 → 切对应台并装配
 ## 把目录条目路由到对应试验台并装配（目录双击走这条；测试/外部也可直接调）
@@ -270,55 +293,94 @@ func route_preset(entry) -> void:
 # ═══ 工作区自动恢复（user:// 配置）═══
 
 func _load_slot_override() -> int:
-	var config_file := ConfigFile.new()
-	if config_file.load(CFG_PATH) != OK:
-		return 1  # 默认弹幕台
-	return int(config_file.get_value("ws", "slot", 1))
+	return _workspace_slot
 
 
+## 读工作区（v1 旧文件也照读；坏数据降级为空，不半截恢复）
 func _load_workspace() -> void:
+	_workspace_slot = 1
+	_loaded_workspace_version = 0
+	_workspace_restores = [{}, {}, {}]
 	var config_file := ConfigFile.new()
 	if config_file.load(CFG_PATH) != OK:
 		return
+	_loaded_workspace_version = int(config_file.get_value("ws", "version", 1))
+	if _loaded_workspace_version < 1:
+		_loaded_workspace_version = 1
+	_workspace_slot = clampi(int(config_file.get_value("ws", "slot", 1)), 0, SLOTS.size() - 1)
 	for i in 3:
-		_workspace_restores[i] = config_file.get_value("bench%d" % i, "data", {})
+		var data = config_file.get_value("bench%d" % i, "data", {})
+		_workspace_restores[i] = data if data is Dictionary else {}
+	_migrate_workspace(_loaded_workspace_version)
+
+
+## 旧 schema → 当前 schema。v1→v2 目前只是信封补齐；以后字段迁移都加在这里。
+func _migrate_workspace(from_version: int) -> void:
+	if from_version < 2:
+		# v1：bench 快照可能缺 F10 的 composer/templates；restore 自己会补默认值。
+		# 这里只保证每条 restore 都是 Dictionary（坏数据降级为空）。
+		for i in 3:
+			if not (_workspace_restores[i] is Dictionary):
+				_workspace_restores[i] = {}
+
+
+## 当前 writer schema（测试/外部查询）
+func workspace_version() -> int:
+	return WORKSPACE_VERSION
+
+
+## 本次读到的原始版本（0 = 没有配置文件；1 = 旧文件；2 = 当前）
+func workspace_loaded_from_version() -> int:
+	return _loaded_workspace_version
+
+
+## 已读入的槽位（0..3）
+func workspace_slot() -> int:
+	return _workspace_slot
+
+
+## 某个试验台的恢复数据（只读副本；测试/调试用）
+func workspace_restore(slot_index: int) -> Dictionary:
+	if slot_index < 1 or slot_index > 3:
+		return {}
+	return (_workspace_restores[slot_index - 1] as Dictionary).duplicate(true)
+
+
+## 公开保存（测试/外部；用户切页/退出走同一条实现）
+func save_workspace() -> void:
+	_save_workspace()
 
 
 func _save_workspace() -> void:
 	if _current_slot < 0:
 		return
 	var config_file := ConfigFile.new()
+	config_file.set_value("ws", "version", WORKSPACE_VERSION)
 	config_file.set_value("ws", "slot", _current_slot)
 	for i in 3:
 		var bench: BenchBase = _bench_instances[i]
 		if bench:
 			config_file.set_value("bench%d" % i, "data", bench.snapshot())
+		elif not (_workspace_restores[i] as Dictionary).is_empty():
+			# 没建过的台：保留上次读到的数据，别因为切到整关预览就清空。
+			config_file.set_value("bench%d" % i, "data", _workspace_restores[i])
 	config_file.save(CFG_PATH)
-
 
 func _exit_tree() -> void:
 	_save_workspace()
 
 
-## 切走：整关 = 停关卡+清弹+停BGM 后释放；试验台 = 清运行时残留（UI 状态保留）
+## 切走：整关预览冻结保活（时间/关卡/书签保留）；试验台清运行时残留后冻结。
 func _clear_view() -> void:
 	if _view == null:
 		return
-	var bullet_manager: BulletManager = null
-	if _view.has_method("bullet_manager"):
-		bullet_manager = _view.call("bullet_manager")
 	if _current_slot == 0:
-		_view.call("stop_stage")
-		if bullet_manager: bullet_manager.reset_world()
-		AudioManager.stop_bgm()
-		_view.queue_free()
+		_workbench_view.suspend_preview()
 	else:
-		if bullet_manager: bullet_manager.reset_world()
-		var rt: StageRuntime = _view.call("stage_runtime") if _view.has_method("stage_runtime") else null
-		var entity_registry: EntityRegistry = rt.entity_registry if rt else null
-		for enemy in (entity_registry.get_active_enemies() if entity_registry else []):
-			if is_instance_valid(enemy):
-				enemy.queue_free()
-		_view.visible = false
-		_view.process_mode = Node.PROCESS_MODE_DISABLED  # 冻结：连发/热更新/幽灵不后台跑
+		var bench := _view as BenchBase
+		if bench != null:
+			# 切走前写回最新状态；切回时（常驻实例）不再被配置里的旧快照覆盖。
+			_workspace_restores[_current_slot - 1] = bench.snapshot()
+			bench.clear_runtime()
+			bench.pause_view()  # 冻结：连发/热更新/幽灵不后台跑
 	_view = null

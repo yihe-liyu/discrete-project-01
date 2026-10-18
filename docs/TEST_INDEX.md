@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：119 脚本 / **830 用例（830 通过 / 0 红 —— ✅ 全绿）/ 7699 断言 / 54.829s** / 19 orphans / **0 pending**。
+**现状**：119 脚本 / **832 用例（832 通过 / 0 红 —— ✅ 全绿）/ 7722 断言 / 54.799s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -30,7 +30,7 @@
 | **C 宿主 · 运行时系统** | 44 | 366 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
-| **F 工具 · 开发台** | 13 | 82 | `scripts/workbench/**`、创作站 |
+| **F 工具 · 开发台** | 13 | 84 | `scripts/workbench/**`、创作站 |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
 
 > 「白盒」列 = 私有成员访问次数（`._xxx`，粗计）。**它越高，重构时越容易断。**
@@ -223,7 +223,7 @@
 | [test_stage01_dialogue](../test/test_stage01_dialogue.gd) | 第一面战前对话构建：台词/说话者/表情/事件顺序 | 9 | 0 |
 | [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断） | 1 | 0 |
 
-## F · 工具 · 开发台（13 / 82）
+## F · 工具 · 开发台（13 / 84）
 
 > ✅ **这一层已接缝化**（2026-09-30，S1）：原先 26 个用例里 181 处私有成员访问，现在**0**——
 > 六个文件全部改走 `BenchBase` / `CreationStation` / `CatalogPanel` 的**公开接口**（见下节）。
@@ -240,7 +240,7 @@
 |---|---|---|---|
 | [test_enemy_rig](../test/test_enemy_rig.gd) | 敌人组合台：壳组装 / 真实生成 / 热重载重演（`load_script` / `spawn_at` / `force_hot_reload`） | 4 | 0 |
 | [test_bullet_rig](../test/test_bullet_rig.gd) | 弹幕试验台：热更新成功重演 / 失败保旧版（`poll_hot_reload` / `age_watch_mtime` / `param_panel`）· **F10b 拼装模式加 op / 生成代码 / 预览发射 / 初始弹编辑 / A/B 模板快照** | 4 | 0 |
-| [test_creation_station](../test/test_creation_station.gd) | 创作台（四页签）：页签切换 / 实例保持 / 运行时清理 / 路由切台+装配· **真点击验页签不被子视图吃掉**（作者报的回归）· **全局目录抽屉四页签可开 / 从台子里路由**· **描述符组双击路由到拼装页** | 8 | 0 |
+| [test_creation_station](../test/test_creation_station.gd) | 创作台（四页签）：页签切换 / 实例保持 / 运行时清理 / 路由切台+装配· **真点击验页签不被子视图吃掉**（作者报的回归）· **全局目录抽屉四页签可开 / 从台子里路由**· **描述符组双击路由到拼装页**· **Phase 2：整关预览冻结保活（时间/实例/process）/ 工作区 v1→v2 迁移与坏数据降级** | 10 | 0 |
 | [test_catalog_panel](../test/test_catalog_panel.gd) | `CatalogPanel` 目录树渲染：组头完整 / 重名消歧 / 拖拽 / **搜索真的在筛**（原先那半条是空转的） | 3 | 0 |
 | [test_phase_rig](../test/test_phase_rig.gd) | 阶段组合台：壳副本 / 双槽默认 / 开演真实生成（`select_phase` / `hp_value` / `selected_shoot_script` / `play`） | 4 | 0 |
 | [test_workbench_align](../test/test_workbench_align.gd) | 工作台坐标一致性：场地 / `BulletManager` / `BenchWorld` 同在画布坐标（`playfield` / `bullet_manager` / `bullet_global_position`） | 1 | 0 |

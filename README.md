@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-830%20tests%20/%20119%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-832%20tests%20/%20119%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -59,7 +59,7 @@
 | 任务 | 打开 | 提醒 |
 |---|---|---|
 | 跑游戏 / 跑测试 | 本页 · [TEST_INDEX](docs/TEST_INDEX.md) | `./tools/verify.sh` 是总门禁 |
-| 加一个波次 / 一张符卡 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §0 / §四 / §六 | 阶段台有热更新；整关预览要重启 |
+| 加一个波次 / 一张符卡 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §0 / §四 / §六 | 阶段台有热更新；整关预览切页保活，改脚本仍要重启 |
 | 加敌人 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §三 | `EnemyData` 构造链 + 行为脚本 + `AssetRegistry` |
 | 加一面 / 新 Boss | [CONTENT_GUIDE](CONTENT_GUIDE.md) §四 / §八 · [ARCHITECTURE](docs/ARCHITECTURE.md) §6 | **必须进 `stage_registry.tres` / `boss_registry.tres`** |
 | 改某颗弹的飞行规律 | [DANMAKU_API](docs/DANMAKU_API.md) · [CONTENT_GUIDE](CONTENT_GUIDE.md) §六 | 直接拼原语或用弹幕台拼装页；`until` 顺序有坑 |
@@ -136,7 +136,8 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 - 幽灵玩家提供自机狙目标；静音/背景开关/事件日志/实时状态
 - **全局目录**：顶栏「目录」抽屉，四个页签下都能开；双击条目直达对应台（不再只活在整关预览里）
 - **弹幕台两种模式**：直射（初始弹外形/方向/发射）· 拼装（初始弹 + A/B 替换弹模板 + Move/Until/Action/Dir → 预览 → 生成/复制代码；目录里有「弹道描述符」组）· 操作四键在两种模式顶部共用
-- **弹幕 / 敌人 / 阶段三个组合台有热更新**（改脚本约 1.3s 自动重载）；**整关预览没有**，改关卡脚本/时间线后切页或重启
+- **弹幕 / 敌人 / 阶段三个组合台有热更新**（改脚本约 1.3s 自动重载）；**整关预览没有**，改关卡脚本/时间线后重启（切页不再丢进度）
+- **整关预览保活**：切走冻结、切回继续；工作区配置 v2（旧 v1 自动读入，坏数据降级为空）
 - 目录自动扫描 `res://data/`，双击条目直达对应组合台（面板显示条数 / 警告数）
 - 创作流程见 [CONTENT_GUIDE.md](CONTENT_GUIDE.md)；架构决策见 [docs/archive/ARCHITECTURE_ROADMAP.md](docs/archive/ARCHITECTURE_ROADMAP.md)「内容工作台演进」专节（已归档）
 

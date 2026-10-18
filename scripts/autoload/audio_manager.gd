@@ -229,6 +229,7 @@ func _play_bgm_at(stream: AudioStream, from: float) -> void:
 	#    若新起一路，同一首歌会**自己叠自己**（两路不同播放位置 = 合唱/回声，作者报的「重开后音乐重叠」）。
 	var existing := _find_bgm_player_with(stream)
 	if existing != null:
+		existing.stream_paused = false
 		# 正在正常播（且不是刚被 stop）→ 不重头播：换场景时同曲**续播**
 		if existing == _bgm_current and not _bgm_stopping:
 			return
@@ -241,6 +242,7 @@ func _play_bgm_at(stream: AudioStream, from: float) -> void:
 	_bgm_stopping = false
 	_stop_fade(next)
 	next.stream = stream
+	next.stream_paused = false
 	next.volume_db = SILENT_DB
 	next.play(from)
 	_fade_bgm(next, 0.0, BGM_FADE_IN, false)   # BGM_FADE_IN = 0 ⇒ 当场满音量（不淡入）
@@ -259,6 +261,25 @@ func stop_bgm(fade: float = BGM_FADE) -> void:
 	_bgm_stopping = true   # 之后的 play_bgm(同一首) 走「复用那一路重头播」，不另起一路同曲
 
 
+## 暂停当前 BGM（创作台整关预览切走时用；位置冻结，恢复后原处继续）。
+func pause_bgm() -> void:
+	for player in _bgm_players:
+		if player.playing:
+			player.stream_paused = true
+
+
+## 恢复 BGM；只清 stream_paused，不重播/不抢别的曲。
+func resume_bgm() -> void:
+	for player in _bgm_players:
+		if player.stream_paused:
+			player.stream_paused = false
+
+
+## 当前 BGM 是否被暂停（测试/宿主查询）
+func bgm_paused() -> bool:
+	return _bgm_current != null and is_instance_valid(_bgm_current) and _bgm_current.stream_paused
+
+
 ## 复用**已经在放这一首**的那一路（重开 / 快速来回切）：停掉它的淡入淡出、从头播，其余各路淡出。
 ## 保证「同一首永远只有一路在响」。
 func _adopt_bgm(player: AudioStreamPlayer, stream: AudioStream, from: float) -> void:
@@ -266,6 +287,7 @@ func _adopt_bgm(player: AudioStreamPlayer, stream: AudioStream, from: float) -> 
 	_bgm_stopping = false
 	_stop_fade(player)
 	player.stream = stream
+	player.stream_paused = false
 	player.volume_db = SILENT_DB
 	player.play(from)
 	_fade_bgm(player, 0.0, BGM_FADE_IN, false)   # 重开也是满音量直入（不淡入）

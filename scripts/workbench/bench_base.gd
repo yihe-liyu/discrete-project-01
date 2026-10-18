@@ -216,6 +216,32 @@ func _draw_marker() -> void:
 	pass
 
 
+# ═══ 创作台页面协议（三台共用）═══
+
+## 切走：冻结 UI/处理（子弹/敌人已由 clear_runtime 清掉）
+func pause_view() -> void:
+	visible = false
+	process_mode = Node.PROCESS_MODE_DISABLED
+
+
+## 切回：恢复处理（连发/热更新/幽灵继续）
+func resume_view() -> void:
+	visible = true
+	process_mode = Node.PROCESS_MODE_INHERIT
+
+
+## 切走前清运行时残留：弹幕世界 + 场上敌人/Boss
+func clear_runtime() -> void:
+	if _bullet_manager != null:
+		_bullet_manager.reset_world()
+	if _stage_runtime != null:
+		var registry: EntityRegistry = _stage_runtime.entity_registry
+		if registry != null:
+			for enemy in registry.get_active_enemies():
+				if is_instance_valid(enemy):
+					enemy.queue_free()
+
+
 # ═══ 公开接缝（创作台 / 测试走这里；R6：外部不碰 _私有）═══
 # ⚠️ 这些方法**不是**为测试新开的旁路 —— 用户操作走的就是同一条实现：
 #    `load_script()` = 用户在脚本下拉里选一条；`force_hot_reload()` = 防抖到点那一次。

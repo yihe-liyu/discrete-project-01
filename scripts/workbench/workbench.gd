@@ -94,6 +94,8 @@ const _TABS := ["目录", "书签", "日志"]
 var _tab_btns: Array[Button] = []
 ## 嵌入创作台时：隐藏内部“目录”页签，统一走创作台的全局目录抽屉。
 var _embedded: bool = false
+## 创作台切走时冻结整关预览（不释放舞台/运行时；位置/时间保留）
+var _preview_suspended: bool = false
 var _stage_shift_y := 0.0    # 嵌入创作台页面偏移；舞台视觉归一回游戏坐标用
 var _ui_page_y := 0.0        # 页面在窗口里的 y（用于同步去重）
 var _ui_offset_applied: bool = false  # 防止 _ready 的首次同步 + deferred 同步重复下移
@@ -358,9 +360,58 @@ func _setup_hitbox_overlay() -> void:
 # ═══ 关卡加载 / 重跑 ═══
 
 ## 加载关卡（start_from >= 0 = 从该时刻续跑，数据关卡专用）
-## 供创作台切页时停止本工作台承载的关卡
+## 供创作台切页时停止本工作台承载的关卡（旧契约；保活路径用 suspend_preview）
 func stop_stage() -> void:
 	_stage_runtime.stop_stage()
+
+
+## 创作台切走：冻结舞台 + 暂停 BGM，但**保留运行时/时间/书签/播放状态**。
+## 必须解掉全局 paused / time_scale / 静音，否则切到别的台会被整关预览的暂停状态卡住。
+func suspend_preview() -> void:
+	if _preview_suspended:
+		return
+	_preview_suspended = true
+	visible = false
+	_set_preview_layers_visible(false)
+	AudioManager.pause_bgm()
+	var tree := get_tree()
+	if tree != null:
+		tree.paused = false
+	Engine.time_scale = 1.0
+	Engine.max_physics_steps_per_frame = 8
+	AudioManager.set_bgm_pitch(1.0)
+	var bus := AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		AudioServer.set_bus_mute(bus, false)
+	process_mode = Node.PROCESS_MODE_DISABLED
+
+
+## 创作台切回：恢复 process + BGM，再把 Playback 状态投影回引擎（暂停/快进/速度保留）。
+func resume_preview() -> void:
+	if not _preview_suspended:
+		return
+	_preview_suspended = false
+	visible = true
+	_set_preview_layers_visible(true)
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	AudioManager.resume_bgm()
+	_apply_playback_runtime()
+
+
+func preview_suspended() -> bool:
+	return _preview_suspended
+
+
+## CanvasLayer 不随父 Control 的 visible 隐藏；切走时必须单独关，否则 UI/命中框还叠在别的台上。
+func _set_preview_layers_visible(on: bool) -> void:
+	for child in get_children():
+		if child is CanvasLayer:
+			(child as CanvasLayer).visible = on
+
+
+## 当前游戏内时刻（创作台/测试用；不摸私有 runner）
+func current_time() -> float:
+	return _current_time()
 
 
 # ═══ 公开接缝（创作台宿主用；不摸 `_私有`）═══
@@ -631,11 +682,11 @@ func _redraw_stage() -> void:
 # ═══ UI 刷新 / 日志 ═══
 
 func _update_ui() -> void:
-	var current_time := _current_time()
-	_status_bar.set_time(current_time, _playback.ff_active())
-	if absf(current_time - _prev_time) >= 0.05:
-		_prev_time = current_time
-		_timeline.time = current_time
+	var now_time := _current_time()
+	_status_bar.set_time(now_time, _playback.ff_active())
+	if absf(now_time - _prev_time) >= 0.05:
+		_prev_time = now_time
+		_timeline.time = now_time
 		_timeline.queue_redraw()
 	var boss = _stage_runtime.entity_registry.get_boss()
 	_status_bar.set_status(

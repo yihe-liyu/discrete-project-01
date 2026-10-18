@@ -100,7 +100,7 @@ func test_tabs_switch_and_keep_bench_instances():
 	cs.open_slot(0)
 	await get_tree().process_frame
 	assert_true(cs.current_view().get_script().resource_path.ends_with("workbench.gd"), "整关=工作台")
-	# 切回阶段台（整关已释放，阶段台实例仍在）
+	# 切回阶段台（整关保活，阶段台实例仍在）
 	cs.open_slot(3)
 	await get_tree().process_frame
 	assert_true(cs.current_view().get_script().resource_path.ends_with("phase_bench.gd"), "整关释放后回阶段台")
@@ -177,6 +177,74 @@ func test_switch_clears_runtime():
 	await get_tree().process_frame
 	assert_eq(BulletManager.current.active_count(), 0, "切换后清场")
 	cs.queue_free()
+
+
+## Phase 2：整关预览不再是“切走即 queue_free”，切回来时间/关卡/播放状态都保留。
+func test_preview_keeps_state_across_tab_switch():
+	DirAccess.remove_absolute("user://creation_station.cfg")
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	cs.open_slot(0)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var wb = cs.workbench_instance()
+	assert_not_null(wb, "整关预览应创建并常驻")
+	var t_before: float = wb.current_time()
+	assert_false(wb.preview_suspended(), "打开时不应处于冻结态")
+	# 切到弹幕台：冻结但保留实例；全局 paused 必须解开
+	cs.open_slot(1)
+	await get_tree().process_frame
+	assert_eq(cs.workbench_instance(), wb, "切页不应释放整关预览")
+	assert_false(wb.visible, "切走后预览隐藏")
+	assert_eq(wb.process_mode, Node.PROCESS_MODE_DISABLED, "切走后预览冻结")
+	assert_true(wb.preview_suspended(), "预览应报告冻结")
+	assert_false((wb.get_node("UI") as CanvasLayer).visible, "预览的 CanvasLayer UI 也要隐藏")
+	assert_false(get_tree().paused, "切走后不能把全局暂停留在场上")
+	assert_almost_eq(wb.current_time(), t_before, 0.05, "冻结后关卡时间不应继续走")
+	# 切回：同一实例 + 时间不归零
+	cs.open_slot(0)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_eq(cs.current_view(), wb, "切回仍是同一实例")
+	assert_true(wb.visible, "切回预览可见")
+	assert_eq(wb.process_mode, Node.PROCESS_MODE_ALWAYS, "切回恢复 process")
+	assert_false(wb.preview_suspended(), "切回解除冻结")
+	assert_true((wb.get_node("UI") as CanvasLayer).visible, "切回恢复 CanvasLayer UI")
+	assert_gte(wb.current_time(), t_before - 0.1, "关卡时间不应归零")
+
+
+## Phase 2：v1 旧配置能读 + 写回 v2；坏 bench 数据降级为空，不半截恢复。
+func test_workspace_v1_migrates_and_corrupt_data_is_ignored():
+	DirAccess.remove_absolute("user://creation_station.cfg")
+	var cfg := ConfigFile.new()
+	cfg.set_value("ws", "slot", 1)
+	cfg.set_value("bench0", "data", {"probe": "v1"})
+	assert_eq(cfg.save("user://creation_station.cfg"), OK)
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_eq(cs.workspace_loaded_from_version(), 1, "无 version 的旧文件按 v1 读")
+	assert_eq(cs.workspace_version(), 2, "当前 schema = 2")
+	assert_eq(cs.workspace_restore(1).get("probe", ""), "v1", "旧 bench 数据原样可见")
+	var after := ConfigFile.new()
+	assert_eq(after.load("user://creation_station.cfg"), OK)
+	assert_eq(int(after.get_value("ws", "version", 0)), 2, "切页/加载后应写回 v2")
+	cs.queue_free()
+	# 坏数据：bench0.data 不是 Dictionary → 空工作区
+	cfg = ConfigFile.new()
+	cfg.set_value("ws", "slot", 1)
+	cfg.set_value("bench0", "data", "broken")
+	assert_eq(cfg.save("user://creation_station.cfg"), OK)
+	var cs2: Control = CS.instantiate()
+	add_child_autofree(cs2)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_eq(cs2.workspace_restore(1), {}, "坏 bench 数据应降级为空")
+	cs2.queue_free()
+	DirAccess.remove_absolute("user://creation_station.cfg")
 
 
 ## 全局目录：不再只活在整关预览的右面板里；四个页签下都能开。
