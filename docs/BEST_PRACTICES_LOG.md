@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 35 条（本文件留最近 35 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 36 条（本文件留最近 36 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — Workbench 与游戏场地同坐标（顶栏 36→32）
 - 2026-10-18 — 创作台页签对齐 + 快捷键
 - 2026-10-18 — 预览暂停：BulletManager 显式 PAUSABLE
 - 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
@@ -100,6 +101,13 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — Workbench 与游戏场地同坐标（顶栏 36→32）
+
+- 之前 Workbench 嵌入后场地 y=36..932（+4），因为顶栏 36、stage_shift 只上移 FIELD_TOP=32；整体上移 4 会裁掉顶边。
+- 把创作台顶栏 36→32（Root margin / HeaderBg / HeaderLine / 页签 / CatalogHeader / CatalogDrawer / bench 面板让位），内容区从 y=32 开始。
+- 现在 Workbench World/画框/场地都是 **x 64..832 / y 32..928**，与真游戏完全一致；高度 896 完整可见。
+- 全量 833 / 7755，verify 七步全绿。
 
 ### 2026-10-18 — 创作台页签对齐 + 快捷键
 

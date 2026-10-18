@@ -180,9 +180,9 @@ func add_panel_to_layer(panel: Control) -> void:
 		add_child(_panel_layer)
 	panel.theme = theme
 	if _embedded:
-		# 创作台顶栏 36px 在 CanvasLayer(2)；右面板在 CanvasLayer(1)，要让出顶栏高度。
-		panel.offset_top += 36.0
-		panel.offset_bottom -= 36.0
+		# 创作台顶栏 32px 在 CanvasLayer(2)；右面板在 CanvasLayer(1)，要让出顶栏高度。
+		panel.offset_top += 32.0
+		panel.offset_bottom -= 32.0
 	_panel_layer.add_child(panel)
 
 
