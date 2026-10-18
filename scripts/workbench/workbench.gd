@@ -94,6 +94,8 @@ var _prev_time := -1.0   # 时间轴刷新去重
 
 ## 嵌入创作台时：隐藏内部“目录”页签，统一走创作台的全局目录抽屉。
 var _embedded: bool = false
+## 创作台 canvas_transform 的 x 偏移；Timeline/phase 计时器要跟场地
+var _view_offset_x: float = 0.0
 ## 冻结/恢复服务（D3：CanvasLayer + process 子树 + BGM + 全局引擎状态）
 var _preview_suspender
 ## 嵌入创作台坐标归一（World/右栏/背景/计时器/画框）
@@ -168,6 +170,7 @@ func _ready() -> void:
 	_preview_debug.setup(_stage_runtime, Callable(self, "_log_line"))
 	_phase_timer = PREVIEW_PHASE_TIMER.new()
 	_phase_timer.setup($UI, _stage_runtime)
+	set_view_offset_x(_view_offset_x)
 	_preview_layout = PREVIEW_LAYOUT.new()
 	_preview_layout.setup(self, _world, %RightPanel as Control, $BgContainer as Control,
 		_phase_timer.label(), Callable(self, "embedded"), Callable(self, "_redraw_stage"))
@@ -209,6 +212,17 @@ func _draw() -> void:
 	draw_rect(Rect2(0, field.end.y, size.x, size.y - field.end.y), Color(0.03, 0.03, 0.05))
 	draw_rect(Rect2(0, field.position.y, field.position.x, field.size.y), Color(0.03, 0.03, 0.05))
 	draw_rect(Rect2(field.end.x, field.position.y, size.x - field.end.x, field.size.y), Color(0.03, 0.03, 0.05))
+
+## 场地空间 UI 的 x 偏移：Timeline / phase 计时器跟 canvas_transform 走；
+## 右面板是屏幕右锚定，不动。
+func set_view_offset_x(offset: float) -> void:
+	_view_offset_x = offset
+	if _timeline != null:
+		_timeline.offset_left = GameConfig.FIELD_LEFT + offset
+		_timeline.offset_right = GameConfig.FIELD_RIGHT + offset
+	if _phase_timer != null:
+		_phase_timer.set_x_offset(offset)
+
 
 ## CanvasLayer 平移到页面全局位置（独立运行 = 0，嵌入创作台 = 页签横栏下方）。
 ## 具体坐标归一见 PreviewLayout（D3 拆出的服务）；这里只委托。

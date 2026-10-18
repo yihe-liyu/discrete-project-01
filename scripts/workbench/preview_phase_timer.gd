@@ -4,6 +4,7 @@ extends RefCounted
 
 var _stage_runtime: StageRuntime
 var _label: Label
+var _base_x: float = 0.0
 
 
 func setup(ui_layer: CanvasLayer, runtime: StageRuntime) -> void:
@@ -12,15 +13,20 @@ func setup(ui_layer: CanvasLayer, runtime: StageRuntime) -> void:
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.add_theme_font_size_override("font_size", 32)
 	# y 与 BossUI.TimerLabel 对齐（场景 offset_top = 64：场地坐标即 FIELD_TOP + 64）
-	_label.position = Vector2(
-		GameConfig.FIELD_LEFT + (GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT) / 2.0 - 16.0,
-		GameConfig.FIELD_TOP + 64.0)
+	_base_x = GameConfig.FIELD_LEFT + (GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT) / 2.0 - 16.0
+	_label.position = Vector2(_base_x, GameConfig.FIELD_TOP + 64.0)
 	_label.visible = false
 	ui_layer.add_child(_label)
 
 
 func label() -> Label:
 	return _label
+
+
+## 创作台把游戏画布整体右移时，倒计时也要跟场地走（它挂在 CanvasLayer，不吃 canvas_transform）。
+func set_x_offset(offset: float) -> void:
+	if _label != null:
+		_label.position.x = _base_x + offset
 
 
 ## 倒计时更新（超时归零、间隙隐藏）

@@ -190,6 +190,8 @@ func _apply_layout() -> void:
 	content.offset_top = 0
 	content.offset_bottom = 0
 	get_viewport().canvas_transform.origin.x = float(x)
+	if _workbench_view != null:
+		_workbench_view.set_view_offset_x(float(x))
 
 
 func _on_catalog_preset(entry) -> void:
@@ -246,6 +248,7 @@ func _on_slot(slot_index: int) -> void:
 	if slot_index == 0:
 		# 嵌入模式：隐藏整关预览自带的“目录”页签，统一走全局抽屉，避免截图里双目录。
 		_workbench_view.set_embedded(true)
+		_workbench_view.set_view_offset_x(get_viewport().canvas_transform.origin.x)
 		_workbench_view.resume_preview()
 		var catalog = _workbench_view.catalog_panel()
 		if catalog and not catalog.preset_requested.is_connected(route_preset):
