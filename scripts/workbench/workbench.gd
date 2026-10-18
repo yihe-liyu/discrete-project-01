@@ -45,6 +45,7 @@ const PREVIEW_INPUT := preload("res://scripts/workbench/preview_input.gd")
 const PREVIEW_STAGE_WORLD := preload("res://scripts/workbench/preview_stage_world.gd")
 const PREVIEW_PHASE_TIMER := preload("res://scripts/workbench/preview_phase_timer.gd")
 const PREVIEW_DEBUG_TOOLS := preload("res://scripts/workbench/preview_debug_tools.gd")
+const PREVIEW_UI := preload("res://scripts/workbench/preview_ui.gd")
 ## Stage 1 = 协程版（stage01.gd Timeline 编排；数据关卡系统已移除）
 const STAGE1_COROUTINE := preload("res://data/stages/stage01/stage_data/stage01.tres")
 
@@ -90,9 +91,6 @@ var _bullet_manager: BulletManager
 # 播放状态（全部在 Playback 里；本文件只读投影）
 var _prev_time := -1.0   # 时间轴刷新去重
 
-## 右侧面板页签：书签（导航）/ 日志（调试）
-const _TABS := ["目录", "书签", "日志"]
-var _tab_btns: Array[Button] = []
 ## 嵌入创作台时：隐藏内部“目录”页签，统一走创作台的全局目录抽屉。
 var _embedded: bool = false
 ## 冻结/恢复服务（D3：CanvasLayer + process 子树 + BGM + 全局引擎状态）
@@ -107,6 +105,8 @@ var _preview_stage_world
 var _phase_timer
 ## 调试工具（D3：强制击破 / uid 冲突扫描）
 var _preview_debug
+## 右栏/顶栏 UI 装配（D3：控件 + 信号 + 页签）
+var _preview_ui
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
 var _diff_sel: OptionButton
@@ -213,89 +213,22 @@ func _exit_tree() -> void:
 # ═══ 装配 ═══
 
 func _build_ui() -> void:
-	# ── 关卡/难度（.tscn 的 StageGrid，代码填控件）──
-	# 关卡列表 = **可玩清单**（`StageCatalog.playable()`：注册表里真有 create_script 的面）。
-	# ⚠️ 旧实现只有一条写死的 "Stage 1 协程版"、回调还忽略 idx ⇒ 下拉是摆设、换面切不动。
-	# `selected` 必须设在 `connect` **之前**：程序化赋值也会触发 `item_selected`，否则白重跑一次。
-	_stages = StageCatalog.playable()
-	_stage_sel = OptionButton.new()
-	for stage in _stages:
-		_stage_sel.add_item(StageCatalog.display_name_of(stage.stage_id))
-	_stage_sel.selected = _index_of_stage(_stage_data.stage_id)
-	_stage_sel.item_selected.connect(_on_stage_selected)
-	_stage_grid.add_child(WorkbenchUI.label("关卡"))
-	_stage_grid.add_child(_stage_sel)
-	_diff_sel = OptionButton.new()
-	for difficulty in DIFFICULTIES:
-		_diff_sel.add_item(difficulty)
-	_diff_sel.selected = 1  # Normal
-	_diff_sel.item_selected.connect(_on_difficulty_changed)
-	_stage_grid.add_child(WorkbenchUI.label("难度"))
-	_stage_grid.add_child(_diff_sel)
-
-	# ── 播放控制（纯视图；信号直接接状态机，只有需要重跑的才经宿主）──
-	_playback_bar = PlaybackBar.new()
-	_playback_bar.play_toggled.connect(_playback.toggle_play)
-	_playback_bar.restart_requested.connect(_restart)
-	_playback_bar.mute_toggled.connect(_playback.set_muted)
-	_playback_bar.bg_toggled.connect(_on_bg_toggled)
-	_playback_bar.hitbox_toggled.connect(_on_hitbox_toggled)
-	_playback_bar.speed_selected.connect(_playback.select_speed)
-	_playback_bar.seed_toggled.connect(_on_seed_toggled)
-	%PlaybackSlot.add_child(_playback_bar)
-
-	# ── 状态显示 ──
-	_status_bar = StatusBar.new()
-	%StatusSlot.add_child(_status_bar)
-
-
-	# ── 书签（视图；数据在 Bookmarks store，编辑后 data_changed 回主控制器落盘）──
-	_bookmark_panel = BookmarkPanel.new()
-	_bookmark_panel.store = _bookmarks
-	_bookmark_panel.stage_runtime = _stage_runtime
-	_bookmark_panel.jump_requested.connect(_jump_to)
-	_bookmark_panel.data_changed.connect(_on_bookmarks_changed)
-	_bookmark_panel.log_requested.connect(_log_line)
-	%BookmarkSlot.add_child(_bookmark_panel)
-
-	# ── 日志（自连 GameEvents）──
-	_event_log = EventLog.new()
-	%LogSlot.add_child(_event_log)
-
-	# ── 目录（扫描+分类展示；起接组合台）──
-	_catalog = CATALOG_PANEL.new()
-	%Pages.add_child(_catalog)
-	_catalog.visible = false
-
-
-	# ── 页签：编排 / 书签 / 日志 / 脚本（播放/状态固定在顶部不滚走）──
-	for i in _TABS.size():
-		var tb := Button.new()
-		tb.text = _TABS[i]
-		tb.toggle_mode = true
-		tb.custom_minimum_size = Vector2(0, 22)
-		tb.pressed.connect(_on_tab_selected.bind(i))
-		%TabBar.add_child(tb)
-		_tab_btns.append(tb)
-	_set_tab(0)
-
-	# ── 时间轴（.tscn 节点）──
-	_timeline.jump_to.connect(_jump_to)
-	_timeline.right_clicked.connect(_bookmark_panel.open_add)
-
-
-
-## 页签切换：只显示对应页，按钮高亮同步
-func _set_tab(index: int) -> void:
-	_catalog.visible = index == 0
-	%PageBookmarks.visible = index == 1
-	%PageLog.visible = index == 2
-	for tab_index in _tab_btns.size():
-		_tab_btns[tab_index].button_pressed = tab_index == index
-
-
-func _on_tab_selected(index: int) -> void:
-	_set_tab(index)
+	_preview_ui = PREVIEW_UI.new()
+	_preview_ui.setup(self, _stage_data, _playback, _bookmarks, _stage_runtime, _stage_grid, _timeline,
+		Callable(self, "_on_stage_selected"), Callable(self, "_on_difficulty_changed"),
+		Callable(self, "_restart"), Callable(self, "_on_bg_toggled"),
+		Callable(self, "_on_hitbox_toggled"), Callable(self, "_on_seed_toggled"),
+		Callable(self, "_jump_to"), Callable(self, "_on_bookmarks_changed"),
+		Callable(self, "_log_line"))
+	_preview_ui.build()
+	_stages = _preview_ui.stages()
+	_stage_sel = _preview_ui.stage_selector()
+	_diff_sel = _preview_ui.difficulty_selector()
+	_playback_bar = _preview_ui.playback_bar()
+	_status_bar = _preview_ui.status_bar()
+	_bookmark_panel = _preview_ui.bookmark_panel()
+	_event_log = _preview_ui.event_log()
+	_catalog = _preview_ui.catalog_panel()
 
 
 ## 舞台世界：幽灵自机 + 弹幕世界 + 命中框覆盖层（构造在 PreviewStageWorld，D3）。
@@ -353,10 +286,8 @@ func stage_runtime() -> StageRuntime:
 ## 嵌入创作台：隐藏内部“目录”页签（全局抽屉接管），右侧默认落在书签页。
 func set_embedded(on: bool) -> void:
 	_embedded = on
-	if _tab_btns.is_empty():
-		return
-	_tab_btns[0].visible = not on
-	_set_tab(0 if not on else 1)
+	if _preview_ui != null:
+		_preview_ui.set_embedded(on)
 
 
 func embedded() -> bool:
@@ -364,7 +295,7 @@ func embedded() -> bool:
 
 
 func catalog_tab_visible() -> bool:
-	return _tab_btns.size() > 0 and _tab_btns[0].visible
+	return _preview_ui.catalog_tab_visible() if _preview_ui != null else false
 
 
 func _load_stage() -> void:
@@ -495,12 +426,6 @@ func _current_time() -> float:
 
 # ═══ 选项回调 ═══
 
-## `stage_id` 在 `_stages` 里的下标（找不到 → 0，别越界）
-func _index_of_stage(stage_id: int) -> int:
-	for i in _stages.size():
-		if _stages[i].stage_id == stage_id:
-			return i
-	return 0
 
 
 func _on_stage_selected(idx: int) -> void:

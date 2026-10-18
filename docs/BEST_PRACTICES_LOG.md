@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 26 条（本文件留最近 26 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 27 条（本文件留最近 27 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — D3 第二批：PreviewUI 拆出，Workbench 523
 - 2026-10-18 — D3 第一批：Workbench 拆出 6 个预览服务
 - 2026-10-18 — 预览协程卡死：常驻视图不再 remove/re-add
 - 2026-10-18 — 预览冻结修复：雾 shader 本地时间 + 递归 CanvasLayer
@@ -56,6 +57,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — D3 第二批：PreviewUI 拆出，Workbench 523
+
+- `PreviewUI`（191）接过关卡/难度选择、播放条、状态条、书签面板、事件日志、目录、页签及信号接线。
+- Workbench 598 → 523；UI 装配不再和关卡/播放/书签状态混在一个方法里。
+- 剩余：`_load_stage` / `_restart` / 播放/书签接线仍在 Workbench（下一批再拆 StageLoader）。
+- 命名契约修正：`PreviewUI._stage_data`；全量 832 / 7741，verify 七步全绿。
 
 ### 2026-10-18 — D3 第一批：Workbench 拆出 6 个预览服务
 
