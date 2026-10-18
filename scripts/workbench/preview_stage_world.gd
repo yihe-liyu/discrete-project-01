@@ -27,6 +27,9 @@ func setup(host: Node, world: Node2D, runtime: StageRuntime, hitbox_layer: Node)
 func build() -> void:
 	_stage_runtime.world = _world
 	_bullet_manager = StageHost.make_bullet_world(_host)
+	# Workbench 根是 PROCESS_MODE_ALWAYS；BulletManager 若 INHERIT 会在 tree.paused 时照跑。
+	# 预览暂停（Playback → tree.paused）必须冻结弹幕，显式 PAUSABLE。
+	_bullet_manager.process_mode = Node.PROCESS_MODE_PAUSABLE
 	_player = StageHost.make_player(_world, GHOST_SCRIPT, "Player", REIMU_DATA)
 	StageHost.wire(_stage_runtime, _bullet_manager, _player, _world)
 	_hitbox_overlay = HITBOX_OVERLAY.new()

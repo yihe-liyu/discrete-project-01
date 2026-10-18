@@ -191,6 +191,8 @@ func test_preview_keeps_state_across_tab_switch():
 	await get_tree().process_frame
 	var wb = cs.workbench_instance()
 	assert_not_null(wb, "整关预览应创建并常驻")
+	assert_eq(wb.bullet_manager().process_mode, Node.PROCESS_MODE_PAUSABLE,
+		"预览 BulletManager 必须 PAUSABLE，否则 tree.paused 时弹幕照跑")
 	var stage_script = wb.stage_runtime().current_stage_script()
 	assert_not_null(stage_script, "整关应已启动关卡协程")
 	assert_true(stage_script.is_running, "关卡协程应在跑")

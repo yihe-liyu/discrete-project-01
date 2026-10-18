@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 33 条（本文件留最近 33 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 34 条（本文件留最近 34 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — 预览暂停：BulletManager 显式 PAUSABLE
 - 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
 - 2026-10-18 — D3 第三批：CreationStation 节点化 + WorkspaceStore
 - 2026-10-18 — D3 第二批：PreviewUI 拆出，Workbench 523
@@ -98,6 +99,12 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — 预览暂停：BulletManager 显式 PAUSABLE
+
+- 根因：Workbench 根是 PROCESS_MODE_ALWAYS；BulletManager 作为子节点 INHERIT 后也 ALWAYS，`tree.paused` 时敌人（World PAUSABLE）停了、弹幕还在跑。
+- 修法：PreviewStageWorld 建出 BulletManager 后显式 `process_mode = PAUSABLE`；内核积分/碰撞都挂在它的 `_physics_process`，因此一起冻结。
+- 测试：断言预览 BulletManager 必须是 PAUSABLE；全量 832 / 7747，verify 七步全绿。
 
 ### 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
 
