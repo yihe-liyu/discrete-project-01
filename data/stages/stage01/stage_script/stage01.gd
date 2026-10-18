@@ -51,6 +51,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	timeline.at(7.0).do(func():
 		var layer := CanvasLayer.new()
 		layer.layer = 32
+		layer.follow_viewport_enabled = true
 		var logo := TextureRect.new()
 		logo.texture = logo_tex
 		logo.global_position = Vector2(GameConfig.FIELD_CENTER_X - (logo.texture.get_size().x / 2), 250)

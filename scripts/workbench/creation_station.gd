@@ -167,18 +167,20 @@ func _on_window_size_changed() -> void:
 func _apply_layout() -> void:
 	var win_w := get_window().content_scale_size.x
 	var wide := win_w >= 1600
-	var content_w := mini(1280, win_w)
 	var x := 0
 	if wide:
-		x = 320 if _catalog_open else maxi(int((win_w - content_w) * 0.5), 0)
+		x = 320
 	else:
-		x = maxi(int((win_w - content_w) * 0.5), 0)
-	# 页签横栏保持全宽（不要跟着 Content 左移）：否则 GUT 输出面板会截走右侧页签点击。
+		x = 0
+	# 游戏画布整体平移（top_level 场地/BulletManager 也会跟着走）；
+	# UI 在 CanvasLayer 上，不受 canvas_transform 影响。
+	# 页签横栏保持全宽：否则 GUT 输出面板会截走右侧页签点击。
 	var content: Control = $Root/ContentHost/Content
-	content.offset_left = x
-	content.offset_right = -(win_w - x - content_w)
+	content.offset_left = 0
+	content.offset_right = 0
 	content.offset_top = 0
 	content.offset_bottom = 0
+	get_viewport().canvas_transform.origin.x = float(x)
 
 
 func _on_catalog_preset(entry) -> void:
@@ -306,6 +308,7 @@ func _exit_tree() -> void:
 	get_window().content_scale_size = Vector2i(1280, 960)
 	get_window().size = Vector2i(1280, 960)
 	get_window().min_size = Vector2i.ZERO
+	get_viewport().canvas_transform.origin.x = 0.0
 
 
 ## 切走：整关预览冻结保活（时间/关卡/书签保留）；试验台清运行时残留后冻结。

@@ -85,7 +85,7 @@ func _build_ui() -> void:
 	panel.offset_bottom = -8.0
 	# 与游戏页面统一：半透明黑底 + 金边卡片（rig_common 单一来源）
 	panel.add_theme_stylebox_override("panel", RIG_COMMON.panel_style())
-	add_child(panel)
+	add_panel_to_layer(panel)
 	# 内部滚动：未来加字段也不会裁内容
 	var panel_scroll := ScrollContainer.new()
 	panel_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

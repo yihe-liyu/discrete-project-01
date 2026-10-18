@@ -59,7 +59,7 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	var panel: PanelContainer = RIG_COMMON.make_panel()
-	add_child(panel)
+	add_panel_to_layer(panel)
 	var panel_scroll := ScrollContainer.new()
 	panel_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(panel_scroll)

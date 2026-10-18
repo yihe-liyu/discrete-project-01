@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 32 条（本文件留最近 32 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 33 条（本文件留最近 33 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 320 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
@@ -62,6 +63,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
+
+- 根因：bench 的场地/BulletManager 是 `top_level`，只把 Content 右移不会带动它们；左栏因此盖住场地、右面板却跟着 Content 走了。
+- 修法：创作台改用 **viewport `canvas_transform.origin.x`** 整体平移游戏画布（top_level 也生效）；UI 用 CanvasLayer 不跟着走。
+- 三个 bench 的右面板统一挂到 `BenchBase.add_panel_to_layer()` 的 CanvasLayer(1)，嵌入时 top+36/bottom−36 让出顶栏；hitbox/Stage logo 设 `follow_viewport_enabled=true`。
+- 离开创作台重置 canvas_transform / content_scale；1600 实拍场地 384..1152、右面板 1160..1592，1280 自动收起为 0..832 / 840..1272。
+- 全量 832 / 7742，verify 七步全绿。
 
 ### 2026-10-18 — D6：1600 布局 + 320 常驻左栏
 

@@ -50,6 +50,8 @@ func preset_from_entry(_entry) -> void:
 # ═══ 热更新（实现全在 `HotReloadService`；本类只做接线 + 转发）═══
 ## 右下角浮动状态条（子类 _ready 建好）
 var _toast: Control
+## 右面板 CanvasLayer：canvas_transform 平移游戏画布时 UI 不跟着走
+var _panel_layer: CanvasLayer
 ## 创作台托管时不要改窗口尺寸（由 CreationStation 统一管）
 var _embedded: bool = false
 ## 热更新服务（无树；两个来源是下面两个子类虚函数的 Callable）
@@ -168,9 +170,25 @@ func _make_field() -> Control:
 
 
 ## 面板脚手架：右锚金边卡片 + 内部纵向滚动 → 返回内容 VBox
+## 右面板统一挂 CanvasLayer：创作台用 viewport canvas_transform 平移游戏画布时，
+## 右面板属于 UI，不能跟着场地/子弹一起走。
+func add_panel_to_layer(panel: Control) -> void:
+	if _panel_layer == null:
+		_panel_layer = CanvasLayer.new()
+		_panel_layer.name = "UILayer"
+		_panel_layer.layer = 1
+		add_child(_panel_layer)
+	panel.theme = theme
+	if _embedded:
+		# 创作台顶栏 36px 在 CanvasLayer(2)；右面板在 CanvasLayer(1)，要让出顶栏高度。
+		panel.offset_top += 36.0
+		panel.offset_bottom -= 36.0
+	_panel_layer.add_child(panel)
+
+
 func build_panel_scroll() -> VBoxContainer:
 	var panel: PanelContainer = RIG_COMMON.make_panel()
-	add_child(panel)
+	add_panel_to_layer(panel)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(scroll)
@@ -227,12 +245,16 @@ func _draw_marker() -> void:
 ## 切走：冻结 UI/处理（子弹/敌人已由 clear_runtime 清掉）
 func pause_view() -> void:
 	visible = false
+	if _panel_layer != null:
+		_panel_layer.visible = false
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 
 ## 切回：恢复处理（连发/热更新/幽灵继续）
 func resume_view() -> void:
 	visible = true
+	if _panel_layer != null:
+		_panel_layer.visible = true
 	process_mode = Node.PROCESS_MODE_INHERIT
 
 

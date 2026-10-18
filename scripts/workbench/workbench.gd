@@ -127,6 +127,8 @@ func _ready() -> void:
 	# UI 在暂停/快进时也要活着
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 创作台可能用 viewport canvas_transform 平移游戏画布；命中框要跟着走
+	$HitboxLayer.follow_viewport_enabled = true
 	# 服务：先建起来（UI 装配时要把信号接上去）
 	_playback = Playback.new()
 	_playback.changed.connect(_apply_playback_runtime)
