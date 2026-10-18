@@ -61,7 +61,8 @@
 - 根因：`CreationStation._on_slot()` 每次切页都把常驻 Workbench `remove_child` 再 `add_child`；`remove_child` 触发整棵子树 `_exit_tree`，`CoroutineRunner._exit_tree()` 直接 `stop()`，背景/敌人/关卡协程全被停掉，重新入树不会自动重启。
 - 修法：已挂在 `$Root/Content` 下的常驻视图不再脱离场景树，只切 `visible` / `process_mode`；只有首次或异常父节点才重新挂。
 - 回归：等 stage01 第一波敌人后反复切页，验关卡 / 背景 / 敌人三个 CoroutineRunner 的 `is_running` 与 `game_time` 都继续推进；另保留递归 CanvasLayer、雾本地时间修复。
-- 全量 832 / 7738，verify 七步全绿。
+- **补充（同一根因的第二层）**：`$World`/背景显式 `process_mode=PAUSABLE`，根节点 `DISABLED` 压不住 ⇒ 冻结时必须递归快照/禁用整棵 Workbench 子树，恢复时逐个还原。测试切走后真等 0.3s，关卡/敌人/背景三个时钟都不前进。
+- 全量 832 / 7741，verify 七步全绿。
 
 ### 2026-10-18 — 预览冻结修复：雾 shader 本地时间 + 递归 CanvasLayer
 

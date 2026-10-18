@@ -227,7 +227,15 @@ func test_preview_keeps_state_across_tab_switch():
 	assert_false((wb.get_node("UI") as CanvasLayer).visible, "预览的 CanvasLayer UI 也要隐藏")
 	assert_false(nested_layer.visible, "嵌套 CanvasLayer（stage logo 同路径）也要隐藏")
 	assert_false(get_tree().paused, "切走后不能把全局暂停留在场上")
-	assert_almost_eq(wb.current_time(), t_before, 0.05, "冻结后关卡时间不应继续走")
+	# 显式 PAUSABLE 子节点（World/背景）必须也被冻结：真等 0.3s 验时钟不前进
+	var frozen_at: float = wb.current_time()
+	var enemy_frozen: float = enemy_script.game_time()
+	var bg_frozen: float = bg_script.game_time()
+	await wait_seconds(0.3)
+	assert_almost_eq(wb.current_time(), frozen_at, 0.02, "冻结后关卡时间不应继续走")
+	assert_almost_eq(stage_script.game_time(), frozen_at, 0.02, "冻结后关卡协程时钟不应继续走")
+	assert_almost_eq(enemy_script.game_time(), enemy_frozen, 0.02, "冻结后敌人协程时钟不应继续走")
+	assert_almost_eq(bg_script.game_time(), bg_frozen, 0.02, "冻结后背景协程时钟不应继续走")
 	assert_true(stage_script.is_running, "切走后关卡协程不能被 _exit_tree 停掉")
 	# 反复切换：协程必须始终存活（旧实现 remove_child 会 stop 所有 CoroutineRunner）
 	for i in 2:

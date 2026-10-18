@@ -99,6 +99,8 @@ var _preview_suspended: bool = false
 ## 切走时递归收集的 CanvasLayer + 原可见性（stage logo 等是内容脚本 add_child 的层）
 var _suspended_layers: Array[CanvasLayer] = []
 var _suspended_layer_visibility: Array[bool] = []
+## 冻结时整棵子树的 process_mode 快照（$World/背景显式 PAUSABLE，根节点 DISABLED 压不住）
+var _suspended_process_modes: Dictionary = {}
 var _stage_shift_y := 0.0    # 嵌入创作台页面偏移；舞台视觉归一回游戏坐标用
 var _ui_page_y := 0.0        # 页面在窗口里的 y（用于同步去重）
 var _ui_offset_applied: bool = false  # 防止 _ready 的首次同步 + deferred 同步重复下移
@@ -376,6 +378,7 @@ func suspend_preview() -> void:
 	_preview_suspended = true
 	visible = false
 	_set_preview_layers_visible(false)
+	_freeze_preview_subtree()
 	AudioManager.pause_bgm()
 	var tree := get_tree()
 	if tree != null:
@@ -396,6 +399,7 @@ func resume_preview() -> void:
 	_preview_suspended = false
 	visible = true
 	_set_preview_layers_visible(true)
+	_restore_preview_process_modes()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	AudioManager.resume_bgm()
 	_apply_playback_runtime()
@@ -429,6 +433,26 @@ func _collect_canvas_layers(node: Node) -> void:
 		if child is CanvasLayer:
 			_suspended_layers.append(child as CanvasLayer)
 		_collect_canvas_layers(child)
+
+
+## 冻结整棵子树：$World/背景等显式 PAUSABLE 的子节点不会自动继承根节点 DISABLED。
+func _freeze_preview_subtree() -> void:
+	_suspended_process_modes.clear()
+	_snapshot_and_disable_process(self)
+
+
+func _snapshot_and_disable_process(node: Node) -> void:
+	_suspended_process_modes[node] = node.process_mode
+	node.process_mode = Node.PROCESS_MODE_DISABLED
+	for child in node.get_children():
+		_snapshot_and_disable_process(child)
+
+
+func _restore_preview_process_modes() -> void:
+	for node in _suspended_process_modes:
+		if is_instance_valid(node):
+			node.process_mode = _suspended_process_modes[node]
+	_suspended_process_modes.clear()
 
 
 ## 当前游戏内时刻（创作台/测试用；不摸私有 runner）
