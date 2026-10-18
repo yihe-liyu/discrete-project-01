@@ -65,7 +65,7 @@ var _random := RandomNumberGenerator.new()
 var _catalog := LifecycleCatalog.new()
 var _program_data: Array = []
 var _program_anchors: Array = []
-var _sig_to_program: Dictionary = {}
+var _program_key_to_pid: Dictionary = {}
 
 
 func _init() -> void:
@@ -272,7 +272,7 @@ func reset_registries() -> void:
 	_accel = null            # 丢旧 store：program / SoA 一并释放，下次 _ensure_native 新建
 	_program_data.clear()
 	_program_anchors.clear()
-	_sig_to_program.clear()
+	_program_key_to_pid.clear()
 	_type_registry.clear()
 	_fx_registry.clear()
 	_catalog = LifecycleCatalog.new()
@@ -425,14 +425,28 @@ func randi_range(from: int, to: int) -> int:
 
 # ═══ 行为 program ═══
 
+## 公开接缝：按 move+params 取/注册 program id（工具/测试不直接摸 `_program_for`）。
+func program_id_for(move: StringName, params: Dictionary) -> int:
+	return _program_for(move, params)
+
+
+## 已注册 program 数（公开接缝；用于测试/工具核对缓存）。
+func program_count() -> int:
+	return _program_data.size()
+
+
 ## move+params → 原生 program（编译 + 注册，按签名缓存）。
 func _program_for(move: StringName, params: Dictionary) -> int:
 	if _accel == null:
 		return -1
-	var sig: int = LifecycleCatalog.signature(move, params)
-	if _sig_to_program.has(sig):
-		return _sig_to_program[sig]
+	var key: int = LifecycleCatalog.cache_key(move, params)
 	var lc: BulletLifecycle = _catalog.get_lifecycle(move, params)
+	if _program_key_to_pid.has(key):
+		var cached_pid: int = _program_key_to_pid[key]
+		if _program_matches(cached_pid, lc):
+			return cached_pid
+		# 键碰撞（hash 相同但 shape 不同）：丢弃映射，下面重新注册。
+		_program_key_to_pid.erase(key)
 	var pid: int = -1
 	if lc != null:
 		var c: Dictionary = lc.compile()
@@ -446,8 +460,18 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 				push_error("[KernelNativeSystem] program 对齐失败：native pid=%d, 期望 %d" % [pid, expected])
 			_program_data.append(c)
 			_program_anchors.append(_anchor_spec_for(move, params))
-	_sig_to_program[sig] = pid
+	_program_key_to_pid[key] = pid
 	return pid
+
+
+## 命中校验：缓存 pid 对应的 program 必须和本次 lifecycle 的 phase/slots 一致。
+func _program_matches(pid: int, lc: BulletLifecycle) -> bool:
+	if lc == null:
+		return pid < 0
+	if pid < 0 or pid >= _program_data.size():
+		return false
+	var c: Dictionary = _program_data[pid]
+	return int(c[&"phase_count"]) == lc.phases.size() and int(c[&"slots"]) == lc.slots
 
 
 func _anchor_spec_for(move: StringName, params: Dictionary) -> Variant:

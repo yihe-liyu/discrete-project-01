@@ -813,3 +813,48 @@ func test_non_last_phase_never_warns() -> void:
 	lc.despawn()
 	lc.compile()
 	assert_push_warning("下一相位永远不会进入")
+
+
+## DSL2 承重契约：on_end 按追加顺序执行，且 emit(forward(...)) 读的是**执行到这里时**的发射者朝向。
+## 这里用固定世界角（1.0 rad）代替 random_dir(PI)：两者最终都走同一条 heading 更新 + forward 解析路径，
+## 固定角才能断言绝对方向；random_dir 的随机分支由 test_kernel_random 覆盖。
+func test_on_end_heading_runs_before_emit_forward() -> void:
+	if not _available():
+		pending("未构建原生扩展")
+		return
+	var factory := func() -> BulletData: return BulletData.new().enemy()
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(0.06)
+	lc.on_end_heading(BulletLifecycle.heading(1.0))
+	for i in 4:
+		lc.emit(factory, BulletLifecycle.forward(TAU * i / 4.0), 100.0)
+	lc.despawn()
+	var compiled: Dictionary = lc.compile()
+	var store = ClassDB.instantiate("DanmakuStore")
+	store.setup(1024, CULL)
+	store.set_margin(0.0)
+	store.set_default_life(100.0)
+	store.set_field(GameConfig.FIELD_LEFT, GameConfig.FIELD_RIGHT, GameConfig.FIELD_TOP)
+	var pid: int = store.register_program(compiled["ops"], compiled["args"],
+		compiled["move_start"], compiled["move_count"], compiled["until_idx"],
+		compiled["act_start"], compiled["act_count"], compiled["phase_count"], compiled["slots"])
+	var id: int = store.spawn(Vector2(448.0, 400.0), Vector2(0.0, -100.0), 0, 0, Color.WHITE)
+	store.set_program(id, pid)
+	var dirs: Array[Vector2] = []
+	for _f in 12:
+		store.integrate(DT)
+		var res: Dictionary = store.behavior_tick(DT, Vector2.ZERO, Vector2.ZERO, false,
+			PackedVector2Array(), PackedVector2Array())
+		var kinds: PackedInt32Array = res.get("kind", PackedInt32Array())
+		var dxs: PackedFloat32Array = res.get("dx", PackedFloat32Array())
+		var dys: PackedFloat32Array = res.get("dy", PackedFloat32Array())
+		for k in kinds.size():
+			if kinds[k] == 0:
+				dirs.append(Vector2(dxs[k], dys[k]))
+		if dirs.size() >= 4:
+			break
+	assert_eq(dirs.size(), 4, "应产生 4 个 emit 事件")
+	for i in dirs.size():
+		var expected := Vector2(sin(1.0 + TAU * i / 4.0), -cos(1.0 + TAU * i / 4.0))
+		assert_true(dirs[i].is_equal_approx(expected),
+			"第 %d 发 forward 应基于 on_end_heading 后的新朝向；实际 %s 期望 %s" % [i, dirs[i], expected])

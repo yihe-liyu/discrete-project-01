@@ -50,10 +50,10 @@ func test_identical_lifecycles_share_one_program() -> void:
 	var ns: KernelNativeSystem = autofree(KernelNativeSystem.new())
 	var a := FIX.world_accel(Vector2(0, 200))
 	var b := FIX.world_accel(Vector2(0, 200))
-	var p1: int = ns._program_for(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": a})
-	var p2: int = ns._program_for(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": b})
+	var p1: int = ns.program_id_for(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": a})
+	var p2: int = ns.program_id_for(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": b})
 	assert_eq(p1, p2, "结构相同的 lifecycle 应复用同一 program")
-	assert_eq(ns._program_data.size(), 1, "应只注册 1 个 program")
+	assert_eq(ns.program_count(), 1, "应只注册 1 个 program")
 
 
 ## b0：BulletData.lifecycle 走 {lifecycle} 入口（优先于 coroutine_script）
@@ -64,3 +64,17 @@ func test_bullet_data_lifecycle_preferred() -> void:
 	var spec: Dictionary = backend.prepare_shot(data, Vector2(300.0, 400.0), Vector2.UP)
 	assert_eq(spec.get("move"), LifecycleCatalog.MOVE_LIFECYCLE, "应走 lifecycle 入口")
 	assert_eq(spec.get("params", {}).get(&"lifecycle"), data.lifecycle, "应带上该描述符")
+
+
+## DSL9：命中缓存后抽验 phase/slots；形状不一致（模拟 hash 碰撞/脏缓存）必须重新注册。
+func test_program_cache_rejects_shape_mismatch() -> void:
+	if not ClassDB.class_exists("DanmakuStore"):
+		pending("未构建原生扩展")
+		return
+	var ns: KernelNativeSystem = autofree(KernelNativeSystem.new())
+	var lc := FIX.world_accel(Vector2(0, 200))
+	var p1: int = ns.program_id_for(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": lc})
+	assert_gte(p1, 0, "首登记应成功")
+	ns._program_data[p1][&"phase_count"] = 99   # 模拟缓存 program 的形状被污染
+	var p2: int = ns.program_id_for(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": lc})
+	assert_ne(p2, p1, "形状不一致不能复用旧 pid，应重新注册")

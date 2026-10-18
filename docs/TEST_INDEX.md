@@ -19,14 +19,14 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：119 脚本 / **834 用例（834 通过 / 0 红 —— ✅ 全绿）/ 7758 断言 / 56.994s** / 19 orphans / **0 pending**。
+**现状**：119 脚本 / **838 用例（838 通过 / 0 红 —— ✅ 全绿）/ 7767 断言 / 57.263s** / 19 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 58 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 30 | 183 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **B 内核 · 原生 C++ + 桥接** | 30 | 187 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 44 | 366 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
@@ -52,7 +52,7 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：类型不匹配 / **严格模式未知键** / **多脚本并集未知键**要响亮报错 | 10 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（30 / 183）
+## B · 内核 · 原生 C++ + 桥接（30 / 187）
 
 ### B1 parity 套件（13 文件 / 100 用例）—— 依赖 `test/reference/` 冻结 oracle
 
@@ -60,7 +60,7 @@
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限）+ **编译守卫（DSL3/4/6/8/13）**，每条原语一条最小 lifecycle 逐帧对比 | 53 | 1 |
+| [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限）+ **编译守卫（DSL3/4/6/8/13）**，每条原语一条最小 lifecycle 逐帧对比；**on_end_heading 先于 emit(forward) 的承重契约（DSL2）** | 54 | 1 |
 | [test_lifecycle_compositions](../test/test_lifecycle_compositions.gd) | **手写原语组合**逐帧 parity（accel / world / radial / bounce / curve / homing / avoid / laser） | 7 | 1 |
 | [test_lifecycle_model](../test/test_lifecycle_model.gd) | `BulletLifecycle` 描述符 ↔ 参考解释器 parity | 3 | 1 |
 | [test_native_executor](../test/test_native_executor.gd) | 原生 `behavior_tick`（packed program）↔ 参考解释器**逐位** parity | 9 | 1 |
@@ -94,8 +94,8 @@
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_lifecycle_signature](../test/test_lifecycle_signature.gd) | b0：结构签名 —— 同结构共用一个原生 program（防 per-instance 爆炸） | 7 | 3 |
-| [test_lifecycle_catalog](../test/test_lifecycle_catalog.gd) | F10c：`LifecycleCatalog` 只剩 `{lifecycle}` 兼容入口；旧 move preset 已删 / 未知 move 返回 null / 缓存按内容签名 | 5 | 0 |
+| [test_lifecycle_signature](../test/test_lifecycle_signature.gd) | b0：结构签名 —— 同结构共用一个原生 program（防 per-instance 爆炸）；program 缓存命中抽验 shape（DSL9） | 8 | 3 |
+| [test_lifecycle_catalog](../test/test_lifecycle_catalog.gd) | F10c：`LifecycleCatalog` 只剩 `{lifecycle}` 兼容入口；旧 move preset 已删 / 未知 move 返回 null / 缓存按内容签名 + phase/slots 抽验（DSL9） | 7 | 0 |
 | [test_emit_variant](../test/test_emit_variant.gd) | 变体发射：`chance_toward` 概率分支号随 emit 事件回传，宿主据此选模板 | 6 | 0 |
 | [test_heading_state](../test/test_heading_state.gd) | K2：弹道「朝向」状态化 —— `accel_heading` 与速度解耦 + `forward()` 糖 | 4 | 0 |
 | [test_lifecycle_hooks](../test/test_lifecycle_hooks.gd) | b2b：`LifecycleHooks` 名字注册表 + `on_end_call` 用名字 | 3 | 0 |

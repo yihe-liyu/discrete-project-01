@@ -226,6 +226,7 @@ data.trajectory(lc)
 
 - `compile()` → `{ops, args, move_start, move_count, until_idx, act_start, act_count, phase_count, slots, actions, sfx}`。
 - `content_signature()` = 结构哈希（内容相同 → 共用同一原生 program）；同结构才共享。
+  缓存键额外混入 phase_count / slots，命中后还会抽验 program 形状；hash 碰撞不会静默复用错误弹道。
 
 ### 3.10 锚点（激光）
 

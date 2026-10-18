@@ -43,3 +43,22 @@ func test_unknown_move_cached_null() -> void:
 	assert_true(cat.get_lifecycle(&"nope", {}) == null, "未知 move → null")
 	assert_true(cat.get_lifecycle(&"nope", {}) == null, "未知 move 也缓存 null")
 	assert_eq(cat.cache_size(), 1, "缓存 1 条 null")
+
+
+func test_cache_key_includes_phase_slots() -> void:
+	var one_phase := FIX.world_accel(Vector2(0, 200))
+	var two_phase := FIX.avoid_player(150.0, 0.6, 1.0)
+	assert_ne(
+		LifecycleCatalog.cache_key(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": one_phase}),
+		LifecycleCatalog.cache_key(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": two_phase}),
+		"phase/slots 不同的 lifecycle 不能共用同一缓存键")
+
+
+func test_cache_collision_does_not_return_wrong_lifecycle() -> void:
+	var cat: LifecycleCatalog = autofree(LifecycleCatalog.new())
+	var target := FIX.world_accel(Vector2(0, 200))
+	var wrong := FIX.avoid_player(150.0, 0.6, 1.0)
+	var key := LifecycleCatalog.cache_key(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": target})
+	cat._cache[key] = wrong
+	var out: BulletLifecycle = cat.get_lifecycle(LifecycleCatalog.MOVE_LIFECYCLE, {&"lifecycle": target})
+	assert_eq(out, target, "缓存命中但 phase/slots 不一致 → 必须重建，不能返回错误弹道")

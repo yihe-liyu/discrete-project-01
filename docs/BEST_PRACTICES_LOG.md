@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 38 条（本文件留最近 38 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 39 条（本文件留最近 39 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — DSL2 契约测试 + DSL9 缓存形状守卫
 - 2026-10-18 — 页签字号 16→20（16px 宋体密笔画糊成别的字）
 - 2026-10-18 — Ghost 活动范围/初始点与真自机对齐
 - 2026-10-18 — Workbench 与游戏场地同坐标（顶栏 36→32）
@@ -103,6 +104,13 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — DSL2 契约测试 + DSL9 缓存形状守卫
+
+- DSL2：新增原生契约测试——`on_end_heading` 必须先于后续 `emit(forward(...))` 执行，整圈发射共享新朝向；用固定 1.0 rad 断言绝对方向，random_dir 走同一 heading 路径。
+- DSL9：`LifecycleCatalog.cache_key()` 在签名上混入 phase_count/slots；`get_lifecycle()` 命中后校验形状，不一致则重建。
+- `KernelNativeSystem` 的 program 缓存改为同款复合键；命中时 `_program_matches()` 校验 pid 对应 program 的 phase/slots，不一致丢弃重登记，不再静默复用错误 pid。
+- 测试：缓存键区分 phase、模拟脏缓存不回错、污染 program 不命旧 pid；全量 838 / 7767，verify 七步全绿。
 
 ### 2026-10-18 — 页签字号 16→20（16px 宋体密笔画糊成别的字）
 

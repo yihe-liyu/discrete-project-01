@@ -26,16 +26,41 @@ static func signature(move: StringName, params: Dictionary) -> int:
 	return hash(move) * 31 + hash(params) * 7
 
 
+## 缓存键：在 int 签名上再混入 phase_count / slots。
+## signature() 本身是 hash，碰撞时只凭它命中就会静默复用错误 layout；形状参与键 + 命中校验是兜底。
+## 返回 int 是为了热路径（每发 spawn 都会查）不做 String 分配。
+static func cache_key(move: StringName, params: Dictionary) -> int:
+	var sig := signature(move, params)
+	if move == MOVE_LIFECYCLE:
+		var lc: BulletLifecycle = params.get(&"lifecycle", null)
+		if lc != null:
+			return sig * 31 + lc.phases.size() * 8 + lc.slots
+	return sig
+
+
+static func _compatible(cached: Variant, incoming: Variant) -> bool:
+	if cached == null or incoming == null:
+		return cached == incoming
+	var a := cached as BulletLifecycle
+	var b := incoming as BulletLifecycle
+	if a == null or b == null:
+		return false
+	return a.phases.size() == b.phases.size() and a.slots == b.slots
+
+
 var _cache: Dictionary = {}
 
 
 ## 带缓存取 lifecycle（可返回 null 并缓存，避免重复 build）。
+## 键碰撞（同 key 但 phase/slots 不同）时不返回旧值，改为 build 本次并修正缓存。
 func get_lifecycle(move: StringName, params: Dictionary) -> BulletLifecycle:
-	var sig := signature(move, params)
-	if _cache.has(sig):
-		return _cache[sig]
+	var key := cache_key(move, params)
+	if _cache.has(key):
+		var cached: Variant = _cache[key]
+		if _compatible(cached, params.get(&"lifecycle")):
+			return cached as BulletLifecycle
 	var lc := build(move, params)
-	_cache[sig] = lc
+	_cache[key] = lc
 	return lc
 
 
