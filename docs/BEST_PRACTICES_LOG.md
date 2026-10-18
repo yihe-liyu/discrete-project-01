@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 27 条（本文件留最近 27 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 28 条（本文件留最近 28 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — D3 第三批：CreationStation 节点化 + WorkspaceStore
 - 2026-10-18 — D3 第二批：PreviewUI 拆出，Workbench 523
 - 2026-10-18 — D3 第一批：Workbench 拆出 6 个预览服务
 - 2026-10-18 — 预览协程卡死：常驻视图不再 remove/re-add
@@ -57,6 +58,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — D3 第三批：CreationStation 节点化 + WorkspaceStore
+
+- `creation_station.tscn` 现在声明：顶栏底板/金线、4 个页签按钮、目录按钮、CatalogLayer(3)/Root/Drawer/CatalogPanel；脚本只接信号、套主题、修正 CatalogPanel 宽度。
+- 配置/迁移抽成无树 `workspace_store.gd`（84）：v1→v2、坏数据降级、slot 钳制、未实例化台数据保留；CreationStation 只委托。
+- `creation_station.gd` 390 → 274；动态页面（Workbench/三台）仍按页签创建，不做节点化。
+- 全量 832 / 7741，verify 七步全绿。
 
 ### 2026-10-18 — D3 第二批：PreviewUI 拆出，Workbench 523
 

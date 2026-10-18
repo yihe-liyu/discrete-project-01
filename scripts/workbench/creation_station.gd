@@ -5,8 +5,8 @@ extends Control
 
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const WORKBENCH := preload("res://scenes/workbench.tscn")
-const CATALOG_PANEL := preload("res://scripts/workbench/catalog_panel.gd")
 const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
+const WORKSPACE_STORE := preload("res://scripts/workbench/workspace_store.gd")
 const BENCHS := [
 	preload("res://scenes/workbench/bullet_bench.tscn"),
 	preload("res://scenes/workbench/enemy_bench.tscn"),
@@ -19,9 +19,8 @@ var _view: Control = null
 var _current_slot: int = -1
 var _workbench_view = null
 var _bench_instances: Array[BenchBase] = [null, null, null]
-var _workspace_restores: Array = [{}, {}, {}]
-var _workspace_slot: int = 1
-var _loaded_workspace_version: int = 0
+## 工作区配置/迁移（无树服务，D3）
+var _workspace_store
 ## 三台是否已经从配置恢复过（之后保留常驻实例的当前状态，不再用旧快照覆盖）
 var _bench_restored: Array[bool] = [false, false, false]
 
@@ -32,111 +31,44 @@ var _catalog_drawer: PanelContainer
 var _catalog_panel               # CatalogPanel（preload 构造，避免 class_name 缓存）
 var _catalog_open: bool = false
 
-const CFG_PATH := "user://creation_station.cfg"
-## 工作区配置 schema；v1 = 无 version 的旧文件，v2 = 显式 ws.version + 校验/迁移。
-const WORKSPACE_VERSION := 2
-
-
 func _ready() -> void:
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
 	get_window().size = Vector2i(1280, 960)
 	theme = WORKBENCH_THEME.build()
 	_build_ui()
-	_load_workspace()
-	_on_slot(_load_slot_override())
+	_workspace_store = WORKSPACE_STORE.new()
+	_workspace_store.load(SLOTS.size())
+	_on_slot(_workspace_store.slot())
 
 
 func _build_ui() -> void:
-	# 布局用场景里挂好的节点（作者在编辑器建的）——填充式。
-	# ⚠️ 横栏挂在 **CanvasLayer(layer=2)** 里，不是内容区里：
-	# 被托管的视图会**压住横栏吃掉点击**（组合台的场地是 `top_level` 的 832x928 Control +
-	# MOUSE_FILTER_STOP；整关预览的 BgContainer 被嵌页归一时移到 y≈1、宽 762）→
-	# 整关预览/弹幕台/敌人台（x<832~963 一带）点不动。GUI 拾取按**画布层从高到低** →
-	# 横栏必须在更高的层上，且**必须显式挂主题**（CanvasLayer 会断 Control 主题链）。
-	# 顶栏底板：原来按钮之间的空隙直接透出场地，场地的金色左边框会像一根“悬空竖线”。
-	# 加一条 36px 的深色 header + 底部金线，给页签/内容一个明确的接缝。
-	var bar_layer: CanvasLayer = $BarLayer
-	var header_bg := ColorRect.new()
-	header_bg.color = Color(0.035, 0.035, 0.05, 0.98)
-	header_bg.anchor_right = 1.0
-	header_bg.offset_bottom = 36.0
-	header_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar_layer.add_child(header_bg)
-	bar_layer.move_child(header_bg, 0)
-	var header_line := ColorRect.new()
-	header_line.color = Color(0.62, 0.52, 0.28, 0.55)
-	header_line.anchor_right = 1.0
-	header_line.offset_top = 35.0
-	header_line.offset_bottom = 36.0
-	header_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar_layer.add_child(header_line)
-	bar_layer.move_child(header_line, 1)
-
+	# 静态 chrome（顶栏/页签/目录抽屉）在 creation_station.tscn 里声明；
+	# 这里只接信号、套主题、压 CatalogPanel 的最小宽度。
 	var bar: HBoxContainer = $BarLayer/Bar
 	bar.theme = theme
+	_slot_buttons.clear()
 	for i in SLOTS.size():
-		var button := Button.new()
-		button.text = SLOTS[i]
-		button.toggle_mode = true
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.add_theme_font_size_override("font_size", 16)
+		var button := bar.get_node("Tab%d" % i) as Button
 		button.pressed.connect(_on_slot.bind(i))
-		bar.add_child(button)
 		_slot_buttons.append(button)
-
-	# 全局目录开关：固定在顶栏右侧；抽屉挂在 layer=3，不挤占 1280 的场地+右面板。
-	_catalog_btn = Button.new()
-	_catalog_btn.text = "目录 ▾"
-	_catalog_btn.tooltip_text = "打开全局目录"
-	_catalog_btn.toggle_mode = true
-	_catalog_btn.custom_minimum_size = Vector2(88, 0)
-	_catalog_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_catalog_btn.add_theme_font_size_override("font_size", 16)
+	_catalog_btn = bar.get_node("CatalogButton") as Button
 	_catalog_btn.toggled.connect(set_catalog_open)
-	bar.add_child(_catalog_btn)
-	_build_catalog_drawer()
+	_configure_catalog_drawer()
 
 
-## 全局目录抽屉：左覆盖层（不缩场地），四个页签共用。
-## 位置避开顶栏（y=44 起）；打开时只挡左侧 432px，右侧场地仍可点。
-func _build_catalog_drawer() -> void:
-	_catalog_layer = CanvasLayer.new()
-	_catalog_layer.name = "CatalogLayer"
-	_catalog_layer.layer = 3
-	add_child(_catalog_layer)
-
-	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_catalog_layer.add_child(root)
-
-	_catalog_drawer = PanelContainer.new()
-	_catalog_drawer.name = "CatalogDrawer"
-	_catalog_drawer.anchor_left = 0.0
-	_catalog_drawer.anchor_right = 0.0
-	_catalog_drawer.anchor_top = 0.0
-	_catalog_drawer.anchor_bottom = 1.0
-	_catalog_drawer.offset_left = 8.0
-	_catalog_drawer.offset_top = 44.0
-	_catalog_drawer.offset_right = 440.0
-	_catalog_drawer.offset_bottom = -8.0
-	_catalog_drawer.mouse_filter = Control.MOUSE_FILTER_STOP
-	_catalog_drawer.custom_minimum_size = Vector2(432, 0)
+## 目录抽屉在场景里声明（CanvasLayer(3)）；这里只套主题/样式、接信号、修正 CatalogPanel 宽度。
+func _configure_catalog_drawer() -> void:
+	_catalog_layer = $CatalogLayer as CanvasLayer
+	_catalog_drawer = $CatalogLayer/Root/CatalogDrawer as PanelContainer
+	_catalog_panel = $CatalogLayer/Root/CatalogDrawer/CatalogPanel
 	_catalog_drawer.add_theme_stylebox_override("panel", RIG_COMMON.panel_style())
 	_catalog_drawer.theme = theme
-	root.add_child(_catalog_drawer)
-
-	_catalog_panel = CATALOG_PANEL.new()
 	_catalog_panel.show_descriptors = true
-	_catalog_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_catalog_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_catalog_panel.preset_requested.connect(_on_catalog_preset)
-	_catalog_drawer.add_child(_catalog_panel)
-	# CatalogPanel._ready() 会把 custom_minimum_size 重置成 (0,420) → 必须在入树后再压宽度
+	# CatalogPanel._ready() 会把 custom_minimum_size 重置成 (0,420) → 必须在入树后压宽度
 	_catalog_panel.custom_minimum_size = Vector2(408, 420)
 	_catalog_drawer.visible = false
-
 
 # ═══ 公开接缝（测试/外部驱动；用户点页签走的是同一条实现）═══
 
@@ -265,7 +197,7 @@ func _on_slot(slot_index: int) -> void:
 		bench.resume_view()
 		var ri := slot_index - 1
 		if not _bench_restored[ri]:
-			var saved: Dictionary = _workspace_restores[ri]
+			var saved: Dictionary = _workspace_store.restore(ri)
 			if not saved.is_empty():
 				bench.restore(saved)
 			_bench_restored[ri] = true
@@ -294,60 +226,22 @@ func route_preset(entry) -> void:
 	set_catalog_open(false)
 
 
-# ═══ 工作区自动恢复（user:// 配置）═══
+# ═══ 工作区（实现见 WorkspaceStore）═══
 
-func _load_slot_override() -> int:
-	return _workspace_slot
-
-
-## 读工作区（v1 旧文件也照读；坏数据降级为空，不半截恢复）
-func _load_workspace() -> void:
-	_workspace_slot = 1
-	_loaded_workspace_version = 0
-	_workspace_restores = [{}, {}, {}]
-	var config_file := ConfigFile.new()
-	if config_file.load(CFG_PATH) != OK:
-		return
-	_loaded_workspace_version = int(config_file.get_value("ws", "version", 1))
-	if _loaded_workspace_version < 1:
-		_loaded_workspace_version = 1
-	_workspace_slot = clampi(int(config_file.get_value("ws", "slot", 1)), 0, SLOTS.size() - 1)
-	for i in 3:
-		var data = config_file.get_value("bench%d" % i, "data", {})
-		_workspace_restores[i] = data if data is Dictionary else {}
-	_migrate_workspace(_loaded_workspace_version)
-
-
-## 旧 schema → 当前 schema。v1→v2 目前只是信封补齐；以后字段迁移都加在这里。
-func _migrate_workspace(from_version: int) -> void:
-	if from_version < 2:
-		# v1：bench 快照可能缺 F10 的 composer/templates；restore 自己会补默认值。
-		# 这里只保证每条 restore 都是 Dictionary（坏数据降级为空）。
-		for i in 3:
-			if not (_workspace_restores[i] is Dictionary):
-				_workspace_restores[i] = {}
-
-
-## 当前 writer schema（测试/外部查询）
 func workspace_version() -> int:
-	return WORKSPACE_VERSION
+	return _workspace_store.version()
 
 
-## 本次读到的原始版本（0 = 没有配置文件；1 = 旧文件；2 = 当前）
 func workspace_loaded_from_version() -> int:
-	return _loaded_workspace_version
+	return _workspace_store.loaded_version()
 
 
-## 已读入的槽位（0..3）
 func workspace_slot() -> int:
-	return _workspace_slot
+	return _workspace_store.slot()
 
 
-## 某个试验台的恢复数据（只读副本；测试/调试用）
 func workspace_restore(slot_index: int) -> Dictionary:
-	if slot_index < 1 or slot_index > 3:
-		return {}
-	return (_workspace_restores[slot_index - 1] as Dictionary).duplicate(true)
+	return _workspace_store.restore(slot_index)
 
 
 ## 公开保存（测试/外部；用户切页/退出走同一条实现）
@@ -358,17 +252,7 @@ func save_workspace() -> void:
 func _save_workspace() -> void:
 	if _current_slot < 0:
 		return
-	var config_file := ConfigFile.new()
-	config_file.set_value("ws", "version", WORKSPACE_VERSION)
-	config_file.set_value("ws", "slot", _current_slot)
-	for i in 3:
-		var bench: BenchBase = _bench_instances[i]
-		if bench:
-			config_file.set_value("bench%d" % i, "data", bench.snapshot())
-		elif not (_workspace_restores[i] as Dictionary).is_empty():
-			# 没建过的台：保留上次读到的数据，别因为切到整关预览就清空。
-			config_file.set_value("bench%d" % i, "data", _workspace_restores[i])
-	config_file.save(CFG_PATH)
+	_workspace_store.save(_current_slot, _bench_instances)
 
 func _exit_tree() -> void:
 	_save_workspace()
@@ -384,7 +268,7 @@ func _clear_view() -> void:
 		var bench := _view as BenchBase
 		if bench != null:
 			# 切走前写回最新状态；切回时（常驻实例）不再被配置里的旧快照覆盖。
-			_workspace_restores[_current_slot - 1] = bench.snapshot()
+			_workspace_store.put_restore(_current_slot - 1, bench.snapshot())
 			bench.clear_runtime()
 			bench.pause_view()  # 冻结：连发/热更新/幽灵不后台跑
 	_view = null
