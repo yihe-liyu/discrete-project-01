@@ -42,12 +42,14 @@ func test_invalid_ids_are_guarded() -> void:
 		assert_eq(s.get_velocity(id), Vector2.ZERO, "越界速度返回 ZERO")
 		assert_eq(s.get_forward(id), Vector2.ZERO, "越界朝向返回 ZERO")
 		assert_eq(s.get_type(id), -1, "越界 type 返回 -1")
+		assert_eq(s.get_type_index(id), -1, "越界 type_index 返回 -1")
 		assert_eq(s.get_faction(id), -1, "越界 faction 返回 -1")
 		assert_eq(s.get_color(id), Color(1, 1, 1, 1), "越界颜色返回白")
 		assert_eq(s.get_program(id), -2, "越界 program 返回 -2")
 		assert_false(s.hit_test(id, Vector2.ZERO, 1.0), "越界 hit_test 返回 false")
 		assert_false(s.is_grazed(id), "越界 grazed 返回 false")
 		assert_eq(s.despawn(id), -1, "越界 despawn 返回 -1")
+	assert_eq(s.get_type_index(0), 0, "合法行 type_index 可读")
 
 
 func test_duplicate_dead_does_not_remove_innocent_bullet() -> void:

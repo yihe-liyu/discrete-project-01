@@ -354,6 +354,13 @@ func get_colors() -> PackedColorArray:
 func get_type_indices() -> PackedInt32Array:
 	return _type_index
 
+
+## 单行取类型下标（NK7：不要为读一个元素拉整张 _type_index）。
+func get_type_index(id: int) -> int:
+	if _accel != null:
+		return _accel.get_type_index(id)
+	return _type_index[id] if id >= 0 and id < _type_index.size() else -1
+
 func get_factions() -> PackedByteArray:
 	return _faction
 

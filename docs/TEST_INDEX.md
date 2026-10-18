@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：120 脚本 / **847 用例（847 通过 / 0 红 —— ✅ 全绿）/ 7840 断言 / 57.178s** / 19 orphans / **0 pending**。
+**现状**：120 脚本 / **847 用例（847 通过 / 0 红 —— ✅ 全绿）/ 7844 断言 / 57.011s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -68,7 +68,7 @@
 | [test_native_storage](../test/test_native_storage.gd) | 原生 `DanmakuStore` 存储/积分/回收语义 ↔ GDScript 1:1 | 2 | 4 |
 | [test_native_collision](../test/test_native_collision.gd) | `set_hitbox` / `hit_test` / `query_circle` / `grazed` ↔ 1:1 | 5 | 0 |
 | [test_native_broadphase](../test/test_native_broadphase.gd) | 原生 uniform grid 宽相 ↔ `BulletSystem` 1:1 | 3 | 0 |
-| [test_native_guards](../test/test_native_guards.gd) | NK1/NK3：逐弹原生 getter/setter 越界守卫 + 重复 dead id 去重；NK4：register_program 对数组/opcode/slot 入参 fail-closed；NK8：dt clamp / cull 边界统一 | 5 | 0 |
+| [test_native_guards](../test/test_native_guards.gd) | NK1/NK3：逐弹原生 getter/setter 越界守卫 + 重复 dead id 去重；NK4：register_program 对数组/opcode/slot 入参 fail-closed；NK7：逐弹 type_index 不拷整表；NK8：dt clamp / cull 边界统一 | 5 | 0 |
 | [test_native_overlap_pairs](../test/test_native_overlap_pairs.gd) | 原生批量重叠 `overlap_pairs` ↔ `hit_test` 1:1 | 3 | 0 |
 | [test_kernel_despawn_drain](../test/test_kernel_despawn_drain.gd) | 多弹**同帧** `request_despawn` 必须**全部**回收 | 2 | 0 |
 | [test_bullet_orientation](../test/test_bullet_orientation.gd) | 弹型朝向契约（F7·B）：`rotation_for` 语义 + 到内核弹型的字段传递 | 3 | 0 |

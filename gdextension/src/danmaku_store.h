@@ -109,6 +109,7 @@ public:
 	PackedVector2Array get_positions() const;
 	PackedVector2Array get_velocities() const;
 	int get_type(int p_id) const;
+	int get_type_index(int p_id) const;
 	int get_faction(int p_id) const;
 	Color get_color(int p_id) const;
 	// N2 存储段：原生持有 SoA；积分/回收语义与 GDScript 内核 1:1。

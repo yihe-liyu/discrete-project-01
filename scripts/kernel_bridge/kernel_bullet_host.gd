@@ -241,8 +241,7 @@ func _port_for(data: BulletData) -> Dictionary:
 
 
 func _sync_host_tables(id: int, texture: Texture2D) -> void:
-	var indices: PackedInt32Array = system.get_type_indices()
-	var ti: int = indices[id]
+	var ti: int = system.get_type_index(id)
 	if _texture_by_index.size() <= ti:
 		_texture_by_index.resize(ti + 1)
 	_texture_by_index[ti] = texture

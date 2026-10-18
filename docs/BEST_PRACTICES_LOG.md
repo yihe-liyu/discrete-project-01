@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 44 条（本文件留最近 44 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 45 条（本文件留最近 45 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — NK7：逐弹 type_index 访问器
 - 2026-10-18 — NK8：dt clamp + cull 边界统一
 - 2026-10-18 — NK4/9：program 入参 fail-closed + 原生 API 对齐
 - 2026-10-18 — NK1/2/3：逐弹 id 守卫 + dead 去重
@@ -109,6 +110,12 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — NK7：逐弹 type_index 访问器
+
+- 原生新增 `get_type_index(id)`（越界 -1，走 NK1 guard）；`KernelNativeSystem.get_type_index` 单行读取。
+- `KernelBulletHost._sync_host_tables` 不再每次 spawn 拉整张 `_type_index` 只为读一个元素，per-spawn O(N) 拷贝改为 O(1)。
+- 原生 API 对齐数 59→60；全量 847 / 7844，verify 七步全绿。
 
 ### 2026-10-18 — NK8：dt clamp + cull 边界统一
 

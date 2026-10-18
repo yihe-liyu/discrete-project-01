@@ -26,6 +26,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_positions"), &DanmakuStore::get_positions);
 	ClassDB::bind_method(D_METHOD("get_velocities"), &DanmakuStore::get_velocities);
 	ClassDB::bind_method(D_METHOD("get_type", "id"), &DanmakuStore::get_type);
+	ClassDB::bind_method(D_METHOD("get_type_index", "id"), &DanmakuStore::get_type_index);
 	ClassDB::bind_method(D_METHOD("get_faction", "id"), &DanmakuStore::get_faction);
 	ClassDB::bind_method(D_METHOD("get_color", "id"), &DanmakuStore::get_color);
 	ClassDB::bind_method(D_METHOD("fill_multimesh", "mm"), &DanmakuStore::fill_multimesh);
@@ -470,6 +471,7 @@ PackedVector2Array DanmakuStore::get_velocities() const {
 }
 
 int DanmakuStore::get_type(int p_id) const { return _valid(p_id) ? _type[p_id] : -1; }
+int DanmakuStore::get_type_index(int p_id) const { return _valid(p_id) ? _type[p_id] : -1; }
 int DanmakuStore::get_faction(int p_id) const { return _valid(p_id) ? _faction[p_id] : -1; }
 Color DanmakuStore::get_color(int p_id) const { return _valid(p_id) ? _color[p_id] : Color(1, 1, 1, 1); }
 
