@@ -77,7 +77,10 @@ func _configure_catalog_drawer() -> void:
 	_catalog_layer = $CatalogLayer as CanvasLayer
 	_catalog_drawer = $CatalogLayer/Root/CatalogDrawer as PanelContainer
 	_catalog_panel = $CatalogLayer/Root/CatalogDrawer/CatalogPanel
-	_catalog_drawer.add_theme_stylebox_override("panel", RIG_COMMON.panel_style())
+	# 目录从屏幕 x=0 起，已经不在场地黑底上；用不透明深色侧栏底，避免半透明黑盖默认灰底发灰。
+	var drawer_style := RIG_COMMON.panel_style()
+	drawer_style.bg_color = Color(0.025, 0.025, 0.04, 0.98)
+	_catalog_drawer.add_theme_stylebox_override("panel", drawer_style)
 	_catalog_drawer.theme = theme
 	_catalog_panel.set_show_descriptors(true)
 	_catalog_panel.preset_requested.connect(_on_catalog_preset)
