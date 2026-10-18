@@ -164,7 +164,7 @@
 ## 🔴 待改进（达标后清空）
 
 - [ ] **R16**：47MB 二进制未配 Git LFS（`.gitattributes` 仅 EOL 规范化）。
-- [ ] **R18/R19**：`spell_practice_menu.gd`（754）上帝对象；`workbench.gd` 已从 786 拆到 523（7 个预览服务），`creation_station.gd` 390→274（静态 chrome 进场景 + WorkspaceStore）；Workbench 仍有关卡加载/重跑、播放/书签接线，判据是“一个类只做一件事”，行数只是提示。
+- [ ] **R18/R19**：`spell_practice_menu.gd`（754）上帝对象；`workbench.gd` 已从 786 拆到 483（8 个预览服务，含 StageLoader），`creation_station.gd` 390→274（静态 chrome 进场景 + WorkspaceStore）；Workbench 仍有播放/书签接线与公开接缝，判据是“一个类只做一件事”，行数只是提示。
 - [ ] **R21**：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）。
 - [ ] **R2（残余）**：`item_service.gd:16` / `player.gd:286` 经 `current_scene` 取 World，可改注入。
 - [ ] **编排路线**（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生 / Step 6 `ctx.background` 注入服务待做；5/7 暂缓。

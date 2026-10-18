@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 29 条（本文件留最近 29 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 30 条（本文件留最近 30 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — D3 第四批：PreviewStageLoader
 - 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
 - 2026-10-18 — D3 第三批：CreationStation 节点化 + WorkspaceStore
 - 2026-10-18 — D3 第二批：PreviewUI 拆出，Workbench 523
@@ -59,6 +60,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — D3 第四批：PreviewStageLoader
+
+- `preview_stage_loader.gd`（96）接管：停旧关 → 清 World → 旧背景离树/释放 → RNG/自机复位 → 新背景实例化 → `StageRuntime.load_stage` → 时间轴/书签刷新。
+- 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
+- Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
+- 全量 832 / 7742，verify 七步全绿。
 
 ### 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
 

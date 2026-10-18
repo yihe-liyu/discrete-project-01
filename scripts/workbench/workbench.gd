@@ -46,6 +46,7 @@ const PREVIEW_STAGE_WORLD := preload("res://scripts/workbench/preview_stage_worl
 const PREVIEW_PHASE_TIMER := preload("res://scripts/workbench/preview_phase_timer.gd")
 const PREVIEW_DEBUG_TOOLS := preload("res://scripts/workbench/preview_debug_tools.gd")
 const PREVIEW_UI := preload("res://scripts/workbench/preview_ui.gd")
+const PREVIEW_STAGE_LOADER := preload("res://scripts/workbench/preview_stage_loader.gd")
 ## Stage 1 = 协程版（stage01.gd Timeline 编排；数据关卡系统已移除）
 const STAGE1_COROUTINE := preload("res://data/stages/stage01/stage_data/stage01.tres")
 
@@ -83,7 +84,6 @@ var _bookmarks: Bookmarks
 # 关卡状态
 var _stage_data: StageData = STAGE1_COROUTINE
 var _player: Player
-var _background: Node
 var _hitbox_overlay: Node2D  # 实际是 HitboxOverlay（preload，避免类缓存依赖）
 ## 关卡的弹幕世界（组合根创建并注入）
 var _bullet_manager: BulletManager
@@ -107,6 +107,8 @@ var _phase_timer
 var _preview_debug
 ## 右栏/顶栏 UI 装配（D3：控件 + 信号 + 页签）
 var _preview_ui
+## 关卡加载/重跑流水线（D3：停关/清 World/背景/复位/load_stage）
+var _preview_stage_loader
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
 var _diff_sel: OptionButton
@@ -159,6 +161,10 @@ func _ready() -> void:
 	_sync_ui_layer_offset()  # 同步执行：首帧渲染即正确（见函数注释）
 	call_deferred("_sync_ui_layer_offset")  # 布局完成后再同步一次：嵌入创作台时首帧 get_global_rect 可能还是 (0,0)
 	_setup_world()
+	_preview_stage_loader = PREVIEW_STAGE_LOADER.new()
+	_preview_stage_loader.setup(_playback, _stage_runtime, _bullet_manager, _player, _world,
+		_bg_viewport, _timeline, _diff_sel,
+		Callable(self, "_load_bookmarks"), Callable(self, "_apply_playback_runtime"))
 	_load_stage()
 	_check_phase_uid_conflicts()
 
@@ -181,7 +187,8 @@ func _poll_playback() -> void:
 func _draw() -> void:
 	# 场景底：有背景时让 3D 背景透出，只在东方框外画暗色；无背景时全屏实心。
 	# 金边 / 网格**不在这里** —— 它们要画在 3D 背景**之上**，见 `FrameOverlay`。
-	var has_bg: bool = _playback.show_bg and _background and is_instance_valid(_background)
+	var background = _preview_stage_loader.background() if _preview_stage_loader != null else null
+	var has_bg: bool = _playback.show_bg and background != null and is_instance_valid(background)
 	var stage_shift: float = _preview_layout.stage_shift_y() if _preview_layout != null else 0.0
 	var field := Rect2(GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP - stage_shift,
 		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT,
@@ -299,58 +306,11 @@ func catalog_tab_visible() -> bool:
 
 
 func _load_stage() -> void:
-	# 统一复位运行状态（防残留：快进打断后 time_scale/静音错乱）
-	_playback.stop_fast_forward()
-	_apply_playback_runtime()
-	# 停止旧关卡 + 清空
-	_stage_runtime.stop_stage()
-	_bullet_manager.reset_world()  # 重跑：回收内核 program/弹型（原生表只增不减）
-	AudioManager.stop_bgm()  # 重跑时 BGM 从头播（play_bgm 有同流防重保护，必须先停）
-	# 清 World 残留：退场中的 Boss（_is_exit_controlled 不 queue_free、已从
-	# active_enemies 移除）stop_stage 清不到 → 立即脱离树，避免卡在画面上
-	for child in _world.get_children():
-		if child == _player or child == _stage_runtime:
-			continue  # StageRuntime 是 World 下的常驻结构节点，不能清
-		_world.remove_child(child)
-		child.queue_free()
-	if _background and is_instance_valid(_background):
-		# 立即脱离树（不能只 queue_free 延迟删除）：
-		# 旧背景的协程/Tween 会和新背景抢同一个 Camera3D（相机数据错乱）
-		# 背景挂在 BgViewport（3D 子视口）下，从实际父节点移除
-		var bg_parent := _background.get_parent()
-		if bg_parent:
-			bg_parent.remove_child(_background)
-		_background.queue_free()
-		_background = null
-	SaveData.is_restarting = false
-	SaveData.reset_all(_stage_runtime.entity_registry)
-	if _diff_sel:
-		SaveData.selected_difficulty = _diff_sel.selected
-	# 固定种子：重跑弹幕序列可复现（调参看效果必备）；关闭则随机化
-	if _playback.fixed_seed:
-		RNG.set_seed(_playback.fixed_seed_value())
-	else:
-		RNG.randomize_seed()
-	# 幽灵复位（重头走路径）
-	if _player:
-		_player.reset()
-	# 背景：必须先设 current_background（load_stage 会启动背景里的协程脚本）
-	# 挂 3D 专用 SubViewport（与真游戏同规格）→ 纵横比/相机/构图一致
-	if _playback.show_bg and _stage_data.background_scene:
-		_background = _stage_data.background_scene.instantiate()
-		if _background is StageBackground:
-			_stage_runtime.current_background = _background
-		# 显式 PAUSABLE：背景演出也随暂停冻结（否则继承 root 的 ALWAYS）
-		_background.process_mode = Node.PROCESS_MODE_PAUSABLE
-		_bg_viewport.add_child(_background)
-	# 真实加载（跑 stage01.gd 的 Timeline）
-	_stage_runtime.load_stage(_stage_data)
-	# 时间轴 + 书签（自动 = 静态提取 timeline.at() 时刻；人工 = 缓存恢复）
-	_timeline.set_window(60.0)
-	_load_bookmarks()
+	if _preview_stage_loader == null:
+		return
+	_preview_stage_loader.load_stage(_stage_data)
 	_prev_time = -1.0
 	_log_line("▶ 加载 Stage %d（难度 %s）" % [_stage_data.stage_id, DIFFICULTIES[_diff_sel.selected]])
-
 
 # ═══ 书签（模型在 Bookmarks；这里只管落盘与时间轴）═══
 
@@ -386,7 +346,6 @@ func _on_bookmarks_changed() -> void:
 # ═══ 播放 / 暂停 / 快进（状态机在 Playback；这里只发起与转发）═══
 
 func _restart() -> void:
-	_playback.stop_fast_forward()
 	_load_stage()
 	_log_line("＊ 重跑")
 
@@ -484,7 +443,8 @@ func _redraw_stage() -> void:
 	queue_redraw()
 	if _frame_overlay == null:
 		return
-	var has_bg: bool = _playback.show_bg and _background != null and is_instance_valid(_background)
+	var background = _preview_stage_loader.background() if _preview_stage_loader != null else null
+	var has_bg: bool = _playback.show_bg and background != null and is_instance_valid(background)
 	var stage_shift: float = _preview_layout.stage_shift_y() if _preview_layout != null else 0.0
 	_frame_overlay.sync(stage_shift, not has_bg)
 
