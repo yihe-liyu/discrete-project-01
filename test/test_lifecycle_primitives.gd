@@ -1,5 +1,6 @@
 extends GutTest
 const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
+const COMPILER := preload("res://scripts/kernel_bridge/lifecycle/lifecycle_compiler.gd")
 ## 最小原语覆盖（9 Move op / 6 Until / 5 Action）—— 每个原语一条最小 lifecycle，
 ## 与参考解释器 LifecycleBehavior 逐位对照。它同时是「原语能干什么」的活文档。
 ##
@@ -630,11 +631,11 @@ func test_position_op_is_unified() -> void:
 	var d := BulletLifecycle.new()
 	d.drift(0.0, 10.0)
 	d.until_never()
-	assert_eq(d.compile()["ops"][0], BulletLifecycle.OP_M_POSITION, "drift = M_POSITION")
+	assert_eq(d.compile()["ops"][0], COMPILER.OP_M_POSITION, "drift = M_POSITION")
 	var a := BulletLifecycle.new()
 	a.anchor_drift(0, Vector2.ZERO, 0.0, 10.0)
 	a.until_never()
-	assert_eq(a.compile()["ops"][0], BulletLifecycle.OP_M_POSITION, "anchor_drift = M_POSITION")
+	assert_eq(a.compile()["ops"][0], COMPILER.OP_M_POSITION, "anchor_drift = M_POSITION")
 	pass_test("位置来源统一为一个 op")
 
 
@@ -749,7 +750,7 @@ func test_every_before_until_is_preserved() -> void:
 	lc.every(0.1).every_ticks(3)
 	lc.until_elapsed(1.0)
 	var c := lc.compile()
-	var base: int = int(c[&"until_idx"][0]) * BulletLifecycle.ARGS
+	var base: int = int(c[&"until_idx"][0]) * COMPILER.ARGS
 	assert_almost_eq(c[&"args"][base], 0.1, 1e-6, "every 应保留")
 	assert_almost_eq(c[&"args"][base + 1], 3.0, 1e-6, "every_ticks 应保留")
 	assert_almost_eq(c[&"args"][base + 2], 1.0, 1e-6, "until_elapsed 参数应正确")
@@ -763,7 +764,7 @@ func test_unknown_move_op_fails_closed() -> void:
 	assert_push_error("未知 Move op")
 	assert_eq(c[&"phase_count"], 1, "失败时编成单相位兜底")
 	assert_eq(c[&"slots"], 0, "兜底 program 不占状态槽")
-	assert_true(c[&"ops"].has(BulletLifecycle.OP_A_DESPAWN), "兜底应立即回收")
+	assert_true(c[&"ops"].has(COMPILER.OP_A_DESPAWN), "兜底应立即回收")
 
 
 func test_unknown_target_fails_closed() -> void:
@@ -780,7 +781,7 @@ func test_radial_composition_sfx_db_default_is_sfx_level() -> void:
 	## DSL6：radial_accel 的 sfx_db 默认必须是总电平，不是 0 dB（满音量）。
 	var lc := FIX.radial_accel(100.0, func() -> BulletData: return BulletData.new(), &"kira")
 	var c := lc.compile()
-	var base: int = int(c[&"act_start"][0]) * BulletLifecycle.ARGS
+	var base: int = int(c[&"act_start"][0]) * COMPILER.ARGS
 	assert_almost_eq(c[&"args"][base + 1], AudioManager.SFX_LEVEL_DB, 1e-6, "默认 sfx_db 应为总电平")
 
 
@@ -858,3 +859,39 @@ func test_on_end_heading_runs_before_emit_forward() -> void:
 		var expected := Vector2(sin(1.0 + TAU * i / 4.0), -cos(1.0 + TAU * i / 4.0))
 		assert_true(dirs[i].is_equal_approx(expected),
 			"第 %d 发 forward 应基于 on_end_heading 后的新朝向；实际 %s 期望 %s" % [i, dirs[i], expected])
+
+
+## DSL10：纯 program 不含宿主对象；宿主表单独建、local id 对齐。
+func test_compile_program_is_pure_host_table_separate() -> void:
+	var data := BulletData.new().enemy()
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(0.2)
+	lc.sfx(&"kira")
+	lc.emit(data, BulletLifecycle.forward(0.5), 120.0)
+	lc.despawn()
+	var program: Dictionary = lc.compile_program()
+	assert_false(program.has(&"actions"), "纯 program 不能夹带 spawn 表")
+	assert_false(program.has(&"sfx"), "纯 program 不能夹带 sfx 表")
+	var host: Dictionary = lc.host_table()
+	assert_eq((host[&"actions"] as Array).size(), 1, "宿主表应有 1 个 emit 模板")
+	assert_eq(host[&"actions"][0], data, "宿主表应保留原模板实例")
+	assert_eq((host[&"sfx"] as Array).size(), 1, "宿主表应有 1 个 sfx")
+	# 兼容 compile() 合并后仍是旧结构
+	var merged: Dictionary = lc.compile()
+	assert_eq(merged[&"actions"][0], data, "compile() 兼容入口应合并宿主表")
+	assert_false(merged.has(&"compile_failed") and bool(merged[&"compile_failed"]), "正常编译不应失败")
+
+
+## DSL10：同结构、不同替换弹实例 → 纯 program 相同；content_signature 仍因宿主身份不同。
+func test_same_program_different_host_table() -> void:
+	var d1 := BulletData.new().enemy()
+	var d2 := BulletData.new().enemy()
+	var a := BulletLifecycle.new()
+	a.until_elapsed(0.2).emit(d1, BulletLifecycle.heading(0.0), 100.0).despawn()
+	var b := BulletLifecycle.new()
+	b.until_elapsed(0.2).emit(d2, BulletLifecycle.heading(0.0), 100.0).despawn()
+	assert_eq(
+		COMPILER.program_signature(a.compile_program()),
+		COMPILER.program_signature(b.compile_program()),
+		"纯 program 结构应相同")
+	assert_ne(a.content_signature(), b.content_signature(), "宿主模板实例不同 → content_signature 必须不同")

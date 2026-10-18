@@ -26,66 +26,65 @@
 class_name BulletLifecycle
 extends RefCounted
 
-# ---- Move 词汇（每帧施加的数学变换，9 个 op）----
-const M_ACCEL_WORLD := &"accel_world"
-const M_ACCEL_HEADING := &"accel_heading"
-const M_ROTATE := &"rotate"
-const M_STEER := &"steer"
-const M_SPEED_LERP := &"speed_lerp"
-const M_SPEED_MUL := &"speed_mul"
-const M_SET_HEADING := &"set_heading"
-const M_SET_SPEED := &"set_speed"
-## V18：位置来源统一成一个 op。`anchor_drift` / `drift` 是它的 builder 糖（mode 不同）。
-const M_POSITION := &"position"
-const POS_PHASE_START := 0
-const POS_ANCHOR := 1
+# ---- 外部模块 ----
+const DIR_SPEC := preload("res://scripts/kernel_bridge/lifecycle/dir_spec.gd")
+const COMPILER := preload("res://scripts/kernel_bridge/lifecycle/lifecycle_compiler.gd")
+const HOST_TABLE := preload("res://scripts/kernel_bridge/lifecycle/lifecycle_host_table.gd")
 
-# ---- Until 词汇（相位结束条件，6 + until_turned 糖）----
-const C_NEVER := &"never"
-const C_ELAPSED := &"elapsed"
-const C_NEAR := &"near"
-const C_AT_WALL := &"at_wall"
-const C_STATE := &"state"
-const C_SPEED := &"speed"    # V21：|v| 与 value 比较（CMP_GE / CMP_LE）
+# ---- Move 词汇（对外 API 兼容别名；定义在 LifecycleCompiler）----
+const M_ACCEL_WORLD := COMPILER.M_ACCEL_WORLD
+const M_ACCEL_HEADING := COMPILER.M_ACCEL_HEADING
+const M_ROTATE := COMPILER.M_ROTATE
+const M_STEER := COMPILER.M_STEER
+const M_SPEED_LERP := COMPILER.M_SPEED_LERP
+const M_SPEED_MUL := COMPILER.M_SPEED_MUL
+const M_SET_HEADING := COMPILER.M_SET_HEADING
+const M_SET_SPEED := COMPILER.M_SET_SPEED
+const M_POSITION := COMPILER.M_POSITION
+const POS_PHASE_START := COMPILER.POS_PHASE_START
+const POS_ANCHOR := COMPILER.POS_ANCHOR
 
-# ---- Action 词汇（相位结束时一次性，共 8 个 op；`despawn_clear()` 是组合糖不算 op）----
-const A_EMIT := &"emit"
-const A_EMIT_VARIANT := &"emit_variant"   # V9：独立的概率分支发射 op
-const A_SFX := &"sfx"
-const A_DESPAWN := &"despawn"
-const A_SET_HEADING := &"set_heading"
-const A_SET_SPEED := &"set_speed"
-const A_CALL := &"call"
-const A_CLEAR_FX := &"clear_fx"   # 纯 action：回传「此刻位置 + 弹色」给宿主播消散特效，**不改状态**
+# ---- Until / Action / 目标 / 墙位 ----
+const C_NEVER := COMPILER.C_NEVER
+const C_ELAPSED := COMPILER.C_ELAPSED
+const C_NEAR := COMPILER.C_NEAR
+const C_AT_WALL := COMPILER.C_AT_WALL
+const C_STATE := COMPILER.C_STATE
+const C_SPEED := COMPILER.C_SPEED
+const A_EMIT := COMPILER.A_EMIT
+const A_EMIT_VARIANT := COMPILER.A_EMIT_VARIANT
+const A_SFX := COMPILER.A_SFX
+const A_DESPAWN := COMPILER.A_DESPAWN
+const A_SET_HEADING := COMPILER.A_SET_HEADING
+const A_SET_SPEED := COMPILER.A_SET_SPEED
+const A_CALL := COMPILER.A_CALL
+const A_CLEAR_FX := COMPILER.A_CLEAR_FX
+const T_PLAYER := COMPILER.T_PLAYER
+const T_NEAREST_ENEMY := COMPILER.T_NEAREST_ENEMY
+const T_BOSS := COMPILER.T_BOSS
+const WALL_LEFT := COMPILER.WALL_LEFT
+const WALL_RIGHT := COMPILER.WALL_RIGHT
+const WALL_TOP := COMPILER.WALL_TOP
+const CMP_GE := COMPILER.CMP_GE
+const CMP_LE := COMPILER.CMP_LE
+const AT_CURRENT := COMPILER.AT_CURRENT
+const AT_PHASE_END := COMPILER.AT_PHASE_END
+const ROT_BOTH := COMPILER.ROT_BOTH
+const ROT_VELOCITY := COMPILER.ROT_VELOCITY
+const ROT_HEADING := COMPILER.ROT_HEADING
 
-# ---- 目标 ----
-const T_PLAYER := &"player"                 ## 自机
-const T_NEAREST_ENEMY := &"nearest_enemy"   ## 宿主提供候选集里最近的一个（targetability 归宿主，V14）
-const T_BOSS := &"boss"                     ## Boss
-# ---- 方向表达式 kind ----
-const D_HEADING := &"heading"
-const D_TOWARD := &"toward"
-const D_AWAY := &"away"
-const D_FORWARD := &"forward"
-const D_RANDOM := &"random"
-const D_CHANCE := &"chance"
-## 镜面：把**当前速度**按发射点所在的场边翻分量（左右翻 x / 上翻 y；角落两边都翻）。
-## 搭 `emit(..., at = AT_PHASE_END)` 用 —— 发射点 = `at_wall` 输出的撞墙落点。
-const D_REFLECT := &"reflect"
+# ---- 原生参数（公共兼容别名；opcode 内部常量在 LifecycleCompiler）----
+const ARGS := COMPILER.ARGS
+const MAX_SLOTS := COMPILER.MAX_SLOTS
 
-# ---- 墙位掩码（at_wall 只支持 左/右/上；无下墙，故无 WALL_BOTTOM）/ 状态槽比较 ----
-const WALL_LEFT := 1
-const WALL_RIGHT := 2
-const WALL_TOP := 4
-const CMP_GE := 0
-const CMP_LE := 1
-# ---- 发射位置操作数（V7：与方向表达式对称的位置轴）----
-const AT_CURRENT := 0      ## 用当前弹位置（默认）
-const AT_PHASE_END := 1    ## 用 until(at_wall) 输出的相位结束落点
-# ---- rotate 模式（V12：速度 / 朝向可独立转）----
-const ROT_BOTH := 0        ## 同时转速度与朝向（rotate 默认）
-const ROT_VELOCITY := 1    ## 只转速度
-const ROT_HEADING := 2     ## 只转朝向
+# ---- 方向 kind（定义在 DirSpec）----
+const D_HEADING := DIR_SPEC.HEADING
+const D_TOWARD := DIR_SPEC.TOWARD
+const D_AWAY := DIR_SPEC.AWAY
+const D_FORWARD := DIR_SPEC.FORWARD
+const D_RANDOM := DIR_SPEC.RANDOM
+const D_CHANCE := DIR_SPEC.CHANCE
+const D_REFLECT := DIR_SPEC.REFLECT
 
 ## 有序相位：[{moves, until, on_end}]
 var phases: Array = []
@@ -93,8 +92,6 @@ var phases: Array = []
 var slots: int = 0
 ## 结构签名缓存（content_signature；0 = 未算）
 var _content_sig: int = 0
-## 编译期致命错误（未知 op/target/dir）→ compile() 返回“立即回收”的兜底 program
-var _compile_failed: bool = false
 ## never 相位警告只报一次（compile() 可能被 content_signature / spawn 多次调用）
 var _warned_never: bool = false
 
@@ -148,48 +145,34 @@ func _set_until(op: StringName, extra: Dictionary = {}) -> void:
 		_until[k] = extra[k]
 
 
-# ═══ 方向表达式（静态构造；供 steer / emit / set_heading / on_end_heading 用）═══
+# ═══ 方向表达式（兼容入口；实现与词汇在 DirSpec）═══
 
-## 世界角：0 = 上，正 = 顺时针（屏幕 y 向下）。结果 = (sin a, -cos a)。
 static func heading(angle: float) -> Dictionary:
-	return {&"kind": D_HEADING, &"target": &"", &"angle": angle}
+	return DIR_SPEC.heading(angle)
 
-## 朝 target 方向再转 angle。**target 不可用时退化为向下 (0,1)** 再转 angle。
+
 static func toward(target: StringName, angle: float = 0.0) -> Dictionary:
-	return {&"kind": D_TOWARD, &"target": target, &"angle": angle}
+	return DIR_SPEC.toward(target, angle)
 
-## 背对 target 再转 angle（逃离 / 回卷）。
+
 static func away(target: StringName, angle: float = 0.0) -> Dictionary:
-	return {&"kind": D_AWAY, &"target": target, &"angle": angle}
+	return DIR_SPEC.away(target, angle)
 
-## 沿弹**自身朝向**（出生朝向 / set_heading 改过的）再转 angle；与 heading(世界角) 正交。
+
 static func forward(angle: float = 0.0) -> Dictionary:
-	return {&"kind": D_FORWARD, &"target": &"", &"angle": angle}
+	return DIR_SPEC.forward(angle)
 
-## 沿自身朝向 ± spread 内**随机**（内核确定性 RNG，单通道；种子由宿主 RNG 派生）。
+
 static func random_dir(spread: float) -> Dictionary:
-	return {&"kind": D_RANDOM, &"target": &"", &"angle": spread}
+	return DIR_SPEC.random_dir(spread)
 
-## 以概率 p 朝 target，否则沿自身朝向再转 spread。
-## **命中时精确朝 target，spread 只服务未命中的 fallback。**
-## 也是 emit_variant 唯一的分支来源（0 = 未命中，1 = 命中）。
+
 static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> Dictionary:
-	return {&"kind": D_CHANCE, &"target": target, &"angle": spread, &"p": p}
+	return DIR_SPEC.chance_toward(target, p, spread)
 
 
-## **镜面反射**：把弹的**当前速度**按发射点所在的场边翻分量 —— 左右边翻 x、上边翻 y，
-## 角落（pos 同时贴两条边）两边都翻 = 原路返回；再叠加 `angle`（可选，用来做"镜面 + 微散"）。
-##
-## 典型用法（撞墙后发射替换弹，方向 = 镜面）：
-## ```gdscript
-## lc.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
-## lc.emit(反射弹, BulletLifecycle.reflect(), 150.0, BulletLifecycle.AT_PHASE_END)
-## lc.despawn()
-## ```
-## ⚠️ 必须配 `at = AT_PHASE_END`：镜面判据是**发射点**贴没贴场边，而 `at_wall` 不改弹自身位置，
-## 只有它的相位结束落点（夹紧到边上）才算"撞到了"。用 `AT_CURRENT` 且没贴边 → 不翻，退化为自身朝向。
 static func reflect(angle: float = 0.0) -> Dictionary:
-	return {&"kind": D_REFLECT, &"target": &"", &"angle": angle}
+	return DIR_SPEC.reflect(angle)
 
 
 # ═══ Move（每帧施加；9 个）═══
@@ -418,109 +401,42 @@ static func anchor_base(anchor_id: int, offset: Vector2, use_global: bool, playe
 	return player + offset
 
 
-# ═══ L3：编译成原生可读的 packed program ═══
-# op / target / dirk / cmp 的整数编码**必须与 C++ DanmakuStore.behavior_tick 一致**。
-const ARGS := 12
-## V20：与原生 DanmakuStore.SLOT_STRIDE 对齐。同相位状态槽数超过它 → 原生拒绝注册。
-const MAX_SLOTS := 8
+# ═══ 编译 / 签名（实现拆在 LifecycleCompiler + LifecycleHostTable）═══
 
-const OP_M_ACCEL_WORLD := 1
-const OP_M_ACCEL_HEADING := 2
-const OP_M_ROTATE := 3
-const OP_M_STEER := 4
-const OP_M_SPEED_LERP := 5
-const OP_M_SPEED_MUL := 6
-const OP_M_SET_HEADING := 7
-const OP_M_SET_SPEED := 8
-const OP_M_POSITION := 9
-const OP_C_NEVER := 20
-const OP_C_ELAPSED := 21
-const OP_C_NEAR := 22
-const OP_C_AT_WALL := 23
-const OP_C_STATE := 24
-const OP_C_SPEED := 25
-const OP_A_EMIT := 40
-const OP_A_SFX := 41
-const OP_A_DESPAWN := 42
-const OP_A_SET_HEADING := 43
-const OP_A_SET_SPEED := 44
-const OP_A_CALL := 45
-const OP_A_EMIT_VARIANT := 46   # V9：变体发射专用 op（分支不再藏在方向求值里）
-const OP_A_CLEAR_FX := 47       # 纯 action：回传位置 + 弹色（宿主播消散特效）；不改任何列式状态
-
-const TG_PLAYER := 0
-const TG_NEAREST := 1
-const TG_BOSS := 2
-const DK_HEADING := 0
-const DK_TOWARD := 1
-const DK_AWAY := 2
-const DK_FORWARD := 3   ## 沿弹自身朝向（与速度解耦）
-const DK_RANDOM := 4    ## 沿自身朝向 ± 随机
-const DK_CHANCE := 5    ## p 概率朝 target，否则自身朝向旋转
-const DK_REFLECT := 6   ## 镜面（与内核 _resolve_dir 的 dk 编号对齐）
-
-## 编译为扁平 packed program。actions / sfx 是**程序级**表：事件回传 (program, local_id)，
-## 由宿主查这两张表（Callable 永不进原生）。
-func compile() -> Dictionary:
-	_compile_failed = false
-	if slots > MAX_SLOTS:
-		push_warning("BulletLifecycle: 状态槽 %d 超过内核上限 %d（减少同相位有状态 unit；program 会被原生拒绝）" % [slots, MAX_SLOTS])
-	var ops := PackedInt32Array()
-	var args := PackedFloat32Array()
-	var move_start := PackedInt32Array()
-	var move_count := PackedInt32Array()
-	var until_idx := PackedInt32Array()
-	var act_start := PackedInt32Array()
-	var act_count := PackedInt32Array()
-	var actions: Array = []
-	var sfx_keys: Array[StringName] = []
-	for phase in phases:
-		var mv: Array = phase[&"moves"]
-		move_start.append(ops.size())
-		move_count.append(mv.size())
-		for m in mv:
-			_emit(ops, args, _op_move(m[&"op"]), _args_move(m))
-		until_idx.append(ops.size())
-		_emit(ops, args, _op_cond(phase[&"until"][&"op"]), _args_cond(phase[&"until"]))
-		var acts: Array = phase[&"on_end"]
-		act_start.append(ops.size())
-		act_count.append(acts.size())
-		for a in acts:
-			_emit(ops, args, _op_act(a[&"op"]), _args_act(a, actions, sfx_keys))
-	if _compile_failed:
-		# fail-closed：未知 op/target/dir 不再静默编成 op 0；返回“下一帧立即 despawn”的兜底 program。
-		return _failed_program()
-	if not _warned_never:
+## 纯 program：ops/args/phase 索引，**不含任何宿主模板 / Callable / 音效对象**。
+func compile_program() -> Dictionary:
+	var c: Dictionary = COMPILER.compile_program(self)
+	if not _warned_never and not bool(c.get(&"compile_failed", false)):
 		_warned_never = true
 		_warn_unreachable_phases()
-	return {
-		&"ops": ops, &"args": args,
-		&"move_start": move_start, &"move_count": move_count,
-		&"until_idx": until_idx,
-		&"act_start": act_start, &"act_count": act_count,
-		&"phase_count": phases.size(), &"slots": slots,
-		&"actions": actions, &"sfx": sfx_keys,
-	}
+	return c
 
 
-## 编译失败兜底：一个相位、until_elapsed(0) → despawn。子弹会立刻消失（可见、不静默错行为）。
-func _failed_program() -> Dictionary:
-	var ops := PackedInt32Array()
-	var args := PackedFloat32Array()
-	_emit(ops, args, OP_C_ELAPSED, [0.0, 0.0, 0.0])
-	_emit(ops, args, OP_A_DESPAWN, [])
-	return {
-		&"ops": ops, &"args": args,
-		&"move_start": PackedInt32Array([0]), &"move_count": PackedInt32Array([0]),
-		&"until_idx": PackedInt32Array([0]),
-		&"act_start": PackedInt32Array([1]), &"act_count": PackedInt32Array([1]),
-		&"phase_count": 1, &"slots": 0,
-		&"actions": [], &"sfx": [] as Array[StringName],
-	}
+## 宿主表：spawn / Callable / sfx，和纯 program 分开。
+func host_table() -> Dictionary:
+	return HOST_TABLE.build(self)
+
+
+## 兼容入口：纯 program + 宿主表合并（现有测试/参考解释器/旧调用点继续可用）。
+func compile() -> Dictionary:
+	var c := compile_program()
+	var h := host_table()
+	c[&"actions"] = h[&"actions"]
+	c[&"sfx"] = h[&"sfx"]
+	return c
+
+
+## 内容签名 = 纯 program 结构 + 宿主表身份。宿主模板不同必须分开（动作表按 program 存）。
+func content_signature() -> int:
+	if _content_sig != 0:
+		return _content_sig
+	var h: int = COMPILER.program_signature(compile_program())
+	h = h * 31 + HOST_TABLE.signature(host_table())
+	_content_sig = h if h != 0 else 1
+	return _content_sig
 
 
 ## DSL13：never 相位上的 on_end 是死代码；非最后相位的 never 会让下一相位永远进不去。
-## 只 warning 不 error —— `until_never()` 仍是合法写法（靠外部触发 / 后续相位），但必须让人看见。
 func _warn_unreachable_phases() -> void:
 	for i in phases.size():
 		var phase: Dictionary = phases[i]
@@ -539,195 +455,3 @@ func _warn_unreachable_phases() -> void:
 				elif op == A_EMIT or op == A_EMIT_VARIANT:
 					has_emit = true
 			push_warning("BulletLifecycle: 最后相位 until=never，on_end 的 %d 个 action 永远不会执行（despawn=%s / emit=%s）" % [acts.size(), str(has_despawn), str(has_emit)])
-
-
-## 结构签名（内容哈希，**不含实例身份**）：相同结构的 lifecycle 共用一个原生 program。
-## 首次调用后缓存。actions（Callable）按**对象身份**参与 —— 结构相同但工厂不同的必须分开
-## （program 的动作表按 program 存，串了就会调错工厂）。
-func content_signature() -> int:
-	if _content_sig != 0:
-		return _content_sig
-	var c := compile()
-	var h: int = hash(c[&"ops"])
-	h = h * 31 + hash(c[&"args"])
-	h = h * 31 + hash(c[&"move_start"])
-	h = h * 31 + hash(c[&"move_count"])
-	h = h * 31 + hash(c[&"until_idx"])
-	h = h * 31 + hash(c[&"act_start"])
-	h = h * 31 + hash(c[&"act_count"])
-	h = h * 31 + int(c[&"phase_count"]) * 7 + int(c[&"slots"])
-	h = h * 31 + hash(c[&"sfx"])
-	for a in c[&"actions"]:
-		h = h * 31 + _hash_action(a)
-	_content_sig = h if h != 0 else 1
-	return _content_sig
-
-
-## 动作表项的结构哈希（变体发射的模板数组递归展开）。
-static func _hash_action(a: Variant) -> int:
-	if a is Array:
-		var sub: int = 1
-		for item in a:
-			sub = sub * 31 + _hash_action(item)
-		return sub
-	if a is Callable:
-		return a.get_object_id() if a.is_valid() else 0
-	if a is BulletData:
-		return int(a.get_instance_id())
-	if a is StringName:
-		return hash(a)
-	return 0
-
-
-func _emit(ops: PackedInt32Array, args: PackedFloat32Array, op: int, a: Array) -> void:
-	ops.append(op)
-	for i in ARGS:
-		args.append(float(a[i]) if i < a.size() else 0.0)
-
-
-func _op_move(op: StringName) -> int:
-	match op:
-		M_ACCEL_WORLD: return OP_M_ACCEL_WORLD
-		M_ACCEL_HEADING: return OP_M_ACCEL_HEADING
-		M_ROTATE: return OP_M_ROTATE
-		M_STEER: return OP_M_STEER
-		M_SPEED_LERP: return OP_M_SPEED_LERP
-		M_SPEED_MUL: return OP_M_SPEED_MUL
-		M_SET_HEADING: return OP_M_SET_HEADING
-		M_SET_SPEED: return OP_M_SET_SPEED
-		M_POSITION: return OP_M_POSITION
-	push_error("BulletLifecycle.compile(): 未知 Move op '%s'" % str(op))
-	_compile_failed = true
-	return 0
-
-
-func _op_cond(op: StringName) -> int:
-	match op:
-		C_NEVER: return OP_C_NEVER
-		C_ELAPSED: return OP_C_ELAPSED
-		C_NEAR: return OP_C_NEAR
-		C_AT_WALL: return OP_C_AT_WALL
-		C_STATE: return OP_C_STATE
-		C_SPEED: return OP_C_SPEED
-	push_error("BulletLifecycle.compile(): 未知 Until op '%s'" % str(op))
-	_compile_failed = true
-	return 0
-
-
-func _op_act(op: StringName) -> int:
-	match op:
-		A_EMIT: return OP_A_EMIT
-		A_EMIT_VARIANT: return OP_A_EMIT_VARIANT
-		A_SFX: return OP_A_SFX
-		A_DESPAWN: return OP_A_DESPAWN
-		A_SET_HEADING: return OP_A_SET_HEADING
-		A_SET_SPEED: return OP_A_SET_SPEED
-		A_CALL: return OP_A_CALL
-		A_CLEAR_FX: return OP_A_CLEAR_FX
-	push_error("BulletLifecycle.compile(): 未知 Action op '%s'" % str(op))
-	_compile_failed = true
-	return 0
-
-
-func _target_code(t: StringName) -> int:
-	match t:
-		T_PLAYER: return TG_PLAYER
-		T_NEAREST_ENEMY: return TG_NEAREST
-		T_BOSS: return TG_BOSS
-		&"": return -1   # heading/forward/random/reflect 不用 target，空是合法值
-	push_error("BulletLifecycle.compile(): 未知 target '%s'" % str(t))
-	_compile_failed = true
-	return -1
-
-
-func _dir_args(d: Dictionary) -> Array:
-	var dk := -1
-	match d[&"kind"]:
-		D_HEADING: dk = DK_HEADING
-		D_TOWARD: dk = DK_TOWARD
-		D_AWAY: dk = DK_AWAY
-		D_FORWARD: dk = DK_FORWARD
-		D_RANDOM: dk = DK_RANDOM
-		D_CHANCE: dk = DK_CHANCE
-		D_REFLECT: dk = DK_REFLECT
-		_:
-			push_error("BulletLifecycle.compile(): 未知方向 kind '%s'" % str(d.get(&"kind", &"")))
-			_compile_failed = true
-			dk = DK_HEADING
-	var target: StringName = d[&"target"]
-	if target == &"" and dk in [DK_TOWARD, DK_AWAY, DK_CHANCE]:
-		push_error("BulletLifecycle.compile(): %s 的 target 为空（打错目标？）" % str(d[&"kind"]))
-		_compile_failed = true
-	return [dk, _target_code(target), float(d[&"angle"]), float(d.get(&"p", 0.0))]
-
-
-func _args_move(m: Dictionary) -> Array:
-	match m[&"op"]:
-		M_ACCEL_WORLD: return [Vector2(m[&"vec"]).x, Vector2(m[&"vec"]).y]
-		M_ACCEL_HEADING: return [float(m[&"a"])]
-		M_ROTATE: return [float(m[&"w"]), float(m[&"limit"]), float(m[&"slot"]), float(m[&"mode"])]
-		M_STEER:
-			if m[&"target"] == &"":
-				push_error("BulletLifecycle.compile(): steer 的 target 为空（打错目标？）")
-				_compile_failed = true
-			return [_target_code(m[&"target"]), float(m[&"max_turn"]), float(m[&"ramp"]), float(m[&"dist_weight"]), float(m[&"steer_until"])]
-		M_SPEED_LERP: return [float(m[&"from"]), float(m[&"to"]), float(m[&"ramp"])]
-		M_SPEED_MUL: return [float(m[&"f"])]
-		M_SET_HEADING: return _dir_args(m[&"dir"])
-		M_SET_SPEED: return [float(m[&"speed"])]
-		M_POSITION:
-			# V18 布局：[mode, anchor_id, off.x, off.y, angle, speed, flags, initial, slot, base_sx, base_sy]
-			if int(m[&"mode"]) == POS_PHASE_START:
-				return [0.0, 0.0, 0.0, 0.0, float(m[&"angle"]), float(m[&"speed"]), 0.0, float(m[&"initial"]), float(m[&"slot"]), float(m[&"sx"]), float(m[&"sy"])]
-			var flags := 0.0
-			if bool(m[&"use_global"]): flags += 1.0
-			if bool(m[&"render_heading"]): flags += 2.0
-			var off := Vector2(m[&"offset"])
-			return [1.0, float(m[&"anchor_id"]), off.x, off.y, float(m[&"angle"]), float(m[&"speed"]), flags, float(m[&"initial"]), float(m[&"slot"]), -1.0, -1.0]
-	return []
-
-
-func _args_cond(c: Dictionary) -> Array:
-	# V6：统一节流头 [every, every_ticks]（对所有条件通用），具体条件参数后移。
-	var head: Array = [float(c.get(&"every", 0.0)), float(c.get(&"every_ticks", 0))]
-	match c[&"op"]:
-		C_ELAPSED: return head + [float(c[&"t"])]
-		C_NEAR:
-			if c[&"target"] == &"":
-				push_error("BulletLifecycle.compile(): until_near 的 target 为空（打错目标？）")
-				_compile_failed = true
-			return head + [_target_code(c[&"target"]), float(c[&"r"])]
-		C_AT_WALL: return head + [float(c[&"mask"])]
-		C_STATE: return head + [float(c[&"slot"]), float(c[&"cmp"]), float(c[&"value"])]
-		C_SPEED: return head + [float(c[&"cmp"]), float(c[&"value"])]
-	return head
-
-
-func _args_act(a: Dictionary, actions: Array, sfx_keys: Array[StringName]) -> Array:
-	match a[&"op"]:
-		A_EMIT:
-			var aid := actions.size()
-			actions.append(a[&"spawn"])
-			return [float(aid)] + _dir_args(a[&"dir"]) + [float(a[&"speed"]), float(a[&"at"])]
-		A_EMIT_VARIANT:
-			# V9 布局：[aid, p, hit_dk, hit_tg, hit_angle, miss_dk, miss_tg, miss_angle, speed, at]
-			# 命中 = toward(target)（angle 0）；未命中 = forward(spread)。
-			var vid := actions.size()
-			actions.append(a[&"spawns"])
-			var ch: Dictionary = a[&"chance"]
-			if ch[&"target"] == &"":
-				push_error("BulletLifecycle.compile(): emit_variant 的 chance target 为空（打错目标？）")
-				_compile_failed = true
-			return [float(vid), float(ch[&"p"]), float(DK_TOWARD), float(_target_code(ch[&"target"])), 0.0,
-				float(DK_FORWARD), -1.0, float(ch[&"angle"]), float(a[&"speed"]), float(a[&"at"])]
-		A_SFX:
-			var sid := sfx_keys.size()
-			sfx_keys.append(a[&"key"])
-			return [float(sid), float(a[&"db"])]
-		A_SET_HEADING: return _dir_args(a[&"dir"])
-		A_SET_SPEED: return [float(a[&"speed"])]
-		A_CALL:
-			var cid := actions.size()
-			actions.append(a[&"call"])
-			return [float(cid)]
-	return []

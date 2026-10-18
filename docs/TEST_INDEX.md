@@ -19,14 +19,14 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：119 脚本 / **838 用例（838 通过 / 0 红 —— ✅ 全绿）/ 7767 断言 / 57.263s** / 19 orphans / **0 pending**。
+**现状**：119 脚本 / **840 用例（840 通过 / 0 红 —— ✅ 全绿）/ 7776 断言 / 57.092s** / 19 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 58 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 30 | 187 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **B 内核 · 原生 C++ + 桥接** | 30 | 189 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 44 | 366 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
@@ -52,7 +52,7 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：类型不匹配 / **严格模式未知键** / **多脚本并集未知键**要响亮报错 | 10 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（30 / 187）
+## B · 内核 · 原生 C++ + 桥接（30 / 189）
 
 ### B1 parity 套件（13 文件 / 100 用例）—— 依赖 `test/reference/` 冻结 oracle
 
@@ -60,7 +60,7 @@
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限）+ **编译守卫（DSL3/4/6/8/13）**，每条原语一条最小 lifecycle 逐帧对比；**on_end_heading 先于 emit(forward) 的承重契约（DSL2）** | 54 | 1 |
+| [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限）+ **编译守卫（DSL3/4/6/8/13）**，每条原语一条最小 lifecycle 逐帧对比；**on_end_heading 先于 emit(forward) 的承重契约（DSL2）**；**纯 program / 宿主表分离（DSL10）** | 56 | 1 |
 | [test_lifecycle_compositions](../test/test_lifecycle_compositions.gd) | **手写原语组合**逐帧 parity（accel / world / radial / bounce / curve / homing / avoid / laser） | 7 | 1 |
 | [test_lifecycle_model](../test/test_lifecycle_model.gd) | `BulletLifecycle` 描述符 ↔ 参考解释器 parity | 3 | 1 |
 | [test_native_executor](../test/test_native_executor.gd) | 原生 `behavior_tick`（packed program）↔ 参考解释器**逐位** parity | 9 | 1 |

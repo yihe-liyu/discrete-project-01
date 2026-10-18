@@ -105,6 +105,14 @@
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
 
+### 2026-10-18 — DSL10/12：纯编译器 + 宿主表分离 + DirSpec
+
+- `bullet_lifecycle.gd` 733→453 行；编译/opcode/args 拆到 `LifecycleCompiler`（314 行），方向词汇/构造器拆到 `DirSpec`（61 行），spawn/Callable/sfx 拆到 `LifecycleHostTable`（47 行）。
+- `compile_program()` 只产出 ops/args/phase 索引，不含宿主对象；`host_table()` 只产出 action/sfx；`compile()` 保留合并兼容入口。
+- action local id 在编译器里按 EMIT/EMIT_VARIANT/CALL 共用 actions、SFX 独立 sfx 的纯结构分配；宿主表按同序遍历，天然对齐。
+- `KernelNativeSystem._program_data` 只存纯 program；新增 `_program_host_tables` 同下标；事件路由查宿主表。content_signature = 纯 program 结构 + 宿主身份，保留模板身份隔离。
+- 全量 840 / 7776，verify 七步全绿。
+
 ### 2026-10-18 — DSL2 契约测试 + DSL9 缓存形状守卫
 
 - DSL2：新增原生契约测试——`on_end_heading` 必须先于后续 `emit(forward(...))` 执行，整圈发射共享新朝向；用固定 1.0 rad 断言绝对方向，random_dir 走同一 heading 路径。

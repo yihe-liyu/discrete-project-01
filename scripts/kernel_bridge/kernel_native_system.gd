@@ -63,7 +63,10 @@ var _random := RandomNumberGenerator.new()
 
 # ── 原生 program（move+params → packed）──
 var _catalog := LifecycleCatalog.new()
+## 纯 program（ops/args/phase 索引）—— 不含宿主对象（DSL10）
 var _program_data: Array = []
+## 与 _program_data 同下标：spawn / Callable / sfx 宿主表
+var _program_host_tables: Array = []
 var _program_anchors: Array = []
 var _program_key_to_pid: Dictionary = {}
 
@@ -271,6 +274,7 @@ func reset_registries() -> void:
 	_active_count = 0
 	_accel = null            # 丢旧 store：program / SoA 一并释放，下次 _ensure_native 新建
 	_program_data.clear()
+	_program_host_tables.clear()
 	_program_anchors.clear()
 	_program_key_to_pid.clear()
 	_type_registry.clear()
@@ -449,7 +453,7 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 		_program_key_to_pid.erase(key)
 	var pid: int = -1
 	if lc != null:
-		var c: Dictionary = lc.compile()
+		var c: Dictionary = lc.compile_program()
 		var expected: int = _program_data.size()
 		pid = _accel.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
 		if pid < 0:
@@ -459,6 +463,7 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 			if pid != expected:
 				push_error("[KernelNativeSystem] program 对齐失败：native pid=%d, 期望 %d" % [pid, expected])
 			_program_data.append(c)
+			_program_host_tables.append(lc.host_table())
 			_program_anchors.append(_anchor_spec_for(move, params))
 	_program_key_to_pid[key] = pid
 	return pid
@@ -563,23 +568,25 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 		var prog: int = eprog[k]
 		if prog < 0 or prog >= _program_data.size():
 			continue
-		var c: Dictionary = _program_data[prog]
+		var host_table: Dictionary = _program_host_tables[prog] if prog < _program_host_tables.size() else {}
+		var actions: Array = host_table.get(&"actions", [])
+		var sfx_keys: Array = host_table.get(&"sfx", [])
 		match kinds[k]:
 			0:
 				var branch: int = variants[k] if k < variants.size() else 0
-				var spawn_src: Variant = pick_variant(c["actions"][local[k]], branch)
+				var spawn_src: Variant = pick_variant(actions[local[k]], branch)
 				var b = spawn_src.call() if spawn_src is Callable else spawn_src
 				if b != null and behavior_host != null:
 					b.velocity = Vector2(0.0, vals[k])
 					behavior_host.queue_spawn(b, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]))
 			1:
-				var key: StringName = c["sfx"][local[k]]
+				var key: StringName = sfx_keys[local[k]]
 				var stream = AssetRegistry.sounds.get(String(key), null)
 				if stream != null:
 					# 节流：弹幕音效"每颗子弹一次"，不节流会变成同音机关枪（见 BULLET_SFX_MIN_INTERVAL）
 					AudioManager.play_sfx(stream, vals[k], AudioManager.BULLET_SFX_MIN_INTERVAL)
 			2:
-				var hook: Variant = c["actions"][local[k]]
+				var hook: Variant = actions[local[k]]
 				var fn: Callable = hook if hook is Callable else LIFECYCLE_HOOKS_SCRIPT.resolve(hook)
 				if fn.is_valid():
 					fn.call(Vector2(xs[k], ys[k]), boss_pos, has_boss, behavior_host)
