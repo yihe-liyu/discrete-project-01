@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 36 条（本文件留最近 36 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 37 条（本文件留最近 37 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — Ghost 活动范围/初始点与真自机对齐
 - 2026-10-18 — Workbench 与游戏场地同坐标（顶栏 36→32）
 - 2026-10-18 — 创作台页签对齐 + 快捷键
 - 2026-10-18 — 预览暂停：BulletManager 显式 PAUSABLE
@@ -101,6 +102,14 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — Ghost 活动范围/初始点与真自机对齐
+
+- 真自机 clamp：`x 88..808 / y 64..896`，初始 `(448, 840)`；之前 ghost auto 路径中心 620、鼠标范围 44..868，初始 620。
+- 把自机边界/初始点收进 `GameConfig`（`PLAYER_MIN/MAX_X/Y`、`PLAYER_START`），Player clamp 与 ghost 共用。
+- GhostPlayer：默认中心 840、y 振幅 40；鼠标/auto 都 clamp 到同一范围；BenchBase 起点改 840；画框参考线改 840。
+- 测试钉住 `GhostPlayer.player_bounds() == Rect2(88,64,720,832)` 与默认 y=840。
+- 全量 834 / 7758，verify 七步全绿。
 
 ### 2026-10-18 — Workbench 与游戏场地同坐标（顶栏 36→32）
 

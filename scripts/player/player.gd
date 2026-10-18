@@ -175,8 +175,8 @@ func update_move(delta: float) -> void:
 	position += move_input * current_speed * delta
 
 	# 位置限制
-	position.x = clamp(position.x, FRONT_LEFT + MIN_MARGIN * 3, FRONT_RIGHT - MIN_MARGIN * 3)
-	position.y = clamp(position.y, FRONT_UP + MIN_MARGIN * 4, FRONT_DOWN - MIN_MARGIN * 4)
+	position.x = clamp(position.x, GameConfig.PLAYER_MIN_X, GameConfig.PLAYER_MAX_X)
+	position.y = clamp(position.y, GameConfig.PLAYER_MIN_Y, GameConfig.PLAYER_MAX_Y)
 
 
 ## 无敌闪烁：只在 `is_invincible` 期间按 `INVINCIBLE_BLINK_HZ` 切换**机体贴图**的不透明度；

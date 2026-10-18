@@ -1,6 +1,7 @@
 extends GutTest
 
 const HITBOX_OVERLAY := preload("res://scripts/workbench/hitbox_overlay.gd")
+const GHOST := preload("res://scripts/workbench/ghost_player.gd")
 ## 工作台（嵌入创作台）坐标一致性：场地 / BulletManager / BenchWorld 都在画布坐标，
 ## 子弹出生（全局）== Boss 全局 == 场地标记全局。
 ## 走**公开接缝**（`set_boss_spawn_pos` / `boss_spawn_pos` / `boss_scene` / `playfield` /
@@ -9,7 +10,7 @@ const HITBOX_OVERLAY := preload("res://scripts/workbench/hitbox_overlay.gd")
 func _embed_bench() -> Node:
 	var host := Control.new()
 	add_child_autofree(host)
-	host.position = Vector2(0.0, 34.0)   # 模拟页签横栏下
+	host.position = Vector2(0.0, 32.0)   # 模拟页签横栏下
 	var bench = preload("res://scenes/workbench/phase_bench.tscn").instantiate()
 	host.add_child(bench)
 	return bench
@@ -49,3 +50,10 @@ func test_embedded_bench_world_matches_field() -> void:
 		"命中框必须叠加 BulletManager 的全局偏移")
 	offset_bm.free()
 	overlay.free()
+
+
+func test_ghost_bounds_match_player() -> void:
+	assert_eq(GHOST.player_bounds(), Rect2(88.0, 64.0, 720.0, 832.0),
+		"ghost 中心活动范围 = 真自机 clamp 范围")
+	assert_eq(GHOST.DEFAULT_CENTER_Y, 840.0, "ghost 默认起点 y = 真自机初始 y")
+	assert_eq(GameConfig.PLAYER_START, Vector2(448.0, 840.0), "真自机初始点")

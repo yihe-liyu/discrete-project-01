@@ -9,7 +9,7 @@ const GHOST := preload("res://scripts/workbench/ghost_player.gd")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 ## 幽灵自机：组合台用鼠标跟随（自机狙随手走），起点在场地偏下（与真游戏自机带一致）
 const GHOST_MOUSE := 1     # GhostPlayer.Mode.MOUSE（静态类型 Player 无 mode，用 set 动态写）
-const GHOST_START_Y := 620.0
+const GHOST_START_Y: float = GameConfig.PLAYER_START.y
 
 ## 坐标约定：场地局部坐标 = 游戏坐标（工作台里所有游戏内容都是本 Control 的子节点，天然同一空间）。
 

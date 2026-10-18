@@ -14,6 +14,15 @@ const FIELD_BOTTOM: float = 928.0
 const FIELD_CENTER_X: float = 448.0
 const FIELD_CENTER_Y: float = 480.0
 
+## 自机中心的活动边界（Player clamp 与创作台 ghost 共用，保证“可存在范围”一致）
+## 真游戏 Player：x 各内缩 24（MIN_MARGIN*3），y 各内缩 32（MIN_MARGIN*4）
+const PLAYER_MIN_X: float = 88.0
+const PLAYER_MAX_X: float = 808.0
+const PLAYER_MIN_Y: float = 64.0
+const PLAYER_MAX_Y: float = 896.0
+## 真游戏 Player 初始点（game_scene.tscn: position = (448, 840)）
+const PLAYER_START: Vector2 = Vector2(448.0, 840.0)
+
 ## 屏幕（viewport）尺寸
 const VIEW_WIDTH: float = 1280.0
 const VIEW_HEIGHT: float = 960.0

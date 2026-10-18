@@ -34,4 +34,4 @@ func _draw() -> void:
 	for grid_y in range(32, 929, 64):
 		draw_line(Vector2(64, grid_y - stage_shift_y), Vector2(832, grid_y - stage_shift_y), Color(1, 1, 1, 0.05))
 	# 幽灵玩家路径参考（纵向漂移中线）
-	draw_line(Vector2(64, 620 - stage_shift_y), Vector2(832, 620 - stage_shift_y), Color(0.3, 0.9, 0.5, 0.15))
+	draw_line(Vector2(64, GameConfig.PLAYER_START.y - stage_shift_y), Vector2(832, GameConfig.PLAYER_START.y - stage_shift_y), Color(0.3, 0.9, 0.5, 0.15))
