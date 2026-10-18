@@ -29,6 +29,13 @@ func _process(_delta: float) -> void:
 		queue_redraw()
 
 
+## 命中框中心 = BulletManager 局部位置 → 画布全局 + 判定偏移（随朝向旋转）。
+## 公开给测试/其他调试工具：贴图与命中框必须共用这一条坐标语义。
+func bullet_center_for(manager: Node2D, local_pos: Vector2, offset: Vector2, rot: float) -> Vector2:
+	var origin := manager.to_global(local_pos) if manager != null else local_pos
+	return origin + offset.rotated(rot)
+
+
 func _draw() -> void:
 	if not is_enabled:
 		return
@@ -46,7 +53,9 @@ func _draw() -> void:
 				continue
 			var bt: BulletType = registry[ti]
 			var rot: float = bt.rotation_for(velocities[i])
-			var center: Vector2 = positions[i] + bt.hitbox_offset.rotated(rot)
+			# 内核坐标是 BulletManager 的局部坐标；贴图也吃它的 Node2D 变换。
+			# 嵌入创作台后 manager.global_position 有页面偏移，只画 positions[i] 会整体错位。
+			var center: Vector2 = bullet_center_for(bm, positions[i], bt.hitbox_offset, rot)
 			if bt.hitbox_size != Vector2.ZERO:
 				draw_set_transform(center, rot, Vector2.ONE)
 				draw_rect(Rect2(-bt.hitbox_size / 2.0, bt.hitbox_size), Color.RED, false, 1.0)

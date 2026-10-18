@@ -1,4 +1,6 @@
 extends GutTest
+
+const HITBOX_OVERLAY := preload("res://scripts/workbench/hitbox_overlay.gd")
 ## 工作台（嵌入创作台）坐标一致性：场地 / BulletManager / BenchWorld 都在画布坐标，
 ## 子弹出生（全局）== Boss 全局 == 场地标记全局。
 ## 走**公开接缝**（`set_boss_spawn_pos` / `boss_spawn_pos` / `boss_scene` / `playfield` /
@@ -36,3 +38,14 @@ func test_embedded_bench_world_matches_field() -> void:
 	var id: int = bm.shoot_bullet(data, boss.global_position, Vector2.DOWN)
 	await get_tree().physics_frame
 	assert_eq(bm.bullet_global_position(id), boss.global_position, "子弹出生全局 == Boss 全局")
+
+	# 命中框与贴图同一坐标：BulletManager 有 y 偏移时，hitbox 不能只画局部坐标
+	var overlay = HITBOX_OVERLAY.new()
+	var offset_bm := BulletManager.new()
+	offset_bm.position = Vector2(0.0, 36.0)
+	assert_eq(
+		overlay.bullet_center_for(offset_bm, Vector2(10.0, 20.0), Vector2.ZERO, 0.0),
+		Vector2(10.0, 56.0),
+		"命中框必须叠加 BulletManager 的全局偏移")
+	offset_bm.free()
+	overlay.free()

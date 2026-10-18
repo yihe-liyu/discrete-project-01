@@ -1,7 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://c0creationst1"]
+[gd_scene format=3 uid="uid://c0creationst1"]
 
 [ext_resource type="Script" uid="uid://bh1emqs76ek6a" path="res://scripts/workbench/creation_station.gd" id="1_cs"]
-[ext_resource type="Script" path="res://scripts/workbench/catalog_panel.gd" id="2_catalog"]
+[ext_resource type="Script" uid="uid://mtjqb4krnbvr" path="res://scripts/workbench/catalog_panel.gd" id="2_catalog"]
 
 [node name="CreationStation" type="Control" unique_id=1568350222]
 layout_mode = 3
@@ -29,7 +29,7 @@ size_flags_vertical = 3
 [node name="BarLayer" type="CanvasLayer" parent="." unique_id=349004766]
 layer = 2
 
-[node name="HeaderBg" type="ColorRect" parent="BarLayer"]
+[node name="HeaderBg" type="ColorRect" parent="BarLayer" unique_id=858359377]
 anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 36.0
@@ -37,7 +37,7 @@ grow_horizontal = 2
 mouse_filter = 2
 color = Color(0.035, 0.035, 0.05, 0.98)
 
-[node name="HeaderLine" type="ColorRect" parent="BarLayer"]
+[node name="HeaderLine" type="ColorRect" parent="BarLayer" unique_id=718150312]
 anchors_preset = 10
 anchor_right = 1.0
 offset_top = 35.0
@@ -54,47 +54,47 @@ offset_bottom = 36.0
 grow_horizontal = 2
 theme_override_constants/separation = 6
 
-[node name="Tab0" type="Button" parent="BarLayer/Bar"]
+[node name="Tab0" type="Button" parent="BarLayer/Bar" unique_id=1027313525]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 toggle_mode = true
 text = "整关预览"
 
-[node name="Tab1" type="Button" parent="BarLayer/Bar"]
+[node name="Tab1" type="Button" parent="BarLayer/Bar" unique_id=761955377]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 toggle_mode = true
 text = "弹幕台"
 
-[node name="Tab2" type="Button" parent="BarLayer/Bar"]
+[node name="Tab2" type="Button" parent="BarLayer/Bar" unique_id=1388566090]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 toggle_mode = true
 text = "敌人台"
 
-[node name="Tab3" type="Button" parent="BarLayer/Bar"]
+[node name="Tab3" type="Button" parent="BarLayer/Bar" unique_id=1047182543]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 toggle_mode = true
 text = "阶段台"
 
-[node name="CatalogButton" type="Button" parent="BarLayer/Bar"]
+[node name="CatalogButton" type="Button" parent="BarLayer/Bar" unique_id=1822375089]
 custom_minimum_size = Vector2(88, 0)
 layout_mode = 2
 size_flags_horizontal = 8
+tooltip_text = "打开全局目录"
 theme_override_font_sizes/font_size = 16
 toggle_mode = true
 text = "目录 ▾"
-tooltip_text = "打开全局目录"
 
-[node name="CatalogLayer" type="CanvasLayer" parent="."]
+[node name="CatalogLayer" type="CanvasLayer" parent="." unique_id=447678217]
 layer = 3
 
-[node name="Root" type="Control" parent="CatalogLayer"]
+[node name="Root" type="Control" parent="CatalogLayer" unique_id=1496937580]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -103,7 +103,9 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="CatalogDrawer" type="PanelContainer" parent="CatalogLayer/Root"]
+[node name="CatalogDrawer" type="PanelContainer" parent="CatalogLayer/Root" unique_id=1780928921]
+visible = false
+custom_minimum_size = Vector2(432, 0)
 layout_mode = 1
 anchors_preset = 9
 anchor_bottom = 1.0
@@ -112,14 +114,10 @@ offset_top = 44.0
 offset_right = 440.0
 offset_bottom = -8.0
 grow_vertical = 2
-custom_minimum_size = Vector2(432, 0)
-mouse_filter = 0
-visible = false
 
-[node name="CatalogPanel" type="VBoxContainer" parent="CatalogLayer/Root/CatalogDrawer"]
+[node name="CatalogPanel" type="VBoxContainer" parent="CatalogLayer/Root/CatalogDrawer" unique_id=1641524395]
+custom_minimum_size = Vector2(408, 420)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-custom_minimum_size = Vector2(408, 420)
 script = ExtResource("2_catalog")
-show_descriptors = true

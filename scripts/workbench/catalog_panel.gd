@@ -25,7 +25,7 @@ var _catalog: Variant
 ## 扫描根（组合根 / 测试可注入；默认 res://data）—— 测试不拿真实内容当标准。
 var catalog_root: String = CAT.DEFAULT_ROOT
 ## 全局目录抽屉开启：额外显示 BulletLifecycle 原语（不写进 ContentCatalog 文件索引）。
-var show_descriptors: bool = false
+@export var show_descriptors: bool = false
 var _descriptor_entries: Array = []
 var _info_panel: PanelContainer
 var _split_area: Control
@@ -218,6 +218,16 @@ func _rebuild_tree() -> void:
 			var full_title: String = entry.extra.get("full_title", entry.name)
 			it.set_tooltip_text(0, full_title + "\n" + entry.path)
 			it.set_metadata(0, entry)
+
+
+## 设置描述符组开关；运行中改也要重建树（`_ready` 只建一次）。
+func set_show_descriptors(on: bool) -> void:
+	show_descriptors = on
+	if not is_inside_tree():
+		return
+	if _role_filter != null and on and _role_filter.item_count == CAT.ROLE_ORDER.size() + 1:
+		_role_filter.add_item("弹道描述符")
+	_rebuild_tree()
 
 
 ## 描述符虚拟组条目（测试/路由用；每次重建树时刷新）

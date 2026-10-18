@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 28 条（本文件留最近 28 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 29 条（本文件留最近 29 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
 - 2026-10-18 — D3 第三批：CreationStation 节点化 + WorkspaceStore
 - 2026-10-18 — D3 第二批：PreviewUI 拆出，Workbench 523
 - 2026-10-18 — D3 第一批：Workbench 拆出 6 个预览服务
@@ -58,6 +59,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
+
+- 根因：`HitboxOverlay` 直接画内核局部坐标 `positions[i]`，而子弹贴图吃 `BulletManager` 的 Node2D 变换；嵌进创作台后 manager 有页面 y 偏移，命中框整体偏上。
+- 修法：`bullet_center_for()` 统一走 `BulletManager.to_global(local_pos)` 再叠加 `hitbox_offset`；测试钉住 y+36 时中心必须 +36。
+- 顺手修节点化暴露的问题：`CatalogPanel.show_descriptors` 加 `@export`，并提供 `set_show_descriptors()` 在运行中重建描述符组（原先场景属性不生效）。
+- 全量 832 / 7742，verify 七步全绿。
 
 ### 2026-10-18 — D3 第三批：CreationStation 节点化 + WorkspaceStore
 

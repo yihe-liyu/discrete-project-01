@@ -64,7 +64,7 @@ func _configure_catalog_drawer() -> void:
 	_catalog_panel = $CatalogLayer/Root/CatalogDrawer/CatalogPanel
 	_catalog_drawer.add_theme_stylebox_override("panel", RIG_COMMON.panel_style())
 	_catalog_drawer.theme = theme
-	_catalog_panel.show_descriptors = true
+	_catalog_panel.set_show_descriptors(true)
 	_catalog_panel.preset_requested.connect(_on_catalog_preset)
 	# CatalogPanel._ready() 会把 custom_minimum_size 重置成 (0,420) → 必须在入树后压宽度
 	_catalog_panel.custom_minimum_size = Vector2(408, 420)
