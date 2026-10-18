@@ -38,7 +38,6 @@ extends Control
 
 const VERSION := "v4.7-ui"
 
-const CATALOG_PANEL := preload("res://scripts/workbench/catalog_panel.gd")
 const PREVIEW_SUSPENDER := preload("res://scripts/workbench/preview_suspender.gd")
 const PREVIEW_LAYOUT := preload("res://scripts/workbench/preview_layout.gd")
 const PREVIEW_INPUT := preload("res://scripts/workbench/preview_input.gd")
@@ -47,6 +46,8 @@ const PREVIEW_PHASE_TIMER := preload("res://scripts/workbench/preview_phase_time
 const PREVIEW_DEBUG_TOOLS := preload("res://scripts/workbench/preview_debug_tools.gd")
 const PREVIEW_UI := preload("res://scripts/workbench/preview_ui.gd")
 const PREVIEW_STAGE_LOADER := preload("res://scripts/workbench/preview_stage_loader.gd")
+const PREVIEW_PLAYBACK := preload("res://scripts/workbench/preview_playback.gd")
+const PREVIEW_BOOKMARKS := preload("res://scripts/workbench/preview_bookmarks.gd")
 ## Stage 1 = 协程版（stage01.gd Timeline 编排；数据关卡系统已移除）
 const STAGE1_COROUTINE := preload("res://data/stages/stage01/stage_data/stage01.tres")
 
@@ -109,6 +110,10 @@ var _preview_debug
 var _preview_ui
 ## 关卡加载/重跑流水线（D3：停关/清 World/背景/复位/load_stage）
 var _preview_stage_loader
+## 播放投影/逐帧/跳转（D3）
+var _preview_playback
+## 书签 open/保存/时间轴（D3）
+var _preview_bookmarks
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
 var _diff_sel: OptionButton
@@ -146,6 +151,11 @@ func _ready() -> void:
 	get_window().size = Vector2i(1280, 960)
 	%Title.text = "内容工作台 %s" % VERSION
 	_build_ui()
+	_preview_playback = PREVIEW_PLAYBACK.new()
+	_preview_playback.setup(self, _playback, _playback_bar, _stage_runtime,
+		Callable(self, "_redraw_stage"), Callable(self, "_load_stage"), Callable(self, "_log_line"))
+	_preview_bookmarks = PREVIEW_BOOKMARKS.new()
+	_preview_bookmarks.setup(_bookmarks, _bookmark_panel, _timeline, Callable(self, "_log_line"))
 	_preview_input = PREVIEW_INPUT.new()
 	_preview_input.setup(self, _playback, _bookmark_panel,
 		Callable(self, "_restart"), Callable(self, "_frame_step"),
@@ -172,16 +182,11 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	_poll_playback()
+	if _preview_playback != null:
+		_preview_playback.poll()
 	_update_ui()
 	if _phase_timer != null:
 		_phase_timer.update()
-
-
-## 快进到达检测（本节点是 PROCESS_MODE_ALWAYS，暂停中也照检；取不到 runner = 关卡已停 → 收尾）
-func _poll_playback() -> void:
-	var runner := _stage_runtime.current_stage_script()
-	_playback.poll(runner.game_time() if runner != null else INF)
 
 
 func _draw() -> void:
@@ -312,76 +317,41 @@ func _load_stage() -> void:
 	_prev_time = -1.0
 	_log_line("▶ 加载 Stage %d（难度 %s）" % [_stage_data.stage_id, DIFFICULTIES[_diff_sel.selected]])
 
-# ═══ 书签（模型在 Bookmarks；这里只管落盘与时间轴）═══
+# ═══ 书签（实现见 PreviewBookmarks）═══
 
-## 打开关卡的书签：读缓存（人工打点）+ 静态提取（自动书签）
 func _load_bookmarks() -> void:
-	var info := _bookmarks.open(_stage_data)
-	_bookmark_panel.refresh()
-	_refresh_timeline_bookmarks()
-	_log_line("＊ 书签：自动 %d 个 · 人工 %d 个（%s）"
-		% [info.auto, info.manual, _bookmark_source_text(info)])
+	if _preview_bookmarks != null:
+		_preview_bookmarks.open(_stage_data)
 
 
-## 缓存来历（首次 / 命中 / 脚本变了 —— 三件事在日志里要能分清）
-func _bookmark_source_text(info: Dictionary) -> String:
-	if not info.cache_hit:
-		return "首次，无缓存"
-	return "缓存命中" if info.cache_fresh else "缓存失效（关卡脚本已改，自动书签重收集）"
-
-
-## 时间轴书签刷新（与列表面板同源的合并视图）
-func _refresh_timeline_bookmarks() -> void:
-	_timeline.clear_bookmarks()
-	for it in _bookmarks.merged():
-		_timeline.add_bookmark(it.t, it.label, "manual" if it.get("is_manual", false) else "")
-
-
-## 书签被编辑（BookmarkPanel data_changed）→ 落盘 + 刷时间轴
 func _on_bookmarks_changed() -> void:
-	_bookmarks.save()
-	_refresh_timeline_bookmarks()
+	if _preview_bookmarks != null:
+		_preview_bookmarks.on_changed()
 
-
-# ═══ 播放 / 暂停 / 快进（状态机在 Playback；这里只发起与转发）═══
+# ═══ 播放 / 逐帧 / 跳转（实现见 PreviewPlayback）═══
 
 func _restart() -> void:
 	_load_stage()
 	_log_line("＊ 重跑")
 
 
-# ═══ 快捷键 / 逐帧 ═══
-
-## 逐帧推进：暂停状态下精确走一帧物理（弹幕排布/碰撞细节检查）
-## 注：physics_frame 信号先于节点物理处理发射 → await 两次 = 恰好一个物理步
-## `begin_step/end_step` 各自发 changed → 宿主下发"这一瞬放行物理、time_scale 归 1"
 func _frame_step() -> void:
-	if not _playback.begin_step():
-		return
-	await get_tree().physics_frame
-	await get_tree().physics_frame
-	_playback.end_step()
+	if _preview_playback != null:
+		_preview_playback.frame_step()
 
 
-## 全局快捷键（输入框聚焦 / 弹窗打开时不拦截）
 func _unhandled_input(event: InputEvent) -> void:
 	if _preview_input != null and _preview_input.handle(event):
 		get_viewport().set_input_as_handled()
 
-## 跳转（时间轴点击 / 书签列表 / ←→ 键）：协程关卡不能倒带 → 目标在过去时先重跑
+
 func _jump_to(target_time: float) -> void:
-	var cur := _current_time()
-	if _playback.jump_reload_needed(target_time, cur):
-		_log_line("＊ 目标 %.1fs 在过去（当前 %.1fs），重跑后快进" % [target_time, cur])
-		_load_stage()
-	_playback.jump_to(target_time)
+	if _preview_playback != null:
+		_preview_playback.jump_to(target_time)
 
 
-## 当前游戏内时刻（无 runner = 0）
 func _current_time() -> float:
-	var runner := _stage_runtime.current_stage_script()
-	return runner.game_time() if runner != null else 0.0
-
+	return _preview_playback.current_time() if _preview_playback != null else 0.0
 
 # ═══ 选项回调 ═══
 
@@ -418,24 +388,9 @@ func _on_difficulty_changed(_index: int) -> void:
 
 # ═══ 状态下发 ═══
 
-## `Playback.changed` 的唯一落点：把状态机投影下发到引擎 / 音频 / 播放控制行。
-## 静音 → 总线；暂停/逐帧 → tree.paused；速度/快进 → time_scale + 物理步上限 + BGM 音高。
 func _apply_playback_runtime() -> void:
-	var scene_tree := get_tree()
-	if scene_tree != null:
-		scene_tree.paused = _playback.should_pause_tree()
-	Engine.time_scale = _playback.desired_time_scale()
-	Engine.max_physics_steps_per_frame = _playback.desired_physics_steps()
-	AudioManager.set_bgm_pitch(_playback.desired_bgm_pitch())
-	var bus := AudioServer.get_bus_index("Master")
-	if bus >= 0:
-		AudioServer.set_bus_mute(bus, _playback.is_audio_muted())
-	if _playback_bar != null:
-		_playback_bar.set_playing(not _playback.paused)
-		_playback_bar.set_speed(_playback.speed_index)
-	# 背景开关会改变「框外压暗 / 网格」的形态 ⇒ 两层都要重画
-	_redraw_stage()
-
+	if _preview_playback != null:
+		_preview_playback.apply_runtime()
 
 ## 舞台视觉重画：根 `_draw`（框外压暗）+ 画框层（金边 / 网格）。
 ## 画框必须画在 3D 背景**之上**，所以它在 `FrameOverlay` 里而不是根 `_draw`（见 frame_overlay.gd）。

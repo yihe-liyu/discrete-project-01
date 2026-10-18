@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 30 条（本文件留最近 30 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 31 条（本文件留最近 31 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
 - 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
 - 2026-10-18 — D3 第三批：CreationStation 节点化 + WorkspaceStore
@@ -60,6 +61,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
+
+- `preview_playback.gd`（75）：Playback → 引擎/音频/播放条投影、快进轮询、逐帧、跳转。
+- `preview_bookmarks.gd`（44）：书签 open / 保存 / 时间轴刷新 / 来源文案。
+- Workbench 483 → 439；`_process` 只调两个服务，`_current_time`/`_jump_to`/`_apply_playback_runtime` 变薄委托。
+- 至此 D3 共 10 个预览服务；Workbench 只剩装配、选项回调、公开接缝。
+- 全量 832 / 7742，verify 七步全绿。
 
 ### 2026-10-18 — D3 第四批：PreviewStageLoader
 
