@@ -82,7 +82,7 @@ func _configure_catalog_drawer() -> void:
 	_catalog_panel.set_show_descriptors(true)
 	_catalog_panel.preset_requested.connect(_on_catalog_preset)
 	# CatalogPanel._ready() 会把 custom_minimum_size 重置成 (0,420) → 必须在入树后压宽度
-	_catalog_panel.custom_minimum_size = Vector2(296, 420)
+	_catalog_panel.custom_minimum_size = Vector2(360, 420)
 	_catalog_drawer.visible = false
 
 # ═══ 公开接缝（测试/外部驱动；用户点页签走的是同一条实现）═══
