@@ -7,6 +7,7 @@ render_mode blend_mix;
 // 全部 uniform 由 ScreenFogFX 组件 @export 注入 → 场景里选节点即可调参
 
 uniform sampler2D noise_tex;                                    // 值噪声云斑纹理（512² 生成）
+uniform float time = 0.0;                                       // 由 ScreenFogFX 按 delta 推进（不是 shader TIME，切页冻结不跳）
 uniform float fog_dark : hint_range(0.0, 1.0) = 0.65;           // 整体蒙眼浓度
 uniform vec2 sun_pos = vec2(0.5, 0.18);                         // 太阳屏幕位置（归一化）
 uniform float sun_fog_radius : hint_range(0.0, 0.5) = 0.1;      // 太阳处雾团范围
@@ -24,14 +25,14 @@ uniform float ring_width = 0.03;                                // 亮环宽度
 
 void fragment() {
 	// 双层噪声：大尺度慢漂 + 小尺度反方向快漂（有机雾斑，非均匀平移）
-	vec2 q1 = UV * noise_scale + vec2(TIME * flow_speed, TIME * flow_speed * 0.7);
-	vec2 q2 = UV * noise_scale * detail_scale + vec2(-TIME * flow_speed * 0.5, TIME * flow_speed * 0.35);
+	vec2 q1 = UV * noise_scale + vec2(time * flow_speed, time * flow_speed * 0.7);
+	vec2 q2 = UV * noise_scale * detail_scale + vec2(-time * flow_speed * 0.5, time * flow_speed * 0.35);
 	float n1 = texture(noise_tex, fract(q1)).r;
 	float n2 = texture(noise_tex, fract(q2)).g;
 	float n = mix(n1, n2, detail_strength);
 
 	// 呼吸感：整体极慢明暗脉动（蒙眼/头罩的"闷"感）
-	float breath = 1.0 + breath_amplitude * sin(TIME * 0.05);
+	float breath = 1.0 + breath_amplitude * sin(time * 0.05);
 
 	// 整体蒙眼：暗雾带云斑不均匀
 	float fog = fog_dark * breath * (0.55 + 0.45 * n);

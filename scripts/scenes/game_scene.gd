@@ -292,7 +292,8 @@ func _on_game_state_changed(_old: int, new: int) -> void:
 		_remove_blur()
 	# 暂停时停掉背景视口的渲染：**视口更新与 process_mode 无关**（暂停菜单只是盖在场景之上），
 	# 不停的话 3D 背景照旧每帧跑整条管线（llvmpipe 实测：暂停时**省 ≈8.7 ms/帧**），而玩家只看得到模糊层。
-	# 副作用（作者 2026-10-02 拍板接受）：雾 shader 用 TIME，本来暂停时还在飘 —— 现在整张背景**冻住**。
+	# 副作用（作者 2026-10-02 拍板接受）：雾现在用 ScreenFogFX 的本地 time（随 delta 推进），
+	# 暂停时 ScreenFogFX._process 也停 ⇒ 整张背景**冻住**，恢复不跳。
 	_sub_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED \
 		if new == GameManager.AppState.PAUSED else SubViewport.UPDATE_ALWAYS
 

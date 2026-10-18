@@ -96,6 +96,9 @@ var _tab_btns: Array[Button] = []
 var _embedded: bool = false
 ## 创作台切走时冻结整关预览（不释放舞台/运行时；位置/时间保留）
 var _preview_suspended: bool = false
+## 切走时递归收集的 CanvasLayer + 原可见性（stage logo 等是内容脚本 add_child 的层）
+var _suspended_layers: Array[CanvasLayer] = []
+var _suspended_layer_visibility: Array[bool] = []
 var _stage_shift_y := 0.0    # 嵌入创作台页面偏移；舞台视觉归一回游戏坐标用
 var _ui_page_y := 0.0        # 页面在窗口里的 y（用于同步去重）
 var _ui_offset_applied: bool = false  # 防止 _ready 的首次同步 + deferred 同步重复下移
@@ -402,11 +405,30 @@ func preview_suspended() -> bool:
 	return _preview_suspended
 
 
-## CanvasLayer 不随父 Control 的 visible 隐藏；切走时必须单独关，否则 UI/命中框还叠在别的台上。
+## CanvasLayer 不随父 Control 的 visible 隐藏；切走时必须单独关，否则 UI/命中框/舞台 logo
+## 还叠在别的台上。stage logo 是内容脚本在 StageRuntime 里 add_child 的，必须递归找。
 func _set_preview_layers_visible(on: bool) -> void:
-	for child in get_children():
+	if on:
+		for i in _suspended_layers.size():
+			var layer: CanvasLayer = _suspended_layers[i]
+			if is_instance_valid(layer):
+				layer.visible = _suspended_layer_visibility[i]
+		_suspended_layers.clear()
+		_suspended_layer_visibility.clear()
+		return
+	_suspended_layers.clear()
+	_suspended_layer_visibility.clear()
+	_collect_canvas_layers(self)
+	for layer in _suspended_layers:
+		_suspended_layer_visibility.append(layer.visible)
+		layer.visible = false
+
+
+func _collect_canvas_layers(node: Node) -> void:
+	for child in node.get_children():
 		if child is CanvasLayer:
-			(child as CanvasLayer).visible = on
+			_suspended_layers.append(child as CanvasLayer)
+		_collect_canvas_layers(child)
 
 
 ## 当前游戏内时刻（创作台/测试用；不摸私有 runner）

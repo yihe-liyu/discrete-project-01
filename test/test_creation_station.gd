@@ -192,6 +192,8 @@ func test_preview_keeps_state_across_tab_switch():
 	var wb = cs.workbench_instance()
 	assert_not_null(wb, "整关预览应创建并常驻")
 	var t_before: float = wb.current_time()
+	var nested_layer := CanvasLayer.new()
+	wb.add_child(nested_layer)
 	assert_false(wb.preview_suspended(), "打开时不应处于冻结态")
 	# 切到弹幕台：冻结但保留实例；全局 paused 必须解开
 	cs.open_slot(1)
@@ -201,6 +203,7 @@ func test_preview_keeps_state_across_tab_switch():
 	assert_eq(wb.process_mode, Node.PROCESS_MODE_DISABLED, "切走后预览冻结")
 	assert_true(wb.preview_suspended(), "预览应报告冻结")
 	assert_false((wb.get_node("UI") as CanvasLayer).visible, "预览的 CanvasLayer UI 也要隐藏")
+	assert_false(nested_layer.visible, "嵌套 CanvasLayer（stage logo 同路径）也要隐藏")
 	assert_false(get_tree().paused, "切走后不能把全局暂停留在场上")
 	assert_almost_eq(wb.current_time(), t_before, 0.05, "冻结后关卡时间不应继续走")
 	# 切回：同一实例 + 时间不归零
@@ -212,6 +215,8 @@ func test_preview_keeps_state_across_tab_switch():
 	assert_eq(wb.process_mode, Node.PROCESS_MODE_ALWAYS, "切回恢复 process")
 	assert_false(wb.preview_suspended(), "切回解除冻结")
 	assert_true((wb.get_node("UI") as CanvasLayer).visible, "切回恢复 CanvasLayer UI")
+	assert_true(nested_layer.visible, "切回恢复嵌套 CanvasLayer")
+	nested_layer.queue_free()
 	assert_gte(wb.current_time(), t_before - 0.1, "关卡时间不应归零")
 
 

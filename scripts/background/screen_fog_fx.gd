@@ -32,11 +32,15 @@ var sun: Node3D          ## 太阳（把它的世界位置投影到屏幕）
 var camera: Camera3D     ## 投影用相机（宿主注入）
 var _mat: ShaderMaterial
 var _is_bound := false
+## 雾的本地时间：不用 shader 的 TIME（全局时间不会随 process 冻结，切页回来会跳）
+var _time: float = 0.0
 
 
 func _ready() -> void:
 	if _rect:
 		_mat = _rect.material as ShaderMaterial
+		if _mat:
+			_mat.set_shader_parameter("time", _time)
 	elif _layer:
 		push_error("ScreenFogFX: 场景里没声明 FogLayer/FogRect —— 雾不会出现（见本文件头）")
 
@@ -50,12 +54,17 @@ func bind(p_camera: Camera3D, p_sun: Node3D = null) -> void:
 		push_error("ScreenFogFX: 场景里没声明 FogLayer/FogRect（或材质不是 ShaderMaterial）—— 雾不会出现")
 		return
 	_is_bound = true
+	if _mat:
+		_mat.set_shader_parameter("time", _time)
 	_update_sun_pos()  # 立即同步太阳位置（不等 _process 首帧，消除覆盖延迟）
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not _is_bound:
 		return
+	_time += delta
+	if _mat:
+		_mat.set_shader_parameter("time", _time)
 	_update_sun_pos()
 
 
