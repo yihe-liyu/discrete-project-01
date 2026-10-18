@@ -68,7 +68,7 @@ func test_plain_emit_branch_is_zero() -> void:
 	if not _available(): pending("无扩展"); return
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(0.01)
-	lc.emit(BulletData.new(), BulletLifecycle.heading(0.0), 100.0)
+	lc.emit(BulletData.new(), BulletLifecycle.world_heading(0.0), 100.0)
 	var s = _store(7)
 	var pid: int = _reg(s, lc)
 	var id: int = s.spawn(Vector2.ZERO, Vector2(0, -100), 0, 0, Color.WHITE)
@@ -95,8 +95,8 @@ func test_host_pick_variant_clamps() -> void:
 func test_signature_distinguishes_variant_templates() -> void:
 	var a := BulletLifecycle.new()
 	a.until_elapsed(0.01)
-	a.emit_variant([BulletData.new(), BulletData.new()], BulletLifecycle.heading(0.0), 100.0)
+	a.emit_variant([BulletData.new(), BulletData.new()], BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, 1.0), 100.0)
 	var b := BulletLifecycle.new()
 	b.until_elapsed(0.01)
-	b.emit_variant([BulletData.new(), BulletData.new()], BulletLifecycle.heading(0.0), 100.0)
+	b.emit_variant([BulletData.new(), BulletData.new()], BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, 1.0), 100.0)
 	assert_ne(a.content_signature(), b.content_signature(), "不同模板实例 → 不同 program 签名")

@@ -1,9 +1,16 @@
 class_name DirSpec
 extends RefCounted
-## 方向表达式词汇与静态构造器。
+## 方向表达式（DSL1）：不再是裸 Dictionary，构造时确定 **eval_phase**。
 ##
-## 现仍是 Dictionary schema（DSL1 的类型化是下一步），但**词汇/构造/求值语义**集中在这里；
-## BulletLifecycle 只保留同名静态方法做兼容别名，运行时（原生 / 参考解释器）按 kind 分发。
+## eval_phase 说明“求值依赖什么”：
+##   WORLD   = 世界角，常量；不读发射者朝向 / 速度 / 位置
+##   TARGET  = 需要目标位置（toward / away / chance）
+##   EMITTER = 需要发射者自身朝向（forward / random）
+##   WALL    = 需要发射点场边（reflect）
+##
+## 原生只收到 kind/target/angle/p 的整数编码（零改动）；eval_phase 是宿主侧类型/校验信息。
+
+enum EvalPhase { WORLD, TARGET, EMITTER, WALL }
 
 const HEADING := &"heading"
 const TOWARD := &"toward"
@@ -11,51 +18,96 @@ const AWAY := &"away"
 const FORWARD := &"forward"
 const RANDOM := &"random"
 const CHANCE := &"chance"
-## 镜面：把当前速度按发射点所在场边翻分量（左右翻 x / 上翻 y；角落两边都翻）。
 const REFLECT := &"reflect"
 
+var kind: StringName = HEADING
+var target: StringName = &""
+var angle: float = 0.0
+var chance_p: float = 0.0
+var eval_phase: int = EvalPhase.WORLD
+## 兼容：显式 world_heading 才允许进入 emit / on_end_heading；裸 heading 不允许。
+var allow_world: bool = false
 
-## 世界角：0 = 上，正 = 顺时针（屏幕 y 向下）。结果 = (sin a, -cos a)。
-static func heading(angle: float) -> Dictionary:
-	return {&"kind": HEADING, &"target": &"", &"angle": angle}
-
-
-## 朝 target 方向再转 angle。**target 不可用时退化为向下 (0,1)** 再转 angle。
-static func toward(target: StringName, angle: float = 0.0) -> Dictionary:
-	return {&"kind": TOWARD, &"target": target, &"angle": angle}
-
-
-## 背对 target 再转 angle（逃离 / 回卷）。
-static func away(target: StringName, angle: float = 0.0) -> Dictionary:
-	return {&"kind": AWAY, &"target": target, &"angle": angle}
+const _SELF_PATH := "res://scripts/kernel_bridge/lifecycle/dir_spec.gd"
+static var _self_script: Script
 
 
-## 沿弹**自身朝向**（出生朝向 / set_heading 改过的）再转 angle；与 heading(世界角) 正交。
-static func forward(angle: float = 0.0) -> Dictionary:
-	return {&"kind": FORWARD, &"target": &"", &"angle": angle}
+static func _script() -> Script:
+	if _self_script == null:
+		_self_script = load(_SELF_PATH) as Script
+	return _self_script
 
 
-## 沿自身朝向 ± spread 内**随机**（内核确定性 RNG，单通道；种子由宿主 RNG 派生）。
-static func random_dir(spread: float) -> Dictionary:
-	return {&"kind": RANDOM, &"target": &"", &"angle": spread}
+static func _make(p_kind: StringName, p_target: StringName, p_angle: float,
+		p_p: float, p_phase: int, p_allow_world: bool = false) -> RefCounted:
+	return _script().new(p_kind, p_target, p_angle, p_p, p_phase, p_allow_world)
 
 
-## 以概率 p 朝 target，否则沿自身朝向再转 spread。
-## **命中时精确朝 target，spread 只服务未命中的 fallback。**
-## 也是 emit_variant 唯一的分支来源（0 = 未命中，1 = 命中）。
-static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> Dictionary:
-	return {&"kind": CHANCE, &"target": target, &"angle": spread, &"p": p}
+func _init(p_kind: StringName = HEADING, p_target: StringName = &"", p_angle: float = 0.0,
+		p_p: float = 0.0, p_phase: int = EvalPhase.WORLD, p_allow_world: bool = false) -> void:
+	kind = p_kind
+	target = p_target
+	angle = p_angle
+	chance_p = p_p
+	eval_phase = p_phase
+	allow_world = p_allow_world
 
 
-## **镜面反射**：把弹的**当前速度**按发射点所在的场边翻分量 —— 左右边翻 x、上边翻 y，
-## 角落（pos 同时贴两条边）两边都翻 = 原路返回；再叠加 `angle`（可选，用来做"镜面 + 微散"）。
-##
-## ⚠️ 必须配 `at = AT_PHASE_END`：镜面判据是**发射点**贴没贴场边，而 `at_wall` 不改弹自身位置，
-## 只有它的相位结束落点（夹紧到边上）才算"撞到了"。用 `AT_CURRENT` 且没贴边 → 不翻，退化为自身朝向。
-static func reflect(angle: float = 0.0) -> Dictionary:
-	return {&"kind": REFLECT, &"target": &"", &"angle": angle}
+static func heading(p_angle: float) -> RefCounted:
+	return _make(HEADING, &"", p_angle, 0.0, EvalPhase.WORLD, false)
 
 
-## 该 kind 是否必须有 target（编译期与工作台提示共用）。
-static func requires_target(kind: StringName) -> bool:
-	return kind == TOWARD or kind == AWAY or kind == CHANCE
+## 显式世界角：用于 emit / on_end_heading（不随发射者变的固定方向）。
+static func world_heading(p_angle: float) -> RefCounted:
+	return _make(HEADING, &"", p_angle, 0.0, EvalPhase.WORLD, true)
+
+
+static func toward(p_target: StringName, p_angle: float = 0.0) -> RefCounted:
+	return _make(TOWARD, p_target, p_angle, 0.0, EvalPhase.TARGET)
+
+
+static func away(p_target: StringName, p_angle: float = 0.0) -> RefCounted:
+	return _make(AWAY, p_target, p_angle, 0.0, EvalPhase.TARGET)
+
+
+static func forward(p_angle: float = 0.0) -> RefCounted:
+	return _make(FORWARD, &"", p_angle, 0.0, EvalPhase.EMITTER)
+
+
+static func random_dir(p_spread: float) -> RefCounted:
+	return _make(RANDOM, &"", p_spread, 0.0, EvalPhase.EMITTER)
+
+
+static func chance_toward(p_target: StringName, p_chance: float, p_spread: float = 0.0) -> RefCounted:
+	return _make(CHANCE, p_target, p_spread, p_chance, EvalPhase.TARGET)
+
+
+static func reflect(p_angle: float = 0.0) -> RefCounted:
+	return _make(REFLECT, &"", p_angle, 0.0, EvalPhase.WALL)
+
+
+## 兼容旧工作台/旧测试里的 Dictionary；旧字典默认允许世界角（工作台会再生成 world_heading 代码）。
+static func from_variant(v: Variant) -> RefCounted:
+	if v is RefCounted and v.get_script() == _script():
+		return v
+	if v is Dictionary:
+		var kind_v: StringName = StringName(v.get(&"kind", HEADING))
+		var angle_v := float(v.get(&"angle", v.get(&"spread", 0.0)))
+		var spec := _make(kind_v, StringName(v.get(&"target", &"")),
+			angle_v, float(v.get(&"p", 0.0)), _phase_of(kind_v), true)
+		spec.eval_phase = _phase_of(kind_v)
+		spec.allow_world = true
+		return spec
+	return heading(0.0)
+
+
+static func to_dict(spec) -> Dictionary:
+	return {&"kind": spec.kind, &"target": spec.target, &"angle": spec.angle, &"p": spec.chance_p}
+
+
+static func _phase_of(k: StringName) -> int:
+	match k:
+		TOWARD, AWAY, CHANCE: return EvalPhase.TARGET
+		FORWARD, RANDOM: return EvalPhase.EMITTER
+		REFLECT: return EvalPhase.WALL
+		_: return EvalPhase.WORLD

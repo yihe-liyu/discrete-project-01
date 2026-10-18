@@ -200,7 +200,7 @@ func test_world_and_radial_composition_golden() -> void:
 		{"op": "at_wall", "mask": BulletLifecycle.WALL_TOP},
 		[
 			{"op": "sfx", "key": &"kira", "db": -18.0},
-			{"op": "emit", "spawn": spawn, "dir": BulletLifecycle.heading(PI),
+			{"op": "emit", "spawn": spawn, "dir": BulletLifecycle.world_heading(PI),
 			 "speed": 0.0, "at": BulletLifecycle.AT_PHASE_END},
 			{"op": "despawn"},
 		])
@@ -292,7 +292,7 @@ func test_composer_codegen_template_slots() -> void:
 	c.from_spec({"phases": [
 		_phase([], {}, [
 			{"op": "emit", "spawn": spawn, "spawn_slot": "a",
-			 "dir": BulletLifecycle.heading(0.0), "speed": 60.0},
+			 "dir": BulletLifecycle.world_heading(0.0), "speed": 60.0},
 			{"op": "emit_variant", "spawns": [spawn, spawn], "spawn_slots": ["a", "b"],
 			 "dir": BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, 0.5, 0.1), "speed": 60.0},
 			{"op": "despawn"},

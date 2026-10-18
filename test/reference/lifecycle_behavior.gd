@@ -7,6 +7,7 @@ class_name LifecycleBehavior
 extends Behavior
 
 const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
+const DIR_SPEC = preload("res://scripts/kernel_bridge/lifecycle/dir_spec.gd")
 
 ## KernelBehaviorHost 或测试假体（emit / sfx 用）。
 var host
@@ -263,6 +264,9 @@ func _do_emit(system: BulletSystem, id: int, st: Dictionary, act: Dictionary, ct
 	var speed: float = system.get_velocity(id).length()
 	if float(act[&"speed"]) > 0.0:
 		speed = float(act[&"speed"])
+	if act.get(&"speed_spec") is Dictionary:
+		var sp: Dictionary = act[&"speed_spec"]
+		speed *= RNG.randf_range(float(sp.get(&"min", 1.0)), float(sp.get(&"max", 1.0)))
 	var dir: Vector2 = _dir(act[&"dir"], at, ctx)
 	var spawn: Variant = act.get(&"spawn", act.get(&"factory", null))
 	if spawn != null and host != null and host.has_method("queue_spawn"):
@@ -308,17 +312,18 @@ func _target_pos(target: StringName, from: Vector2, ctx: BehaviorContext) -> Var
 			return null
 
 
-func _dir(spec: Dictionary, pos: Vector2, ctx: BehaviorContext) -> Vector2:
-	var angle: float = float(spec[&"angle"])
-	match spec[&"kind"]:
+func _dir(spec_v: Variant, pos: Vector2, ctx: BehaviorContext) -> Vector2:
+	var spec := DIR_SPEC.from_variant(spec_v)
+	var angle: float = spec.angle
+	match spec.kind:
 		BulletLifecycle.D_HEADING:
 			return Vector2(sin(angle), -cos(angle))
 		BulletLifecycle.D_TOWARD:
-			var tp = _target_pos(spec[&"target"], pos, ctx)
+			var tp = _target_pos(spec.target, pos, ctx)
 			var base: Vector2 = (tp - pos).normalized() if tp != null else Vector2.DOWN
 			return base.rotated(angle)
 		BulletLifecycle.D_AWAY:
-			var tp2 = _target_pos(spec[&"target"], pos, ctx)
+			var tp2 = _target_pos(spec.target, pos, ctx)
 			var base2: Vector2 = (pos - tp2).normalized() if tp2 != null else Vector2.DOWN
 			return base2.rotated(angle)
 		_:

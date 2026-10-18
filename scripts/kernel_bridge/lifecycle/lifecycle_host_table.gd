@@ -14,14 +14,22 @@ const COMPILER := preload("res://scripts/kernel_bridge/lifecycle/lifecycle_compi
 static func build(lc) -> Dictionary:
 	var actions: Array = []
 	var sfx: Array[StringName] = []
+	var speed_specs: Array = []
 	for phase in lc.phases:
 		for a in phase[&"on_end"]:
 			match a[&"op"]:
-				COMPILER.A_EMIT, COMPILER.A_EMIT_VARIANT, COMPILER.A_CALL:
-					actions.append(a.get(&"spawn", a.get(&"spawns", a.get(&"call"))))
+				COMPILER.A_EMIT:
+					actions.append(a[&"spawn"])
+					speed_specs.append(a.get(&"speed_spec", null))
+				COMPILER.A_EMIT_VARIANT:
+					actions.append(a[&"spawns"])
+					speed_specs.append(a.get(&"speed_spec", null))
+				COMPILER.A_CALL:
+					actions.append(a[&"call"])
+					speed_specs.append(null)
 				COMPILER.A_SFX:
 					sfx.append(a[&"key"])
-	return {&"actions": actions, &"sfx": sfx}
+	return {&"actions": actions, &"sfx": sfx, &"speed_specs": speed_specs}
 
 
 ## 宿主表结构签名：actions 按对象身份（Callable/BulletData 不可值比较），sfx 按名字。
@@ -29,6 +37,8 @@ static func signature(table: Dictionary) -> int:
 	var h: int = hash(table.get(&"sfx", []))
 	for a in table.get(&"actions", []):
 		h = h * 31 + _hash_action(a)
+	for s in table.get(&"speed_specs", []):
+		h = h * 31 + _hash_speed_spec(s)
 	return h
 
 
@@ -45,3 +55,9 @@ static func _hash_action(a: Variant) -> int:
 	if a is StringName:
 		return hash(a)
 	return 0
+
+
+static func _hash_speed_spec(s: Variant) -> int:
+	if not (s is Dictionary):
+		return 0
+	return hash(float(s.get(&"min", 1.0))) * 31 + hash(float(s.get(&"max", 1.0)))

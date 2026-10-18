@@ -204,10 +204,10 @@ static func apply_action(lc: BulletLifecycle, op_call: Dictionary) -> void:
 	var op := StringName(op_call.get("op", &""))
 	match op:
 		&"emit":
-			lc.emit(op_call.get("spawn"), op_call.get("dir", BulletLifecycle.heading(0.0)),
+			lc.emit(op_call.get("spawn"), op_call.get("dir", BulletLifecycle.world_heading(0.0)),
 				float(op_call.get("speed", 0.0)), int(op_call.get("at", BulletLifecycle.AT_CURRENT)))
 		&"emit_variant":
-			lc.emit_variant(op_call.get("spawns", []), op_call.get("dir", BulletLifecycle.heading(0.0)),
+			lc.emit_variant(op_call.get("spawns", []), op_call.get("dir", BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, 0.5)),
 				float(op_call.get("speed", 0.0)), int(op_call.get("at", BulletLifecycle.AT_CURRENT)))
 		&"sfx":
 			if op_call.has("db"):
@@ -221,17 +221,18 @@ static func apply_action(lc: BulletLifecycle, op_call: Dictionary) -> void:
 		&"despawn_clear":
 			lc.despawn_clear()
 		&"on_end_heading":
-			lc.on_end_heading(op_call.get("dir", BulletLifecycle.heading(0.0)))
+			lc.on_end_heading(op_call.get("dir", BulletLifecycle.world_heading(0.0)))
 		&"on_end_call":
 			lc.on_end_call(op_call.get("hook", &""))
 		_:
 			push_error("DescriptorCatalog: 未知 Action op '%s'" % str(op))
 
 
-static func make_dir(id: StringName, args: Dictionary = {}) -> Dictionary:
+static func make_dir(id: StringName, args: Dictionary = {}) -> RefCounted:
 	match id:
 		&"heading":
-			return BulletLifecycle.heading(float(args.get("angle", 0.0)))
+			# 拼装器生成的方向用于 emit / on_end_heading 时是显式世界角；用 world_heading 免误报。
+			return BulletLifecycle.world_heading(float(args.get("angle", 0.0)))
 		&"toward":
 			return BulletLifecycle.toward(StringName(args.get("target", BulletLifecycle.T_PLAYER)), float(args.get("angle", 0.0)))
 		&"away":
@@ -246,4 +247,4 @@ static func make_dir(id: StringName, args: Dictionary = {}) -> Dictionary:
 		&"reflect":
 			return BulletLifecycle.reflect(float(args.get("angle", 0.0)))
 	push_error("DescriptorCatalog: 未知 Dir op '%s'" % str(id))
-	return BulletLifecycle.heading(0.0)
+	return BulletLifecycle.world_heading(0.0)

@@ -571,13 +571,18 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 		var host_table: Dictionary = _program_host_tables[prog] if prog < _program_host_tables.size() else {}
 		var actions: Array = host_table.get(&"actions", [])
 		var sfx_keys: Array = host_table.get(&"sfx", [])
+		var speed_specs: Array = host_table.get(&"speed_specs", [])
 		match kinds[k]:
 			0:
 				var branch: int = variants[k] if k < variants.size() else 0
 				var spawn_src: Variant = pick_variant(actions[local[k]], branch)
 				var b = spawn_src.call() if spawn_src is Callable else spawn_src
 				if b != null and behavior_host != null:
-					b.velocity = Vector2(0.0, vals[k])
+					var speed_val: float = vals[k]
+					if local[k] < speed_specs.size() and speed_specs[local[k]] is Dictionary:
+						var sp: Dictionary = speed_specs[local[k]]
+						speed_val *= RNG.randf_range(float(sp.get(&"min", 1.0)), float(sp.get(&"max", 1.0)))
+					b.velocity = Vector2(0.0, speed_val)
 					behavior_host.queue_spawn(b, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]))
 			1:
 				var key: StringName = sfx_keys[local[k]]

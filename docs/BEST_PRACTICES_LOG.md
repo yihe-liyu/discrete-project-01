@@ -26,12 +26,14 @@
 
 ## 索引
 
-> 共 39 条（本文件留最近 39 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 41 条（本文件留最近 41 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — DSL1/7：DirSpec eval_phase + emit_speed_rel
+- 2026-10-18 — DSL10/12：纯编译器 + 宿主表分离 + DirSpec
 - 2026-10-18 — DSL2 契约测试 + DSL9 缓存形状守卫
 - 2026-10-18 — 页签字号 16→20（16px 宋体密笔画糊成别的字）
 - 2026-10-18 — Ghost 活动范围/初始点与真自机对齐
@@ -104,6 +106,13 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — DSL1/7：DirSpec eval_phase + emit_speed_rel
+
+- DSL1：`DirSpec` 从字典工厂升级为带 `eval_phase`（WORLD/TARGET/EMITTER/WALL）的类型；`heading()` 是世界角，`world_heading()` 是 emit/on_end_heading 的显式世界角；builder 对裸 heading 报错，防止“以为会跟随发射者”。
+- 编译/参考解释器/工作台统一 normalize DirSpec；旧 Dictionary 仍兼容（工作台生成 `world_heading` 代码）。
+- DSL7：`emit_speed_rel(spawn, dir, speed, spread)` 把逐发 ±spread 倍率放进宿主表；纯 program 只保留 base speed，KernelNativeSystem / 参考解释器在事件落地时求值。
+- 测试：eval_phase、世界角守卫（emit / on_end_heading）、speed spec 边界；全量 842 / 7787，verify 七步全绿。
 
 ### 2026-10-18 — DSL10/12：纯编译器 + 宿主表分离 + DirSpec
 

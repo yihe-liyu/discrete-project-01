@@ -37,7 +37,7 @@ static func radial_accel(rate: float, spawn: Variant, sfx_key: StringName = &"",
 	lc.until_at_wall(BulletLifecycle.WALL_TOP)
 	if sfx_key != &"":
 		lc.sfx(sfx_key, sfx_db)
-	lc.emit(spawn, BulletLifecycle.heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
+	lc.emit(spawn, BulletLifecycle.world_heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
 	lc.despawn()
 	return lc
 

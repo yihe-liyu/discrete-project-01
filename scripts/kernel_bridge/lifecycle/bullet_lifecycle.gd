@@ -147,31 +147,36 @@ func _set_until(op: StringName, extra: Dictionary = {}) -> void:
 
 # ═══ 方向表达式（兼容入口；实现与词汇在 DirSpec）═══
 
-static func heading(angle: float) -> Dictionary:
+static func heading(angle: float) -> RefCounted:
 	return DIR_SPEC.heading(angle)
 
 
-static func toward(target: StringName, angle: float = 0.0) -> Dictionary:
+## 显式世界角：emit / on_end_heading 用；不随发射者变的固定方向。
+static func world_heading(angle: float) -> RefCounted:
+	return DIR_SPEC.world_heading(angle)
+
+
+static func toward(target: StringName, angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.toward(target, angle)
 
 
-static func away(target: StringName, angle: float = 0.0) -> Dictionary:
+static func away(target: StringName, angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.away(target, angle)
 
 
-static func forward(angle: float = 0.0) -> Dictionary:
+static func forward(angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.forward(angle)
 
 
-static func random_dir(spread: float) -> Dictionary:
+static func random_dir(spread: float) -> RefCounted:
 	return DIR_SPEC.random_dir(spread)
 
 
-static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> Dictionary:
+static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> RefCounted:
 	return DIR_SPEC.chance_toward(target, p, spread)
 
 
-static func reflect(angle: float = 0.0) -> Dictionary:
+static func reflect(angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.reflect(angle)
 
 
@@ -224,8 +229,8 @@ func speed_mul(f: float) -> BulletLifecycle:
 	return self
 
 ## 设速度方向（保持速度大小）**并同步朝向**。
-func set_heading(dir: Dictionary) -> BulletLifecycle:
-	_moves.append({&"op": M_SET_HEADING, &"dir": dir})
+func set_heading(dir: Variant) -> BulletLifecycle:
+	_moves.append({&"op": M_SET_HEADING, &"dir": DIR_SPEC.from_variant(dir)})
 	return self
 
 ## 设速度大小（方向不变）。
@@ -328,18 +333,40 @@ func sfx(key: StringName, db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecy
 ## - speed <= 0 → 继承当前速度大小；> 0 → 用该速度。
 ## - at = AT_PHASE_END → 用 until(at_wall) 输出的相位结束落点；AT_CURRENT（默认）→ 当前弹位置。
 ## - 事件回传 (program, local) 给宿主，由宿主实例化模板 —— Callable / BulletData 永不进原生。
-func emit(spawn: Variant, dir: Dictionary, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
-	_on_end.append({&"op": A_EMIT, &"spawn": spawn, &"dir": dir, &"speed": speed, &"at": at})
+func emit(spawn: Variant, dir: Variant, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
+	return _append_emit(spawn, DIR_SPEC.from_variant(dir), speed, at, null)
+
+
+## DSL7：每次 emit 时在 base speed 上做 ±spread 的**逐发求值**（均匀分布）。
+## speed<=0 仍表示继承当前速度；spread=0 等价于常量。原生只收到 base speed，
+## 倍率放在宿主表，由 KernelNativeSystem / 参考解释器在事件落地时求值。
+func emit_speed_rel(spawn: Variant, dir: Variant, speed: float = 0.0, spread: float = 0.15,
+		at: int = AT_CURRENT) -> BulletLifecycle:
+	var lo := clampf(1.0 - absf(spread), 0.0, 2.0)
+	var hi := 1.0 + absf(spread)
+	return _append_emit(spawn, DIR_SPEC.from_variant(dir), speed, at, {&"min": lo, &"max": hi})
+
+
+func _append_emit(spawn: Variant, spec: RefCounted, speed: float, at: int,
+		speed_spec: Variant) -> BulletLifecycle:
+	# 裸 heading 是世界角，不随发射者变；在 emit 里必须显式写 world_heading，防“以为会跟随”的误用。
+	if spec.eval_phase == DIR_SPEC.EvalPhase.WORLD and not spec.allow_world:
+		push_error("BulletLifecycle.emit(): world angle 请用 world_heading()，不要用 heading()（heading 只给 set_heading）")
+	var act := {&"op": A_EMIT, &"spawn": spawn, &"dir": spec, &"speed": speed, &"at": at}
+	if speed_spec != null:
+		act[&"speed_spec"] = speed_spec
+	_on_end.append(act)
 	return self
 
 ## 变体发射：内核抽一次 RNG 决定分支，宿主按分支号取 spawns 里哪个模板（0=未命中，1=命中）。
 ## `dir` 必须是 `chance_toward(target, p, spread)`：命中→精确朝 target，未命中→forward 旋转 spread。
 ## 分支由内核**显式**抽取（V9），不再藏在方向求值里。
-func emit_variant(spawns: Array, dir: Dictionary, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
-	if dir.get(&"kind", &"") != D_CHANCE:
+func emit_variant(spawns: Array, dir: Variant, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
+	var spec := DIR_SPEC.from_variant(dir)
+	if spec.kind != D_CHANCE:
 		push_warning("BulletLifecycle.emit_variant(): dir 应为 chance_toward(...)，已退化为普通 emit")
-		return emit(spawns, dir, speed, at)
-	_on_end.append({&"op": A_EMIT_VARIANT, &"spawns": spawns, &"chance": dir, &"speed": speed, &"at": at})
+		return emit(spawns, spec, speed, at)
+	_on_end.append({&"op": A_EMIT_VARIANT, &"spawns": spawns, &"chance": spec, &"speed": speed, &"at": at})
 	return self
 
 ## 回收自己。**静默** —— 不播任何特效（这是默认语义：多数 despawn 发生在屏外或做超时清理）。
@@ -364,8 +391,11 @@ func despawn_clear() -> BulletLifecycle:
 	return clear_fx().despawn()
 
 ## 转向（保持速度大小）—— avoid / non_mid 的「逃离自机」。
-func on_end_heading(dir: Dictionary) -> BulletLifecycle:
-	_on_end.append({&"op": A_SET_HEADING, &"dir": dir})
+func on_end_heading(dir: Variant) -> BulletLifecycle:
+	var spec := DIR_SPEC.from_variant(dir)
+	if spec.eval_phase == DIR_SPEC.EvalPhase.WORLD and not spec.allow_world:
+		push_error("BulletLifecycle.on_end_heading(): world angle 请用 world_heading()")
+	_on_end.append({&"op": A_SET_HEADING, &"dir": spec})
 	return self
 
 ## 低频内容回调（**逃逸口**，V13）：fn.call(pos, boss_pos, has_boss, host)。
@@ -423,6 +453,7 @@ func compile() -> Dictionary:
 	var h := host_table()
 	c[&"actions"] = h[&"actions"]
 	c[&"sfx"] = h[&"sfx"]
+	c[&"speed_specs"] = h[&"speed_specs"]
 	return c
 
 

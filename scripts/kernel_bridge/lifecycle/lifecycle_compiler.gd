@@ -235,9 +235,10 @@ static func _target_code(t: StringName, state: Array) -> int:
 	return -1
 
 
-static func _dir_args(d: Dictionary, state: Array) -> Array:
+static func _dir_args(d: Variant, state: Array) -> Array:
+	var spec := DIR_SPEC.from_variant(d)
 	var dk := -1
-	match d.get(&"kind", &""):
+	match spec.kind:
 		DIR_SPEC.HEADING: dk = DK_HEADING
 		DIR_SPEC.TOWARD: dk = DK_TOWARD
 		DIR_SPEC.AWAY: dk = DK_AWAY
@@ -246,14 +247,13 @@ static func _dir_args(d: Dictionary, state: Array) -> Array:
 		DIR_SPEC.CHANCE: dk = DK_CHANCE
 		DIR_SPEC.REFLECT: dk = DK_REFLECT
 		_:
-			push_error("BulletLifecycle.compile(): 未知方向 kind '%s'" % str(d.get(&"kind", &"")))
+			push_error("BulletLifecycle.compile(): 未知方向 kind '%s'" % str(spec.kind))
 			state[0] = true
 			dk = DK_HEADING
-	var target: StringName = d.get(&"target", &"")
-	if target == &"" and dk in [DK_TOWARD, DK_AWAY, DK_CHANCE]:
-		push_error("BulletLifecycle.compile(): %s 的 target 为空（打错目标？）" % str(d.get(&"kind", &"")))
+	if spec.target == &"" and dk in [DK_TOWARD, DK_AWAY, DK_CHANCE]:
+		push_error("BulletLifecycle.compile(): %s 的 target 为空（打错目标？）" % str(spec.kind))
 		state[0] = true
-	return [dk, _target_code(target, state), float(d.get(&"angle", 0.0)), float(d.get(&"p", 0.0))]
+	return [dk, _target_code(spec.target, state), spec.angle, spec.chance_p]
 
 
 static func _args_move(m: Dictionary, state: Array) -> Array:
@@ -302,12 +302,12 @@ static func _args_act(a: Dictionary, state: Array) -> Array:
 		A_EMIT:
 			return _dir_args(a[&"dir"], state) + [float(a[&"speed"]), float(a[&"at"])]
 		A_EMIT_VARIANT:
-			var ch: Dictionary = a[&"chance"]
-			if ch[&"target"] == &"":
+			var ch := DIR_SPEC.from_variant(a[&"chance"])
+			if ch.target == &"":
 				push_error("BulletLifecycle.compile(): emit_variant 的 chance target 为空（打错目标？）")
 				state[0] = true
-			return [float(ch[&"p"]), float(DK_TOWARD), float(_target_code(ch[&"target"], state)), 0.0,
-				float(DK_FORWARD), -1.0, float(ch[&"angle"]), float(a[&"speed"]), float(a[&"at"])]
+			return [ch.chance_p, float(DK_TOWARD), float(_target_code(ch.target, state)), 0.0,
+				float(DK_FORWARD), -1.0, ch.angle, float(a[&"speed"]), float(a[&"at"])]
 		A_SFX: return [float(a[&"db"])]
 		A_SET_HEADING: return _dir_args(a[&"dir"], state)
 		A_SET_SPEED: return [float(a[&"speed"])]

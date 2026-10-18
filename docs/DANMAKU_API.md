@@ -161,14 +161,16 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 > 撞墙/屏外回收别用（屏外闪光 + 特效风暴）；消散特效与死亡清弹圈共用同一实现。
 > **`on_end` 按 append 顺序执行**；`on_end_heading` 即时改写朝向，`despawn` 后同一相位后续 action 不再有意义。
 > `emit` 细则：`speed<=0` 继承当前速度；`at=AT_PHASE_END` 用 until 落点；模板永不进原生。
+> `emit_speed_rel(spawn, dir, speed=0, spread=0.15, at=AT_CURRENT)`：每次 emit 在 base speed 上做 ±spread 逐发求值（宿主表执行，纯 program 只存 base speed）。
 
 ### 3.5 方向表达式（静态构造；供 steer / emit / set_heading / on_end_heading 用）
 
 | 表达式 | 签名 | 语义 |
 |---|---|---|
-| heading | `heading(angle)` | 世界角：0=上，正=顺时针；`(sin a, -cos a)` |
+| heading | `heading(angle)` | 世界角（构造期常量）；`set_heading` 可用；**emit / on_end_heading 必须用 world_heading** |
 | toward | `toward(target, angle=0)` | 朝 target 再转 angle；**target 不可用时退化为向下** |
 | away | `away(target, angle=0)` | 背对 target 再转 angle |
+| world_heading | `world_heading(angle)` | 显式世界角；emit / on_end_heading 专用（不随发射者变） |
 | forward | `forward(angle=0)` | 沿**自身朝向**再转 angle |
 | random_dir | `random_dir(spread)` | 沿自身朝向 ±spread 随机（确定性 RNG，每次求值抽 1 次） |
 | chance_toward | `chance_toward(target, p, spread=0)` | p 概率精确朝 target；否则沿自身朝向转 spread；**仅作 `emit_variant` 的 dir** |

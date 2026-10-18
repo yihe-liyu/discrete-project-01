@@ -14,6 +14,7 @@ extends RefCounted
 ## 不加 class_name：测试/工作台用 preload，避免新 class_name 全局缓存未导入。
 
 const CATALOG = preload("res://scripts/workbench/descriptor_catalog.gd")
+const DIR_SPEC = preload("res://scripts/kernel_bridge/lifecycle/dir_spec.gd")
 
 ## 每个相位：moves 有序；until 一个；on_end 有序。
 var phases: Array = []
@@ -134,7 +135,7 @@ func _move_code(op_call: Dictionary) -> String:
 		&"speed_mul":
 			return "speed_mul(%s)" % _num_code(op_call.get("f", 1.0))
 		&"set_heading":
-			return "set_heading(%s)" % _dir_code(op_call.get("dir", {}))
+			return "set_heading(%s)" % _dir_code(op_call.get("dir", {}), false)
 		&"set_speed":
 			return "set_speed(%s)" % _num_code(op_call.get("speed", 0.0))
 		&"anchor_drift":
@@ -171,7 +172,7 @@ func _action_code(op_call: Dictionary) -> String:
 	match op:
 		&"emit":
 			return "emit(%s, %s, %s, %s)" % [
-				_spawn_code(op_call.get("spawn_slot", "current")), _dir_code(op_call.get("dir", {})),
+				_spawn_code(op_call.get("spawn_slot", "current")), _dir_code(op_call.get("dir", {}), true),
 				_num_code(op_call.get("speed", 0.0)), _at_code(op_call.get("at", BulletLifecycle.AT_CURRENT))]
 		&"emit_variant":
 			var spawns: Array = op_call.get("spawns", [])
@@ -183,7 +184,7 @@ func _action_code(op_call: Dictionary) -> String:
 				parts.append(_spawn_code(slots[i] if i < slots.size() else "current"))
 			var arr_code := "[" + ", ".join(parts) + "]"
 			return "emit_variant(%s, %s, %s, %s)" % [
-				arr_code, _dir_code(op_call.get("dir", {})),
+				arr_code, _dir_code(op_call.get("dir", {}), true),
 				_num_code(op_call.get("speed", 0.0)), _at_code(op_call.get("at", BulletLifecycle.AT_CURRENT))]
 		&"sfx":
 			var key := _string_name_code(op_call.get("key", &""))
@@ -193,32 +194,31 @@ func _action_code(op_call: Dictionary) -> String:
 		&"despawn": return "despawn()"
 		&"clear_fx": return "clear_fx()"
 		&"despawn_clear": return "despawn_clear()"
-		&"on_end_heading": return "on_end_heading(%s)" % _dir_code(op_call.get("dir", {}))
+		&"on_end_heading": return "on_end_heading(%s)" % _dir_code(op_call.get("dir", {}), true)
 		&"on_end_call": return "on_end_call(%s)" % _string_name_code(op_call.get("hook", &""))
 	return "pass  # 未知 Action %s" % op
 
 
-func _dir_code(dir: Dictionary) -> String:
-	if dir.is_empty():
-		return "BulletLifecycle.heading(0.0)"
-	match StringName(dir.get(&"kind", &"")):
+func _dir_code(dir_v: Variant, for_action: bool = false) -> String:
+	var spec := DIR_SPEC.from_variant(dir_v)
+	match spec.kind:
 		BulletLifecycle.D_HEADING:
-			return "BulletLifecycle.heading(%s)" % _num_code(dir.get(&"angle", 0.0))
+			var fn := "BulletLifecycle.world_heading" if for_action else "BulletLifecycle.heading"
+			return "%s(%s)" % [fn, _num_code(spec.angle)]
 		BulletLifecycle.D_TOWARD:
-			return "BulletLifecycle.toward(%s, %s)" % [_target_code(dir.get(&"target", &"")), _num_code(dir.get(&"angle", 0.0))]
+			return "BulletLifecycle.toward(%s, %s)" % [_target_code(spec.target), _num_code(spec.angle)]
 		BulletLifecycle.D_AWAY:
-			return "BulletLifecycle.away(%s, %s)" % [_target_code(dir.get(&"target", &"")), _num_code(dir.get(&"angle", 0.0))]
+			return "BulletLifecycle.away(%s, %s)" % [_target_code(spec.target), _num_code(spec.angle)]
 		BulletLifecycle.D_FORWARD:
-			return "BulletLifecycle.forward(%s)" % _num_code(dir.get(&"angle", 0.0))
+			return "BulletLifecycle.forward(%s)" % _num_code(spec.angle)
 		BulletLifecycle.D_RANDOM:
-			return "BulletLifecycle.random_dir(%s)" % _num_code(dir.get(&"spread", 0.0))
+			return "BulletLifecycle.random_dir(%s)" % _num_code(spec.angle)
 		BulletLifecycle.D_CHANCE:
 			return "BulletLifecycle.chance_toward(%s, %s, %s)" % [
-				_target_code(dir.get(&"target", &"")), _num_code(dir.get(&"p", 1.0)), _num_code(dir.get(&"spread", 0.0))]
+				_target_code(spec.target), _num_code(spec.chance_p), _num_code(spec.angle)]
 		BulletLifecycle.D_REFLECT:
-			return "BulletLifecycle.reflect(%s)" % _num_code(dir.get(&"angle", 0.0))
+			return "BulletLifecycle.reflect(%s)" % _num_code(spec.angle)
 	return "BulletLifecycle.heading(0.0)"
-
 
 func _target_code(target: Variant) -> String:
 	match StringName(target):
@@ -293,8 +293,8 @@ func validate() -> Array[String]:
 			if aop == &"emit" and a.get("spawn") == null:
 				errors.append("相位 %d：emit 的 spawn 为空" % (i + 1))
 			if aop == &"emit_variant":
-				var d: Dictionary = a.get("dir", {})
-				if StringName(d.get("kind", &"")) != BulletLifecycle.D_CHANCE:
+				var d := DIR_SPEC.from_variant(a.get("dir", {}))
+				if d.kind != BulletLifecycle.D_CHANCE:
 					errors.append("相位 %d：emit_variant 的 dir 必须是 chance_toward" % (i + 1))
 			if aop == &"on_end_call" and StringName(a.get("hook", &"")) == &"":
 				errors.append("相位 %d：on_end_call 的 hook 为空" % (i + 1))

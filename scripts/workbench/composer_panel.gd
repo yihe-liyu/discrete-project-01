@@ -10,6 +10,7 @@ signal difficulty_changed(index: int)
 signal status(text: String, color: Color)
 
 const COMPOSER := preload("res://scripts/workbench/bullet_composer.gd")
+const DIR_SPEC := preload("res://scripts/kernel_bridge/lifecycle/dir_spec.gd")
 const CATALOG := preload("res://scripts/workbench/descriptor_catalog.gd")
 const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
 const SHELL := preload("res://scripts/workbench/bullet_shell.gd")
@@ -673,6 +674,8 @@ func _item_text(prefix: String, op_call: Dictionary) -> String:
 			continue
 		if value is Dictionary:
 			parts.append("%s=%s" % [key, str(value.get("kind", "dir"))])
+		elif value is RefCounted and value.get_script() == DIR_SPEC:
+			parts.append("%s=%s" % [key, str(DIR_SPEC.from_variant(value).kind)])
 		elif parts.size() < 3:
 			parts.append("%s=%s" % [key, str(value)])
 	return "%s · %s%s" % [prefix, op, (" (" + ", ".join(parts) + ")") if parts.size() > 0 else ""]
@@ -794,7 +797,7 @@ func _add_param_row(param: Dictionary, op_call: Dictionary) -> void:
 
 
 func _make_dir_editor(op_call: Dictionary) -> Control:
-	var dir: Dictionary = op_call.get("dir", {})
+	var dir := DIR_SPEC.from_variant(op_call.get("dir", {}))
 	# 两行：kind/target 一行，angle/p/spread 一行；5 个控件挤一行会超出 432。
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -810,7 +813,7 @@ func _make_dir_editor(op_call: Dictionary) -> Control:
 	for d in CATALOG.dir_defs():
 		kind_sel.add_item(d["label"])
 		kind_sel.set_item_metadata(kind_sel.item_count - 1, d["id"])
-	var cur_kind := StringName(dir.get(&"kind", BulletLifecycle.D_HEADING))
+	var cur_kind: StringName = dir.kind
 	var cur_idx := 0
 	for i in kind_sel.item_count:
 		if StringName(kind_sel.get_item_metadata(i)) == cur_kind:
@@ -825,7 +828,7 @@ func _make_dir_editor(op_call: Dictionary) -> Control:
 	for i in TARGETS.size():
 		target_sel.add_item(TARGET_LABELS[i])
 		target_sel.set_item_metadata(i, TARGETS[i])
-	target_sel.selected = maxi(0, TARGETS.find(dir.get(&"target", BulletLifecycle.T_PLAYER)))
+	target_sel.selected = maxi(0, TARGETS.find(dir.target))
 	row1.add_child(target_sel)
 	box.add_child(row1)
 
@@ -836,7 +839,7 @@ func _make_dir_editor(op_call: Dictionary) -> Control:
 	angle.min_value = -TAU * 4.0
 	angle.max_value = TAU * 4.0
 	angle.step = 0.05
-	angle.value = float(dir.get(&"angle", 0.0))
+	angle.value = float(dir.angle)
 	angle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row2.add_child(angle)
 
@@ -844,7 +847,7 @@ func _make_dir_editor(op_call: Dictionary) -> Control:
 	p.min_value = 0.0
 	p.max_value = 1.0
 	p.step = 0.05
-	p.value = float(dir.get(&"p", 1.0))
+	p.value = float(dir.chance_p)
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row2.add_child(p)
 
@@ -852,7 +855,7 @@ func _make_dir_editor(op_call: Dictionary) -> Control:
 	spread.min_value = -TAU * 4.0
 	spread.max_value = TAU * 4.0
 	spread.step = 0.05
-	spread.value = float(dir.get(&"spread", 0.0))
+	spread.value = float(dir.angle)
 	spread.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row2.add_child(spread)
 	angle.tooltip_text = "角度（弧度）"
@@ -1000,7 +1003,7 @@ func _default_args(def: Dictionary) -> Dictionary:
 			"Vector2": args[key] = default if default is Vector2 else Vector2.ZERO
 			"target": args[key] = default if default != null else BulletLifecycle.T_PLAYER
 			"at": args[key] = default if default != null else BulletLifecycle.AT_CURRENT
-			"dir": args[key] = BulletLifecycle.heading(0.0)
+			"dir": args[key] = BulletLifecycle.world_heading(0.0)
 			"spawn": args[key] = _current_spawn()
 			"spawns":
 				var s = _current_spawn()

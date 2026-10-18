@@ -389,7 +389,7 @@ func test_primitive_action_emit() -> void:
 		return d
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(0.32)
-	lc.emit(factory, BulletLifecycle.heading(0.0), 200.0, BulletLifecycle.AT_CURRENT)
+	lc.emit(factory, BulletLifecycle.world_heading(0.0), 200.0, BulletLifecycle.AT_CURRENT)
 	_parity("action:emit", lc, 40, _spread(4, 400.0), BehaviorContext.new())
 
 
@@ -398,7 +398,7 @@ func test_action_emit_at_phase_end_uses_wall_point() -> void:
 	if not _available(): pending("未构建原生扩展"); return
 	var lc := BulletLifecycle.new()
 	lc.until_at_wall(BulletLifecycle.WALL_TOP)
-	lc.emit(func() -> BulletData: return BulletData.new(), BulletLifecycle.heading(PI), 100.0, BulletLifecycle.AT_PHASE_END)
+	lc.emit(func() -> BulletData: return BulletData.new(), BulletLifecycle.world_heading(PI), 100.0, BulletLifecycle.AT_PHASE_END)
 	var store = _combo_store()
 	var c: Dictionary = lc.compile()
 	var pid: int = store.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
@@ -826,7 +826,7 @@ func test_on_end_heading_runs_before_emit_forward() -> void:
 	var factory := func() -> BulletData: return BulletData.new().enemy()
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(0.06)
-	lc.on_end_heading(BulletLifecycle.heading(1.0))
+	lc.on_end_heading(BulletLifecycle.world_heading(1.0))
 	for i in 4:
 		lc.emit(factory, BulletLifecycle.forward(TAU * i / 4.0), 100.0)
 	lc.despawn()
@@ -887,11 +887,52 @@ func test_same_program_different_host_table() -> void:
 	var d1 := BulletData.new().enemy()
 	var d2 := BulletData.new().enemy()
 	var a := BulletLifecycle.new()
-	a.until_elapsed(0.2).emit(d1, BulletLifecycle.heading(0.0), 100.0).despawn()
+	a.until_elapsed(0.2).emit(d1, BulletLifecycle.world_heading(0.0), 100.0).despawn()
 	var b := BulletLifecycle.new()
-	b.until_elapsed(0.2).emit(d2, BulletLifecycle.heading(0.0), 100.0).despawn()
+	b.until_elapsed(0.2).emit(d2, BulletLifecycle.world_heading(0.0), 100.0).despawn()
 	assert_eq(
 		COMPILER.program_signature(a.compile_program()),
 		COMPILER.program_signature(b.compile_program()),
 		"纯 program 结构应相同")
 	assert_ne(a.content_signature(), b.content_signature(), "宿主模板实例不同 → content_signature 必须不同")
+
+
+## DSL1：方向表达式带 eval_phase；emit / on_end_heading 里裸世界角必须显式 world_heading。
+func test_dir_spec_eval_phase_and_world_guard() -> void:
+	var dir_script := preload("res://scripts/kernel_bridge/lifecycle/dir_spec.gd")
+	var world := dir_script.heading(0.5)
+	assert_eq(world.eval_phase, dir_script.EvalPhase.WORLD, "heading = 世界角")
+	assert_eq(dir_script.toward(BulletLifecycle.T_PLAYER).eval_phase, dir_script.EvalPhase.TARGET)
+	assert_eq(dir_script.forward().eval_phase, dir_script.EvalPhase.EMITTER)
+	assert_eq(dir_script.reflect().eval_phase, dir_script.EvalPhase.WALL)
+
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(1.0)
+	lc.emit(BulletData.new(), world, 100.0)
+	assert_push_error("world angle 请用 world_heading", "emit 里的裸 heading 应报错")
+
+	lc = BulletLifecycle.new()
+	lc.until_elapsed(1.0)
+	lc.on_end_heading(world)
+	assert_push_error("world angle 请用 world_heading", "on_end_heading 里的裸 heading 应报错")
+
+	# 显式 world_heading 是合法用法，不再报错。
+	lc = BulletLifecycle.new()
+	lc.until_elapsed(1.0)
+	lc.emit(BulletData.new(), BulletLifecycle.world_heading(0.5), 100.0)
+	lc.on_end_heading(BulletLifecycle.world_heading(0.5))
+
+
+## DSL7：emit_speed_rel 把逐发倍率放进宿主表，纯 program 仍只有 base speed。
+func test_emit_speed_rel_host_spec() -> void:
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(1.0)
+	lc.emit_speed_rel(BulletData.new(), BulletLifecycle.forward(), 120.0, 0.15)
+	var host: Dictionary = lc.host_table()
+	assert_eq((host[&"speed_specs"] as Array).size(), 1, "宿主表应有 1 个速度 spec")
+	var spec: Dictionary = host[&"speed_specs"][0]
+	assert_almost_eq(float(spec[&"min"]), 0.85, 1e-6, "下界 = 1-spread")
+	assert_almost_eq(float(spec[&"max"]), 1.15, 1e-6, "上界 = 1+spread")
+	var c: Dictionary = lc.compile_program()
+	assert_true(c.has(&"ops"), "纯 program 仍应可编译")
+	assert_false(c.has(&"speed_specs"), "速度 spec 不能进纯 program")

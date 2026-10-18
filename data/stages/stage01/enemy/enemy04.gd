@@ -32,7 +32,7 @@ func _init_enemy() -> void:
 		radial_lc.accel_heading(150.0)
 		radial_lc.until_at_wall(BulletLifecycle.WALL_TOP)
 		radial_lc.sfx(&"kira", -18.0)
-		radial_lc.emit(_radial_spawn_bullet_data, BulletLifecycle.heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
+		radial_lc.emit(_radial_spawn_bullet_data, BulletLifecycle.world_heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
 		radial_lc.despawn()
 		_radial_bullet_data.trajectory(radial_lc)
 
