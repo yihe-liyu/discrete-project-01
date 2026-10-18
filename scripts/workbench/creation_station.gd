@@ -21,6 +21,8 @@ var _workbench_view = null
 var _bench_instances: Array[BenchBase] = [null, null, null]
 ## 工作区配置/迁移（无树服务，D3）
 var _workspace_store
+## 上次看到的物理窗口宽度（size_changed 在 viewport stretch 下可能不触发，用 _process 兜底）
+var _last_window_w: int = 0
 ## 三台是否已经从配置恢复过（之后保留常驻实例的当前状态，不再用旧快照覆盖）
 var _bench_restored: Array[bool] = [false, false, false]
 
@@ -32,14 +34,27 @@ var _catalog_panel               # CatalogPanel（preload 构造，避免 class_
 var _catalog_open: bool = false
 
 func _ready() -> void:
-	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
-	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
-	get_window().size = Vector2i(1280, 960)
+	# Phase 3A：1600x960 = 左栏 320 + 内容 1280（场地 832 + 右面板 440 + 间距）。
+	# 1280 时自动收起左栏，改为覆盖抽屉，避免把场地/右面板挤坏。
+	get_window().size = Vector2i(1600, 960)
+	get_window().content_scale_size = Vector2i(1600, 960)
+	get_window().min_size = Vector2i(1280, 960)
+	get_window().size_changed.connect(_on_window_size_changed)
+	_last_window_w = get_window().size.x
 	theme = WORKBENCH_THEME.build()
 	_build_ui()
+	_catalog_open = get_window().size.x >= 1600
+	set_catalog_open(_catalog_open)
 	_workspace_store = WORKSPACE_STORE.new()
 	_workspace_store.load(SLOTS.size())
 	_on_slot(_workspace_store.slot())
+
+
+func _process(_delta: float) -> void:
+	var w := get_window().size.x
+	if w != _last_window_w:
+		_last_window_w = w
+		_on_window_size_changed()
 
 
 func _build_ui() -> void:
@@ -67,7 +82,7 @@ func _configure_catalog_drawer() -> void:
 	_catalog_panel.set_show_descriptors(true)
 	_catalog_panel.preset_requested.connect(_on_catalog_preset)
 	# CatalogPanel._ready() 会把 custom_minimum_size 重置成 (0,420) → 必须在入树后压宽度
-	_catalog_panel.custom_minimum_size = Vector2(408, 420)
+	_catalog_panel.custom_minimum_size = Vector2(296, 420)
 	_catalog_drawer.visible = false
 
 # ═══ 公开接缝（测试/外部驱动；用户点页签走的是同一条实现）═══
@@ -134,6 +149,36 @@ func set_catalog_open(open: bool) -> void:
 		_catalog_btn.tooltip_text = "关闭全局目录（Esc）" if open else "打开全局目录"
 	if _catalog_drawer != null:
 		_catalog_drawer.visible = open
+	_apply_layout()
+
+
+func _on_window_size_changed() -> void:
+	var w := get_window().size.x
+	var logical_w := clampi(w, 1280, 1600)
+	if get_window().content_scale_size.x != logical_w:
+		get_window().content_scale_size = Vector2i(logical_w, 960)
+	if logical_w < 1600 and _catalog_open:
+		set_catalog_open(false)
+		return
+	_apply_layout()
+
+
+## 1600：左栏常驻、内容 1280；1280：左栏覆盖、内容占满。内容始终 1280 宽，避免改三台场景。
+func _apply_layout() -> void:
+	var win_w := get_window().content_scale_size.x
+	var wide := win_w >= 1600
+	var content_w := mini(1280, win_w)
+	var x := 0
+	if wide:
+		x = 320 if _catalog_open else maxi(int((win_w - content_w) * 0.5), 0)
+	else:
+		x = maxi(int((win_w - content_w) * 0.5), 0)
+	# 页签横栏保持全宽（不要跟着 Content 左移）：否则 GUT 输出面板会截走右侧页签点击。
+	var content: Control = $Root/ContentHost/Content
+	content.offset_left = x
+	content.offset_right = -(win_w - x - content_w)
+	content.offset_top = 0
+	content.offset_bottom = 0
 
 
 func _on_catalog_preset(entry) -> void:
@@ -168,14 +213,16 @@ func _on_slot(slot_index: int) -> void:
 	if slot_index == 0:
 		if _workbench_view == null:
 			_workbench_view = WORKBENCH.instantiate()
+			_workbench_view.set_embedded(true)  # 先标记，避免 Workbench._ready 把窗口改回 1280
 		_view = _workbench_view
 	else:
 		var bench_i: int = slot_index - 1
 		if _bench_instances[bench_i] == null:
 			_bench_instances[bench_i] = BENCHS[bench_i].instantiate() as BenchBase
+			_bench_instances[bench_i].set_embedded(true)  # 先标记，避免 bench._ready 把窗口改回 1280
 			_bench_restored[bench_i] = false
 		_view = _bench_instances[bench_i]
-	var content: Control = $Root/Content
+	var content: Control = $Root/ContentHost/Content
 	# 常驻视图不要每次 remove_child + add_child：会触发整棵子树的 _exit_tree/_enter_tree，
 	# CoroutineRunner._exit_tree() 会 stop() 背景/敌人/关卡协程，回来只 _enter_tree 不会重启。
 	# 已挂在 Content 下就只切 visible/process；只有首次/异常父节点才重新挂。
@@ -256,6 +303,9 @@ func _save_workspace() -> void:
 
 func _exit_tree() -> void:
 	_save_workspace()
+	get_window().content_scale_size = Vector2i(1280, 960)
+	get_window().size = Vector2i(1280, 960)
+	get_window().min_size = Vector2i.ZERO
 
 
 ## 切走：整关预览冻结保活（时间/关卡/书签保留）；试验台清运行时残留后冻结。

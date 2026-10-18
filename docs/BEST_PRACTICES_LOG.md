@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 31 条（本文件留最近 31 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 32 条（本文件留最近 32 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-18 — D6：1600 布局 + 320 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
 - 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
@@ -61,6 +62,15 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-18 — D6：1600 布局 + 320 常驻左栏
+
+- 创作台默认 1600×960：左侧目录 320 常驻，内容 1280（场地 832 + 右面板 440）；1280 自动收起为覆盖抽屉。
+- `content_scale_size` 同步 1600/1280；离开创作台恢复 1280（游戏/工作台 standalone 不受影响）。
+- 三台 bench 与 Workbench 在嵌入时不再把窗口改回 1280（BenchBase `_embedded` / Workbench `_embedded`）。
+- 窗口宽度用 `_process` 轮询兜底（`size_changed` 在 viewport stretch 下可能不触发）。
+- 左栏复用 CatalogDrawer/CanvasLayer(3)，宽 320；内容右移，页签横栏保持全宽避免遮挡测试点击。
+- 实拍 `creation_1600.png` / `creation_1280.png`；全量 832 / 7742，verify 七步全绿。
 
 ### 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 

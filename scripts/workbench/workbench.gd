@@ -148,7 +148,8 @@ func _ready() -> void:
 	# 横向 1.25x 给右侧面板腾位置（东方框 64,32~832,928 完整可见）
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
-	get_window().size = Vector2i(1280, 960)
+	if not _embedded:
+		get_window().size = Vector2i(1280, 960)
 	%Title.text = "内容工作台 %s" % VERSION
 	_build_ui()
 	_preview_playback = PREVIEW_PLAYBACK.new()

@@ -50,6 +50,8 @@ func preset_from_entry(_entry) -> void:
 # ═══ 热更新（实现全在 `HotReloadService`；本类只做接线 + 转发）═══
 ## 右下角浮动状态条（子类 _ready 建好）
 var _toast: Control
+## 创作台托管时不要改窗口尺寸（由 CreationStation 统一管）
+var _embedded: bool = false
 ## 热更新服务（无树；两个来源是下面两个子类虚函数的 Callable）
 var _hot_reload_service: HotReloadService
 
@@ -106,6 +108,10 @@ func _process_hot_reload(delta: float) -> void:
 ## 跳过防抖立刻重载
 func _do_hot_reload() -> void:
 	_hot_reload_service.force()
+
+
+func set_embedded(on: bool) -> void:
+	_embedded = on
 
 
 func ensure_bullet_world() -> BulletManager:

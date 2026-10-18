@@ -36,7 +36,8 @@ var _shoot_path: String = ""
 func _ready() -> void:
 	# 1280x960 = 视口原生尺寸 1:1：stretch "viewport" 下窗口再放大都会被双线性
 	# 拉伸，小字号在用户屏幕上看成"乱码"；场地 832 + 面板 440 = 1272 ≤ 1280，本就放得下
-	get_window().size = Vector2i(1280, 960)
+	if not _embedded:
+		get_window().size = Vector2i(1280, 960)
 	_shell = PHASE_SHELL.new()
 	_catalog = CATALOG.new().scan()
 	theme = WORKBENCH_THEME.build()
