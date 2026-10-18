@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-832%20tests%20/%20119%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-833%20tests%20/%20119%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -134,7 +134,7 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 - **写代码在 Godot 编辑器**：关卡编排 = stage01.gd（Timeline API）；Boss 弹幕 = PhaseData.tres 显式引用脚本
 - **调参工具**：固定种子（可复现）· 命中框 · 逐帧（F）· 12x 快进跳转 · 书签（静态提取 + 人工打点）
 - 幽灵玩家提供自机狙目标；静音/背景开关/事件日志/实时状态
-- **1600 布局 / 常驻左栏**：1600×960 时左侧 384 目录常驻（不提供关闭按钮，贴住场地金框）、内容 1280；1280 时自动收起为可开合覆盖抽屉；双击条目直达对应台
+- **1600 布局 / 常驻左栏**：1600×960 时左侧 384 目录常驻（不提供关闭按钮，贴住场地金框）、页签从内容区 384 开始；1280 时自动收起为可开合覆盖抽屉；**1–4 直达四台 / Ctrl+Tab 循环 / Alt+← 返回**；双击条目直达对应台
 - **弹幕台两种模式**：直射（初始弹外形/方向/发射）· 拼装（初始弹 + A/B 替换弹模板 + Move/Until/Action/Dir → 预览 → 生成/复制代码；目录里有「弹道描述符」组）· 操作四键在两种模式顶部共用
 - **弹幕 / 敌人 / 阶段三个组合台有热更新**（改脚本约 1.3s 自动重载）；**整关预览没有**，改关卡脚本/时间线后重启（切页不再丢进度）
 - **整关预览保活**：切走冻结、切回继续；工作区配置 v2（旧 v1 自动读入，坏数据降级为空）

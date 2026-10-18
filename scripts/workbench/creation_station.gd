@@ -28,10 +28,14 @@ var _bench_restored: Array[bool] = [false, false, false]
 
 # ── 全局目录抽屉（CanvasLayer(3)：高于顶栏(2)与各页自带 UI(1)）──
 var _catalog_btn: Button
+var _catalog_header: Label
 var _catalog_layer: CanvasLayer
 var _catalog_drawer: PanelContainer
 var _catalog_panel               # CatalogPanel（preload 构造，避免 class_name 缓存）
 var _catalog_open: bool = false
+## 页签历史（Alt+←）；切换时自动压栈
+var _slot_history: Array[int] = []
+var _suppress_history_push: bool = false
 
 func _ready() -> void:
 	# Phase 3A：1600x960 = 左栏 320 + 内容 1280（场地 832 + 右面板 440 + 间距）。
@@ -69,6 +73,8 @@ func _build_ui() -> void:
 		_slot_buttons.append(button)
 	_catalog_btn = bar.get_node("CatalogButton") as Button
 	_catalog_btn.toggled.connect(set_catalog_open)
+	_catalog_header = $BarLayer/CatalogHeader as Label
+	_catalog_header.theme = theme
 	_configure_catalog_drawer()
 
 
@@ -184,9 +190,14 @@ func _apply_layout() -> void:
 		_catalog_btn.visible = not wide
 	if _catalog_drawer != null:
 		_catalog_drawer.visible = _catalog_open
+	# 页签在 1600 下从内容区起点开始（384），不悬在目录上；1280 下全宽。
+	var bar: HBoxContainer = $BarLayer/Bar
+	bar.offset_left = 384.0 if wide else 0.0
+	bar.offset_right = 0.0
+	if _catalog_header != null:
+		_catalog_header.visible = wide
 	# 游戏画布整体平移（top_level 场地/BulletManager 也会跟着走）；
 	# UI 在 CanvasLayer 上，不受 canvas_transform 影响。
-	# 页签横栏保持全宽：否则 GUT 输出面板会截走右侧页签点击。
 	var content: Control = $Root/ContentHost/Content
 	content.offset_left = 0
 	content.offset_right = 0
@@ -203,9 +214,46 @@ func _on_catalog_preset(entry) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if _catalog_open and event.is_action_pressed("ui_cancel"):
-		set_catalog_open(false)
+	if handle_shortcut(event):
 		get_viewport().set_input_as_handled()
+
+
+## 页签快捷键（用户键盘与测试共用）：1–4 直达 / Ctrl+Tab 循环 / Alt+← 返回。
+## 返回 true = 已消费。
+func handle_shortcut(event: InputEvent) -> bool:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return false
+	var keycode: int = event.physical_keycode
+	if keycode == 0:
+		keycode = event.keycode
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus and (focus is LineEdit or focus is TextEdit or focus is SpinBox):
+		return false
+	if event.is_action_pressed("ui_cancel") and _catalog_open:
+		set_catalog_open(false)
+		return true
+	if event.ctrl_pressed and keycode == KEY_TAB:
+		var step := -1 if event.shift_pressed else 1
+		open_slot(wrapi(_current_slot + step, 0, SLOTS.size()))
+		return true
+	if event.alt_pressed and keycode == KEY_LEFT:
+		return _go_back()
+	if not event.ctrl_pressed and not event.alt_pressed and keycode >= KEY_1 and keycode <= KEY_4:
+		open_slot(keycode - KEY_1)
+		return true
+	return false
+
+
+func _go_back() -> bool:
+	while not _slot_history.is_empty():
+		var prev: int = _slot_history.pop_back()
+		if prev == _current_slot:
+			continue
+		_suppress_history_push = true
+		open_slot(prev)
+		_suppress_history_push = false
+		return true
+	return false
 
 
 ## 打开某个槽位（同步页签高亮 + 切换视图）
@@ -224,6 +272,10 @@ func open_slot(slot_index: int) -> void:
 func _on_slot(slot_index: int) -> void:
 	if _current_slot == slot_index and _view != null:
 		return
+	if not _suppress_history_push and _current_slot >= 0:
+		_slot_history.append(_current_slot)
+		if _slot_history.size() > 20:
+			_slot_history.pop_front()
 	_clear_view()
 	_current_slot = slot_index
 	if slot_index == 0:

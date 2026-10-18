@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 34 条（本文件留最近 34 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 35 条（本文件留最近 35 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — 创作台页签对齐 + 快捷键
 - 2026-10-18 — 预览暂停：BulletManager 显式 PAUSABLE
 - 2026-10-18 — 命中框错位：叠加 BulletManager 全局偏移
 - 2026-10-18 — D3 第三批：CreationStation 节点化 + WorkspaceStore
@@ -99,6 +100,14 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — 创作台页签对齐 + 快捷键
+
+- 1600 下页签从内容区 384 开始，不再悬在目录上；左侧顶部显示「内容目录」；1280 恢复全宽页签。
+- `1–4` 直达四台，`Ctrl+Tab` 循环（Shift 反向），`Alt+←` 返回上一个台；历史栈 20，输入框聚焦时不抢数字键。
+- `handle_shortcut()` 作为用户键盘与测试共用的公开接缝；测试钉住直达/循环/返回。
+- 页签真实点击测试改到 1280 全宽下跑，避免 GUT 输出面板截走右侧点击。
+- 全量 833 / 7755，verify 七步全绿。
 
 ### 2026-10-18 — 预览暂停：BulletManager 显式 PAUSABLE
 

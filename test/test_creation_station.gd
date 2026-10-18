@@ -53,6 +53,11 @@ func test_tab_clicks_reach_the_bar_over_the_hosted_view():
 	add_child_autofree(cs)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# 1600 下页签从内容区 384 开始，GUT 自己的输出面板会截走右侧点击；
+	# 本用例要验真实拾取，切到 1280 全宽页签再点。
+	cs.get_window().size = Vector2i(1280, 960)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	var bar_layer := _canvas_layer_of(cs.slot_button(0))
 	assert_not_null(bar_layer, "页签横栏必须在 CanvasLayer 里（被托管视图会吃掉横栏上的点击）")
 	if bar_layer != null:
@@ -305,6 +310,40 @@ func test_workspace_v1_migrates_and_corrupt_data_is_ignored():
 	assert_eq(cs2.workspace_restore(1), {}, "坏 bench 数据应降级为空")
 	cs2.queue_free()
 	DirAccess.remove_absolute("user://creation_station.cfg")
+
+
+## B+A：1–4 直达 / Ctrl+Tab 循环 / Alt+← 返回。
+func test_page_shortcuts_and_history():
+	DirAccess.remove_absolute("user://creation_station.cfg")
+	var cs: Control = CS.instantiate()
+	add_child_autofree(cs)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	get_viewport().gui_release_focus()
+	var ev := InputEventKey.new()
+	ev.pressed = true
+	ev.physical_keycode = KEY_2
+	assert_true(cs.handle_shortcut(ev), "按 2 应消费")
+	assert_eq(cs.current_slot(), 1, "2 → 弹幕台")
+	ev = InputEventKey.new()
+	ev.pressed = true
+	ev.physical_keycode = KEY_4
+	assert_true(cs.handle_shortcut(ev), "按 4 应消费")
+	assert_eq(cs.current_slot(), 3, "4 → 阶段台")
+	# Ctrl+Tab 循环到最后 → 回到整关预览
+	ev = InputEventKey.new()
+	ev.pressed = true
+	ev.physical_keycode = KEY_TAB
+	ev.ctrl_pressed = true
+	assert_true(cs.handle_shortcut(ev), "Ctrl+Tab 应消费")
+	assert_eq(cs.current_slot(), 0, "循环到整关预览")
+	# Alt+← 返回上一个台
+	ev = InputEventKey.new()
+	ev.pressed = true
+	ev.physical_keycode = KEY_LEFT
+	ev.alt_pressed = true
+	assert_true(cs.handle_shortcut(ev), "Alt+← 应消费")
+	assert_eq(cs.current_slot(), 3, "返回阶段台")
 
 
 ## 全局目录：不再只活在整关预览的右面板里；四个页签下都能开。
