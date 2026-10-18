@@ -140,15 +140,19 @@ func catalog_button() -> Button:
 	return _catalog_btn
 
 
-## 开/关全局目录（不递归触发按钮 toggled）
+## 开/关全局目录（不递归触发按钮 toggled）。
+## 1600 下目录是常驻左栏，关闭无意义且会留空白 ⇒ 强制保持打开、隐藏按钮；
+## 1280 下才是可开合的覆盖抽屉。
 func set_catalog_open(open: bool) -> void:
-	_catalog_open = open
+	var wide := get_window().content_scale_size.x >= 1600
+	_catalog_open = true if wide else open
 	if _catalog_btn != null:
-		_catalog_btn.set_pressed_no_signal(open)
-		_catalog_btn.text = "目录 ▴" if open else "目录 ▾"
-		_catalog_btn.tooltip_text = "关闭全局目录（Esc）" if open else "打开全局目录"
+		_catalog_btn.visible = not wide
+		_catalog_btn.set_pressed_no_signal(_catalog_open)
+		_catalog_btn.text = "目录 ▴" if _catalog_open else "目录 ▾"
+		_catalog_btn.tooltip_text = "关闭全局目录（Esc）" if _catalog_open else "打开全局目录"
 	if _catalog_drawer != null:
-		_catalog_drawer.visible = open
+		_catalog_drawer.visible = _catalog_open
 	_apply_layout()
 
 
@@ -169,9 +173,14 @@ func _apply_layout() -> void:
 	var wide := win_w >= 1600
 	var x := 0
 	if wide:
+		_catalog_open = true
 		x = 320
 	else:
 		x = 0
+	if _catalog_btn != null:
+		_catalog_btn.visible = not wide
+	if _catalog_drawer != null:
+		_catalog_drawer.visible = _catalog_open
 	# 游戏画布整体平移（top_level 场地/BulletManager 也会跟着走）；
 	# UI 在 CanvasLayer 上，不受 canvas_transform 影响。
 	# 页签横栏保持全宽：否则 GUT 输出面板会截走右侧页签点击。

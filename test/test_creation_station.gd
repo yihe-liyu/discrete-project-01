@@ -325,7 +325,11 @@ func test_catalog_drawer_available_on_every_slot():
 			assert_true(cs.catalog_panel().is_visible_in_tree(), "槽 %d 目录应可见" % slot)
 			assert_gt(cs.catalog_panel().size.x, 300.0, "槽 %d 目录抽屉应有宽度" % slot)
 		cs.set_catalog_open(false)
-		assert_false(cs.catalog_open(), "槽 %d 目录应能关闭" % slot)
+		if cs.get_window().content_scale_size.x >= 1600:
+			assert_true(cs.catalog_open(), "槽 %d：1600 常驻目录不可关" % slot)
+			assert_false(cs.catalog_button().visible, "槽 %d：1600 不显示关闭按钮" % slot)
+		else:
+			assert_false(cs.catalog_open(), "槽 %d 目录应能关闭" % slot)
 
 
 ## 从弹幕台打开全局目录，双击敌人条目 → 切敌人台并选中。
@@ -345,7 +349,10 @@ func test_catalog_drawer_routes_from_bench_tab():
 	cs.catalog_panel().preset_requested.emit(enemies[0])
 	await get_tree().process_frame
 	assert_eq(cs.current_slot(), 2, "从弹幕台点敌人条目应切敌人台")
-	assert_false(cs.catalog_open(), "路由后目录应关闭")
+	if cs.get_window().content_scale_size.x >= 1600:
+		assert_true(cs.catalog_open(), "1600 路由后目录仍常驻")
+	else:
+		assert_false(cs.catalog_open(), "路由后目录应关闭")
 	assert_eq(cs.bench_instance(1).selected_index(), 1, "敌人台选中条目 0（下拉 +1）")
 
 

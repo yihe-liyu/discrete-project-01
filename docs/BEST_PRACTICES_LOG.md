@@ -70,7 +70,8 @@
 - 修法：创作台改用 **viewport `canvas_transform.origin.x`** 整体平移游戏画布（top_level 也生效）；UI 用 CanvasLayer 不跟着走。
 - 三个 bench 的右面板统一挂到 `BenchBase.add_panel_to_layer()` 的 CanvasLayer(1)，嵌入时 top+36/bottom−36 让出顶栏；hitbox/Stage logo 设 `follow_viewport_enabled=true`。
 - 离开创作台重置 canvas_transform / content_scale；1600 实拍场地 384..1152、右面板 1160..1592，1280 自动收起为 0..832 / 840..1272。
-- 全量 832 / 7742，verify 七步全绿。
+- 1600 目录常驻且隐藏关闭按钮：关闭只会留空白，画布仍需 320 偏移；1280 才显示「目录」按钮作为覆盖抽屉。
+- 全量 832 / 7746，verify 七步全绿。
 
 ### 2026-10-18 — D6：1600 布局 + 320 常驻左栏
 
