@@ -11,6 +11,7 @@
 #   ③ 唯一来源常量：值只允许出现一次（同值多定义 = 漂移，两边改一边是必然的）。
 #   ④ 舞台接线唯一：`bullet_manager.inject_*(...)` 这类调用只允许出现在 `stage_host.gd`
 #      （S4 的成果；调用点自己接线就是分叉，漏一句就出隐性 bug）。
+#   ⑤ 跨语言常量一致：C++ OPS_ARGS / SLOT_STRIDE 必须与 GDScript ARGS / MAX_SLOTS 相同。
 #
 # 用法: bash tools/check_structure.sh   （默认只报告；`--fail` 时有违规 exit 1）
 set -e
@@ -102,9 +103,26 @@ for dp, dn, fn in os.walk("scripts"):
 			if CALL.search(line) and p not in WIRING_OK:
 				BAD.append(("④ 接线唯一", f"{p}:{i} 自己接线了：{line.strip()}（舞台接线只走 StageHost）"))
 
+# ── ⑤ 跨语言常量一致 ─────────────────────────────────────────────────
+def _const(path: str, pattern: str):
+	m = re.search(pattern, open(path, encoding="utf-8").read())
+	return int(m.group(1)) if m else None
+CROSS_CONST = [
+	("OPS_ARGS", "gdextension/src/danmaku_store.h", r"static const int OPS_ARGS\s*=\s*(\d+)",
+	 "ARGS", "scripts/kernel_bridge/lifecycle/lifecycle_compiler.gd", r"const ARGS\s*:=\s*(\d+)"),
+	("SLOT_STRIDE", "gdextension/src/danmaku_store.h", r"static const int SLOT_STRIDE\s*=\s*(\d+)",
+	 "MAX_SLOTS", "scripts/kernel_bridge/lifecycle/lifecycle_compiler.gd", r"const MAX_SLOTS\s*:=\s*(\d+)"),
+]
+for cpp_name, cpp_path, cpp_pat, gd_name, gd_path, gd_pat in CROSS_CONST:
+	cpp_v = _const(cpp_path, cpp_pat)
+	gd_v = _const(gd_path, gd_pat)
+	if cpp_v is None or gd_v is None or cpp_v != gd_v:
+		BAD.append(("⑤ 跨语言常量",
+			f"{cpp_name}={cpp_v}（{cpp_path}）≠ {gd_name}={gd_v}（{gd_path}）"))
+
 # ── 报告 ─────────────────────────────────────────────────────────────
 print(f"check_structure: 组合台 {len(benches)} 个 · 测试白盒 {total}/{WHITEBOX_BUDGET} · "
-	f"唯一来源常量 {len(UNIQUE_SOURCES)} 条 · 接线白名单 {len(WIRING_OK)} 个文件")
+	f"唯一来源常量 {len(UNIQUE_SOURCES)} 条 · 跨语言常量 {len(CROSS_CONST)} 组 · 接线白名单 {len(WIRING_OK)} 个文件")
 if BAD:
 	for rule, msg in BAD:
 		print(f"❌ [{rule}] {msg}")

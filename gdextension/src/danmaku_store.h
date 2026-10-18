@@ -80,7 +80,7 @@ class DanmakuStore : public RefCounted {
 	float _margin = 0.0f;
 
 	// L3.5-4b-pre：宽相 uniform grid（参数与 GDScript `BulletSystem` 一致；查询前按需重建）。
-	// mutable：`query_circle` / `overlap_pairs` 是 const，但需要惰性重建网格。
+	// mutable：`query_circle` 是 const，但需要惰性重建网格。
 	static constexpr float GRID_CELL = 64.0f;
 	static constexpr int GRID_MIN_COUNT = 64;
 	static constexpr int GRID_MAX_CELLS = 8192;
@@ -128,8 +128,6 @@ public:
 	PackedInt32Array query_circle(const Vector2 &p_center, float p_search_radius) const;
 	// 宽相是否已启用（诊断 / 测试；调用过 query_circle 后才反映最近一次重建结果）。
 	bool is_broadphase_active() const;
-	// L3.5-4a：批量重叠（几何整体下沉，杜绝 O(弹×目标) 次跨界）。返回扁平对 [bullet, target, ...]。
-	PackedInt32Array overlap_pairs(int p_faction, const PackedVector2Array &p_targets, const PackedFloat32Array &p_radii) const;
 	PackedColorArray get_colors() const;
 	PackedInt32Array get_type_indices() const;
 	PackedInt32Array get_factions() const;
@@ -165,6 +163,8 @@ public:
 	PackedFloat32Array get_timers() const;
 	PackedFloat32Array get_render_rots() const;
 	int get_capacity() const;
+	// NK10：仅供 tools/bench_native.gd 的基线渲染测量；生产渲染走 BulletMultiMesh。
+	// 不是生产渲染 API，也不应被当主路径调用。
 	void fill_multimesh(const Ref<MultiMesh> &p_mm) const;
 
 	// N2.2：无状态「积分加速器」——对宿主传入的 SoA 数组跑完整积分/寿命/出生相位/剔除循环，

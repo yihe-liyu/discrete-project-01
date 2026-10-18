@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 45 条（本文件留最近 45 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 46 条（本文件留最近 46 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — NK5/10：删 overlap_pairs + 跨语言常量门禁
 - 2026-10-18 — NK7：逐弹 type_index 访问器
 - 2026-10-18 — NK8：dt clamp + cull 边界统一
 - 2026-10-18 — NK4/9：program 入参 fail-closed + 原生 API 对齐
@@ -110,6 +111,12 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — NK5/10：删 overlap_pairs + 跨语言常量门禁
+
+- NK5：删除生产零调用的原生 `overlap_pairs`、绑定、测试文件与 TEST_INDEX 行；主路径保持 `query_circle + hit_test`，不再有“文档说主路径用它”的歧义。
+- NK10：`fill_multimesh` 确认仍被 `tools/bench_native.gd` 使用（不是死 API），保留并在头文件标注 benchmark-only；`check_structure.sh` 新增 ⑤ 跨语言常量门禁，`OPS_ARGS/ARGS` 与 `SLOT_STRIDE/MAX_SLOTS` 不一致会红。
+- 原生 API 对齐数 60→59；全量 844 / 7820，verify 七步全绿。
 
 ### 2026-10-18 — NK7：逐弹 type_index 访问器
 

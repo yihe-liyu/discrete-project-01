@@ -19,14 +19,14 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：120 脚本 / **847 用例（847 通过 / 0 红 —— ✅ 全绿）/ 7844 断言 / 57.011s** / 19 orphans / **0 pending**。
+**现状**：119 脚本 / **844 用例（844 通过 / 0 红 —— ✅ 全绿）/ 7820 断言 / 57.075s** / 19 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 58 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 31 | 196 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **B 内核 · 原生 C++ + 桥接** | 30 | 193 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 44 | 366 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
@@ -52,7 +52,7 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：类型不匹配 / **严格模式未知键** / **多脚本并集未知键**要响亮报错 | 10 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（31 / 196）
+## B · 内核 · 原生 C++ + 桥接（30 / 193）
 
 ### B1 parity 套件（13 文件 / 100 用例）—— 依赖 `test/reference/` 冻结 oracle
 
@@ -69,7 +69,6 @@
 | [test_native_collision](../test/test_native_collision.gd) | `set_hitbox` / `hit_test` / `query_circle` / `grazed` ↔ 1:1 | 5 | 0 |
 | [test_native_broadphase](../test/test_native_broadphase.gd) | 原生 uniform grid 宽相 ↔ `BulletSystem` 1:1 | 3 | 0 |
 | [test_native_guards](../test/test_native_guards.gd) | NK1/NK3：逐弹原生 getter/setter 越界守卫 + 重复 dead id 去重；NK4：register_program 对数组/opcode/slot 入参 fail-closed；NK7：逐弹 type_index 不拷整表；NK8：dt clamp / cull 边界统一 | 5 | 0 |
-| [test_native_overlap_pairs](../test/test_native_overlap_pairs.gd) | 原生批量重叠 `overlap_pairs` ↔ `hit_test` 1:1 | 3 | 0 |
 | [test_kernel_despawn_drain](../test/test_kernel_despawn_drain.gd) | 多弹**同帧** `request_despawn` 必须**全部**回收 | 2 | 0 |
 | [test_bullet_orientation](../test/test_bullet_orientation.gd) | 弹型朝向契约（F7·B）：`rotation_for` 语义 + 到内核弹型的字段传递 | 3 | 0 |
 | [test_reference_oracle](../test/test_reference_oracle.gd) | 冻结参照（oracle）自足性：`test/reference/BulletSystem` 可独立 new / spawn / 查询（不依赖任何 autoload） | 2 | 0 |
