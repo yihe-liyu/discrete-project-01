@@ -302,7 +302,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 // 完整积分循环：寿命 / 出生相位 / 位移 / 计时 / 剔除 —— 与 scripts/kernel/bullet_system.gd 1:1。
 void DanmakuStore::integrate(double p_delta) {
 	_grid_dirty = true;
-	const float dt = (float)p_delta;
+	const float dt = CLAMP((float)p_delta, 0.0f, MAX_DT);
 	const bool cull = _cull.has_area();
 	const Rect2 grown = _cull.grow(_margin);
 	for (int i = _count - 1; i >= 0; --i) {
@@ -493,7 +493,7 @@ Dictionary DanmakuStore::integrate_batch(int p_count, const PackedVector2Array &
 	PackedFloat32Array fx = p_fx_phase;
 	PackedFloat32Array timers = p_timers;
 	PackedInt32Array dead;
-	const float dt = (float)p_delta;
+	const float dt = CLAMP((float)p_delta, 0.0f, MAX_DT);
 	const bool cull = p_cull_size.x > 0.0f && p_cull_size.y > 0.0f;
 	const float x0 = p_cull_pos.x - p_margin;
 	const float y0 = p_cull_pos.y - p_margin;
@@ -519,7 +519,8 @@ Dictionary DanmakuStore::integrate_batch(int p_count, const PackedVector2Array &
 		if (timers[i] > 0.0f) {
 			timers[i] -= dt;
 		}
-		if (cull && (p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1)) {
+		// NK8：与 integrate 的 Rect2.has_point 对齐：右/下边界开区间。
+		if (cull && (p.x < x0 || p.x >= x1 || p.y < y0 || p.y >= y1)) {
 			dead.push_back(i);
 		}
 	}
@@ -1066,7 +1067,7 @@ Dictionary DanmakuStore::_events_dict() const {
 }
 
 Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base) {
-	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
+	_run_behavior_pass(CLAMP((float)p_delta, 0.0f, MAX_DT), p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
 	std::sort(_tick_dead.begin(), _tick_dead.end(), std::greater<int>());
 	for (int id : _tick_dead) {
 		if (id >= 0 && id < _count) { _swap_remove(id); }
@@ -1105,7 +1106,7 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 			_pslots[k] = k < p_slots.size() ? p_slots[k] : 0.0f;
 		}
 	}
-	_run_behavior_pass((float)p_delta, p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
+	_run_behavior_pass(CLAMP((float)p_delta, 0.0f, MAX_DT), p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
 	PackedVector2Array opos, ovel;
 	PackedFloat32Array olife, ofx, oelapsed, oslots, orender;
 	PackedInt32Array oprog, ophase, otick, odead;

@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 43 条（本文件留最近 43 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 44 条（本文件留最近 44 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — NK8：dt clamp + cull 边界统一
 - 2026-10-18 — NK4/9：program 入参 fail-closed + 原生 API 对齐
 - 2026-10-18 — NK1/2/3：逐弹 id 守卫 + dead 去重
 - 2026-10-18 — DSL1/7：DirSpec eval_phase + emit_speed_rel
@@ -108,6 +109,12 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — NK8：dt clamp + cull 边界统一
+
+- 原生 `MAX_DT = 0.4s`：`integrate` / `behavior_tick` / `behavior_batch` / `integrate_batch` 统一 clamp 到 `[0, 0.4]`；1s 级断点不再一步穿透/漏剔除。
+- `integrate_batch` 的 cull 右/下边界改为 `>=`，与 `integrate` 的 `Rect2.has_point`（右/下开区间）一致。
+- 测试：1s 大 dt 只积分 0.4s、负 dt 不倒放、batch 右边界 x==x1 判死/内侧存活；全量 847 / 7840，verify 七步全绿。
 
 ### 2026-10-18 — NK4/9：program 入参 fail-closed + 原生 API 对齐
 

@@ -104,3 +104,34 @@ func test_register_program_rejects_malformed_inputs() -> void:
 	assert_eq(_register(s, c, -1, bad_slot_args), -1, "slot 操作数越界 → 拒绝")
 
 	assert_gte(_register(s, c), 0, "拒绝坏输入后仍能注册合法 program")
+
+
+## NK8：单帧 dt 被 clamp 到 MAX_DT(0.2)，大 dt 不会把弹一步送出 1s 的距离。
+func test_large_dt_is_clamped() -> void:
+	if not _available():
+		pending("未构建原生扩展")
+		return
+	var s = _store()
+	var id: int = s.spawn(Vector2.ZERO, Vector2(1000.0, 0.0), 0, 0, Color.WHITE)
+	s.integrate(1.0)
+	assert_almost_eq(s.get_position(id).x, 400.0, 0.001, "1s 大 dt 应只积分 0.4s")
+	s.integrate(-1.0)
+	assert_almost_eq(s.get_position(id).x, 400.0, 0.001, "负 dt 不应倒放")
+
+
+## NK8：integrate_batch 的 cull 右/下边界与 integrate 的 Rect2.has_point 一样是开区间。
+func test_integrate_batch_cull_upper_bound_is_open() -> void:
+	if not _available():
+		pending("未构建原生扩展")
+		return
+	var s = _store()
+	var pos := PackedVector2Array([Vector2(100.0, 50.0), Vector2(99.0, 50.0)])
+	var vel := PackedVector2Array([Vector2.ZERO, Vector2.ZERO])
+	var life := PackedFloat32Array([100.0, 100.0])
+	var fx := PackedFloat32Array([0.0, 0.0])
+	var timers := PackedFloat32Array([0.0, 0.0])
+	var out: Dictionary = s.integrate_batch(2, pos, vel, life, fx, timers, DT,
+		Vector2.ZERO, Vector2(100.0, 100.0), 0.0)
+	var dead: PackedInt32Array = out["dead"]
+	assert_true(dead.has(0), "x == 右边界应判出界（Rect2.has_point 口径）")
+	assert_false(dead.has(1), "x < 右边界应存活")

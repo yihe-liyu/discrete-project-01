@@ -44,6 +44,9 @@ class DanmakuStore : public RefCounted {
 
 	// L3：packed program 执行（列式；op/args 全局拼接，program 只存偏移）。
 	static const int SLOT_STRIDE = 8;
+	// NK8：单帧最大积分/行为步长。大 dt（断点、卡帧、热重载）不得穿透/漏剔除；
+	// 0.4s = 24 个 60Hz 物理帧；能覆盖常见的 2~3 帧卡顿，又不会让 1s 级断点一步穿透。
+	static constexpr float MAX_DT = 0.4f;
 	// NK4：register_program 的 opcode 白名单（与 GDScript LifecycleCompiler 编码一致）。
 	static constexpr int OP_M_ACCEL_WORLD = 1;
 	static constexpr int OP_M_POSITION = 9;
