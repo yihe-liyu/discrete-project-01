@@ -69,6 +69,7 @@ func _build_ui() -> void:
 	_slot_buttons.clear()
 	for i in SLOTS.size():
 		var button := bar.get_node("Tab%d" % i) as Button
+		_tighten_tab_button(button)
 		button.pressed.connect(_on_slot.bind(i))
 		_slot_buttons.append(button)
 	_catalog_btn = bar.get_node("CatalogButton") as Button
@@ -76,6 +77,18 @@ func _build_ui() -> void:
 	_catalog_header = $BarLayer/CatalogHeader as Label
 	_catalog_header.theme = theme
 	_configure_catalog_drawer()
+
+
+## 20px 宋体在 32px 顶栏里要压掉上下 content margin，否则按钮会被撑到 36+。
+## 只动页签，不动全局 Button 样式。
+func _tighten_tab_button(button: Button) -> void:
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var style := button.get_theme_stylebox(state)
+		if style is StyleBoxFlat:
+			var tight := style.duplicate() as StyleBoxFlat
+			tight.content_margin_top = 0.0
+			tight.content_margin_bottom = 0.0
+			button.add_theme_stylebox_override(state, tight)
 
 
 ## 目录抽屉在场景里声明（CanvasLayer(3)）；这里只套主题/样式、接信号、修正 CatalogPanel 宽度。

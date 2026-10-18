@@ -77,28 +77,28 @@ theme_override_constants/separation = 6
 [node name="Tab0" type="Button" parent="BarLayer/Bar" unique_id=1027313525]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 20
 toggle_mode = true
 text = "整关预览"
 
 [node name="Tab1" type="Button" parent="BarLayer/Bar" unique_id=761955377]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 20
 toggle_mode = true
 text = "弹幕台"
 
 [node name="Tab2" type="Button" parent="BarLayer/Bar" unique_id=1388566090]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 20
 toggle_mode = true
 text = "敌人台"
 
 [node name="Tab3" type="Button" parent="BarLayer/Bar" unique_id=1047182543]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 20
 toggle_mode = true
 text = "阶段台"
 

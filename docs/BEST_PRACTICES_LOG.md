@@ -26,12 +26,13 @@
 
 ## 索引
 
-> 共 37 条（本文件留最近 37 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 38 条（本文件留最近 38 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
 - 2026-10-18 — D3 第四批：PreviewStageLoader
+- 2026-10-18 — 页签字号 16→20（16px 宋体密笔画糊成别的字）
 - 2026-10-18 — Ghost 活动范围/初始点与真自机对齐
 - 2026-10-18 — Workbench 与游戏场地同坐标（顶栏 36→32）
 - 2026-10-18 — 创作台页签对齐 + 快捷键
@@ -102,6 +103,12 @@
 - 背景实例由 loader 持有，Workbench 通过 `background()` 读取；不再在各处维护 `_background`。
 - Workbench 523 → 483；`_restart`/选项回调只剩“调 loader + 日志”。
 - 全量 832 / 7742，verify 七步全绿。
+
+### 2026-10-18 — 页签字号 16→20（16px 宋体密笔画糊成别的字）
+
+- 现象：顶栏「整关预览 / 弹幕台」在 16px 思源宋体下，整/幕/预的笔画挤成一团，看起来像「幕关预览 / 弹合台」。
+- 修法：页签字号 16→20；给页签单独压掉上下 content margin（0），让 20px 仍正好落在 32px 顶栏内；全局 Button 样式不动。
+- 现在 Bar/Tab 高度正好 32，Workbench 场地仍 32..928；全量 834 / 7758，verify 七步全绿。
 
 ### 2026-10-18 — Ghost 活动范围/初始点与真自机对齐
 
