@@ -2,6 +2,37 @@
 
 # 原生弹幕内核（GDExtension）构建脚本。
 # 显式 api_version=4.7（godot-cpp v10 起版本号与 Godot 独立）。
+import hashlib
+import os
+
+# ── 构建指纹 ─────────────────────────────────────────────────────────
+# 把 src/*.{h,cpp} 的 SHA-256 写进 build_stamp.h，C++ 暴露 get_build_id()。
+# tools/check_native_api.gd 会用同一算法重算源码指纹并比对运行时值：
+#   "二进制 = 当前源码" 从巧合变成机械保证（改了 C++ 忘重编 → verify 直接红）。
+_src_dir = os.path.join(Dir("#").srcnode().abspath, "src")
+_names = sorted(
+    n for n in os.listdir(_src_dir)
+    if (n.endswith(".h") or n.endswith(".cpp")) and n != "build_stamp.h"
+)
+_hasher = hashlib.sha256()
+for _name in _names:
+    _hasher.update(_name.encode("utf-8"))
+    _hasher.update(b"\0")
+    with open(os.path.join(_src_dir, _name), "rb") as _handle:
+        _hasher.update(_handle.read())
+    _hasher.update(b"\0")
+_build_id = _hasher.hexdigest()
+
+_stamp_path = os.path.join(_src_dir, "build_stamp.h")
+_stamp_content = '#pragma once\n#define DANMAKU_BUILD_ID "%s"\n' % _build_id
+_old_stamp = ""
+if os.path.exists(_stamp_path):
+    with open(_stamp_path, "r", encoding="utf-8") as _handle:
+        _old_stamp = _handle.read()
+if _old_stamp != _stamp_content:
+    with open(_stamp_path, "w", encoding="utf-8") as _handle:
+        _handle.write(_stamp_content)
+
 env = SConscript("godot-cpp/SConstruct", {"api_version": "4.7"})
 
 env.Append(CPPPATH=["src/"])

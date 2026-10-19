@@ -282,11 +282,13 @@ func stop_stage() -> void:
 func suspend_preview() -> void:
 	if _preview_suspender != null:
 		_preview_suspender.suspend()
+	_sync_bg_viewport()
 
 
 func resume_preview() -> void:
 	if _preview_suspender != null:
 		_preview_suspender.resume()
+	_sync_bg_viewport()
 
 
 func preview_suspended() -> bool:
@@ -331,6 +333,7 @@ func _load_stage() -> void:
 	if _preview_stage_loader == null:
 		return
 	_preview_stage_loader.load_stage(_stage_data)
+	_sync_bg_viewport()
 	_prev_time = -1.0
 	_log_line("▶ 加载 Stage %d（难度 %s）" % [_stage_data.stage_id, DIFFICULTIES[_diff_sel.selected]])
 
@@ -408,6 +411,20 @@ func _on_difficulty_changed(_index: int) -> void:
 func _apply_playback_runtime() -> void:
 	if _preview_playback != null:
 		_preview_playback.apply_runtime()
+	_sync_bg_viewport()
+
+
+## 背景视口只在"真的要看"时渲染：暂停（逐帧推进那一瞬除外）、切走、无背景都停。
+## SubViewport 的 render_target_update_mode 与 process_mode 无关 —— 不显式关掉，
+## 暂停时 3D 背景仍会每帧跑完整条管线（game_scene 实测省 ≈8.7 ms/帧，见 BGT5）。
+func _sync_bg_viewport() -> void:
+	if _bg_viewport == null or _playback == null:
+		return
+	var background = _preview_stage_loader.background() if _preview_stage_loader != null else null
+	var has_bg: bool = _playback.show_bg and background != null and is_instance_valid(background)
+	var frozen: bool = _playback.paused and not _playback.stepping
+	_bg_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED \
+		if not has_bg or frozen or preview_suspended() else SubViewport.UPDATE_ALWAYS
 
 ## 舞台视觉重画：根 `_draw`（框外压暗）+ 画框层（金边 / 网格）。
 ## 画框必须画在 3D 背景**之上**，所以它在 `FrameOverlay` 里而不是根 `_draw`（见 frame_overlay.gd）。

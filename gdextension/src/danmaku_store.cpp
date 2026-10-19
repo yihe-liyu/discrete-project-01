@@ -1,4 +1,5 @@
 #include "danmaku_store.h"
+#include "build_stamp.h"
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/error_macros.hpp>
 #include <godot_cpp/variant/transform2d.hpp>
@@ -67,6 +68,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_timers"), &DanmakuStore::get_timers);
 	ClassDB::bind_method(D_METHOD("get_render_rots"), &DanmakuStore::get_render_rots);
 	ClassDB::bind_method(D_METHOD("get_capacity"), &DanmakuStore::get_capacity);
+	ClassDB::bind_method(D_METHOD("get_build_id"), &DanmakuStore::get_build_id);
 	ClassDB::bind_method(D_METHOD("integrate_batch", "count", "positions", "velocities", "life_left", "fx_phase", "timers", "delta", "cull_pos", "cull_size", "margin"), &DanmakuStore::integrate_batch);
 }
 
@@ -359,6 +361,8 @@ float DanmakuStore::get_out_grace(int p_id) const {
 void DanmakuStore::set_default_life(float p_life) { _default_life = p_life; }
 void DanmakuStore::set_field(float p_left, float p_right, float p_top) { _field_left = p_left; _field_right = p_right; _field_top = p_top; }
 int DanmakuStore::get_capacity() const { return _capacity; }
+
+String DanmakuStore::get_build_id() const { return String(DANMAKU_BUILD_ID); }
 
 void DanmakuStore::clear() {
 	_grid_dirty = true;

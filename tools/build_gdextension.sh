@@ -44,4 +44,8 @@ EOF
 
 echo "✅ 产物："
 ls -la "$GDX/bin/" 2>/dev/null || true
+# 构建指纹（SConstruct 生成；与 runtime get_build_id() / verify 的源码重算值三方对齐）
+if [ -f "$GDX/src/build_stamp.h" ]; then
+	echo "✅ 构建指纹：$(sed -n 's/^#define DANMAKU_BUILD_ID "\(.*\)"/\1/p' "$GDX/src/build_stamp.h")"
+fi
 echo "✅ 已生成 $GDX/danmaku_kernel.gdextension"

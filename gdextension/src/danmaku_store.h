@@ -11,6 +11,7 @@
 #include <godot_cpp/variant/packed_color_array.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/string.hpp>
 #include <vector>
 #include <cstdint>
 
@@ -163,6 +164,9 @@ public:
 	PackedFloat32Array get_timers() const;
 	PackedFloat32Array get_render_rots() const;
 	int get_capacity() const;
+	// 构建指纹（SCons 由 src/*.{h,cpp} 的 SHA-256 生成 build_stamp.h）。
+	// tools/check_native_api.gd 用同一算法重算源码并比对，防止"源码改了但 .so 没重编"。
+	String get_build_id() const;
 	// NK10：仅供 tools/bench_native.gd 的基线渲染测量；生产渲染走 BulletMultiMesh。
 	// 不是生产渲染 API，也不应被当主路径调用。
 	void fill_multimesh(const Ref<MultiMesh> &p_mm) const;

@@ -208,6 +208,26 @@ func test_background_viewports_own_their_world():
 		host.free()
 
 
+## BGT5：工作台切走时背景视口必须停渲染（`render_target_update_mode` 与 process_mode 无关，
+## 不显式关掉的话 3D 管线在后台照跑；游戏里实测暂停省 ≈8.7 ms/帧）。
+func test_workbench_bg_viewport_stops_when_suspended():
+	var wb: Node = load("res://scenes/workbench.tscn").instantiate()
+	add_child_autofree(wb)
+	await get_tree().process_frame
+	var viewport := wb.get_node_or_null("BgContainer/BgViewport") as SubViewport
+	assert_not_null(viewport, "工作台应有背景 SubViewport")
+	if viewport == null:
+		return
+	assert_eq(viewport.render_target_update_mode, SubViewport.UPDATE_ALWAYS,
+		"运行中背景视口应持续渲染")
+	wb.suspend_preview()
+	assert_eq(viewport.render_target_update_mode, SubViewport.UPDATE_DISABLED,
+		"切走/暂停后背景视口应停渲染")
+	wb.resume_preview()
+	assert_eq(viewport.render_target_update_mode, SubViewport.UPDATE_ALWAYS,
+		"恢复后背景视口应重新渲染")
+
+
 # ═══ 蒙眼雾：可见部分场景声明 + 不再摸父节点（2026-10-04 BGA/B）═══
 
 ## 蒙眼雾的**可见部分**必须在场景里声明，参数唯一来源 = **材质**。

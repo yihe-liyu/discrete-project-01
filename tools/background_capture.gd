@@ -25,14 +25,16 @@ extends Node
 ## 出图文件名带 **stage**：`bg_s<stage>_f<帧>_<宽>x<高>.png` —— 同一目录跑多面不会互相覆盖。
 
 const BENCH_COMMON := preload("res://scripts/workbench/bench_common.gd")
+const CAMERA_HOME := preload("res://scripts/background/background_camera_home.gd")
 
 ## 抓哪一面（`--stage` 覆盖）
 const DEFAULT_STAGE_ID := 1
 ## 与 `game_scene.tscn` 的 SubViewport 同规格（BG7 已把工作台统一到此值）
 const FIELD_SIZE := Vector2i(800, 928)
-const CAM_POS := Vector3(0.0, 10.0, 6.0)
-const CAM_ROT_DEG := Vector3(-30.0, 0.0, 0.0)
-const CAM_FOV := 90.0
+## 相机姿态唯一来源：scripts/background/background_camera_home.gd
+const CAM_POS := CAMERA_HOME.POSITION
+const CAM_ROT_DEG := CAMERA_HOME.ROTATION_DEGREES
+const CAM_FOV := CAMERA_HOME.FOV
 ## 真实耗时的滚动平均窗口（帧）
 const AVG_WINDOW := 60
 

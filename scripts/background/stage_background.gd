@@ -15,21 +15,21 @@ var decor_manager: DecorManager
 @export var env_preset: BackgroundEnvPreset
 ## **初始相机姿态**（在背景场景里声明）：勾上 `override_camera_home` 后，`_ready` 会把解析到的
 ## 那台相机摆成下面这套值 —— **在抓"初始姿态"之前**应用 ⇒ `reset_camera()` 天然复位到**这套**。
-## 不勾 = 沿用**宿主**相机的姿态（`game_scene.tscn` / `workbench.tscn` 里那台）。
-## ⚠️ 勾了之后**改宿主的相机不再影响这一面** —— 构图归本背景所有（这就是"每面自己定构图"）。
+## 不勾 = 沿用 [BackgroundCameraHome] 的默认姿态（宿主场景不再放冗余相机）。
+## ⚠️ 勾了之后**改默认姿态不再影响这一面** —— 构图归本背景所有（这就是"每面自己定构图"）。
 ## ⚠️ 只在**进树时**应用一次：`move_camera_by` / `set_camera_rotation` / `tween_camera_fov` 照常叠加在它之上。
 @export var override_camera_home := false
-@export var camera_home_position := Vector3(0, 10, 6)
-@export var camera_home_rotation_degrees := Vector3(-30, 0, 0)
-@export var camera_home_fov := 90.0
+@export var camera_home_position: Vector3 = BackgroundCameraHome.POSITION
+@export var camera_home_rotation_degrees: Vector3 = BackgroundCameraHome.ROTATION_DEGREES
+@export var camera_home_fov: float = BackgroundCameraHome.FOV
 ## 相机初始姿态（`_ready` 抓一次）——`reset_camera()` 复位到**它**，而不是写死 `fov = 90`
 var _cam_home_pos := Vector3.ZERO
 var _cam_home_rot := Vector3.ZERO
-var _cam_home_fov := 90.0
+var _cam_home_fov: float = BackgroundCameraHome.FOV
 ## 相机动词的**目标记忆**（**不是**实时值）：相对动词从这里累加，见 `move_camera_by`
 var _cam_target_pos := Vector3.ZERO
 var _cam_target_rot := Vector3.ZERO
-var _cam_target_fov := 90.0
+var _cam_target_fov: float = BackgroundCameraHome.FOV
 ## 每个属性只留一条活动 tween（新指令先杀旧的）——见 `_replace_camera_tween`
 var _cam_tween_pos: Tween
 var _cam_tween_rot: Tween
@@ -140,13 +140,13 @@ func _capture_camera_home() -> void:
 
 
 
-## 自建相机：初始姿态与真游戏 SubViewport 相机一致；随本背景实例销毁
+## 自建相机：初始姿态唯一来源 = [BackgroundCameraHome]；随本背景实例销毁
 func _own_camera() -> void:
 	var cam := Camera3D.new()
 	cam.name = "Camera3D"
-	cam.position = Vector3(0, 10, 6)
-	cam.rotation_degrees = Vector3(-30, 0, 0)
-	cam.fov = 90.0
+	cam.position = BackgroundCameraHome.POSITION
+	cam.rotation_degrees = BackgroundCameraHome.ROTATION_DEGREES
+	cam.fov = BackgroundCameraHome.FOV
 	add_child(cam)
 	camera = cam
 

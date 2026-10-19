@@ -26,8 +26,11 @@
 
 ## 索引
 
-> 共 46 条（本文件留最近 46 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 49 条（本文件留最近 49 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-19 — 存档可靠性：版本号 / 原子写 / .bak 回退 / 读档校验
+- 2026-10-19 — 原生库构建指纹：`get_build_id()` + verify 重算源码哈希
+- 2026-10-19 — BGT5 + BGA12：工作台背景视口停渲染 + 相机初值唯一来源
 - 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 - 2026-10-18 — D6：1600 布局 + 384 常驻左栏
 - 2026-10-18 — D3 第五批：PreviewPlayback / PreviewBookmarks
@@ -76,6 +79,35 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-19 — 存档可靠性：版本号 / 原子写 / .bak 回退 / 读档校验
+
+- **起因**：`SaveManager` 只有 60 行，直接 `ConfigFile.save(SAVE_PATH)`；写到一半崩溃会同时毁掉设置和高分，主档损坏时下次保存又会直接覆盖。
+- **改法**：
+  - `meta/version = 1`；读档时对已知设置做类型/范围收敛（音量 0..1、`max_fps` 白名单），高分只留「非负整数 id + 非负整数分」。
+  - 写盘改为 **tmp → 轮换 `.bak` → 提交**；任何一步失败都保留原正式档，并 `push_warning` + 返回 `false`（`get_last_save_error()` 可查）。
+  - 主档损坏/空文件 → 回退 `.bak`，坏档隔离成 `.corrupt`（避免下一次保存把好备份轮换掉）；`load()` 先清空内存字典，二次 load 不再叠旧数据。
+  - `save_path` 可覆盖（测试用独立 `user://` 档）；`clear_player_data()` 在全新档上不再凭空创建文件。
+- **踩坑**：`ConfigFile.load("not a config file")` 返回 **OK**（只是没有任何段）⇒ 不能只看返回值，必须检查 `meta/settings/high_scores` 至少存在一段，否则会把空档当成好档、绕过 `.bak`。
+- **回归**：`test_clear_data` 从 3 例扩到 9 例 —— 往返/版本、原子写+备份、坏主档回退、二次 load 清旧状态、非法值收敛、写失败返回 false。
+- **验收**：全量 **851 用例 / 7857 断言**；`verify.sh` 七步全绿。
+
+### 2026-10-19 — 原生库构建指纹：`get_build_id()` + verify 重算源码哈希
+
+- **问题**：NK9 只比对 `D_METHOD` 名字；C++ 实现改了、方法名没变，旧 `.so` 仍然全绿 —— "库 = 源码"是巧合，不是保证。
+- **改法**：
+  - `gdextension/SConstruct` 构建时对 `src/*.{h,cpp}`（排除生成的 `build_stamp.h`）按「文件名升序 + 文件名 + NUL + 内容 + NUL」算 SHA-256，写入 `build_stamp.h`；该文件 gitignore。
+  - C++ 新增 `get_build_id()`（`D_METHOD` 自动进入 NK9 的 API 对齐）。
+  - `tools/check_native_api.gd` 用同一算法重算源码指纹，与运行时值比对；`verify.sh` 打印匹配结果，源码改了没重编 → 直接红。
+- **反向验证**：临时往 `danmaku_store.h` 追加一行注释，检查立刻报 `binary=0322b13bdb12 source=95fc9a677de4`；恢复后重新匹配。
+- **验收**：debug + release 重编；原生 API **60 methods**；指纹 `0322b13bdb12`。
+
+### 2026-10-19 — BGT5 + BGA12：工作台背景视口停渲染 + 相机初值唯一来源
+
+- **BGT5**：`SubViewport.render_target_update_mode` 与 `process_mode` 无关 —— 暂停/切走/无背景时 3D 管线仍会跑。`Workbench._sync_bg_viewport()` 在 `_apply_playback_runtime` / `_load_stage` / `suspend_preview` / `resume_preview` 收口：暂停（逐帧推进那一瞬除外）、切走、无背景 → `UPDATE_DISABLED`，恢复 → `UPDATE_ALWAYS`。回归 `test_workbench_bg_viewport_stops_when_suspended`（21 例背景套件）。
+- **BGA12**：新增 `BackgroundCameraHome`（POSITION / ROTATION_DEGREES / FOV）作为唯一来源；`StageBackground` 的 `camera_home_*` 默认值、`_own_camera()`、`tools/background_capture.gd` 全部引用它；两个宿主场景的冗余 `Camera3D` 节点删除（背景入树时自建，未开 `override_camera_home` 的默认姿态不变）。
+- **顺带**：CI Godot 4.7.1 → 4.7.2（与本地一致）；`TEST_INDEX` 开头「118 个测试文件」→ 119；基线 R2 残余只剩 `dialogue_service.gd:20`（`item_service` / `player` 已不再摸 `current_scene`）。
+- **验收**：全量 **851 用例 / 7857 断言**；`verify.sh` 七步全绿。
 
 ### 2026-10-18 — D6 修正：canvas_transform + bench UI CanvasLayer
 

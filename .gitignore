@@ -32,5 +32,6 @@ gdextension/danmaku_kernel.gdextension
 gdextension/danmaku_kernel.gdextension.uid
 gdextension/src/*.os
 gdextension/src/*.o
+gdextension/src/build_stamp.h
 gdextension/.sconsign.dblite
 gdextension/.sconsign*

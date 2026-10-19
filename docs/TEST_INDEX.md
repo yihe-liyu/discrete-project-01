@@ -1,6 +1,6 @@
 # 测试索引（改哪里 → 看哪条）
 
-> **这是什么**：118 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
+> **这是什么**：119 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
 > **这不是**：规格说明、待办清单、覆盖率报告（本项目**没有**覆盖率度量）。
 >
 > **怎么用**：改动前扫一眼对应层的表，改动后跑门禁。
@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：119 脚本 / **844 用例（844 通过 / 0 红 —— ✅ 全绿）/ 7820 断言 / 57.075s** / 19 orphans / **0 pending**。
+**现状**：119 脚本 / **851 用例（851 通过 / 0 红 —— ✅ 全绿）/ 7857 断言 / 57.342s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 10 | 58 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 193 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 44 | 366 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 44 | 373 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 13 | 86 | `scripts/workbench/**`、创作站 |
@@ -105,7 +105,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（44 / 366）
+## C · 宿主 · 运行时系统（44 / 373）
 
 ### C1 组合根 / 服务 / 时间线（9 / 52）
 
@@ -150,13 +150,13 @@
 | [test_boss_encapsulation](../test/test_boss_encapsulation.gd) | 债 E：Boss 封装 —— hp/`boss_data`/`hitbox_radius` 只读 + `hp_changed` 信号 | 3 | 6 |
 | [test_boss_targeting](../test/test_boss_targeting.gd) | 自机诱导弹不该追「还没进入战斗的 Boss」（对话/进场期） | 3 | 0 |
 
-### C5 特效 / 背景 / 表现（9 / 48）
+### C5 特效 / 背景 / 表现（9 / 49）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_miss_circle_layer](../test/test_miss_circle_layer.gd) | Miss 圈特效：autoload → 场景节点 + 组合根注入 | 8 | 7 |
 | [test_decor_manager](../test/test_decor_manager.gd) | `DecorManager`：静态路径（SCISSOR 层）性能优化后行为不变 + **「树与地面同速」**（跟随速度取平面 `world_scroll_per_second()`，**含加速倍率** ——回归：2026-10-04 作者实测「树和地面的速度不一样了」，比值 1.0002 vs 期望 7） | 8 | 1 |
-| [test_stage_background](../test/test_stage_background.gd) | 背景环境接线：**父节点 `_ready` 之前应用预设也必须生效**（子节点 `_ready` 先于父节点 ⇒ 旧实现静默 no-op，练习模式改预设不变）+ `build_environment()` 每次全新实例（防「越重跑越暗」）+ **预设必须带真天球且不被 `fog_sky_affect` 洗掉** + **地平线联动真的生效** + **`Sky.radiance_size` 必须压低**（默认 256 ⇒ 每帧重算立方图，实测 8.9 → 44.8 ms）+ **雾色不许是亮灰**（`Color.DARK_GRAY` = CSS #A9A9A9 = 0.663 会把远处洗亮）+ **相机按类型找**（不按名字：改名不再静默改变行为）+ **背景视口必须 `own_world_3d = true`**（否则与根视口共享 World3D，环境被同 world 的另一个 `WorldEnvironment` 抢） + **B3：场景必须声明 `DecorManager` 子节点**（`get_decor_manager()` 按类型解析） + **相机复位回初始姿态（不只 fov）** + **`env_preset` 由场景声明、入树即应用**（环境不再依赖内容脚本的 `_ready`；练习模式同样覆盖） + **蒙眼雾：可见部分场景声明、参数唯一来源 = 材质**（旧实现三份默认 + 编辑器里看不见） + **`setup()` 不依赖父节点是 `StageBackground`**（旧实现 `get_parent()` ⇒ 挪层级就静默拿 null、雾不再跟相机） + **雾材质每实例独立**（`.tscn` sub_resource 默认跨实例共享 ⇒ 需 `resource_local_to_scene`） + **太阳 `SunSprite` 场景声明且纹理来自场景**（裸 `Image` 资源 ⇒ 编辑器里是空白，连位置都没法拖；实测圆心在画面顶边外 7 像素） + **宿主自动接线故事演出层**（`_resolve_showcase()` 按类型接相机+太阳 ⇒ **内容脚本零调用**；旧设计"记得调 setup() 才显示"已废止 —— 忘了就隐形且零报错，stage02 实况） + **太阳对准取"画出来的 sprite"而非 `Sun` 节点**（`SunSprite` 有局部位移 ⇒ 旧实现一改 y 就与黑雾错位） + **相机初始姿态可由背景声明**（`override_camera_home`，在抓 home **之前**应用 ⇒ `reset_camera()` 回**声明的**那套） + **相机动词绝对/相对分名 + 目标记忆**（相对动词从"上一条指令的**目标**"累加而非实时值，并先杀同属性旧 tween ⇒ 重叠不漂移；作者实测「Y 没回到 0」已成回归） | 20 | 0 |
+| [test_stage_background](../test/test_stage_background.gd) | 背景环境接线：**父节点 `_ready` 之前应用预设也必须生效**（子节点 `_ready` 先于父节点 ⇒ 旧实现静默 no-op，练习模式改预设不变）+ `build_environment()` 每次全新实例（防「越重跑越暗」）+ **预设必须带真天球且不被 `fog_sky_affect` 洗掉** + **地平线联动真的生效** + **`Sky.radiance_size` 必须压低**（默认 256 ⇒ 每帧重算立方图，实测 8.9 → 44.8 ms）+ **雾色不许是亮灰**（`Color.DARK_GRAY` = CSS #A9A9A9 = 0.663 会把远处洗亮）+ **相机按类型找**（不按名字：改名不再静默改变行为）+ **背景视口必须 `own_world_3d = true`**（否则与根视口共享 World3D，环境被同 world 的另一个 `WorldEnvironment` 抢） + **B3：场景必须声明 `DecorManager` 子节点**（`get_decor_manager()` 按类型解析） + **相机复位回初始姿态（不只 fov）** + **`env_preset` 由场景声明、入树即应用**（环境不再依赖内容脚本的 `_ready`；练习模式同样覆盖） + **蒙眼雾：可见部分场景声明、参数唯一来源 = 材质**（旧实现三份默认 + 编辑器里看不见） + **`setup()` 不依赖父节点是 `StageBackground`**（旧实现 `get_parent()` ⇒ 挪层级就静默拿 null、雾不再跟相机） + **雾材质每实例独立**（`.tscn` sub_resource 默认跨实例共享 ⇒ 需 `resource_local_to_scene`） + **太阳 `SunSprite` 场景声明且纹理来自场景**（裸 `Image` 资源 ⇒ 编辑器里是空白，连位置都没法拖；实测圆心在画面顶边外 7 像素） + **宿主自动接线故事演出层**（`_resolve_showcase()` 按类型接相机+太阳 ⇒ **内容脚本零调用**；旧设计"记得调 setup() 才显示"已废止 —— 忘了就隐形且零报错，stage02 实况） + **太阳对准取"画出来的 sprite"而非 `Sun` 节点**（`SunSprite` 有局部位移 ⇒ 旧实现一改 y 就与黑雾错位） + **相机初始姿态可由背景声明**（`override_camera_home`，在抓 home **之前**应用 ⇒ `reset_camera()` 回**声明的**那套） + **相机动词绝对/相对分名 + 目标记忆**（相对动词从"上一条指令的**目标**"累加而非实时值，并先杀同属性旧 tween ⇒ 重叠不漂移；作者实测「Y 没回到 0」已成回归） + **BGT5：切走/暂停时背景视口停渲染**（`render_target_update_mode` 与 process_mode 无关） | 21 | 0 |
 | [test_screen_shake](../test/test_screen_shake.gd) | `ScreenShake`：trauma 按 DECAY 衰减、sustain 保持到清零、强度封顶 1 | 6 | 6 |
 | [test_hit_effect](../test/test_hit_effect.gd) | 通用击中特效：一个类驱动所有特效场景（数据驱动验证） | 6 | 0 |
 | [test_spawn_fx](../test/test_spawn_fx.gd) | 出生雾 / 消弹消散统一特效模型（`EffectType` + 行 `fx_type`） | 5 | 2 |
@@ -172,13 +172,13 @@
 | [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类 | 5 | 0 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
-### C7 存档 / 回放 / 随机（5 / 21）
+### C7 存档 / 回放 / 随机（5 / 27）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_replay_recorder](../test/test_replay_recorder.gd) | `ReplayRecorder` 录输入基础设施 | 7 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 | 5 | 0 |
-| [test_clear_data](../test/test_clear_data.gd) | 「清空数据」：符卡记录 + 高分归零；**设置保留** | 3 | 0 |
+| [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |
 | [test_enemy_data_serializable](../test/test_enemy_data_serializable.gd) | 债 C 第一步：`EnemyData` 可序列化 + `validate()` | 3 | 0 |
 

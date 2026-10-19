@@ -144,11 +144,12 @@
 
 - 池化/复用对象加字段 → `setup()`/`reset()` 必须归零（`Item` 漏 `_is_highlight` 即此）。
 - 遍历中 `despawn` 必须倒序（swap-with-last；升序丢大 id）。
-- 改内核 C++ → 必须 `./tools/build_gdextension.sh` 重编；`test/reference/**` 只作冻结参照。
+- 改内核 C++ → 必须 `./tools/build_gdextension.sh` 重编（verify 比对 `get_build_id()` 与源码 SHA-256，陈旧 `.so` 直接红）；`test/reference/**` 只作冻结参照。
 - 改 `class_name` / 新增/删脚本 → `godot --headless --import` 刷 `.godot`；`.tres` 的 `ext_resource` 用生成的 uid，别手编。
 - GDScript 警告 = 错误（`check_syntax`）；原生 `WARN/ERR_PRINT` 会被 GUT 记 Unexpected Errors → 内核静默返回、宿主 `push_warning`。
 - preset/builder 不覆写显式开关（`.enemy()` 别设 `is_spawn_fog`）。
 - Godot 的 `erase_section` / `remove_*` 对不存在目标会 `ERR_FAIL`：先 `has_section` / `file_exists` 守卫。
+- 存档写盘走 `SaveManager` 的 tmp → `.bak` → 提交，不要直接 `ConfigFile.save` 正式档；`ConfigFile.load` 对垃圾文件也可能返回 OK（无任何段）⇒ 必须检查已知段，别把空档当好档。
 - 重构成果靠机械护栏：`tools/check_structure.sh` 看住组合台同名场景壳 / 测试白盒预算只减不增 / 唯一来源常量 / 舞台接线唯一；护栏要先证明会红。
 - 被托管视图的输入领地要显式划分：宿主 chrome 占更高 `CanvasLayer`（GUI 拾取按画布层从高到低）。
 - 测试用夹具，别拿真实内容当断言标准；内容只做“不数数量、不写死路径”的结构冒烟。
@@ -166,7 +167,7 @@
 - [ ] **R16**：47MB 二进制未配 Git LFS（`.gitattributes` 仅 EOL 规范化）。
 - [ ] **R18/R19**：`spell_practice_menu.gd`（754）上帝对象；`workbench.gd` 已从 786 拆到 439（10 个预览服务，含 Playback/Bookmarks），`creation_station.gd` 390→274（静态 chrome 进场景 + WorkspaceStore）；Workbench 只剩装配/选项回调/公开接缝，判据是“一个类只做一件事”，行数只是提示。
 - [ ] **R21**：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）。
-- [ ] **R2（残余）**：`item_service.gd:16` / `player.gd:286` 经 `current_scene` 取 World，可改注入。
+- [ ] **R2（残余）**：`dialogue_service.gd:20` 仍用 `ctx.runner.get_tree().current_scene.add_child(box)` 挂对话框，可改为注入 overlay 层（`item_service` / `player` 已不再摸 `current_scene`，2026-10-19 核）。
 - [ ] **编排路线**（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生 / Step 6 `ctx.background` 注入服务待做；5/7 暂缓。
 - [ ] **内核融合（M3）**：M1/M2 完成、M3 已拍板「纹理句柄」；判据改为结构性（0 类型映射 / 0 内容签名侧表）。
 

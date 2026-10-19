@@ -81,7 +81,8 @@ if [ -n "$START_ERR" ]; then
 fi
 echo "✅ 启动零错误"
 
-# NK9：有原生二进制时，运行时 ClassDB 方法必须与 C++ _bind_methods 对齐。
+# NK9：有原生二进制时，运行时 ClassDB 方法必须与 C++ _bind_methods 对齐；
+# 同时比对构建指纹，防止"源码改了但 .so 没重编"的假绿。
 API_USER="$(mktemp -d)"
 mkdir -p "$API_USER/logs"
 API_OUT=$(XDG_DATA_HOME="$API_USER" godot --headless --path "$PWD" --script res://tools/check_native_api.gd 2>&1 || true)
@@ -90,7 +91,7 @@ if echo "$API_OUT" | grep -q "❌"; then
 	echo "$API_OUT" | grep -E "❌"
 	exit 1
 fi
-echo "$API_OUT" | grep -E "✅ 原生 API|⚠️ 未构建原生扩展" || true
+echo "$API_OUT" | grep -E "✅ 原生 API|✅ 原生构建指纹|⚠️ 未构建原生扩展|⚠️ 找不到 gdextension/src" || true
 
 echo ""
 if [ "$FAST" = 1 ]; then
