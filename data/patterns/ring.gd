@@ -36,8 +36,8 @@ func fire(p_ctx: StageContext, p: PatternParams, origin: Vector2, direction: Vec
 	if p == null:
 		push_warning("RingPattern.fire(): params 为 null，跳过")
 		return
-	if p.bullet_def == null:
-		push_warning("RingPattern.fire(): params.bullet_def 未设置，跳过")
+	if p.bullet_def == null and p.template == null:
+		push_warning("RingPattern.fire(): params.bullet_def / template 未设置，跳过")
 		return
 	if p.count <= 0:
 		return
@@ -52,11 +52,18 @@ func fire(p_ctx: StageContext, p: PatternParams, origin: Vector2, direction: Vec
 	if directions.is_empty():
 		return
 	# 每个 wave 建一份 BulletData：pattern 只改自己这一发的速度长度，不污染共享资源。
-	var shot := BulletData.new().def(p.bullet_def).color(p.color).blend(p.blend)
-	if p.enemy:
-		shot.enemy()
+	var shot: BulletData
+	if p.template != null:
+		shot = p.template.duplicate() as BulletData
 	else:
-		shot.player()
+		shot = BulletData.new().def(p.bullet_def).color(p.color).blend(p.blend)
+		if p.enemy:
+			shot.enemy()
+		else:
+			shot.player()
+	if shot == null:
+		push_warning("RingPattern.fire(): BulletData 构造失败，跳过")
+		return
 	if p.speed > 0.0:
 		shot.velocity = Vector2(p.speed, 0.0)
 	p_ctx.bullets.shoot_directions(shot, directions, origin)

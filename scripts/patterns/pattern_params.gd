@@ -10,7 +10,10 @@ extends Resource
 
 ## 发射的弹型定义（`data/bullets/*.tres`，外观+碰撞+朝向）。
 @export var bullet_def: BulletDef
-## 染色 / 阵营 / 混合（pattern 在构造 BulletData 时套用）。
+## 运行时模板（代码注入；不进 .tres）：已有 BulletData（带 lifecycle/颜色）时优先用它，
+## 这样把旧内容迁到 pattern 时不必把 lifecycle 重写成参数。
+var template: BulletData
+## 染色 / 阵营 / 混合（pattern 在构造 BulletData 时套用；template 路径不覆盖这些）。
 @export var color: Color = Color.WHITE
 @export var enemy: bool = true
 @export var blend: bool = true

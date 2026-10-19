@@ -69,6 +69,14 @@ func test_ring_fire_spawns_count_bullets():
 	assert_eq(bm.kernel_system().get_active_count(), 6, "6 发环弹应写进内核池")
 	bm.clear_bullets()
 
+	# 运行时模板路径：带 lifecycle 的旧 BulletData 可以直接迁进 ring
+	p.bullet_def = null
+	p.template = BulletData.new().enemy().tex("小玉").color(Color.RED)
+	p.count = 3
+	RING.new().fire(ctx, p, Vector2(100, 100), Vector2.UP)
+	assert_eq(bm.kernel_system().get_active_count(), 3, "template 路径也应发射")
+	bm.clear_bullets()
+
 
 func test_fire_with_null_context_is_noop():
 	var ring := RING.new()
