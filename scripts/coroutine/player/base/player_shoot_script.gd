@@ -118,6 +118,9 @@ func _sync_options(leader: Player, _ctx: StageContext) -> void:
 
 	while _options.size() > wanted:
 		var opt = _options.pop_back()
+		# 旧激光段锚在这个子机上；先清段，否则锚点失效会退回自机并报错。
+		if ctx != null:
+			ctx.bullets.clear_laser_bullets()
 		opt.queue_free()
 
 	if offsets.size() > 0:
@@ -138,6 +141,8 @@ func _shoot_options(_ctx: StageContext, bullet_data: BulletData, count: int, spr
 
 
 func _cleanup_options() -> void:
+	if ctx != null:
+		ctx.bullets.clear_laser_bullets()
 	for opt in _options:
 		if is_instance_valid(opt):
 			opt.queue_free()

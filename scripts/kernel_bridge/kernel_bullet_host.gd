@@ -88,6 +88,17 @@ func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = 
 	return bomb
 
 
+## 清掉所有 LASER 类子弹（魔理沙非 focus 激光段；供子机重建 / 熄火时清锚点）。
+## 倒序：`system.despawn` 是 swap-with-last。
+func clear_laser_bullets() -> void:
+	if system == null:
+		return
+	for i in range(system.get_active_count() - 1, -1, -1):
+		var bt := system.get_type(i)
+		if bt != null and bt.kind == BulletType.Kind.LASER:
+			system.despawn(i)
+
+
 ## 清掉所有宿主 bomb（换关/重开）。
 func clear_bombs() -> void:
 	for b in _bombs:

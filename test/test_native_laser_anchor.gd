@@ -35,3 +35,22 @@ func test_marisa_laser_segments_track_anchor() -> void:
 	assert_almost_eq(pos.x, 340.0, 2.0, "段应贴在子机锚点 x（忽略锚点会停在 player.x=0）")
 	assert_lt(pos.y, 561.0, "段应从锚点向上漂")
 	assert_gt(pos.y, 470.0, "三帧只漂 ~27px，不应飞走")
+
+
+func test_clear_laser_bullets_only_clears_laser_kind() -> void:
+	var ns = BulletManager.current.kernel_system() as KernelNativeSystem
+	if ns == null:
+		pending("无内核系统"); return
+	var laser := BulletData.new().enemy().no_spawn_fog()
+	laser.kind = BulletType.Kind.LASER
+	laser.velocity = Vector2.UP * 100.0
+	laser.trajectory(FIX.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 0.0))
+	BulletManager.current.shoot_bullet(laser, Vector2(200.0, 700.0), Vector2.UP)
+
+	var point := BulletData.new().enemy().no_spawn_fog()
+	point.velocity = Vector2.UP * 100.0
+	BulletManager.current.shoot_bullet(point, Vector2(220.0, 700.0), Vector2.UP)
+
+	assert_eq(ns.get_active_count(), 2, "先有 1 LASER + 1 POINT")
+	BulletManager.current.clear_laser_bullets()
+	assert_eq(ns.get_active_count(), 1, "只清 LASER，不动普通弹")

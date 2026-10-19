@@ -141,6 +141,7 @@ func _get_laser_bullet(frame: int) -> BulletData:
 	while _laser_bullets.size() < _seg_count():
 		var k: int = _laser_bullets.size()
 		var bullet_data := BulletData.new().player()
+		bullet_data.kind = BulletType.Kind.LASER
 		bullet_data.texture = _make_laser_segment(k)
 		bullet_data.color(Color(1, 1, 1, 0.5))
 		bullet_data.damage = LASER_DAMAGE

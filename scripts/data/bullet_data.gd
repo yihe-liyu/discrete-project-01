@@ -13,6 +13,8 @@ var damage: float = 10.0                              ## 基础伤害（支持�
 var velocity: Vector2 = Vector2.UP                   ## 速度向量
 var hit_effect: PackedScene                          ## 击中特效
 var faction: Faction = Faction.PLAYER                ## 阵营
+## 内核弹型类别：POINT = 普通弹；LASER = 魔理沙非 focus 激光段（供整批淡出/清理）。
+var kind: BulletType.Kind = BulletType.Kind.POINT
 var hitbox_shape: HitboxShape = HitboxShape.CIRCLE   ## 判定形状
 var hitbox_offset: Vector2 = Vector2.ZERO            ## 判定偏移
 var hitbox_radius: float = 4.0                       ## 判定半径
@@ -145,6 +147,7 @@ func invalidate_bullet_type() -> void:
 
 func _build_bullet_type() -> BulletType:
 	var bt := BulletType.new()
+	bt.kind = kind
 	bt.faction = _map_faction()
 	bt.tint_mode = BulletType.TintMode.BLEND if tint_mode == TintMode.BLEND else BulletType.TintMode.MULTIPLY
 	bt.hitbox_radius = hitbox_radius

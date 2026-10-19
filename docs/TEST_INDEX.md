@@ -19,15 +19,15 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：121 脚本 / **865 用例（865 通过 / 0 红 —— ✅ 全绿）/ 7966 断言 / 57.865s** / 19 orphans / **0 pending**。
+**现状**：121 脚本 / **867 用例（867 通过 / 0 红 —— ✅ 全绿）/ 7969 断言 / 57.804s** / 19 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 30 | 193 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 45 | 382 | `scripts/**` 的实体/系统/服务 |
+| **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **C 宿主 · 运行时系统** | 45 | 383 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 13 | 86 | `scripts/workbench/**`、创作站 |
@@ -53,7 +53,7 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：类型不匹配 / **严格模式未知键** / **多脚本并集未知键**要响亮报错 | 10 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（30 / 193）
+## B · 内核 · 原生 C++ + 桥接（30 / 194）
 
 ### B1 parity 套件（13 文件 / 100 用例）—— 依赖 `test/reference/` 冻结 oracle
 
@@ -88,7 +88,7 @@
 | [test_kernel_reset](../test/test_kernel_reset.gd) | 内核注册表重置（工作台清场：回收 program / 弹型） | 2 | 5 |
 | [test_native_behavior_batch](../test/test_native_behavior_batch.gd) | 无状态 `behavior_batch` ↔ 有状态 `behavior_tick` 1:1 + dead 返回 | 3 | 0 |
 | [test_native_event_dispatch](../test/test_native_event_dispatch.gd) | 行为事件必须按**事件自己的 program**（`eprog`）派发 | 1 | 0 |
-| [test_native_laser_anchor](../test/test_native_laser_anchor.gd) | 端到端桥接：魔理沙激光段必须贴**子机锚点**而非自机 | 1 | 0 |
+| [test_native_laser_anchor](../test/test_native_laser_anchor.gd) | 端到端桥接：魔理沙激光段必须贴**子机锚点**而非自机 + **只清 LASER kind、不动普通弹** | 2 | 0 |
 
 | [test_native_reflect](../test/test_native_reflect.gd) | `reflect()` 镜面方向（dk=6）：左右翻 x / 上墙翻 y / 角落原路返回 / `angle` 微散 / 未贴边退化 / 编译成 dk=6（**原生专属**：参照解释器是冻结 vendor，不实现新原语） | 6 | 0 |
 ### B3 Lifecycle 描述符与发射原语（6 文件 / 27 用例）
@@ -106,7 +106,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（45 / 382）
+## C · 宿主 · 运行时系统（45 / 383）
 
 ### C1 组合根 / 服务 / 时间线（10 / 59）
 
@@ -140,7 +140,7 @@
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_laser](../test/test_laser.gd) | Laser 2.0：骨架采样 + 生长/持续/收缩状态机 + 判定/擦弹 | 23 | 20 |
-| [test_marisa_laser](../test/test_marisa_laser.gd) | 魔理沙分段激光：切片 + 偏移无缝 + 编译加载 | 2 | 4 |
+| [test_marisa_laser](../test/test_marisa_laser.gd) | 魔理沙分段激光：切片 + 偏移无缝 + 编译加载 + **BulletData.kind → BulletType.kind** | 3 | 4 |
 
 ### C4 Boss 战（4 / 34）
 

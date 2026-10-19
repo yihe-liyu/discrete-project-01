@@ -26,10 +26,11 @@
 
 ## 索引
 
-> 共 56 条（本文件留最近 56 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 57 条（本文件留最近 57 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-19 — 把「卡摩瑞一非」迁到 ring（保留旧路径 A/B）
 - 2026-10-19 — AsyncCoroutineScript：`await ctx.clock.delay()` 接入确定性时钟
+- 2026-10-19 — 修 Marisa 激光锚点失效（阶段台报 anchor id 已失效）
 - 2026-10-19 — 「卡摩瑞一非」改 AsyncCoroutineScript（端到端验证）
 - 2026-10-19 — Pattern spike：BulletPattern / PatternParams / ring
 - 2026-10-19 — 拆 `spell_practice_menu`：770 → 348 + Data / ListView
@@ -106,6 +107,14 @@
 - **测试**：`test_async_coroutine` 5 例 / 20 断言 —— 手动 tick / 暂停冻结 / stop 唤醒并返回 false / 真实 `_physics_process` / `finished`。
 - **内容目录**：`ContentCatalog._is_coroutine_script` 补认 `AsyncCoroutineScript`，否则 async 阶段脚本会从目录消失（`test_content_catalog` 补夹具）。
 - **未做**：还没迁现有内容；先保留旧 `_tick` A/B，下一步拿一张符卡验证。
+
+### 2026-10-19 — 修 Marisa 激光锚点失效（阶段台报 anchor id 已失效）
+
+- **现象**：`BulletLifecycle.anchor_base(): 锚点 id=… 已失效/不是 Node2D，退回自机`，每 id 报一次。
+- **根因**：Marisa 非 focus 激光段 `_laser_anchor(source)` 把**子机节点 instance_id** 写进 per-shot anchor；火力变化导致 `_sync_options` 移除子机 / 阶段台重开重建 player 时，旧激光段还活着，anchor id 失效。不是 async/ring 的锅。
+- **修法**：`BulletData.kind`（POINT/LASER）→ `BulletType.kind`；`MarisaShoot` 激光段标 LASER；`KernelBulletHost.clear_laser_bullets()` 倒序清 LASER 行；`BulletManager/BulletService` 暴露；`PlayerShootScript` 在**移除子机 / cleanup** 前清激光，避免旧锚点。
+- **附带**：`MarisaLaserFade` 原本按 `kind == LASER` 清段，但激光段此前没标 kind；现在标记后，松手/切 focus 的整批淡出也真正生效。
+- **测试**：`test_native_laser_anchor` 只清 LASER；`test_marisa_laser` kind 映射。全量 **867 用例 / 7969 断言**；verify 七步全绿。
 
 ### 2026-10-19 — 「卡摩瑞一非」改 AsyncCoroutineScript（端到端验证）
 

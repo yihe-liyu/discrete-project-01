@@ -30,3 +30,9 @@ func test_offset_sequence_is_seamless():
 		if i > 0:
 			assert_eq(prev_y - offset.y, float(inst.SEG_W), "段 %d 与上一段间距应为段宽 32" % i)
 		prev_y = offset.y
+
+
+func test_bullet_data_laser_kind_maps_to_bullet_type():
+	var d := BulletData.new().player()
+	d.kind = BulletType.Kind.LASER
+	assert_eq(d.to_bullet_type().kind, BulletType.Kind.LASER, "BulletData.kind 应带到内核弹型")

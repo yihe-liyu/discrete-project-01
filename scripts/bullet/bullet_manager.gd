@@ -175,6 +175,12 @@ func clear_all():
 	if _multi_mesh:
 		_multi_mesh.clear()
 
+## 清掉魔理沙非 focus 激光段（LASER kind）；子机重建/熄火时调用。
+func clear_laser_bullets() -> void:
+	if _kernel_bullet_host != null:
+		_kernel_bullet_host.clear_laser_bullets()
+
+
 func clear_bullets():
 	if _kernel_bullet_host != null:
 		_kernel_bullet_host.system.clear()

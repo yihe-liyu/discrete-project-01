@@ -70,6 +70,12 @@ func clear_all_lasers() -> void:
 	if bullet_manager: bullet_manager.clear_all_lasers()
 
 
+## 清掉魔理沙非 focus 激光段（LASER kind）；子机重建/熄火时用，避免旧锚点失效。
+func clear_laser_bullets() -> void:
+	if bullet_manager:
+		bullet_manager.clear_laser_bullets()
+
+
 ## 即时清掉**全屏敌弹**，**并逐颗播消弹消散特效**（同色提亮 1.5× —— 与死亡清弹圈/`clear_fx()` 同一套）。
 ## 用途：道中转场、Boss 登场前的清屏、剧情演出清场 —— 语义是"**当帧清空、看得见**"。
 ## ⚠️ 与 `death_clear()` 的分工：那个是**膨胀圈**（从 start_radius 胀到 max_radius，有半径上限、
