@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 51 条（本文件留最近 51 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 52 条（本文件留最近 52 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-19 — 拆 `spell_practice_menu`：770 → 348 + Data / ListView
 - 2026-10-19 — P1 前五步：R2 对话注入 / BGA9 / 内容 lint / 死代码分诊 / 白盒接缝
 - 2026-10-19 — P0 整洁包：C++ 弃用警告 / 行尾空格 / 死常量
 - 2026-10-19 — 存档可靠性：版本号 / 原子写 / .bak 回退 / 读档校验
@@ -81,6 +82,16 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-19 — 拆 `spell_practice_menu`：770 → 348 + Data / ListView
+
+- **动机**：770 行的菜单同时做“记录 → 数据”、“三级列表渲染/滚动/高亮”、“输入/启动/返回状态”，是 P1 清单里最大的单体之一。
+- **拆法**：
+  - `SpellPracticeData`（231 行，RefCounted）：从 `spell_book` 生成 `stages/phases/diff_entries`，解析 Boss 配置、收取进度、`first_unlocked_index()`；不碰树、不碰 UI。
+  - `SpellPracticeListView`（370 行，RefCounted）：三级列表构建、二级窗口开窗/滚动提示、高亮/脉冲/压暗、`get_highlighted_item`；只吃 Data + 选中项。
+  - `spell_practice_menu.gd`（348 行）：生命周期、人物切换、层级/索引、输入、返回状态还原、开始练习；保留 `_stages/_phases/_diff_entries` 只读转发和 `_build_*` 包装，测试/Probe 调用面不变。
+- **顺手**：`diff_entries` 现在由 Data 一次性生成（含 `record` / `card_name`），View 不再自己查 `BossCatalog`；`SpellPracticeMenuProbe` 只改 `set_phases/set_stages` 的落点。
+- **验收**：`test_spell_practice_menu` 20/20；白盒仍 **327/327**；`verify.sh` 七步全绿；853 用例 / 7872 断言。
 
 ### 2026-10-19 — P1 前五步：R2 对话注入 / BGA9 / 内容 lint / 死代码分诊 / 白盒接缝
 

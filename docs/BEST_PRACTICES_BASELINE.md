@@ -166,7 +166,7 @@
 ## 🔴 待改进（达标后清空）
 
 - [ ] **R16**：47MB 二进制未配 Git LFS（`.gitattributes` 仅 EOL 规范化）。
-- [ ] **R18/R19**：`spell_practice_menu.gd`（769）上帝对象；`workbench.gd` 已从 786 拆到 455（10 个预览服务，含 Playback/Bookmarks），`creation_station.gd` 390→274（静态 chrome 进场景 + WorkspaceStore）；Workbench 只剩装配/选项回调/公开接缝，判据是“一个类只做一件事”，行数只是提示。
+- [ ] **R18/R19**：`composer_panel.gd`（1109）仍是工作台最大单体；`spell_practice_menu.gd` 已从 769 拆到 348（`SpellPracticeData` / `SpellPracticeListView` / Probe），`workbench.gd` 455（10 个预览服务），`creation_station.gd` 274；判据是“一个类只做一件事”，行数只是提示。
 - [ ] **R21**：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）。
 - [ ] **编排路线**（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生 / Step 6 `ctx.background` 注入服务待做；5/7 暂缓。
 - [ ] **内核融合（M3）**：M1/M2 完成、M3 已拍板「纹理句柄」；判据改为结构性（0 类型映射 / 0 内容签名侧表）。

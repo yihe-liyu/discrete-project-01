@@ -11,13 +11,13 @@ func _init(menu) -> void:
 	_menu = menu
 
 func set_phases(phases: Array[Dictionary]) -> void:
-	_menu._phases = phases
+	_menu._spell_practice_data.phases = phases
 
 func phases_count() -> int:
 	return _menu._phases.size()
 
 func clear_phases() -> void:
-	_menu._phases.clear()
+	_menu._spell_practice_data.phases.clear()
 
 func phase_box() -> VBoxContainer:
 	return _menu._phase_box
@@ -41,13 +41,13 @@ func section() -> int:
 	return _menu._section
 
 func set_stages(stages: Array[int]) -> void:
-	_menu._stages = stages
+	_menu._spell_practice_data.stages = stages
 
 func stages_count() -> int:
 	return _menu._stages.size()
 
 func clear_stages() -> void:
-	_menu._stages.clear()
+	_menu._spell_practice_data.stages.clear()
 
 func set_char_index(index: int) -> void:
 	_menu._char_index = index
@@ -59,7 +59,7 @@ func stage_index() -> int:
 	return _menu._stage_index
 
 func phase_offset() -> int:
-	return _menu._phase_offset
+	return _menu._spell_practice_list_view.phase_offset_value()
 
 func char_name_text() -> String:
 	return _menu._char_name.text
