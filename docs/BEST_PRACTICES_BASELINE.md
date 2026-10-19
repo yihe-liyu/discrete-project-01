@@ -162,6 +162,7 @@
 - **bomb 数据模型**（`BombData` 家族 + `KernelBulletHost.spawn_bomb` 按实际类型分派）→ `ARCHITECTURE.md` §6 · `CONTENT_GUIDE.md` §四。
 - **弹型与贴图**（`data/bullets/*.tres` = 外观+碰撞+朝向；贴图 = 1024² 图集）→ `DANMAKU_API.md` §7.1。
 - **纹理插座**（`_texture_by_index` / `texture_for_index()` 是设计 seam，不是债）→ `docs/archive/M3_TEXTURE_OWNERSHIP_DECISION.md`。
+- **Pattern（实验）**：`BulletPattern` 基类 + `PatternParams`（手感 `.tres`）+ `data/patterns/ring.gd`；具体 pattern **不写 `class_name`**，由内容 preload / 目录扫描；只给基类/参数类进全局类表。
 
 ## 🔴 待改进（达标后清空）
 

@@ -23,6 +23,17 @@ func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base
 		bullet_manager.shoot_bullet(bullet_data, at, dir)
 
 
+## 按**方向数组**逐发（pattern 用：方向已在 pattern 里算好，服务只负责发射）。
+func shoot_directions(bullet_data: BulletData, directions: Array[Vector2], at: Vector2,
+		sfx: AudioStream = null) -> void:
+	if not is_active or bullet_data == null or directions.is_empty() or bullet_manager == null:
+		return
+	if sfx:
+		AudioManager.play_sfx(sfx)
+	for direction in directions:
+		bullet_manager.shoot_bullet(bullet_data, at, direction)
+
+
 # ── 激光 ──
 
 ## 骨架级生成（配合 LaserPresets 预设）：最灵活入口
