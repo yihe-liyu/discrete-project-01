@@ -109,7 +109,7 @@ func _tick(p_ctx: StageContext):
 	var 往返弹方向: Vector2
 	if 难度高于Hard:
 		往返弹方向 = Vector2(-sin(发弹点当前角度), cos(发弹点当前角度))
-	else: 
+	else:
 		往返弹方向 = Vector2(-cos(发弹点当前角度), -sin(发弹点当前角度))
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
 	var 夹角弹角度间隔 := TAU / 个数

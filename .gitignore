@@ -12,6 +12,10 @@ node_modules/
 package-lock.json
 package.json
 
+# Python 工具缓存（py_compile / 本地脚本）
+__pycache__/
+*.pyc
+
 # 本地恢复备份（勿提交）
 .recovery_backup/
 

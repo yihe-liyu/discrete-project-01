@@ -6,11 +6,8 @@ class_name Player
 @onready var animation: AnimatedSprite2D = $AnimatedSprite2D
 @onready var muzzle: Marker2D = $Muzzle
 
-const FRONT_UP: float = GameConfig.FIELD_TOP
-const FRONT_DOWN: float = GameConfig.FIELD_BOTTOM
 const FRONT_LEFT: float = GameConfig.FIELD_LEFT
 const FRONT_RIGHT: float = GameConfig.FIELD_RIGHT
-const MIN_MARGIN: int = 8
 
 ## 关卡上下文（StageRuntime/game_scene 注入，系统操作走服务）
 var ctx: StageContext

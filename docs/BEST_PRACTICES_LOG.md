@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 49 条（本文件留最近 49 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 50 条（本文件留最近 50 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-19 — P0 整洁包：C++ 弃用警告 / 行尾空格 / 死常量
 - 2026-10-19 — 存档可靠性：版本号 / 原子写 / .bak 回退 / 读档校验
 - 2026-10-19 — 原生库构建指纹：`get_build_id()` + verify 重算源码哈希
 - 2026-10-19 — BGT5 + BGA12：工作台背景视口停渲染 + 相机初值唯一来源
@@ -80,6 +81,16 @@
 
 ## 记录
 
+### 2026-10-19 — P0 整洁包：C++ 弃用警告 / 行尾空格 / 死常量
+
+- **范围**：只做“确认无引用”的安全清理，不动公开内容 API、不拆文件。
+- **C++**：3 处 `ABS` → `Math::abs`（godot-cpp 4.7 已弃用 `ABS`），debug/release 重编 **0 warnings**。
+- **空白/注释**：清掉 4 处行尾空格；`layer_config.gd` 的 `SPELL_PORTRAIT` 合并重复的 `##` 注释（旧注释把“符卡背景”的说明挂到了立绘上）。
+- **死常量**：删除 `FRONT_UP` / `FRONT_DOWN` / `MIN_MARGIN`（`player.gd`）、`DIFF_ITEM_SIZE`（`character_screen.gd`）；同步去掉 `game_config.gd` 注释里对 `MIN_MARGIN` 的引用。`DEFAULT_CENTER_Y` **保留**（`test_workbench_align` 用它断言默认起点）。
+- **死函数只报告不删**：整仓有 46 个生产函数在声明处之外无引用，其中一部分是留给内容脚本的公开动词；先记录，不在 P0 里批量删。
+- **指纹**：源码变化后原生构建指纹从 `0322b13bdb12` → `cc64cfa470a1`（verify 会自动比对）。
+- **验收**：`verify.sh` 七步全绿；851 用例 / 7857 断言。
+
 ### 2026-10-19 — 存档可靠性：版本号 / 原子写 / .bak 回退 / 读档校验
 
 - **起因**：`SaveManager` 只有 60 行，直接 `ConfigFile.save(SAVE_PATH)`；写到一半崩溃会同时毁掉设置和高分，主档损坏时下次保存又会直接覆盖。
@@ -100,7 +111,7 @@
   - C++ 新增 `get_build_id()`（`D_METHOD` 自动进入 NK9 的 API 对齐）。
   - `tools/check_native_api.gd` 用同一算法重算源码指纹，与运行时值比对；`verify.sh` 打印匹配结果，源码改了没重编 → 直接红。
 - **反向验证**：临时往 `danmaku_store.h` 追加一行注释，检查立刻报 `binary=0322b13bdb12 source=95fc9a677de4`；恢复后重新匹配。
-- **验收**：debug + release 重编；原生 API **60 methods**；指纹 `0322b13bdb12`。
+- **验收**：debug + release 重编；原生 API **60 methods**；指纹先为 `0322b13bdb12`，P0 清理后更新为 `cc64cfa470a1`。
 
 ### 2026-10-19 — BGT5 + BGA12：工作台背景视口停渲染 + 相机初值唯一来源
 

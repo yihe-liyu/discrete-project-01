@@ -771,7 +771,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 				if (remain <= 0.0f) { break; }
 				step = CLAMP(step, -remain, remain);
 			}
-			slots[si] = turned + ABS(step);
+			slots[si] = turned + Math::abs(step);
 			const int mode = (int)a[3];
 			if (mode != 2) { const Vector2 r = v.rotated(step); _vx[i] = r.x; _vy[i] = r.y; }
 			if (mode != 1) { const Vector2 h = Vector2(_hx[i], _hy[i]).rotated(step); _hx[i] = h.x; _hy[i] = h.y; }
@@ -1174,8 +1174,8 @@ PackedByteArray DanmakuStore::get_factions_bytes() const {
 static bool _circle_rect(const Vector2 &center, float radius, const Vector2 &rect_center, float rot, const Vector2 &size) {
 	const Vector2 local = (center - rect_center).rotated(-rot);
 	const Vector2 half = size * 0.5f;
-	const float dx = MAX(0.0f, ABS(local.x) - half.x);
-	const float dy = MAX(0.0f, ABS(local.y) - half.y);
+	const float dx = MAX(0.0f, Math::abs(local.x) - half.x);
+	const float dy = MAX(0.0f, Math::abs(local.y) - half.y);
 	return dx * dx + dy * dy <= radius * radius;
 }
 

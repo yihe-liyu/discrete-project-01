@@ -5,8 +5,6 @@ extends NavPage
 @onready var _difficulty_badge: TextureRect = $DifficultyBadge
 
 const FLY_DURATION: float = 0.5
-## 难度页面中选项的大小
-const DIFF_ITEM_SIZE: Vector2 = Vector2(256, 156)
 
 ## 难度贴图路径，按索引 [Easy, Normal, Hard, Lunatic]
 const DIFF_TEX_PATHS: Array[String] = [

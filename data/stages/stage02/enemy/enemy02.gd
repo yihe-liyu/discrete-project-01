@@ -1,5 +1,5 @@
 extends CoroutineScript
-## 
+##
 
 var target_pos1: Vector2
 var target_pos2: Vector2

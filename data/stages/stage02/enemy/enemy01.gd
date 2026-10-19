@@ -1,5 +1,5 @@
 extends CoroutineScript
-## 
+##
 
 var target_pos: Vector2
 var bullet_name: String

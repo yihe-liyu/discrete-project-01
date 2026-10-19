@@ -231,7 +231,7 @@ func _on_boss_fight() -> void:
 		1.0)
 	
 	_timeline.wait(2.0).do(func(): 关底卡摩瑞句柄.defeat())
-	_timeline.wait(4.5).do(func(): 
+	_timeline.wait(4.5).do(func():
 			if SaveData.selected_character == 0:
 				_stage_director.dialogue(STAGE01_REIMU.灵梦战斗后())
 			else:

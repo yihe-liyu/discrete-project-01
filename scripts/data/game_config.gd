@@ -15,7 +15,7 @@ const FIELD_CENTER_X: float = 448.0
 const FIELD_CENTER_Y: float = 480.0
 
 ## 自机中心的活动边界（Player clamp 与创作台 ghost 共用，保证“可存在范围”一致）
-## 真游戏 Player：x 各内缩 24（MIN_MARGIN*3），y 各内缩 32（MIN_MARGIN*4）
+## 真游戏 Player：x 各内缩 24，y 各内缩 32
 const PLAYER_MIN_X: float = 88.0
 const PLAYER_MAX_X: float = 808.0
 const PLAYER_MIN_Y: float = 64.0
