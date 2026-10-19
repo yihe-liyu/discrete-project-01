@@ -4,7 +4,7 @@ extends RefCounted
 ##
 ## 铁律：索引永不手写清单；按「目录/命名约定 + ## @role 注解」从文件自动生成。
 ## 角色判定优先级：@role 注解 > 路径/命名约定；两者打架 → warning（响亮，不静默）。
-## 边界：只扫 data/（内容边界）；只收 extends CoroutineScript/CoroutineRunner 的 .gd；
+## 边界：只扫 data/（内容边界）；只收 extends CoroutineScript/CoroutineRunner/AsyncCoroutineScript 的 .gd；
 ##       dialogue/ 目录排除（对话脚本非演出逻辑）。
 
 const ROLE_STAGE := "stage"
@@ -146,7 +146,7 @@ func _scan_script(path: String) -> void:
 	var text: String = FileAccess.get_file_as_string(path)
 	if text.is_empty():
 		return
-	# 边界：只收协程脚本（extends CoroutineScript / CoroutineRunner / 路径式 extends）
+	# 边界：只收协程脚本（extends CoroutineScript / CoroutineRunner / AsyncCoroutineScript / 路径式 extends）
 	if not _is_coroutine_script(text):
 		return
 	var ann := _parse_header(text)
@@ -377,7 +377,9 @@ func _convention_role(path: String) -> String:
 func _is_coroutine_script(text: String) -> bool:
 	return text.contains("extends CoroutineScript") \
 		or text.contains("extends CoroutineRunner") \
-		or text.contains("coroutine_script.gd")
+		or text.contains("extends AsyncCoroutineScript") \
+		or text.contains("coroutine_script.gd") \
+		or text.contains("async_coroutine_script.gd")
 
 
 ## 解析**文件顶部**注释块，取显示名/描述/角色注解：

@@ -26,10 +26,11 @@
 
 ## 索引
 
-> 共 55 条（本文件留最近 55 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 56 条（本文件留最近 56 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-19 — 把「卡摩瑞一非」迁到 ring（保留旧路径 A/B）
 - 2026-10-19 — AsyncCoroutineScript：`await ctx.clock.delay()` 接入确定性时钟
+- 2026-10-19 — 「卡摩瑞一非」改 AsyncCoroutineScript（端到端验证）
 - 2026-10-19 — Pattern spike：BulletPattern / PatternParams / ring
 - 2026-10-19 — 拆 `spell_practice_menu`：770 → 348 + Data / ListView
 - 2026-10-19 — P1 前五步：R2 对话注入 / BGA9 / 内容 lint / 死代码分诊 / 白盒接缝
@@ -103,7 +104,16 @@
 - **新增**：`ClockService.runner` + `delay(seconds) -> bool` / `next_tick() -> bool`；只等 `runner.ticked`，所以 pause/逐帧/快进/`tick_manual` 一致。
 - **新增**：`AsyncCoroutineScript extends CoroutineScript`：内容写 `func run_async(ctx)`，用 `while ctx.active(): ... await ctx.clock.delay(0.8)`；旧 `_tick` 脚本不受影响。
 - **测试**：`test_async_coroutine` 5 例 / 20 断言 —— 手动 tick / 暂停冻结 / stop 唤醒并返回 false / 真实 `_physics_process` / `finished`。
+- **内容目录**：`ContentCatalog._is_coroutine_script` 补认 `AsyncCoroutineScript`，否则 async 阶段脚本会从目录消失（`test_content_catalog` 补夹具）。
 - **未做**：还没迁现有内容；先保留旧 `_tick` A/B，下一步拿一张符卡验证。
+
+### 2026-10-19 — 「卡摩瑞一非」改 AsyncCoroutineScript（端到端验证）
+
+- `卡摩瑞一非.gd` 从 `_tick` 手动状态机（距下一波 / 波内计时 / 剩余次数）改为 `run_async`：
+  `while ctx.active(): await delay(波间隔); ...; for 本波开花次数: 开花(); await delay(0.01)`。
+- 时间语义保持：首波 2.4s、波内 0.01s、无 target 时只等待；ring / 旧 `shoot_spread` 的 A/B 开关保留。
+- **回归**：`ContentCatalog` 原先只认 `extends CoroutineScript/CoroutineRunner`，async 脚本会从目录消失；补认 `AsyncCoroutineScript`，并加夹具测试。
+- **验收**：stage01 headless 70s 无脚本错误；全量 **865 用例 / 7966 断言**；verify 七步全绿。
 
 ### 2026-10-19 — Pattern spike：BulletPattern / PatternParams / ring
 

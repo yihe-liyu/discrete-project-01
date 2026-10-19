@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：121 脚本 / **864 用例（864 通过 / 0 红 —— ✅ 全绿）/ 7933 断言 / 58.057s** / 19 orphans / **0 pending**。
+**现状**：121 脚本 / **865 用例（865 通过 / 0 红 —— ✅ 全绿）/ 7966 断言 / 57.865s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 193 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 45 | 381 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 45 | 382 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 13 | 86 | `scripts/workbench/**`、创作站 |
@@ -106,7 +106,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（45 / 381）
+## C · 宿主 · 运行时系统（45 / 382）
 
 ### C1 组合根 / 服务 / 时间线（10 / 59）
 
@@ -190,7 +190,7 @@
 |---|---|---|---|
 | [test_dialogue_preview](../test/test_dialogue_preview.gd) | 对话预览交互契约：**默认不自动播**（进场景预选但不播 / 换段只选中并停演出 / 换脚本同理） | 3 | 0 |
 | [test_dialogue_steps](../test/test_dialogue_steps.gd) | 对话系统：`StageState` / `DialogueSteps` DSL / `DialogueRunner`（纯逻辑，不进树） | 28 | 0 |
-| [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块** · **阶段按 uid 升序（符卡优先、非符路径定序）** · `@role` 补空缺不算冲突 · **角色标签只在敌人脚本里砍、前缀要「标签形状」** | 9 | 0 |
+| [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块** · **阶段按 uid 升序（符卡优先、非符路径定序）** · `@role` 补空缺不算冲突 · **角色标签只在敌人脚本里砍、前缀要「标签形状」** · **`AsyncCoroutineScript` 也入目录** | 10 | 0 |
 | [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` + **`playable()`（可玩清单）在扫描兜底下滤掉无关卡脚本的面** | 4 | 0 |
 
 ## D · UI / 菜单（16 / 113）

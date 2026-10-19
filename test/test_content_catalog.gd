@@ -185,6 +185,14 @@ func test_fixture_meta_const():
 
 ## ── 夹具：preload 引用反查 ──
 
+func test_fixture_async_script_is_cataloged():
+	var cat = CAT.new().scan(FIXTURE)
+	var entry = cat.find(FIXTURE.path_join("stages/stageF/enemy/async_e.gd"))
+	assert_not_null(entry, "AsyncCoroutineScript 应被目录收录")
+	if entry:
+		assert_eq(entry.role, "enemy", "路径约定仍应推出 enemy")
+
+
 func test_fixture_refs_from():
 	var cat = CAT.new().scan(FIXTURE)
 	var enemy = cat.find(FIXTURE.path_join("stages/stageF/enemy/e.gd"))
@@ -216,6 +224,7 @@ func _build_fixture() -> void:
 	_write(FIXTURE.path_join("stages/stageF/stage_script/f_stage.gd"),
 		"extends CoroutineScript\n## 夹具关卡\n\nconst E = preload(\"%s\")\n" % FIXTURE.path_join("stages/stageF/enemy/e.gd"))
 	_write(FIXTURE.path_join("stages/stageF/enemy/e.gd"), "extends CoroutineScript\n## 夹具敌人\n")
+	_write(FIXTURE.path_join("stages/stageF/enemy/async_e.gd"), "extends AsyncCoroutineScript\n## 异步敌人\n")
 	_write(FIXTURE.path_join("stages/stageF/enemy/x_move.gd"),
 		"extends CoroutineScript\n## @role: bullet\n## @name: 测试弹\n## 这是描述行\n")
 	_write(FIXTURE.path_join("stages/stageF/enemy/y_bullet.gd"), "extends CoroutineScript\n## 普通螺旋弹\n")

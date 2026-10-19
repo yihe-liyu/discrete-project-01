@@ -301,7 +301,8 @@ data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见
 
 ## 六、脚本层约定
 
-> 全部继承 `CoroutineScript`（`scripts/coroutine/base/coroutine_script.gd`）。
+> 旧 `_tick` 风格继承 `CoroutineScript`（`scripts/coroutine/base/coroutine_script.gd`）；
+> async 风格继承 `AsyncCoroutineScript`（仍是 `CoroutineScript` 子类，目录/阶段台无需改类型）。
 
 ### 协程返回值约定
 
@@ -310,6 +311,23 @@ return ctx.clock.wait(2.0)  # 等待 2 秒后再次调用
 return true                  # 下物理帧立即再次调用
 return false                 # 结束协程
 ```
+
+### async 协程（可选，复杂循环更舒服）
+
+```gdscript
+extends AsyncCoroutineScript
+
+func run_async(ctx: StageContext) -> void:
+	while ctx.active():
+		RING.new().fire(ctx, p, target.global_position, 随机角度)
+		if not await ctx.clock.delay(0.8):
+			return
+```
+
+- **只等 `ctx.clock.delay / next_tick`**；不要用 `Timer` / `SceneTreeTimer` 做内容时间。
+- 跟 `CoroutineRunner` 一条时钟 ⇒ 暂停 / 逐帧 / 快进 / `tick_manual` 一致。
+- 旧 `_tick` 脚本不用动；`Timeline` 仍适合纯排程，两者可共存。
+- async 状态不能倒带：向后 seek 仍是“重跑 + 快进”。
 
 ### 弹型实例复用（M2 起）
 
