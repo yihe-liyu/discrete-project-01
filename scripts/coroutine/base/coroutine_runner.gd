@@ -20,12 +20,17 @@ class_name CoroutineRunner
 ## 恢复后不会追帧，时钟从暂停处继续。
 
 signal finished()
+## 每个物理 tick 后发一次（含 `tick_manual`）；`AsyncCoroutineScript` 的 `ctx.clock` 等它。
+## 注意：`stop()` 也会发一次 `ticked(0.0)`，用于唤醒挂起的 await（调用方必须检查 is_running）。
+signal ticked(delta: float)
 
 var is_running: bool = false
 var _is_paused: bool = false
 var _tasks: Array[Task] = []
 var _clock: float = 0.0  # 游戏内时间（物理帧累积，暂停时冻结）
 var _last_dt: float = 0.0  # 当前帧物理步长（time_scale 生效；节点/无节点模式一致）
+## async 模式没有 task，但仍要保持 runner 存活（否则空任务会立刻 finished）。
+var _async_keepalive: bool = false
 
 
 ## 当前帧物理步长（协程脚本用这个代替 get_physics_process_delta_time()：
@@ -63,10 +68,31 @@ func stop():
 	if not is_running:
 		return
 	_is_paused = false
+	_async_keepalive = false
 	for task in _tasks:
 		task.callable = Callable()
 	_tasks.clear()
 	is_running = false
+	# 唤醒挂起的 async await；它们看到 is_running == false 后自行返回。
+	ticked.emit(0.0)
+
+
+## 进入 async 模式：没有 task，但时钟照走；由 [AsyncCoroutineScript] 调用。
+func begin_async() -> void:
+	_tasks.clear()
+	_is_paused = false
+	_clock = 0.0
+	_async_keepalive = true
+	is_running = true
+
+
+## async 函数正常返回：关掉 keepalive 并只发一次 finished。
+func end_async() -> void:
+	if not is_running:
+		return
+	_async_keepalive = false
+	is_running = false
+	finished.emit()
 
 
 ## 临时暂停：冻结时钟，任务保留（恢复后继续）
@@ -88,6 +114,7 @@ func _physics_process(_delta: float) -> void:
 		return  # 暂停时不累积时钟
 	_last_dt = get_physics_process_delta_time()  # 用引擎时钟（time_scale 生效，快进/慢动作正确）
 	_clock += _last_dt
+	ticked.emit(_last_dt)
 	_advance_tasks()
 
 
@@ -100,6 +127,7 @@ func tick_manual(dt: float) -> bool:
 		return true
 	_last_dt = dt
 	_clock += dt
+	ticked.emit(dt)
 	_advance_tasks()
 	return is_running
 
@@ -126,7 +154,7 @@ func _advance_tasks() -> void:
 		else:
 			_tasks.remove_at(i)
 
-	if _tasks.is_empty() and is_running:
+	if _tasks.is_empty() and is_running and not _async_keepalive:
 		is_running = false
 		finished.emit()
 

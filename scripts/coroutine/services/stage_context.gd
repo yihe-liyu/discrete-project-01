@@ -26,7 +26,9 @@ var _stage_objects: StageObjects
 
 var clock: ClockService:
 	get:
-		if _clock_service == null: _clock_service = ClockService.new()
+		if _clock_service == null:
+			_clock_service = ClockService.new()
+			_clock_service.runner = runner
 		return _clock_service
 
 var bullets: BulletService:

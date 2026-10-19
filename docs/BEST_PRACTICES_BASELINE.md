@@ -164,6 +164,7 @@
 - **弹型与贴图**（`data/bullets/*.tres` = 外观+碰撞+朝向；贴图 = 1024² 图集）→ `DANMAKU_API.md` §7.1。
 - **纹理插座**（`_texture_by_index` / `texture_for_index()` 是设计 seam，不是债）→ `docs/archive/M3_TEXTURE_OWNERSHIP_DECISION.md`。
 - **Pattern（实验）**：`BulletPattern` 基类 + `PatternParams`（手感 `.tres`）+ `data/patterns/ring.gd`；具体 pattern **不写 `class_name`**，由内容 preload / 目录扫描；只给基类/参数类进全局类表。
+- **内容协程 async（实验）**：`extends AsyncCoroutineScript` + `run_async(ctx)`；只 `await ctx.clock.delay/next_tick`（跟 `CoroutineRunner` 时钟）；不要用 `Timer`/`SceneTreeTimer` 做内容时间。旧 `_tick` 返回秒数风格保留。
 
 ## 🔴 待改进（达标后清空）
 

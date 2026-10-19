@@ -4,13 +4,13 @@ extends GutTest
 
 class HookProbe extends CoroutineScript:
 	var started: bool = false
-	var ticked: int = 0
+	var tick_calls: int = 0
 
 	func _on_start() -> void:
 		started = true
 
 	func _tick(_ctx: StageContext) -> Variant:
-		ticked += 1
+		tick_calls += 1
 		return false
 
 
@@ -26,10 +26,10 @@ func test_on_start_hook_runs_before_first_tick() -> void:
 	var p := _probe()
 	var probe: HookProbe = p[1]
 	assert_false(probe.started, "start 前不应触发 _on_start")
-	assert_eq(probe.ticked, 0, "start 前不应 _tick")
+	assert_eq(probe.tick_calls, 0, "start 前不应 _tick")
 	probe.start(StageContext.new(p[0]))
 	assert_true(probe.started, "start() 应调用 _on_start()")
-	assert_eq(probe.ticked, 0, "_on_start 早于首次 _tick")
+	assert_eq(probe.tick_calls, 0, "_on_start 早于首次 _tick")
 
 
 func test_start_injects_ctx() -> void:

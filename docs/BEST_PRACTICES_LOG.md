@@ -26,9 +26,10 @@
 
 ## 索引
 
-> 共 54 条（本文件留最近 54 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 55 条（本文件留最近 55 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
 - 2026-10-19 — 把「卡摩瑞一非」迁到 ring（保留旧路径 A/B）
+- 2026-10-19 — AsyncCoroutineScript：`await ctx.clock.delay()` 接入确定性时钟
 - 2026-10-19 — Pattern spike：BulletPattern / PatternParams / ring
 - 2026-10-19 — 拆 `spell_practice_menu`：770 → 348 + Data / ListView
 - 2026-10-19 — P1 前五步：R2 对话注入 / BGA9 / 内容 lint / 死代码分诊 / 白盒接缝
@@ -93,6 +94,16 @@
 - **为什么选这一张**：它是 stage01 第一张非符，环弹参数干净（15~30 发 / TAU / 随机基准角），迁移后方向和速度语义与 `shoot_spread` 一致。
 - **踩坑（阶段台实测）**：最初用 `template.duplicate()` 克隆，`BulletData.duplicate()` 会**丢掉未导出的脚本 var**（`faction/tint/tint_mode/lifecycle`）⇒ 环弹回到默认 PLAYER 阵营，阶段台里把 Boss 的血打掉。改为 **template 按引用使用**（只改 `velocity`，与旧 content 一致），并补断言：pattern 不得改模板的阵营/染色。
 - **验收**：`test_pattern_ring` 6/6（含 template 路径）；stage01 headless 60s 无脚本错误；全量 **859 用例 / 7911 断言**；verify 七步全绿。
+
+### 2026-10-19 — AsyncCoroutineScript：`await ctx.clock.delay()` 接入确定性时钟
+
+- **问题**：旧 `_tick` 返回值状态机（`return ctx.clock.wait(0.5)`）在复杂循环/条件里要手写计时变量；直接用 `await` 会绕过 `CoroutineRunner`，暂停/逐帧/回放失真。
+- **新增**：`CoroutineRunner.ticked`（`_physics_process` / `tick_manual` 发；`stop()` 也发 `ticked(0.0)` 唤醒挂起 await）。
+- **新增**：`CoroutineRunner.begin_async()` / `end_async()`：async 模式无 task，用 keepalive 保持 runner 存活；正常返回只发一次 `finished`。
+- **新增**：`ClockService.runner` + `delay(seconds) -> bool` / `next_tick() -> bool`；只等 `runner.ticked`，所以 pause/逐帧/快进/`tick_manual` 一致。
+- **新增**：`AsyncCoroutineScript extends CoroutineScript`：内容写 `func run_async(ctx)`，用 `while ctx.active(): ... await ctx.clock.delay(0.8)`；旧 `_tick` 脚本不受影响。
+- **测试**：`test_async_coroutine` 5 例 / 20 断言 —— 手动 tick / 暂停冻结 / stop 唤醒并返回 false / 真实 `_physics_process` / `finished`。
+- **未做**：还没迁现有内容；先保留旧 `_tick` A/B，下一步拿一张符卡验证。
 
 ### 2026-10-19 — Pattern spike：BulletPattern / PatternParams / ring
 
