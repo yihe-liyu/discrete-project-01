@@ -51,10 +51,11 @@ func fire(p_ctx: StageContext, p: PatternParams, origin: Vector2, direction: Vec
 	var directions := spread_directions(p.count, p.spread, base_dir)
 	if directions.is_empty():
 		return
-	# 每个 wave 建一份 BulletData：pattern 只改自己这一发的速度长度，不污染共享资源。
+	# template 路径按引用使用：与旧 content 共享同一个 BulletData，保留 faction/tint/lifecycle 与类型缓存。
+	# 只改 velocity（旧 content 也是每波 set speed），不重建实例。
 	var shot: BulletData
 	if p.template != null:
-		shot = p.template.duplicate() as BulletData
+		shot = p.template
 	else:
 		shot = BulletData.new().def(p.bullet_def).color(p.color).blend(p.blend)
 		if p.enemy:

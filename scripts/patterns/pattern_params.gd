@@ -12,6 +12,7 @@ extends Resource
 @export var bullet_def: BulletDef
 ## 运行时模板（代码注入；不进 .tres）：已有 BulletData（带 lifecycle/颜色）时优先用它，
 ## 这样把旧内容迁到 pattern 时不必把 lifecycle 重写成参数。
+## ⚠️ 按**引用**使用：pattern 会改它的 velocity；不要跨并发 pattern 共享同一个模板。
 var template: BulletData
 ## 染色 / 阵营 / 混合（pattern 在构造 BulletData 时套用；template 路径不覆盖这些）。
 @export var color: Color = Color.WHITE

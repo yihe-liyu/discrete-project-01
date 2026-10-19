@@ -152,6 +152,7 @@
 - 存档写盘走 `SaveManager` 的 tmp → `.bak` → 提交，不要直接 `ConfigFile.save` 正式档；`ConfigFile.load` 对垃圾文件也可能返回 OK（无任何段）⇒ 必须检查已知段，别把空档当好档。
 - 重构成果靠机械护栏：`tools/check_structure.sh` 看住组合台同名场景壳 / 测试白盒预算只减不增（现 327）/ 唯一来源常量 / 舞台接线唯一 / **内容层不直连**；护栏要先证明会红。
 - 内容层 `data/**` 不自己 `get_parent()` / `create_tween()`：移动走 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path`，Logo 走 `ctx.stage.show_logo`（`check_structure` ⑥ 会红）。
+- `BulletData.duplicate()` 会丢**未导出**的脚本 var（`faction/tint/tint_mode/lifecycle`）⇒ 复用请直接按引用，或用构造链重建；pattern 的 `template` 不要 `duplicate()`（否则阵营回默认 PLAYER，阶段台会打 Boss）。
 - 被托管视图的输入领地要显式划分：宿主 chrome 占更高 `CanvasLayer`（GUI 拾取按画布层从高到低）。
 - 测试用夹具，别拿真实内容当断言标准；内容只做“不数数量、不写死路径”的结构冒烟。
 

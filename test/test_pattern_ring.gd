@@ -71,10 +71,13 @@ func test_ring_fire_spawns_count_bullets():
 
 	# 运行时模板路径：带 lifecycle 的旧 BulletData 可以直接迁进 ring
 	p.bullet_def = null
-	p.template = BulletData.new().enemy().tex("小玉").color(Color.RED)
+	var template := BulletData.new().enemy().tex("小玉").color(Color.RED)
+	p.template = template
 	p.count = 3
 	RING.new().fire(ctx, p, Vector2(100, 100), Vector2.UP)
 	assert_eq(bm.kernel_system().get_active_count(), 3, "template 路径也应发射")
+	assert_eq(template.faction, BulletData.Faction.ENEMY, "pattern 不得改模板阵营")
+	assert_eq(template.tint, Color.RED, "pattern 不得改模板染色")
 	bm.clear_bullets()
 
 

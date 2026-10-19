@@ -91,6 +91,7 @@
 - **模板路径**：`PatternParams.template`（运行时注入，不进 `.tres`）——旧 `BulletData` 自带 `lifecycle`（`accel_heading` / 撞墙 emit 反弹 / despawn），ring 只 `duplicate()` 后改本次 `speed/count`，不把 lifecycle 重写成参数。
 - **A/B 开关**：脚本里 `const USE_RING := true`；`false` 走旧 `shoot_spread` 路径，方便对比手感（确认后删）。
 - **为什么选这一张**：它是 stage01 第一张非符，环弹参数干净（15~30 发 / TAU / 随机基准角），迁移后方向和速度语义与 `shoot_spread` 一致。
+- **踩坑（阶段台实测）**：最初用 `template.duplicate()` 克隆，`BulletData.duplicate()` 会**丢掉未导出的脚本 var**（`faction/tint/tint_mode/lifecycle`）⇒ 环弹回到默认 PLAYER 阵营，阶段台里把 Boss 的血打掉。改为 **template 按引用使用**（只改 `velocity`，与旧 content 一致），并补断言：pattern 不得改模板的阵营/染色。
 - **验收**：`test_pattern_ring` 6/6（含 template 路径）；stage01 headless 60s 无脚本错误；全量 **859 用例 / 7911 断言**；verify 七步全绿。
 
 ### 2026-10-19 — Pattern spike：BulletPattern / PatternParams / ring
@@ -99,7 +100,7 @@
 - **全局类只加 2 个**：`BulletPattern`（基类，`fire()`）与 `PatternParams`（Resource：`bullet_def` / `count` / `speed` / `spread` / `interval` / `duration` / `aim` / `color` / `enemy` / `blend` / `extra`）。
 - **具体 pattern 不写 `class_name`**：`data/patterns/ring.gd` 继承 `BulletPattern`，由内容 preload；`PatternParams` 的 `.tres` 预设只引用 `BulletDef`（`data/bullets/*.tres`），不复制外观。
 - **Ring**：`spread_directions()` 纯函数（整圈 / 扇形 / 单发）+ `fire()` 通过 `ctx.bullets.shoot_directions()` 发射；每波建 `BulletData`，只改自己这一发的速度，不污染共享资源。
-- **测试**：`test_pattern_ring` 6 例 / 39 断言 —— 类型/默认值/方向/预设加载/真实 `BulletManager` 发射 6 发/null ctx 容错。
+- **测试**：`test_pattern_ring` 6 例 / 41 断言 —— 类型/默认值/方向/预设加载/真实 `BulletManager` 发射 6 发/null ctx 容错。
 - **未做**：continuous pattern 的 `PatternHandle`、PatternCatalog、composer 接线（先验证再扩展）。
 - **验收**：`test_pattern_ring` 6/6；`verify.sh` 七步全绿。
 
