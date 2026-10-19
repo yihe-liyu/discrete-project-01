@@ -107,11 +107,6 @@ func _process_hot_reload(delta: float) -> void:
 	_hot_reload_service.poll(delta)
 
 
-## 跳过防抖立刻重载
-func _do_hot_reload() -> void:
-	_hot_reload_service.force()
-
-
 func set_embedded(on: bool) -> void:
 	_embedded = on
 

@@ -198,15 +198,6 @@ func _build_type_table(registry: Array[BulletType], fx_registry: Array[EffectTyp
 	_bridge.set_fx_table(fx_tex_key, fx_duration, fx_scale_from, fx_scale_to, fx_alpha_from, fx_alpha_to, fx_tint)
 
 
-## 分组键（两路共用）：纹理 RID + region + 阵营 + tint_mode → 唯一 int（避免每帧拼字符串）。
-func _group_key(tex: Texture2D, faction: int, tint_mode: int) -> int:
-	var key: int = tex.get_rid().get_id()
-	if tex is AtlasTexture:
-		key = key * 31 + hash((tex as AtlasTexture).region)
-	key = key * 16 + faction * 2 + tint_mode
-	return key
-
-
 ## 内核阵营 → 宿主 Bullet 阵营常量：两枚枚举顺序不同（内核 ENEMY=0/PLAYER=1，宿主 PLAYER=0/ENEMY=1），必须显式映射。
 func _host_faction(kernel_faction: int) -> int:
 	match kernel_faction:

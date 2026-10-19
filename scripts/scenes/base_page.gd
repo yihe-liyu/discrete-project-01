@@ -121,36 +121,6 @@ func _fade_overlay_out(duration: float = OVERLAY_FADE_OUT) -> Tween:
 	return tween
 
 
-## 内容淡入（从右侧滑入 + 透明 → 不透明）
-func _fade_content_in(content: Control, duration: float = OVERLAY_FADE_IN, slide: bool = true) -> void:
-	content.modulate.a = 0.0
-	if slide:
-		content.position.x += 30
-
-	var tween := create_tween().set_parallel(true)
-	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tween.tween_property(content, "modulate:a", 1.0, duration)
-	if slide:
-		tween.tween_property(content, "position:x", content.position.x - 30, duration)
-
-
-## 内容 + 遮罩 一起淡出
-func _fade_all_out(content: Control, content_duration: float = OVERLAY_FADE_OUT, overlay_duration: float = -1.0) -> void:
-	var tween := create_tween().set_parallel(true)
-	tween.tween_property(content, "modulate:a", 0.0, content_duration)
-
-	var overlay_tween := _fade_overlay_out(overlay_duration)
-
-	var cb := func():
-		finished.emit({})
-		queue_free()
-
-	if overlay_tween:
-		overlay_tween.tween_callback(cb)
-	else:
-		tween.tween_callback(cb)
-
-
 ## 覆盖层退场：遮罩淡出 + 内容缩小淡出 → queue_free
 ## 调用前需自行关闭导航（_is_nav_enabled=false, _stop_pulse()）
 func _overlay_leave(content: Control) -> void:

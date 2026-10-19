@@ -1,6 +1,8 @@
 # SpellPracticeMenu.gd — 符卡练习（记录驱动：记录即真相，配置随解锁入记录）
 extends BasePage
 
+const PROBE := preload("res://scripts/scenes/spell_practice_menu_probe.gd")
+
 @onready var _stage_box: VBoxContainer = $StageBox
 @onready var _phase_box: VBoxContainer = $PhaseBox
 @onready var _diff_box: VBoxContainer = $DiffBox
@@ -237,13 +239,13 @@ func _rows_visible(vbox: VBoxContainer) -> int:
 
 ## 一行的实际高度 + 行距：字高由主题字体决定，用一行真 Label 量（写死像素会随字体漂）。
 func _row_pitch(vbox: VBoxContainer) -> float:
-	var probe := Label.new()
-	probe.add_theme_font_size_override("font_size", LIST_FONT_SIZE)
-	probe.text = "0"
-	vbox.add_child(probe)
-	var row_h: float = probe.get_combined_minimum_size().y
-	vbox.remove_child(probe)
-	probe.free()
+	var measure_label := Label.new()
+	measure_label.add_theme_font_size_override("font_size", LIST_FONT_SIZE)
+	measure_label.text = "0"
+	vbox.add_child(measure_label)
+	var row_h: float = measure_label.get_combined_minimum_size().y
+	vbox.remove_child(measure_label)
+	measure_label.free()
 	return row_h + float(vbox.get_theme_constant("separation"))
 
 
@@ -511,12 +513,6 @@ func _pulse_on_vbox(vbox: VBoxContainer, idx: int) -> void:
 		_start_pulse(children[idx])
 
 
-func _pulse_on_diff(idx: int) -> void:
-	var items := _diff_box.get_children()
-	if idx < items.size():
-		_start_pulse(items[idx])
-
-
 # ═══ 脉冲 ═══
 
 func _start_pulse(item: Control) -> void:
@@ -767,3 +763,8 @@ func _start_practice() -> void:
 	AudioManager.stop_bgm()
 	on_leave()
 	GameManager.change_scene("res://scenes/game_scene.tscn")
+
+
+## 测试/调试探针（实现见 spell_practice_menu_probe.gd）。
+func probe():
+	return PROBE.new(self)

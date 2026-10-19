@@ -16,14 +16,11 @@ func _ready() -> void:
 
 
 func _init_enemy() -> void:
-	var parent := get_parent()
-	if not parent:
+	if not target:
 		return
-	
-	parent.create_tween() \
-		.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS) \
-		.tween_property(parent, "global_position", target_pos1, 2) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+	# 移动:减速到第一站位（内容只给意图，tween 机制在 EnemyService）
+	ctx.enemies.move_to(target, target_pos1, 2.0)
 	
 	var lifecycle: BulletLifecycle
 	
@@ -53,10 +50,8 @@ func _init_enemy() -> void:
 	)
 	
 	timeline.at(3).do(func():
-		parent.create_tween() \
-			.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS) \
-			.tween_property(parent, "global_position", target_pos2, 4) \
-			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+		ctx.enemies.move_to(target, target_pos2, 4.0,
+			Tween.EASE_IN, Tween.TRANS_QUAD)
 	)
 	
 	timeline.at(7).do(func():

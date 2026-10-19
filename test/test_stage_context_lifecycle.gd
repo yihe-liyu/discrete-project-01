@@ -8,6 +8,26 @@ func _make_runner() -> CoroutineRunner:
 	return runner
 
 
+## R2：对话框挂到组合根注入的 StageRuntime，不再摸 `get_tree().current_scene`。
+func test_dialogue_box_is_parented_to_injected_stage() -> void:
+	var rt := StageRuntime.new()
+	add_child_autofree(rt)
+	var runner := _make_runner()
+	runner.run(func(): return true)
+	var ctx := StageContext.new(runner)
+	ctx.stage = rt
+	ctx.play_dialogue_steps([])
+
+	assert_gt(rt.get_child_count(), 0, "对话服务应实例化并挂上对话框")
+	if rt.get_child_count() == 0:
+		return
+	var box := rt.get_child(rt.get_child_count() - 1)
+	assert_true(box is CanvasLayer, "对话框根是 CanvasLayer")
+	assert_eq(box.get_parent(), rt, "对话框应挂在注入的 StageRuntime 下（不是 current_scene）")
+	box.queue_free()
+	await get_tree().process_frame
+
+
 func test_stage_context_with_dialogue_service_is_freed():
 	var runner := _make_runner()
 	var ctx := StageContext.new(runner)

@@ -168,6 +168,34 @@ func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -
 	return boss
 
 
+## 关卡 Logo：在 top_center 处淡入 → 停留 → 淡出，然后释放整层。
+## 内容只给纹理与位置；`create_tween` / CanvasLayer 的机制留在这里（BGA5：内容不自己造 tween）。
+func show_logo(texture: Texture2D, top_center: Vector2, fade_in: float = 2.0,
+		hold: float = 3.0, fade_out: float = 1.0) -> void:
+	if texture == null:
+		push_warning("StageRuntime.show_logo: texture 为 null，跳过")
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 32
+	layer.follow_viewport_enabled = true
+	var logo := TextureRect.new()
+	logo.texture = texture
+	logo.global_position = top_center - Vector2(texture.get_size().x * 0.5, 0.0)
+	logo.modulate.a = 0.0
+	layer.add_child(logo)
+	# 挂到本关协程脚本下：关卡停止时随它一起释放（与旧实现的生命周期一致）。
+	var owner_node: Node = current_stage_script()
+	if not is_instance_valid(owner_node):
+		owner_node = self
+	owner_node.add_child(layer)
+	var tween := layer.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	tween.tween_property(logo, "modulate:a", 1.0, fade_in)
+	if hold > 0.0:
+		tween.tween_interval(hold)
+	tween.tween_property(logo, "modulate:a", 0.0, fade_out)
+	tween.tween_callback(layer.queue_free)
+
+
 ## 开一场"仅单个阶段"的战（符卡练习）：自建一个可运行的协程时钟作 ctx，
 ## 生成对应 Boss 并直接让它进入该阶段。
 ## 与 load_stage（整关编排）不同：本方法只服务"点杀单阶段"，故自建 clock，不复用整关脚本。

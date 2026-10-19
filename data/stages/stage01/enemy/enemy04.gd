@@ -18,8 +18,7 @@ func _ready() -> void:
 
 
 func _init_enemy() -> void:
-	var parent := get_parent()
-	if not parent:
+	if not target:
 		return
 
 	# 弹幕（复用弹型实例）

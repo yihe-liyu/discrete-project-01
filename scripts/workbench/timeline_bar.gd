@@ -140,11 +140,6 @@ func _font() -> Font:
 	return font
 
 
-## 时刻 → 像素 x（当前窗口）
-func _time_to_pixel_x(time_sec: float, width: float) -> float:
-	return (time_sec - window_start) / maxf(window_len, 0.001) * width
-
-
 # ═══ 输入 ═══
 
 func _gui_input(event: InputEvent) -> void:

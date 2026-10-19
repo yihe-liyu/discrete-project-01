@@ -31,7 +31,5 @@ func _tick(p_ctx: StageContext):
 	if _moving:
 		return false          # 第二轮：位移已走完 → 结束 → 宣言
 	_moving = true
-	var tw := target.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(target, "global_position", dest, move_time)
-	return p_ctx.clock.wait(move_time)   # 等这条 tween 走完再来第二轮
+	p_ctx.boss.move_to(target, dest, move_time, Tween.EASE_IN_OUT, Tween.TRANS_QUAD)
+	return p_ctx.clock.wait(move_time)   # 等这条移动走完再来第二轮

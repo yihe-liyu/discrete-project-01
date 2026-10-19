@@ -247,17 +247,6 @@ func _make_fragment_region(tex: Texture2D, index: int) -> AtlasTexture:
 	return at
 
 
-## 根据 life_values[i] 选帧：0.0=空(隐藏), 0.0~0.2=帧0, ..., 0.8~1.0=帧4(碎片), 1.0=帧5(完整)
-func _life_frame(value: float) -> int:
-	if value <= 0.0:
-		return -1
-	elif value >= 1.0:
-		return 5
-	else:
-		# 0.0 < value < 1.0 → 帧 0~4
-		return mini(int(value * 5.0), 4)
-
-
 func _update_fragments() -> void:
 	if resources == null:
 		return

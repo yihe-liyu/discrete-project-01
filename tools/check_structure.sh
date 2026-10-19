@@ -3,7 +3,7 @@
 #
 # 为什么需要：S1–S4 的成果（接缝化 / 抽服务 / 装配合一）都是"靠人记得"的约定；
 # 靠记性的约定会在下一次改动里静默退化（本轮就踩到：创作台页签被子视图吃掉点击）。
-# 这里只查**能被机械验证**的四条，不查文风：
+# 这里只查**能被机械验证的六条**，不查文风：
 #
 #   ① 组合台必须有同名场景壳：`scripts/workbench/X_bench.gd` ↔ `scenes/workbench/X_bench.tscn`，
 #      脚本 `extends BenchBase`，且场景根节点挂的就是这个脚本。
@@ -12,6 +12,8 @@
 #   ④ 舞台接线唯一：`bullet_manager.inject_*(...)` 这类调用只允许出现在 `stage_host.gd`
 #      （S4 的成果；调用点自己接线就是分叉，漏一句就出隐性 bug）。
 #   ⑤ 跨语言常量一致：C++ OPS_ARGS / SLOT_STRIDE 必须与 GDScript ARGS / MAX_SLOTS 相同。
+#   ⑥ 内容层不直连：`data/**/*.gd` 不得出现 `get_parent()` / `create_tween()`（BGA5；
+#      取背景走 `ctx.background`，移动/渐变走 `ctx.enemies` / `ctx.boss` / `ctx.stage` 的意图动词）。
 #
 # 用法: bash tools/check_structure.sh   （默认只报告；`--fail` 时有违规 exit 1）
 set -e
@@ -42,7 +44,7 @@ for f in benches:
 		BAD.append(("① 组合台", f"{path} 必须 extends BenchBase（公共骨架只此一处）"))
 
 # ── ② 测试白盒预算（只减不增）─────────────────────────────────────────
-WHITEBOX_BUDGET = 463   # 2026-09-30 实测（S1 接缝化后 F 层为 0，这里是**全仓**预算）
+WHITEBOX_BUDGET = 327   # 2026-10-19 实测（符卡练习菜单 135 处改走 Probe 后；只减不增）
 hits = collections.Counter()
 for dp, dn, fn in os.walk("test"):
 	if ".godot" in dp or (os.sep + "reference") in (dp + os.sep):
@@ -120,9 +122,27 @@ for cpp_name, cpp_path, cpp_pat, gd_name, gd_path, gd_pat in CROSS_CONST:
 		BAD.append(("⑤ 跨语言常量",
 			f"{cpp_name}={cpp_v}（{cpp_path}）≠ {gd_name}={gd_v}（{gd_path}）"))
 
+# ── ⑥ 内容层不直连 get_parent()/create_tween() ───────────────────────
+CONTENT_BAD = 0
+for dp, dn, fn in os.walk("data"):
+	if ".godot" in dp:
+		continue
+	for n in fn:
+		if not n.endswith(".gd"):
+			continue
+		p = os.path.join(dp, n).replace(os.sep, "/")
+		for i, line in enumerate(open(p, encoding="utf-8").read().splitlines(), 1):
+			code = line.split("#", 1)[0]       # 整行/行尾注释不算调用
+			for token in ("get_parent()", "create_tween()"):
+				if token in code:
+					CONTENT_BAD += 1
+					BAD.append(("⑥ 内容直连",
+						f"{p}:{i} 用了 {token}：{line.strip()}（改走 ctx.* 意图动词）"))
+
 # ── 报告 ─────────────────────────────────────────────────────────────
 print(f"check_structure: 组合台 {len(benches)} 个 · 测试白盒 {total}/{WHITEBOX_BUDGET} · "
-	f"唯一来源常量 {len(UNIQUE_SOURCES)} 条 · 跨语言常量 {len(CROSS_CONST)} 组 · 接线白名单 {len(WIRING_OK)} 个文件")
+	f"唯一来源常量 {len(UNIQUE_SOURCES)} 条 · 跨语言常量 {len(CROSS_CONST)} 组 · "
+	f"内容直连 {CONTENT_BAD} 条 · 接线白名单 {len(WIRING_OK)} 个文件")
 if BAD:
 	for rule, msg in BAD:
 		print(f"❌ [{rule}] {msg}")

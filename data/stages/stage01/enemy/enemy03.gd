@@ -18,14 +18,11 @@ func _ready() -> void:
 
 
 func _init_enemy() -> void:
-	var parent := get_parent()
-	if not parent:
+	if not target:
 		return
 
-	# 移动:减速到某位置
-	parent.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS).tween_property(parent, "global_position",
-		target_pos, 5)\
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# 移动:减速到某位置（内容只给意图，tween 机制在 EnemyService）
+	ctx.enemies.move_to(target, target_pos, 5.0)
 
 	# 弹幕（复用两个弹型实例）
 	var timeline := start_timeline()

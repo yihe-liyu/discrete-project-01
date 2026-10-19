@@ -47,22 +47,9 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 				.param("target_y", 150 + i * 50))
 		)
 
-	# 7s: Logo
+	# 7s: Logo（内容只给纹理与位置，淡入/停留/淡出机制在 StageRuntime）
 	timeline.at(7.0).do(func():
-		var layer := CanvasLayer.new()
-		layer.layer = 32
-		layer.follow_viewport_enabled = true
-		var logo := TextureRect.new()
-		logo.texture = logo_tex
-		logo.global_position = Vector2(GameConfig.FIELD_CENTER_X - (logo.texture.get_size().x / 2), 250)
-		logo.modulate.a = 0.0
-		layer.add_child(logo)
-		add_child(layer)
-		var t := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-		t.tween_property(logo, "modulate:a", 1.0, 2.0)
-		t.tween_interval(3.0)
-		t.tween_property(logo, "modulate:a", 0.0, 1.0)
-		t.tween_callback(layer.queue_free)
+		ctx.stage.show_logo(logo_tex, Vector2(GameConfig.FIELD_CENTER_X, 250))
 	)
 
 	# 11~26s: 中线妖精波

@@ -15,15 +15,11 @@ func _ready() -> void:
 
 
 func _init_enemy() -> void:
-	var parent := get_parent()
-	if not parent:
+	if not target:
 		return
 
-	# 移动:向下减速
-	parent.create_tween() \
-		.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS) \
-		.tween_property(parent, "global_position", target_pos, 1.5) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# 移动:向下减速（内容只给意图，tween 机制在 EnemyService）
+	ctx.enemies.move_to(target, target_pos, 1.5)
 
 	var timeline := start_timeline()
 	
@@ -43,10 +39,8 @@ func _init_enemy() -> void:
 		)
 	
 	timeline.at(5).do(func():
-		parent.create_tween() \
-			.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS) \
-			.tween_property(parent, "global_position", Vector2(target_pos.x, 1400), 3) \
-			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		ctx.enemies.move_to(target, Vector2(target_pos.x, 1400), 3.0,
+			Tween.EASE_IN, Tween.TRANS_CUBIC)
 	)
 	
 	timeline.at(10).do(func():

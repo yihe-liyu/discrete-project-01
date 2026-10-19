@@ -272,6 +272,34 @@ func test_fog_material_is_per_instance():
 	assert_ne(ma, mb, "两个实例的雾材质必须各自独立（sub_resource 默认共享 ⇒ 需 resource_local_to_scene）")
 
 
+## BGA9：地面材质同理 —— `BackgroundPlane._process` 每帧写 `uv_offset`，
+## 工作台 + 游戏同时跑时共享材质会互相串 ⇒ 必须每实例独立。
+func test_ground_material_is_per_instance():
+	for path in [
+		"res://data/stages/stage01/background/stage01_background.tscn",
+		"res://data/stages/stage02/background/stage02_background.tscn",
+	]:
+		var packed: PackedScene = load(path)
+		assert_not_null(packed, "场景应能加载：" + path)
+		if packed == null:
+			continue
+		var a: Node = packed.instantiate()
+		var b: Node = packed.instantiate()
+		add_child_autofree(a)
+		add_child_autofree(b)
+		var mesh_a := (a.get_node("Ground") as MeshInstance3D).mesh as PlaneMesh
+		var mesh_b := (b.get_node("Ground") as MeshInstance3D).mesh as PlaneMesh
+		assert_not_null(mesh_a, "%s 的 Ground 应是 PlaneMesh" % path)
+		assert_not_null(mesh_b, "%s 的 Ground 应是 PlaneMesh" % path)
+		if mesh_a == null or mesh_b == null:
+			continue
+		var ma := mesh_a.material as ShaderMaterial
+		var mb := mesh_b.material as ShaderMaterial
+		assert_not_null(ma, "%s 实例 a 应有地面材质" % path)
+		assert_not_null(mb, "%s 实例 b 应有地面材质" % path)
+		assert_ne(ma, mb, "%s 两个实例的地面材质必须各自独立（需 resource_local_to_scene）" % path)
+
+
 ## 太阳的可见部分必须场景声明，**且圆盘纹理来自场景**（不是运行时 `load()`）。
 ## 否则编辑器里是个"无纹理的 Sprite3D" = **什么都不画**，连"把太阳拖进画面"都做不到 ——
 ## 而 2026-10-04 实测太阳圆心在画面顶边**外 7 像素**（屏幕像素 640, -7.3），正需要能在编辑器里调位置。

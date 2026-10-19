@@ -15,6 +15,7 @@
 [ext_resource type="Texture2D" path="res://assets/Textures/background/stage01/cloud_noise.tres" id="13_cloud"]
 
 [sub_resource type="ShaderMaterial" id="Mat_Ground"]
+resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("1_g25nt")
 shader_parameter/base_texture = ExtResource("2_4oxri")
@@ -23,6 +24,7 @@ shader_parameter/uv_offset = Vector2(0, 0)
 shader_parameter/modulate = Color(1, 1, 1, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_h8p4f"]
+resource_local_to_scene = true
 material = SubResource("Mat_Ground")
 size = Vector2(256, 512)
 

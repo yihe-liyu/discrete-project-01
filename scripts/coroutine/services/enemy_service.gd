@@ -18,6 +18,22 @@ func spawn(data: EnemyData) -> Enemy:
 	return ctx.stage.spawn_enemy_data(data, ctx)
 
 
+## 让杂兵在 duration 秒内移动到目标点（物理时钟；内容不自己 create_tween）。
+## 返回 Tween（便于调试/追加）；参数非法/时长为 0 时返回 null（时长为 0 则瞬移）。
+func move_to(enemy: Node2D, target_pos: Vector2, duration: float,
+		ease_type: int = Tween.EASE_OUT, trans_type: int = Tween.TRANS_QUAD) -> Tween:
+	if enemy == null or not is_instance_valid(enemy):
+		push_error("EnemyService.move_to(): 传入空 / 已释放的对象 —— 移动空跑")
+		return null
+	if duration <= 0.0:
+		enemy.global_position = target_pos
+		return null
+	var tween := enemy.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	tween.set_ease(ease_type).set_trans(trans_type)
+	tween.tween_property(enemy, "global_position", target_pos, duration)
+	return tween
+
+
 ## 回收一只敌人 —— **静默**：不掉道具、不计分、不发 `enemy_killed`、不播死亡特效。
 ## 用途：离场 / 超时清理（多数回收都属于这两类 —— 对齐子弹 `despawn()` 的"静默"口径）。
 ## ⚠️ **"被打死"是另一条路**：让 hp≤0（`Enemy.die()`）—— 那条才掉道具 / 播特效 / 计分。

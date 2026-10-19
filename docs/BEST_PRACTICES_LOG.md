@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 50 条（本文件留最近 50 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 51 条（本文件留最近 51 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-19 — P1 前五步：R2 对话注入 / BGA9 / 内容 lint / 死代码分诊 / 白盒接缝
 - 2026-10-19 — P0 整洁包：C++ 弃用警告 / 行尾空格 / 死常量
 - 2026-10-19 — 存档可靠性：版本号 / 原子写 / .bak 回退 / 读档校验
 - 2026-10-19 — 原生库构建指纹：`get_build_id()` + verify 重算源码哈希
@@ -80,6 +81,15 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-19 — P1 前五步：R2 对话注入 / BGA9 / 内容 lint / 死代码分诊 / 白盒接缝
+
+- **R2 对话**：`DialogueService.play_steps()` 不再 `get_tree().current_scene.add_child(box)`，改挂组合根注入的 `ctx.stage`（对话框自身是 `CanvasLayer`，层级由 `box.layer=40` 决定）。新增回归：对话框 parent == 注入的 StageRuntime。
+- **BGA9**：两个背景的 `Mat_Ground` 与承载它的 `PlaneMesh` 都加 `resource_local_to_scene = true`。⚠️ 只给材质加**不够**（PlaneMesh 仍跨实例共享）；测试同时断言材质与 mesh 每实例独立，覆盖 stage01/02。
+- **BGA5 + BGA7**：新增 `check_structure.sh` ⑥：`data/**/*.gd` 的非注释行不得出现 `get_parent()` / `create_tween()`；临时探针验证会报 2 条。清理 11 个内容脚本（stage01 enemy01~04、stage02 enemy01/02、3 个 boss_move、2 个 stage 脚本），机制收口为 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path` / `ctx.stage.show_logo`。
+- **死代码分诊**：删除 7 个确认无引用的私有函数（`_group_key` / `_time_to_pixel_x` / `_pulse_on_diff` / `_fade_content_in` / `_fade_all_out` / `_life_frame` / `_do_hot_reload`）；新增 `tools/report_dead_code.py`（只报告不判红），当前剩 37 个**公开**零引用声明，保留为内容/工作台 API。
+- **白盒接缝**：`SpellPracticeMenu` 新增 `probe()`（返回独立的 `SpellPracticeMenuProbe`，集中读写内部状态），`test_spell_practice_menu` 的 135 处 `._` 全部改走 Probe；全仓白盒 **462 → 327**，预算同步收紧到 327。
+- **验收**：`verify.sh` 七步全绿；**853 用例 / 7872 断言**；stage01 headless 50s 无脚本错误。
 
 ### 2026-10-19 — P0 整洁包：C++ 弃用警告 / 行尾空格 / 死常量
 

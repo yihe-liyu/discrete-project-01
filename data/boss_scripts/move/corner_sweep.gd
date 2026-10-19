@@ -41,9 +41,6 @@ func _tick(p_ctx: StageContext):
 	if from_corner:
 		target.global_position = corner   # 瞬移到右上角再起跑
 	var half := maxf(move_time, 0.0) * 0.5
-	var tw := target.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.tween_property(target, "global_position", mid, half).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	if hold_middle > 0.0:
-		tw.tween_interval(hold_middle)
-	tw.tween_property(target, "global_position", dest, half).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	p_ctx.boss.move_path(target, [mid, dest], [half, half],
+		[Tween.EASE_OUT, Tween.EASE_IN], hold_middle)
 	return p_ctx.clock.wait(move_time + hold_middle)

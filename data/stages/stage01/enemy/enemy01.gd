@@ -17,16 +17,11 @@ func _ready() -> void:
 
 
 func _init_enemy() -> void:
-	var parent := get_parent()
-	if not parent:
+	if not target:
 		return
 
-	# 移动:向下减速
-	parent.create_tween() \
-		.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS) \
-		.tween_property(parent, "global_position",
-			Vector2(parent.global_position.x, target_y), 1.5) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# 移动:向下减速（内容只给意图，tween 机制在 EnemyService）
+	ctx.enemies.move_to(target, Vector2(target.global_position.x, target_y), 1.5)
 
 	# 弹幕（复用两个弹型实例：普通弹 / 强化弹）
 	var timeline := start_timeline()

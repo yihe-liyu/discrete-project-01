@@ -16,8 +16,12 @@ const DIALOGUE_BOX_SCENE = preload("res://scenes/ui/dialogue_box.tscn")
 func play_steps(steps: Array) -> float:
 	if not ctx or not ctx.active() or not is_instance_valid(ctx.runner):
 		return 0.0
+	if not is_instance_valid(ctx.stage):
+		push_error("DialogueService: ctx.stage 未注入，无法挂对话框（不再摸 current_scene）")
+		return 0.0
 	var box := DIALOGUE_BOX_SCENE.instantiate()
-	ctx.runner.get_tree().current_scene.add_child(box)
+	# 对话框自己是 CanvasLayer；挂到组合根注入的 StageRuntime 即可，层级由 box.layer=40 决定。
+	ctx.stage.add_child(box)
 	ctx.runner.pause()
 	box.finished.connect(func(): ctx.runner.resume(), CONNECT_ONE_SHOT)
 	box.play_steps(steps)

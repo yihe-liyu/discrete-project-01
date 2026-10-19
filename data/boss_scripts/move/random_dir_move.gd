@@ -25,16 +25,14 @@ func _tick(p_ctx: StageContext):
 	_t += get_dt()
 	if _t >= jump_interval:
 		_t = 0.0
-		_jump()
+		_jump(p_ctx)
 	return true
 
 
 ## 随机方向 + 固定距离 → 目标点 clamp 到游戏框上方区域
-func _jump() -> void:
+func _jump(p_ctx: StageContext) -> void:
 	var dir := Vector2.RIGHT.rotated(RNG.randf() * TAU)
 	var dest := target.global_position + dir * move_distance
 	dest.x = clampf(dest.x, GameConfig.FIELD_LEFT + margin, GameConfig.FIELD_RIGHT - margin)
 	dest.y = clampf(dest.y, top_min_y, top_max_y)
-	var tw := target.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(target, "global_position", dest, move_time)
+	p_ctx.boss.move_to(target, dest, move_time, Tween.EASE_IN_OUT, Tween.TRANS_QUAD)
