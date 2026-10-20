@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 60 条（本文件留最近 60 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 61 条（本文件留最近 61 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-20 — KernelNativeSystem / KernelBulletHost 注释整理
 - 2026-10-20 — 原生 DanmakuStore / DanmakuRenderBridge 注释整理
 - 2026-10-20 — AssetRegistry：BGM 曲名缓存 + 失败告警收敛
 - 2026-10-20 — `BulletLifecycle` 的 AABB 式 API 文档试点
@@ -90,6 +91,12 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-20 — KernelNativeSystem / KernelBulletHost 注释整理
+
+- `KernelNativeSystem`：类头补“原生 store 是唯一存储 / 快照只读 / despawn 倒序”契约；补齐 is_native_ready / clear / 写访问器 / 快照 getter / RNG 的 `##` 文档。
+- `KernelBulletHost`：类头说明 BulletData→BulletType、lifecycle 优先、旧 port 映射、未映射直线；清理 `L3.5/M2/M3/N4` 等内部标记与粗体/反引号。
+- 只改注释，不改行为；全量 867 用例 / 7969 断言；verify 七步全绿。
 
 ### 2026-10-20 — 原生 DanmakuStore / DanmakuRenderBridge 注释整理
 

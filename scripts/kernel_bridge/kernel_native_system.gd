@@ -1,18 +1,17 @@
-## KernelNativeSystem —— 原生权威弹幕存储（L3.5-4e/4f）。
+## 原生弹幕存储的 GDScript 桥接层。
 ##
-## 归属：**桥接层**。原生 `DanmakuStore` 是**唯一存储**（spawn / despawn / integrate / behavior / collision）。
-## 本类维护 GDScript 侧的表（BulletType / render_fade / spawn_fx）与**每帧只读快照**，
-## 供渲染 / 物理 / 调试读取；**不再依赖 GDScript BulletSystem**（4f 拆掉 scaffold）。
+## 原生 [code]DanmakuStore[/code] 是唯一存储（spawn / despawn / integrate / behavior / collision）；
+## 本类维护 BulletType / render_fade / spawn_fx 表与每帧只读快照，供渲染 / 物理 / 调试读取。
 ##
-## **契约**：消费方在遍历中 `despawn` **必须倒序** —— 快照在帧内不即时更新；倒序时被 swap 进来的
-## 尾行索引更大、已处理过，故安全（现状已如此）。
+## 契约：遍历中 [code]despawn[/code] 必须倒序（swap-with-last；快照在帧内不即时更新）。
+## 没有 GDScript BulletSystem 回退；扩展缺失时 [code]is_native_ready()[/code] 为 false。
 class_name KernelNativeSystem
 extends Node
 const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
 ## 未注册的 on_end_call hook 名只告警一次（每帧/每弹重复会刷屏）
 static var _warned_hooks: Dictionary = {}
 ## 消弹消散特效（与出生雾同一套 EffectType 模型）——「消弹消散」的唯一来源：
-## 死亡清弹圈扫掠（KernelBulletPhysics）与生命周期 `clear_fx()` / `despawn_clear()` 都走 play_clear_fx。
+## 死亡清弹圈扫掠（KernelBulletPhysics）与生命周期 [code]clear_fx()[/code] / [code]despawn_clear()[/code] 都走 play_clear_fx。
 const CLEAR_FX: EffectType = preload("res://data/fx/enemy_clear_fx.tres")
 
 @export_group("Pool")
@@ -49,7 +48,7 @@ var _life_left := PackedFloat32Array()
 var _fx_phase := PackedFloat32Array()
 var _fx_type_index := PackedInt32Array()   # 行 → _fx_registry 下标（-1 = 无特效）
 var _timer := PackedFloat32Array()
-var _render_rot := PackedFloat32Array()   # V19：逐弹渲染朝向覆盖（NAN = 用 velocity 推）
+var _render_rot := PackedFloat32Array()   # 逐弹渲染朝向覆盖（NAN = 用 velocity 推）
 var _out_grace := PackedFloat32Array()    # 逐弹出界宽限（秒；0 = 出界立即剔除）
 
 # ── 宿主侧表 ──
@@ -58,12 +57,12 @@ var _render_fade: Dictionary = {}          # Kind → 整批淡出 0..1
 var _spawn_fx: Dictionary = {}             # Faction → 出生特效 EffectType
 var _fx_registry: Array[EffectType] = []   # 特效表（发弹/消弹共用；行按下标引用）
 
-## 确定性 RNG（宿主 seed；N3 后行为已原生，仅保留宿主接口）。
+## 确定性 RNG（宿主 seed；行为已原生，仅保留宿主接口）。
 var _random := RandomNumberGenerator.new()
 
 # ── 原生 program（move+params → packed）──
 var _catalog := LifecycleCatalog.new()
-## 纯 program（ops/args/phase 索引）—— 不含宿主对象（DSL10）
+## 纯 program（ops/args/phase 索引）—— 不含宿主对象。
 var _program_data: Array = []
 ## 与 _program_data 同下标：spawn / Callable / sfx 宿主表
 var _program_host_tables: Array = []
@@ -85,6 +84,7 @@ func _ensure_native() -> void:
 		_accel.set_seed(_seed)
 
 
+## 原生扩展是否已加载；首次调用会尝试实例化 DanmakuStore。
 func is_native_ready() -> bool:
 	_ensure_native()
 	return _accel != null
@@ -209,8 +209,8 @@ func spawn_fx(effect: EffectType, position: Vector2, color: Color = Color.WHITE,
 	return id
 
 
-## 播一次「消弹消散」：**同色提亮 1.5×**（与死亡清弹圈扫掠完全一致）。
-## 纯特效行，无节点/tween 分配。调用方：KernelBulletPhysics 的 sweep，以及生命周期 op 47（`clear_fx`）。
+## 播一次「消弹消散」：同色提亮 1.5×（与死亡清弹圈扫掠完全一致）。
+## 纯特效行，无节点/tween 分配。调用方：KernelBulletPhysics 的 sweep，以及生命周期 op 47（[code]clear_fx[/code]）。
 func play_clear_fx(pos: Vector2, tint: Color) -> void:
 	var bright := Color(
 		minf(tint.r * 1.5, 1.0),
@@ -243,8 +243,8 @@ func despawn(id: int) -> void:
 		_accel.despawn(id)
 
 
-## 逐弹出界宽限（秒）—— 与原生 `DanmakuStore.set_out_grace` 同名同义。
-## 常规发射路径不需要它（grace 随 `BulletType.out_grace` 在 spawn 时推下去）；
+## 逐弹出界宽限（秒）—— 与原生 [code]DanmakuStore.set_out_grace[/code] 同名同义。
+## 常规发射路径不需要它（grace 随 [code]BulletType.out_grace[/code] 在 spawn 时推下去）；
 ## 本方法供 parity / 调试在发射后改。
 func set_out_grace(id: int, grace: float) -> void:
 	if id < 0 or id >= _active_count:
@@ -254,13 +254,14 @@ func set_out_grace(id: int, grace: float) -> void:
 		_accel.set_out_grace(id, grace)
 
 
-## 读**原生行**的出界宽限（测试/调试用；无原生或越界 → -1）。
+## 读原生行的出界宽限（测试/调试用；无原生或越界 → -1）。
 func get_out_grace(id: int) -> float:
 	if id < 0 or id >= _active_count or _accel == null:
 		return -1.0
 	return _accel.get_out_grace(id)
 
 
+## 清空所有行（快照 + 原生 store），保留容量与注册表。
 func clear() -> void:
 	_active_count = 0
 	if _accel != null:
@@ -268,7 +269,7 @@ func clear() -> void:
 
 
 ## 重置内核注册表：丢弃全部已注册 program / 弹型 / 特效，并重建原生 store。
-## **只在清场后（无弹）调用** —— 原生 store 的 program 表只增不减，工作台/工具反复重来会积累
+## 只在清场后（无弹）调用 —— 原生 store 的 program 表只增不减，工作台/工具反复重来会积累
 ## （每次重建内容脚本 → 新 BulletData 实例 → 新签名）；正常游戏靠换 scene 重建 BulletManager 天然重置。
 func reset_registries() -> void:
 	_active_count = 0
@@ -285,6 +286,7 @@ func reset_registries() -> void:
 
 # ═══ 写访问器（工具 / 回退 / 测试）═══
 
+## 改一行速度（会转发原生；普通行为优先用速度原语）。
 func set_velocity(id: int, value: Vector2) -> void:
 	_velocities[id] = value
 	if _accel != null:
@@ -298,18 +300,21 @@ func set_position(id: int, value: Vector2) -> void:
 		_accel.set_position(id, value)
 
 
+## 改一行剩余寿命（秒）。
 func set_life(id: int, value: float) -> void:
 	_life_left[id] = value
 	if _accel != null:
 		_accel.set_life(id, value)
 
 
+## 改一行特效相位（秒）。
 func set_fx(id: int, value: float) -> void:
 	_fx_phase[id] = value
 	if _accel != null:
 		_accel.set_fx(id, value)
 
 
+## 改一行自定义计时器。
 func set_timer(id: int, value: float) -> void:
 	_timer[id] = value
 	if _accel != null:
@@ -318,20 +323,24 @@ func set_timer(id: int, value: float) -> void:
 
 # ═══ 判定（权威在原生；宽相网格）═══
 
+## 宽相圆查询；返回候选行 id，仍需 hit_test 精确判定。
 func query_circle(center: Vector2, search_radius: float) -> PackedInt32Array:
 	if _accel != null:
 		return _accel.query_circle(center, search_radius)
 	return PackedInt32Array()
 
 
+## 单行精确判定。
 func hit_test(id: int, center: Vector2, radius: float) -> bool:
 	return _accel.hit_test(id, center, radius) if _accel != null else false
 
 
+## 该行本帧是否已擦弹过。
 func is_grazed(id: int) -> bool:
 	return _accel.is_grazed(id) if _accel != null else false
 
 
+## 标记该行已擦弹（每行只计一次）。
 func mark_grazed(id: int) -> void:
 	if _accel != null:
 		_accel.mark_grazed(id)
@@ -339,28 +348,34 @@ func mark_grazed(id: int) -> void:
 
 # ═══ 读访问器（快照）═══
 
+## 当前活跃行数；快照数组按容量分配，只有前 count 行有效。
 func get_active_count() -> int:
 	return _active_count
 
+## 位置快照。
 func get_positions() -> PackedVector2Array:
 	return _positions
 
+## 速度快照。
 func get_velocities() -> PackedVector2Array:
 	return _velocities
 
+## 颜色快照。
 func get_colors() -> PackedColorArray:
 	return _color
 
+## 行 → 弹型表下标。
 func get_type_indices() -> PackedInt32Array:
 	return _type_index
 
 
-## 单行取类型下标（NK7：不要为读一个元素拉整张 _type_index）。
+## 单行取类型下标（不要为读一个元素拉整张 _type_index）。
 func get_type_index(id: int) -> int:
 	if _accel != null:
 		return _accel.get_type_index(id)
 	return _type_index[id] if id >= 0 and id < _type_index.size() else -1
 
+## 行 → 阵营（BulletType.Faction）。
 func get_factions() -> PackedByteArray:
 	return _faction
 
@@ -369,28 +384,35 @@ func get_type(id: int) -> BulletType:
 	var ti: int = _type_index[id]
 	return _type_registry[ti] if ti >= 0 and ti < _type_registry.size() else null
 
+## 单行位置。
 func get_position(id: int) -> Vector2:
 	return _positions[id]
 
+## 单行速度。
 func get_velocity(id: int) -> Vector2:
 	return _velocities[id]
 
+## 单行颜色。
 func get_color(id: int) -> Color:
 	return _color[id]
 
+## 单行剩余寿命（秒）。
 func get_life_left(id: int) -> float:
 	return _life_left[id]
 
+## 单行特效相位（秒）。
 func get_fx_phase(id: int) -> float:
 	return _fx_phase[id]
 
+## 单行自定义计时器。
 func get_timer(id: int) -> float:
 	return _timer[id]
 
-## V19：逐弹渲染朝向覆盖（NAN = 未设，渲染端按 velocity 推）。
+## 逐弹渲染朝向覆盖（NAN = 未设，渲染端按 velocity 推）。
 func get_render_rots() -> PackedFloat32Array:
 	return _render_rot
 
+## 弹型表（行里的 type index 指向它）。
 func get_type_registry() -> Array[BulletType]:
 	return _type_registry
 
@@ -400,10 +422,12 @@ func get_fx_phases() -> PackedFloat32Array:
 	return _fx_phase
 
 
+## 行 → 特效表下标（-1 = 无特效）。
 func get_fx_type_indices() -> PackedInt32Array:
 	return _fx_type_index
 
 
+## 特效表（渲染桥按行下标取贴图/参数）。
 func get_fx_registry() -> Array[EffectType]:
 	return _fx_registry
 
@@ -412,31 +436,36 @@ func get_fx_registry() -> Array[EffectType]:
 func set_render_fade(kind: int, value: float) -> void:
 	_render_fade[kind] = clampf(value, 0.0, 1.0)
 
+## 读某弹型类别的整批渲染淡出（0..1）。
 func get_render_fade(kind: int) -> float:
 	return _render_fade.get(kind, 1.0)
 
 
 # ═══ 确定性 RNG（宿主 seed）═══
 
+## 设宿主 RNG 种子，并转发原生 store。
 func set_seed(seed_value: int) -> void:
 	_seed = seed_value
 	_random.seed = seed_value
 	if _accel != null:
 		_accel.set_seed(seed_value)   # 转发原生 store（行为随机走内核单通道）
 
+## 宿主 RNG：0..1。
 func randf() -> float:
 	return _random.randf()
 
+## 宿主 RNG：区间浮点。
 func randf_range(from: float, to: float) -> float:
 	return _random.randf_range(from, to)
 
+## 宿主 RNG：区间整数。
 func randi_range(from: int, to: int) -> int:
 	return _random.randi_range(from, to)
 
 
 # ═══ 行为 program ═══
 
-## 公开接缝：按 move+params 取/注册 program id（工具/测试不直接摸 `_program_for`）。
+## 公开接缝：按 move+params 取/注册 program id（工具/测试不直接摸 [code]_program_for[/code]）。
 func program_id_for(move: StringName, params: Dictionary) -> int:
 	return _program_for(move, params)
 
@@ -464,7 +493,7 @@ func _program_for(move: StringName, params: Dictionary) -> int:
 		var expected: int = _program_data.size()
 		pid = _accel.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
 		if pid < 0:
-			# V20：槽数超上限被原生拒绝 —— 不 append，保持 _program_data 与原生 pid 对齐。
+			# 槽数超上限被原生拒绝 —— 不 append，保持 _program_data 与原生 pid 对齐。
 			push_error("[KernelNativeSystem] program 注册被拒（入参校验失败：数组/opcode/slot）")
 		else:
 			if pid != expected:
@@ -548,7 +577,7 @@ func _pull_snapshot() -> void:
 	_render_rot = _accel.get_render_rots()
 
 
-## 变体发射：`src` 是模板数组时按分支号取模板（越界钳到末项）；非数组原样返回。
+## 变体发射：[code]src[/code] 是模板数组时按分支号取模板（越界钳到末项）；非数组原样返回。
 static func pick_variant(src: Variant, branch: int) -> Variant:
 	if src is Array:
 		var arr: Array = src
@@ -569,7 +598,7 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	var dys: PackedFloat32Array = res.dy
 	var vals: PackedFloat32Array = res.val
 	var variants: PackedInt32Array = res.get("variant", PackedInt32Array())
-	# 事件携带自己的 program（eprog）；**不能**用 per-bullet program 去反查（历史 bug）。
+	# 事件携带自己的 program（eprog）；不能用 per-bullet program 去反查（历史 bug）。
 	var eprog: PackedInt32Array = res.eprog
 	for k in kinds.size():
 		var prog: int = eprog[k]
@@ -608,7 +637,7 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 						_warned_hooks[hook_key] = true
 						push_warning("[KernelNativeSystem] on_end_call 未注册 hook '%s'（静默不调）" % hook_key)
 			3:
-				# op 47（clear_fx / despawn_clear）：原地播消散，颜色用**该弹自己的色**（原生随事件回传）。
+				# op 47（clear_fx / despawn_clear）：原地播消散，颜色用该弹自己的色（原生随事件回传）。
 				# 行此刻可能已被 swap-remove，所以颜色只能来自事件载荷 —— 不能用 res.bullet[k] 回查。
 				var colors: PackedColorArray = res.get("color", PackedColorArray())
 				var tint: Color = colors[k] if k < colors.size() else Color.WHITE

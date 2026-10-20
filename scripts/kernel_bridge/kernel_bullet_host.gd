@@ -1,11 +1,9 @@
-## KernelBulletHost——宿主侧适配：BulletData → BulletType。
+## BulletData → BulletType 的宿主适配器。
 ##
-## 边界：内核不认识 BulletData；弹型由 `BulletData.to_bullet_type()` 在
-## **内容侧**产出并缓存（内容须复用 BulletData 实例；每发 new 会让内核弹型表每发长一个）。
-##
-## `BulletData.lifecycle` 直接挂描述符（b0/b1，优先）；旧路 `coroutine_script` 走 duck-typed
-## `kernel_port()` 端口映射到内核行为。未映射（无 lifecycle / 无端口）仍按直线发射并计入 unmapped。
-## 渲染不在本类：纹理走**渲染插座**（纹理句柄表 `texture_for_index`，M3 ③），喂给原项目 BulletMultiMesh。
+## 原生内核不认识 BulletData；弹型由 [code]BulletData.to_bullet_type()[/code] 在内容侧缓存。
+## lifecycle 优先；旧 [code]coroutine_script[/code] 走 [code]kernel_port()[/code]；
+## 未映射（无 lifecycle / 无端口）按直线发射并计入 [code]unmapped[/code]。
+## 渲染不在本类：纹理走 [code]texture_for_index()[/code]，由 BulletMultiMesh 消费。
 class_name KernelBulletHost
 extends Node
 
@@ -15,7 +13,7 @@ const KERNEL_MIST_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_mist
 const KERNEL_BEHAVIOR_HOST_SCRIPT = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
 const _MOVE_LASER := &"marisa_laser"
 
-## 内核弹池（原生权威；L3.5-4f 起扩展为必需）。
+## 内核弹池（原生权威，必需）。
 var system: KernelNativeSystem
 ## 实体注册表（自机 / 敌机 / Boss；BulletManager 注入）
 var entity_registry: EntityRegistry
@@ -24,7 +22,7 @@ var bullet_manager: BulletManager
 ## 未映射行为（有 coroutine_script 但无端口的）的发射次数——前用来看覆盖面。
 var unmapped_behavior_count: int = 0
 
-var _texture_by_index: Array[Texture2D] = []   # 纹理句柄表（render socket）：弹型下标 → 贴图；M3 ③ 判定为设计 seam，N4 换原生实例缓冲
+var _texture_by_index: Array[Texture2D] = []   # 纹理句柄表（render socket）：弹型下标 → 贴图
 
 ## 内核行为上下文（由 BulletManager 装配）。
 var behavior_ctx: BehaviorContext
@@ -56,7 +54,7 @@ func _exit_tree() -> void:
 	_port_probes.clear()
 
 
-## 重置内核注册表（回收 program / 弹型 / 纹理句柄表 / 端口探测）。**清场后调用**（工作台重开演）。
+## 重置内核注册表（回收 program / 弹型 / 纹理句柄表 / 端口探测）。清场后调用（工作台重开演）。
 ## 纹理句柄表与弹型表按下标对齐 —— 弹型清空则句柄表必须一起清，否则索引错位。
 func reset_registries() -> void:
 	_texture_by_index.clear()
@@ -70,9 +68,9 @@ func reset_registries() -> void:
 
 
 ## 生成宿主节点 bomb（返回节点，供调用方忽略/持有）。data 是 BombData（不是弹幕的 BulletData）。
-## 宿主实体由 data 的**实际类型**决定（MistBombData → KernelMistBomb；其余/基类 → KernelBomb）。
+## 宿主实体由 data 的实际类型决定（MistBombData → KernelMistBomb；其余/基类 → KernelBomb）。
 func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0) -> Node:
-	# 用 if/else 而非三元：两个分支是**兄弟类**（KernelMistBomb / KernelBomb），
+	# 用 if/else 而非三元：两个分支是兄弟类（KernelMistBomb / KernelBomb），
 	# 三元要求分支类型互相兼容，静态分析会报 INCOMPATIBLE_TERNARY。
 	var bomb: BombEntity
 	if data is MistBombData:
@@ -89,7 +87,7 @@ func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = 
 
 
 ## 清掉所有 LASER 类子弹（魔理沙非 focus 激光段；供子机重建 / 熄火时清锚点）。
-## 倒序：`system.despawn` 是 swap-with-last。
+## 倒序：system.despawn 是 swap-with-last。
 func clear_laser_bullets() -> void:
 	if system == null:
 		return
@@ -131,8 +129,8 @@ func flush_behavior_host() -> void:
 		_behavior_host.flush()
 
 
-## 解析一次发射所需的 **per-shot 状态**（类型 / 速度 / 行为 / 染色），不写内核池。
-## 延后队列在**入队瞬间**调它做快照：内容复用同一 BulletData 模板改速度再入队（M2 正常写法），
+## 解析一次发射所需的 per-shot 状态（类型 / 速度 / 行为 / 染色），不写内核池。
+## 延后队列在入队瞬间调它做快照：内容复用同一 BulletData 模板改速度再入队，
 ## 若拖到 flush 才读实例，所有入队项会被最后一次写入覆盖（non_mid01 红弹速度梯度消失即此因）。
 func prepare_shot(data: BulletData, pos: Vector2, direction: Vector2) -> Dictionary:
 	if data == null:
@@ -182,7 +180,7 @@ func spawn_prepared(spec: Dictionary) -> int:
 	return id
 
 
-## 发射一颗弹（立即）。语义对齐原项目 `Bullet.bind`：`direction` 定方向，`data.velocity` 只取速度大小。
+## 发射一颗弹（立即）。语义对齐原项目 [code]Bullet.bind[/code]：[code]direction[/code] 定方向，[code]data.velocity[/code] 只取速度大小。
 func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return spawn_prepared(prepare_shot(data, pos, direction))
 
@@ -226,8 +224,8 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	system.boss_getter = func(): return _behavior_host.get_boss()
 
 
-## 取内容脚本的内核端口（duck-typed `kernel_port()`），按内容签名缓存。
-## 脚本先用 `data.params` 覆盖自身变量再问端口，故端口能反映发射参数。
+## 取内容脚本的内核端口（duck-typed [code]kernel_port()[/code]），按内容签名缓存。
+## 脚本先用 [code]data.params[/code] 覆盖自身变量再问端口，故端口能反映发射参数。
 func _port_for(data: BulletData) -> Dictionary:
 	var sig: int = hash(data.coroutine_script)
 	sig = sig * 31 + hash(data.params)
