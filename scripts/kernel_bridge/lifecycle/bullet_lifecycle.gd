@@ -1,28 +1,27 @@
-## BulletLifecycle —— per-bullet 生命周期的**固定 schema 描述符** + fluent builder。
+## per-bullet 生命周期描述符 + fluent builder。
 ##
-## 模型（完整参考见 docs/DANMAKU_API.md §3）：
-##   BulletLifecycle = [Phase, Phase, ...]        有序，不可跳转
-##   Phase = { moves: [Move...], until: Until, on_end: [Action...] }
-##   每帧按顺序跑 moves；until 成立 → 执行 on_end → 进下一相位；then() 开新相位。
-##   最后一个相位结束后：弹不再受 program 驱动，按当前速度自由积分（出界由 cull 回收）。
+## [b]模型[/b]
+## [codeblock]
+## BulletLifecycle = [Phase, Phase, ...]
+## Phase = { moves: [Move...], until: Until, on_end: [Action...] }
+## [/codeblock]
+## 每帧按顺序跑 moves；until 成立 → 执行 on_end → 进入下一相位；[method then] 开新相位。
+## 最后一个相位结束后，弹不再受 program 驱动，按当前速度自由积分（出界由 cull 回收）。
 ##
-## 用法：
-##   var lc := BulletLifecycle.new()
-##   lc.accel_heading(-150.0).until_elapsed(2.0).sfx(&"kira").despawn()
-##   bullet_data.trajectory(lc)
+## [b]用法[/b]
+## [codeblock]
+## var lc := BulletLifecycle.new()
+## lc.accel_heading(-150.0).until_elapsed(2.0).sfx(&"kira").despawn()
+## bullet_data.trajectory(lc)
+## [/codeblock]
 ##
-## 设计要点：
-##   ① 状态显式化：有状态 unit 自带槽（rotate→turned / anchor_drift→drift / drift→起点+位移），
-##      builder 自动分配、相位切换清零 → 各 unit 的槽互不污染；`steer` 读相位 elapsed（不占槽）。
-##      **例外**：写位置的 unit（anchor_drift / drift）会互相覆盖位置、并覆盖速度积分结果，
-##      同相位不可叠加（见 docs/DANMAKU_API.md §9.13）。
-##   ② unit 正交化：aim→steer(toward())；anchor+drift→anchor_drift；top_edge→at_wall；
-##      near_player/near_boss→near(target)；emit 收方向表达式。
-##   ③ 朝向与速度解耦：heading（朝向）出生取初速，rotate/set_heading 更新；
-##      accel_heading / forward / random_dir / chance_toward 读它 → 速度反向后仍正确。
+## [b]边界[/b]
+## - 位置写入原语（[code]drift[/code] / [code]anchor_drift[/code]）同相位会互相覆盖，
+##   也会覆盖速度积分；不要和速度原语混在同一相位。
+## - [code]anchor_drift[/code] 必须在 [code]trajectory(lc, anchor)[/code] 提供锚点 spec，否则退回自机。
+## - [code]until=never[/code] 的相位不会自动结束；最后一相位的 on_end 是死代码（编译会警告）。
 ##
-## 编译：compile() → packed program（原生 DanmakuStore 执行）；content_signature() 做结构去重。
-## 创作者只调高层方法，看不到槽 / opcode。
+## 完整参考：[code]docs/DANMAKU_API.md[/code] §3；位置覆盖规则见 §9.13。
 class_name BulletLifecycle
 extends RefCounted
 
@@ -59,18 +58,31 @@ const A_SET_HEADING := COMPILER.A_SET_HEADING
 const A_SET_SPEED := COMPILER.A_SET_SPEED
 const A_CALL := COMPILER.A_CALL
 const A_CLEAR_FX := COMPILER.A_CLEAR_FX
+## 目标：自机。
 const T_PLAYER := COMPILER.T_PLAYER
+## 目标：最近的敌人。
 const T_NEAREST_ENEMY := COMPILER.T_NEAREST_ENEMY
+## 目标：Boss。
 const T_BOSS := COMPILER.T_BOSS
+## 墙掩码：左边界。
 const WALL_LEFT := COMPILER.WALL_LEFT
+## 墙掩码：右边界。
 const WALL_RIGHT := COMPILER.WALL_RIGHT
+## 墙掩码：上边界。
 const WALL_TOP := COMPILER.WALL_TOP
+## [code]until_speed()[/code] 比较：[code]|v| >= value[/code]。
 const CMP_GE := COMPILER.CMP_GE
+## [code]until_speed()[/code] 比较：[code]|v| <= value[/code]。
 const CMP_LE := COMPILER.CMP_LE
+## [code]emit()[/code] 落点：当前弹位置。
 const AT_CURRENT := COMPILER.AT_CURRENT
+## [code]emit()[/code] 落点：[code]until_at_wall()[/code] 记录的相位结束落点。
 const AT_PHASE_END := COMPILER.AT_PHASE_END
+## [code]rotate()[/code] 模式：速度与朝向一起转。
 const ROT_BOTH := COMPILER.ROT_BOTH
+## [code]rotate()[/code] 模式：只转速度。
 const ROT_VELOCITY := COMPILER.ROT_VELOCITY
+## [code]rotate()[/code] 模式：只转朝向。
 const ROT_HEADING := COMPILER.ROT_HEADING
 
 # ---- 原生参数（公共兼容别名；opcode 内部常量在 LifecycleCompiler）----
@@ -78,12 +90,19 @@ const ARGS := COMPILER.ARGS
 const MAX_SLOTS := COMPILER.MAX_SLOTS
 
 # ---- 方向 kind（定义在 DirSpec）----
+## 方向表达式 kind：相对发射者朝向。
 const D_HEADING := DIR_SPEC.HEADING
+## 方向表达式 kind：朝目标。
 const D_TOWARD := DIR_SPEC.TOWARD
+## 方向表达式 kind：背向目标。
 const D_AWAY := DIR_SPEC.AWAY
+## 方向表达式 kind：沿当前朝向。
 const D_FORWARD := DIR_SPEC.FORWARD
+## 方向表达式 kind：随机方向。
 const D_RANDOM := DIR_SPEC.RANDOM
+## 方向表达式 kind：概率朝目标。
 const D_CHANCE := DIR_SPEC.CHANCE
+## 方向表达式 kind：沿当前速度反射。
 const D_REFLECT := DIR_SPEC.REFLECT
 
 ## 有序相位：[{moves, until, on_end}]
@@ -147,6 +166,7 @@ func _set_until(op: StringName, extra: Dictionary = {}) -> void:
 
 # ═══ 方向表达式（兼容入口；实现与词汇在 DirSpec）═══
 
+## 相对发射者朝向的方向表达式；可选角度偏移（弧度）。
 static func heading(angle: float) -> RefCounted:
 	return DIR_SPEC.heading(angle)
 
@@ -156,26 +176,32 @@ static func world_heading(angle: float) -> RefCounted:
 	return DIR_SPEC.world_heading(angle)
 
 
+## 朝目标的方向表达式；[code]angle[/code] 为额外偏移（弧度）。目标见 [code]T_PLAYER[/code] / [code]T_BOSS[/code] / [code]T_NEAREST_ENEMY[/code]。
 static func toward(target: StringName, angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.toward(target, angle)
 
 
+## 背向目标的方向表达式；[code]angle[/code] 为额外偏移（弧度）。
 static func away(target: StringName, angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.away(target, angle)
 
 
+## 沿当前朝向的方向表达式；[code]angle[/code] 为额外偏移（弧度）。
 static func forward(angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.forward(angle)
 
 
+## 随机方向；[code]spread[/code] 是总张角（弧度），由内核 RNG 求值。
 static func random_dir(spread: float) -> RefCounted:
 	return DIR_SPEC.random_dir(spread)
 
 
+## 概率方向：[code]p[/code] 概率精确朝目标，否则 [code]forward[/code] 旋转 [code]spread[/code]；配合 [code]emit_variant()[/code]。
 static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> RefCounted:
 	return DIR_SPEC.chance_toward(target, p, spread)
 
 
+## 沿当前速度反射的方向表达式；[code]angle[/code] 为额外偏移（弧度）。
 static func reflect(angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.reflect(angle)
 
@@ -238,7 +264,7 @@ func set_speed(speed: float) -> BulletLifecycle:
 	_moves.append({&"op": M_SET_SPEED, &"speed": speed})
 	return self
 
-## V18：编译为统一 `M_POSITION`（mode=POS_PHASE_START）。
+## V18：编译为统一 [code]M_POSITION[/code]（mode=POS_PHASE_START）。
 ## 从**相位起点**沿 dir(angle) 匀速平移：pos = 相位起点 + dir(angle) * 累计位移。
 ## 与 anchor_drift 的区别：**不锚定任何外部对象**，基准就是本相位开始时自己的位置；同样不改速度/朝向。
 ## **⚠ 位置写入原语**：直接写 pos、覆盖积分；与 anchor_drift / 速度原语同相位会互相覆盖（DANMAKU_API §9.13）。
@@ -251,7 +277,7 @@ func drift(angle: float, speed: float, initial: float = 0.0) -> BulletLifecycle:
 	return self
 
 
-## V18：编译为统一 `M_POSITION`（mode=POS_ANCHOR）。
+## V18：编译为统一 [code]M_POSITION[/code]（mode=POS_ANCHOR）。
 ## 锚定 + 线性漂移（激光段）：pos = anchor_base + dir(angle) * drift。
 ## drift 首帧 = initial，之后每帧 += speed * dt；render_heading=true 时设置独立渲染朝向（render_rot 通道，不写 velocity）。
 ## **⚠ 位置写入原语**：直接写 pos、覆盖积分；与 drift / 速度原语同相位会互相覆盖（DANMAKU_API §9.13）。
@@ -274,7 +300,7 @@ func until_elapsed(t: float) -> BulletLifecycle:
 	_set_until(C_ELAPSED, {&"t": t})
 	return self
 
-## 距 target < r 时结束。节流用链式 `.every(秒)` / `.every_ticks(帧)`（V6：对所有条件通用）。
+## 距 target < r 时结束。节流用链式 [code].every(秒)[/code] / [code].every_ticks(帧)[/code]（V6：对所有条件通用）。
 func until_near(target: StringName, r: float) -> BulletLifecycle:
 	_set_until(C_NEAR, {&"target": target, &"r": r})
 	return self
@@ -286,7 +312,7 @@ func until_at_wall(mask: int) -> BulletLifecycle:
 	return self
 
 ## V21：速度大小满足比较时结束（|v| cmp value；cmp = CMP_GE / CMP_LE）。
-## 典型：撞墙后 `accel_heading(-b)` 减速，`until_speed(CMP_LE, v_min)` 降到 v_min 即停。
+## 典型：撞墙后 [code]accel_heading(-b)[/code] 减速，[code]until_speed(CMP_LE, v_min)[/code] 降到 v_min 即停。
 func until_speed(cmp: int, value: float) -> BulletLifecycle:
 	_set_until(C_SPEED, {&"cmp": cmp, &"value": value})
 	return self
@@ -305,12 +331,12 @@ func until_turned() -> BulletLifecycle:
 
 # ---- Until 通用修饰（V6：节流是相位级横切属性，任何条件都能套）----
 
-## 每 `sec` 秒最多检查一次该相位的 until。
+## 每 [code]sec[/code] 秒最多检查一次该相位的 until。
 func every(sec: float) -> BulletLifecycle:
 	_until[&"every"] = sec
 	return self
 
-## 每 `n` 帧最多检查一次该相位的 until。
+## 每 [code]n[/code] 帧最多检查一次该相位的 until。
 func every_ticks(n: int) -> BulletLifecycle:
 	_until[&"every_ticks"] = n
 	return self
@@ -322,8 +348,8 @@ func _set_state_until(slot: int, cmp: int, value: float) -> void:
 # ═══ Action（当前相位的 on_end；相位结束时一次性执行）═══
 
 ## 播音效。key 见 docs/DANMAKU_API.md §7.2（如 &"kira" / &"shoot"）。
-## ⚠️ `db` 默认必须是**总电平**，不能是 0.0 —— `0.0 dB` 是"满音量"，会让这个音比其它响约 15 dB
-## （内容里普遍写 `lc.sfx(&"kira")` 不传 db）。
+## ⚠️ [code]db[/code] 默认必须是**总电平**，不能是 0.0 —— [code]0.0 dB[/code] 是"满音量"，会让这个音比其它响约 15 dB
+## （内容里普遍写 [code]lc.sfx(&"kira")[/code] 不传 db）。
 func sfx(key: StringName, db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecycle:
 	_on_end.append({&"op": A_SFX, &"key": key, &"db": db})
 	return self
@@ -359,7 +385,7 @@ func _append_emit(spawn: Variant, spec: RefCounted, speed: float, at: int,
 	return self
 
 ## 变体发射：内核抽一次 RNG 决定分支，宿主按分支号取 spawns 里哪个模板（0=未命中，1=命中）。
-## `dir` 必须是 `chance_toward(target, p, spread)`：命中→精确朝 target，未命中→forward 旋转 spread。
+## [code]dir[/code] 必须是 [code]chance_toward(target, p, spread)[/code]：命中→精确朝 target，未命中→forward 旋转 spread。
 ## 分支由内核**显式**抽取（V9），不再藏在方向求值里。
 func emit_variant(spawns: Array, dir: Variant, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
 	var spec := DIR_SPEC.from_variant(dir)
@@ -370,23 +396,23 @@ func emit_variant(spawns: Array, dir: Variant, speed: float = 0.0, at: int = AT_
 	return self
 
 ## 回收自己。**静默** —— 不播任何特效（这是默认语义：多数 despawn 发生在屏外或做超时清理）。
-## 想让人看见"这颗弹消散了"，用 `despawn_clear()`。
+## 想让人看见"这颗弹消散了"，用 [code]despawn_clear()[/code]。
 func despawn() -> BulletLifecycle:
 	_on_end.append({&"op": A_DESPAWN})
 	return self
 
 
-## 播一次「消弹消散」特效（宿主的 `play_clear_fx`：位置 = 弹此刻位置，颜色 = 该弹当前色提亮 1.5×）。
-## **纯 action：不改变任何状态** —— 弹继续飞。要"消散并消失"用 `despawn_clear()`。
+## 播一次「消弹消散」特效（宿主的 [code]play_clear_fx[/code]：位置 = 弹此刻位置，颜色 = 该弹当前色提亮 1.5×）。
+## **纯 action：不改变任何状态** —— 弹继续飞。要"消散并消失"用 [code]despawn_clear()[/code]。
 func clear_fx() -> BulletLifecycle:
 	_on_end.append({&"op": A_CLEAR_FX})
 	return self
 
 
-## 消散特效 + 回收自己（= `clear_fx().despawn()`）。
+## 消散特效 + 回收自己（= [code]clear_fx().despawn()[/code]）。
 ## 用于**显式**想让人看见"这颗弹消失了"的场合（时间到 / 主动湮灭）。
-## ⚠️ 别把普通 `despawn()` 一律换成它：`bounce`/`radial_accel` 在**撞墙时**回收、
-## `avoid_player` 相位2 在**屏外**回收 —— 那些地方播消散 = 屏外闪光 + 特效风暴。
+## ⚠️ 别把普通 [code]despawn()[/code] 一律换成它：[code]bounce[/code]/[code]radial_accel[/code] 在**撞墙时**回收、
+## [code]avoid_player[/code] 相位2 在**屏外**回收 —— 那些地方播消散 = 屏外闪光 + 特效风暴。
 func despawn_clear() -> BulletLifecycle:
 	return clear_fx().despawn()
 
@@ -399,7 +425,7 @@ func on_end_heading(dir: Variant) -> BulletLifecycle:
 	return self
 
 ## 低频内容回调（**逃逸口**，V13）：fn.call(pos, boss_pos, has_boss, host)。
-## 契约：每相位结束最多一次、宿主侧执行、**非热路径**；host 只暴露 `queue_spawn`。
+## 契约：每相位结束最多一次、宿主侧执行、**非热路径**；host 只暴露 [code]queue_spawn[/code]。
 ## 用了它，描述符就不再是唯一行为来源 —— 仅在「一次性散圈 / 难度分支」等极少数场合用。
 ## hook = **StringName**（推荐：注册表解析，可序列化、跨实例共用 program；需先 LIFECYCLE_HOOKS_SCRIPT.register）
 ##      或 **Callable**（旧写法 / oracle）。未注册的名字静默不调。

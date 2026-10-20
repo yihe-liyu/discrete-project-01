@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 57 条（本文件留最近 57 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 58 条（本文件留最近 58 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-20 — `BulletLifecycle` 的 AABB 式 API 文档试点
 - 2026-10-19 — 把「卡摩瑞一非」迁到 ring（保留旧路径 A/B）
 - 2026-10-19 — AsyncCoroutineScript：`await ctx.clock.delay()` 接入确定性时钟
 - 2026-10-19 — 修 Marisa 激光锚点失效（阶段台报 anchor id 已失效）
@@ -87,6 +88,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-20 — `BulletLifecycle` 的 AABB 式 API 文档试点
+
+- **目标**：核心类在 Godot 内置 Help 里像 AABB 一样：类描述 / 模型 / 用法 / 边界 / 方法列表，而不是把所有长文塞进代码。
+- **做法**：`BulletLifecycle` 顶部改成结构化 `##`（[codeblock] 模型与示例）；所有公开方法补齐 `##`；关键目标/墙/比较/落点/旋转常量补说明；`##` 里的反引号统一成 `[code]`。
+- **边界**：长教程 / 槽位覆盖细节仍以 `docs/DANMAKU_API.md` 为准，代码只留摘要 + 链接；不改任何行为。
+- **未做**：不迁移 `CONTENT_GUIDE` / `TEST_INDEX`；不批量改其他类，先看这个页面的实际效果。
 
 ### 2026-10-19 — 把「卡摩瑞一非」迁到 ring（保留旧路径 A/B）
 
