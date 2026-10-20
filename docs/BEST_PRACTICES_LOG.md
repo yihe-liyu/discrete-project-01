@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 59 条（本文件留最近 59 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 60 条（本文件留最近 60 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-20 — 原生 DanmakuStore / DanmakuRenderBridge 注释整理
 - 2026-10-20 — AssetRegistry：BGM 曲名缓存 + 失败告警收敛
 - 2026-10-20 — `BulletLifecycle` 的 AABB 式 API 文档试点
 - 2026-10-19 — 把「卡摩瑞一非」迁到 ring（保留旧路径 A/B）
@@ -89,6 +90,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-20 — 原生 DanmakuStore / DanmakuRenderBridge 注释整理
+
+- 两个注册类补类级职责/边界/ID 语义：行 id 是活跃下标、despawn 是 swap-with-last、快照只读且前 count 行有效。
+- 公开入口补文档：setup/spawn/spawn_batch/integrate/query_circle/register_program/behavior_tick/integrate_batch/despawn；渲染桥补 type/fx 表、group/fill/fill_fx。
+- 去掉注释里的内部编号（N2/V19/K1/L3/NK8 等）、双星号和反引号，保留技术说明。
+- C++ 注释改动会改构建指纹：已重建 debug/release，指纹 `6925da6f01b5…`。
+- 全量 867 用例 / 7969 断言；verify 七步全绿。
 
 ### 2026-10-20 — AssetRegistry：BGM 曲名缓存 + 失败告警收敛
 

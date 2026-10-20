@@ -133,7 +133,7 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_out_time[i] = 0.0f;
 	_fx[i] = 0.0f;
 	_timer[i] = 0.0f;
-	// L3.5-4e：有状态 spawn 必须整行归零（batch 路径由调用方传数组，stateful 没有）。
+	// 有状态 spawn 必须整行归零（batch 路径由调用方传数组，stateful 没有）。
 	_program[i] = -1;
 	_pphase[i] = 0;
 	_ptick[i] = 0;
@@ -343,7 +343,7 @@ void DanmakuStore::integrate(double p_delta) {
 	}
 }
 
-// L3.5-4e：有状态存储的容量扩容（grow-only）与剔除区注入。
+// 有状态存储的容量扩容（grow-only）与剔除区注入。
 void DanmakuStore::reserve(int p_n) { _ensure_capacity(p_n); }
 void DanmakuStore::set_cull(const Rect2 &p_cull) { _cull = p_cull; _grid_dirty = true; }
 void DanmakuStore::set_margin(float p_margin) { _margin = p_margin; }
@@ -426,7 +426,7 @@ PackedFloat32Array DanmakuStore::get_timers() const {
 	return out;
 }
 
-// V19：逐弹渲染朝向覆盖（NAN = 未设，渲染端回退到 velocity 角）。
+// 逐弹渲染朝向覆盖（NAN = 未设，渲染端回退到 velocity 角）。
 PackedFloat32Array DanmakuStore::get_render_rots() const {
 	PackedFloat32Array out;
 	out.resize(_count);
@@ -488,8 +488,8 @@ void DanmakuStore::fill_multimesh(const Ref<MultiMesh> &p_mm) const {
 	}
 }
 
-// N2.2：积分加速器。语义必须与 scripts/kernel/bullet_system.gd 的 _physics_process 1:1。
-// 与 GDScript 版的唯一区别：这里**不**在循环里 swap 回收，只记录 dead；调用方按同序重放 despawn。
+// 积分加速器。语义必须与 scripts/kernel/bullet_system.gd 的 _physics_process 1:1。
+// 与 GDScript 版的唯一区别：这里不在循环里 swap 回收，只记录 dead；调用方按同序重放 despawn。
 Dictionary DanmakuStore::integrate_batch(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedFloat32Array &p_life_left, const PackedFloat32Array &p_fx_phase, const PackedFloat32Array &p_timers, double p_delta, const Vector2 &p_cull_pos, const Vector2 &p_cull_size, float p_margin) const {
 	const int n = MIN(p_count, MIN(p_positions.size(), p_velocities.size()));
 	PackedVector2Array positions = p_positions;   // CoW 共享；下面首次写入时才整块拷贝
@@ -524,7 +524,7 @@ Dictionary DanmakuStore::integrate_batch(int p_count, const PackedVector2Array &
 		if (timers[i] > 0.0f) {
 			timers[i] -= dt;
 		}
-		// NK8：与 integrate 的 Rect2.has_point 对齐：右/下边界开区间。
+		// 与 integrate 的 Rect2.has_point 对齐：右/下边界开区间。
 		if (cull && (p.x < x0 || p.x >= x1 || p.y < y0 || p.y >= y1)) {
 			dead.push_back(i);
 		}
@@ -540,14 +540,14 @@ Dictionary DanmakuStore::integrate_batch(int p_count, const PackedVector2Array &
 }
 
 
-// ═══ L3：packed program 执行器（与 GDScript 参考解释器 LifecycleBehavior 1:1）═══
+// ═══ packed program 执行器（与 GDScript 参考解释器 LifecycleBehavior 1:1）═══
 
 int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFloat32Array &p_args,
 		const PackedInt32Array &p_move_start, const PackedInt32Array &p_move_count,
 		const PackedInt32Array &p_until, const PackedInt32Array &p_act_start,
 		const PackedInt32Array &p_act_count, int p_phase_count, int p_slots) {
-	// NK4：原生是最后一道边界。所有并行数组 / opcode / slot 操作数先校验，再写任何表。
-	// 注意：这里**不发引擎消息**（原生 warning/error 会被 GUT 记为 Unexpected Errors）；由调用方按 -1 报告。
+	// 原生是最后一道边界。所有并行数组 / opcode / slot 操作数先校验，再写任何表。
+	// 注意：这里不发引擎消息（原生 warning/error 会被 GUT 记为 Unexpected Errors）；由调用方按 -1 报告。
 	if (p_phase_count <= 0 || p_slots < 0 || p_slots > SLOT_STRIDE) {
 		return -1;
 	}
@@ -660,7 +660,7 @@ Vector2 DanmakuStore::_target_pos(int p_tg, const Vector2 &from, const Vector2 &
 	return Vector2();
 }
 
-// K1：确定性 PRNG（xorshift32）。种子 0 会退化 → 用黄金比常量兜底。
+// 确定性 PRNG（xorshift32）。种子 0 会退化 → 用黄金比常量兜底。
 void DanmakuStore::set_seed(int p_seed) {
 	_rng_state = (uint32_t)((uint64_t)p_seed & 0xFFFFFFFFu);
 	if (_rng_state == 0) { _rng_state = 0x9E3779B9u; }
@@ -675,7 +675,7 @@ float DanmakuStore::_rng_float() {
 
 float DanmakuStore::_rng_range(float a, float b) { return a + (b - a) * _rng_float(); }
 
-// V9/V10：纯方向解析——不消耗 RNG、不写隐藏分支；随机量 rnd 由调用方显式预抽。
+// 纯方向解析——不消耗 RNG、不写隐藏分支；随机量 rnd 由调用方显式预抽。
 Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, const Vector2 &vel, float p_prob, float rnd) {
 	if (p_dk == 0) {
 		return Vector2(sin(angle), -cos(angle));
@@ -683,10 +683,10 @@ Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector
 	if (p_dk == 3) {   // 自身朝向（forward）旋转 angle
 		return forward.rotated(angle);
 	}
-	if (p_dk == 6) {   // 镜面（reflect）：把**当前速度**按 pos 所在的场边翻分量，再转 angle
+	if (p_dk == 6) {   // 镜面（reflect）：把当前速度按 pos 所在的场边翻分量，再转 angle
 		// 左右边翻 x、上边翻 y；角落（同时贴两条边）两边都翻 = 原路返回。
 		// pos 由调用方给：emit(at=AT_PHASE_END) 时 = 撞墙落点（at_wall 的相位结束输出），
-		// 不贴边（如 AT_CURRENT 未撞墙）→ 不翻，退化为自身朝向，**不会静默乱转向**。
+		// 不贴边（如 AT_CURRENT 未撞墙）→ 不翻，退化为自身朝向，不会静默乱转向。
 		Vector2 v = (vel != Vector2()) ? vel : forward;
 		bool flipped = false;
 		if (pos.x <= _field_left || pos.x >= _field_right) { v.x = -v.x; flipped = true; }
@@ -715,12 +715,12 @@ Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector
 	return base.rotated(angle);
 }
 
-// V10：方向表达式的随机消耗点显式化（RANDOM(4)/CHANCE(5) 各抽一次；其余 0 次）。
+// 方向表达式的随机消耗点显式化（RANDOM(4)/CHANCE(5) 各抽一次；其余 0 次）。
 float DanmakuStore::_draw_dir_rnd(int p_dk) {
 	return (p_dk == 4 || p_dk == 5) ? _rng_float() : 0.0f;
 }
 
-// V11：set_heading 的单一实现（Move case 7 / Action case 43 共用）。
+// set_heading 的单一实现（Move case 7 / Action case 43 共用）。
 void DanmakuStore::_apply_set_heading(int i, const float *a, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies) {
 	const int dk = (int)a[0];
 	const Vector2 d = _resolve_dir(dk, (int)a[1], a[2], Vector2(_x[i], _y[i]), player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), Vector2(_vx[i], _vy[i]), a[3], _draw_dir_rnd(dk));
@@ -732,11 +732,11 @@ void DanmakuStore::_apply_set_heading(int i, const float *a, const Vector2 &play
 	}
 }
 
-// V11：set_speed 的单一实现（Move case 8 / Action case 44 共用）。
+// set_speed 的单一实现（Move case 8 / Action case 44 共用）。
 void DanmakuStore::_apply_set_speed(int i, const float *a) {
 	const Vector2 vv(_vx[i], _vy[i]);
 	const float len = vv.length();
-	// V15：v=0 时用「朝向」定方向（与 set_heading 对称），不再静默 no-op。
+	// v=0 时用「朝向」定方向（与 set_heading 对称），不再静默 no-op。
 	const Vector2 d = (len > 0.0f) ? vv / len : Vector2(_hx[i], _hy[i]);
 	if (d != Vector2()) {
 		_vx[i] = d.x * a[0];
@@ -753,7 +753,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			_vx[i] = v.x + a[0] * dt;
 			_vy[i] = v.y + a[1] * dt;
 			break;
-		case 2: { // accel_heading —— 沿**自身朝向**加速（与速度解耦：v=0 也不失义，可减速→反向）
+		case 2: { // accel_heading —— 沿自身朝向加速（与速度解耦：v=0 也不失义，可减速→反向）
 			const Vector2 dir(_hx[i], _hy[i]);
 			if (dir != Vector2()) {
 				_vx[i] = v.x + dir.x * a[0] * dt;
@@ -761,7 +761,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			}
 			break;
 		}
-		case 3: { // rotate（mode：0=both / 1=velocity only / 2=heading only，V12）
+		case 3: { // rotate（mode：0=both / 1=velocity only / 2=heading only）
 			const int si = (int)a[2];
 			const float turned = slots[si];
 			float step = a[0] * dt;
@@ -798,7 +798,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 					rotated = cur.rotated(CLAMP(cur.angle_to(diff / dist), -max_turn, max_turn));
 				}
 			}
-			// V2：steer 只转向、不改速度（速度是独立轴，交给 speed_lerp / set_speed）。
+			// steer 只转向、不改速度（速度是独立轴，交给 speed_lerp / set_speed）。
 			const Vector2 nv = rotated * v.length();
 			_vx[i] = nv.x;
 			_vy[i] = nv.y;
@@ -825,7 +825,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 		case 8: // set_speed
 			_apply_set_speed(i, a);
 			break;
-		case 9: { // V18 position —— 位置来源统一 op（mode 0=PHASE_START / 1=ANCHOR）
+		case 9: { // position —— 位置来源统一 op（mode 0=PHASE_START / 1=ANCHOR）
 			// 布局：[mode, anchor_id, off.x, off.y, angle, speed, flags, initial, slot, base_sx, base_sy]
 			const int mode = (int)a[0];
 			const int slot = (int)a[8];
@@ -859,7 +859,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			const float adir_y = -cos(angle);
 			_x[i] = base.x + adir_x * slots[slot];
 			_y[i] = base.y + adir_y * slots[slot];
-			// V19：位置 op 只写位置；render_heading 走独立渲染朝向通道，不再借道 velocity。
+			// 位置 op 只写位置；render_heading 走独立渲染朝向通道，不再借道 velocity。
 			if (mode == 1 && (((int)a[6] & 2) != 0)) {
 				_render_rot[i] = std::atan2(adir_y, adir_x);
 			}
@@ -873,7 +873,7 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 bool DanmakuStore::_check_until(int i, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies) {
 	const int op = _p_ops[ins];
 	const float *a = &_p_args[ins * OPS_ARGS];
-	// V6：通用节流头 [every, every_ticks]（所有条件一致；先帧门控，再秒节流）。
+	// 通用节流头 [every, every_ticks]（所有条件一致；先帧门控，再秒节流）。
 	const int et = (int)a[1];
 	if (et > 0 && _ptick[i] % et != 0) { return false; }
 	if (a[0] > 0.0f) {
@@ -909,11 +909,11 @@ bool DanmakuStore::_check_until(int i, float *slots, int ins, const Vector2 &pla
 		}
 		case 24: { // state
 			const int si = (int)a[2];
-			if (si < 0 || si >= SLOT_STRIDE) { return false; }   // V8：slot 边界守卫
+			if (si < 0 || si >= SLOT_STRIDE) { return false; }   // slot 边界守卫
 			const float sv = slots[si];
 			return (int)a[3] == 0 ? sv >= a[4] : sv <= a[4];
 		}
-		case 25: { // speed（V21：|v| 与 value 比较，cmp 0=GE / 1=LE）
+		case 25: { // speed（|v| 与 value 比较，cmp 0=GE / 1=LE）
 			const float sp = Vector2(_vx[i], _vy[i]).length();
 			return (int)a[2] == 0 ? sp >= a[3] : sp <= a[3];
 		}
@@ -928,7 +928,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 	switch (op) {
 		case 40: { // emit
 			Vector2 at(_x[i], _y[i]);
-			if ((int)a[6] == 1 && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }   // V7：at = AT_PHASE_END
+			if ((int)a[6] == 1 && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }   // at = AT_PHASE_END
 			float speed = Vector2(_vx[i], _vy[i]).length();
 			if (a[5] > 0.0f) { speed = a[5]; }
 			const int dk = (int)a[1];
@@ -973,7 +973,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_color.push_back(_color[i]);
 			_ev_variant.push_back(0);
 			break;
-		case 46: { // V9：变体发射（显式抽一次定分支；两套方向各自解析）
+		case 46: { // 变体发射（显式抽一次定分支；两套方向各自解析）
 			Vector2 at(_x[i], _y[i]);
 			if ((int)a[9] == 1 && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }
 			float speed = Vector2(_vx[i], _vy[i]).length();
@@ -1017,7 +1017,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 	_ev_color.clear();
 	const int phase_total = _p_move_start.size();
 	for (int i = 0; i < _count; ++i) {
-		_render_rot[i] = (float)NAN;   // V19：每帧重置；只有 position(render_heading) 会设它
+		_render_rot[i] = (float)NAN;   // 每帧重置；只有 position(render_heading) 会设它
 		if (_fx[i] > 0.0f) { continue; }   // 出生相位：只画特效，不跑行为（与参照 behavior_processor 一致）
 		const int prog = _program[i];
 		if (prog < 0) { continue; }
@@ -1048,7 +1048,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 			for (int s = 0; s < SLOT_STRIDE; ++s) { slots[s] = 0.0f; }
 		}
 	}
-	// NK3：同一行可能因重复 despawn / 重复 action 被 push 多次。
+	// 同一行可能因重复 despawn / 重复 action 被 push 多次。
 	// swap-remove 逆序只能解决“搬进来的 id 更大”，不能解决重复 id 删到下一颗无辜弹。
 	std::sort(_tick_dead.begin(), _tick_dead.end(), std::greater<int>());
 	_tick_dead.erase(std::unique(_tick_dead.begin(), _tick_dead.end()), _tick_dead.end());
@@ -1162,7 +1162,7 @@ PackedInt32Array DanmakuStore::get_factions() const {
 	return out;
 }
 
-// L3.5-4e：宿主 BulletSystem 的 `_faction` 是 PackedByteArray → 需要同型快照。
+// 宿主 BulletSystem 的 _faction 是 PackedByteArray → 需要同型快照。
 PackedByteArray DanmakuStore::get_factions_bytes() const {
 	PackedByteArray out;
 	out.resize(_count);
@@ -1170,7 +1170,7 @@ PackedByteArray DanmakuStore::get_factions_bytes() const {
 	return out;
 }
 
-// ═══ L3.5-1：判定几何（与 scripts/kernel/collision/hit_geometry.gd 1:1）═══
+// ═══ 判定几何（与 scripts/kernel/collision/hit_geometry.gd 1:1）═══
 static bool _circle_rect(const Vector2 &center, float radius, const Vector2 &rect_center, float rot, const Vector2 &size) {
 	const Vector2 local = (center - rect_center).rotated(-rot);
 	const Vector2 half = size * 0.5f;
@@ -1217,7 +1217,7 @@ bool DanmakuStore::hit_test(int p_id, const Vector2 &p_center, float p_radius) c
 	return _circle_rect(p_center, p_radius, hit, rot, Vector2(sx, sy));
 }
 
-// ═══ L3.5-4b-pre：宽相 uniform grid（与 GDScript `BulletSystem` 同参数/同语义）═══
+// ═══ 宽相 uniform grid（与 GDScript BulletSystem 同参数/同语义）═══
 
 void DanmakuStore::_ensure_broadphase() const {
 	if (!_grid_dirty) { return; }

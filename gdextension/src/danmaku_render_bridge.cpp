@@ -44,7 +44,7 @@ int DanmakuRenderBridge::get_fx_type_count() const {
 Dictionary DanmakuRenderBridge::group(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedColorArray &p_colors, const PackedInt32Array &p_type_indices, const PackedByteArray &p_factions, const PackedFloat32Array &p_fade_by_kind, const PackedFloat32Array &p_render_rots, const PackedFloat32Array &p_fx_phases, const PackedInt32Array &p_fx_type_indices) {
 	_buckets.clear();
 	_fx_buckets.clear();
-	// 快照数组是**容量大小**，只有前 p_count 条是活跃的（GDScript 侧用 for i in count 截断）。
+	// 快照数组是容量大小，只有前 p_count 条是活跃的（GDScript 侧用 for i in count 截断）。
 	const int n = p_count < p_type_indices.size() ? p_count : p_type_indices.size();
 	const int types = _tex_key_base.size();
 	const int fx_types = _fx_tex_key.size();
@@ -60,7 +60,7 @@ Dictionary DanmakuRenderBridge::group(int p_count, const PackedVector2Array &p_p
 		} else if (kf == 1) {
 			hf = 0;
 		}
-		// 特效行：有特效型，且（还在出生相位 **或** 本就是纯特效行）。
+		// 特效行：有特效型，且（还在出生相位 或 本就是纯特效行）。
 		if (fi >= 0 && fi < fx_types && (ph > 0.0f || ti < 0)) {
 			const int64_t fx_base = _fx_tex_key[fi];
 			if (fx_base < 0) {
@@ -110,7 +110,7 @@ Dictionary DanmakuRenderBridge::group(int p_count, const PackedVector2Array &p_p
 			const Vector2 v = r < p_velocities.size() ? p_velocities[r] : Vector2();
 			const bool follow = ti < _follow_dir.size() && _follow_dir[ti] != 0;
 			const float d_off = ti < _dir_offset.size() ? _dir_offset[ti] : 0.0f;
-			// V19：优先用逐弹 render_rot 覆盖（位置 op 的 render_heading）；否则回退 velocity 角。
+			// 优先用逐弹 render_rot 覆盖（位置 op 的 render_heading）；否则回退 velocity 角。
 			const bool has_rr = r < p_render_rots.size() && !std::isnan(p_render_rots[r]);
 			float rot = 0.0f;
 			if (follow && (has_rr || v != Vector2())) {

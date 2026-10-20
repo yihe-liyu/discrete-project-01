@@ -17,9 +17,13 @@
 
 namespace godot {
 
-// N2-real：原生 SoA 存储 + 积分 + 剔除 + 实例缓冲写入。
-// 每弹携带 type / faction / color，供渲染与后续宿主规则使用。
-// **批量 spawn**（spawn_batch）避免逐弹跨语言边界。
+// DanmakuStore
+// 原生弹幕内核：SoA 存储、积分、剔除、生命周期 program、宽相查询。
+//
+// 边界：原生只负责机制；弹型、内容、宿主规则仍在 GDScript。
+// 行 id 是当前活跃行下标；despawn 是 swap-with-last，遍历回收必须倒序。
+// 公开入口做边界守卫；无效 id 返回 -1 / 空，不向引擎发 warning/error（GUT 会记为 Unexpected Errors）。
+// 批量入口（spawn_batch / integrate_batch / behavior_batch）按值 CoW 进出，避免逐弹跨语言调用。
 class DanmakuStore : public RefCounted {
 	GDCLASS(DanmakuStore, RefCounted)
 
@@ -36,19 +40,19 @@ class DanmakuStore : public RefCounted {
 	float _default_life = 20.0f;
 	std::vector<float> _hb_radius, _hb_offx, _hb_offy, _hb_sizex, _hb_sizey, _hb_diroff;
 	std::vector<unsigned char> _hb_follow, _grazed;
-	// V19：逐弹渲染朝向覆盖（NAN = 未设，渲染按 velocity 推）。位置 op 只写它，不再借道 velocity。
+	// 逐弹渲染朝向覆盖（NAN = 未设，渲染按 velocity 推）。位置 op 只写它，不再借道 velocity。
 	std::vector<float> _render_rot;
 	float _field_left = 0.0f, _field_right = 0.0f, _field_top = 0.0f;
 
-	// K1：确定性 PRNG（单通道；种子由宿主 RNG 派生）。抽取顺序 = 弹行遍历顺序 → 回放可复现。
+	// 确定性 PRNG（单通道；种子由宿主 RNG 派生）。抽取顺序 = 弹行遍历顺序 → 回放可复现。
 	uint32_t _rng_state = 0x9E3779B9u;
 
-	// L3：packed program 执行（列式；op/args 全局拼接，program 只存偏移）。
+	// packed program 执行（列式；op/args 全局拼接，program 只存偏移）。
 	static const int SLOT_STRIDE = 8;
-	// NK8：单帧最大积分/行为步长。大 dt（断点、卡帧、热重载）不得穿透/漏剔除；
+	// 单帧最大积分/行为步长。大 dt（断点、卡帧、热重载）不得穿透/漏剔除；
 	// 0.4s = 24 个 60Hz 物理帧；能覆盖常见的 2~3 帧卡顿，又不会让 1s 级断点一步穿透。
 	static constexpr float MAX_DT = 0.4f;
-	// NK4：register_program 的 opcode 白名单（与 GDScript LifecycleCompiler 编码一致）。
+	// register_program 的 opcode 白名单（与 GDScript LifecycleCompiler 编码一致）。
 	static constexpr int OP_M_ACCEL_WORLD = 1;
 	static constexpr int OP_M_POSITION = 9;
 	static constexpr int OP_C_NEVER = 20;
@@ -62,7 +66,7 @@ class DanmakuStore : public RefCounted {
 	std::vector<int> _program, _pphase, _ptick;
 	std::vector<float> _pelapsed, _pnext, _pendx, _pendy, _pslots;
 	std::vector<unsigned char> _phasend;
-	// V1：相位首帧标志从「每弹一个 bool」改为「每槽一个 bit」——否则同相位的两个有状态
+	// 相位首帧标志从「每弹一个 bool」改为「每槽一个 bit」——否则同相位的两个有状态
 	// 初始化 unit（anchor_drift / drift）会互相消费掉 fresh，后者用未初始化的槽（实测瞬移到原点）。
 	// bit s = 槽 s 在本相位尚未初始化。
 	std::vector<uint32_t> _pslot_fresh;
@@ -70,18 +74,18 @@ class DanmakuStore : public RefCounted {
 	std::vector<int> _tick_dead;
 	std::vector<int> _ev_kind, _ev_prog, _ev_local, _ev_bullet, _ev_variant;
 	std::vector<float> _ev_x, _ev_y, _ev_dx, _ev_dy, _ev_val;
-	// 事件携带的弹色（与上面各数组**等长对齐**）。宿主用它给消弹消散特效染同色（op 47）。
+	// 事件携带的弹色（与上面各数组等长对齐）。宿主用它给消弹消散特效染同色（op 47）。
 	std::vector<Color> _ev_color;
 	int _capacity = 0;
 	int _count = 0;
 
-	// NK1：所有逐弹入口的统一边界守卫。release 下 vector[] 越界是 UB，不依赖容器检查。
+	// 所有逐弹入口的统一边界守卫。release 下 vector[] 越界是 UB，不依赖容器检查。
 	inline bool _valid(int p_id) const { return p_id >= 0 && p_id < _count; }
 	Rect2 _cull;
 	float _margin = 0.0f;
 
-	// L3.5-4b-pre：宽相 uniform grid（参数与 GDScript `BulletSystem` 一致；查询前按需重建）。
-	// mutable：`query_circle` 是 const，但需要惰性重建网格。
+	// 宽相 uniform grid（参数与 GDScript BulletSystem 一致；查询前按需重建）。
+	// mutable：query_circle 是 const，但需要惰性重建网格。
 	static constexpr float GRID_CELL = 64.0f;
 	static constexpr int GRID_MIN_COUNT = 64;
 	static constexpr int GRID_MAX_CELLS = 8192;
@@ -97,11 +101,17 @@ protected:
 	static void _bind_methods();
 
 public:
+	// 重置容量与剔除区；会清空现有行。
 	void setup(int p_capacity, const Rect2 &p_cull);
+	// 追加一行，返回行 id；容量满返回 -1。
 	int spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type = 0, int p_faction = 0, const Color &p_color = Color(1, 1, 1, 1));
+	// 批量追加，返回成功行数；容量不足时截断。
 	int spawn_batch(const PackedVector2Array &p_pos, const PackedVector2Array &p_vel, const PackedInt32Array &p_type, const PackedInt32Array &p_faction, const PackedColorArray &p_color);
+	// 推进一帧积分、寿命、出生相位与出界剔除；不跑生命周期 program。
 	void integrate(double p_delta);
+	// 当前活跃行数；快照数组可能按容量分配。
 	int get_active_count() const;
+	// 逐行 getter / 只读快照：前 count 行有效，不要跨帧缓存。
 	int get_program(int p_id) const;
 	Vector2 get_position(int p_id) const;
 	Vector2 get_velocity(int p_id) const;
@@ -113,19 +123,20 @@ public:
 	int get_type_index(int p_id) const;
 	int get_faction(int p_id) const;
 	Color get_color(int p_id) const;
-	// N2 存储段：原生持有 SoA；积分/回收语义与 GDScript 内核 1:1。
+	// 容量 / 剔除区 / 出界宽限。
 	void reserve(int p_n);
 	void set_cull(const Rect2 &p_cull);
 	void set_margin(float p_margin);
-	/// 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
+	// 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
 	void set_out_grace(int p_id, float p_grace);
 	float get_out_grace(int p_id) const;
 	void set_default_life(float p_life);
 	void set_field(float p_left, float p_right, float p_top);
 	void set_seed(int p_seed);
-	// L3.5-1：判定（与 GDScript 内核 1:1）
+	// 判定（与 GDScript 内核 1:1）
 	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
 	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const;
+	// 宽相查询：首次调用惰性建网格；返回候选行 id，仍需精确判定。
 	PackedInt32Array query_circle(const Vector2 &p_center, float p_search_radius) const;
 	// 宽相是否已启用（诊断 / 测试；调用过 query_circle 后才反映最近一次重建结果）。
 	bool is_broadphase_active() const;
@@ -135,7 +146,7 @@ public:
 	PackedByteArray get_factions_bytes() const;
 	void _run_behavior_pass(float p_dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base);
 	Dictionary _events_dict() const;
-	// L3.5-3：无状态行为批（数组进/出，不做 swap；回收由调用方按 dead 重放）—— 与 integrate_batch 同款模式。
+	// 无状态行为批（数组进/出，不做 swap；回收由调用方按 dead 重放）—— 与 integrate_batch 同款模式。
 	Dictionary behavior_batch(int p_count, const PackedVector2Array &p_pos, const PackedVector2Array &p_vel,
 			const PackedFloat32Array &p_life, const PackedFloat32Array &p_fx,
 			const PackedInt32Array &p_program, const PackedInt32Array &p_phase, const PackedInt32Array &p_tick,
@@ -145,6 +156,7 @@ public:
 	bool is_grazed(int p_id) const;
 	void mark_grazed(int p_id);
 	void clear();
+	// 回收一行；返回被 swap 进来的行 id（尾部回收返回 -1）。
 	int despawn(int p_id);
 	void set_life(int p_id, float p_life);
 	void set_fx(int p_id, float p_fx);
@@ -167,42 +179,40 @@ public:
 	// 构建指纹（SCons 由 src/*.{h,cpp} 的 SHA-256 生成 build_stamp.h）。
 	// tools/check_native_api.gd 用同一算法重算源码并比对，防止"源码改了但 .so 没重编"。
 	String get_build_id() const;
-	// NK10：仅供 tools/bench_native.gd 的基线渲染测量；生产渲染走 BulletMultiMesh。
+	// 仅供 tools/bench_native.gd 的基线渲染测量；生产渲染走 BulletMultiMesh。
 	// 不是生产渲染 API，也不应被当主路径调用。
 	void fill_multimesh(const Ref<MultiMesh> &p_mm) const;
 
-	// N2.2：无状态「积分加速器」——对宿主传入的 SoA 数组跑完整积分/寿命/出生相位/剔除循环，
-	// 返回新数组 + 本帧应回收的行 id（**不做 swap**：回收由 GDScript 侧按既有契约重放，
-	// 保证颜色/行为等 GDScript 专有字段的行身份一致）。数组按值 CoW 进出，无跨帧状态。
 	void _swap_remove(int p_id);
 	void _ensure_capacity(int p_n);
-	// L3.5-4b-pre：宽相网格（惰性重建；与 GDScript `_ensure_broadphase/_rebuild_broadphase/_cell_index` 同序）。
+	// 宽相网格（惰性重建；与 GDScript _ensure_broadphase/_rebuild_broadphase/_cell_index 同序）。
 	void _ensure_broadphase() const;
 	void _rebuild_broadphase() const;
 	int _cell_index(int p_i) const;
 	PackedInt32Array _query_circle_grid(const Vector2 &p_center, float p_search_radius) const;
 
-	// L3：注册一个编译后的 program，返回 program_id。
+	// 注册编译后的 program（只存偏移/参数）；返回 program_id，校验失败返回 -1。
 	int register_program(const PackedInt32Array &p_ops, const PackedFloat32Array &p_args,
 			const PackedInt32Array &p_move_start, const PackedInt32Array &p_move_count,
 			const PackedInt32Array &p_until, const PackedInt32Array &p_act_start,
 			const PackedInt32Array &p_act_count, int p_phase_count, int p_slots);
 	void set_program(int p_id, int p_program);
-	// 跑一帧所有 program；返回事件（emit/sfx/call），由宿主 drain。
+	// 跑一帧 program；返回事件字典（emit/sfx/call）；本帧 dead 行走倒序 swap 回收。
 	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array());
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);
 	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, const Vector2 &vel, float p_prob, float rnd);
 	float _rng_float();
 	float _rng_range(float a, float b);
-	// V10：方向表达式的随机消耗点显式化（RANDOM/CHANCE 各抽一次；其余 0 次）。
+	// 方向表达式的随机消耗点显式化（RANDOM/CHANCE 各抽一次；其余 0 次）。
 	float _draw_dir_rnd(int p_dk);
 	void _exec_move(int i, int prog, float *slots, int ins, float dt, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const PackedVector2Array &anchor_base);
 	bool _check_until(int i, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
 	void _exec_action(int i, int prog, float *slots, int ins, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
-	// V11：瞬时变换的单一实现（Move case 7/8 与 Action case 43/44 共用）。
+	// 瞬时变换的单一实现（Move case 7/8 与 Action case 43/44 共用）。
 	void _apply_set_heading(int i, const float *a, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies);
 	void _apply_set_speed(int i, const float *a);
 
+	// 无状态积分批：数组进/出，不 swap；返回 dead 行 id，由宿主按同序重放 despawn。
 	Dictionary integrate_batch(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedFloat32Array &p_life_left, const PackedFloat32Array &p_fx_phase, const PackedFloat32Array &p_timers, double p_delta, const Vector2 &p_cull_pos, const Vector2 &p_cull_size, float p_margin) const;
 
 	DanmakuStore();
