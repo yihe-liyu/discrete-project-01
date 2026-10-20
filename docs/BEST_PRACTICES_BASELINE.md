@@ -167,6 +167,7 @@
 - **内容协程 async（实验）**：`extends AsyncCoroutineScript` + `run_async(ctx)`；只 `await ctx.clock.delay/next_tick`（跟 `CoroutineRunner` 时钟）；不要用 `Timer`/`SceneTreeTimer` 做内容时间。旧 `_tick` 返回秒数风格保留。
 - **目录扫描**：`ContentCatalog` 必须同时认 `extends AsyncCoroutineScript`；新增协程基类时同步改 `_is_coroutine_script`，否则脚本会静默从创作台消失。
 - **API 文档**：核心 `class_name` 用 `##`（`[codeblock]` / `[code]` / `[method]`）写“描述 + 模型 + 用法 + 边界”；长教程留在 `docs/`，代码只放链接。试点：`BulletLifecycle`。
+- **文档注释风格**：不写内部版本号（V18/DSL7）和 `**` 强调；用平实中文、`[code]`/`[codeblock]`；长文留 `docs/`。
 - **Marisa 激光锚点**：激光段 anchor 到子机节点；子机重建 / cleanup 前必须 `ctx.bullets.clear_laser_bullets()`，否则旧段 anchor id 失效（退回自机 + `push_error`）。激光段用 `BulletData.kind = LASER` 标记，`MarisaLaserFade` 才能整批淡出。
 
 ## 🔴 待改进（达标后清空）

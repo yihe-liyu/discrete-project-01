@@ -17,7 +17,7 @@
 ##
 ## [b]边界[/b]
 ## - 位置写入原语（[code]drift[/code] / [code]anchor_drift[/code]）同相位会互相覆盖，
-##   也会覆盖速度积分；不要和速度原语混在同一相位。
+## 也会覆盖速度积分；不要和速度原语混在同一相位。
 ## - [code]anchor_drift[/code] 必须在 [code]trajectory(lc, anchor)[/code] 提供锚点 spec，否则退回自机。
 ## - [code]until=never[/code] 的相位不会自动结束；最后一相位的 on_end 是死代码（编译会警告）。
 ##
@@ -150,7 +150,7 @@ func _alloc() -> int:
 
 
 func _set_until(op: StringName, extra: Dictionary = {}) -> void:
-	# V6 节流是相位级横切属性：`.every()` / `.every_ticks()` 可能写在 until_* 之前，
+	# 节流是相位级横切属性：`.every()` / `.every_ticks()` 可能写在 until_* 之前，
 	# 这里必须先保住修饰键再 clear；否则“先 every 再 until”会被静默清空。
 	var every_sec: float = float(_until.get(&"every", 0.0))
 	var ticks_mod: int = int(_until.get(&"every_ticks", 0))
@@ -213,21 +213,21 @@ func accel_world(v: Vector2) -> BulletLifecycle:
 	_moves.append({&"op": M_ACCEL_WORLD, &"vec": v})
 	return self
 
-## 沿**自身朝向**加速：velocity += heading * a * dt。
+## 沿自身朝向加速：velocity += heading * a * dt。
 ## 与速度解耦 → v=0 也不失义；a < 0 可减速到反向（往返探测弹的「回点」）。
 func accel_heading(a: float) -> BulletLifecycle:
 	_moves.append({&"op": M_ACCEL_HEADING, &"a": a})
 	return self
 
-## 角速度 w（弧度/秒），**同时**转速度与朝向；limit > 0 时累计转角钳到 limit（自带槽）。
+## 角速度 w（弧度/秒），同时转速度与朝向；limit > 0 时累计转角钳到 limit（自带槽）。
 func rotate(w: float, limit: float = 0.0) -> BulletLifecycle:
 	return _add_rotate(w, limit, ROT_BOTH)
 
-## 只转**速度**（朝向不变，V12）。
+## 只转速度（朝向不变）。
 func rotate_velocity(w: float, limit: float = 0.0) -> BulletLifecycle:
 	return _add_rotate(w, limit, ROT_VELOCITY)
 
-## 只转**朝向**（速度不变，V12）。
+## 只转朝向（速度不变）。
 func rotate_heading(w: float, limit: float = 0.0) -> BulletLifecycle:
 	return _add_rotate(w, limit, ROT_HEADING)
 
@@ -238,7 +238,7 @@ func _add_rotate(w: float, limit: float, mode: int) -> BulletLifecycle:
 	_moves.append({&"op": M_ROTATE, &"w": w, &"limit": limit, &"slot": s, &"mode": mode})
 	return self
 
-## 朝 target 转向（**只转向、不改速度**）。ramp 秒内爬满转向权；dist_weight > 0 时近距离转得更快；
+## 朝 target 转向（只转向、不改速度）。ramp 秒内爬满转向权；dist_weight > 0 时近距离转得更快；
 ## steer_until > 0 时只在前 N 秒转。变速是独立轴：需要时另加 speed_lerp / set_speed。
 func steer(target: StringName, max_turn_per_sec: float, ramp: float = 0.0, dist_weight: float = 0.0, steer_until: float = 0.0) -> BulletLifecycle:
 	_moves.append({&"op": M_STEER, &"target": target, &"max_turn": max_turn_per_sec, &"ramp": ramp, &"dist_weight": dist_weight, &"steer_until": steer_until})
@@ -249,12 +249,12 @@ func speed_lerp(from_speed: float, to_speed: float, ramp: float) -> BulletLifecy
 	_moves.append({&"op": M_SPEED_LERP, &"from": from_speed, &"to": to_speed, &"ramp": ramp})
 	return self
 
-## 每帧把速度乘 f（**复利/指数算子**，不是瞬时设定）。线性变速用 speed_lerp，瞬时设定用 set_speed。
+## 每帧把速度乘 f（复利/指数算子，不是瞬时设定）。线性变速用 speed_lerp，瞬时设定用 set_speed。
 func speed_mul(f: float) -> BulletLifecycle:
 	_moves.append({&"op": M_SPEED_MUL, &"f": f})
 	return self
 
-## 设速度方向（保持速度大小）**并同步朝向**。
+## 设速度方向（保持速度大小）并同步朝向。
 func set_heading(dir: Variant) -> BulletLifecycle:
 	_moves.append({&"op": M_SET_HEADING, &"dir": DIR_SPEC.from_variant(dir)})
 	return self
@@ -264,10 +264,10 @@ func set_speed(speed: float) -> BulletLifecycle:
 	_moves.append({&"op": M_SET_SPEED, &"speed": speed})
 	return self
 
-## V18：编译为统一 [code]M_POSITION[/code]（mode=POS_PHASE_START）。
-## 从**相位起点**沿 dir(angle) 匀速平移：pos = 相位起点 + dir(angle) * 累计位移。
-## 与 anchor_drift 的区别：**不锚定任何外部对象**，基准就是本相位开始时自己的位置；同样不改速度/朝向。
-## **⚠ 位置写入原语**：直接写 pos、覆盖积分；与 anchor_drift / 速度原语同相位会互相覆盖（DANMAKU_API §9.13）。
+## 编译为统一 [code]M_POSITION[/code]（mode=POS_PHASE_START）。
+## 从相位起点沿 dir(angle) 匀速平移：pos = 相位起点 + dir(angle) * 累计位移。
+## 与 anchor_drift 的区别：不锚定任何外部对象，基准就是本相位开始时自己的位置；同样不改速度/朝向。
+## 位置写入原语：直接写 pos、覆盖积分；与 anchor_drift / 速度原语同相位会互相覆盖（DANMAKU_API §9.13）。
 ## 典型：整圈弹幕先「整体沿一个方向平移」一段距离（速度/朝向保留），平移结束后各自按出生方向飞出。
 func drift(angle: float, speed: float, initial: float = 0.0) -> BulletLifecycle:
 	var sx := _alloc()
@@ -277,11 +277,11 @@ func drift(angle: float, speed: float, initial: float = 0.0) -> BulletLifecycle:
 	return self
 
 
-## V18：编译为统一 [code]M_POSITION[/code]（mode=POS_ANCHOR）。
+## 编译为统一 [code]M_POSITION[/code]（mode=POS_ANCHOR）。
 ## 锚定 + 线性漂移（激光段）：pos = anchor_base + dir(angle) * drift。
 ## drift 首帧 = initial，之后每帧 += speed * dt；render_heading=true 时设置独立渲染朝向（render_rot 通道，不写 velocity）。
-## **⚠ 位置写入原语**：直接写 pos、覆盖积分；与 drift / 速度原语同相位会互相覆盖（DANMAKU_API §9.13）。
-## **必须在 trajectory(lc, anchor) 里提供锚点 spec**，否则退回 player + offset。
+## 位置写入原语：直接写 pos、覆盖积分；与 drift / 速度原语同相位会互相覆盖（DANMAKU_API §9.13）。
+## 必须在 trajectory(lc, anchor) 里提供锚点 spec，否则退回 player + offset。
 func anchor_drift(anchor_id: int, offset: Vector2, angle: float, speed: float, use_global: bool = true, initial: float = 0.0, render_heading: bool = false) -> BulletLifecycle:
 	var s := _alloc()
 	_moves.append({&"op": M_POSITION, &"mode": POS_ANCHOR, &"anchor_id": anchor_id, &"offset": offset, &"angle": angle, &"speed": speed, &"use_global": use_global, &"initial": initial, &"render_heading": render_heading, &"slot": s})
@@ -300,18 +300,18 @@ func until_elapsed(t: float) -> BulletLifecycle:
 	_set_until(C_ELAPSED, {&"t": t})
 	return self
 
-## 距 target < r 时结束。节流用链式 [code].every(秒)[/code] / [code].every_ticks(帧)[/code]（V6：对所有条件通用）。
+## 距 target < r 时结束。节流用链式 [code].every(秒)[/code] / [code].every_ticks(帧)[/code]（对所有条件通用）。
 func until_near(target: StringName, r: float) -> BulletLifecycle:
 	_set_until(C_NEAR, {&"target": target, &"r": r})
 	return self
 
 ## 碰到掩码指定的墙（左 1 / 右 2 / 上 4）时结束。
-## 纯谓词：只在越界时把**相位结束落点**写进 Until 输出（不改弹自身位置），供 emit(..., at=AT_PHASE_END) 使用。
+## 纯谓词：只在越界时把相位结束落点写进 Until 输出（不改弹自身位置），供 emit(..., at=AT_PHASE_END) 使用。
 func until_at_wall(mask: int) -> BulletLifecycle:
 	_set_until(C_AT_WALL, {&"mask": mask})
 	return self
 
-## V21：速度大小满足比较时结束（|v| cmp value；cmp = CMP_GE / CMP_LE）。
+## 速度大小满足比较时结束（|v| cmp value；cmp = CMP_GE / CMP_LE）。
 ## 典型：撞墙后 [code]accel_heading(-b)[/code] 减速，[code]until_speed(CMP_LE, v_min)[/code] 降到 v_min 即停。
 func until_speed(cmp: int, value: float) -> BulletLifecycle:
 	_set_until(C_SPEED, {&"cmp": cmp, &"value": value})
@@ -329,7 +329,7 @@ func until_turned() -> BulletLifecycle:
 	_set_state_until(_last_turn_slot, CMP_GE, _last_turn_limit)
 	return self
 
-# ---- Until 通用修饰（V6：节流是相位级横切属性，任何条件都能套）----
+# ---- Until 通用修饰（节流是相位级横切属性，任何条件都能套）----
 
 ## 每 [code]sec[/code] 秒最多检查一次该相位的 until。
 func every(sec: float) -> BulletLifecycle:
@@ -341,21 +341,21 @@ func every_ticks(n: int) -> BulletLifecycle:
 	_until[&"every_ticks"] = n
 	return self
 
-## 内部：状态槽条件（slot 对创作者不可见，仅 until_turned 用；V8）。
+## 内部：状态槽条件（slot 对创作者不可见，仅 until_turned 用）。
 func _set_state_until(slot: int, cmp: int, value: float) -> void:
 	_set_until(C_STATE, {&"slot": slot, &"cmp": cmp, &"value": value})
 
 # ═══ Action（当前相位的 on_end；相位结束时一次性执行）═══
 
 ## 播音效。key 见 docs/DANMAKU_API.md §7.2（如 &"kira" / &"shoot"）。
-## ⚠️ [code]db[/code] 默认必须是**总电平**，不能是 0.0 —— [code]0.0 dB[/code] 是"满音量"，会让这个音比其它响约 15 dB
+## [code]db[/code] 默认必须是总电平，不能是 0.0 —— [code]0.0 dB[/code] 是"满音量"，会让这个音比其它响约 15 dB
 ## （内容里普遍写 [code]lc.sfx(&"kira")[/code] 不传 db）。
 func sfx(key: StringName, db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecycle:
 	_on_end.append({&"op": A_SFX, &"key": key, &"db": db})
 	return self
 
 ## 相位结束时生成替换弹。
-## - spawn：**BulletData**（推荐：可序列化、跨实例共用 program）／Callable()->BulletData（旧写法 / oracle）／Array（见 emit_variant）。
+## - spawn：BulletData（推荐：可序列化、跨实例共用 program）／Callable()->BulletData（旧写法 / oracle）／Array（见 emit_variant）。
 ## - speed <= 0 → 继承当前速度大小；> 0 → 用该速度。
 ## - at = AT_PHASE_END → 用 until(at_wall) 输出的相位结束落点；AT_CURRENT（默认）→ 当前弹位置。
 ## - 事件回传 (program, local) 给宿主，由宿主实例化模板 —— Callable / BulletData 永不进原生。
@@ -363,7 +363,7 @@ func emit(spawn: Variant, dir: Variant, speed: float = 0.0, at: int = AT_CURRENT
 	return _append_emit(spawn, DIR_SPEC.from_variant(dir), speed, at, null)
 
 
-## DSL7：每次 emit 时在 base speed 上做 ±spread 的**逐发求值**（均匀分布）。
+## 每次 emit 时在 base speed 上做 ±spread 的逐发求值（均匀分布）。
 ## speed<=0 仍表示继承当前速度；spread=0 等价于常量。原生只收到 base speed，
 ## 倍率放在宿主表，由 KernelNativeSystem / 参考解释器在事件落地时求值。
 func emit_speed_rel(spawn: Variant, dir: Variant, speed: float = 0.0, spread: float = 0.15,
@@ -386,7 +386,7 @@ func _append_emit(spawn: Variant, spec: RefCounted, speed: float, at: int,
 
 ## 变体发射：内核抽一次 RNG 决定分支，宿主按分支号取 spawns 里哪个模板（0=未命中，1=命中）。
 ## [code]dir[/code] 必须是 [code]chance_toward(target, p, spread)[/code]：命中→精确朝 target，未命中→forward 旋转 spread。
-## 分支由内核**显式**抽取（V9），不再藏在方向求值里。
+## 分支由内核显式抽取，不再藏在方向求值里。
 func emit_variant(spawns: Array, dir: Variant, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
 	var spec := DIR_SPEC.from_variant(dir)
 	if spec.kind != D_CHANCE:
@@ -395,7 +395,7 @@ func emit_variant(spawns: Array, dir: Variant, speed: float = 0.0, at: int = AT_
 	_on_end.append({&"op": A_EMIT_VARIANT, &"spawns": spawns, &"chance": spec, &"speed": speed, &"at": at})
 	return self
 
-## 回收自己。**静默** —— 不播任何特效（这是默认语义：多数 despawn 发生在屏外或做超时清理）。
+## 回收自己。静默 —— 不播任何特效（这是默认语义：多数 despawn 发生在屏外或做超时清理）。
 ## 想让人看见"这颗弹消散了"，用 [code]despawn_clear()[/code]。
 func despawn() -> BulletLifecycle:
 	_on_end.append({&"op": A_DESPAWN})
@@ -403,16 +403,16 @@ func despawn() -> BulletLifecycle:
 
 
 ## 播一次「消弹消散」特效（宿主的 [code]play_clear_fx[/code]：位置 = 弹此刻位置，颜色 = 该弹当前色提亮 1.5×）。
-## **纯 action：不改变任何状态** —— 弹继续飞。要"消散并消失"用 [code]despawn_clear()[/code]。
+## 纯 action：不改变任何状态 —— 弹继续飞。要"消散并消失"用 [code]despawn_clear()[/code]。
 func clear_fx() -> BulletLifecycle:
 	_on_end.append({&"op": A_CLEAR_FX})
 	return self
 
 
 ## 消散特效 + 回收自己（= [code]clear_fx().despawn()[/code]）。
-## 用于**显式**想让人看见"这颗弹消失了"的场合（时间到 / 主动湮灭）。
-## ⚠️ 别把普通 [code]despawn()[/code] 一律换成它：[code]bounce[/code]/[code]radial_accel[/code] 在**撞墙时**回收、
-## [code]avoid_player[/code] 相位2 在**屏外**回收 —— 那些地方播消散 = 屏外闪光 + 特效风暴。
+## 用于显式想让人看见"这颗弹消失了"的场合（时间到 / 主动湮灭）。
+## 别把普通 [code]despawn()[/code] 一律换成它：[code]bounce[/code]/[code]radial_accel[/code] 在撞墙时回收、
+## [code]avoid_player[/code] 相位2 在屏外回收 —— 那些地方播消散 = 屏外闪光 + 特效风暴。
 func despawn_clear() -> BulletLifecycle:
 	return clear_fx().despawn()
 
@@ -424,11 +424,11 @@ func on_end_heading(dir: Variant) -> BulletLifecycle:
 	_on_end.append({&"op": A_SET_HEADING, &"dir": spec})
 	return self
 
-## 低频内容回调（**逃逸口**，V13）：fn.call(pos, boss_pos, has_boss, host)。
-## 契约：每相位结束最多一次、宿主侧执行、**非热路径**；host 只暴露 [code]queue_spawn[/code]。
+## 低频内容回调（逃逸口）：fn.call(pos, boss_pos, has_boss, host)。
+## 契约：每相位结束最多一次、宿主侧执行、非热路径；host 只暴露 [code]queue_spawn[/code]。
 ## 用了它，描述符就不再是唯一行为来源 —— 仅在「一次性散圈 / 难度分支」等极少数场合用。
-## hook = **StringName**（推荐：注册表解析，可序列化、跨实例共用 program；需先 LIFECYCLE_HOOKS_SCRIPT.register）
-##      或 **Callable**（旧写法 / oracle）。未注册的名字静默不调。
+## hook = StringName（推荐：注册表解析，可序列化、跨实例共用 program；需先 LIFECYCLE_HOOKS_SCRIPT.register）
+## 或 Callable（旧写法 / oracle）。未注册的名字静默不调。
 func on_end_call(hook: Variant) -> BulletLifecycle:
 	_on_end.append({&"op": A_CALL, &"call": hook})
 	return self
@@ -438,12 +438,11 @@ func on_end_call(hook: Variant) -> BulletLifecycle:
 static var _anchor_warned_ids: Dictionary = {}
 
 
-## 锚点解析（**唯一真相**；原生/参考解释器/测试都走它，避免两套语义漂移）：
-##   anchor_id=0       → player + offset
-##   use_global=true   → 锚点 global_position + offset（marisa 子机是 World 兄弟）
-##   use_global=false  → player + 锚点局部 position（focus 子机是 player 子节点；
-##                       **不读 global**，父级移动后 global 会滞后一帧 → 根部多偏 v·dt）
-## 失效锚点（节点已释放 / 不是 Node2D）→ **响亮告警一次**再退回自机；别静默把整批激光贴到自机。
+## 锚点解析（唯一真相；原生/参考解释器/测试都走它）：
+## - [code]anchor_id=0[/code] → player + offset
+## - [code]use_global=true[/code] → 锚点 global_position + offset（marisa 子机是 World 兄弟）
+## - [code]use_global=false[/code] → player + 锚点局部 position（focus 子机是 player 子节点；不读 global，父级移动后 global 会滞后一帧）
+## - 失效锚点（已释放 / 不是 Node2D）→ 响亮告警一次再退回自机。
 static func anchor_base(anchor_id: int, offset: Vector2, use_global: bool, player: Vector2) -> Vector2:
 	if anchor_id != 0:
 		var node: Object = instance_from_id(anchor_id)
@@ -459,7 +458,7 @@ static func anchor_base(anchor_id: int, offset: Vector2, use_global: bool, playe
 
 # ═══ 编译 / 签名（实现拆在 LifecycleCompiler + LifecycleHostTable）═══
 
-## 纯 program：ops/args/phase 索引，**不含任何宿主模板 / Callable / 音效对象**。
+## 纯 program：ops/args/phase 索引，不含任何宿主模板 / Callable / 音效对象。
 func compile_program() -> Dictionary:
 	var c: Dictionary = COMPILER.compile_program(self)
 	if not _warned_never and not bool(c.get(&"compile_failed", false)):
@@ -493,7 +492,7 @@ func content_signature() -> int:
 	return _content_sig
 
 
-## DSL13：never 相位上的 on_end 是死代码；非最后相位的 never 会让下一相位永远进不去。
+## never 相位上的 on_end 是死代码；非最后相位的 never 会让下一相位永远进不去。
 func _warn_unreachable_phases() -> void:
 	for i in phases.size():
 		var phase: Dictionary = phases[i]
