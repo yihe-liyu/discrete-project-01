@@ -1,12 +1,13 @@
-## AssetRegistry — 全项目资源注册表（**内容槽的代码侧索引表**），改一处全局生效。
-## 不再是 autoload（R9）—— 改 `class_name` 静态表（R8）；调用方 `AssetRegistry.xxx` 语法不变。
-## **契约**：本表的 `res://` 与中文 key 属内容槽引用，按基线「命名边界契约」**明确豁免**（非机制标识符）。
-## **退役条件**：随 S13 图集 + 数据化（F7：打包 + `AtlasLayout` + `BulletType` `.tres`）逐表迁 `data/*.tres`（R17）；迁完一表移除一表豁免。
-## **F7 进度（2026-09-20）**：A = 弹幕贴图全部进图集（`data/atlas/bullet_shapes.tres` + `assets/Textures/bullet/bullet.png`）；
-## ② = 弹型内容表从代码 `bullet_configs` 迁到 `data/bullets/*.tres`（`BulletCatalog` 读取）→ **`bullet_configs` 表已退役**。
-## 本表仅余 `enemy_visuals` / `sounds` / `BGM_PATHS` / `LASER_TEXTURE`（内容槽引用豁免范围相应收窄）。
+## 全项目资源注册表：内容槽的代码侧索引表，改一处全局生效。
+##
+## 不是 autoload；调用方统一用 [code]AssetRegistry.xxx[/code]。
+## 表内的 [code]res://[/code] 与中文 key 属于内容槽引用，按基线「命名边界契约」豁免。
+##
+## 退役条件：随图集/数据化逐表迁到 [code]data/*.tres[/code]；迁完一表移除一表豁免。
+## 当前仅余 [code]enemy_visuals[/code] / [code]sounds[/code] / [code]BGM_PATHS[/code] / [code]LASER_TEXTURE[/code]。
 class_name AssetRegistry
 
+## 敌人外观：id -> 场景；[code]EnemyData[/code] / 创作台外观清单从这里取。
 const enemy_visuals := {
 	"blue_little_fairy":  preload("res://data/enemy_visual/blue_little_fairy.tscn"),
 	"red_little_fairy":  preload("res://data/enemy_visual/red_little_fairy.tscn"),
@@ -26,23 +27,21 @@ const enemy_visuals := {
 
 
 ## 激光贴图（碰撞由激光系统自行处理，这里只提供贴图）。
-## 弹幕的**贴图引用 / 判定 / 朝向**已迁到 `data/bullets/*.tres`（`BulletCatalog` 读取）：
-## 见 `scripts/data/bullet_catalog.gd` + `scripts/data/bullet_type.gd`；本表不再承载弹型内容。
+## 弹型的贴图/判定/朝向已迁到 [code]data/bullets/*.tres[/code]（[code]BulletCatalog[/code] 读取）；
+## 本表不再承载弹型内容。
 const LASER_TEXTURE := preload("res://assets/Textures/bullet/laser.png")
 
-## 音效**均衡表**（dB，已中心化：整表均值 ≈ 0）。
-## 来源：量各 wav 的 RMS，向 -20 dBFS 对齐后减去均值 —— 所以**总电平**（`AudioManager.SFX_LEVEL_DB`）不受影响，
-## 这里只表达**相对**关系（谁该响一点、谁该轻一点）。
-## ⚠️ 觉得哪个音不对，**只改这里**就行，不用去动播放代码。
-## 定位：**RMS 只是起点，耳朵才是终局** —— 它负责把源文件之间 ~13 dB 的电平差拉平；
-## 短促/高频音的听感偏差（`kira` 偏响、菜单点击偏小）RMS 无法建模，只能手调（下面标 `## 手调` 的就是）。
-## 新加音效时用 `python3 tools/sfx_db_baseline.py` 算起点，并看哪些是手调过的。
+## 音效均衡表（dB，已中心化：整表均值约 0）。
+## 来源：量各 wav 的 RMS，向 -20 dBFS 对齐后减去均值；总电平由 [code]AudioManager.SFX_LEVEL_DB[/code] 控制。
+## RMS 只负责拉平源文件之间约 13 dB 的差异；短促/高频音的听感偏差仍需手调。
+## 觉得哪个音不对，只改这里，不用动播放代码。
+## 新加音效时先用 [code]python3 tools/sfx_db_baseline.py[/code] 算起点。
 const SFX_DB := {
 	"cancel": +1.4,   ## 手调：菜单返回音，同上
 	"card": -0.3,
-	## 符卡干净收取的回报音（作者素材）。起点 = RMS 基准(+3.9)，**作者反馈偏小 → +3 dB**
+	## 符卡干净收取的回报音（作者素材）。起点 = RMS 基准(+3.9)，作者反馈偏小 → +3 dB
 	"get_card": +6.9,
-	## 拿到**完整残机**的回报音（作者素材）。起点 = RMS 基准(+0.4)：素材 RMS −13.1 dBFS，
+	## 拿到完整残机的回报音（作者素材）。起点 = RMS 基准(+0.4)：素材 RMS −13.1 dBFS，
 	## 比 get_card 的源还响 ~3.5 dB ⇒ 几乎不用补（取基准 ⇒ 与 item/graze 的有效 RMS 相同）
 	"get_player": +0.4,
 	"enemy_die": +2.6,
@@ -51,9 +50,9 @@ const SFX_DB := {
 	"item": +5.3,
 	"kira": -4.6,   ## 手调（作者反馈两次）：弹幕每颗子弹都发它，密度+高频 ⇒ 必须比 RMS 值再低一截
 	"lazer": -3.3,
-	"marisa_damage": -0.6,   ## 手调（作者反馈两次）：**魔理沙子机弹的命中音**（focus 弹专属 key），最多 20 次/秒（节流 0.05）
-							 ## ⇒ 压 7 dB（相对 RMS 基准 −7.9），与 kira 同档：高频持续音必须比 RMS 值再低一截
-	"msl": -5.3,   ## 手调（作者反馈两次）：**魔理沙子机（focus）的发射音**，~12 次/秒的持续音 ⇒ 同样压 7 dB（相对基准 −7.9）
+	"marisa_damage": -0.6,   ## 手调（作者反馈两次）：魔理沙子机弹的命中音（focus 弹专属 key），最多 20 次/秒（节流 0.05）
+ ## ⇒ 压 7 dB（相对 RMS 基准 −7.9），与 kira 同档：高频持续音必须比 RMS 值再低一截
+	"msl": -5.3,   ## 手调（作者反馈两次）：魔理沙子机（focus）的发射音，~12 次/秒的持续音 ⇒ 同样压 7 dB（相对基准 −7.9）
 	"normal_damage": -3.3,
 	"ok": +4.3,
 	"pause": +4.3,
@@ -65,6 +64,7 @@ const SFX_DB := {
 }
 
 
+## 音效 key -> AudioStream；key 必须与 [code]SFX_DB[/code] 对应。
 const sounds := {
 	"shoot":        preload("res://assets/Sound/shoot.wav"),
 	"player_shoot": preload("res://assets/Sound/player_shoot.wav"),
@@ -74,9 +74,9 @@ const sounds := {
 	"graze":        preload("res://assets/Sound/graze.wav"),
 	"item":         preload("res://assets/Sound/item.wav"),
 	"card":         preload("res://assets/Sound/card.wav"),
-	## 符卡**干净收取**（正常流程）的回报音 —— 见 `Boss.CAPTURE_SFX`
+	## 符卡干净收取（正常流程）的回报音 —— 见 [code]Boss.CAPTURE_SFX[/code]
 	"get_card":     preload("res://assets/Sound/get_card.wav"),
-	## 拿到**完整残机**（碎片集满 5 片 / 吃到整命道具）的回报音 —— 见 `Item.EXTEND_SFX`
+	## 拿到完整残机（碎片集满 5 片 / 吃到整命道具）的回报音 —— 见 [code]Item.EXTEND_SFX[/code]
 	"get_player":   preload("res://assets/Sound/get_player.wav"),
 	"player_card":  preload("res://assets/Sound/player_card.wav"),
 	# ── UI ──
@@ -89,13 +89,12 @@ const sounds := {
 	"marisa_damage":  preload("res://assets/Sound/marisa_damage.wav"),
 	"msl":            preload("res://assets/Sound/msl.wav"),
 	"normal_damage":  preload("res://assets/Sound/normal_damage.wav"),
-	# Boss 全破（`Boss.play_defeat`）。专用素材；`BossData.defeat_sfx` 可按 Boss 换 key。
+	# Boss 全破（[code]Boss.play_defeat[/code]）。专用素材；[code]BossData.defeat_sfx[/code] 可按 Boss 换 key。
 	"boss_die":       preload("res://assets/Sound/boss_die.wav"),
 }
 
-## BGM 资源表 —— 按需加载（load 而非 preload，避免启动即解码大文件）
-## 路径唯一来源：音乐室（music_registry.tres）与游戏内播放共用此表；
-## MusicRecord 只存 bgm_key 引用（展示数据），不再存路径
+## BGM key -> 路径；按需 [code]load[/code]（不要 preload 大文件）。
+## 音乐室与游戏内播放共用此表；[code]MusicRecord[/code] 只存 [code]bgm_key[/code]。
 const BGM_PATHS := {
 	# 音乐室曲目（与 music_registry.tres 的 bgm_key 对应）
 	"music_1":  "res://assets/Music/THq01_01.无缘故之回.mp3",
@@ -121,13 +120,14 @@ const BGM_PATHS := {
 	"stageEX_boss":"res://assets/Music/THq01_18.以空为核，抽丝剥茧.mp3",
 }
 
-const MUSIC_REGISTRY_PATH := "res://data/registry/music_registry.tres"   # 出厂默认（只读）
-## 运行期解锁档（R14：导出包 res:// 只读，运行期写入一律 user://）
+## 音乐室出厂目录（只读）。
+const MUSIC_REGISTRY_PATH := "res://data/registry/music_registry.tres"
+## 运行期解锁档；导出包 [code]res://[/code] 只读，写入一律走 [code]user://[/code]。
 const MUSIC_REGISTRY_USER_PATH := "user://music_registry.tres"
 
 
-## 加载音乐注册表：以出厂目录为基准，叠加 user:// 的解锁状态
-## （新增曲目不会因旧解锁档而消失）。无 user:// 档时 = 出厂目录。
+## 载入出厂目录并叠加 [code]user://[/code] 解锁状态；新增曲目不会因旧档消失。
+## 出厂/用户档缺失或不可用时返回可用的出厂表。
 static func load_music_registry() -> MusicRegistry:
 	var registry: MusicRegistry = null
 	if ResourceLoader.exists(MUSIC_REGISTRY_PATH):
@@ -146,7 +146,7 @@ static func load_music_registry() -> MusicRegistry:
 	return registry
 
 
-## 保存解锁状态到 user://（R14）
+## 保存解锁状态到 [code]user://[/code]；失败会报错，不静默丢进度。
 static func save_music_registry(registry: MusicRegistry) -> void:
 	var err := ResourceSaver.save(registry, MUSIC_REGISTRY_USER_PATH)
 	if err != OK:
@@ -160,7 +160,8 @@ static var _bgm_titles_ready: bool = false
 # 未知 / 加载失败的 BGM key：只告警一次，避免调用方每帧刷屏
 static var _bgm_missing: Dictionary = {}
 
-## 按需加载 BGM（带缓存，首次访问后复用）；播放视为听过 → 顺带解锁音乐室对应曲目
+## 按 key 取 BGM；首次 [code]load[/code] 后按 key 缓存。
+## 播放视为听过，顺带解锁音乐室同路径曲目；未知/加载失败只告警一次并返回 null。
 static func get_bgm(key: String) -> AudioStream:
 	if _bgm_cache.has(key):
 		return _bgm_cache[key]
@@ -177,8 +178,8 @@ static func get_bgm(key: String) -> AudioStream:
 	return stream
 
 
-## BGM 曲名（BGM 提示 UI 用）：由 stream 的资源路径反查音乐室记录
-## 游戏语义 key（stage1）与音乐室 key（music_2）指向同一文件 → 按路径关联取同一曲名
+## 由 stream 的资源路径反查曲名；首次建 path -> title 缓存，之后 O(1)。
+## 同一文件的不同 key（[code]stage1[/code] / [code]music_2[/code]）返回同一曲名。
 static func get_bgm_title(stream: AudioStream) -> String:
 	if stream == null:
 		return ""
@@ -210,8 +211,7 @@ static func _warn_missing_bgm(key: String, reason: String) -> void:
 	push_warning("AssetRegistry.get_bgm: %s（key='%s'）" % [reason, key])
 
 
-## 播放 BGM 视为听过 → 解锁音乐室对应曲目（幂等，仅首次解锁写盘）
-## 按路径关联：游戏 key（stage1）与音乐室 key（music_2）指向同一文件时视为同一曲
+## 播放 BGM 视为听过，解锁音乐室同路径曲目（幂等，仅首次解锁写盘）。
 static func _unlock_music_by_key(bgm_key: String) -> void:
 	var registry: MusicRegistry = load_music_registry()
 	if not registry:
@@ -223,7 +223,7 @@ static func _unlock_music_by_key(bgm_key: String) -> void:
 	for r in registry.records:
 		if r.is_unlocked:
 			continue
-		# 该曲目的注册器路径 == 当前播放路径 → 听过
+ # 该曲目的注册器路径 == 当前播放路径 → 听过
 		if BGM_PATHS.get(r.bgm_key, "") == path:
 			r.is_unlocked = true
 			changed = true

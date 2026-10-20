@@ -96,6 +96,7 @@
 - `get_bgm()` 对未知 key / 加载失败只告警一次，避免调用方每帧刷屏；加载失败不再写入缓存。
 - `save_music_registry()` 检查 `ResourceSaver.save` 返回值并报错，不再静默丢解锁进度。
 - 行为不变：曲名仍按资源路径关联（`stage1` 与 `music_2` 同曲同名）。
+- 补类/表/方法文档，清理注释里的粗体/反引号/版本标记。
 - 测试：`test_asset_registry` / `test_bgm_hint` 通过；全量 867 用例 / 7969 断言；verify 七步全绿。
 
 ### 2026-10-20 — `BulletLifecycle` 的 AABB 式 API 文档试点
