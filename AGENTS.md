@@ -17,6 +17,31 @@ Godot 4.7 + GDScript + 原生 GDExtension 的东方 STG。先读：
 - 原生改动只在 `gdextension/`，非必要不改 C++。
 - 默认只本地提交，**不要自动 push**。
 
+## API 文档格式（Godot）
+
+- `##` 紧贴声明：类、公开方法、`@export`、`signal`、公开常量。
+- 私有实现用 `#`，不要用 `##` 污染 Help。
+- 类头：一句话职责 → `[b]模型[/b]` → `[b]用法[/b]` → `[b]边界[/b]`。
+- 分段用 `[br]`；单独一行 `##` 不产生可见段落。
+- 行内代码 `[code]x[/code]`；代码块 `[codeblock]...[/codeblock]`。
+- 引用 `[method foo]` / `[member foo]` / `[signal foo]` / `[constant FOO]` / `[enum Foo]`。
+- 强调用 `[b]...[/b]`；**不要**用 `**...**`、反引号、`V18` / `DSL7` 这类内部版本号。
+- 长教程不复制，只留链接：`[code]docs/DANMAKU_API.md[/code]`。
+
+```gdscript
+## 一句话职责。
+##
+## [b]用法[/b][br]
+## [codeblock]
+## var x := Foo.new()
+## [/codeblock]
+## [br]
+## [b]边界[/b][br]
+## - 失败时返回 false。
+class_name Foo
+```
+
+
 ## 验证
 
 ```bash
