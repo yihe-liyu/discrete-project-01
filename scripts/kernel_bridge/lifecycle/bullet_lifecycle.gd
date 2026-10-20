@@ -7,20 +7,19 @@
 ## [/codeblock]
 ## 每帧按顺序跑 moves；until 成立 → 执行 on_end → 进入下一相位；[method then] 开新相位。
 ## 最后一个相位结束后，弹不再受 program 驱动，按当前速度自由积分（出界由 cull 回收）。
-##
-## [b]用法[/b]
+## [br]
+## [b]用法[/b][br]
 ## [codeblock]
 ## var lc := BulletLifecycle.new()
 ## lc.accel_heading(-150.0).until_elapsed(2.0).sfx(&"kira").despawn()
 ## bullet_data.trajectory(lc)
 ## [/codeblock]
-##
-## [b]边界[/b]
+## [br]
+## [b]边界[/b][br]
 ## - 位置写入原语（[code]drift[/code] / [code]anchor_drift[/code]）同相位会互相覆盖，
-## 也会覆盖速度积分；不要和速度原语混在同一相位。
-## - [code]anchor_drift[/code] 必须在 [code]trajectory(lc, anchor)[/code] 提供锚点 spec，否则退回自机。
-## - [code]until=never[/code] 的相位不会自动结束；最后一相位的 on_end 是死代码（编译会警告）。
-##
+## 也会覆盖速度积分；不要和速度原语混在同一相位。[br]
+## - [code]anchor_drift[/code] 必须在 [code]trajectory(lc, anchor)[/code] 提供锚点 spec，否则退回自机。[br]
+## - [code]until=never[/code] 的相位不会自动结束；最后一相位的 on_end 是死代码（编译会警告）。[br]
 ## 完整参考：[code]docs/DANMAKU_API.md[/code] §3；位置覆盖规则见 §9.13。
 class_name BulletLifecycle
 extends RefCounted
