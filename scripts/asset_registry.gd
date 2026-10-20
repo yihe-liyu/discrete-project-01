@@ -148,9 +148,17 @@ static func load_music_registry() -> MusicRegistry:
 
 ## 保存解锁状态到 user://（R14）
 static func save_music_registry(registry: MusicRegistry) -> void:
-	ResourceSaver.save(registry, MUSIC_REGISTRY_USER_PATH)
+	var err := ResourceSaver.save(registry, MUSIC_REGISTRY_USER_PATH)
+	if err != OK:
+		push_error("AssetRegistry.save_music_registry: 保存失败（%s）：%s"
+			% [error_string(err), MUSIC_REGISTRY_USER_PATH])
 
 static var _bgm_cache: Dictionary = {}
+# BGM 路径 -> 曲名（首次 get_bgm_title 时建一次；曲名不随解锁状态变化）
+static var _bgm_titles: Dictionary = {}
+static var _bgm_titles_ready: bool = false
+# 未知 / 加载失败的 BGM key：只告警一次，避免调用方每帧刷屏
+static var _bgm_missing: Dictionary = {}
 
 ## 按需加载 BGM（带缓存，首次访问后复用）；播放视为听过 → 顺带解锁音乐室对应曲目
 static func get_bgm(key: String) -> AudioStream:
@@ -158,9 +166,12 @@ static func get_bgm(key: String) -> AudioStream:
 		return _bgm_cache[key]
 	var path: String = BGM_PATHS.get(key, "")
 	if path.is_empty():
-		push_warning("AssetRegistry.get_bgm: 未知 BGM key '%s'" % key)
+		_warn_missing_bgm(key, "未知 BGM key")
 		return null
 	var stream: AudioStream = load(path)
+	if stream == null:
+		_warn_missing_bgm(key, "BGM 加载失败：" + path)
+		return null
 	_bgm_cache[key] = stream
 	_unlock_music_by_key(key)
 	return stream
@@ -174,13 +185,29 @@ static func get_bgm_title(stream: AudioStream) -> String:
 	var path: String = stream.resource_path
 	if path.is_empty():
 		return ""
+	_ensure_bgm_titles()
+	return _bgm_titles.get(path, "")
+
+
+# 首次需要曲名时建 path -> title 映射；之后 O(1)。
+static func _ensure_bgm_titles() -> void:
+	if _bgm_titles_ready:
+		return
 	var registry: MusicRegistry = load_music_registry()
 	if registry == null:
-		return ""
-	for r in registry.records:
-		if BGM_PATHS.get(r.bgm_key, "") == path:
-			return r.title
-	return ""
+		return
+	_bgm_titles_ready = true
+	for record in registry.records:
+		var path: String = BGM_PATHS.get(record.bgm_key, "")
+		if not path.is_empty() and not _bgm_titles.has(path):
+			_bgm_titles[path] = record.title
+
+
+static func _warn_missing_bgm(key: String, reason: String) -> void:
+	if _bgm_missing.has(key):
+		return
+	_bgm_missing[key] = true
+	push_warning("AssetRegistry.get_bgm: %s（key='%s'）" % [reason, key])
 
 
 ## 播放 BGM 视为听过 → 解锁音乐室对应曲目（幂等，仅首次解锁写盘）

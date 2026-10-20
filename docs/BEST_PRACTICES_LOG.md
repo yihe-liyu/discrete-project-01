@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 58 条（本文件留最近 58 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 59 条（本文件留最近 59 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-20 — AssetRegistry：BGM 曲名缓存 + 失败告警收敛
 - 2026-10-20 — `BulletLifecycle` 的 AABB 式 API 文档试点
 - 2026-10-19 — 把「卡摩瑞一非」迁到 ring（保留旧路径 A/B）
 - 2026-10-19 — AsyncCoroutineScript：`await ctx.clock.delay()` 接入确定性时钟
@@ -88,6 +89,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-20 — AssetRegistry：BGM 曲名缓存 + 失败告警收敛
+
+- `get_bgm_title()` 原来每次 load 音乐注册表并线性扫 records；改为首次建 `路径 -> 曲名` 缓存，之后 O(1)。
+- `get_bgm()` 对未知 key / 加载失败只告警一次，避免调用方每帧刷屏；加载失败不再写入缓存。
+- `save_music_registry()` 检查 `ResourceSaver.save` 返回值并报错，不再静默丢解锁进度。
+- 行为不变：曲名仍按资源路径关联（`stage1` 与 `music_2` 同曲同名）。
+- 测试：`test_asset_registry` / `test_bgm_hint` 通过；全量 867 用例 / 7969 断言；verify 七步全绿。
 
 ### 2026-10-20 — `BulletLifecycle` 的 AABB 式 API 文档试点
 
