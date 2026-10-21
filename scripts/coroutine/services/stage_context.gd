@@ -1,13 +1,32 @@
+## 关卡上下文：协程脚本通过它访问内容动词，替代旧 StageAPI / autoload。
+##
+## [b]模型[/b][br]
+## StageRuntime 创建 ctx 并回填 [member stage]；每个协程拿一份 ctx，服务按需懒加载：
+## [codeblock]
+## ctx.clock / bullets / player / enemies / boss / diff
+## ctx.items / audio / effects / dialogue / objects
+## ctx.background / decor / entity_registry / stage / runner
+## [/codeblock]
+## 高频路径（每颗协程弹一个 ctx）只建实际用到的服务，默认从 8 个对象降到 2 个。
+## [br]
+## [b]边界[/b][br]
+## - 无 stage 绑定时 bullets / effects / entity_registry 等为 null 或静默 no-op，测试友好。[br]
+## - 不读 BulletManager.current / 全局实体注册表；由宿主显式注入 stage。[br]
+## - objects 是 per-ctx 命名对象表，随关卡生命周期，不是 autoload。[br]
+## - dialogue.play_steps 会暂停 runner 直到对话框结束。
 class_name StageContext
 extends RefCounted
-## 关卡上下文 —— 协程拿这个代替 StageAPI
 
+## BossService 脚本（ctx.boss 的懒加载实现）。
 const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
+## DifficultyService 脚本（ctx.diff 的懒加载实现）。
 const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
+## EnemyService 脚本（ctx.enemies 的懒加载实现）。
 const EnemyService = preload("res://scripts/coroutine/services/enemy_service.gd")
 
+## 协程时钟 / 生命周期（active、对话暂停都看它）。
 var runner: CoroutineRunner
-## 关卡运行时（由 StageRuntime 创建 ctx 时回填；内容经此拿注入槽/工厂）
+## 关卡运行时（由 StageRuntime 创建 ctx 时回填；内容经此拿注入槽 / 工厂）。
 var stage: StageRuntime
 
 # 服务懒加载（高频路径优化：每颗协程弹 new 一次 ctx，只创建用到的服务）
@@ -24,6 +43,7 @@ var _diff: DifficultyService
 var _enemy_service: EnemyService
 var _stage_objects: StageObjects
 
+## 时间服务：wait / wait_frames / next_tick / delay；内容的唯一时钟。
 var clock: ClockService:
 	get:
 		if _clock_service == null:
@@ -31,6 +51,7 @@ var clock: ClockService:
 			_clock_service.runner = runner
 		return _clock_service
 
+## 弹幕 / 激光服务；无 stage 绑定 = null，方法静默 no-op。
 var bullets: BulletService:
 	get:
 		if _bullet_service == null:
@@ -39,6 +60,7 @@ var bullets: BulletService:
 			_bullet_service.bullet_manager = stage.bullet_manager if stage else null
 		return _bullet_service
 
+## 只读自机查询：get_player / get_position（无自机 = null / ZERO）。
 var player: PlayerService:
 	get:
 		if _player_service == null:
@@ -46,6 +68,7 @@ var player: PlayerService:
 			_player_service.ctx = self
 		return _player_service
 
+## 对话服务：play_steps（播放期间暂停 runner）。
 var dialogue: DialogueService:
 	get:
 		if _dialogue_service == null:
@@ -53,6 +76,7 @@ var dialogue: DialogueService:
 			_dialogue_service.ctx = self
 		return _dialogue_service
 
+## 道具服务：spawn / spawn_fan。
 var items: ItemService:
 	get:
 		if _item_service == null:
@@ -60,11 +84,13 @@ var items: ItemService:
 			_item_service.ctx = self
 		return _item_service
 
+## 音频服务：play_bgm / stop_bgm / play_sfx（不依赖 stage）。
 var audio: AudioService:
 	get:
 		if _audio_service == null: _audio_service = AudioService.new()
 		return _audio_service
 
+## 特效服务：Miss 圈 / 命中特效；无 stage 时静默跳过。
 var effects: EffectService:
 	get:
 		if _effect_service == null: _effect_service = EffectService.new()
@@ -73,6 +99,7 @@ var effects: EffectService:
 		_effect_service.fx_pool = stage.fx_pool if stage else null        # 特效层同样由组合根注入
 		return _effect_service
 
+## Boss 查询 / 移动：current / exists / move_to / move_path。
 var boss: BossService:
 	get:
 		if _boss == null:
@@ -80,7 +107,7 @@ var boss: BossService:
 			_boss.ctx = self
 		return _boss
 
-## 敌人生成服务（内容动词；机制在 StageRuntime.spawn_enemy_data）
+## 敌人生成服务：spawn / move_to / despawn（机制在 StageRuntime.spawn_enemy_data）。
 var enemies: EnemyService:
 	get:
 		if _enemy_service == null:
@@ -88,6 +115,7 @@ var enemies: EnemyService:
 			_enemy_service.ctx = self
 		return _enemy_service
 
+## 难度服务：picked / pick / pick_from / at_least。
 var diff: DifficultyService:
 	get:
 		if _diff == null: _diff = DifficultyService.new()
@@ -105,50 +133,49 @@ var objects: StageObjects:
 		if _stage_objects == null: _stage_objects = StageObjects.new()
 		return _stage_objects
 
+## 构造；runner 是时钟与生命周期来源，通常由 StageRuntime / CoroutineScript 传入。
 func _init(p_runner: CoroutineRunner) -> void:
 	runner = p_runner
 
-## 装饰物管理器（**背景场景声明式持有**：`StageBackground.get_decor_manager()` 按类型取声明的子节点）。
-## 旧实现按名字 `get_node_or_null("DecorManager")` 找、找不到就运行时 `add_child` 动态建 ——
-## 既把行为绑在节点名上，又在内容脚本里偷偷改场景树；现在只读声明的类型化引用。
+## 从当前背景取装饰物管理器；无背景 = null。
+## 背景场景用 StageBackground.get_decor_manager() 声明式持有，不再按节点名摸树。
 func get_decor() -> DecorManager:
 	var bg := get_background()
 	if not is_instance_valid(bg):
 		return null
 	return bg.get_decor_manager()
 
-## 便捷属性
+## 装饰物管理器（同 get_decor()）。
 var decor: DecorManager:
 	get: return get_decor()
 
 
-## **背景宿主**（背景场景声明的 `StageBackground`）：相机 / 环境 / 雾 / FOV 的意图动词都在它上面
-## （`apply_env_preset` / `reset` / `tween_env_fog` / 相机：`set_camera_position` / `move_camera_by` /
-##   `set_camera_rotation` / `rotate_camera_by` / `tween_camera_fov`）。
-## ⚠️ 相机动词**绝对 / 相对**分得很清（旧名 `rotate_camera` 绝对、`pan_camera` 相对，名字看不出来 ⇒ 已改名）；
-##   `*rotation*` 一律**弧度**。
-## 内容**不再** `get_parent() as StageBackground`（R2 禁往上摸）—— 拿它就够。
-## ⚠️ 背景场景 = **你自己的场景**：`ctx.background.get_node("Ground")` 这类按名字访问**是允许的**
-##   （同 `main_menu.gd` 用 `$Logo`）；**引擎不碰你的树** ⇒ 你想搭几层、放山/球膜/多层地面都随便。
+## 背景宿主（背景场景声明的 StageBackground）：相机 / 环境 / 雾 / FOV 的意图动词都在它上面。
+## rotation 类参数一律弧度；内容不再 get_parent() 摸背景，拿它即可。
+## 背景场景是自己的树：ctx.background.get_node("Ground") 这类按名字访问是允许的。
 func get_background() -> StageBackground:
 	return stage.current_background if stage else null
 
 
-## 便捷属性
+## 背景宿主（同 get_background()）。
 var background: StageBackground:
 	get: return get_background()
 
+## runner 存在且 is_running；runner 停 = ctx 失效。
 func active() -> bool:
 	return is_instance_valid(runner) and runner.is_running
 
-## 步骤版对话（DSL 步骤，台词内联）—— 唯一入口
+## 播放步骤版对话（台词内联）；播放期间暂停 runner，结束后恢复。
+## 返回值为历史占位（当前恒 0.0）。
 func play_dialogue_steps(steps: Array) -> float:
 	return dialogue.play_steps(steps)
 
+## 取 runner 视口的可见矩形；无 runner = Rect2()。
+## 这是 viewport 尺寸，不是 FIELD_* 场地框。
 func get_field_rect() -> Rect2:
 	if not is_instance_valid(runner): return Rect2()
 	return runner.get_viewport().get_visible_rect()
 
-## 道具（便捷委托）
+## 道具便捷委托：items.spawn(type, position)。
 func spawn_item(type: int, position: Vector2) -> void:
 	items.spawn(type, position)
