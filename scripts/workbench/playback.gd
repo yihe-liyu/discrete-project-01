@@ -1,8 +1,7 @@
 ## 播放状态机（工作台）—— 只持状态、只做决策：不碰场景树 / 不碰 Engine / 不碰音频总线。
 ##
-## 为什么要单独一层（2026-09-30，S3）：暂停 / 速度 / 快进 / 逐帧 / 静音这些规则原先长在
-## [code]workbench.gd[/code] 里，必须借一个 Control 台子真跑帧才能验。抽出来后全是"给状态、问结果"
-## 的纯投影（[code]desired_time_scale()[/code] / [code]should_pause_tree()[/code] / [code]is_audio_muted()[/code]），可无树断言。
+## 暂停 / 速度 / 快进 / 逐帧 / 静音这些规则原先长在 [code]workbench.gd[/code]，
+## 必须借 Control 台子真跑帧才能验；抽出来后全是“给状态、问结果”的纯投影，可无树断言。
 ##
 ## 分工：本类只改自己的字段并发信号；宿主（[code]workbench.gd[/code]）在 [code]changed[/code] 里把状态下发到引擎
 ## （[code]tree.paused[/code] / [code]Engine.time_scale[/code] / [code]max_physics_steps_per_frame[/code] /
@@ -25,25 +24,32 @@ const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
 const FAST_FORWARD_SCALE := 12.0
 ## 快进时抬高的物理步上限（默认 8 撑不住 12 步/帧 → 演出 tween/物理落后）
 const FAST_FORWARD_MAX_STEPS := 64
+## 默认物理步上限。
 const DEFAULT_MAX_STEPS := 8
 ## 跳转容差：目标比当前早这么多以内算"同一点"，不值得重跑
 const JUMP_BACK_TOLERANCE := 0.5
 ## 跳转下限：这么早的目标等价于"回开头"（不启动快进）
 const MIN_JUMP_TARGET := 0.05
 
+## 是否暂停。
 var paused := false
+## 是否手动静音。
 var muted := false
+## 是否显示背景。
 var show_bg := true
+## 当前速度档下标（SPEEDS）。
 var speed_index := 2
+## 是否使用固定种子。
 var fixed_seed := false
-## 快进目标时刻（< 0 = 不快进）
+## 快进目标时刻（< 0 = 不快进）。
 var ff_target := -1.0
-## 逐帧推进中（防重入）
+## 逐帧推进中（防重入）。
 var stepping := false
 
 
 # ═══ 播放 / 暂停 ═══
 
+## 切换播放 / 暂停。
 func toggle_play() -> void:
 	if paused:
 		resume()
@@ -51,6 +57,7 @@ func toggle_play() -> void:
 		pause()
 
 
+## 暂停：先退出快进（避免 time_scale 残留），再置 paused 并发 changed。
 func pause() -> void:
 	# 先退出快进：否则 time_scale 残留 12x，暂停后仍在飞
 	if ff_active():
@@ -62,6 +69,7 @@ func pause() -> void:
 	changed.emit()
 
 
+## 继续播放；未暂停时 no-op。
 func resume() -> void:
 	if not paused:
 		return
@@ -101,6 +109,7 @@ func jump_to(target_time: float) -> void:
 	start_fast_forward(target_time)
 
 
+## 开始快进到 target_time；若当前暂停会先 resume。发 changed。
 func start_fast_forward(target_time: float) -> void:
 	if paused:
 		resume()  # 快进要走时间，暂停中先解开（resume 自己发 changed）
@@ -109,6 +118,7 @@ func start_fast_forward(target_time: float) -> void:
 	changed.emit()
 
 
+## 结束快进（到点 / 手动 / 跳转前都走这里），播报实际目标并发 changed。
 func stop_fast_forward() -> void:
 	if not ff_active():
 		return
@@ -143,6 +153,7 @@ func begin_step() -> bool:
 	return true
 
 
+## 结束逐帧推进，恢复常规暂停投影；发 changed。
 func end_step() -> void:
 	stepping = false
 	changed.emit()
@@ -150,16 +161,19 @@ func end_step() -> void:
 
 # ═══ 开关 ═══
 
+## 设手动静音；发 changed。
 func set_muted(on: bool) -> void:
 	muted = on
 	changed.emit()
 
 
+## 设背景显示；发 changed。
 func set_show_bg(on: bool) -> void:
 	show_bg = on
 	changed.emit()
 
 
+## 设固定种子开关并播报；发 changed。
 func set_fixed_seed(on: bool) -> void:
 	fixed_seed = on
 	if on:
