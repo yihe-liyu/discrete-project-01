@@ -1,32 +1,58 @@
+## 关卡运行时：关卡生命周期 + 生成敌人 / Boss（World 下的场景节点）。
+## StageManager autoload 已删除；本节点是关卡生命周期的唯一实现。
+##
+## [b]模型[/b][br]
+## 组合根把本节点放进游戏场景，并注入 world / player / bullet_manager / ui_layer / 背景；
+## load_stage 创建关卡协程，spawn_* 负责实体落地，finish_stage / stop_stage 收尾。
+## [codeblock]
+## load_stage(data) → 校验 → reset → 启动 create_script + 背景协程 → stage_started
+## finish_stage()  → stage_cleared + all_enemies_defeated + 高分
+## stop_stage()    → 停脚本 / 清实体 / 清弹（不发信号，拆场景用）
+## [/codeblock]
+## [br]
+## [b]边界[/b][br]
+## - 依赖由组合根注入，不按节点名 / 全树找 Player。[br]
+## - stop_stage 是拆场景路径，不发 stage_cleared；正常收尾用 finish_stage。[br]
+## - spawn_enemy_data 要求 ctx active + 行为脚本；spawn_enemy 是简化版（不挂脚本）。[br]
+## - add_enemy_to_scene 只做注入 + 挂树，注册由实体自己完成。
 class_name StageRuntime
 extends Node
-## 关卡运行时 —— 关卡生命周期 + 生成敌人/Boss（World 下的场景节点）。
-## StageManager autoload 已删除；本节点是关卡生命周期的唯一实现（World 下声明）。
-## 依赖由组合根注入 `world`（敌人生成目标）与 `player`（自机 ctx 注入对象），不再 get_tree().current_scene 全树找 / 按名字找 Player（R2）。
-## 运行时引用归 EntityRegistry / SaveData，运行时字段已清空。
 
+## 关卡成功启动后发。
 signal stage_started()
+## 正常收尾（finish_stage / 关卡脚本自然结束）后发；拆场景的 stop_stage 不发。
 signal stage_cleared()
+## 整关结束时与 stage_cleared 同时发；不要拿它当“场上敌人清空”的实时信号。
 signal all_enemies_defeated()
 
+## 敌人场景。
 const ENEMY_SCENE = preload("res://scenes/enemy.tscn")
+## 阶段参数校验脚本。
 const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
 
 
-var world: Node2D							## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）
-## 本关自机（组合根注入的显式引用）——`_inject_player_ctx` 只认它，不再按名字在 World 下找。
+## 敌人生成 / 自机 ctx 注入的父节点（World；组合根注入）。
+var world: Node2D
+## 本关自机（组合根注入的显式引用；只认它，不按名字在 World 下找）。
 var player: Player
-var entity_registry := EntityRegistry.new()	## 战场实体注册表（自机 / 敌机 / Boss 的单一真源）
-var bullet_manager: BulletManager			## 弹幕世界（组合根注入；供关卡发弹 / 清弹）
-var miss_layer: MissCircleLayer				## 注入槽（组合根 / 工作台设置）
+## 战场实体注册表（自机 / 敌机 / Boss 的单一真源）。
+var entity_registry := EntityRegistry.new()
+## 弹幕世界（组合根注入；供关卡发弹 / 清弹）。
+var bullet_manager: BulletManager
+## Miss 圈层（组合根 / 工作台注入）。
+var miss_layer: MissCircleLayer
+## 特效池（组合根注入）。
 var fx_pool: FxPool
-## 道具池（组合根注入；消费端经 ctx.stage.item_pool，不再全树搜 World/ItemPool）
+## 道具池（组合根注入；消费端经 ctx.stage.item_pool）。
 var item_pool: ItemPool
-var ui_layer: CanvasLayer					## Boss 位置指示器所属 HUD 层（组合根注入）
-var current_background: StageBackground		## 背景场景实例（组合根在 load_stage 前注入）
+## Boss 位置指示器所属 HUD 层（组合根注入）。
+var ui_layer: CanvasLayer
+## 背景场景实例（组合根在 load_stage 前注入）。
+var current_background: StageBackground
+## 当前关卡数据；stop_stage 后为 null。
 var current_stage: StageData
 var _is_stage_active: bool = false
-var _coroutine_script: CoroutineScript		##关卡协程脚本
+var _coroutine_script: CoroutineScript
 
 
 ## 获取当前关卡协程脚本（工作台/调试读取运行时间用）
@@ -34,7 +60,8 @@ func current_stage_script() -> CoroutineScript:
 	return _coroutine_script
 
 
-## 加载关卡；背景实例由 current_background 注入（会启动背景里挂的协程脚本）
+## 加载关卡：校验 → 重置资源（+ 关卡练习火力）→ 启动关卡脚本与背景协程 → stage_started。
+## 背景实例由 current_background 注入；非法数据 push_error 并拒绝启动。
 func load_stage(data: StageData) -> void:
 	var background := current_background
 	if _is_stage_active:
@@ -48,7 +75,7 @@ func load_stage(data: StageData) -> void:
 		return
 
 	SaveData.reset_all(entity_registry)   # 注册表显式传入，不再读全局
-	# 关卡练习的起始火力：**紧跟在复位之后**（复位会把火力归 0；放别处会被这里冲掉）。
+	# 关卡练习的起始火力：紧跟在复位之后（复位会把火力归 0；放别处会被这里冲掉）。
 	# 非关卡练习 / 第 1 面 ⇒ 空跑。
 	SaveData.apply_stage_practice_power(entity_registry)
 
@@ -77,6 +104,7 @@ func load_stage(data: StageData) -> void:
 	stage_started.emit()
 
 
+## 拆场景 / 中止：停脚本、清实体注册表、清弹幕（激光自行淡出）；不发 stage_cleared。
 func stop_stage() -> void:
 	_is_stage_active = false
 	current_stage = null
@@ -89,13 +117,9 @@ func stop_stage() -> void:
 		bullet_manager.clear_bullets()  # 清弹幕，激光自己淡出
 
 
-## **关卡正常收尾**（内容动词 `StageDirector.finish_stage()` 的落点）。
-## ⚠️ 两个都不能走错，否则"这关结束了"就没有出口（Boss 打完只能干等）：
-## ① 不能走 `stop_stage()`：它**先把 `current_stage` 置空**，`_on_stage_finished()` 会在
-##    `if not current_stage` 处直接 return、**不发 `stage_cleared`** —— 那是「拆场景」用的路；
-## ② 也不能靠 `_coroutine_script.stop()` 触发：`CoroutineRunner.stop()` 只清任务、**不发 `finished`**
-##    （`finished` 只在任务自然跑完时发）。
-## 所以这里**直接收尾**（发信号 + 存分），再把脚本停掉/回收。
+## 关卡正常收尾（StageDirector.finish_stage 的落点）：发 stage_cleared + all_enemies_defeated、
+## 存高分，然后停掉 / 回收关卡脚本。
+## 不能改用 stop_stage（它会先清 current_stage，导致不发信号），也不能靠 stop() 触发 finished。
 func finish_stage() -> void:
 	if not _is_stage_active:
 		return
@@ -119,7 +143,8 @@ func _on_stage_finished() -> void:
 	SaveData.save_high_score(current_stage.stage_id, score)
 
 
-## 从 EnemyData 生成敌人（实例化/挂载协程/入场景）
+## 从 EnemyData 生成敌人：实例化、挂行为协程、严格注入 params、入场景。
+## 要求 ctx active + 行为脚本；配置非法 / 无 ctx 时返回 null。
 func spawn_enemy_data(data: EnemyData, p_ctx: StageContext = null) -> Enemy:
 	if not p_ctx or not p_ctx.active():
 		return null
@@ -146,6 +171,7 @@ func spawn_enemy_data(data: EnemyData, p_ctx: StageContext = null) -> Enemy:
 	return enemy
 
 
+## 简化生成：只实例化 Enemy + 设数据 / 位置 / 入场景，不挂行为协程。
 func spawn_enemy(data: EnemyData, position: Vector2, auto_start: bool = true) -> Enemy:
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
 	enemy.enemy_data = data
@@ -156,6 +182,7 @@ func spawn_enemy(data: EnemyData, position: Vector2, auto_start: bool = true) ->
 	return enemy
 
 
+## 生成 Boss：Boss.new + 外观场景 + 入场景 + setup + start_boss。
 func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -> Boss:
 	var boss := Boss.new()
 	boss.global_position = position
@@ -169,7 +196,7 @@ func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -
 
 
 ## 关卡 Logo：在 top_center 处淡入 → 停留 → 淡出，然后释放整层。
-## 内容只给纹理与位置；`create_tween` / CanvasLayer 的机制留在这里（BGA5：内容不自己造 tween）。
+## 内容只给纹理与位置；tween / CanvasLayer 机制留在这里。
 func show_logo(texture: Texture2D, top_center: Vector2, fade_in: float = 2.0,
 		hold: float = 3.0, fade_out: float = 1.0) -> void:
 	if texture == null:
@@ -196,17 +223,16 @@ func show_logo(texture: Texture2D, top_center: Vector2, fade_in: float = 2.0,
 	tween.tween_callback(layer.queue_free)
 
 
-## 开一场"仅单个阶段"的战（符卡练习）：自建一个可运行的协程时钟作 ctx，
-## 生成对应 Boss 并直接让它进入该阶段。
-## 与 load_stage（整关编排）不同：本方法只服务"点杀单阶段"，故自建 clock，不复用整关脚本。
-## 返回 Boss；Boss.ctx.runner 即本次时钟（可 stop/queue_free 清理）。
+## 开一场仅单个阶段的战（符卡练习）：自建保活时钟作 ctx，生成 Boss 并直接进入该阶段。
+## 与 load_stage（整关编排）不同，本方法只服务“点杀单阶段”，不复用整关脚本。
+## 返回 Boss；Boss.ctx.runner 即本次时钟（可 stop / queue_free 清理）。
 func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: String, position: Vector2,
 		p_data: BossData = null) -> Boss:
 	var runner := CoroutineRunner.new()
 	runner.run(func(): return true)  # 保活：让 ctx.runner 保持 is_running（ctx.active/clock 依赖）
 	var ctx := StageContext.new(runner)
 	ctx.stage = self   # 符卡练习 ctx 也要绑 StageRuntime：ctx.effects/entity_registry 才能解析 Miss 层与自机
-	# 用**真 BossData**（调用方给）→ `spell_background` / `portrait` 等字段不会被丢掉；
+	# 用真 BossData（调用方给）→ spell_background / portrait 等字段不会被丢掉；
 	# 阶段表收敛成"就这一张卡"（练习是单阶段战）。没给则退回自建（工作台等场景）。
 	var single: BossData
 	if p_data != null:
@@ -228,9 +254,7 @@ func start_spell_card(p_phase: PhaseData, boss_scene: PackedScene, boss_name: St
 	return boss
 
 
-## 把关卡上下文注入给**组合根注入**的自机（供系统操作服务）。
-## 旧实现 `world.get_node_or_null("Player")` 把行为绑在节点名 / 父子关系上 —— 自机换个名字
-## 或挂到别处就静默不注入；现在只认 `player` 这个显式引用。
+## 把关卡上下文注入给组合根注入的自机（供系统操作服务）；只认显式的 player 引用。
 func _inject_player_ctx(p_ctx: StageContext) -> void:
 	if not is_instance_valid(player):
 		return
@@ -238,10 +262,11 @@ func _inject_player_ctx(p_ctx: StageContext) -> void:
 	entity_registry.bind_player(player)
 
 
+## 把敌人 / Boss 挂进 World：先按类型注入注册表（Boss 还有 HUD 层），再 add_child。
+## 无 world 时挂到场景根；两者都不可用则 queue_free。
 func add_enemy_to_scene(node: Node2D) -> void:
 	# 注入注册表：Enemy 在 _ready 自注册、Boss 在 start_boss 注册（都在 add_child 之后，故先给引用）。
-	# 显式类型化接口（`Enemy.set_registry` / `Boss.set_registry` / `Boss.set_ui_layer`）——
-	# 取代旧实现 `"registry" in node` / `"ui_layer" in node` 的属性名探针。
+	# 显式类型化接口：Enemy.set_registry / Boss.set_registry / Boss.set_ui_layer。
 	var enemy := node as Enemy
 	if enemy != null:
 		enemy.set_registry(entity_registry)
