@@ -5,11 +5,17 @@ extends RefCounted
 
 ## 符卡练习模式（单 phase Boss）
 static var is_practice_mode: bool = false
+## 本次练习的阶段数据。
 static var phase: PhaseData
+## 本次练习的 Boss 外观场景。
 static var boss_scene: PackedScene
+## 本次练习的 Boss 显示名。
 static var boss_name: String
+## 所属关卡主键。
 static var stage_id: int = 1
+## 练习目标在规范阶段序里的下标。
 static var phase_index: int = 0
+## 该面的背景场景（来自 StageCatalog）。
 static var background: PackedScene
 ## 符卡背景（每 Boss 一张，PackedScene）：[code]start_spell_card()[/code] 自建 BossData 会丢
 ## [code]BossData.spell_background[/code]，故练习载荷单独携带一份，由 game_scene 优先取 Boss 的、回落取这份。

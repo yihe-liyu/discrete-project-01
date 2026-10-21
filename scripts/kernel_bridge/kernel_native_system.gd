@@ -15,6 +15,7 @@ static var _warned_hooks: Dictionary = {}
 const CLEAR_FX: EffectType = preload("res://data/fx/enemy_clear_fx.tres")
 
 @export_group("Pool")
+## 弹池初始容量（@export，建池时用）。
 @export var initial_capacity: int = 1024
 ## 默认最长存活秒数；<=0 = 由行为/超时决定。
 @export var default_lifetime: float = 20.0
@@ -32,9 +33,13 @@ var _seed: int = 0
 var native_frames: int = 0
 
 # ── 原生行为执行（由 KernelBulletHost 装配）──
+## 是否启用原生行为管道。
 var enable_native_behaviors: bool = false
+## 原生行为使用的 BehaviorContext。
 var behavior_ctx: BehaviorContext
+## 原生行为宿主（KernelBehaviorHost）。
 var behavior_host          # KernelBehaviorHost
+## 取当前 Boss 的回调（行为目标用）。
 var boss_getter: Callable
 
 # ── 每帧只读快照（pull 自原生权威 SoA）──

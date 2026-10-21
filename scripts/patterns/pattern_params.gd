@@ -16,14 +16,19 @@ extends Resource
 var template: BulletData
 ## 染色 / 阵营 / 混合（pattern 在构造 BulletData 时套用；template 路径不覆盖这些）。
 @export var color: Color = Color.WHITE
+## 是否敌方阵营（enemy()）。
 @export var enemy: bool = true
+## 是否加色混合（blend()）。
 @export var blend: bool = true
+## 单次发射数量（连续型为每波数量）。
 @export var count: int = 12
+## 弹速（px/s）。
 @export var speed: float = 160.0
 ## 总张角：TAU = 整圈；PI/2 = 90° 扇形。
 @export var spread: float = TAU
 ## 连续型 pattern 用（瞬时 pattern 忽略）。
 @export var interval: float = 0.08
+## 连续型 pattern 的持续秒数（瞬时 pattern 忽略）。
 @export var duration: float = 3.0
 ## true = 以自机为基准方向；false = 用调用方传入的 direction。
 @export var aim: bool = false

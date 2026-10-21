@@ -3,14 +3,19 @@
 class_name ActorState
 extends RefCounted
 
+## 角色名（与 profile.char_name 同步）。
 var char_name: String = ""
+## 角色档案。
 var profile: CharacterProfile
+## 舞台坐标（立绘位置）。
 var position: Vector2 = Vector2(50, 230)
+## 是否水平翻转。
 var is_flip_h: bool = false
 ## 明暗：1=正常，<1=暗（沉默在场者 0.35）
 var light: float = 1.0
 ## 在场与否
 var is_visible: bool = false
+## 当前表情名（默认“通常”）。
 var emotion: String = "通常"
 ## 气泡相对立绘右缘偏移（旧模型默认粘滞值）
 var bubble_offset: Vector2 = Vector2(12, 0)

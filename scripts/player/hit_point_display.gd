@@ -8,10 +8,14 @@ class_name HitPointDisplay
 ## 渐隐渐显过渡时间（秒）
 @export var fade_duration: float = 0.15
 
+## 阴玉贴图节点。
 @onready var yin: Sprite2D = $Yin
+## 阳玉贴图节点。
 @onready var yang: Sprite2D = $Yang
 
+## 目标透明度（show / hide 设置）。
 var target_alpha: float = 0.0
+## 当前透明度（_process 追赶 target）。
 var current_alpha: float = 0.0
 
 func _ready():

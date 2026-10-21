@@ -13,10 +13,15 @@ var ctx: StageContext
 var registry: EntityRegistry
 
 var _visual: Node2D          # 外观实例（可能不是 AnimatedSprite2D）
+## 最大生命。
 var max_hp: int
+## 判定半径（像素）。
 var hitbox_radius: float
+## 击破分数。
 var score_value: int
+## 死亡特效场景。
 var death_effect: PackedScene
+## 当前生命。
 var hp: int
 
 var _last_pos: Vector2

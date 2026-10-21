@@ -7,6 +7,7 @@ extends Node2D
 enum Phase { GROW, SUSTAIN, CONTRACT, FADE, DEAD }
 
 # ── 配置（spawn 前设置，默认值合理）──
+## 激光颜色。
 var laser_color: Color = Color(1.0, 0.2, 0.1)
 ## 视觉光柱宽度
 var core_width: float = 16.0
@@ -26,10 +27,15 @@ var is_grow_on_spawn: bool = true
 var laser_texture: Texture2D
 
 # ── 运行时 ──
+## 激光骨架（判定与渲染共用采样）。
 var skeleton: LaserSkeleton
+## 当前状态机阶段（Phase）。
 var phase: Phase = Phase.DEAD
+## 本次生成后的存活秒数。
 var age: float = 0.0
+## 可见段头部沿骨架的距离。
 var head_dist: float = 0.0
+## 可见段尾部沿骨架的距离。
 var tail_dist: float = 0.0
 var _is_dirty: bool = true             ## 骨架可见段是否变化（渲染层据此重建）
 var _fade_age: float = 0.0
