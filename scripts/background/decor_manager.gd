@@ -34,6 +34,7 @@ var _warned_missing_layers: Dictionary = {}
 var _instance_writes: int = 0
 
 
+## 取并清零实例写入计数（测试 / 诊断）。
 func debug_take_writes() -> int:
 	var n := _instance_writes
 	_instance_writes = 0
@@ -42,6 +43,7 @@ func debug_take_writes() -> int:
 
 # ═══ API ═══
 
+## 声明一层 DecorLayer；同名 / 同贴图重复声明警告并忽略。
 func add_layer(layer: DecorLayer) -> void:
 	var key := layer.name if layer.name != "" else layer.texture.resource_path
 	if _groups.has(key):
@@ -67,6 +69,7 @@ func _require_layer(layer_name: String) -> _LayerGroup:
 	return g
 
 
+## 在指定世界位置生成一个装饰实例；tex_scale 为零时按层随机尺寸。
 func spawn(layer_name: String, pos: Vector3, tex_scale: Vector2, follow: BackgroundPlane, lifetime: float = -1.0) -> void:
 	var g := _require_layer(layer_name)
 	if not g: return
@@ -76,6 +79,7 @@ func spawn(layer_name: String, pos: Vector3, tex_scale: Vector2, follow: Backgro
 	_alloc_slot(g, pos - g.scroll_offset, sz, follow, lifetime)
 
 
+## 按 x / z 范围批量随机生成；z_range 为零时用层的 spawn_band。
 func batch_spawn(layer_name: String, count: int, x_range: Vector2, z_range: Vector2, follow: BackgroundPlane, lifetime: float = -1.0) -> void:
 	var g := _require_layer(layer_name)
 	if not g: return
@@ -89,6 +93,7 @@ func batch_spawn(layer_name: String, count: int, x_range: Vector2, z_range: Vect
 		var pos := Vector3(RNG.randf_range(x_range.x, x_range.y), tex_scale.y / 2.0 + RNG.randf_range(-y_var, y_var), RNG.randf_range(band.x, band.y))
 		_alloc_slot(g, pos - g.scroll_offset, tex_scale, follow, lifetime)
 
+## 清空该层所有实例与滚动偏移。
 func clear_layer(layer_name: String) -> void:
 	var g := _require_layer(layer_name)
 	if not g: return
@@ -99,6 +104,7 @@ func clear_layer(layer_name: String) -> void:
 	if g.multi_mesh.instance_count > 0:
 		g.multi_mesh.instance_count = 0
 
+## duration 秒淡出该层，结束后清空。
 func fade_out_layer(layer_name: String, duration: float) -> void:
 	var g := _require_layer(layer_name)
 	if not g or not g.mmi: return

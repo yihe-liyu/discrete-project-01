@@ -9,11 +9,13 @@ var _laser_engine: LaserEngine
 var _sweep: Callable = Callable()
 
 
+## 注入激光引擎与敌弹扫掠回调。
 func setup(p_laser_sys, p_sweep: Callable) -> void:
 	_laser_engine = p_laser_sys
 	_sweep = p_sweep
 
 
+## 加一个扩张清弹圈（pos / max_radius / duration / start_radius / on_clear）。
 func start(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
 	_death_clears.append({
 		pos = pos,
@@ -25,10 +27,12 @@ func start(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, star
 	})
 
 
+## 清空所有清弹圈。
 func clear_all() -> void:
 	_death_clears.clear()
 
 
+## 每帧推进：扩张半径、扫敌弹、切生长激光头；到期移除。
 func process(delta: float) -> void:
 	for i in range(_death_clears.size() - 1, -1, -1):
 		var circle: Dictionary = _death_clears[i]

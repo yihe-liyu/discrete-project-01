@@ -13,19 +13,23 @@ var player: Node2D
 var enemies: Array = []
 
 
+## 绑定当前自机（只存引用，不接管资源）。
 func bind_player(p: Node2D) -> void:
 	player = p
 
 
+## 登记敌机 / Boss（去重）。
 func register_enemy(enemy) -> void:
 	if enemy != null and not enemies.has(enemy):
 		enemies.append(enemy)
 
 
+## 移除登记；不释放对象。
 func unregister_enemy(enemy) -> void:
 	enemies.erase(enemy)
 
 
+## 当前在场敌机 / Boss（注册顺序；含未开战 Boss）。
 func get_active_enemies() -> Array:
 	return enemies
 

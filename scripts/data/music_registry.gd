@@ -7,6 +7,7 @@ class_name MusicRegistry
 @export var records: Array[MusicRecord] = []
 
 
+## 按编号取音乐记录；不存在 = null。
 func get_by_id(music_id: int) -> MusicRecord:
 	for record in records:
 		if record.music_id == music_id:
@@ -14,6 +15,7 @@ func get_by_id(music_id: int) -> MusicRecord:
 	return null
 
 
+## 所有已解锁的音乐记录。
 func get_unlocked() -> Array[MusicRecord]:
 	var result: Array[MusicRecord] = []
 	for record in records:
@@ -22,12 +24,14 @@ func get_unlocked() -> Array[MusicRecord]:
 	return result
 
 
+## 按编号解锁；记录不存在时 no-op。
 func unlock(music_id: int) -> void:
 	var record := get_by_id(music_id)
 	if record:
 		record.is_unlocked = true
 
 
+## 是否已解锁；记录不存在 = false。
 func is_unlocked(music_id: int) -> bool:
 	var record := get_by_id(music_id)
 	return record != null and record.is_unlocked

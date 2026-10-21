@@ -34,6 +34,7 @@ var _config: ConfigFile = ConfigFile.new()
 var _last_save_error: Error = OK
 
 
+## 清空旧状态后读主档；损坏回退 .bak，坏档隔离 .corrupt，失败按空档。
 func load() -> void:
 	# 重载必须从干净状态开始：否则上一次的旧 key / 旧高分会在新档上"叠"回来。
 	high_scores.clear()
@@ -69,15 +70,18 @@ func save_settings() -> bool:
 	return _save()
 
 
+## 取设置键；缺省返回 default。
 func get_setting(key: String, default: Variant = null) -> Variant:
 	return settings.get(key, default)
 
 
+## 写设置并立即存盘；返回是否成功。
 func set_setting(key: String, value: Variant) -> bool:
 	settings[key] = value
 	return _save()
 
 
+## 仅当更高时写入高分并存盘；返回是否成功（不更高 = true）。
 func save_high_score(stage_id: int, score: int) -> bool:
 	var prev: int = get_high_score(stage_id)
 	if score <= prev:
@@ -86,6 +90,7 @@ func save_high_score(stage_id: int, score: int) -> bool:
 	return _save()
 
 
+## 取该面高分；无记录 = 0。
 func get_high_score(stage_id: int) -> int:
 	return high_scores.get(stage_id, 0)
 
