@@ -1,16 +1,34 @@
+## 时间线排程器：只回答“何时触发”，不认识任何游戏机制。
+##
+## [b]模型[/b][br]
+## [codeblock]
+## at(2.0).do(cb)                      绝对时刻 2s
+## at(0.0).every(1.5).times(4).do(cb)  0s 起，每 1.5s，共 4 次
+## wait(3.0).do(cb)                    最近一次阶段击破后 3s
+## [/codeblock]
+## 动作一律 [method do]（[code]Callable[/code] 无参数）；ctx / 导演等环境由内容在闭包里捕获。
+## 唯一保留的类型耦合是阶段：[method wait] 的相对时间必须锚定一次阶段击破。
+## [br]
+## [b]用法[/b][br]
+## [codeblock]
+## var tl := start_timeline()
+## tl.at(10.0).do(func(): ctx.bullets.shoot_spread(...))
+## tl.loop()
+##
+## func _on_step(_ctx):
+##     return tl.tick(get_dt())
+## [/codeblock]
+## 通常由 [CoroutineScript] 的 [code]start_timeline()[/code] 创建并驱动；
+## tick 的返回值供 [code]CoroutineScript.auto_stop[/code] 判断是否收尾。
+## [br]
+## [b]边界[/b][br]
+## - 未配 [method loop] 时，所有一次性事件触发完 tick 就返回 false；无限重复事件不会返回 false。[br]
+## - [method wait] 只认阶段击破；没有 [method start_phase] / [method sequence_phases] 就永远不触发。[br]
+## - 阶段战不冻结时间线：绝对时间事件照常推进，wait 只等击破。[br]
+## - [method loop] 遇到无限重复事件不会回到起点（永远有未完成事件）。[br]
+## 完整参考：[code]docs/DANMAKU_API.md[/code] §5.4。
 class_name Timeline
 extends RefCounted
-## 时间线 —— 纯排程器：只回答"何时触发"，不认识任何游戏机制。
-## 动作一律 do(callable)，环境由内容在闭包里自带（ctx / 导演）；
-## 唯一保留的类型耦合是 start_phase —— 相对时间 wait() 必须锚定一个阻塞事件。
-##
-##   var timeline := Timeline.new()
-##   timeline.at(0.0).do(func(): _dir.bgm("stage1"))
-##   timeline.at(2.0).every(1.5).times(4).do(_wave)
-##   timeline.at(10.0).do(func(): ctx.bullets.shoot_spread(...))
-##   timeline.loop()
-##
-##   func _on_step(_ctx): return timeline.tick(get_dt())
 
 var _events: Array[TimelineEvent] = []
 ## 阶段序列（sequence_phases）：{getter, phases, gap, index, next_at}
@@ -28,6 +46,7 @@ var _wait_n: float = -1.0
 
 # ═══ 构建器 ═══
 
+## 设下一个 [method do] 的绝对时刻（秒），并清空 every / times / wait 状态。
 func at(t: float) -> Timeline:
 	_time = t
 	_every = -1.0
@@ -35,20 +54,25 @@ func at(t: float) -> Timeline:
 	_wait_n = -1.0
 	return self
 
+## 让下一个 [method do] 每 [code]interval[/code] 秒重复；不配 [method times] 就无限重复。
 func every(interval: float) -> Timeline:
 	_every = interval
 	return self
 
+## 限制下一个 [method do] 的重复次数；n <= 0 表示无限。
 func times(n: int) -> Timeline:
 	_times = n
 	return self
 
+## 把回调排到当前构建时刻；回调无参数，ctx / 导演等环境在闭包里捕获。
+## 未先调用 [method at] / [method wait] 时时刻为 -1，首个 tick 立即触发。
 func do(cb: Callable) -> Timeline:
 	_add(_time, cb, _every, _times)
 	return self
 
 
-## 等上一个 blocking 事件结束后 N 秒执行（运行时计算）
+## 相对时刻：等最近一次 Boss 阶段击破（phase_cleared）后 n 秒触发。
+## 在 [method start_phase] / [method sequence_phases] 武装前 tick 会跳过；没有阶段事件就永远不触发。
 func wait(n: float) -> Timeline:
 	_time = -1.0  # 标记为相对事件，tick 时用 _cursor + n
 	_every = -1.0
@@ -57,8 +81,9 @@ func wait(n: float) -> Timeline:
 	return self
 
 
-## 启动 Boss 阶段（战斗不冻结时间轴：绝对时间事件照常推进，仅 wait() 等待阶段击破）
-## 注意：与 BossData.normal_phase()（静态声明 Boss 有哪些阶段）区分——这里是运行驱动"此刻进入该阶段"
+## 按当前构建时刻排一个事件：取 Boss 并 [code]start_phase(data)[/code]；该阶段击破后把 wait 基准设为
+## 击破时刻并武装所有 wait。boss_getter 返回空则跳过，wait 不会武装。
+## 与 [code]BossData.normal_phase()[/code]（静态声明阶段表）区分：这里是运行驱动“此刻进入该阶段”。
 func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 	return do(func():
 		var boss = boss_getter.call()
@@ -73,14 +98,14 @@ func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 	)
 
 
-## 按序连打一串阶段：phases[0] 起手；每张击破后 gap 秒进下一张；
-## **最后一张**击破后才记 _cursor + 武装 wait —— 所以紧随其后的 wait(n).do(...) 是「全部打完后 n 秒」。
-## 空表 → 视作「已打完」，立即武装 wait（避免后续 wait 永不触发）。
+## 按当前构建时刻排一个事件：按序连打 [code]phases[/code]；每张击破后 gap 秒进下一张。
+## 最后一张击破后才武装 wait —— 所以紧随其后的 [code]wait(n).do(...)[/code] 是「全部打完后 n 秒」。
+## 空表视作「已打完」，立即武装 wait（避免后续 wait 永不触发）。
 func sequence_phases(boss_getter: Callable, phases: Array[PhaseData], gap: float = 0.0) -> Timeline:
 	return do(func(): _start_sequence(boss_getter, phases, gap))
 
 
-## 立即起一个序列（不排时间点；事件驱动开战用，如对话 boss_fight）。
+## 不排时间点，下一次 tick 起手；事件驱动开战用（如对话 boss_fight）。
 func start_sequence_now(boss_getter: Callable, phases: Array[PhaseData], gap: float = 0.0) -> void:
 	_start_sequence(boss_getter, phases, gap)
 
@@ -132,6 +157,8 @@ func _add(t: float, cb: Callable, ev: float = -1.0, n: int = -1) -> void:
 
 # ═══ 运行 ═══
 
+## 推进 delta 秒：触发到期事件、推进阶段序列、处理 loop。
+## 返回是否仍需继续：loop 模式恒 true；否则还有未触发事件即 true。
 func tick(delta: float) -> bool:
 	_elapsed += delta
 
@@ -193,12 +220,17 @@ func _reset_onetime() -> void:
 		ev.repeat_times = ev._original_repeat_times
 
 
+## 时间归零、清空阶段序列、所有事件标回未触发。
+## 只重置时间与触发标记；wait 基准/武装状态和重复事件配置都不变。完整重播用 [method loop]。
 func reset() -> void:
 	_elapsed = 0.0
 	_sequences.clear()
 	for ev in _events:
 		ev.is_fired = false
 
+## 整段循环：所有事件都触发完（重复事件达到 times）后回到 loop_start，按原始时间戳重排，
+## 并恢复每轮 every / times。loop_start = 所有事件“最后一次触发”的最大时刻
+## （重复事件按 every × (times - 1) 算）；空时间线忽略。
 func loop() -> void:
 	if _events.is_empty(): return
 	_loop_start = _compute_loop_start()
