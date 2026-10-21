@@ -1,3 +1,5 @@
+## 背景滚动平面：用 ShaderMaterial 的 uv_offset 滚动地面 / 远景。
+## 跟随它的装饰物应读 effective_scroll_speed()，不要直接读 scroll_speed。
 class_name BackgroundPlane
 extends MeshInstance3D
 

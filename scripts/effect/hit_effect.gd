@@ -1,3 +1,4 @@
+## 命中特效基类：池化激活 / 速度 / 染色，播完回调回收；子类覆写 _setup。
 extends Node2D
 class_name HitEffect
 # 命中特效基类 — 支持对象池回收

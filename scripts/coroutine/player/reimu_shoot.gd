@@ -1,3 +1,4 @@
+## 灵梦射击：主弹 + 子机编队（power 阈值 / 数量 / 偏移）。
 extends PlayerShootScript
 class_name ReimuShoot
 

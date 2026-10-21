@@ -1,4 +1,5 @@
 # MusicRecord.gd — 单首音乐的播放记录
+## 单首音乐的播放记录：编号 / 曲名 / 评语 / BGM key / 解锁状态。
 extends Resource
 class_name MusicRecord
 

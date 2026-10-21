@@ -1,3 +1,4 @@
+## 死亡特效：继承 HitEffect，按 AnimatedSprite 播放一次后回收。
 extends HitEffect
 class_name DeathEffect
 

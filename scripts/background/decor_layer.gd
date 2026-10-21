@@ -1,4 +1,5 @@
 # DecorLayer.gd — 一层装饰物配置
+## 一层装饰物的生成配置：贴图 / 尺寸范围 / 密度 / 生成带 / LOD。
 class_name DecorLayer
 extends Resource
 

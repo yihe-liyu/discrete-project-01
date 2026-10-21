@@ -1,3 +1,4 @@
+## 子机跟随协程：以指数追赶 leader + offset；失效时结束。
 extends CoroutineScript
 class_name OptionFollow
 

@@ -1,4 +1,6 @@
 # StageRegistry.gd — 全关卡注册表
+## 全关卡注册表：StageData 集合，按 stage_id 查找 / 校验。
+## 运行时由 StageCatalog 加载；通常落在 data/registry/stage_registry.tres。
 extends Resource
 class_name StageRegistry
 

@@ -1,3 +1,4 @@
+## 游戏主场景：装配关卡 / Boss / UI / 背景，并管理结算与练习模式。
 class_name GameScene
 extends Node
 

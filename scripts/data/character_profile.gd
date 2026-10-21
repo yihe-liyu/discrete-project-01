@@ -1,4 +1,5 @@
 # CharacterProfile.gd
+## 对话角色档案：名字、表情立绘、默认立绘位置 / 翻转 / 气泡偏移。
 extends Resource
 class_name CharacterProfile
 

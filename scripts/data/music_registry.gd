@@ -1,4 +1,5 @@
 # MusicRegistry.gd — 音乐注册表
+## 音乐注册表：MusicRecord 集合 + 按编号 / BGM key 查询与解锁。
 extends Resource
 class_name MusicRegistry
 

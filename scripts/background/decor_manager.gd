@@ -1,4 +1,5 @@
 # DecorManager.gd — 分层装饰物管理器（自定义 MultiMesh）
+## 分层装饰物管理器：按 DecorLayer 生成 MultiMesh 实例，跟随 BackgroundPlane 滚动并池化回收。
 class_name DecorManager
 extends Node3D
 

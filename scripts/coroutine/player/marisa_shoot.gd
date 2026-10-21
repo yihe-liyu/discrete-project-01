@@ -1,3 +1,4 @@
+## 魔理沙射击：主弹 + 子机分段激光；覆写 option 装配与激光参数。
 extends PlayerShootScript
 class_name MarisaShoot
 

@@ -1,3 +1,4 @@
+## 时间线事件：时刻 / 回调 / 重复配置 / 相对 wait 状态；由 Timeline 驱动。
 class_name TimelineEvent
 extends RefCounted
 

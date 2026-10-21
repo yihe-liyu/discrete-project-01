@@ -1,3 +1,4 @@
+## 自机射击基类：主弹 + 子机状态机，子类覆写 _main_shoot / _option_setup 等。
 class_name PlayerShootScript
 extends CoroutineRunner
 

@@ -1,4 +1,5 @@
 # hit_point_display.gd
+## 自机判定点显示：focus 时淡入，阴阳玉反向自转。
 extends Node2D
 class_name HitPointDisplay
 

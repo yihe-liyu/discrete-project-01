@@ -1,4 +1,6 @@
 # SpellRecordBook.gd
+## 符卡簿：SpellRecord 集合 + 增删查 / 统计 / 清理幽灵记录。
+## 主键 = (stage, phase_index, character, difficulty)；落盘由 SpellBookManager 负责。
 extends Resource
 class_name SpellRecordBook
 

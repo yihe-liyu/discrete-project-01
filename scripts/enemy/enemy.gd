@@ -1,4 +1,5 @@
 # Enemy.gd
+## 杂兵本体：外观 / HP / 判定 / 掉落 / 死亡；行为协程由 StageRuntime.spawn_enemy_data 挂载。
 extends Area2D
 class_name Enemy
 
