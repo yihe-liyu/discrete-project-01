@@ -5,13 +5,20 @@
 class_name SpellPracticeListView
 extends RefCounted
 
+## 全收颜色（正蓝）。
 const CAPTURE_FULL := Color(0.4, 0.7, 1.0)
+## 难度显示名（SpellRecord）。
 const DIFF_NAMES = SpellRecord.DIFF_NAMES
+## 角色显示名（SpellRecord）。
 const CHAR_NAMES = SpellRecord.CHAR_NAMES
+## 列表字号。
 const LIST_FONT_SIZE := 28
 
+## 层级：关卡。
 const SECTION_STAGE := 0
+## 层级：阶段。
 const SECTION_PHASE := 1
+## 层级：难度。
 const SECTION_DIFF := 2
 
 var _host: Node
@@ -26,6 +33,7 @@ var _phase_offset: int = 0
 var _pulse_tween: Tween
 
 
+## 注入宿主与四个列表容器 / 人物名 / 滚动提示。
 func setup(host: Node, stage_box: VBoxContainer, p_phase_box: VBoxContainer,
 		diff_box: VBoxContainer, char_name: Label, phase_scroll_hint: Label) -> void:
 	_host = host
@@ -36,16 +44,19 @@ func setup(host: Node, stage_box: VBoxContainer, p_phase_box: VBoxContainer,
 	_phase_scroll_hint = phase_scroll_hint
 
 
+## 阶段列表容器。
 func phase_box() -> VBoxContainer:
 	return _phase_box
 
 
+## 阶段列表当前窗口起点。
 func phase_offset_value() -> int:
 	return _phase_offset
 
 
 # ═══ 构建列表 ═══
 
+## 重建关卡列表；无记录时显示 No records，再建阶段列表。
 func build_lists(data: SpellPracticeData, char_index: int, phase_index: int) -> void:
 	_clear(_stage_box)
 	if data.stages.is_empty():
@@ -105,6 +116,7 @@ func _window_start(current: int, selected: int, total: int, limit: int) -> int:
 	return clampi(start, 0, total - limit)
 
 
+## 按当前窗口重建阶段列表，并同步滚动提示。
 func build_phase_list(data: SpellPracticeData, char_index: int, phase_index: int) -> void:
 	_clear(_phase_box)
 
@@ -144,6 +156,7 @@ func phase_local_index(phase_index: int) -> int:
 	return clampi(phase_index - _phase_offset, 0, maxi(_phase_box.get_child_count() - 1, 0))
 
 
+## 按当前阶段重建难度列表（卡名 / 难度 / 收取统计）。
 func build_diff_list(data: SpellPracticeData, phase_index: int) -> void:
 	_clear(_diff_box)
 	if phase_index < 0 or phase_index >= data.phases.size():
@@ -154,7 +167,7 @@ func build_diff_list(data: SpellPracticeData, phase_index: int) -> void:
 		var is_locked: bool = entry.is_locked
 		var record: SpellRecord = entry.get("record")
 		var vbox := VBoxContainer.new()
-		# 名字行**始终占位**（两种状态下选项高度一致）：锁定 → "?"；符卡 → 卡名；非符 → 空串。
+		# 名字行始终占位（两种状态下选项高度一致）：锁定 → "?"；符卡 → 卡名；非符 → 空串。
 		var nl := Label.new()
 		nl.text = entry.get("card_name", "")
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -208,6 +221,7 @@ func _make_label(text: String) -> Label:
 
 # ═══ 高亮 ═══
 
+## 按当前层级压暗全部、点亮选中项并脉冲；阶段窗口变化时重建。
 func highlight(data: SpellPracticeData, section: int, stage_index: int, phase_index: int,
 		diff_index: int, char_index: int) -> void:
 	stop_pulse()
@@ -298,6 +312,7 @@ func _start_pulse(item: Control) -> void:
 	_pulse_tween.tween_property(item, "modulate", Color(0.5, 0.5, 0.5), 0.3)
 
 
+## 停止高亮脉冲。
 func stop_pulse() -> void:
 	if _pulse_tween and _pulse_tween.is_valid():
 		_pulse_tween.kill()
@@ -306,6 +321,7 @@ func stop_pulse() -> void:
 
 # ═══ 选中项 / 标签 ═══
 
+## 取当前层级选中项节点；索引越界 = null。
 func get_highlighted_item(section: int, stage_index: int, phase_index: int, diff_index: int) -> Control:
 	match section:
 		SECTION_STAGE:
@@ -321,22 +337,27 @@ func get_highlighted_item(section: int, stage_index: int, phase_index: int, diff
 	return null
 
 
+## 同步人物名标签（← 名字 →）。
 func sync_char_label(char_index: int) -> void:
 	_char_name.text = "← %s →" % CHAR_NAMES[char_index]
 
 
+## 人物名标签文本。
 func char_name_text() -> String:
 	return _char_name.text
 
 
+## 阶段滚动提示文本。
 func phase_scroll_hint_text() -> String:
 	return _phase_scroll_hint.text
 
 
+## 阶段列表子项数。
 func phase_box_count() -> int:
 	return _phase_box.get_child_count()
 
 
+## 阶段列表文本快照。
 func phase_labels() -> Array[String]:
 	var out: Array[String] = []
 	for child in _phase_box.get_children():
@@ -344,6 +365,7 @@ func phase_labels() -> Array[String]:
 	return out
 
 
+## 难度列表文本快照（取卡名行）。
 func diff_labels() -> Array[String]:
 	var out: Array[String] = []
 	for child in _diff_box.get_children():
@@ -352,6 +374,7 @@ func diff_labels() -> Array[String]:
 	return out
 
 
+## 难度列表高度快照。
 func diff_heights() -> Array[int]:
 	var out: Array[int] = []
 	for child in _diff_box.get_children():
@@ -359,10 +382,12 @@ func diff_heights() -> Array[int]:
 	return out
 
 
+## 关卡列表子项数。
 func stage_box_count() -> int:
 	return _stage_box.get_child_count()
 
 
+## 关卡列表文本快照。
 func stage_labels() -> Array[String]:
 	var out: Array[String] = []
 	for child in _stage_box.get_children():
