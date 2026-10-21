@@ -28,8 +28,6 @@ class_name EnemyData
 @export var score_value: int = 100
 ## 死亡特效；留空 = 用 AssetRegistry.enemy_visuals["death"]。
 @export var death_effect: PackedScene
-## Boss 数据（可选；当前敌人生成不读它）。
-var boss_data: BossData
 
 ## 掉落 P 道具数。
 @export var item_power: int = 0
