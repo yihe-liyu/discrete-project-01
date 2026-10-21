@@ -459,13 +459,13 @@ func test_relative_camera_moves_accumulate_from_target_not_live_value():
 	host.add_child(bg)
 	await wait_frames(1)
 
-	bg.set_camera_position(Vector3.ZERO, 0.001)
+	bg.tween_camera_position(Vector3.ZERO, 0.001)
 	bg.move_camera_by(Vector3(5, 0, 0), 0.5)     # 立刻
 	bg.move_camera_by(Vector3(0, 7, 0), 0.5)     # **不等第一条跑完** —— 旧实现会在这里丢掉 +5
 	await wait_physics_frames(45)
 
-	assert_almost_eq(bg.get_camera_offset().x, 5.0, 0.02, "第二条相对移动必须从**目标**累加（+5 不能丢）")
-	assert_almost_eq(bg.get_camera_offset().y, 7.0, 0.02, "第二条自己那段也要到位")
+	assert_almost_eq(bg.get_camera_position().x, 5.0, 0.02, "第二条相对移动必须从**目标**累加（+5 不能丢）")
+	assert_almost_eq(bg.get_camera_position().y, 7.0, 0.02, "第二条自己那段也要到位")
 
 
 ## 作者实况：4 条 Y 增量 −10/+25/−30/+15 **和 = 0**，本意是"转过去再转回来"

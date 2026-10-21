@@ -71,7 +71,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	#timeline.at(60.0).do(func():
 		#_background_plane.speed_ramp(7.0, 4.0, 25.0)
-		#ctx.background.set_camera_rotation(Vector3(deg_to_rad(-22), 0, 0), 25.0, Tween.EASE_IN_OUT, Tween.TRANS_SINE)
+		#ctx.background.tween_camera_rotation(Vector3(deg_to_rad(-22), 0, 0), 25.0, Tween.EASE_IN_OUT, Tween.TRANS_SINE)
 	#)
 
 	super.start(ctx, target)

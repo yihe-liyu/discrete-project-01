@@ -468,7 +468,7 @@ func _set_seed(seed_value: int) -> void:
 
 
 func _next_seed() -> void:
-	_set_seed(randi())
+	_set_seed(RNG.randi())
 	_update_stats()
 
 

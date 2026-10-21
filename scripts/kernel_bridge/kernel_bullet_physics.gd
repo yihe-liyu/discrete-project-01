@@ -4,7 +4,7 @@
 ## 几何唯一实现归内核（query_circle / hit_test），本层只做"规则"（命中 / 擦弹 / 伤害 / 特效）。
 ## 覆盖：敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹）；自机弹 ↔ 敌人
 ## （damage 侧表 + 记忆加成 + 音效/特效）；死亡清弹扫掠（sweep_enemy_bullets）。
-## 待补：bomb（X）。
+## bomb 不走本层：自机 bomb 是宿主实体（KernelBomb / KernelMistBomb），自己处理伤害与清弹。
 class_name KernelBulletPhysics
 extends RefCounted
 

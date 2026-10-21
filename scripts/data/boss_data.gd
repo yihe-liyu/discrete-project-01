@@ -60,11 +60,6 @@ class_name BossData
 @export var stage_id: int = 0
 ## 同面内排序（升序 = boss_index）。
 @export var order: int = 0
-## 入场演出脚本（可选；当前 Boss 入场走默认逻辑，该字段尚未接入）。
-@export var enter_script: Script
-## 退场演出脚本（可选；当前 Boss 退场走默认逻辑，该字段尚未接入）。
-@export var exit_script: Script
-
 # ── 构造链 ──
 
 ## 设显示名。

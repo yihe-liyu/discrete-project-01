@@ -5,7 +5,7 @@
 ## _ready 时按类型解析相机（兄弟节点）/ WorldEnvironment / DecorManager / ScreenFogFX / BackgroundSun，
 ## 应用 env_preset，并抓相机初始姿态。动作用绝对 / 相对相机 tween + 环境 tween。
 ## [codeblock]
-## ctx.background.set_camera_position(...)
+## ctx.background.tween_camera_position(...)
 ## ctx.background.move_camera_by(...)
 ## ctx.background.tween_env_fog(...)
 ## [/codeblock]
@@ -180,46 +180,19 @@ func _find_world_environment() -> WorldEnvironment:
 			return child
 	return null
 
-## 立即设置相机 FOV（无 tween），并同步相对动词的目标记忆。
-func set_camera_fov(fov: float) -> void:
-	_cam_target_fov = fov
-	if camera:
-		camera.fov = fov
-
-## 立即设置相机 y 坐标（无 tween）。
-func set_camera_y(y: float):
-	if camera:
-		var t = camera.transform
-		t.origin.y = y
-		camera.transform = t
-
-## 立即设置相机 x 坐标（无 tween）。
-func set_camera_x(x: float):
-	if camera:
-		var t = camera.transform
-		t.origin.x = x
-		camera.transform = t
-
-## 立即设置相机位置（无 tween）。
-func set_camera_pos(pos: Vector3):
-	if camera:
-		var t = camera.transform
-		t.origin = pos
-		camera.transform = t
-
-## 取相机当前位置（名字是历史遗留，不是相对偏移）。
-func get_camera_offset() -> Vector3:
+## 取相机当前位置；无相机 = 零向量。
+func get_camera_position() -> Vector3:
 	if camera:
 		return camera.transform.origin
 	return Vector3.ZERO
 
 # ═══ 相机动词（绝对 / 相对，名字里写清楚）═══
-# 绝对：set_camera_position / set_camera_rotation / tween_camera_fov
+# 绝对：tween_camera_position / tween_camera_rotation / tween_camera_fov
 # 相对：move_camera_by / rotate_camera_by（在上一条指令的目标上累加）
 # rotation 参数一律弧度；camera_home_rotation_degrees 是度。
 
 ## 相机位置：绝对，tween 到 target_pos；会覆盖同属性的旧 tween。
-func set_camera_position(target_pos: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
+func tween_camera_position(target_pos: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
 	if camera == null:
 		return
 	_cam_target_pos = target_pos
@@ -230,11 +203,11 @@ func set_camera_position(target_pos: Vector3, duration: float, ease_type: int = 
 func move_camera_by(offset: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
 	if camera == null:
 		return
-	set_camera_position(_cam_target_pos + offset, duration, ease_type, trans_type)
+	tween_camera_position(_cam_target_pos + offset, duration, ease_type, trans_type)
 
 
 ## 相机旋转：绝对（弧度），会覆盖同属性的旧 tween。
-func set_camera_rotation(target_rot: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
+func tween_camera_rotation(target_rot: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
 	if camera == null:
 		return
 	_cam_target_rot = target_rot
@@ -245,7 +218,7 @@ func set_camera_rotation(target_rot: Vector3, duration: float, ease_type: int = 
 func rotate_camera_by(delta_rot: Vector3, duration: float, ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> void:
 	if camera == null:
 		return
-	set_camera_rotation(_cam_target_rot + delta_rot, duration, ease_type, trans_type)
+	tween_camera_rotation(_cam_target_rot + delta_rot, duration, ease_type, trans_type)
 
 
 ## 相机 FOV：绝对（tween）。

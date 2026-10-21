@@ -44,8 +44,9 @@ func test_embedded_bench_world_matches_field() -> void:
 	var overlay = HITBOX_OVERLAY.new()
 	var offset_bm := BulletManager.new()
 	offset_bm.position = Vector2(0.0, 36.0)
+	var bt := BulletType.new()
 	assert_eq(
-		overlay.bullet_center_for(offset_bm, Vector2(10.0, 20.0), Vector2.ZERO, 0.0),
+		overlay.bullet_center_for(offset_bm, bt, Vector2(10.0, 20.0), Vector2.ZERO),
 		Vector2(10.0, 56.0),
 		"命中框必须叠加 BulletManager 的全局偏移")
 	offset_bm.free()

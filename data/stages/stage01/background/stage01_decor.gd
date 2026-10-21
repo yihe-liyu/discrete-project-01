@@ -39,7 +39,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	# ② 相机移动 + 旋转 (6s)
 	timeline.at(6.0).do(func():
 		ctx.background.move_camera_by(Vector3(0, 20, -3), 8.0, Tween.EASE_IN_OUT, Tween.TRANS_QUAD)
-		ctx.background.set_camera_rotation(Vector3(deg_to_rad(-30), 0, 0), 6.0, Tween.EASE_IN_OUT, Tween.TRANS_SINE)
+		ctx.background.tween_camera_rotation(Vector3(deg_to_rad(-30), 0, 0), 6.0, Tween.EASE_IN_OUT, Tween.TRANS_SINE)
 	)
 
 	# ③ 地面加速 (10s)：**意图动词**，tween 归 `BackgroundPlane` 自己管
@@ -62,7 +62,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	timeline.at(60.0).do(func():
 		_background_plane.speed_ramp(7.0, 4.0, 25.0)
-		ctx.background.set_camera_rotation(Vector3(deg_to_rad(-22), 0, 0), 25.0, Tween.EASE_IN_OUT, Tween.TRANS_SINE)
+		ctx.background.tween_camera_rotation(Vector3(deg_to_rad(-22), 0, 0), 25.0, Tween.EASE_IN_OUT, Tween.TRANS_SINE)
 	)
 
 	super.start(ctx, target)
