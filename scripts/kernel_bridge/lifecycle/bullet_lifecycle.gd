@@ -165,7 +165,7 @@ func _set_until(op: StringName, extra: Dictionary = {}) -> void:
 
 # ═══ 方向表达式（兼容入口；实现与词汇在 DirSpec）═══
 
-## 相对发射者朝向的方向表达式；可选角度偏移（弧度）。
+## 绝对世界角；[code]angle[/code] 以向上为 0、顺时针为正（弧度）。只用于 [method set_heading]。
 static func heading(angle: float) -> RefCounted:
 	return DIR_SPEC.heading(angle)
 
@@ -190,7 +190,7 @@ static func forward(angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.forward(angle)
 
 
-## 随机方向；[code]spread[/code] 是总张角（弧度），由内核 RNG 求值。
+## 随机方向；以当前朝向为中心 ±[code]spread[/code] 均匀随机（单侧张角，总张角 = 2×spread），由内核 RNG 求值。
 static func random_dir(spread: float) -> RefCounted:
 	return DIR_SPEC.random_dir(spread)
 
@@ -200,7 +200,8 @@ static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> 
 	return DIR_SPEC.chance_toward(target, p, spread)
 
 
-## 沿当前速度反射的方向表达式；[code]angle[/code] 为额外偏移（弧度）。
+## 把当前速度按发射点所在场边翻分量，再转 [code]angle[/code]；未贴边时退化为当前朝向。
+## 配 [method until_at_wall] + [code]AT_PHASE_END[/code] 使用。
 static func reflect(angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.reflect(angle)
 
