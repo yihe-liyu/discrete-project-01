@@ -121,14 +121,12 @@ func enemy() -> BulletData:
 	return self
 
 ## 打开/换出生雾：effect 为空 = 用阵营默认特效。
-## 打开/换出生雾；effect 为空 = 用阵营默认特效。
 func with_spawn_fog(effect: EffectType = null) -> BulletData:
 	is_spawn_fog = true
 	spawn_fx = effect
 	return self
 
 
-## 关掉出生雾：这型弹直接出现，不给预告。
 ## 关闭出生雾：这型弹直接出现，不给预告。
 func no_spawn_fog() -> BulletData:
 	is_spawn_fog = false
