@@ -1,28 +1,31 @@
-# MenuNav — 统一菜单导航（替代 MenuHost + MenuStack + SubPageStack + PauseControl）
-#
-# ★ 所有菜单页面 push/pop 的唯一入口 ★
-#
-# 用法:
-#   # 普通页面（MainMenu 内推子页面）
-#   await MenuNav.push("res://scenes/ui/difficulty_screen.tscn")
-#   MenuNav.pop()
-#
-#   # 覆盖层（暂停 / GameOver / 通关）
-#   MenuNav.push_overlay("res://scenes/ui/pause_menu.tscn")
-#   MenuNav.pop_overlay()
-#
-# 页面契约:
-#   - 必须有 finished(result: Dictionary) 信号（可选）
-#   - 必须继承 BasePage / NavPage（页面栈类型化为 BasePage）
-#   - MenuNav 自动调 on_enter() / on_leave()
-
+## 统一菜单导航：普通页面栈 + 覆盖层栈的唯一 push / pop 入口。
+##
+## [b]模型[/b][br]
+## 普通页面挂在 MainMenu 注入的 PageHost 下；覆盖层挂独立 CanvasLayer(64)，并暂停 SceneTree。
+## 页面须继承 BasePage；MenuNav 自动调 on_enter / on_leave / on_activate / on_deactivate。
+## [codeblock]
+## # 游戏内通常经 GameManager 包装
+## GameManager.push_page("res://scenes/ui/difficulty_screen.tscn")
+## GameManager.pop_page()
+## # 覆盖层
+## GameManager.push_overlay_menu(pause_page)
+## GameManager.pop_overlay_menu(pause_page)
+## [/codeblock]
+## 直接实例时：setup(parent) → set_page_host(host) → push / pop。
+## [br]
+## [b]边界[/b][br]
+## - push 前必须 set_page_host，否则 push_error 并返回 null。[br]
+## - 覆盖层把 tree.paused 置 true；只有最后一个弹出才恢复。[br]
+## - page.finished 不会自动 pop，由调用方决定。[br]
+## - clear_pages / clear_overlays 只清节点，不调 on_leave、也不恢复 paused。
 class_name MenuNav
 extends RefCounted
 
+## 页面栈变化（current = 新栈顶，previous = 旧栈顶 / 被弹出页）。
 signal page_changed(current: Node, previous: Node)
-## 请求宿主切到「暂停 / 恢复」状态（显式接口，取代旧的动态方法名 `_parent.set_state(...)` + `call_deferred`）。
-## 由 GameManager 以 `CONNECT_DEFERRED` 连接 —— 保持原来"状态切换推迟到本帧末"的时序。
+## 请求宿主切到暂停状态；GameManager 用 CONNECT_DEFERRED 连接，保持“帧末切状态”时序。
 signal pause_requested()
+## 请求宿主恢复；与 pause_requested 对称。
 signal resume_requested()
 
 # ═══ 过渡设置 ═══
@@ -37,11 +40,12 @@ var _overlay_stack: Array[BasePage] = []  # 覆盖层栈
 
 # ═══ 初始化 ═══
 
+## 绑定宿主（GameManager）：取 tree、发信号都经它。
 func setup(parent: Node) -> void:
 	_parent = parent
 
 
-## 注入子页面容器（由拥有它的场景调用，如 MainMenu 的 %PageHost）
+## 注入子页面容器（由拥有它的场景调用，如 MainMenu 的 %PageHost）。
 func set_page_host(host: Control) -> void:
 	_host = host
 
@@ -53,7 +57,8 @@ func has_page_host() -> bool:
 
 # ═══ 页面栈 ═══
 
-## 推入一个子页面（须先由 MainMenu 注入 PageHost）
+## 加载并推入子页面：隐藏当前栈顶、挂到 PageHost、on_enter、发 page_changed。
+## 未注入 PageHost → push_error 并返回 null。
 func push(page_path: String) -> BasePage:
 	if not has_page_host():
 		push_error("MenuNav: 未注入 PageHost（应由 MainMenu 注册）——拒绝 push 子页面")
@@ -78,7 +83,7 @@ func push(page_path: String) -> BasePage:
 	return page
 
 
-## 弹出当前页面（回到上一层）
+## 弹出当前页面：on_leave、恢复上一层 on_activate、发 page_changed。
 func pop() -> void:
 	if _page_stack.is_empty():
 		return
@@ -99,7 +104,7 @@ func pop() -> void:
 	page_changed.emit(_page_stack[-1] if not _page_stack.is_empty() and is_instance_valid(_page_stack[-1]) else null, page)
 
 
-## 弹出到指定页面（保留该页）
+## 弹出到指定页面（保留该页），中间页面直接 queue_free。
 func pop_to(page: BasePage) -> void:
 	while _page_stack.size() > 1 and _page_stack[-1] != page:
 		var dead: BasePage = _page_stack.pop_back()
@@ -111,7 +116,7 @@ func pop_to(page: BasePage) -> void:
 		_connect_signals(page)
 
 
-## 清空页面栈
+## 清空页面栈：所有子页面 queue_free；不调 on_leave、不发 page_changed。
 func clear_pages() -> void:
 	while not _page_stack.is_empty():
 		var page = _page_stack.pop_back()
@@ -120,10 +125,12 @@ func clear_pages() -> void:
 			page.queue_free()
 
 
+## 当前子页面栈顶；空栈 = null。
 func get_top_page() -> BasePage:
 	return _page_stack[-1] if not _page_stack.is_empty() else null
 
 
+## 清空覆盖层：释放页面与 wrapper；不恢复 tree.paused、不发 resume_requested。
 func clear_overlays() -> void:
 	while not _overlay_stack.is_empty():
 		var page: BasePage = _overlay_stack.pop_back()
@@ -136,13 +143,14 @@ func clear_overlays() -> void:
 			wrapper.queue_free()
 
 
+## 是否有子页面打开。
 func is_page_open() -> bool:
 	return not _page_stack.is_empty()
 
 
 # ═══ 覆盖层（暂停 / Game Over / 通关） ═══
 
-## 推入覆盖层（暂停游戏 + 独立 CanvasLayer）
+## 加载并推入覆盖层：挂 CanvasLayer(64)、暂停 tree、发 pause_requested、on_enter。
 func push_overlay(page_path: String) -> BasePage:
 	var page: BasePage = _load_page(page_path)
 	_overlay_stack.append(page)
@@ -166,7 +174,7 @@ func push_overlay(page_path: String) -> BasePage:
 	return page
 
 
-## 接受已实例化的覆盖层（兼容旧 API）
+## 接受已实例化的覆盖层（兼容旧 API），行为同 push_overlay。
 func add_overlay_instance(page: BasePage) -> void:
 	_overlay_stack.append(page)
 	page.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -184,7 +192,7 @@ func add_overlay_instance(page: BasePage) -> void:
 	page.on_enter()
 
 
-## 弹出当前覆盖层
+## 弹出当前覆盖层：on_leave、释放 wrapper；空栈时恢复 tree.paused 并发 resume_requested。
 func pop_overlay() -> void:
 	if _overlay_stack.is_empty():
 		return
@@ -206,7 +214,7 @@ func pop_overlay() -> void:
 		resume_requested.emit()
 
 
-## 弹出指定覆盖层
+## 弹出指定覆盖层；空栈时恢复 tree.paused 并发 resume_requested。
 func pop_specific_overlay(page: BasePage) -> void:
 	_overlay_stack.erase(page)
 	_disconnect_signals(page)
@@ -221,10 +229,12 @@ func pop_specific_overlay(page: BasePage) -> void:
 		resume_requested.emit()
 
 
+## 是否有覆盖层打开。
 func is_overlay_open() -> bool:
 	return not _overlay_stack.is_empty()
 
 
+## 当前覆盖层栈顶；空栈 = null。
 func get_overlay_top() -> BasePage:
 	return _overlay_stack[-1] if not _overlay_stack.is_empty() else null
 
