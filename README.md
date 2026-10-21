@@ -38,7 +38,7 @@
 | 叙事 | ██████████ 50% |
 | 打磨/QoL | ██████████████ 70% |
 
-已知待做：Stage 2~6 内容（面脚本 / Boss / 符卡）、Replay 播放器、结算画面、各页面逐页核验。
+已知待做：Stage 2~6 内容（面脚本 / Boss / 符卡）、Replay 播放器、结算画面。
 待办逐条清单在 [docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md) 的「🔴 待改进」与本地 `TODO_TEMP.md`。
 
 ---
