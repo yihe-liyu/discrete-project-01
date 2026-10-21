@@ -3,8 +3,10 @@
 class_name LaserSkeleton
 extends RefCounted
 
+## 骨架顶点（世界坐标折线）。构建后不要原地改点；改形状请重新调 from_points / from_curve / from_line。
 var points: PackedVector2Array = PackedVector2Array()
 var _lengths: PackedFloat32Array = PackedFloat32Array()  # 每点累积弧长
+## 骨架总弧长（由最近一次构建自动算出；采样越界时按它钳制）。
 var total_length: float = 0.0
 
 

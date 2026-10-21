@@ -20,6 +20,7 @@
 class_name DialogueSteps
 extends RefCounted
 
+## 已构建的步骤序列（按添加顺序；交给 [code]ctx.play_dialogue_steps[/code] 解释执行）。
 var steps: Array[DialogueStep] = []
 
 var _character_profile: CharacterProfile  ## line() 默认说话者（延续机制）

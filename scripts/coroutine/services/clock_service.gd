@@ -8,6 +8,7 @@
 class_name ClockService
 extends RefCounted
 
+## 共用的协程时钟；[method delay] / [method next_tick] 都等它的 ticked，null 时立即返回 false。
 var runner: CoroutineRunner
 
 

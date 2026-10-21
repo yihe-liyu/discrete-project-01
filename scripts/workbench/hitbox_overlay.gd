@@ -9,6 +9,7 @@ var entity_registry: EntityRegistry
 ## 弹幕世界（工作台注入）；不再读 BulletManager.current
 var bullet_manager: BulletManager
 
+## 是否显示命中框；setter 同时切换 visible / 每帧刷新，并在开启时立即重绘。
 var is_enabled: bool = false:
 	set(value):
 		is_enabled = value

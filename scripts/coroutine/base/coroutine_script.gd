@@ -15,6 +15,7 @@
 extends CoroutineRunner
 class_name CoroutineScript
 
+## 启动时绑定的关卡上下文（[method start] 注入；之前为 null）。
 var ctx: StageContext
 ## 要控制的节点（可选）。设置后可在 _tick/timeline 中访问。
 var target: Node2D

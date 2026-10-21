@@ -2,6 +2,7 @@
 class_name PlayerService
 extends RefCounted
 
+## 绑定给本服务的关卡上下文；null 时所有查询安全返回空值。
 var ctx: StageContext
 
 

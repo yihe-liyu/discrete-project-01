@@ -2,6 +2,7 @@
 extends HitEffect
 class_name DeathEffect
 
+## 场景里声明的死亡动画节点（播放 default，播完回收）。
 @onready var ani: AnimatedSprite2D = $AnimatedSprite2D
 
 func _setup() -> void:

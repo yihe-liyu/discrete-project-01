@@ -8,9 +8,12 @@ class_name HitEffect
 #   effect.activate(pos, vel, tint)
 #   # 播完后自动 invisible + on_finish()
 
+## 当前速度（像素/秒）；[method set_velocity] 会按子类速度归一化后写入。
 var velocity: Vector2 = Vector2.ZERO
 var _age: float = 0.0
-var on_finish: Callable  # 回收回调，池化时由 FxPool 注入（命名契约：回调值用 on_x）
+## 播放完毕的回收回调（池化时由 FxPool 注入；命名契约：回调值用 on_x）。
+## 无效（未池化）时 [method _finish] 直接 queue_free。
+var on_finish: Callable
 
 
 ## 池化激活：设位置 / 速度 / 染色 / 回收回调，再调 _setup。

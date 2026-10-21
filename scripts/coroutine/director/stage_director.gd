@@ -7,6 +7,7 @@
 class_name StageDirector
 extends RefCounted
 
+## 本导演绑定的关卡上下文（构造时注入，所有场景动词经它访问 stage / objects / 服务）。
 var ctx: StageContext
 
 var _handlers: Dictionary = {}   # event_name -> Callable

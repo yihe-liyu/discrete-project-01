@@ -13,6 +13,7 @@ const DIFF_VALUES = SpellRecord.DIFF_VALUES
 const MENU_DIFFS: Array[int] = [0, 1, 2, 3]
 const MENU_DIFFS_EXTRA: Array[int] = [SpellRecord.Difficulty.EXTRA]
 
+## 当前自机有记录的关卡主键列表（[method build] 重建后升序）。
 var stages: Array[int] = []
 ## 每个 phase: {rec: SpellRecord(带配置), diffs: {diff: SpellRecord}}
 var phases: Array[Dictionary] = []

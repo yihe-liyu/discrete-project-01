@@ -15,6 +15,7 @@ extends Node3D
 ## 仅预生成工具用（运行时纹理在场景里，见文件头）。
 @export var texture_size: int = 256
 
+## 场景里声明的太阳 Sprite3D（[code]SunSprite[/code]）；[method drawn_position] 以它的全局位置为准。
 @onready var sprite: Sprite3D = get_node_or_null("SunSprite") as Sprite3D
 
 

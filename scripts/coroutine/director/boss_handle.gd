@@ -7,6 +7,7 @@
 class_name BossHandle
 extends RefCounted
 
+## 该句柄绑定的 Boss 定义（构造时注入；槽位解析 / 名词动词都以它为准）。
 var data: BossData
 
 var _key: String

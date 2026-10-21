@@ -8,12 +8,16 @@ class_name GhostPlayer
 
 ## 正弦路径参数（可调：路径宽度/纵向中心/摆动频率）
 var path_amplitude: float = 330.0
+## 正弦路径的纵向中心（也是 STATIC 模式的固定 y；默认 = 真自机起始高度）。
 var path_center_y: float = GameConfig.PLAYER_START.y
+## 正弦路径的纵向半振幅（像素）：实际 y 在中心上下各摆这么远，并夹在自机活动范围内。
 var path_y_amp: float = 40.0
 const DEFAULT_CENTER_Y: float = GameConfig.PLAYER_START.y
 
 ## 走位模式（AUTO=自动漂移【工作台默认】/ MOUSE=鼠标跟随【弹幕试验台】/ STATIC=静止）
 enum Mode { AUTO, MOUSE, STATIC }
+## 走位模式：AUTO = 自动正弦漂移（工作台默认）；MOUSE = 鼠标跟随；
+## STATIC = 固定在场地中心线 / [code]path_center_y[/code]。
 var mode: int = Mode.AUTO
 
 var _elapsed: float = 0.0

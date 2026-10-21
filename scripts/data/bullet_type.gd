@@ -19,8 +19,11 @@ enum Faction { ENEMY, PLAYER, NONE }
 enum TintMode { MULTIPLY, BLEND }
 
 @export_group("Identity")
+## 弹型标识（可选，调试 / 工具辨识用；内核判定不读）。
 @export var id: StringName = &""
+## 弹型类别：POINT = 普通弹；LASER = 激光段（供整批淡出 / 清理）。
 @export var kind: Kind = Kind.POINT
+## 阵营：碰撞 / 消弹按它过滤。NONE = 纯特效 / 装饰行（不碰撞、不被消弹波及）。
 @export var faction: Faction = Faction.ENEMY
 
 @export_group("Visual | Collision")

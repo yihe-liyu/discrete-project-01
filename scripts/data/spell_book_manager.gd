@@ -5,6 +5,7 @@ extends RefCounted
 ## 运行期档（R14：不写 res://，导出包只读）。首启无文件 = 空簿。
 const SPELL_BOOK_USER_PATH := "user://spell_records.tres"
 
+## 运行期符卡簿（[method load] 从 user:// 载入；load 前为 null，读档失败时为空白新簿）。
 var spell_book: SpellRecordBook
 
 

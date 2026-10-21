@@ -9,6 +9,7 @@ class_name KernelBulletPhysics
 extends RefCounted
 
 
+## 内核弹幕后端（[method setup] 注入）；null = 不处理碰撞。
 var backend: KernelBulletHost
 ## 组合根注入的特效层（空则静默）
 var fx_pool: FxPool

@@ -3,6 +3,7 @@
 class_name EffectType
 extends Resource
 
+## 特效标识（可选，与资源文件名一致；运行时不读）。
 @export var id: StringName = &""
 ## 特效贴图（本项目弹幕/特效用独立贴图，不走图集）。
 @export var texture: Texture2D
@@ -10,9 +11,11 @@ extends Resource
 @export var duration: float = 0.3
 ## 起止缩放（倍率：1.0 = 贴图原始大小）。
 @export var scale_from: float = 2.0
+## 结束缩放（倍率：1.0 = 贴图原始大小）；从 [code]scale_from[/code] 线性插值到它。
 @export var scale_to: float = 1.0
 ## 起止 alpha（淡出）：进度 = 1 - 剩余/duration。
 @export var alpha_from: float = 1.0
+## 结束 alpha；从 [code]alpha_from[/code] 线性淡出到它。
 @export var alpha_to: float = 0.0
 ## 染色模式（默认 BLEND：只取亮度换色，颜色由触发方传入）。
 @export var tint_mode: BulletType.TintMode = BulletType.TintMode.BLEND

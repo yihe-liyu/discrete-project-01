@@ -2,6 +2,7 @@
 class_name AudioService
 extends RefCounted
 
+## 总开关：false 时所有音频调用静默 no-op。
 var is_active: bool = true
 
 ## 播 BGM；is_active=false 时 no-op。

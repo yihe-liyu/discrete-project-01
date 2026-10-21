@@ -4,6 +4,7 @@ extends RefCounted
 
 ## 弱引用 ctx：避免 StageContext ↔ DialogueService 形成 RefCounted 环导致关卡退出后泄漏
 var _ctx_ref: WeakRef
+## 弱引用持有的关卡上下文（避免与 StageContext 形成 RefCounted 环）；未注入时为 null。
 var ctx: StageContext:
 	get:
 		return _ctx_ref.get_ref() as StageContext if _ctx_ref else null

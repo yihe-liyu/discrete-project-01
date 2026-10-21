@@ -6,7 +6,9 @@ class_name FieldFilterLayer
 
 ## 扩圆 / 停留 / 渐隐时长（秒）。
 @export var expand_time: float = 1.5
+## 铺满后保持完全不透明的时长（秒）。
 @export var hold_time: float = 0.5
+## 从完全不透明淡出的时长（秒）。
 @export var fade_time: float = 3.0
 ## 圆边缘羽化（px）。
 @export var edge_softness: float = 160.0

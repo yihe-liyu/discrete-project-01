@@ -7,6 +7,8 @@
 class_name BackgroundEnvPreset
 extends Resource
 
+## Environment 模板（Inspector 可调 Godot 原生全部参数）；[method build_environment] 深拷贝它，
+## null 时回退默认暗环境。
 @export var environment: Environment
 
 ## 联动开关：build 时天球地面水平色 = 雾色（默认开，防改雾色露地平线）

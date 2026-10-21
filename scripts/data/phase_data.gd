@@ -15,7 +15,11 @@ const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
 @export var hp: int = 4000
 ## 时符
 @export var is_timeout_only: bool = false
+## Boss 移动协程脚本（[code]CoroutineScript[/code]）：宣言后与 [code]shoot_script[/code] 同时实例化启动。
+## 空 = 本阶段不移动（Boss 保持原位）。
 @export var move_script: Script
+## Boss 弹幕协程脚本（[code]CoroutineScript[/code]）：宣言后与 [code]move_script[/code] 同时启动。
+## 空 = 本阶段无弹幕（纯演出 / 纯走位阶段允许）。
 @export var shoot_script: Script
 ## 发动前走位：符卡宣言（报幕 / [code]card[/code] 音效 / 符卡背景）之前跑完的移动脚本。
 ## 用来做「先走到位、再发表宣言」的演出；空 = 不等待，宣言立即发生。

@@ -14,6 +14,7 @@ signal state_changed(state: StageState, duration: float)
 signal event_fired(event_key: String)
 signal finished()
 
+## 当前对话的舞台状态（[method start] 时换成全新实例，是角色状态的唯一真相）。
 var state := StageState.new()
 
 var _steps: Array[DialogueStep] = []

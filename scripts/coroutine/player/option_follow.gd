@@ -2,7 +2,9 @@
 extends CoroutineScript
 class_name OptionFollow
 
+## 跟随目标：子机的目标位置 = 它的全局位置 + [code]offset[/code]。
 var leader: Node2D
+## 相对 leader 的固定偏移（全局坐标方向，不随 leader 旋转）。
 var offset: Vector2
 
 ## 追赶速度（单位：1/秒），值越大跟随越紧

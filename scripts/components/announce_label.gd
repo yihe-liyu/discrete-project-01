@@ -38,6 +38,7 @@ enum Style { BOSS, PLAYER }
 ## Bonus / Capture 的说明前缀（Boss 符卡计分信息那两行）。
 ## 文案属表现 → 声明在 announce_label.tscn，改措辞不用动代码。
 @export var bonus_prefix: String = ""
+## Capture 行的说明前缀（如「收取：」）；与 [code]bonus_prefix[/code] 同属表现文案，声明在 announce_label.tscn。
 @export var capture_prefix: String = ""
 
 var _tween: Tween

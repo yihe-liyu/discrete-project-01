@@ -31,6 +31,7 @@ const OVERLAY_FADE_OUT: float = 0.15
 ## 调用时不传也有正常动画（旧默认 [code]-1.0[/code] = 负时长，淡入瞬间完成）。
 @export var is_auto_overlay: bool = true
 
+## 新建 [code]Overlay[/code] 时使用的颜色（场景里已有 Overlay 时以场景自身的 color 为准）。
 var overlay_color: Color = Color(0, 0, 0, 0.5)
 var _overlay: ColorRect = null
 

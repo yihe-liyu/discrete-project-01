@@ -7,7 +7,8 @@
 class_name StageState
 extends RefCounted
 
-var actors: Dictionary = {}  # char_name → ActorState
+## 角色状态表：char_name → ActorState；用 [method ensure] / [method actor] 访问。
+var actors: Dictionary = {}
 
 
 ## 取角色状态（不存在则按 profile 创建并登场）

@@ -28,7 +28,9 @@ const MAX_FPS_CHOICES: Array[int] = [0, 60, 120, 144]
 
 ## 存档路径（默认 user://save_data.cfg；测试可覆盖为独立路径）。
 var save_path: String = SAVE_PATH
+## 各面最高分：{ stage_id: int → score: int }；读档时做非负整数校验。
 var high_scores: Dictionary = {}
+## 设置项：{ key: String → value }；已知 key 按 [constant SETTING_DEFAULTS] 的类型 / 范围校验。
 var settings: Dictionary = {}
 var _config: ConfigFile = ConfigFile.new()
 var _last_save_error: Error = OK

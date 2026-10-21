@@ -13,7 +13,9 @@ const DIR_NAMES: Array[String] = ["下", "右下", "右", "右上", "上", "左�
 static func preset(idx: int) -> Vector2:
 	return Vector2.DOWN.rotated(-deg_to_rad(float(idx) * 45.0))
 
+## 弹型 key（[code]BulletCatalog[/code] / docs/DANMAKU_API.md §7.1）：决定贴图、受击判定与朝向。
 var tex_key: String = "小玉"
+## 贴图染色（[code]is_blend[/code] 关闭时按乘法叠加；开启时按亮度混合）。
 var tint: Color = Color.WHITE
 ## 加色混合（视觉效果：弹幕质感差异大）
 var is_blend: bool = false

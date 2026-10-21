@@ -12,6 +12,7 @@ const IDLE    = "idle"
 const RIGHTING = "righting"
 const RIGHT   = "right"
 
+## 当前动画状态：IDLE / RIGHTING / RIGHT；由速度状态机维护，外部只读。
 var anim_state: String = IDLE
 var _parent: Node2D
 var _last_pos: Vector2

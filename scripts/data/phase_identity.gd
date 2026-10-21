@@ -6,8 +6,11 @@ extends RefCounted
 
 ## 展示用 No.xxx
 var uid: int
+## 自机索引（0 = Reimu，1 = Marisa）；创建时从存档选择快照，是记录主键的一部分。
 var character: int
+## 难度索引（0 = Easy … 4 = Extra）；创建时从存档选择快照，是记录主键的一部分。
 var difficulty: int
+## 关卡主键 [code]StageData.stage_id[/code]（3B 面 = 4、EX 面 = 9，不等于面序号）。
 var stage_id: int
 ## 第几个 Boss（0 = 第一个/唯一；多 Boss 关卡区分记录）
 var boss_index: int = 0

@@ -8,9 +8,9 @@
 extends Area2D
 class_name PlayerBase
 
+var _player_resources: PlayerResources
 ## 单局资源（自机是 owner；消费者经 [code]EntityRegistry[/code] 取同一实例）。
 ## 惰性创建：任何读取都保证非 null（无需 [code]_ready[/code] 判空自建），也允许入树前预注入。
-var _player_resources: PlayerResources
 var resources: PlayerResources:
 	get:
 		if _player_resources == null:

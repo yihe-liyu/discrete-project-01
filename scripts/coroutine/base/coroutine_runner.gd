@@ -24,6 +24,7 @@ signal finished()
 ## 注意：[code]stop()[/code] 也会发一次 [code]ticked(0.0)[/code]，用于唤醒挂起的 await（调用方必须检查 is_running）。
 signal ticked(delta: float)
 
+## 是否还有任务在跑（含 async keepalive）；[method stop] 后为 false，[code]tick_manual[/code] 只在 true 时推进。
 var is_running: bool = false
 var _is_paused: bool = false
 var _tasks: Array[Task] = []

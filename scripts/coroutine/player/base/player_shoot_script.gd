@@ -4,6 +4,7 @@ extends CoroutineRunner
 
 var _options: Array[Node2D] = []
 var _phase: int = 0
+## 启动时绑定的关卡上下文（[method start_shooting] 注入；供主弹 / 子机状态机读取）。
 var ctx: StageContext
 
 ## 绑定 ctx 并启动主弹 / 子机状态机。

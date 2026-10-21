@@ -6,6 +6,7 @@ class_name BulletDef
 extends Resource
 
 @export_group("Identity")
+## 内容标识（可选，与文件名 key 同名；运行时不读，仅供编辑器 / 工具辨识）。
 @export var id: StringName = &""
 
 @export_group("Visual | Collision")

@@ -2,6 +2,7 @@
 class_name BulletService
 extends RefCounted
 
+## 总开关：false 时所有发弹 / 激光 API 静默 no-op（不报错，用于彩排 / 禁用弹幕）。
 var is_active: bool = true
 ## 弹幕世界（StageContext 从绑定的 stage 取；起不再回退 BulletManager.current）。
 ## 无 stage 绑定 = null：方法静默 no-op（测试 / 无场景上下文），不崩。
