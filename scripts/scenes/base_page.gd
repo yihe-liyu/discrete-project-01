@@ -134,11 +134,14 @@ func _overlay_leave(content: Control) -> void:
 
 # ═══ 音效快捷（只表达意图，不碰音频数据；AudioManager 是音效知识唯一 owner） ═══
 
+## 发 nav 音效意图（sfx_requested），不直接播音。
 func sfx_nav() -> void:
 	sfx_requested.emit("nav")
 
+## 发 confirm 音效意图。
 func sfx_confirm() -> void:
 	sfx_requested.emit("confirm")
 
+## 发 back 音效意图。
 func sfx_back() -> void:
 	sfx_requested.emit("back")

@@ -13,6 +13,7 @@ var _age: float = 0.0
 var on_finish: Callable  # 回收回调，池化时由 FxPool 注入（命名契约：回调值用 on_x）
 
 
+## 池化激活：设位置 / 速度 / 染色 / 回收回调，再调 _setup。
 func activate(p_pos: Vector2, p_vel: Vector2, p_tint: Color, p_on_finish: Callable = Callable()) -> void:
 	process_mode = PROCESS_MODE_PAUSABLE
 	scale = Vector2.ONE
@@ -37,11 +38,13 @@ func _finish() -> void:
 
 # ── 公共接口 ──
 
+## 按 _get_speed 归一化速度，并触发子类钩子。
 func set_velocity(vel: Vector2) -> void:
 	velocity = vel.normalized() * _get_speed()
 	_on_velocity_set()
 
 
+## 染色钩子；基类空实现，子类覆写。
 func set_tint(_color: Color) -> void:
 	pass
 

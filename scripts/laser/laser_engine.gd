@@ -16,6 +16,7 @@ var entity_registry: EntityRegistry
 var _graze_cooldown: int = 0
 
 
+## 建 POOL_SIZE 条 LaserBeam 挂到 parent（禁用 / 隐藏），绑定擦弹回调。
 func setup(p_parent: Node, p_on_graze: Callable = Callable()) -> void:
 	on_graze = p_on_graze
 	_parent = p_parent
@@ -98,11 +99,13 @@ func step(delta: float) -> void:
 		_graze_cooldown -= 1
 
 
+## 重置所有活动光柱并清空活动表。
 func clear() -> void:
 	for beam in _is_active:
 		beam.reset()
 	_is_active.clear()
 
 
+## 当前活动 LaserBeam 数组。
 func get_active() -> Array[LaserBeam]:
 	return _is_active

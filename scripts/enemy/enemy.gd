@@ -77,6 +77,7 @@ func _apply_enemy_data(data: EnemyData):
 		cs.shape.radius = hitbox_radius
 
 
+## 空启动钩子，由生成入口调用（实际行为在挂载的协程脚本）。
 func start() -> void:
 	pass
 
@@ -84,6 +85,7 @@ func start() -> void:
 ## 小数伤害累积器（0.3×4 次 = 1.2 → 扣 1 血余 0.2）
 var _dmg_acc: float = 0.0
 
+## 小数伤害累积到整才扣血；HP <= 0 调 die；已排队释放忽略。
 func take_damage(damage: float):
 	if is_queued_for_deletion():
 		return
@@ -96,6 +98,7 @@ func take_damage(damage: float):
 	if hp <= 0: die()
 
 
+## 死亡：播音 / 特效、注销实体、掉落、发 enemy_killed，然后 queue_free。
 func die():
 	# 系统操作统一走 ctx 服务；ctx 为 null 时跳过（不回退全局）
 	if ctx:

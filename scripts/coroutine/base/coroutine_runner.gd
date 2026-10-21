@@ -49,11 +49,13 @@ class Task extends RefCounted:
 	var wake_time: float = 0.0
 
 
+## 停旧任务、时钟归零，再启动 method（首帧立即执行）。
 func run(method: Callable):
 	stop()
 	_clock = 0.0
 	_start_task(method)
 
+## 追加一个并行任务，不清旧任务。
 func run_parallel(method: Callable):
 	_start_task(method)
 
@@ -64,6 +66,7 @@ func _start_task(method: Callable):
 	_tasks.append(task)
 	is_running = true
 
+## 清空任务、置 is_running=false，并唤醒挂起的 async await。
 func stop():
 	if not is_running:
 		return

@@ -26,6 +26,7 @@ var is_waiting_line: bool = false  ## 停在某句，等 advance / auto_advance
 var is_waiting_time: bool = false  ## 停在 WAIT 计时
 
 
+## 重置舞台状态与索引，开始步骤序列。
 func start(steps: Array[DialogueStep]) -> void:
 	state = StageState.new()
 	_steps = steps
@@ -54,10 +55,12 @@ func advance() -> void:
 		_advance()
 
 
+## 当前等待的台词行；无 = null。
 func current_line() -> DialogueLine:
 	return _dialogue_line
 
 
+## 步骤是否已跑完。
 func is_finished() -> bool:
 	return _idx >= _steps.size()
 

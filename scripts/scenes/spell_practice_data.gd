@@ -34,6 +34,7 @@ func menu_diffs_for(stage: int) -> Array[int]:
 	return MENU_DIFFS
 
 
+## 难度值 → 显示名；未知值 = "?"。
 func diff_name(v: int) -> String:
 	var idx := DIFF_VALUES.find(v)
 	return DIFF_NAMES[idx] if idx >= 0 else "?"
@@ -41,6 +42,7 @@ func diff_name(v: int) -> String:
 
 # ═══ 从符卡记录生成 ═══
 
+## 从符卡簿按角色重建 stages / phases。
 func build(p_char_index: int) -> void:
 	stages.clear()
 	phases.clear()
@@ -67,6 +69,7 @@ func build(p_char_index: int) -> void:
 	change_stage(0, p_char_index)
 
 
+## 切关卡并重建 phases；越界只清空。
 func change_stage(idx: int, p_char_index: int) -> void:
 	phases.clear()
 	if stages.is_empty() or idx < 0 or idx >= stages.size():

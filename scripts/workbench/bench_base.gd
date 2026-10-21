@@ -107,10 +107,12 @@ func _process_hot_reload(delta: float) -> void:
 	_hot_reload_service.poll(delta)
 
 
+## 标记组合台嵌在创作台；子类 _ready 据此不改窗口大小。
 func set_embedded(on: bool) -> void:
 	_embedded = on
 
 
+## 幂等建组合台自己的 BulletManager（top_level，坐标 = 画布）。
 func ensure_bullet_world() -> BulletManager:
 	if _bullet_manager == null:
 		# top_level：游戏世界原点 = 画布原点（全局坐标 = 游戏坐标），不叠工作台页签偏移
@@ -181,6 +183,7 @@ func add_panel_to_layer(panel: Control) -> void:
 	_panel_layer.add_child(panel)
 
 
+## 建右侧面板（Panel + Scroll + VBox），返回内容 VBox。
 func build_panel_scroll() -> VBoxContainer:
 	var panel: PanelContainer = RIG_COMMON.make_panel()
 	add_panel_to_layer(panel)

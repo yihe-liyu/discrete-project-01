@@ -32,6 +32,7 @@ func get_record(stage: int, phase_index: int, _boss_index: int, character: int, 
 	return null
 
 
+## 按主键取记录，不存在则新建；boss_index 只写归属、不参与主键。
 func get_or_create(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
 		uid: int = 0, phase_type: int = 0, phase_number: int = 1) -> SpellRecord:
 	var record := get_record(stage, phase_index, boss_index, character, difficulty)
@@ -51,6 +52,7 @@ func get_or_create(stage: int, phase_index: int, boss_index: int, character: int
 	return record
 
 
+## 普通模式尝试 +1；captured 时更新收取 / 最高分 / 最快时间。
 func record_attempt(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
 		captured: bool, score: int, elapsed: float, extra: Dictionary = {}) -> void:
 	var record := get_or_create(stage, phase_index, boss_index, character, difficulty,
@@ -80,6 +82,7 @@ func record_capture(stage: int, phase_index: int, boss_index: int, character: in
 			record.best_time = elapsed
 
 
+## 练习尝试 +1；只更新已有记录（首次记录由普通模式建）。
 func record_practice(stage: int, phase_index: int, boss_index: int, character: int, difficulty: int,
 		captured: bool) -> void:
 	var record := get_record(stage, phase_index, boss_index, character, difficulty)

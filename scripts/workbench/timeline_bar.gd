@@ -54,18 +54,21 @@ func set_events(evs: Array) -> void:
 	queue_redraw()
 
 
+## 设时间窗长度（秒，至少 1），回到起点并重绘。
 func set_window(seconds: float) -> void:
 	window_len = maxf(seconds, 1.0)
 	window_start = 0.0
 	queue_redraw()
 
 
+## 加书签并按时间排序、重绘。
 func add_bookmark(bookmark_time: float, label: String, bm_type: String = "") -> void:
 	bookmarks.append({"t": bookmark_time, "label": label, "type": bm_type})
 	bookmarks.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.t < b.t)
 	queue_redraw()
 
 
+## 清空书签并重绘。
 func clear_bookmarks() -> void:
 	bookmarks.clear()
 	queue_redraw()
