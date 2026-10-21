@@ -174,7 +174,7 @@ timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))         
 
 ### BossData / PhaseData（.tres）
 
-- `BossData`（`data/stages/stage01/phase/` 参照）：`boss_name` / `visual` / `phases_normal`（Normal 组）/ `phases_easy/hard/lunatic/extra`（各难度独立、不回退） / `enter_script` / `exit_script` / `score_value` / **`practice_bgm_key`**（见下）
+- `BossData`（`data/stages/stage01/phase/` 参照）：`boss_name` / `section_label` / `visual` / `phases_normal`（Normal 组）/ `phases_easy/hard/lunatic/extra`（各难度独立、不回退） / `spell_background` / `portrait` / `practice_bgm_key` / `defeat_fx` / `defeat_sfx` / `defeat_hitstop`（见下）
 - `PhaseData`：`name`（空串 = 非符）、`uid`（0 = 非符不记；真符卡全局唯一）、`hp` / `time_limit` / `is_timeout_only`（时符）、`move_script` / `shoot_script`、掉落 item 系列、`params`
 
 > **新 Boss 要登记**：在 `data/stages/<面>/boss/` 建 `BossData.tres` 后，加入 `data/registry/boss_registry.tres`。
