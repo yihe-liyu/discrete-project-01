@@ -298,6 +298,22 @@ data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见
 - **数组长度**：4 项只覆盖 Easy~Lunatic；Extra 是第 5 项。EX 内容要么写 5 项，要么在 Extra 下走别的分支 ——
   4 项数组遇 Extra 会由 `Difficulty.pick()` **响亮报错并回落最后一项**，不会再越界崩溃。
 - **分化手段优先级**：难度轴 → `diff_pick()`（首选，值放脚本里）；内容轴 → 另写脚本；`params` 最后（见 §四）
+
+### 关卡整面变体（StageData.variants）
+
+如果整面不只是数值变化（例如 Extra 换关卡脚本 / 背景 / BGM），不要复制整份 `StageData`：
+
+```gdscript
+# data/stages/<面>/stage_data/<面>.tres 里的 StageData
+variants = [
+    # difficulty = Difficulty.EXTRA；只覆盖需要变化的字段
+    # create_script = ...  background_scene = ...  bgm_key = "stageEX"
+]
+```
+
+- `StageVariant` 只覆盖 `create_script` / `background_scene` / `bgm_key`；空字段 = 沿用 `StageData` 基准。
+- 普通关卡、练习模式、工作台都按**当前难度**解析变体；没有变体时行为与以前完全一样。
+- 基类的 `create_script` 仍是必填（`StageCatalog.playable()` 用它判断可玩），变体只做覆盖。
 - **UID 规则**：真符卡全局唯一（建议 1 面 100-199、2 面 200-299…）；非符 uid=0；角色共用 UID，SpellRecordBook 主键区分
 
 ---

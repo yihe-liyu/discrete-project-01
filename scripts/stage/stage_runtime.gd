@@ -5,7 +5,7 @@
 ## 组合根把本节点放进游戏场景，并注入 world / player / bullet_manager / ui_layer / 背景；
 ## load_stage 创建关卡协程，spawn_* 负责实体落地，finish_stage / stop_stage 收尾。
 ## [codeblock]
-## load_stage(data) → 校验 → reset → 启动 create_script + 背景协程 → stage_started
+## load_stage(data) → 校验 → reset → 启动当前难度脚本（变体优先）+ 背景协程 → stage_started
 ## finish_stage()  → stage_cleared + all_enemies_defeated + 高分
 ## stop_stage()    → 停脚本 / 清实体 / 清弹（不发信号，拆场景用）
 ## [/codeblock]
@@ -82,7 +82,11 @@ func load_stage(data: StageData) -> void:
 	current_stage = data
 	_is_stage_active = true
 
-	var stage_script: CoroutineScript = data.create_script.new()
+	var stage_script_resource: Script = data.script_for_difficulty(SaveData.selected_difficulty)
+	if stage_script_resource == null:
+		push_error("StageRuntime: 难度 %s 没有可用的关卡脚本" % Difficulty.display_name(SaveData.selected_difficulty))
+		return
+	var stage_script: CoroutineScript = stage_script_resource.new()
 	assert(stage_script is CoroutineScript, "StageRuntime: create_script must be a CoroutineScript")
 	add_child(stage_script)
 	_coroutine_script = stage_script

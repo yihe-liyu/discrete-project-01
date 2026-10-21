@@ -85,7 +85,7 @@ func _start_normal_game() -> void:
 	if not data:
 		push_error("GameScene: 找不到关卡 stage_id=%d difficulty=%d" % [SaveData.current_stage_id, SaveData.selected_difficulty])
 		return
-	_load_background(data.background_scene)
+	_load_background(data.background_for_difficulty(SaveData.selected_difficulty))
 	_stage_runtime.load_stage(data)
 
 

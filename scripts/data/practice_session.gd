@@ -42,7 +42,7 @@ static func start(p_phase: PhaseData, p_boss_scene: PackedScene, p_boss_name: St
 	boss_name = p_boss_name
 	stage_id = p_stage_id
 	phase_index = p_phase_index
-	background = StageCatalog.background(p_stage_id)
+	background = StageCatalog.background(p_stage_id, SaveData.selected_difficulty)
 	spell_background = p_spell_background
 	bgm_key = p_bgm_key
 

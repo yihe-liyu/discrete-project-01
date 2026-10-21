@@ -52,10 +52,13 @@ static func playable() -> Array[StageData]:
 	return out
 
 
-## 某关卡的背景场景（练习用）
-static func background(stage_id: int) -> PackedScene:
+## 某关卡某难度的背景场景（练习用）；difficulty < 0 = 当前选择。
+static func background(stage_id: int, difficulty: int = -1) -> PackedScene:
 	var stage_data := find(stage_id)
-	return stage_data.background_scene if stage_data else null
+	if stage_data == null:
+		return null
+	var diff := SaveData.selected_difficulty if difficulty < 0 else difficulty
+	return stage_data.background_for_difficulty(diff)
 
 
 ## 给人看的关卡名：[code]StageData.display_name[/code] → 回落 [code]"Stage %d"[/code]。
@@ -76,11 +79,14 @@ static func stage_no_of(stage_id: int) -> int:
 	return stage_id
 
 
-## 该面的默认 BGM key（[code]StageData.bgm_key[/code]；无 StageData / 未填 → ""）。
+## 该面某难度的 BGM key（变体 > [code]StageData.bgm_key[/code]；无 StageData / 未填 → ""）。
 ## 用途：符卡练习的回落曲 —— 见 [code]BossCatalog.practice_bgm_key()[/code]。
-static func bgm_key_of(stage_id: int) -> String:
+static func bgm_key_of(stage_id: int, difficulty: int = -1) -> String:
 	var stage_data := find(stage_id)
-	return stage_data.bgm_key if stage_data else ""
+	if stage_data == null:
+		return ""
+	var diff := SaveData.selected_difficulty if difficulty < 0 else difficulty
+	return stage_data.bgm_key_for_difficulty(diff)
 
 
 ## 递归扫 [code]data/stages//stage_data/*.tres[/code]。

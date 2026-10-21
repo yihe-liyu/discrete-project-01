@@ -1,4 +1,4 @@
-## 关卡定义：id + 脚本 + 背景 + 显示名
+## 关卡定义：id + 脚本 + 背景 + 显示名 + 可选难度变体
 ## 难度差分在 CoroutineScript 中通过 Difficulty / diff_pick() / diff_get() 运行时处理；
 ## 4 项数组只覆盖 Easy~Lunatic，Extra 需要第 5 项（边界由 Difficulty.pick 守卫）。
 class_name StageData
@@ -27,6 +27,34 @@ extends Resource
 ## 该面的背景场景（根节点应为 [code]StageBackground[/code]）。null = 不加背景。
 ## 普通关卡与符卡练习共用这一张；工作台 / 截图工具也从这里取。
 @export var background_scene: PackedScene
+## 可选难度变体：同一面只给某难度换脚本 / 背景 / BGM，其余沿用上面的基准。
+@export var variants: Array[StageVariant] = []
+
+
+## 该难度的变体；找不到 = null。
+func variant_for(difficulty: int) -> StageVariant:
+	for variant in variants:
+		if variant != null and variant.difficulty == difficulty:
+			return variant
+	return null
+
+
+## 该难度最终使用的关卡脚本（变体 > 基准）。
+func script_for_difficulty(difficulty: int) -> Script:
+	var variant := variant_for(difficulty)
+	return variant.create_script if variant != null and variant.create_script != null else create_script
+
+
+## 该难度最终使用的背景场景（变体 > 基准）。
+func background_for_difficulty(difficulty: int) -> PackedScene:
+	var variant := variant_for(difficulty)
+	return variant.background_scene if variant != null and variant.background_scene != null else background_scene
+
+
+## 该难度最终使用的 BGM key（变体 > 基准）。
+func bgm_key_for_difficulty(difficulty: int) -> String:
+	var variant := variant_for(difficulty)
+	return variant.bgm_key if variant != null and variant.bgm_key != "" else bgm_key
 
 
 ## 配置校验：返回错误列表（空 = 合法）
@@ -36,4 +64,13 @@ func validate() -> Array[String]:
 		errs.append("StageData.stage_id = %s 必须 >= 1" % stage_id)
 	if create_script == null:
 		errs.append("StageData[%d] 缺少 create_script（关卡无法生成）" % stage_id)
+	var seen_difficulties: Dictionary = {}
+	for variant in variants:
+		if variant == null:
+			errs.append("StageData[%d] 含空 StageVariant" % stage_id)
+			continue
+		if seen_difficulties.has(variant.difficulty):
+			errs.append("StageData[%d] 难度 %s 的变体重复" % [stage_id, Difficulty.display_name(variant.difficulty)])
+		seen_difficulties[variant.difficulty] = true
+		errs.append_array(variant.validate())
 	return errs

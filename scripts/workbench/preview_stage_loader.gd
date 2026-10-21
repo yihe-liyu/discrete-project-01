@@ -63,8 +63,9 @@ func load_stage(stage_data: StageData) -> void:
 	if _player != null:
 		_player.reset()
 
-	if _playback.show_bg and stage_data.background_scene:
-		_background = stage_data.background_scene.instantiate()
+	var background_scene := stage_data.background_for_difficulty(SaveData.selected_difficulty)
+	if _playback.show_bg and background_scene:
+		_background = background_scene.instantiate()
 		if _background is StageBackground:
 			_stage_runtime.current_background = _background
 		# 显式 PAUSABLE：背景演出随暂停冻结（否则继承 root 的 ALWAYS）
