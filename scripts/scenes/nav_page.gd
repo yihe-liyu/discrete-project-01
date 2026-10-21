@@ -1,34 +1,43 @@
-# NavPage — 带选项导航的菜单页面（替代 BaseMenu）
+## 带选项导航的菜单页面：继承 BasePage，自动收集容器子节点作为选项。
 ##
-## 继承 BasePage，增加:
-##   - 选项列表管理（从容器自动收集子节点）
-##   - 上下/左右导航 + 锁定项跳过
-##   - 选中脉冲高亮 + 确认闪烁特效
-##   - 入场动画（元素依次滑入）
-
+## [b]模型[/b][br]
+## on_enter 收集 container_path 下的 Control → 入场动画（依次滑入）→ 启用导航。
+## 四方向键移动（跳过锁定项）、ui_accept 确认、ui_cancel 取消；选中项脉冲高亮。
+## [codeblock]
+## # 子类通常只覆写：
+## func _on_item_selected(index: int): ...
+## func _on_cancel(): ...
+## [/codeblock]
+## 锁定项：节点 meta is_locked = Callable，返回 true 则跳过。
+## [br]
+## [b]边界[/b][br]
+## - container_path 未设置 / 无效 → 导航不工作并 push_warning。[br]
+## - 入场动画期间不响应输入；skip_entrance 可立即到位。[br]
+## - 方向 / 确认 / 取消都带冷却；_nav_directional 可覆写（如只取左右）。[br]
+## - on_leave 停脉冲并 queue_free。
 @tool
 class_name NavPage
 extends BasePage
 
 # ═══ 配置 ═══
 
-@export var container_path: NodePath          ## 选项容器
-
-## 导航冷却（秒）
+## 选项容器：其 Control 子节点自动成为选项。
+@export var container_path: NodePath
+## 方向导航冷却（秒）。
 @export var nav_cooldown: float = 0.08
-## 确认冷却（秒）
+## 确认 / 取消冷却（秒）。
 @export var accept_cooldown: float = 0.2
-## 是否允许回绕（到头后回到另一端）
+## 是否允许回绕（到头后回到另一端）。
 @export var allow_wrap: bool = true
-## 选中项颜色
+## 选中项颜色。
 @export var highlight_color: Color = Color.WHITE
-## 普通项颜色
+## 普通项颜色。
 @export var normal_color: Color = Color(0.4, 0.4, 0.4)
-## 锁定项颜色
+## 锁定项颜色。
 @export var locked_color: Color = Color(0.15, 0.15, 0.15)
-## 入场间隔（秒/元素）
+## 入场间隔（秒/元素）。
 @export var entrance_stagger: float = 0.03
-## 入场单元素动画时长
+## 入场单元素动画时长（秒）。
 @export var entrance_duration: float = 0.2
 
 # ═══ 内部 ═══
@@ -45,11 +54,13 @@ var _last_accept_time: float = 0.0
 
 # ═══ 初始化 ═══
 
+## 收集选项、初始化颜色 / 缩放、播入场动画；动画结束后启用导航。
 func on_enter() -> void:
 	_setup_nav()
 	_play_entrance()
 
 
+## 停脉冲并 queue_free（BasePage 退场钩子）。
 func on_leave() -> void:
 	_is_nav_enabled = false
 	_stop_pulse()
@@ -118,6 +129,7 @@ func _find_first_unlocked() -> int:
 
 # ═══ 颜色刷新 ═══
 
+## 按当前索引 / 锁定状态刷新所有选项颜色；外部改锁定条件后调。
 func refresh_colors() -> void:
 	for i in _nav_items.size():
 		var item := _nav_items[i]
@@ -167,7 +179,7 @@ func _play_entrance() -> void:
 	).set_delay(total)
 
 
-## 跳过入场动画，所有选项立刻到位
+## 跳过入场动画：所有选项立刻到位并启用导航（会重置确认冷却防误触）。
 func skip_entrance() -> void:
 	if not _entrance_tween or not _entrance_tween.is_valid():
 		return
@@ -191,6 +203,7 @@ func skip_entrance() -> void:
 
 # ═══ 导航 ═══
 
+## 移动 delta 个选项，跳过锁定项并按 allow_wrap 回绕；未启用 / 空列表无效。
 func navigate(delta: int) -> void:
 	if _nav_items.is_empty() or not _is_nav_enabled:
 		return
@@ -231,6 +244,7 @@ func _select(index: int) -> void:
 
 # ═══ 确认 ═══
 
+## 确认当前项：播音、闪烁 3 次、暂停导航，然后调 _on_item_selected。
 func accept_current() -> void:
 	if _nav_index < 0 or _nav_index >= _nav_items.size():
 		return
@@ -302,7 +316,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	_nav_directional(event)
 
 
-## 子类覆写：方向键 → 导航（默认四方向；难度/音乐页只取左右或上下）
+## 子类覆写：方向键 → 导航（默认四方向；难度 / 音乐页只取左右或上下）。
 func _nav_directional(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_up") or event.is_action_pressed("ui_left"):
 		_nav_move(-1)
@@ -346,8 +360,10 @@ func _nav_move(delta: int) -> void:
 
 # ═══ 子类覆写 ═══
 
+## 子类覆写：选中项行为；默认空。
 func _on_item_selected(_index: int) -> void:
 	pass
 
+## 子类覆写：取消行为；默认 go_back()。
 func _on_cancel() -> void:
 	go_back()
