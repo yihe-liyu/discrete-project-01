@@ -1,52 +1,83 @@
-# entities/player/player.gd
-extends PlayerBase
+## 自机：移动 / 动画 / 射击 / Bomb / 释放记忆 / Miss / 被弹炸弹。
+## extends PlayerBase；单局资源 resources 在基类上，由 EntityRegistry 类型化读取。
+##
+## [b]模型[/b][br]
+## 输入（move_* / focus / memory_release / cancel&bomb）→ 物理帧移动与动画；
+## 离散动作走事件：C = 释放记忆，X = Bomb，被弹瞬间 X = deathbomb。
+## [codeblock]
+## Player (Area2D)
+##  ├─ AnimatedSprite2D / Muzzle / HitPointDisplay
+##  ├─ PlayerShootScript（player_data.shoot_script）
+##  └─ PlayerResources（继承自 PlayerBase）
+## [/codeblock]
+## [br]
+## [b]边界[/b][br]
+## - 系统操作走 ctx 服务；ctx 为 null 时跳过，不回退全局。[br]
+## - 伤害 / 擦弹由 KernelBulletPhysics 结算；本类负责移动 / 无敌 / 复位。[br]
+## - deathbomb 用真实时间计时，定格 / 暂停中也会到点。[br]
+## - Miss 复位移动必须最后做（演出用的是中弹位置）。
 class_name Player
+extends PlayerBase
 
 @onready var _hit_point_display: HitPointDisplay = $HitPointDisplay
 @onready var animation: AnimatedSprite2D = $AnimatedSprite2D
 @onready var muzzle: Marker2D = $Muzzle
 
+## 场地左边界（道具扇形夹取用）。
 const FRONT_LEFT: float = GameConfig.FIELD_LEFT
+## 场地右边界。
 const FRONT_RIGHT: float = GameConfig.FIELD_RIGHT
 
-## 关卡上下文（StageRuntime/game_scene 注入，系统操作走服务）
+## 关卡上下文（StageRuntime / game_scene 注入，系统操作走服务）。
 var ctx: StageContext
-## 单局资源（`resources`）在接口基类 `PlayerBase` 上 —— 消费者经 EntityRegistry 类型化读取。
+## 单局资源在接口基类 PlayerBase 上；消费者经 EntityRegistry 类型化读取。
 
 
+## 待机动画状态。
 const IDLE = &"idle"
+## 左转中（一次性动画，播完进 LEFT）。
 const LEFTING = &"lefting"
+## 左移动画状态。
 const LEFT = &"left"
+## 右转中（一次性动画，播完进 RIGHT）。
 const RIGHTING = &"righting"
+## 右移动画状态。
 const RIGHT = &"right"
+## 当前动画状态（取 IDLE / LEFTING / LEFT / RIGHTING / RIGHT）。
 var anim_state: StringName = IDLE
 
+## 当前方向输入（-1..1，来自 move_left/right/up/down）。
 var input_vector: Vector2 = Vector2.ZERO
+## 是否按住 focus（低速 + 显示判定点）。
 var is_focused: bool = false
+## 是否无敌（Miss / Bomb / 复位期间）。
 var is_invincible: bool = false
 var _invincible_timer: float = 0.0
-## 中弹后自机移动的**最终位置** = 复位点（默认 `MISS_RESPAWN_POS` = "正中偏下"）。
-## 两步里的**第二步终点**；第一步是瞬移到 `MISS_RESPAWN_FROM`（框下正中）。
+## 中弹复位的最终位置（默认 MISS_RESPAWN_POS）；第一步先瞬移到 MISS_RESPAWN_FROM。
 var _respawn_pos: Vector2 = MISS_RESPAWN_POS
-## 中弹复位移动进行中 → 锁移动输入（tween 正在写 position，别跟输入抢）
+## 复位移动进行中（锁移动输入）。
 var _is_respawning: bool = false
-## 被弹炸弹（deathbomb）窗口开着：= "刚被弹、还没死"，全局定格等玩家按 bomb（见 `_begin_deathbomb_window`）
+## deathbomb 窗口开着（刚被弹、还没死，等玩家按 bomb）。
 var _is_deathbombing: bool = false
-## 定格前的 `Engine.time_scale`（与 Boss 全破定格同一套：保存/恢复**倍率**，别写死 1.0）
+## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
 var _deathbomb_saved_time_scale: float = 1.0
-## 无敌闪烁的相位累加器（秒；只在无敌期间前进）
+## 无敌闪烁相位累加器（秒）。
 var _blink_phase: float = 0.0
 
+## 自机判定半径（像素）。
 var hitbox_radius: float = 5.0
-var graze_radius: float = 40.0  # 擦弹判定半径
+## 擦弹判定半径（像素）。
+var graze_radius: float = 40.0
 
-## 玩家机体数据（速度、动画、武器等）
+## 玩家机体数据（速度 / 动画 / 武器 / Bomb 等）。
 @export var player_data: PlayerData
 var _player_shoot_script: PlayerShootScript
 
-# 移动速度（像素/秒）
+## focus（低速）移动速度（像素/秒）。
 var focus_speed: int
+## 常态移动速度（像素/秒）。
 var normal_speed: int
+## 当前移动速度（focus_speed 或 normal_speed）。
 var current_speed: int
 
 func _ready() -> void:
@@ -96,7 +127,7 @@ func setup_character(data: PlayerData) -> void:
 	reinit_shoot()
 
 
-# 应用机体数据
+## 应用 PlayerData 的速度 / 动画；空数据报错并返回。
 func apply_player_data() -> void:
 	if player_data == null:
 		push_error("Player: 未设置 PlayerData 资源！")
@@ -138,7 +169,7 @@ func _init_shoot_script() -> void:
 	shoot_ctx.stage = ctx.stage if ctx else null   # 无 stage 的射击 ctx 显式绑定关卡
 	_player_shoot_script.start_shooting(shoot_ctx)
 
-## 切换角色时重新初始化射击
+## 停掉旧射击脚本并重建（换角色用）。
 func reinit_shoot() -> void:
 	if _player_shoot_script:
 		_player_shoot_script.stop()
@@ -154,12 +185,14 @@ func bind_ctx(p_ctx: StageContext) -> void:
 	if _player_shoot_script != null and _player_shoot_script.ctx != null:
 		_player_shoot_script.ctx.stage = p_ctx.stage if p_ctx != null else null
 
+## focus 时显示判定点，否则隐藏。
 func update_hitbox_display() -> void:
 	if is_focused:
 		_hit_point_display.show_hitpoint()
 	else:
 		_hit_point_display.hide_hitpoint()
 
+## 按 input_vector 移动：斜向归一化、focus 用 focus_speed、clamp 场地框；复位移动期间锁输入。
 func update_move(delta: float) -> void:
 	if _is_respawning:
 		return  # 复位移动期间锁输入（位置由 tween 写）
@@ -176,8 +209,8 @@ func update_move(delta: float) -> void:
 	position.y = clamp(position.y, GameConfig.PLAYER_MIN_Y, GameConfig.PLAYER_MAX_Y)
 
 
-## 无敌闪烁：只在 `is_invincible` 期间按 `INVINCIBLE_BLINK_HZ` 切换**机体贴图**的不透明度；
-## 无敌一结束立刻恢复不透明（不留半透明残留）。判定点 / 枪口是兄弟节点，不受影响。
+## 无敌闪烁：只在 is_invincible 期间按 INVINCIBLE_BLINK_HZ 切换机体贴图透明度；
+## 无敌一结束立刻恢复不透明。判定点 / 枪口是兄弟节点，不受影响。
 func _update_invincible_blink(delta: float) -> void:
 	if not is_invincible:
 		if animation.modulate.a < 1.0:
@@ -189,6 +222,7 @@ func _update_invincible_blink(delta: float) -> void:
 	var blink_off := fmod(_blink_phase, half_period * 2.0) < half_period
 	animation.modulate.a = INVINCIBLE_BLINK_MIN_ALPHA if blink_off else 1.0
 
+## 按水平输入在 idle / lefting / left / righting / right 之间切换。
 func update_animation() -> void:
 	var is_pressing_left: bool = input_vector.x < -0.1
 	var is_pressing_right: bool = input_vector.x > 0.1
@@ -207,6 +241,7 @@ func update_animation() -> void:
 		RIGHT:		if not is_pressing_right: change_state(IDLE)
 		RIGHTING:	if not is_pressing_right: change_state(IDLE)
 
+## 切动画状态并 play；同名跳过。
 func change_state(new_state: String) -> void:
 	if anim_state == new_state:
 		return
@@ -242,7 +277,7 @@ func _bomb_data() -> BombData:
 	return player_data.bomb if player_data else null
 
 
-## bomb 的"演出 + 无敌 + 编队"部分（**不含雷数扣除**）：常规 bomb 与被弹炸弹共用。
+## bomb 的演出 + 无敌 + 编队部分（不含雷数扣除）；常规 bomb 与 deathbomb 共用。
 func _fire_bomb(bomb_data: BombData) -> void:
 	_play_sfx(AssetRegistry.sounds["player_card"])
 	GameEvents.player_bomb.emit(bomb_data.name)
@@ -271,7 +306,9 @@ func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
 
 # ═══ 释放记忆（C 键） ═══
 
+## 释放记忆的消弹半径（像素）。
 const MEM_RELEASE_RANGE := 400.0
+## 释放记忆的消弹 / 特效时长（秒）。
 const MEM_RELEASE_DURATION := 0.75
 
 func _memory_release() -> void:
@@ -305,11 +342,9 @@ func _force_collect_all_items() -> void:
 			child.force_collect()
 
 
-## Miss 的"赔偿点"：在自机处撒 MISS_POWER_COUNT 个 P 点，绕自机**向上 180° 均匀弧形**
-## （中轴 = 正上方，含两端点 → 10 个点相邻 20°），**左右夹在场地框内**（贴墙时靠墙一侧横向压扁、
-## 纵向半径不变 → 连同随后竖直下落的轨迹都不会出框）。两段式：
-## ① 沿弧向飞到目标点（`MISS_POWER_HANG` 秒，期间不被吸附）→
-## ② 径向初速归零 → **竖直下落**（`Item.burst` 的语义）。走 `ctx.items` 服务；无 ctx（单测/无舞台）时安全跳过。
+## Miss 的赔偿点：在自机处撒 MISS_POWER_COUNT 个 P 点，绕自机向上 180° 均匀弧形。
+## 目标点横向夹在场地框内（贴墙时靠墙一侧压扁）；第一段沿弧飞 MISS_POWER_HANG 秒，
+## 第二段径向初速归零后竖直下落。走 ctx.items；无 ctx 时安全跳过。
 func _spawn_miss_power_fan(pos: Vector2) -> void:
 	if ctx == null:
 		return
@@ -356,53 +391,47 @@ func _find_item_pool() -> ItemPool:
 
 # ═══ Miss ═══
 
-## ⚠️ Miss 的雷**不再是"补偿 +2"**（2026-10-04 作者改口径）：现在走
-## `PlayerResources.on_miss_bomb_penalty()` = **扣 2、且不低于 3**（不撒掉落物、不动雷碎片）。
-## 规则与"少于 3 会被补到 3"这条副作用见 `PlayerResources.MISS_BOMB_PENALTY/FLOOR`。
-## Miss 撒出的 P 点数量（绕自机、向上均匀半圆）
+## Miss 撒出的 P 点数量（绕自机、向上均匀半圆）。
 const MISS_POWER_COUNT: int = 10
-## 扇形总张角：180° = 向上半圆（含两端点 → 相邻 20°）
+## 扇形总张角：180° = 向上半圆（含两端点，相邻 20°）。
 const MISS_POWER_SPREAD_DEG: float = 180.0
-## 两段式的第一段：沿弧向飞 `MISS_POWER_HANG` 秒，飞到 `MISS_POWER_RADIUS` 处
+## 第一段弧飞时长（秒），飞到 MISS_POWER_RADIUS 处。
 const MISS_POWER_HANG: float = 0.45
-## 弧半径（px）。**必须 > `Item.PROXIMITY_RANGE`(128)**：否则弧飞完那一刻就落进吸附圈被吸走，
-## 第二段"竖直下落"根本看不到（`test_player` 有一条契约测试守着这个不等式）。
+## 弧半径（px）。必须 > Item.PROXIMITY_RANGE，否则弧飞完就落进吸附圈，看不到竖直下落。
 const MISS_POWER_RADIUS: float = 240.0
-## 左右留白（px）：道具贴图 32×32，整张也要留在场地框内 → 目标点横坐标夹在 [框左+16, 框右−16]
+## 左右留白（px）：目标点横坐标夹在 [框左+16, 框右−16]，整张道具留在框内。
 const MISS_POWER_MARGIN: float = 16.0
-## 中弹复位移动的**起点**（第一步瞬移到这里）：水平正中、**场地框下方之外**（船从框下升进场）。
+## 中弹复位起点：水平正中、场地框下方之外（船从框下升进场）。
 const MISS_RESPAWN_FROM := Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_BOTTOM + 96.0)
-## 中弹复位移动的**终点**默认值（第二步走到这里）= "正中偏下"（场地底部上方 88px、水平正中）
+## 中弹复位终点默认值：水平正中、场地底部上方 120px。
 const MISS_RESPAWN_POS := Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_BOTTOM - 120.0)
-## 复位移动时长（秒）
+## 复位移动时长（秒）。
 const MISS_RESPAWN_TIME: float = 1.0
-## 中弹无敌时长（秒）——**还有残机**时用这个
+## 还有残机时的中弹无敌时长（秒）。
 const MISS_INVINCIBLE_TIME: float = 3.0
-## 残机归零（在等 Game Over 菜单）时的无敌 = `max(MISS_INVINCIBLE_TIME, DEATH_MENU_DELAY + 这个余量)`。
-## 菜单延迟一调大，无敌自动跟上 —— 否则 0 残机下会在等菜单时被弹打中，演出会怪。
+## 残机归零（等 Game Over 菜单）时额外加的余量（秒）；菜单延迟调大时无敌自动跟上。
 const MISS_DEATH_INVINCIBLE_MARGIN: float = 1.0
-## 无敌闪烁：每秒明暗切换次数 + 暗半周期的 alpha（0 = 全隐）。
-## **只动机体贴图**（`AnimatedSprite2D`）—— 判定点由 focus 门控自管淡入淡出（S2 判据），枪口也是兄弟节点，都别碰。
+## 无敌闪烁频率（每秒明暗切换次数）。
 const INVINCIBLE_BLINK_HZ: float = 6.0
+## 暗半周期的 alpha（0 = 全隐）；只动机体贴图，判定点 / 枪口不参与。
 const INVINCIBLE_BLINK_MIN_ALPHA: float = 0.2
-## 被弹炸弹（deathbomb）窗口长度（**物理帧**）：被弹瞬间全局定格这么多帧，等玩家按 bomb 抢命
+## deathbomb 窗口长度（物理帧）：被弹瞬间全局定格，等玩家按 bomb 抢命。
 const DEATHBOMB_FRAMES: int = 24
-## 开窗所需的最少雷数（1 = 只剩一个雷也给机会；想"必须 ≥2 才有窗口"就改成 2）
+## 开窗所需的最少雷数。
 const DEATHBOMB_MIN_BOMBS: int = 1
-## 抵消一次 miss 消耗的雷数（不足则把手上的用完 —— 只剩 1 个就只扣 1）
+## 抵消一次 miss 消耗的雷数（不足则把手上的用完）。
 const DEATHBOMB_COST: int = 2
 
 
-## 本次 miss 的无敌时长（秒）。`p_dead = true` = 残机已归零、正在等 Game Over 菜单 →
-## 跟着 `GameConfig.DEATH_MENU_DELAY` 走（+余量），保证等菜单期间一直无敌。
-## 纯函数（可测）：菜单延迟以后被调大，这条链接有断言守着。
+## 本次 miss 的无敌时长（秒）。p_dead = 残机已归零、正在等 Game Over 菜单时，
+## 跟着 GameConfig.DEATH_MENU_DELAY 走（+余量），保证等菜单期间一直无敌。
 static func miss_invincible_time(p_dead: bool) -> float:
 	if not p_dead:
 		return MISS_INVINCIBLE_TIME
 	return maxf(MISS_INVINCIBLE_TIME, GameConfig.DEATH_MENU_DELAY + MISS_DEATH_INVINCIBLE_MARGIN)
 
-## 被弹：**有雷先给一个"被弹炸弹"窗口**（全局定格几帧等玩家按 bomb 抢命）；
-## 窗口里按下 bomb → 抵消这次 miss（只花雷，不掉命）；没按 → 窗口结束才真正结算（`_apply_miss`）。
+## 被弹入口：无敌 / deathbomb 中忽略；有雷且配了 BombData 先开 deathbomb 窗口，
+## 否则立即结算。窗口里按 bomb = 只花雷不掉命，没按 = 窗口结束才结算。
 func miss() -> void:
 	if is_invincible or _is_deathbombing:
 		return  # 无敌中不重复触发；窗口里的第二发命中一律忽略（定格的意义就在这）
@@ -412,7 +441,7 @@ func miss() -> void:
 
 
 ## 真正的 miss 结算（清弹 / 记忆 / 火力惩罚 / P 点扇形 / 扣残机 / 复位两步，最后触发）。
-## **反色圈等演出用的都是这里捕获的 `pos`**（中弹那一刻的位置），所以复位移动必须放在本函数末尾。
+## 反色圈等演出用的是这里捕获的 pos（中弹那一刻的位置），所以复位移动必须放在本函数末尾。
 func _apply_miss() -> void:
 	_play_sfx(AssetRegistry.sounds["player_die"])
 	var pos: Vector2 = global_position
@@ -431,8 +460,8 @@ func _apply_miss() -> void:
 	# 火力惩罚（原作口径）：miss 削 50 火力（clamp 0..300）
 	resources.on_miss_power_penalty()
 
-	# 雷惩罚：**扣 2、不低于 3**（作者口径 2026-10-04；原先这里是"+2 补偿"）——
-	# 不撒掉落物、雷碎片不动；被弹炸弹窗口在 `miss()` 里**先**判定，所以这次扣雷抢不了这次命。
+	# 雷惩罚：扣 2、不低于 3；不撒掉落物、雷碎片不动。
+	# deathbomb 窗口在 miss() 里先判定，所以这次扣雷抢不了这次命。
 	resources.on_miss_bomb_penalty()
 
 	# 在自机处撒 10 个 P 点：绕自机、向上 180° 均匀弧形（宽限内不被吸走，先飞成弧）
@@ -441,26 +470,26 @@ func _apply_miss() -> void:
 	# 每次 miss 都通知（boss 判定 miss 后不收；player_death 只在残机 0 发，不能复用）
 	GameEvents.player_missed.emit()
 
-	# 残机扣除（`lose_life()` = 减之前还有命 → 返回 true；false = 残机归零）
+	# 残机扣除（lose_life() = 减之前还有命 → true；false = 残机归零）
 	var dead := not resources.lose_life()
-	# 无敌：倒计时由 `_physics_process` 自动倒数（不 await，不挂起调用链）。
-	# 时长见 `miss_invincible_time()`：有残机 = 固定值；残机归零 = **跟着 `DEATH_MENU_DELAY` 走**
+	# 无敌：倒计时由 _physics_process 自动倒数（不 await）。
+	# 时长见 miss_invincible_time()：有残机 = 固定值；残机归零 = 跟着 DEATH_MENU_DELAY 走。
 	# （菜单延迟调大时无敌自动跟上，0 残机下不会在等 Game Over 时被弹打中）。
 	is_invincible = true
 	_invincible_timer = miss_invincible_time(dead)
 	if dead:
 		GameEvents.player_death.emit()
 
-	# ── 自机复位（**必须放在最后**）────────────────────────────────────────
-	# 上面所有演出/撒点用的都是 `pos`（中弹那一刻的位置）——反色圈必须留在中弹处，
-	# 所以移动自机这件事只能在最后做，否则圈会画到移动后的位置上。
-	# ① 瞬移到**场地框下方之外**（水平正中）—— 让船从框下升进来
+	# ── 自机复位（必须放在最后）────────────────────────────────────────
+	# 上面演出 / 撒点用的都是 pos（中弹位置）——反色圈必须留在中弹处，
+	# 所以移动自机只能在最后做。
+	# ① 瞬移到场地框下方之外（水平正中），船从框下升进来
 	global_position = MISS_RESPAWN_FROM
-	# ② 从那里移动到 `_respawn_pos`（复位点 = 终点）
+	# ② 从那里移动到 _respawn_pos（复位点 = 终点）
 	_move_to_respawn()
 
 
-## 中弹复位第二步：从 `MISS_RESPAWN_FROM`（框下正中）移动到 `_respawn_pos`（复位点），期间锁移动输入。
+## 中弹复位第二步：从 MISS_RESPAWN_FROM（框下正中）移动到 _respawn_pos，期间锁移动输入。
 func _move_to_respawn() -> void:
 	if _is_respawning:
 		return
@@ -473,9 +502,9 @@ func _move_to_respawn() -> void:
 
 # ═══ 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命 ═══
 
-## 开窗：有雷（≥ `DEATHBOMB_MIN_BOMBS`）且机体配了 `BombData` 才开。
-## 开了就**全局定格** `DEATHBOMB_FRAMES` 帧（`Engine.time_scale = 0`，保存/恢复倍率 ——
-## 与 Boss 全破定格同一套做法，别写死 1.0）。返回 true = 本次 miss 的后果推迟到窗口结束时结算。
+## 开窗：有雷（≥ DEATHBOMB_MIN_BOMBS）且机体配了 BombData 才开。
+## 开了就全局定格 DEATHBOMB_FRAMES 帧（Engine.time_scale = 0，保存 / 恢复倍率）。
+## 返回 true = 本次 miss 的后果推迟到窗口结束再结算。
 func _begin_deathbomb_window() -> bool:
 	if DEATHBOMB_FRAMES <= 0 or _bomb_data() == null:
 		return false
@@ -485,9 +514,8 @@ func _begin_deathbomb_window() -> bool:
 	_deathbomb_saved_time_scale = Engine.time_scale
 	Engine.time_scale = 0.0
 	GameEvents.deathbomb_started.emit()
-	# 收尾用**真实时间**计时（process_always + ignore_time_scale）：定格中 delta = 0、玩家按暂停时
-	# `get_tree().paused` 也照样到点 —— 否则窗口永远走不完，`time_scale` 卡在 0，
-	# 暂停菜单会被一起冻住（既出不来也解不开，实测踩到过）。
+	# 收尾用真实时间计时（process_always + ignore_time_scale）：定格 / 暂停中也照样到点，
+	# 否则窗口永远走不完，time_scale 卡在 0，暂停菜单会被一起冻住。
 	var timer := get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, true, false, true)
 	timer.timeout.connect(_on_deathbomb_timeout)
 	return true
@@ -511,7 +539,7 @@ func _end_deathbomb(p_cancelled: bool) -> void:
 		_apply_miss()
 
 
-## 被弹炸弹成功：花掉 `DEATHBOMB_COST` 个雷（不足则用完，只剩 1 个就只扣 1）并照常放炸弹 —— **不掉命**。
+## deathbomb 成功：花掉 DEATHBOMB_COST 个雷（不足则用完）并照常放炸弹，不掉命。
 func _cancel_miss_by_deathbomb() -> void:
 	var bomb_data := _bomb_data()
 	if bomb_data == null:
@@ -521,7 +549,7 @@ func _cancel_miss_by_deathbomb() -> void:
 	_fire_bomb(bomb_data)
 
 
-## 解开定格：恢复开窗前的 `time_scale`（可能叠加在别的定格上）
+## 解开定格：恢复开窗前的 time_scale（可能叠加在别的定格上）。
 func _restore_time_scale() -> void:
 	Engine.time_scale = _deathbomb_saved_time_scale
 
