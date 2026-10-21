@@ -1,6 +1,6 @@
 # 测试索引（改哪里 → 看哪条）
 
-> **这是什么**：121 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
+> **这是什么**：122 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
 > **这不是**：规格说明、待办清单、覆盖率报告（本项目**没有**覆盖率度量）。
 >
 > **怎么用**：改动前扫一眼对应层的表，改动后跑门禁。
@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：121 脚本 / **867 用例（867 通过 / 0 红 —— ✅ 全绿）/ 7969 断言 / 57.804s** / 19 orphans / **0 pending**。
+**现状**：122 脚本 / **871 用例（871 通过 / 0 红 —— ✅ 全绿）/ 8029 断言 / 57.989s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 45 | 383 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 46 | 387 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 13 | 86 | `scripts/workbench/**`、创作站 |
@@ -106,9 +106,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（45 / 383）
+## C · 宿主 · 运行时系统（46 / 387）
 
-### C1 组合根 / 服务 / 时间线（10 / 59）
+### C1 组合根 / 服务 / 时间线（11 / 63）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -121,7 +121,8 @@
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 | 11 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** | 6 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
-| [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环 + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 4 | 0 |
+| [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：12 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
+| [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环（Dialogue / Item / Player / Boss / Enemy 五个服务都有回归） + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 7 | 0 |
 | [test_pattern_ring](../test/test_pattern_ring.gd) | Pattern spike：`BulletPattern` 基类 / `PatternParams` 默认值 / **Ring 的方向计算（整圈、扇形、单发）** / **`.tres` 预设加载** / **真实 `BulletManager` 发射 6 发** | 6 | 0 |
 | [test_timeline_phase_unfreeze](../test/test_timeline_phase_unfreeze.gd) | B 方案回归：Boss 阶段战斗不再冻结时间轴 | 1 | 0 |
 
