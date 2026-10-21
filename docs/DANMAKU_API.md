@@ -299,8 +299,9 @@ s.start_timeline() -> Timeline
 ### 5.3 难度
 
 ```gdscript
-diff_pick(arr)               # arr[SaveData.selected_difficulty]
-diff_get(dict, key, default)
+diff_pick(arr)               # Difficulty.pick(arr, SaveData.selected_difficulty)
+diff_get(dict, key, default)  # 缺行 / 非法行走默认值
+# 4 项数组只覆盖 Easy~Lunatic；Extra 需要第 5 项，否则报错并回落最后一项。
 ctx.diff.picked() / pick(arr) / at_least(n)
 ```
 

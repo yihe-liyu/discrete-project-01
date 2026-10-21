@@ -1,5 +1,6 @@
 ## 关卡定义：id + 脚本 + 背景 + 显示名
-## 难度差分在 CoroutineScript 中通过 diff_pick() / diff_get() 运行时处理
+## 难度差分在 CoroutineScript 中通过 Difficulty / diff_pick() / diff_get() 运行时处理；
+## 4 项数组只覆盖 Easy~Lunatic，Extra 需要第 5 项（边界由 Difficulty.pick 守卫）。
 class_name StageData
 extends Resource
 

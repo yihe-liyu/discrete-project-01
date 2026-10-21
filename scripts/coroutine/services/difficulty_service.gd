@@ -8,13 +8,23 @@ extends RefCounted
 func picked() -> int:
 	return SaveData.selected_difficulty
 
-## 按难度从数组取对应值（arr[difficulty]）
+## 按难度从数组取对应值；边界 / Extra 越界由 [Difficulty.pick] 守卫。
 func pick(arr: Array) -> Variant:
-	return arr[SaveData.selected_difficulty]
+	return Difficulty.pick(arr, picked(), "ctx.diff.pick")
 
-## 按难度从嵌套字典取对应值（diff_get 的落地）
+## 按难度从嵌套字典取对应值；缺行 / 非法行走默认值并响亮报错。
 func pick_from(dict: Dictionary, key: String, default = null):
-	return dict.get(SaveData.selected_difficulty, {}).get(key, default)
+	var difficulty := picked()
+	if not Difficulty.is_valid(difficulty):
+		push_error("ctx.diff.pick_from: 非法难度 %d（应为 0..%d）" % [difficulty, Difficulty.COUNT - 1])
+		difficulty = Difficulty.NORMAL
+	var row = dict.get(difficulty)
+	if row == null:
+		return default
+	if not row is Dictionary:
+		push_error("ctx.diff.pick_from: 难度 %s 对应的不是 Dictionary" % Difficulty.display_name(difficulty))
+		return default
+	return row.get(key, default)
 
 ## 当前难度 ≥ n（0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra）
 func at_least(n: int) -> bool:

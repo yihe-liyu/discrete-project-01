@@ -295,6 +295,8 @@ data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见
 
 - **Boss 阶段**：`BossData` 四组 phases（E/N/H/L），协程脚本里 `diff_pick()` 按难度取
 - **敌人强度**：行为脚本内 `diff_pick([1, 3, 5, 8])` 运行时取参
+- **数组长度**：4 项只覆盖 Easy~Lunatic；Extra 是第 5 项。EX 内容要么写 5 项，要么在 Extra 下走别的分支 ——
+  4 项数组遇 Extra 会由 `Difficulty.pick()` **响亮报错并回落最后一项**，不会再越界崩溃。
 - **分化手段优先级**：难度轴 → `diff_pick()`（首选，值放脚本里）；内容轴 → 另写脚本；`params` 最后（见 §四）
 - **UID 规则**：真符卡全局唯一（建议 1 面 100-199、2 面 200-299…）；非符 uid=0；角色共用 UID，SpellRecordBook 主键区分
 

@@ -55,11 +55,21 @@ func _tick(_ctx: StageContext) -> Variant:
 	return not auto_stop
 
 
-## 根据当前难度从数组取对应值
+## 根据当前难度从数组取对应值（边界/Extra 越界由 [Difficulty.pick] 守卫）。
 func diff_pick(arr: Array) -> Variant:
-	return arr[SaveData.selected_difficulty]
+	return Difficulty.pick(arr, SaveData.selected_difficulty, "diff_pick")
 
 
-## 根据当前难度从嵌套字典取对应值
+## 根据当前难度从嵌套字典取对应值；缺行 / 非法行走默认值并响亮报错。
 func diff_get(dict: Dictionary, key: String, default = null):
-	return dict.get(SaveData.selected_difficulty, {}).get(key, default)
+	var difficulty := SaveData.selected_difficulty
+	if not Difficulty.is_valid(difficulty):
+		push_error("diff_get: 非法难度 %d（应为 0..%d）" % [difficulty, Difficulty.COUNT - 1])
+		difficulty = Difficulty.NORMAL
+	var row = dict.get(difficulty)
+	if row == null:
+		return default
+	if not row is Dictionary:
+		push_error("diff_get: 难度 %s 对应的不是 Dictionary" % Difficulty.display_name(difficulty))
+		return default
+	return row.get(key, default)
