@@ -1,6 +1,6 @@
+## 游戏 HUD —— Score / HiScore / Power / MaxPoint / Graze
 extends CanvasLayer
 class_name GameUI
-## 游戏 HUD —— Score / HiScore / Power / MaxPoint / Graze
 
 ## 单局资源（组合根注入；过渡期与全局资源同一实例）
 var resources: PlayerResources

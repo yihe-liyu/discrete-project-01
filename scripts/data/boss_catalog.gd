@@ -1,4 +1,3 @@
-class_name BossCatalog
 ## Boss 谱（花名册）—— 唯一权威的关卡内容表
 ##
 ## 阶段身份（phase_index / 非符N / 符卡N / boss_index）一律由"每面规范阶段顺序"
@@ -7,6 +6,7 @@ class_name BossCatalog
 ## 每个 BossData 只带它"自己打"的阶段（spawn / BossUI 分点用）；真正的编号看规范顺序。
 ##
 ## 自机差分（换卡 = 换 uid）暂未落地；未来在"取 Boss"这层按 selected_character 路由即可。
+class_name BossCatalog
 
 const REGISTRY_PATH := "res://data/registry/boss_registry.tres"
 const BOSS_SCAN_ROOT := "res://data/stages"

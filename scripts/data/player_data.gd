@@ -1,5 +1,5 @@
-extends Resource
 ## 自机数据：移动速度、动画、射击脚本
+extends Resource
 class_name PlayerData
 
 @export_group("Speed")

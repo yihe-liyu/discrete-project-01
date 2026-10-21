@@ -1,7 +1,7 @@
-class_name ActorState
-extends RefCounted
 ## 舞台角色状态 —— 对话演出中单个角色的"真相"（位置/翻转/明暗/表情/在场）
 ## 由 StageState 统一管理；DSL 步骤只描述"变化"，不重复整行属性
+class_name ActorState
+extends RefCounted
 
 var char_name: String = ""
 var profile: CharacterProfile

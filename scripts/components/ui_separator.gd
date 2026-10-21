@@ -1,6 +1,4 @@
 # scripts/components/ui_separator.gd
-extends Node2D
-class_name UISeparator
 ## 渐变分隔条 —— 两端渐透明，中间实色
 ##
 ## 用法：
@@ -9,6 +7,8 @@ class_name UISeparator
 ##   sep.width = 2
 ##   sep.length = 280
 ##   add_child(sep)
+extends Node2D
+class_name UISeparator
 
 ## 分隔条颜色
 @export var line_color: Color = Color(0.7, 0.7, 0.7, 0.8)

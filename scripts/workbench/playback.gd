@@ -1,5 +1,3 @@
-class_name Playback
-extends RefCounted
 ## 播放状态机（工作台）—— 只持状态、只做决策：**不碰场景树 / 不碰 Engine / 不碰音频总线**。
 ##
 ## 为什么要单独一层（2026-09-30，S3）：暂停 / 速度 / 快进 / 逐帧 / 静音这些规则原先长在
@@ -13,6 +11,8 @@ extends RefCounted
 ## 信号：
 ##   changed      —— 状态变了 → 宿主重新下发一次运行时设置
 ##   logged(text) —— 操作播报 → 宿主转交事件日志
+class_name Playback
+extends RefCounted
 
 signal changed
 signal logged(text: String)

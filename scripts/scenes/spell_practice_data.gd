@@ -1,9 +1,9 @@
-class_name SpellPracticeData
-extends RefCounted
 ## 符卡练习菜单的**数据模型**（无树 / 无 UI）。
 ##
 ## 只负责：从 `SaveData.spell_book` 生成 stage / phase / diff 数据，解析 Boss 配置，
 ## 计算练习收取进度。选中项、层级、滚动窗口仍归菜单 / 列表视图。
+class_name SpellPracticeData
+extends RefCounted
 
 const DIFF_NAMES = SpellRecord.DIFF_NAMES
 const DIFF_VALUES = SpellRecord.DIFF_VALUES

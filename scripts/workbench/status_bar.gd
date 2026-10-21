@@ -1,7 +1,7 @@
-class_name StatusBar
-extends VBoxContainer
 ## 实时状态：当前时间 + 子弹/敌人/Boss/FPS
 ## 纯显示：主控制器每帧调用 set_time / set_status
+class_name StatusBar
+extends VBoxContainer
 
 const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
 

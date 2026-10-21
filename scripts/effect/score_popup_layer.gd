@@ -1,8 +1,8 @@
-class_name ScorePopupLayer
-extends Node2D
 ## 吃道具得分浮字：池化 NumberSprite，在被吃掉的位置显示本次得分，上浮 + 渐隐后回池。
 ## 数据源：GameEvents.item_score（Item.collect 发射）。组合根在 game_scene.tscn 声明（R21）。
 ## 与 FxPool 分工：FxPool 是命中/爆炸的**精灵动画**池；本层是**数字**浮字池（同字体 ascii.png）。
+class_name ScorePopupLayer
+extends Node2D
 
 ## 上浮像素 / 渐隐时长（秒）
 const RISE: float = 24.0

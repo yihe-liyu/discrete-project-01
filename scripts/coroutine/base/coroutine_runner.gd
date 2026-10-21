@@ -1,5 +1,3 @@
-extends Node
-class_name CoroutineRunner
 ## 协程调度器 —— 所有任务在 _physics_process 里步进
 ##
 ## 为什么用这个代替 Tween/Timer？
@@ -18,6 +16,8 @@ class_name CoroutineRunner
 ##
 ## 计时方式：累积 _physics_process 的 delta，暂停时不累积。
 ## 恢复后不会追帧，时钟从暂停处继续。
+extends Node
+class_name CoroutineRunner
 
 signal finished()
 ## 每个物理 tick 后发一次（含 `tick_manual`）；`AsyncCoroutineScript` 的 `ctx.clock` 等它。

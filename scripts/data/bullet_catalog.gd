@@ -1,8 +1,8 @@
-class_name BulletCatalog
-extends RefCounted
 ## 弹型目录：扫 `data/bullets/*.tres`（`BulletDef` 内容资源），按 key（= 文件名）索引。
 ## **索引不手写**（R17：内容在 data/，机制在 scripts/）；未知 key **响亮告警**，不静默回退。
 ## 单一来源：`bullet_configs` 代码表已删除 —— 贴图引用（texture_key）+ 判定 + 朝向全部在 .tres 里。
+class_name BulletCatalog
+extends RefCounted
 
 const DIR := "res://data/bullets/"
 

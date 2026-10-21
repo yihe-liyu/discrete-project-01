@@ -1,11 +1,11 @@
-class_name BossHandle
-extends RefCounted
 ## 关内 Boss 的命名句柄 —— 内容层的"Boss 场景动词"。
 ## 绑定一个命名槽位（StageObjects 的 key）+ 对应 BossData，内容用动词操控它，
 ## 不直接碰注册表 / Boss 内部 / create_tween。
 ## 动词时序无关：可单独调用（符卡练习），也可被 Timeline 摆放。
 ##
 ## 注意：name 会遮蔽 Node.name，故句柄侧用 key 而非 name 做槽位键。
+class_name BossHandle
+extends RefCounted
 
 var data: BossData
 

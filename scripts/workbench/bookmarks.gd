@@ -1,5 +1,3 @@
-class_name Bookmarks
-extends RefCounted
 ## 书签模型（工作台）—— 两类书签 + 缓存读写 + 合并规则，一处持有、可无树测试。
 ##
 ##   auto   ：静态提取（扫关卡脚本的 `timeline.at()` 时刻）。确定性重算，不依赖缓存。
@@ -11,6 +9,8 @@ extends RefCounted
 ## 重启工作台就全丢（"人工打点（可编辑，持久化）"名不副实）。
 ##
 ## 分工：本类不碰 UI、不播报；宿主拿 `open()` 的返回值去写日志。
+class_name Bookmarks
+extends RefCounted
 
 const CACHE := preload("res://scripts/workbench/bookmark_cache.gd")
 const EXTRACTOR := preload("res://scripts/workbench/bookmark_extractor.gd")

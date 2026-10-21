@@ -1,8 +1,8 @@
 # FieldFilterLayer.gd
-extends CanvasLayer
-class_name FieldFilterLayer
 ## 场地颜色滤镜（Bomb）：从**游戏框中心**扩圆铺满 → 停留 → 渐隐。
 ## 范围严格限制在游戏框内（ColorRect = 场地矩形），不影响框外 HUD。
+extends CanvasLayer
+class_name FieldFilterLayer
 
 ## 扩圆 / 停留 / 渐隐时长（秒）。
 @export var expand_time: float = 1.5

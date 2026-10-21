@@ -1,5 +1,3 @@
-class_name BackgroundCameraHome
-extends RefCounted
 ## 背景相机初始姿态的**唯一来源**。
 ##
 ## 使用方：
@@ -9,6 +7,8 @@ extends RefCounted
 ##
 ## ⚠️ `.tscn` 里的 Camera3D 节点无法引用脚本常量；两个宿主场景已移除冗余相机，
 ##    由 `StageBackground` 在入树时按这套常量创建 ⇒ 不再有第 3、4 份字面量。
+class_name BackgroundCameraHome
+extends RefCounted
 
 const POSITION := Vector3(0.0, 10.0, 6.0)
 const ROTATION_DEGREES := Vector3(-30.0, 0.0, 0.0)

@@ -1,11 +1,11 @@
-class_name LifecycleCatalog
-extends RefCounted
 ## LifecycleCatalog —— F10c 后只剩**遗留 `kernel_port` 的 lifecycle 入口**。
 ##
 ## 旧 `move + params`（bounce / homing / radial_accel …）的 9 个 preset 组合已删除：
 ## 内容直接写 `BulletLifecycle` 原语，或工作台拼装器生成后再写成代码。
 ## 这里保留 `{lifecycle: BulletLifecycle}` 是因为 `KernelBulletHost` / 旧测试仍走
 ## `kernel_port()` 的 lifecycle 字段；不要再往这里加组合分支。
+class_name LifecycleCatalog
+extends RefCounted
 
 const MOVE_LIFECYCLE := &"lifecycle"
 

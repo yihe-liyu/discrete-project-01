@@ -1,11 +1,11 @@
-class_name StageDirector
-extends RefCounted
 ## 场景导演 —— 内容层的"场景动词"入口。
 ## 持有 StageContext；提供 bgm / boss / 对话 / 事件路由 等跨子系统场景动词。
 ## 内部才碰 ctx.stage / ctx.objects / GameEvents / 机制；内容只调动词。
 ## 动词时序无关：可单独调用（符卡练习），也可被 Timeline 摆放。
 ##
 ## 事件路由：on(key, handler) 取代内容里的大 match _on_dialogue_event。
+class_name StageDirector
+extends RefCounted
 
 var ctx: StageContext
 

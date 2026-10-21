@@ -1,5 +1,3 @@
-class_name PatternParams
-extends Resource
 ## 弹幕 pattern 的手感参数（**默认值**，不是规则）。
 ##
 ## 用法：
@@ -7,6 +5,8 @@ extends Resource
 ##   - 代码内联：`var p := PATTERN_PARAMS.new(); p.count = 12 + diff_pick(...)`
 ##
 ## 只放“经常调、调起来烦”的数值；流程/条件/循环仍在 GDScript。
+class_name PatternParams
+extends Resource
 
 ## 发射的弹型定义（`data/bullets/*.tres`，外观+碰撞+朝向）。
 @export var bullet_def: BulletDef

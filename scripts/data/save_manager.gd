@@ -1,5 +1,3 @@
-class_name SaveManager
-extends RefCounted
 ## 高分 / 设置存档管理（从 SaveData 拆出，职责单一）。
 ##
 ## 写盘策略：**临时文件 → 轮换备份 → 提交**。
@@ -9,6 +7,8 @@ extends RefCounted
 ##
 ## 格式：`meta/version` 当前为 [constant FORMAT_VERSION]；读档时对设置/高分做类型与范围校验，
 ## 坏值回退到默认值（不再让手改/旧版本档把运行时搞崩）。
+class_name SaveManager
+extends RefCounted
 
 const SAVE_PATH: String = "user://save_data.cfg"
 const META_SECTION := "meta"

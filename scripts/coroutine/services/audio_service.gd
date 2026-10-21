@@ -1,5 +1,5 @@
-class_name AudioService
 ## 音频服务 —— 协程中通过 ctx.audio 访问
+class_name AudioService
 extends RefCounted
 
 var is_active: bool = true

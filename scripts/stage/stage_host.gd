@@ -1,5 +1,3 @@
-class_name StageHost
-extends RefCounted
 ## 舞台世界装配（**唯一实现**）—— 真游戏 / 工作台整关预览 / 三个组合台原先各写一份同一段接线。
 ##
 ## 为什么值得抽（2026-09-30，S4）：三处的差别只在"节点从哪来、摆哪儿"，
@@ -16,6 +14,8 @@ extends RefCounted
 ##
 ## 放在 `scripts/stage/`（核心层）而不是 `scripts/workbench/`：真游戏也要用，
 ## 依赖方向只能是 工具 → 核心。
+class_name StageHost
+extends RefCounted
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 

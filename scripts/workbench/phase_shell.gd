@@ -1,7 +1,7 @@
-class_name PhaseShell
-extends RefCounted
 ## 阶段试验台 —— 阶段"数值/脚本"载体（构建副本，不改动原 .tres 资源）
 ## 双槽：move_script × shoot_script（默认取所选阶段 .tres 的值，可换/可清空）
+class_name PhaseShell
+extends RefCounted
 
 const KAMORUI_BOSS := preload("res://data/enemy_visual/boss/stage01/kamorui.tscn")
 

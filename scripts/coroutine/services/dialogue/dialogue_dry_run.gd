@@ -1,5 +1,3 @@
-class_name DialogueDryRun
-extends RefCounted
 ## 对话**干跑**：无头把一段 steps 跑完，收集可观测量（台词 / 说话者 / 事件 / 有没有跑完）。
 ##
 ## 用途：
@@ -8,6 +6,8 @@ extends RefCounted
 ##
 ## 与真实播放的差别：这里**自动翻页**（不等玩家按 Z）→ 验的是**剧本本身**，
 ## 不是节奏手感（手感去 `DialoguePreview` 的窗口模式看）。
+class_name DialogueDryRun
+extends RefCounted
 
 const TICK := 0.05          ## 假 delta（秒）
 const MAX_TICKS := 4000     ## 安全上限：剧本卡住（永远等不到输入）也不会把调用方挂死

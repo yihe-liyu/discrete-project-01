@@ -1,5 +1,3 @@
-class_name DialogHost
-extends CanvasLayer
 ## 通用弹窗宿主：遮罩 + 居中面板 + 内容 VBox + 确认/取消按钮行
 ##
 ## 用法：
@@ -9,6 +7,8 @@ extends CanvasLayer
 ##   dialog.close()
 ##
 ## 暂停时也可操作（弹窗输入）→ 显式 ALWAYS
+class_name DialogHost
+extends CanvasLayer
 
 var _panel: PanelContainer
 var _content: VBoxContainer

@@ -1,5 +1,3 @@
-extends CoroutineRunner
-class_name CoroutineScript
 ## 通用协程脚本 —— 替代 CreateScript / MoveScript / EnemyScript / StageScript / BackgroundScript
 ##
 ## auto_stop = true  → _tick 返回 false 时自动结束（原 CreateScript 语义）
@@ -14,6 +12,8 @@ class_name CoroutineScript
 ##   s.start_timeline().at(0.0).every(0.5).do(func(): shoot())
 ##   func _on_start():            # 可选：一次性初始化（此时 ctx/target 已就绪）
 ##       _build()
+extends CoroutineRunner
+class_name CoroutineScript
 
 var ctx: StageContext
 ## 要控制的节点（可选）。设置后可在 _tick/timeline 中访问。

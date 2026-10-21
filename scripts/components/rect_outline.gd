@@ -1,6 +1,6 @@
+## 自动把自身像素尺寸同步到 shader 的 rect_size 参数
 extends ColorRect
 class_name RectOutline
-## 自动把自身像素尺寸同步到 shader 的 rect_size 参数
 
 func _ready() -> void:
 	resized.connect(_update_size)

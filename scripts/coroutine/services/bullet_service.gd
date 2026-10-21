@@ -1,5 +1,5 @@
-class_name BulletService
 ## 子弹服务 —— ctx.bullets 下的弹幕/激光 API
+class_name BulletService
 extends RefCounted
 
 var is_active: bool = true

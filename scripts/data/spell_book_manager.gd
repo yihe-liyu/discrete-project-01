@@ -1,6 +1,6 @@
+## 符卡簿管理：加载/保存/解锁/记录（从 SaveData 拆出，职责单一）
 class_name SpellBookManager
 extends RefCounted
-## 符卡簿管理：加载/保存/解锁/记录（从 SaveData 拆出，职责单一）
 
 ## 运行期档（R14：不写 res://，导出包只读）。首启无文件 = 空簿。
 const SPELL_BOOK_USER_PATH := "user://spell_records.tres"

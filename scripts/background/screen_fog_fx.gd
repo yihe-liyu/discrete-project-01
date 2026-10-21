@@ -1,6 +1,3 @@
-class_name ScreenFogFX
-extends Node
-
 ## 全屏蒙眼雾组件。**看得见的部分全部场景声明**（2026-10-04 BGA/B）：
 ##   FogFX（本节点，只装逻辑）
 ##   └── FogLayer（CanvasLayer，layer = 5 —— 背景 SubViewport 内叠在 3D 之上）
@@ -19,6 +16,8 @@ extends Node
 ## ⇒ **忘了调就永远隐形、且零报错**（stage02 2026-10-04 实况）。那套"记得调用才显示"已废止。
 ## 噪声纹理也在场景里（材质的 `shader_parameter/noise_tex` = `cloud_noise.tres`）。
 ## ⚠️ 本层在**背景 SubViewport 内** ⇒ 只压暗背景，**不挡弹幕/自机**。
+class_name ScreenFogFX
+extends Node
 
 # ── 仅**预生成工具**用（运行时纹理在场景里；改这两个值要重跑
 #    tools/regenerate_fog_tex.gd，**不影响已生成的纹理**）──

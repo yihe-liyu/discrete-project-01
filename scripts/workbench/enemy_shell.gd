@@ -1,7 +1,7 @@
-class_name EnemyShell
-extends RefCounted
 ## 敌人试验台 —— 敌人"外形/数值"载体（临时试验道具，不落盘）。
 ## 对应 EnemyData 的"外观/数值侧：外观/HP/判定/掉落；行为脚本由组合台选择，二者独立组合。
+class_name EnemyShell
+extends RefCounted
 
 var visual_key: String = "red_little_fairy"
 var max_hp: int = 100

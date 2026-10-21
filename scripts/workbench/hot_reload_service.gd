@@ -1,5 +1,3 @@
-class_name HotReloadService
-extends RefCounted
 ## 工作台**热更新服务**（2026-09-30 S2：从 `BenchBase` 抽出）。
 ##
 ## 设计要点：**不依赖场景树、也不认识 toast** —— 调用方用两个 `Callable` 说明
@@ -11,6 +9,8 @@ extends RefCounted
 ##     不等稳就重载会拿到半截脚本；
 ##   * **连坐**：主脚本 `preload` 的同伴改了，只重载主脚本**看不到**新代码 ⇒
 ##     主脚本 + 它同目录的全部 `.gd` 一起重载。
+class_name HotReloadService
+extends RefCounted
 
 ## 状态条文案（"＊ 检测到修改…" / "⚠ 重载失败…"）；调用方接去自己的 toast/标签
 signal status(text: String, color: Color)

@@ -1,11 +1,11 @@
-class_name LifecycleHostTable
-extends RefCounted
 ## 宿主模板表：只存 spawn / Callable / sfx —— 与纯 program 分开（DSL10）。
 ##
 ## local id 分配必须与 LifecycleCompiler.compile_program() 完全一致：
 ##   actions：EMIT / EMIT_VARIANT / CALL 共用序号
 ##   sfx：SFX 独立序号
 ## 表格本身不参与原生注册；事件 (program, local) 由宿主按本表解析。
+class_name LifecycleHostTable
+extends RefCounted
 
 const COMPILER := preload("res://scripts/kernel_bridge/lifecycle/lifecycle_compiler.gd")
 

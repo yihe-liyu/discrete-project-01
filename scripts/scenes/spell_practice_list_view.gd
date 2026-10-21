@@ -1,9 +1,9 @@
-class_name SpellPracticeListView
-extends RefCounted
 ## 符卡练习菜单的**列表视图**（三级列表 + 高亮 + 滚动窗口）。
 ##
 ## 只管画：数据来自 `SpellPracticeData`，选中项/层级由菜单传入。
 ## 不碰 SaveData、不生成记录、不做练习启动。
+class_name SpellPracticeListView
+extends RefCounted
 
 const CAPTURE_FULL := Color(0.4, 0.7, 1.0)
 const DIFF_NAMES = SpellRecord.DIFF_NAMES

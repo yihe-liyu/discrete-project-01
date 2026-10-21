@@ -1,6 +1,6 @@
+## 对话服务
 class_name DialogueService
 extends RefCounted
-## 对话服务
 
 ## 弱引用 ctx：避免 StageContext ↔ DialogueService 形成 RefCounted 环导致关卡退出后泄漏
 var _ctx_ref: WeakRef

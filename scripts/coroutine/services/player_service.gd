@@ -1,6 +1,6 @@
+## 玩家服务 —— 只读访问玩家状态（自机由 StageContext.entity_registry 显式注入，不摸全局）
 class_name PlayerService
 extends RefCounted
-## 玩家服务 —— 只读访问玩家状态（自机由 StageContext.entity_registry 显式注入，不摸全局）
 
 var ctx: StageContext
 

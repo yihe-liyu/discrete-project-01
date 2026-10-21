@@ -1,6 +1,6 @@
+## Item 对象池，挂在 World 下
 class_name ItemPool
 extends Node
-## Item 对象池，挂在 World 下
 
 const ITEM_SCENE = preload("res://scenes/item.tscn")
 const POOL_SIZE: int = 128

@@ -1,5 +1,3 @@
-class_name ClockService
-extends RefCounted
 ## 时间服务 —— 协程等待的**唯一时钟**。
 ##
 ## 两种用法共用同一个 [CoroutineRunner] 时钟：
@@ -7,6 +5,8 @@ extends RefCounted
 ##   - 新 async 风格：`await ctx.clock.delay(0.5)`（等 runner.ticked，暂停/逐帧/快进都一致）
 ##
 ## ⚠️ 不要用 `get_tree().create_timer()` 代替 —— 那是引擎时间，不是内容时钟。
+class_name ClockService
+extends RefCounted
 
 var runner: CoroutineRunner
 

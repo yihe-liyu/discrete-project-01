@@ -1,6 +1,6 @@
+## 道具服务
 class_name ItemService
 extends RefCounted
-## 道具服务
 
 ## 弱引用 ctx：避免 StageContext ↔ ItemService 形成 RefCounted 环导致关卡退出后泄漏
 var _ctx_ref: WeakRef

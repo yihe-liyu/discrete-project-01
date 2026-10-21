@@ -1,7 +1,7 @@
 # SceneTransition — 场景切换 + 黑场过渡
+## 场景切换过渡：TRANSITIONING → fade_out → change_scene → fade_in → target_state
 class_name SceneTransition
 extends RefCounted
-## 场景切换过渡：TRANSITIONING → fade_out → change_scene → fade_in → target_state
 
 const FADE_DURATION: float = 0.4
 

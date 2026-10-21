@@ -1,5 +1,3 @@
-class_name AsyncCoroutineScript
-extends CoroutineScript
 ## 内容协程的 **async 风格**基类：用 `await ctx.clock.delay(...)` 代替 `_tick` 的返回值状态机。
 ##
 ## 用法：
@@ -17,6 +15,8 @@ extends CoroutineScript
 ##
 ## ⚠️ 不用于倒带：async 状态不能回退；向后 seek 仍需“重跑 + 快进”。
 ## ⚠️ 不要让同一个实例 `start()` 两次（旧 await 可能复活）；换关请新建脚本实例。
+class_name AsyncCoroutineScript
+extends CoroutineScript
 
 ## 覆写它来写内容。**必须包含 await**（基类默认只等一帧）。
 func run_async(p_ctx: StageContext) -> void:

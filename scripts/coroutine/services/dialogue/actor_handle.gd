@@ -1,5 +1,3 @@
-class_name ActorHandle
-extends RefCounted
 ## 对话里**某个角色**的"场景动词"句柄 —— 由 `DialogueSteps.enter()` 返回。
 ##
 ## 与 `BossHandle` 同一路子（"谁"是**接收者**而不是参数），但更简单：
@@ -16,6 +14,8 @@ extends RefCounted
 ## 动词一律返回 `self`（可链式），全部落到同一个 actor key。
 ## 与 `d` 上那些"收 profile 的动词"的关系：**薄委托**（`_dialogue_steps.portrait(_character_profile, …)`），
 ## 没有第二套构建逻辑 —— 所以两种写法产物完全一致（可混用）。
+class_name ActorHandle
+extends RefCounted
 
 var _dialogue_steps: DialogueSteps
 var _character_profile: CharacterProfile

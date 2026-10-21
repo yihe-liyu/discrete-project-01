@@ -1,5 +1,3 @@
-extends AnimatedSprite2D
-class_name EnemyVisual
 ## 根据父节点移动速度自动切换动画
 ##
 ## 速度阈值：
@@ -7,6 +5,8 @@ class_name EnemyVisual
 ##   speed >= 2.0 → righting(过渡) → right (loop)
 ##
 ## flip_h 由移动方向自动控制
+extends AnimatedSprite2D
+class_name EnemyVisual
 
 const IDLE    = "idle"
 const RIGHTING = "righting"

@@ -1,6 +1,6 @@
+## 特效服务 —— ctx.effects 下的特效 API（Miss 圈 / 命中特效）
 class_name EffectService
 extends RefCounted
-## 特效服务 —— ctx.effects 下的特效 API（Miss 圈 / 命中特效）
 
 ## Miss 圈渲染节点（组合根 GameScene 注入；为空则静默跳过，便于测试/无场景上下文）
 var miss_layer: MissCircleLayer

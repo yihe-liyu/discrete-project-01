@@ -1,5 +1,3 @@
-class_name DialogueRunner
-extends RefCounted
 ## 对话步骤解释器 —— 纯逻辑，不进树，可测试
 ##
 ## 语义：
@@ -8,6 +6,8 @@ extends RefCounted
 ## - LINE 步骤从台词库取行 → 应用自动明暗 → 停在等待（玩家 advance 或 auto_advance）
 ## - WAIT 步骤停在计时（tick 驱动）
 ## - EVENT 步骤即"行间事件"：出现在步骤序列任意位置，时机精确
+class_name DialogueRunner
+extends RefCounted
 
 signal line_shown(line: DialogueLine, speakers: Array, state: StageState)
 signal state_changed(state: StageState, duration: float)

@@ -1,9 +1,9 @@
-class_name CatalogPanel
-extends VBoxContainer
 ## 内容目录面板（浏览 + 分类展示；起接组合台）
 ## 数据来源：ContentCatalog（自动派生索引，永不手写清单）。
 ## 注：headless/新文件下 class_name 全局缓存不可靠 → preload 常量。
 ## 注意：这里不能是 ScrollContainer——它不拉伸子节点，split_area 会塌成 0 高。
+class_name CatalogPanel
+extends VBoxContainer
 
 const CAT = preload("res://scripts/data/content_catalog.gd")
 const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源

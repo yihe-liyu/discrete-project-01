@@ -1,6 +1,6 @@
+## 工作台 UI 公共工具：统一的小控件工厂（标签/标题/参数行）
 class_name WorkbenchUI
 extends RefCounted
-## 工作台 UI 公共工具：统一的小控件工厂（标签/标题/参数行）
 
 const TEXT_DIM := Color(0.72, 0.72, 0.72)  # 中性灰（与游戏页面弱化文字一致，不再蓝灰）
 const ACCENT := Color(0.92, 0.73, 0.32)

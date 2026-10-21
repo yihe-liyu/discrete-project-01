@@ -1,7 +1,7 @@
-class_name PlaybackBar
-extends VBoxContainer
 ## 播放控制行：播放/暂停、重跑、静音、背景、命中框、速度档位
 ## 纯视图：只发信号不碰状态；状态由 Workbench 主控制器持有并同步回来
+class_name PlaybackBar
+extends VBoxContainer
 
 signal play_toggled
 signal restart_requested

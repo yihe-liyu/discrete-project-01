@@ -1,6 +1,6 @@
-class_name TextAlign
 ## 全角对齐工具：字母数字/标点转全角（等宽 1em）+ 全角空格补位（右对齐）
 ## 供菜单/UI 显示对齐用（不硬调 Label 宽度）
+class_name TextAlign
 
 ## 半角字母数字转全角（０-９／Ａ-Ｚ／ａ-ｚ）+ 句点／斜杠全角
 static func full(text: String) -> String:

@@ -1,6 +1,3 @@
-class_name SpellBonus
-extends RefCounted
-
 ## 符卡奖励分（bonus）规则 —— **唯一 owner**（内容不再手填，见 `PhaseData`）。
 ##
 ## 东方原作口径 + 本作定调（作者 2026-09-26 实测 + 多轮核对）：
@@ -15,6 +12,8 @@ extends RefCounted
 ##
 ## ⚠️ 面序号 ≠ 记录主键 `StageData.stage_id`：后者为存档唯一会把 3B 面取 4、EX 取 9，
 ## 而奖励分要的是 3A/3B 都算 3、EX 算 7 → 取自 `StageData.stage_no`。
+class_name SpellBonus
+extends RefCounted
 
 ## 初始值倍率：公式里 1 点 = 50 万。
 const INITIAL_UNIT: int = 500000

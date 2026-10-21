@@ -1,6 +1,3 @@
-class_name BackgroundSun
-extends Node3D
-
 ## 日食太阳组件。**可见部分全部场景声明**（2026-10-04）：
 ##   Sun（本节点 Node3D —— **位置就是太阳位置**，编辑器里直接拖）
 ##   └── SunSprite（Sprite3D，billboard）+ 圆盘纹理 + ShaderMaterial(sun_sprite.gdshader)
@@ -12,6 +9,8 @@ extends Node3D
 ## ② **忘了调 `setup()` 就永远隐形、且零报错** —— stage02 2026-10-04 实况（作者摆好了节点却看不见）。
 ## 教训：**别把"显示"绑在"记得调用"上**（练习模式要不要它也定了：要）。
 ## ⚠️ `SunSprite` 是子节点 ⇒ 它的**局部位移叠加**在本节点上（两处都能摆，合并即最终位置）。
+class_name BackgroundSun
+extends Node3D
 
 @export var texture_size: int = 256      ## **仅预生成工具用**（运行时纹理在场景里，见文件头）
 

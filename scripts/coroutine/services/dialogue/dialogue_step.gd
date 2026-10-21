@@ -1,7 +1,7 @@
-class_name DialogueStep
-extends RefCounted
 ## 对话步骤 —— 一步演出操作（数据载体）
 ## 由 DialogueSteps DSL 生成、DialogueRunner 解释
+class_name DialogueStep
+extends RefCounted
 
 enum Type {
 	LINE,      ## 显示一句（从台词库按 line_id 取）

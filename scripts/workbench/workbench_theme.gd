@@ -1,5 +1,3 @@
-class_name WorkbenchTheme
-extends RefCounted
 ## 工作台主题 —— 与游戏页面视觉统一：半透明黑底金边卡片 + 思源宋体描边
 ##
 ## 设计（完全对齐 themes/ui_theme.tres 与菜单面板 StyleBox）：
@@ -9,6 +7,8 @@ extends RefCounted
 ##   · 强调一律金色（东方风），弱化文字用中性灰（不再蓝灰）
 ##
 ## 用法：workbench 根 Control.theme = WorkbenchTheme.build()
+class_name WorkbenchTheme
+extends RefCounted
 
 const PANEL_BG := Color(0, 0, 0, 0.32)
 const PANEL_BORDER := Color(0.62, 0.52, 0.28, 0.55)

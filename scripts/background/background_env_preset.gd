@@ -1,12 +1,11 @@
-class_name BackgroundEnvPreset
-extends Resource
-
 ## 背景环境预设：持有完整 Environment 模板（Godot 原生 Environment 编辑器调全部参数：
 ## 雾/天空/glow/体积雾/tonemap/adjustment 等全成员可用，无需维护参数镜像）
 ## - build_environment() 深拷贝 → 每次全新实例，根治共享污染（越重跑越暗）
 ## - 联动内建：build 时天球地面水平色强制跟随雾色（改雾色不露地平线）
 ## - environment 为 null 时自动构建默认暗环境（自愈）
 ## 用途：新建关卡背景 = 新建 .tres 预设（含 Environment）+ 场景拼装
+class_name BackgroundEnvPreset
+extends Resource
 
 @export var environment: Environment
 

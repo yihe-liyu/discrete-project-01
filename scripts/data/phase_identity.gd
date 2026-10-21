@@ -1,8 +1,8 @@
-class_name PhaseIdentity
-extends RefCounted
 ## 一个 phase（非符/符卡）的唯一身份标识
 ##
 ## 主键 = (stage_id, phase_index, character, difficulty)
+class_name PhaseIdentity
+extends RefCounted
 
 var uid: int               ## 展示用 No.xxx
 var character: int

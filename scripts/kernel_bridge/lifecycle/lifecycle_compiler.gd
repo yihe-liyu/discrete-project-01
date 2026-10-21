@@ -1,5 +1,3 @@
-class_name LifecycleCompiler
-extends RefCounted
 ## BulletLifecycle 的**纯编译器**：只读 phases/slots，输出原生 packed program。
 ##
 ## 边界（DSL10）：
@@ -7,6 +5,8 @@ extends RefCounted
 ##   · action 的 local id 按「EMIT / EMIT_VARIANT / CALL 共用 actions 序号，SFX 单独 sfx 序号」
 ##     纯结构分配；`LifecycleHostTable.build()` 按同一遍历顺序填模板表，两边天然对齐。
 ##   · op / target / dirk 的整数编码必须与 C++ DanmakuStore.behavior_tick 一致。
+class_name LifecycleCompiler
+extends RefCounted
 
 const DIR_SPEC := preload("res://scripts/kernel_bridge/lifecycle/dir_spec.gd")
 

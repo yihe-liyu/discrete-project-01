@@ -1,5 +1,3 @@
-class_name DialogueSteps
-extends RefCounted
 ## 对话流程 DSL —— 构建步骤序列（Array[DialogueStep]）
 ##
 ## **推荐写法（句柄）**：`enter()` 返回 `ActorHandle`，"谁"是接收者而不是参数：
@@ -19,6 +17,8 @@ extends RefCounted
 ##
 ## 原则：只描述"变化"；位置/flip/明暗/表情等在状态里"声明即改变，不声明不动"。
 ## `d.line()` 的说话者默认延续上一句（enter 也会更新延续者）；想在句柄上显式指定就用 `handle.line()`。
+class_name DialogueSteps
+extends RefCounted
 
 var steps: Array[DialogueStep] = []
 

@@ -1,8 +1,8 @@
-class_name BenchBase
-extends Control
 ## 组合台（弹幕/敌人/阶段）公共基类 —— 场地/幽灵/坐标归一/面板脚手架/字段助手
 ## 术语：行为（脚本）/ 外形（外观）/ 数值（字段）——"魂/壳" 已弃用
 ## 三台结构一致：只写各自的"行为/外形/数值"专属逻辑，公共骨架在此一处。
+class_name BenchBase
+extends Control
 
 const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
 const GHOST := preload("res://scripts/workbench/ghost_player.gd")

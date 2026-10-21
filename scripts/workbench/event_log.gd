@@ -1,7 +1,7 @@
-class_name EventLog
-extends VBoxContainer
 ## 事件日志：Boss/符卡事件 + 工作台操作记录
 ## 自连 GameEvents（_exit_tree 统一断开，符合项目信号生命周期规范）
+class_name EventLog
+extends VBoxContainer
 
 var _log: RichTextLabel
 var _lines: Array[String] = []

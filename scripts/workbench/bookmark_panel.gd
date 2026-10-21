@@ -1,5 +1,3 @@
-class_name BookmarkPanel
-extends VBoxContainer
 ## 书签面板：列表显示（自动 + 人工合并）+ 添加/重命名/删除（弹窗）
 ## **纯视图**：数据在 `Bookmarks` store 里（宿主注入），编辑后发 `data_changed`，
 ## 由 Workbench 主控制器落盘并刷新时间轴 —— 这里不再自持第二份副本（2026-09-30，S3）
@@ -8,6 +6,8 @@ extends VBoxContainer
 ##   jump_requested(t)   —— 点击书签（左键）→ 快进跳转
 ##   data_changed        —— 书签被编辑 → 持久化 + 刷时间轴
 ##   log_requested(text) —— 操作日志（转交 EventLog）
+class_name BookmarkPanel
+extends VBoxContainer
 
 signal jump_requested(time_sec: float)
 signal data_changed

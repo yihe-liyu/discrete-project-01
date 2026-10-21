@@ -1,8 +1,8 @@
-extends Node2D
-class_name NumberSprite
 ## 用贴图显示数字 —— 横向排列 0-9 的 sprite sheet
 ## 每帧更新，自动创建/回收数字精灵
 ## 配置项由创建者 (game_ui.gd) 设置
+extends Node2D
+class_name NumberSprite
 
 var digit_texture: Texture2D
 var char_count: int

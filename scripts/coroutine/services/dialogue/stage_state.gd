@@ -1,11 +1,11 @@
-class_name StageState
-extends RefCounted
 ## 对话舞台状态 —— 所有在场角色的唯一真相（char_name → ActorState）
 ##
 ## 关键语义：
 ## - 状态"声明即改变，不声明不动"——DSL 步骤只改自己关心的字段
 ## - apply_line 是唯一自动推断点：说话者亮、沉默在场者暗
 ## - 不涉及任何 UI/渲染（z 排序、气泡创建归播放器）
+class_name StageState
+extends RefCounted
 
 var actors: Dictionary = {}  # char_name → ActorState
 
