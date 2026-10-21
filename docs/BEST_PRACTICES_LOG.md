@@ -98,7 +98,8 @@
 - 逐行 getter 补返回值/无效值语义：`get_program` -2、`get_type`/`get_faction` -1、`get_color` 白、`get_out_grace`/`get_life_left` 0。
 - 快照 getter、`set_*` 写访问器、`is_grazed`/`mark_grazed`、`set_program`、`clear` 补一行说明。
 - `_p_ops` / `_program` / `_capacity` / `_cull` / 默认寿命 / 场地范围补字段注释。
-- 重建 debug/release；新指纹 `af9ab320cfa4…`；867 用例 / 7969 断言；verify 七步全绿。
+- 继续补齐剩余公开 getter / 设置器注释（get_position / get_type_indices / set_cull / get_capacity 等）。
+- 重建 debug/release；新指纹 `f216af8d0a18…`；867 用例 / 7969 断言；verify 七步全绿。
 
 ### 2026-10-20 — KernelNativeSystem / KernelBulletHost 注释整理
 

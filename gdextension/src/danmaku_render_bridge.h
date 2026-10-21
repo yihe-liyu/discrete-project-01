@@ -50,10 +50,10 @@ protected:
 public:
 	// 类型表：贴图 RID + tint/kind/follow/dir_offset；类型数变化时宿主刷新。
 	void set_type_table(const PackedInt64Array &p_tex_key_base, const PackedInt32Array &p_tint_mode, const PackedInt32Array &p_kind, const PackedByteArray &p_follow_dir, const PackedFloat32Array &p_dir_offset);
-	int get_type_count() const;
+	int get_type_count() const; // 已注册弹型数。
 	// 特效表：贴图 RID + 时长 / 缩放 / alpha 曲线 / tint。
 	void set_fx_table(const PackedInt64Array &p_tex_key, const PackedFloat32Array &p_duration, const PackedFloat32Array &p_scale_from, const PackedFloat32Array &p_scale_to, const PackedFloat32Array &p_alpha_from, const PackedFloat32Array &p_alpha_to, const PackedInt32Array &p_tint_mode);
-	int get_fx_type_count() const;
+	int get_fx_type_count() const; // 已注册特效数。
 	// 按纹理/阵营/tint 分组；返回 {keys/starts/rows/rots/alphas} + {fx_keys/fx_starts/fx_rows/fx_rots/fx_alphas/fx_scales}。
 	Dictionary group(int p_count, const PackedVector2Array &p_positions, const PackedVector2Array &p_velocities, const PackedColorArray &p_colors, const PackedInt32Array &p_type_indices, const PackedByteArray &p_factions, const PackedFloat32Array &p_fade_by_kind, const PackedFloat32Array &p_render_rots = PackedFloat32Array(), const PackedFloat32Array &p_fx_phases = PackedFloat32Array(), const PackedInt32Array &p_fx_type_indices = PackedInt32Array());
 	// 按 group 的 rows/rots/alphas 写 MultiMesh；start/count 截取。

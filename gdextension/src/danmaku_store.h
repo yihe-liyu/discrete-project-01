@@ -119,26 +119,26 @@ public:
 	int get_active_count() const;
 	// 逐行 getter / 只读快照：前 count 行有效，不要跨帧缓存。
 	int get_program(int p_id) const; // 该行 program id；无效 → -2。
-	Vector2 get_position(int p_id) const;
-	Vector2 get_velocity(int p_id) const;
-	Vector2 get_forward(int p_id) const;
+	Vector2 get_position(int p_id) const; // 无效 → 零向量。
+	Vector2 get_velocity(int p_id) const; // 无效 → 零向量。
+	Vector2 get_forward(int p_id) const; // 无效 → 零向量。
 	void set_forward(int p_id, const Vector2 &p_fwd); // 设朝向，不改速度。
-	PackedVector2Array get_positions() const;
-	PackedVector2Array get_velocities() const;
+	PackedVector2Array get_positions() const; // 位置快照。
+	PackedVector2Array get_velocities() const; // 速度快照。
 	int get_type(int p_id) const; // 弹型下标；无效 → -1。
 	int get_type_index(int p_id) const; // 同上（兼容名）。
 	int get_faction(int p_id) const; // 阵营；无效 → -1。
 	Color get_color(int p_id) const; // 无效 → 白。
 	// 容量 / 剔除区 / 出界宽限。
 	void reserve(int p_n);
-	void set_cull(const Rect2 &p_cull);
-	void set_margin(float p_margin);
+	void set_cull(const Rect2 &p_cull); // 设剔除矩形。
+	void set_margin(float p_margin); // 剔除余量。
 	// 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
 	void set_out_grace(int p_id, float p_grace);
 	float get_out_grace(int p_id) const; // 无效 → 0。
-	void set_default_life(float p_life);
-	void set_field(float p_left, float p_right, float p_top);
-	void set_seed(int p_seed);
+	void set_default_life(float p_life); // 新行默认寿命。
+	void set_field(float p_left, float p_right, float p_top); // 反射/边界场地范围。
+	void set_seed(int p_seed); // PRNG 种子；0 会兜底成黄金比常量。
 	// 判定（与 GDScript 内核 1:1）
 	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
 	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const; // 单行精确判定。
@@ -148,7 +148,7 @@ public:
 	bool is_broadphase_active() const;
 	// 批量只读快照：容量大小，前 _count 行有效。
 	PackedColorArray get_colors() const;
-	PackedInt32Array get_type_indices() const;
+	PackedInt32Array get_type_indices() const; // 行 → 弹型下标。
 	PackedInt32Array get_factions() const; // int32 版。
 	PackedByteArray get_factions_bytes() const; // byte 版（宿主快照用）。
 	void _run_behavior_pass(float p_dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base);
@@ -161,7 +161,7 @@ public:
 			double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies,
 			const PackedVector2Array &p_anchor_base = PackedVector2Array());
 	bool is_grazed(int p_id) const; // 该行本帧是否已擦弹。
-	void mark_grazed(int p_id);
+	void mark_grazed(int p_id); // 标记已擦弹。
 	void clear(); // 清空所有行，保留容量/注册表。
 	// 回收一行；返回被 swap 进来的行 id（尾部回收返回 -1）。
 	int despawn(int p_id);
@@ -169,20 +169,20 @@ public:
 	void set_fx(int p_id, float p_fx); // 特效相位（秒）。
 	void set_fx_type(int p_id, int p_fx_type);
 	int get_fx_type(int p_id) const; // 特效型下标；-1 = 无。
-	PackedInt32Array get_fx_type_indices() const;
+	PackedInt32Array get_fx_type_indices() const; // 行 → 特效型下标。
 	// 纯特效行：_type=-1、无速度/碰撞，寿命=相位=p_life（到期 integrate 回收）。faction 只定渲染分批。
 	int spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_color, int p_faction, float p_life);
-	void set_timer(int p_id, float p_timer);
-	void set_velocity(int p_id, const Vector2 &p_vel);
-	void set_position(int p_id, const Vector2 &p_pos);
+	void set_timer(int p_id, float p_timer); // 自定义计时器。
+	void set_velocity(int p_id, const Vector2 &p_vel); // 改速度。
+	void set_position(int p_id, const Vector2 &p_pos); // 直接写位置（锚定型行为用）。
 	float get_life_left(int p_id) const; // 无效 → 0。
 	float get_fx_phase(int p_id) const; // 无效 → 0。
 	float get_timer(int p_id) const; // 无效 → 0。
-	PackedFloat32Array get_life_lefts() const;
-	PackedFloat32Array get_fx_phases() const;
-	PackedFloat32Array get_timers() const;
+	PackedFloat32Array get_life_lefts() const; // 寿命快照。
+	PackedFloat32Array get_fx_phases() const; // 特效相位快照。
+	PackedFloat32Array get_timers() const; // 计时器快照。
 	PackedFloat32Array get_render_rots() const; // 逐弹渲染朝向；NAN = 按 velocity。
-	int get_capacity() const;
+	int get_capacity() const; // 当前容量（非活跃数）。
 	// 构建指纹（SCons 由 src/*.{h,cpp} 的 SHA-256 生成 build_stamp.h）。
 	// tools/check_native_api.gd 用同一算法重算源码并比对，防止"源码改了但 .so 没重编"。
 	String get_build_id() const;
