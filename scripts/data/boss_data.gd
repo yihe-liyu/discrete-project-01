@@ -54,8 +54,6 @@ class_name BossData
 @export var phases_lunatic: Array[PhaseData] = []
 ## Extra 难度阶段列表（按出战顺序；空 = 该难度无阶段，不回退）。
 @export var phases_extra: Array[PhaseData] = []
-## 击破分数（保留字段；当前 Boss 流程未读取，计分走阶段 bonus）。
-@export var score_value: int = 10000
 ## Boss 判定半径（像素）；[code]Boss.setup()[/code] 写进 CircleShape2D。
 @export var hitbox_radius: float = 36.0
 ## 所在关卡面（BossCatalog 按它分组）。
@@ -83,8 +81,6 @@ func hard_phase(v: PhaseData) -> BossData:  phases_hard.append(v); return self
 func lunatic_phase(v: PhaseData) -> BossData:  phases_lunatic.append(v); return self
 ## 追加 Extra 阶段。
 func extra_phase(v: PhaseData) -> BossData:    phases_extra.append(v); return self
-## 设击破分数（保留字段，当前流程未读取）。
-func score(v: int) -> BossData:         score_value = v; return self
 ## 设判定半径（像素）。
 func hitbox(v: float) -> BossData:       hitbox_radius = v; return self
 ## 设所在关卡面（BossCatalog 分组键）。
