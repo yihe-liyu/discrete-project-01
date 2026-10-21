@@ -37,11 +37,13 @@ class DanmakuStore : public RefCounted {
 	std::vector<float> _life, _fx, _timer;
 	// 出界宽限（秒，逐弹；0 = 出界立即剔除）与「已连续出界时长」。cull 时按 _out_grace 计时。
 	std::vector<float> _out_grace, _out_time;
+	// 新行默认寿命；spawn 时写入 _life。
 	float _default_life = 20.0f;
 	std::vector<float> _hb_radius, _hb_offx, _hb_offy, _hb_sizex, _hb_sizey, _hb_diroff;
 	std::vector<unsigned char> _hb_follow, _grazed;
 	// 逐弹渲染朝向覆盖（NAN = 未设，渲染按 velocity 推）。位置 op 只写它，不再借道 velocity。
 	std::vector<float> _render_rot;
+	// 反射/边界判定用的场地范围（左/右/上）。
 	float _field_left = 0.0f, _field_right = 0.0f, _field_top = 0.0f;
 
 	// 确定性 PRNG（单通道；种子由宿主 RNG 派生）。抽取顺序 = 弹行遍历顺序 → 回放可复现。
@@ -61,8 +63,10 @@ class DanmakuStore : public RefCounted {
 	static constexpr int OP_A_CLEAR_FX = 47;
 	static constexpr int OP_M_ROTATE = 3;
 	static constexpr int OP_C_STATE = 24;
+	// packed program 表：op/参数/until/action 的偏移与长度；program 只存偏移。
 	PackedInt32Array _p_ops, _p_move_start, _p_move_count, _p_until, _p_act_start, _p_act_count, _p_phase_base, _p_slots;
 	PackedFloat32Array _p_args;
+	// 每行运行态：program / 相位 / tick / elapsed / pending emit 落点 / slots。
 	std::vector<int> _program, _pphase, _ptick;
 	std::vector<float> _pelapsed, _pnext, _pendx, _pendy, _pslots;
 	std::vector<unsigned char> _phasend;
@@ -76,11 +80,13 @@ class DanmakuStore : public RefCounted {
 	std::vector<float> _ev_x, _ev_y, _ev_dx, _ev_dy, _ev_val;
 	// 事件携带的弹色（与上面各数组等长对齐）。宿主用它给消弹消散特效染同色（op 47）。
 	std::vector<Color> _ev_color;
+	// 容量 / 当前活跃行数（活跃行总在 [0, _count)）。
 	int _capacity = 0;
 	int _count = 0;
 
 	// 所有逐弹入口的统一边界守卫。release 下 vector[] 越界是 UB，不依赖容器检查。
 	inline bool _valid(int p_id) const { return p_id >= 0 && p_id < _count; }
+	// 剔除矩形与余量。
 	Rect2 _cull;
 	float _margin = 0.0f;
 
@@ -112,38 +118,39 @@ public:
 	// 当前活跃行数；快照数组可能按容量分配。
 	int get_active_count() const;
 	// 逐行 getter / 只读快照：前 count 行有效，不要跨帧缓存。
-	int get_program(int p_id) const;
+	int get_program(int p_id) const; // 该行 program id；无效 → -2。
 	Vector2 get_position(int p_id) const;
 	Vector2 get_velocity(int p_id) const;
 	Vector2 get_forward(int p_id) const;
-	void set_forward(int p_id, const Vector2 &p_fwd);
+	void set_forward(int p_id, const Vector2 &p_fwd); // 设朝向，不改速度。
 	PackedVector2Array get_positions() const;
 	PackedVector2Array get_velocities() const;
-	int get_type(int p_id) const;
-	int get_type_index(int p_id) const;
-	int get_faction(int p_id) const;
-	Color get_color(int p_id) const;
+	int get_type(int p_id) const; // 弹型下标；无效 → -1。
+	int get_type_index(int p_id) const; // 同上（兼容名）。
+	int get_faction(int p_id) const; // 阵营；无效 → -1。
+	Color get_color(int p_id) const; // 无效 → 白。
 	// 容量 / 剔除区 / 出界宽限。
 	void reserve(int p_n);
 	void set_cull(const Rect2 &p_cull);
 	void set_margin(float p_margin);
 	// 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
 	void set_out_grace(int p_id, float p_grace);
-	float get_out_grace(int p_id) const;
+	float get_out_grace(int p_id) const; // 无效 → 0。
 	void set_default_life(float p_life);
 	void set_field(float p_left, float p_right, float p_top);
 	void set_seed(int p_seed);
 	// 判定（与 GDScript 内核 1:1）
 	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
-	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const;
+	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const; // 单行精确判定。
 	// 宽相查询：首次调用惰性建网格；返回候选行 id，仍需精确判定。
 	PackedInt32Array query_circle(const Vector2 &p_center, float p_search_radius) const;
 	// 宽相是否已启用（诊断 / 测试；调用过 query_circle 后才反映最近一次重建结果）。
 	bool is_broadphase_active() const;
+	// 批量只读快照：容量大小，前 _count 行有效。
 	PackedColorArray get_colors() const;
 	PackedInt32Array get_type_indices() const;
-	PackedInt32Array get_factions() const;
-	PackedByteArray get_factions_bytes() const;
+	PackedInt32Array get_factions() const; // int32 版。
+	PackedByteArray get_factions_bytes() const; // byte 版（宿主快照用）。
 	void _run_behavior_pass(float p_dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base);
 	Dictionary _events_dict() const;
 	// 无状态行为批（数组进/出，不做 swap；回收由调用方按 dead 重放）—— 与 integrate_batch 同款模式。
@@ -153,28 +160,28 @@ public:
 			const PackedFloat32Array &p_elapsed, const PackedFloat32Array &p_slots,
 			double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies,
 			const PackedVector2Array &p_anchor_base = PackedVector2Array());
-	bool is_grazed(int p_id) const;
+	bool is_grazed(int p_id) const; // 该行本帧是否已擦弹。
 	void mark_grazed(int p_id);
-	void clear();
+	void clear(); // 清空所有行，保留容量/注册表。
 	// 回收一行；返回被 swap 进来的行 id（尾部回收返回 -1）。
 	int despawn(int p_id);
-	void set_life(int p_id, float p_life);
-	void set_fx(int p_id, float p_fx);
+	void set_life(int p_id, float p_life); // 剩余寿命（秒）。
+	void set_fx(int p_id, float p_fx); // 特效相位（秒）。
 	void set_fx_type(int p_id, int p_fx_type);
-	int get_fx_type(int p_id) const;
+	int get_fx_type(int p_id) const; // 特效型下标；-1 = 无。
 	PackedInt32Array get_fx_type_indices() const;
 	// 纯特效行：_type=-1、无速度/碰撞，寿命=相位=p_life（到期 integrate 回收）。faction 只定渲染分批。
 	int spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_color, int p_faction, float p_life);
 	void set_timer(int p_id, float p_timer);
 	void set_velocity(int p_id, const Vector2 &p_vel);
 	void set_position(int p_id, const Vector2 &p_pos);
-	float get_life_left(int p_id) const;
-	float get_fx_phase(int p_id) const;
-	float get_timer(int p_id) const;
+	float get_life_left(int p_id) const; // 无效 → 0。
+	float get_fx_phase(int p_id) const; // 无效 → 0。
+	float get_timer(int p_id) const; // 无效 → 0。
 	PackedFloat32Array get_life_lefts() const;
 	PackedFloat32Array get_fx_phases() const;
 	PackedFloat32Array get_timers() const;
-	PackedFloat32Array get_render_rots() const;
+	PackedFloat32Array get_render_rots() const; // 逐弹渲染朝向；NAN = 按 velocity。
 	int get_capacity() const;
 	// 构建指纹（SCons 由 src/*.{h,cpp} 的 SHA-256 生成 build_stamp.h）。
 	// tools/check_native_api.gd 用同一算法重算源码并比对，防止"源码改了但 .so 没重编"。
@@ -196,7 +203,7 @@ public:
 			const PackedInt32Array &p_move_start, const PackedInt32Array &p_move_count,
 			const PackedInt32Array &p_until, const PackedInt32Array &p_act_start,
 			const PackedInt32Array &p_act_count, int p_phase_count, int p_slots);
-	void set_program(int p_id, int p_program);
+	void set_program(int p_id, int p_program); // 绑定 program；-1 = 直线/未映射。
 	// 跑一帧 program；返回事件字典（emit/sfx/call）；本帧 dead 行走倒序 swap 回收。
 	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array());
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);

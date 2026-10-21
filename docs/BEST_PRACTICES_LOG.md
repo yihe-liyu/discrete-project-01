@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 61 条（本文件留最近 61 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 62 条（本文件留最近 62 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-21 — DanmakuStore 公开方法/字段注释补齐
 - 2026-10-20 — KernelNativeSystem / KernelBulletHost 注释整理
 - 2026-10-20 — 原生 DanmakuStore / DanmakuRenderBridge 注释整理
 - 2026-10-20 — AssetRegistry：BGM 曲名缓存 + 失败告警收敛
@@ -91,6 +92,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-21 — DanmakuStore 公开方法/字段注释补齐
+
+- 逐行 getter 补返回值/无效值语义：`get_program` -2、`get_type`/`get_faction` -1、`get_color` 白、`get_out_grace`/`get_life_left` 0。
+- 快照 getter、`set_*` 写访问器、`is_grazed`/`mark_grazed`、`set_program`、`clear` 补一行说明。
+- `_p_ops` / `_program` / `_capacity` / `_cull` / 默认寿命 / 场地范围补字段注释。
+- 重建 debug/release；新指纹 `af9ab320cfa4…`；867 用例 / 7969 断言；verify 七步全绿。
 
 ### 2026-10-20 — KernelNativeSystem / KernelBulletHost 注释整理
 
