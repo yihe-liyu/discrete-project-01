@@ -1,43 +1,72 @@
-# Boss.gd
+## Boss 本体：阶段战状态机（HP / 奖励分 / 符卡记录 / 阶段脚本 / 全破演出）。
+## 由 [code]StageRuntime.spawn_boss()[/code] 创建；Boss 配置在 [BossData]，阶段数据在 [PhaseData]。
+##
+## [b]模型[/b][br]
+## [codeblock]
+## BossData（阶段表）
+##   → start_phase(PhaseData)
+##       → pre_move（可选；跑完才宣言）
+##       → 宣言 + 涨血 + move / shoot 协程
+##       → 击破 / 超时 → clear_phase(captured)
+## [/codeblock]
+## 奖励分由 SpellBonus 规则计算（符卡按难度 × 面序号，非符 0），BossData 不再手填分数。
+## [br]
+## [b]边界[/b][br]
+## - Boss 不是 Enemy 子类；spawn_boss 走独立路径，ctx.enemies.despawn 只收杂兵。[br]
+## - clear_phase 每阶段只执行一次；miss / bomb 作废奖励分，但阶段仍继续。[br]
+## - 全破演出由 BossHandle.defeat() 调 [method play_defeat]；退场位移 / 回收在外层。[br]
+## - 时符（is_timeout_only）无敌、HP 显示 999999，靠超时结束。
 class_name Boss
 extends Area2D
 
+## Boss 血条环脚本。
 const BOSS_HP_RING_SCRIPT = preload("res://scripts/scenes/boss_hp_ring.gd")
+## Boss 位置指示器贴图。
 const POS_INDICATOR_TEX := preload("res://assets/Textures/front/boss_position.png")
+## 阶段参数校验脚本。
 const PARAM_VALIDATOR_SCRIPT = preload("res://scripts/data/param_validator.gd")
-## 全破演出的默认件（`BossData.defeat_fx` / `defeat_sfx` / `defeat_hitstop` 可逐个覆盖）
+## 全破演出的默认爆点特效；BossData.defeat_fx 可覆盖。
 const DEFAULT_DEFEAT_FX := preload("res://scenes/effect/boss_defeat.tscn")
+## 全破演出的默认音效 key；BossData.defeat_sfx 可覆盖。
 const DEFAULT_DEFEAT_SFX := &"boss_die"
-## **正常流程干净收取一张符卡**的回报音（非符 `phase.uid == 0`、练习模式、miss/bomb 作废都不算）
+## 正常流程干净收取一张符卡的回报音（非符、练习、miss/bomb 作废都不算）。
 const CAPTURE_SFX := &"get_card"
+## 全破定格默认时长（秒）；BossData.defeat_hitstop 可覆盖。
 const DEFAULT_DEFEAT_HITSTOP := 0.12
-## 定格时的 time_scale 倍率（只压时间、不冻结；真实时间到点恢复）
+## 定格时的 time_scale 倍率（只压时间，不冻结；真实时间到点恢复）。
 const DEFEAT_HITSTOP_SCALE := 0.05
-## 全破清弹半径 / 震屏强度
+## 全破清弹半径（像素）。
 const DEFEAT_CLEAR_RADIUS := 960.0
+## 全破震屏强度。
 const DEFEAT_SHAKE := 1.0
-## 全破**反色圈**：与自机 miss **同一套参数**（`player.gd` 的 5 发十字偏移 + 1 发延迟补闪），
-## 只是圆心换成 Boss 位置 —— 反色是 shader 的**奇偶**语义（奇=反色、偶=复原），
-## 5 发同半径、圆心错开 100px ⇒ 叠出一圈"五瓣"的闪光边界，而不是同心靶环。
-## ⚠️ 所有圈的 `start_delay + duration` 必须**相等**（同时收）：`MissCircleLayer` 在
-## "本帧有圈到期且剩余圈数为奇"时会同帧全清（治反色闪烁），不同时收的话后几发会被提前掐掉。
-## （miss 那边的 1.5 + 1.0 = 2.5 正好也是同时收 —— 不是巧合，是同一个约束。）
+## 全破反色圈：与自机 miss 同参数（5 发十字偏移 + 1 发延迟补闪），圆心换成 Boss 位置。
+## 所有圈的 start_delay + duration 必须相等（同时收），否则 MissCircleLayer 会提前掐掉后几发。
+## 反色圈半径（像素）。
 const DEFEAT_RING_RADIUS := 1280.0
+## 反色圈持续时长（秒）。
 const DEFEAT_RING_DURATION := 2.5
+## 延迟补闪圈的持续时长（秒）。
 const DEFEAT_RING_DELAYED_DURATION := 1.0
+## 延迟补闪圈的启动延迟（秒）。
 const DEFEAT_RING_DELAY := 1.5
+## 5 发反色圈的圆心偏移。
 const DEFEAT_RING_OFFSETS: Array[Vector2] = [
 	Vector2.ZERO, Vector2(100.0, 0.0), Vector2(-100.0, 0.0),
 	Vector2(0.0, 100.0), Vector2(0.0, -100.0),
 ]
 
-## Boss 位置指示器距离淡出：离自机 x 越远越清晰（近处半透明，远处醒目）
-const INDICATOR_FADE_NEAR := 60.0    ## |dx| ≤ 60px 时最淡
-const INDICATOR_FADE_FAR := 400.0    ## |dx| ≥ 400px 时完全清晰（更早变亮）
-const INDICATOR_ALPHA_NEAR := 0.25   ## 最近处透明度（半透明但可见）
-const INDICATOR_FADE_POW := 0.5      ## 透明度缓动指数：<1 → 越近透明得越快（近处斜率陡）
+## 位置指示器距离淡出：离自机 x 越远越清晰。
+const INDICATOR_FADE_NEAR := 60.0
+## 完全清晰所需的 x 距离（像素）。
+const INDICATOR_FADE_FAR := 400.0
+## 最近处透明度。
+const INDICATOR_ALPHA_NEAR := 0.25
+## 透明度缓动指数（<1 → 近处透明得更快）。
+const INDICATOR_FADE_POW := 0.5
 
+## 阶段结束（击破或超时）。captured = 是否收取；bonus = 最终奖励分。
 signal phase_cleared(captured: bool, bonus: int)
+## 血量变化；max_hp 取当前阶段（无阶段 = 0）。
 signal hp_changed(hp: int, max_hp: int)
 
 var _boss_data: BossData
@@ -47,11 +76,13 @@ var _hitbox_radius: float
 ## 显示状态（名字文字 / 名字显隐 / 进度点显隐）——Boss 只管战斗，显示层在 BossHud
 var hud: BossHud = BossHud.new()
 
-## 只读访问器：hp / boss_data / hitbox_radius 外部只读，改写只经本类方法（封装，防作弊/防割裂）
+## Boss 配置（只读）。
 var boss_data: BossData:
 	get: return _boss_data
+## 当前血量（只读）；改写只经 take_damage / _set_hp。
 var hp: int:
 	get: return _hp
+## 判定半径（只读）。
 var hitbox_radius: float:
 	get: return _hitbox_radius
 
@@ -63,7 +94,7 @@ var ui_layer: CanvasLayer
 var _phase_data: PhaseData
 var _pos_indicator: Sprite2D  # Boss 位置指示器（x 跟随 Boss，y 固定游戏框底）
 var _bonus: int = 0
-## 本阶段的**初始**奖励分（= 规则值）—— 衰减下限（30%）按它算，故要留住。
+## 本阶段的初始奖励分（规则值）—— 衰减下限（30%）按它算，故要留住。
 var _bonus_initial: int = 0
 var _elapsed: float = 0.0
 var _is_invincible: bool = false
@@ -74,13 +105,14 @@ var _open_reduce_ratio: float = 0.0  # 开局减伤比例（0~1）
 var _move_coroutine_runner: CoroutineRunner
 var _shoot_coroutine_runner: CoroutineRunner
 var _stage_id: int
-## 全破定格：是否正压着时间倍率 + 压之前的原值（恢复用；见 `play_defeat`）
+## 全破定格：是否正压着时间倍率 + 压之前的原值（恢复用；见 play_defeat）
 var _time_scaled: bool = false
 var _saved_time_scale: float = 1.0
 var _phase_identity: PhaseIdentity
 var _is_exit_controlled: bool = false
 var _is_cleared: bool = false
 
+## 当前阶段数据；未开战 / 已结束 = null。
 func current_phase() -> PhaseData: return _phase_data
 
 ## 关卡上下文（含本次时钟 ctx.runner —— 练习/工作台清理用）。只读。
@@ -88,23 +120,27 @@ var ctx: StageContext:
 	get: return _stage_context
 
 
-## 战场实体注册表：优先注入的 `registry`，否则关卡 ctx 自带的
+## 战场实体注册表：优先注入的 registry，否则关卡 ctx 自带的
 func _refs():
 	if registry != null:
 		return registry
 	return _stage_context.entity_registry if _stage_context else null
 
 
-## Boss 残血（供命中音效等）：血量 < 当前阶段满血的 45%，且非无敌/非时符
+## Boss 残血（供命中音效等）：血量 < 当前阶段满血的 45%，且非无敌 / 非时符。
 func is_low_hp() -> bool:
 	if _is_invincible or not _phase_data or _phase_data.is_timeout_only:
 		return false
 	return _phase_data.hp > 0 and float(_hp) < _phase_data.hp * 0.45
+## 当前奖励分（未开战 / 非符 = 0）。
 func current_bonus() -> int: return _bonus
+## 本阶段已过的秒数。
 func get_elapsed() -> float: return _elapsed
+## 阶段身份（记录键）；未解析 = null。
 func get_phase_id() -> PhaseIdentity: return _phase_identity
 
 
+## 阶段已结束、等待下一阶段（clear_phase 后为 true）。
 func is_in_gap() -> bool:
 	return _is_cleared
 
@@ -114,21 +150,22 @@ func is_in_gap() -> bool:
 func is_targetable() -> bool:
 	return _phase_data != null
 
+## 外部接管退场：die() 时只发 boss_defeated，不 queue_free（BossHandle 退场 tween 用）。
 func set_exit_controlled() -> void:
 	_is_exit_controlled = true
 
 
 ## 显式注入战场实体注册表（StageRuntime.add_enemy_to_scene 的唯一入口）。
-## 取代旧实现 `if "registry" in node: node.registry = ...` 的属性名探针。
 func set_registry(p_registry: EntityRegistry) -> void:
 	registry = p_registry
 
 
-## 显式注入 HUD 层（同上，取代 `"ui_layer" in node` 探针）。
+## 显式注入 HUD 层（StageRuntime 注入；位置指示器挂此）。
 func set_ui_layer(p_ui_layer: CanvasLayer) -> void:
 	ui_layer = p_ui_layer
 
 
+## 初始化：绑定 BossData / HUD / ctx，解析 stage_id，建血条环与圆形判定体；不启动战斗。
 func setup(data: BossData, p_ctx: StageContext = null) -> void:
 	_boss_data = data
 	hud = BossHud.new(data)
@@ -160,6 +197,7 @@ func setup(data: BossData, p_ctx: StageContext = null) -> void:
 
 	_set_ring_visible(false)
 
+## 启动 Boss：注册实体、发 boss_spawned、开碰撞、建位置指示器；由 StageRuntime.spawn_boss 调。
 func start_boss() -> void:
 	set_process(true)
 	if registry != null:
@@ -213,6 +251,8 @@ func _update_indicator_alpha() -> void:
 	_pos_indicator.modulate.a = lerpf(INDICATOR_ALPHA_NEAR, 1.0, fade_ratio)
 
 
+## 开始一个阶段：校验、重置奖励 / 无敌、记录 attempt、跑可选 pre_move，然后宣言 + 涨血 + 启动 move/shoot。
+## pre_move 用 await；等待期间阶段被换掉 / Boss 已亡则放弃本次宣言。
 func start_phase(data: PhaseData) -> void:
 	# 配置校验：time_limit<=0 会除零/立即超时，防御性拒绝
 	for e in data.validate():
@@ -222,7 +262,7 @@ func start_phase(data: PhaseData) -> void:
 	_is_phase_bombed = false  # 每阶段独立判定 bomb
 	_phase_data = data
 	_elapsed = 0.0
-	# 奖励分走规则（`SpellBonus`，内容不再手填）：符卡 = (难度权重 + 面序号 − 1) × 50 万；非符 0
+	# 奖励分走规则（SpellBonus，内容不再手填）：符卡 = (难度权重 + 面序号 − 1) × 50 万；非符 0
 	_bonus_initial = SpellBonus.initial(StageCatalog.stage_no_of(_stage_id), SaveData.selected_difficulty, data.uid != 0)
 	_bonus = _bonus_initial
 	_is_invincible = true
@@ -276,7 +316,7 @@ func _declare_phase(data: PhaseData) -> void:
 	)
 
 
-## 跑「发动前走位」脚本并等它结束。⚠️ 内容侧别写死循环 —— 它不结束这张卡就不会宣言。
+## 跑「发动前走位」脚本并等它结束。内容侧别写死循环——它不结束这张卡就不会宣言。
 func _run_pre_move(data: PhaseData) -> void:
 	var pre: CoroutineScript = data.pre_move_script.new()
 	add_child(pre)
@@ -297,12 +337,12 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 
 	# 奖励分已作废（miss / bomb）→ 不再衰减、也不再发数字 tick：UI 的「失败」必须定格，
-	# 否则下一帧又被 `phase_bonus_tick` 的数字覆盖。
-	# ⚠️ **只跳过奖励分这一段**：后面的开卡减伤倒计时 / 时限判定都还在本函数里，
+	# 否则下一帧又被 phase_bonus_tick 的数字覆盖。
+	# 只跳过奖励分这一段：后面的开卡减伤倒计时 / 时限判定都还在本函数里，
 	#    早退会把它们一起掐掉（回归：miss 后符卡到点不结束、减伤永久挂着）。
 	if not is_bonus_failed():
 		if _bonus > 0:
-			# 衰减走规则：非时符在**时限内均匀**掉到初始的 30%；时符完全不掉（见 SpellBonus）
+			# 衰减走规则：非时符在时限内均匀掉到初始的 30%；时符完全不掉（见 SpellBonus）
 			_bonus = SpellBonus.decayed(_bonus, _bonus_initial, _phase_data.time_limit, delta,
 				_phase_data.is_timeout_only)
 		GameEvents.phase_bonus_tick.emit(_bonus)
@@ -317,6 +357,8 @@ func _process(delta: float) -> void:
 ## 小数伤害累积器（0.5×2 次 = 1 → 扣 1 血）
 var _dmg_acc: float = 0.0
 
+## 受伤：无敌时忽略；开局减伤按比例；小数伤害累积到整才扣血。
+## HP <= 0 且非时符 → clear_phase(true)。
 func take_damage(damage: float) -> void:
 	if _is_invincible: return
 	if not _phase_data: return
@@ -339,13 +381,13 @@ func _on_player_death() -> void:
 	_fail_bonus(true)
 
 
-## 玩家用 bomb：与 miss **同罪**（东方规则：bomb 也算失败尝试）→ 本符卡奖励分作废
+## 玩家用 bomb：与 miss 同罪（东方规则：bomb 也算失败尝试）→ 本符卡奖励分作废
 func _on_player_bomb(_spell_name: String) -> void:
 	_fail_bonus(false)
 
 
-## **本符卡奖励分作废**（miss / bomb 任一）：标位 + 通知 UI 把数字位换成「失败」。
-## 每阶段只作废一次（`is_bonus_failed()` 已为真就直接返回，信号也只发一次）。
+## 本符卡奖励分作废（miss / bomb 任一）：标位 + 通知 UI 把数字位换成「失败」。
+## 每阶段只作废一次（is_bonus_failed() 已为真就直接返回，信号也只发一次）。
 func _fail_bonus(p_by_miss: bool) -> void:
 	if not _phase_data or _is_cleared or is_bonus_failed():
 		return
@@ -357,14 +399,13 @@ func _fail_bonus(p_by_miss: bool) -> void:
 
 
 ## 本符卡奖励分是否已作废（期间 miss 过或用过 bomb）——
-## 后果：UI 显示「失败」、击破**不计分**、符卡簿不算干净收取。
+## 后果：UI 显示「失败」、击破不计分、符卡簿不算干净收取。
 func is_bonus_failed() -> bool:
 	return _is_phase_missed or _is_phase_bombed
 
 
-## 该不该播 `CAPTURE_SFX`：**正常流程（非练习）+ 干净收取 + 是符卡** 三者齐备。
-## 纯函数（真值表在 `test_boss_phase`）—— `p_uid == 0` = 非符，不算"收取符卡"；
-## miss / 用 bomb 作废（`p_bonus_failed`）与练习模式都不算"正常流程收取"。
+## 是否播 CAPTURE_SFX：非练习 + 干净收取 + 符卡（uid != 0）三者齐备。
+## 纯函数，真值表在 test_boss_phase。
 static func should_play_capture_sfx(p_captured: bool, p_bonus_failed: bool, p_uid: int,
 		p_practice: bool) -> bool:
 	if p_practice:
@@ -372,6 +413,8 @@ static func should_play_capture_sfx(p_captured: bool, p_bonus_failed: bool, p_ui
 	return p_captured and not p_bonus_failed and p_uid != 0
 
 
+## 结束当前阶段（击破或超时）：停 move/shoot、记录、发结算 / 奖励分、掉道具、清弹、发 phase_cleared。
+## 每阶段只执行一次；captured = 是否收取。
 func clear_phase(captured: bool) -> void:
 	if _is_cleared: return
 	_is_cleared = true
@@ -386,16 +429,16 @@ func clear_phase(captured: bool) -> void:
 		elif captured and not is_bonus_failed():
 			RecordService.record_phase_capture(_phase_identity, true, _bonus, _elapsed)  # 干净收取
 
-	# 正常流程**收取一张符卡**的回报音（规则见 `should_play_capture_sfx`）
+	# 正常流程收取一张符卡的回报音（规则见 should_play_capture_sfx）
 	if should_play_capture_sfx(captured, is_bonus_failed(), _phase_data.uid if _phase_data else 0,
 			PracticeSession.is_practice_mode):
 		_play_sfx(CAPTURE_SFX)
 
 	GameEvents.phase_end.emit(captured, _bonus)
-	# 符卡结算（结算横幅的数据源）—— **只在符卡阶段发**：非符没有"奖励分"这回事
+	# 符卡结算（结算横幅的数据源）—— 只在符卡阶段发：非符没有"奖励分"这回事
 	if _phase_data and _phase_data.uid != 0:
 		GameEvents.spell_result.emit(captured, _bonus, _elapsed, is_bonus_failed())
-	# 奖励分：作废（miss / bomb）就**一分不给** —— UI 那边数字位也已经换成「失败」
+	# 奖励分：作废（miss / bomb）就一分不给 —— UI 那边数字位也已经换成「失败」
 	if captured and _bonus > 0 and not is_bonus_failed():
 		var entity_registry = _refs()
 		var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
@@ -408,9 +451,8 @@ func clear_phase(captured: bool) -> void:
 	phase_cleared.emit(captured, _bonus)
 
 
-## **全破演出**（`BossHandle.defeat()` 调；「被完全击破」的表现层，不进逐弹热路径）：
-## 定格 → 清弹 + 冲击环 + 爆点 → 震屏 + 音效 → 本体闪白淡出。
-## 爆点场景 / 音效 / 定格时长可被 `BossData` 逐个覆盖（空 = 用默认常量）。
+## 全破演出（BossHandle.defeat 调）：定格 → 清弹 + 反色圈 + 爆点 → 震屏 + 音效 → 闪白淡出。
+## BossData 的 defeat_fx / defeat_sfx / defeat_hitstop 可覆盖默认值。
 func play_defeat() -> void:
 	var fx: PackedScene = DEFAULT_DEFEAT_FX
 	var sfx_key: StringName = DEFAULT_DEFEAT_SFX
@@ -422,7 +464,7 @@ func play_defeat() -> void:
 			sfx_key = _boss_data.defeat_sfx
 		hitstop = _boss_data.defeat_hitstop
 
-	# ① 定格：只压时间倍率（**保存原值**再恢复 —— 工作台 12x 快进时不能被我们拉回 1.0）
+	# ① 定格：只压时间倍率（保存原值再恢复 —— 工作台 12x 快进时不能被我们拉回 1.0）
 	if hitstop > 0.0 and is_inside_tree():
 		_saved_time_scale = Engine.time_scale
 		_time_scaled = true
@@ -448,14 +490,14 @@ func play_defeat() -> void:
 	_flash_and_fade_out()
 
 
-## 播一个 `AssetRegistry.sounds` 里的音效（key 不存在就静默跳过 —— 与全破音效同一套取法）
+## 播一个 AssetRegistry.sounds 里的音效（key 不存在就静默跳过，与全破音效同一套取法）。
 func _play_sfx(p_key: StringName) -> void:
 	var stream: AudioStream = AssetRegistry.sounds.get(String(p_key), null)
 	if stream:
 		AudioManager.play_sfx(stream)
 
 
-## 本体演出：闪白两下 → 淡出（位移/回收由 `BossHandle.defeat()` 的退场 tween 负责）
+## 本体演出：闪白两下 → 淡出（位移 / 回收由 BossHandle.defeat() 的退场 tween 负责）。
 func _flash_and_fade_out() -> void:
 	var tw := create_tween()
 	tw.set_parallel(true)
@@ -478,14 +520,14 @@ func _exit_tree() -> void:
 	_restore_time_scale()
 
 
-## 外部受控死亡（练习模式等场景调用）
+## 外部受控死亡：清阶段、隐藏血条、注销实体、发 boss_defeated；非 exitControlled 时 queue_free。
 func die() -> void:
 	_die()
 
 
 func _die() -> void:
 	# 注意：不停 _process——指示器 x 跟随在其中，死后离场演出期间仍需跟随 Boss
-	# （阶段逻辑由 _process 开头的 `if not _phase_data: return` 自然跳过）
+	# （阶段逻辑由 _process 开头的 if not _phase_data: return 自然跳过）
 	_phase_data = null
 	_set_ring_visible(false)
 	if PracticeSession.is_practice_mode and _phase_identity and not _is_cleared:
@@ -532,6 +574,6 @@ func _drop_items() -> void:
 ## 阶段脚本参数注入（工作台编辑的 PhaseData.params → 脚本同名属性）
 ## 注意：这里只有参数注入，掉落逻辑在 _drop_items（clear_phase 击破时）——
 ## 曾经残留过一份掉落代码导致 start_phase 时误掉道具（已删，勿再贴回）
-## 未知键由 `PhaseData.validate()` 按 pre_move/move/shoot 三脚本并集校验；这里只报类型不匹配。
+## 未知键由 PhaseData.validate() 按 pre_move/move/shoot 三脚本并集校验；这里只报类型不匹配。
 func _apply_phase_params(script: Node, params: Dictionary) -> void:
 	PARAM_VALIDATOR_SCRIPT.apply(script, params)   # 类型不匹配 push_error；未知键见 PhaseData.validate()
