@@ -314,6 +314,10 @@ variants = [
 - `StageVariant` 只覆盖 `create_script` / `background_scene` / `bgm_key`；空字段 = 沿用 `StageData` 基准。
 - 普通关卡、练习模式、工作台都按**当前难度**解析变体；没有变体时行为与以前完全一样。
 - 基类的 `create_script` 仍是必填（`StageCatalog.playable()` 用它判断可玩），变体只做覆盖。
+- 变体建议放 `data/stages/<面>/stage_variants/*.tres`，不要放 `stage_data/` ——
+  后者会被 `StageCatalog` 的目录扫描当成 `StageData` 读取。
+- 示例：`data/stages/stage01/stage_variants/` 已有 Easy / Normal / Hard / Lunatic 四份，
+  目前都引用同一个 `stage01.gd`；以后哪个难度要独立，只改对应 `.tres`。
 - **UID 规则**：真符卡全局唯一（建议 1 面 100-199、2 面 200-299…）；非符 uid=0；角色共用 UID，SpellRecordBook 主键区分
 
 ---

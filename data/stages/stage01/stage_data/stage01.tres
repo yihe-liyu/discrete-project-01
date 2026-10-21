@@ -4,6 +4,12 @@
 [ext_resource type="PackedScene" uid="uid://40gibb6sxa5f" path="res://data/stages/stage01/background/stage01_background.tscn" id="2"]
 [ext_resource type="Script" uid="uid://bvylga103rn86" path="res://data/stages/stage01/stage_script/stage01.gd" id="3"]
 
+[ext_resource type="Script" uid="uid://cfth35rfrm3mj" path="res://scripts/data/stage_variant.gd" id="4_variant"]
+[ext_resource type="Resource" uid="uid://btruiuflbfo4u" path="res://data/stages/stage01/stage_variants/stage01_easy.tres" id="5_easy"]
+[ext_resource type="Resource" uid="uid://ctx3u4js4teja" path="res://data/stages/stage01/stage_variants/stage01_normal.tres" id="6_normal"]
+[ext_resource type="Resource" uid="uid://d158ha035iotu" path="res://data/stages/stage01/stage_variants/stage01_hard.tres" id="7_hard"]
+[ext_resource type="Resource" uid="uid://cjsojg6r2sxwi" path="res://data/stages/stage01/stage_variants/stage01_lunatic.tres" id="8_lunatic"]
+
 [resource]
 script = ExtResource("1")
 stage_no = 1
@@ -11,3 +17,4 @@ display_name = "Stage１　"
 bgm_key = "stage1"
 create_script = ExtResource("3")
 background_scene = ExtResource("2")
+variants = Array[ExtResource("4_variant")]([ExtResource("5_easy"), ExtResource("6_normal"), ExtResource("7_hard"), ExtResource("8_lunatic")])
