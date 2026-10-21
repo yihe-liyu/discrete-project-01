@@ -1,8 +1,10 @@
+## 用 MultiMeshInstance2D 批量渲染子弹/特效。
+##
+## 所有行按纹理 × 阵营 × tint_mode 分组，合并成少量 draw call。
+## 数据源是 KernelBulletHost 的内核 SoA 快照（backend.system）；set_backend() 注入后生效。
+## 原生 DanmakuRenderBridge 负责分组/旋转/fade/填充；本类只按组取/建 MultiMesh（O(groups)）。
 class_name BulletMultiMesh
 extends Node2D
-## BulletMultiMesh — 用 MultiMeshInstance2D 批量渲染子弹
-## 所有子弹合并为 1 次 draw call（按纹理 × 阵营 × tint_mode 分组）
-## 数据源：KernelBulletHost 的内核 SoA 快照（backend.system）；set_backend() 注入后生效。
 
 
 ## 宿主阵营常量（顺序与内核 BulletType.Faction 不同，渲染时显式映射）
@@ -18,7 +20,7 @@ var backend: KernelBulletHost
 
 var _groups: Dictionary = {}  # key → {mmi, mm, mesh}
 
-## 渲染同步走原生 DanmakuRenderBridge（分组 + 旋转 + fade + 填充）；L3.5-4f 起扩展为必需。
+## 原生渲染同步器；扩展缺失时退回隐藏（不做 GDScript 分组）。
 var _bridge = null
 var _type_table_count: int = -1
 var _fx_table_count: int = -1
@@ -63,7 +65,7 @@ func _render_bridge():
 	return _bridge
 
 
-## N4-real：分组 + 旋转 + fade + 填充全在原生；这里只按组取/建 MultiMesh（O(groups)）。
+## 原生同步：分组/旋转/fade/填充全在原生；这里只按组取/建 MultiMesh（O(groups)）。
 ## 弹与特效（出生雾 / 消弹消散）分两路：桥按行 fx_type/相位拆流，这里分别建组。
 func _sync_native() -> void:
 	var system := backend.system
@@ -230,6 +232,7 @@ func _hide_group(key: int) -> void:
 	_groups[key].mm.visible_instance_count = 0
 
 
+## 清空所有渲染组并释放 MultiMesh 实例。
 func clear():
 	for grp in _groups.values():
 		if is_instance_valid(grp.mmi):

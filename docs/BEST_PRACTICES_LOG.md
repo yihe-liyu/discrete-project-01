@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 62 条（本文件留最近 62 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 63 条（本文件留最近 63 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-21 — BulletMultiMesh（DanmakuRenderBridge 的 GD 包装）注释
 - 2026-10-21 — DanmakuStore 公开方法/字段注释补齐
 - 2026-10-20 — KernelNativeSystem / KernelBulletHost 注释整理
 - 2026-10-20 — 原生 DanmakuStore / DanmakuRenderBridge 注释整理
@@ -92,6 +93,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-21 — BulletMultiMesh（DanmakuRenderBridge 的 GD 包装）注释
+
+- 类头移到 `class_name` 上方：说明它是 MultiMesh 批渲染、数据源是 KernelBulletHost 内核快照、原生桥负责分组/旋转/fade/填充。
+- 补 `set_backend()` / `clear()` 的公开契约；说明扩展缺失时只隐藏、不做 GDScript 分组回退。
+- 去掉 `L3.5-4f` / `N4-real` 等内部标记。
+- 只改注释；867 用例 / 7969 断言；verify 七步全绿。
 
 ### 2026-10-21 — DanmakuStore 公开方法/字段注释补齐
 
