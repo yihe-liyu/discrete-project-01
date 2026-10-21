@@ -19,10 +19,12 @@ func _init() -> void:
 	add_child(_status_label)
 
 
+## 更新时间文本；is_ff 时追加 ▶ 快进标记。
 func set_time(time_value: float, is_ff: bool) -> void:
 	_time_label.text = "t = %.1f s%s" % [time_value, " ▶" if is_ff else ""]
 
 
+## 更新状态行：子弹 / 敌人 / Boss / FPS。
 func set_status(bullets: int, enemies: int, boss_alive: bool, fps: int) -> void:
 	# 单行紧凑（顶部卡片常驻，不想占高度）
 	_status_label.text = "子弹 %d · 敌人 %d · Boss %s · %d FPS" % [

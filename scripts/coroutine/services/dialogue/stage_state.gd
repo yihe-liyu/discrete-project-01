@@ -20,10 +20,12 @@ func ensure(profile: CharacterProfile) -> ActorState:
 	return actors[name_key]
 
 
+## 按名字取角色状态；不存在 = null。
 func actor(char_name: String) -> ActorState:
 	return actors.get(char_name, null)
 
 
+## 该角色是否已登记。
 func has(char_name: String) -> bool:
 	return actors.has(char_name)
 

@@ -24,8 +24,10 @@ func _process(delta):
 	current_alpha = move_toward(current_alpha, target_alpha, (1.0 / fade_duration) * delta)
 	modulate.a = current_alpha
 
+## 显示判定点（目标 alpha = 1，_process 淡入）。
 func show_hitpoint():
 	target_alpha = 1.0
 
+## 隐藏判定点（目标 alpha = 0，_process 淡出）。
 func hide_hitpoint():
 	target_alpha = 0.0

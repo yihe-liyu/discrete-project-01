@@ -11,10 +11,12 @@ extends RefCounted
 var runner: CoroutineRunner
 
 
+## 旧 _tick 风格：返回 seconds，交给 runner 计时。
 func wait(seconds: float) -> float:
 	return seconds
 
 
+## 返回 count 个物理帧对应的秒数。
 func wait_frames(count: int) -> float:
 	return float(count) / Engine.physics_ticks_per_second
 

@@ -5,6 +5,7 @@ extends RefCounted
 var ctx: StageContext
 
 
+## 取当前自机；无 ctx / 注册表 / 已释放 = null。
 func get_player() -> Player:
 	if ctx == null or ctx.entity_registry == null:
 		return null
@@ -12,6 +13,7 @@ func get_player() -> Player:
 	return player if is_instance_valid(player) else null
 
 
+## 取自机位置；无自机 = Vector2.ZERO。
 func get_position() -> Vector2:
 	var player := get_player()
 	return player.global_position if player else Vector2.ZERO

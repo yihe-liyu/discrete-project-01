@@ -9,6 +9,7 @@ extends RefCounted
 const DIR_NAMES: Array[String] = ["下", "右下", "右", "右上", "上", "左上", "左", "左下"]
 
 
+## 8 方位预设向量（0 = 下，顺时针每档 45°）。
 static func preset(idx: int) -> Vector2:
 	return Vector2.DOWN.rotated(-deg_to_rad(float(idx) * 45.0))
 
@@ -62,6 +63,7 @@ static func dir_name(vec: Vector2) -> String:
 	return DIR_NAMES[best] if exact else "自选·" + DIR_NAMES[best]
 
 
+## 两个方向向量的归一化点积（最近方位判定用）。
 static func dir_dot(vec_a: Vector2, vec_b: Vector2) -> float:
 	return vec_a.normalized().dot(vec_b.normalized())
 

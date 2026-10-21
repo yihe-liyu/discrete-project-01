@@ -35,9 +35,11 @@ func has(slot: String) -> bool:
 	return resolve(slot) != null
 
 
+## 移除名字槽位（不释放对象）。
 func unregister(slot: String) -> void:
 	_slots.erase(slot)
 
 
+## 清空所有槽位（不释放对象）。
 func clear() -> void:
 	_slots.clear()

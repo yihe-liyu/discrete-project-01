@@ -8,6 +8,7 @@ const SPELL_BOOK_USER_PATH := "user://spell_records.tres"
 var spell_book: SpellRecordBook
 
 
+## 从 user:// 载入符卡簿；无档 / 损坏回退空簿，清理幽灵记录后落盘。
 func load() -> void:
 	# 只有 user:// 一份档；全新检出/首启时不存在 → 空簿，解锁时 save 自建。
 	if not FileAccess.file_exists(SPELL_BOOK_USER_PATH):
@@ -24,6 +25,7 @@ func load() -> void:
 		save()
 
 
+## 清理幽灵记录并写 user://spell_records.tres。
 func save() -> void:
 	if spell_book:
 		spell_book.prune_empty()

@@ -6,6 +6,7 @@ var _options: Array[Node2D] = []
 var _phase: int = 0
 var ctx: StageContext
 
+## 绑定 ctx 并启动主弹 / 子机状态机。
 func start_shooting(p_ctx: StageContext):
 	ctx = p_ctx
 	run(_on_step.bind(ctx))
@@ -29,6 +30,7 @@ func _on_step(_ctx: StageContext) -> Variant:
 			return false
 
 
+## 清子机视觉并停 runner。
 func stop():
 	_cleanup_options()
 	super.stop()

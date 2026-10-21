@@ -33,6 +33,7 @@ func _ready() -> void:
 	add_child(_rect)
 
 
+## 加入一圈反色圈（最多 8 圈；start_delay / fade_out 可配）。
 func add_circle(world_pos: Vector2, duration: float = 0.8, max_radius: float = 1280.0, start_radius: float = 0.0, start_delay: float = 0.0, fade_out: float = 0.0) -> void:
 	if _circles.size() >= MAX_CIRCLES: return
 	_circles.append({
@@ -62,6 +63,7 @@ func _process(delta: float) -> void:
 	if removed and _circles.size() % 2 == 1:
 		_circles.clear()
 
+## 清空所有圈并立即刷新 shader。
 func clear_all() -> void:
 	_circles.clear()
 	_update_shader()

@@ -20,6 +20,7 @@ func _ready() -> void:
 		_pool.append(item)
 
 
+## 从池取 / 新建 Item，注入注册表、setup、显示并开物理；返回该 Item。
 func spawn(pos: Vector2, type: int) -> Item:
 	var item: Item
 	if _pool.is_empty():
@@ -40,6 +41,7 @@ func spawn(pos: Vector2, type: int) -> Item:
 	return item
 
 
+## 回收 Item：隐藏 / 停物理，池未满回池，否则 queue_free；已在池中忽略。
 func recycle(item: Item) -> void:
 	if not is_instance_valid(item):
 		return
