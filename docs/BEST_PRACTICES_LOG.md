@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 63 条（本文件留最近 63 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 64 条（本文件留最近 64 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-10-21 — BulletData 注释补齐
 - 2026-10-21 — BulletMultiMesh（DanmakuRenderBridge 的 GD 包装）注释
 - 2026-10-21 — DanmakuStore 公开方法/字段注释补齐
 - 2026-10-20 — KernelNativeSystem / KernelBulletHost 注释整理
@@ -93,6 +94,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-10-21 — BulletData 注释补齐
+
+- 类头说明构造链定位、类型级字段快照、复用实例避免弹型表膨胀。
+- 字段全部改成声明上方的 `##`（贴图/染色/判定/出生雾/lifecycle/锚点/命中音）。
+- 公开构造链方法补文档：def / tex / speed / dir / trajectory / color / blend / enemy / player / bomb / behavior / grace / to_bullet_type。
+- 只改注释；867 用例 / 7969 断言；verify 七步全绿。
 
 ### 2026-10-21 — BulletMultiMesh（DanmakuRenderBridge 的 GD 包装）注释
 
