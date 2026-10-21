@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="DanmakuRenderBridge" inherits="RefCounted" api_type="extension" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+	原生渲染批处理：把 BulletMultiMesh 的分组、旋转 / fade 与填充搬到 C++。
+	</brief_description>
+	<description>
+	不拥有 MultiMesh，也不读场景节点；宿主传入容量大小的快照与目标 MultiMesh，只有前 count 行有效。group 只返回键、行 id、旋转与 alpha，fill / fill_fx 用同一快照写 MultiMesh。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="fill" qualifiers="const">
+			<return type="void" />
+			<param index="0" name="mm" type="MultiMesh" />
+			<param index="1" name="positions" type="PackedVector2Array" />
+			<param index="2" name="colors" type="PackedColorArray" />
+			<param index="3" name="rows" type="PackedInt32Array" />
+			<param index="4" name="rots" type="PackedFloat32Array" />
+			<param index="5" name="alphas" type="PackedFloat32Array" />
+			<param index="6" name="start" type="int" />
+			<param index="7" name="count" type="int" />
+			<description>
+			按 group 返回的 rows / rots / alphas 写 MultiMesh；start 与 count 用于截取分组区间。
+			</description>
+		</method>
+		<method name="fill_fx" qualifiers="const">
+			<return type="void" />
+			<param index="0" name="mm" type="MultiMesh" />
+			<param index="1" name="positions" type="PackedVector2Array" />
+			<param index="2" name="colors" type="PackedColorArray" />
+			<param index="3" name="rows" type="PackedInt32Array" />
+			<param index="4" name="rots" type="PackedFloat32Array" />
+			<param index="5" name="alphas" type="PackedFloat32Array" />
+			<param index="6" name="scales" type="PackedFloat32Array" />
+			<param index="7" name="start" type="int" />
+			<param index="8" name="count" type="int" />
+			<description>
+			同 fill，额外写入特效缩放 scales。
+			</description>
+		</method>
+		<method name="get_fx_type_count" qualifiers="const">
+			<return type="int" />
+			<description>
+			已注册的特效型数量。
+			</description>
+		</method>
+		<method name="get_type_count" qualifiers="const">
+			<return type="int" />
+			<description>
+			已注册的弹型数量。
+			</description>
+		</method>
+		<method name="group">
+			<return type="Dictionary" />
+			<param index="0" name="count" type="int" />
+			<param index="1" name="positions" type="PackedVector2Array" />
+			<param index="2" name="velocities" type="PackedVector2Array" />
+			<param index="3" name="colors" type="PackedColorArray" />
+			<param index="4" name="type_indices" type="PackedInt32Array" />
+			<param index="5" name="factions" type="PackedByteArray" />
+			<param index="6" name="fade_by_kind" type="PackedFloat32Array" />
+			<param index="7" name="render_rots" type="PackedFloat32Array" default="PackedFloat32Array()" />
+			<param index="8" name="fx_phases" type="PackedFloat32Array" default="PackedFloat32Array()" />
+			<param index="9" name="fx_type_indices" type="PackedInt32Array" default="PackedInt32Array()" />
+			<description>
+			按纹理、阵营与 tint 分组；返回 keys / starts / rows / rots / alphas 以及 fx_ 前缀的同构数组。输入快照按容量分配，只有前 count 行有效。
+			</description>
+		</method>
+		<method name="set_fx_table">
+			<return type="void" />
+			<param index="0" name="tex_key" type="PackedInt64Array" />
+			<param index="1" name="duration" type="PackedFloat32Array" />
+			<param index="2" name="scale_from" type="PackedFloat32Array" />
+			<param index="3" name="scale_to" type="PackedFloat32Array" />
+			<param index="4" name="alpha_from" type="PackedFloat32Array" />
+			<param index="5" name="alpha_to" type="PackedFloat32Array" />
+			<param index="6" name="tint_mode" type="PackedInt32Array" />
+			<description>
+			注册特效表：贴图 RID、时长、起止缩放、起止 alpha、tint 模式。
+			</description>
+		</method>
+		<method name="set_type_table">
+			<return type="void" />
+			<param index="0" name="tex_key_base" type="PackedInt64Array" />
+			<param index="1" name="tint_mode" type="PackedInt32Array" />
+			<param index="2" name="kind" type="PackedInt32Array" />
+			<param index="3" name="follow_dir" type="PackedByteArray" />
+			<param index="4" name="dir_offset" type="PackedFloat32Array" />
+			<description>
+			注册弹型表：贴图 RID（已折入 atlas region hash）、tint 模式、弹型类别、是否跟随朝向、朝向补偿。类型数变化时刷新。
+			</description>
+		</method>
+	</methods>
+</class>

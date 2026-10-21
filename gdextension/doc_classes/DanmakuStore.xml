@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="DanmakuStore" inherits="RefCounted" api_type="extension" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+	原生弹幕内核：SoA 存储、积分、剔除、生命周期 program 与宽相查询。
+	</brief_description>
+	<description>
+	只负责机制；弹型、内容与宿主规则仍在 GDScript。行 id 是当前活跃行下标，despawn 使用 swap-with-last，遍历回收必须倒序。无效 id 返回 -1 或空值，不向引擎发 warning / error。
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="behavior_batch">
+			<return type="Dictionary" />
+			<param index="0" name="count" type="int" />
+			<param index="1" name="positions" type="PackedVector2Array" />
+			<param index="2" name="velocities" type="PackedVector2Array" />
+			<param index="3" name="life" type="PackedFloat32Array" />
+			<param index="4" name="fx" type="PackedFloat32Array" />
+			<param index="5" name="program" type="PackedInt32Array" />
+			<param index="6" name="phase" type="PackedInt32Array" />
+			<param index="7" name="tick" type="PackedInt32Array" />
+			<param index="8" name="elapsed" type="PackedFloat32Array" />
+			<param index="9" name="slots" type="PackedFloat32Array" />
+			<param index="10" name="delta" type="float" />
+			<param index="11" name="player" type="Vector2" />
+			<param index="12" name="boss" type="Vector2" />
+			<param index="13" name="has_boss" type="bool" />
+			<param index="14" name="enemies" type="PackedVector2Array" />
+			<param index="15" name="anchor_base" type="PackedVector2Array" default="PackedVector2Array()" />
+			<description>
+			无状态行为批：数组进、数组出，不执行 swap；返回事件字典与 dead 行数组，回收由调用方按 dead 重放。
+			</description>
+		</method>
+		<method name="behavior_tick">
+			<return type="Dictionary" />
+			<param index="0" name="delta" type="float" />
+			<param index="1" name="player" type="Vector2" />
+			<param index="2" name="boss" type="Vector2" />
+			<param index="3" name="has_boss" type="bool" />
+			<param index="4" name="enemies" type="PackedVector2Array" />
+			<param index="5" name="anchor_base" type="PackedVector2Array" default="PackedVector2Array()" />
+			<description>
+			跑一帧生命周期 program；返回 emit / sfx / call 事件，本帧 dead 行走倒序 swap 回收。
+			</description>
+		</method>
+		<method name="clear">
+			<return type="void" />
+			<description>
+			清空所有活跃行，保留容量与已注册的 program。
+			</description>
+		</method>
+		<method name="despawn">
+			<return type="int" />
+			<param index="0" name="id" type="int" />
+			<description>
+			回收一行；返回被 swap 进来的行 id，尾部回收返回 -1。
+			</description>
+		</method>
+		<method name="fill_multimesh" qualifiers="const">
+			<return type="void" />
+			<param index="0" name="mm" type="MultiMesh" />
+			<description>
+			仅调试 / 基线测量用：把当前行写进 MultiMesh。生产渲染走 BulletMultiMesh。
+			</description>
+		</method>
+		<method name="get_active_count" qualifiers="const">
+			<return type="int" />
+			<description>
+			当前活跃行数。
+			</description>
+		</method>
+		<method name="get_build_id" qualifiers="const">
+			<return type="String" />
+			<description>
+			构建指纹：src 下源码的 SHA-256，用于校验二进制与当前源码一致。
+			</description>
+		</method>
+		<method name="get_capacity" qualifiers="const">
+			<return type="int" />
+			<description>
+			当前容量（非活跃数）。
+			</description>
+		</method>
+		<method name="get_color" qualifiers="const">
+			<return type="Color" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行颜色；无效 id 返回白色。
+			</description>
+		</method>
+		<method name="get_colors" qualifiers="const">
+			<return type="PackedColorArray" />
+			<description>
+			颜色快照；数组按容量分配，只有前 get_active_count() 行有效。
+			</description>
+		</method>
+		<method name="get_faction" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行阵营；无效 id 返回 -1。
+			</description>
+		</method>
+		<method name="get_factions" qualifiers="const">
+			<return type="PackedInt32Array" />
+			<description>
+			阵营 int32 快照；前 get_active_count() 行有效。
+			</description>
+		</method>
+		<method name="get_factions_bytes" qualifiers="const">
+			<return type="PackedByteArray" />
+			<description>
+			阵营 byte 快照（宿主高频路径）。
+			</description>
+		</method>
+		<method name="get_forward" qualifiers="const">
+			<return type="Vector2" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行自身朝向单位向量；无效 id 返回零向量。
+			</description>
+		</method>
+		<method name="get_fx_phase" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行特效相位（秒）；无效 id 返回 0。
+			</description>
+		</method>
+		<method name="get_fx_phases" qualifiers="const">
+			<return type="PackedFloat32Array" />
+			<description>
+			特效相位快照；前 get_active_count() 行有效。
+			</description>
+		</method>
+		<method name="get_fx_type" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行特效型下标；-1 = 无特效。
+			</description>
+		</method>
+		<method name="get_fx_type_indices" qualifiers="const">
+			<return type="PackedInt32Array" />
+			<description>
+			行到特效型下标的快照。
+			</description>
+		</method>
+		<method name="get_life_left" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行剩余寿命（秒）；无效 id 返回 0。
+			</description>
+		</method>
+		<method name="get_life_lefts" qualifiers="const">
+			<return type="PackedFloat32Array" />
+			<description>
+			剩余寿命快照；前 get_active_count() 行有效。
+			</description>
+		</method>
+		<method name="get_out_grace" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行出界宽限（秒）；无效 id 返回 0。
+			</description>
+		</method>
+		<method name="get_position" qualifiers="const">
+			<return type="Vector2" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行位置；无效 id 返回零向量。
+			</description>
+		</method>
+		<method name="get_positions" qualifiers="const">
+			<return type="PackedVector2Array" />
+			<description>
+			位置快照；数组按容量分配，只有前 get_active_count() 行有效。
+			</description>
+		</method>
+		<method name="get_program" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行绑定的 program id；无效 id 返回 -2。
+			</description>
+		</method>
+		<method name="get_render_rots" qualifiers="const">
+			<return type="PackedFloat32Array" />
+			<description>
+			逐弹渲染朝向快照；NAN 表示按速度方向推。
+			</description>
+		</method>
+		<method name="get_timer" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行自定义计时器；无效 id 返回 0。
+			</description>
+		</method>
+		<method name="get_timers" qualifiers="const">
+			<return type="PackedFloat32Array" />
+			<description>
+			自定义计时器快照；前 get_active_count() 行有效。
+			</description>
+		</method>
+		<method name="get_type" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="id" type="int" />
+			<description>
+			弹型下标；无效 id 返回 -1。
+			</description>
+		</method>
+		<method name="get_type_index" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="id" type="int" />
+			<description>
+			get_type 的兼容别名。
+			</description>
+		</method>
+		<method name="get_type_indices" qualifiers="const">
+			<return type="PackedInt32Array" />
+			<description>
+			行到弹型下标的快照。
+			</description>
+		</method>
+		<method name="get_velocities" qualifiers="const">
+			<return type="PackedVector2Array" />
+			<description>
+			速度快照；前 get_active_count() 行有效。
+			</description>
+		</method>
+		<method name="get_velocity" qualifiers="const">
+			<return type="Vector2" />
+			<param index="0" name="id" type="int" />
+			<description>
+			行速度；无效 id 返回零向量。
+			</description>
+		</method>
+		<method name="hit_test" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="center" type="Vector2" />
+			<param index="2" name="radius" type="float" />
+			<description>
+			单行精确判定：圆或矩形，偏移与朝向按 set_hitbox 的设置。
+			</description>
+		</method>
+		<method name="integrate">
+			<return type="void" />
+			<param index="0" name="delta" type="float" />
+			<description>
+			推进一帧积分、寿命、出生相位与出界剔除；不跑生命周期 program。
+			</description>
+		</method>
+		<method name="integrate_batch" qualifiers="const">
+			<return type="Dictionary" />
+			<param index="0" name="count" type="int" />
+			<param index="1" name="positions" type="PackedVector2Array" />
+			<param index="2" name="velocities" type="PackedVector2Array" />
+			<param index="3" name="life_left" type="PackedFloat32Array" />
+			<param index="4" name="fx_phase" type="PackedFloat32Array" />
+			<param index="5" name="timers" type="PackedFloat32Array" />
+			<param index="6" name="delta" type="float" />
+			<param index="7" name="cull_pos" type="Vector2" />
+			<param index="8" name="cull_size" type="Vector2" />
+			<param index="9" name="margin" type="float" />
+			<description>
+			无状态积分批：数组进、数组出，返回 dead 行 id；不执行 swap。
+			</description>
+		</method>
+		<method name="is_broadphase_active" qualifiers="const">
+			<return type="bool" />
+			<description>
+			宽相网格是否启用；调用 query_circle 后反映最近一次重建结果。
+			</description>
+		</method>
+		<method name="is_grazed" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="id" type="int" />
+			<description>
+			该行本帧是否已擦弹。
+			</description>
+		</method>
+		<method name="mark_grazed">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<description>
+			标记该行本帧已擦弹。
+			</description>
+		</method>
+		<method name="query_circle" qualifiers="const">
+			<return type="PackedInt32Array" />
+			<param index="0" name="center" type="Vector2" />
+			<param index="1" name="radius" type="float" />
+			<description>
+			宽相查询：返回圆形范围内的候选行 id；仍需 hit_test 精确判定。首次调用会惰性建网格。
+			</description>
+		</method>
+		<method name="register_program">
+			<return type="int" />
+			<param index="0" name="ops" type="PackedInt32Array" />
+			<param index="1" name="args" type="PackedFloat32Array" />
+			<param index="2" name="move_start" type="PackedInt32Array" />
+			<param index="3" name="move_count" type="PackedInt32Array" />
+			<param index="4" name="until" type="PackedInt32Array" />
+			<param index="5" name="act_start" type="PackedInt32Array" />
+			<param index="6" name="act_count" type="PackedInt32Array" />
+			<param index="7" name="phase_count" type="int" />
+			<param index="8" name="slots" type="int" />
+			<description>
+			注册编译后的生命周期 program；返回 program id，校验失败返回 -1。
+			</description>
+		</method>
+		<method name="reserve">
+			<return type="void" />
+			<param index="0" name="n" type="int" />
+			<description>
+			预留容量；不改变活跃行。
+			</description>
+		</method>
+		<method name="set_cull">
+			<return type="void" />
+			<param index="0" name="cull" type="Rect2" />
+			<description>
+			设置剔除矩形。
+			</description>
+		</method>
+		<method name="set_default_life">
+			<return type="void" />
+			<param index="0" name="life" type="float" />
+			<description>
+			设置新行默认寿命（秒）。
+			</description>
+		</method>
+		<method name="set_field">
+			<return type="void" />
+			<param index="0" name="left" type="float" />
+			<param index="1" name="right" type="float" />
+			<param index="2" name="top" type="float" />
+			<description>
+			设置反射 / 边界判定用的场地范围（左、右、上）。
+			</description>
+		</method>
+		<method name="set_forward">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="fwd" type="Vector2" />
+			<description>
+			设置行自身朝向，不改速度。
+			</description>
+		</method>
+		<method name="set_fx">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="fx" type="float" />
+			<description>
+			设置行特效相位（秒）。
+			</description>
+		</method>
+		<method name="set_fx_type">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="fx_type" type="int" />
+			<description>
+			设置行特效型下标；-1 = 无特效。
+			</description>
+		</method>
+		<method name="set_hitbox">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="radius" type="float" />
+			<param index="2" name="offset" type="Vector2" />
+			<param index="3" name="size" type="Vector2" />
+			<param index="4" name="follow_dir" type="bool" />
+			<param index="5" name="dir_offset" type="float" />
+			<description>
+			设置逐弹判定：半径、偏移、矩形尺寸、是否随朝向、朝向补偿。
+			</description>
+		</method>
+		<method name="set_life">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="life" type="float" />
+			<description>
+			设置行剩余寿命（秒）。
+			</description>
+		</method>
+		<method name="set_margin">
+			<return type="void" />
+			<param index="0" name="margin" type="float" />
+			<description>
+			设置剔除余量。
+			</description>
+		</method>
+		<method name="set_out_grace">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="grace" type="float" />
+			<description>
+			设置行出界宽限（秒）；0 = 出界立即回收。
+			</description>
+		</method>
+		<method name="set_position">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="pos" type="Vector2" />
+			<description>
+			直接写行位置（锚定型行为用）。
+			</description>
+		</method>
+		<method name="set_program">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="program" type="int" />
+			<description>
+			绑定 program；-1 = 直线或未映射。
+			</description>
+		</method>
+		<method name="set_seed">
+			<return type="void" />
+			<param index="0" name="seed" type="int" />
+			<description>
+			设置 PRNG 种子；0 会回退到黄金比常量。
+			</description>
+		</method>
+		<method name="set_timer">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="timer" type="float" />
+			<description>
+			设置行自定义计时器。
+			</description>
+		</method>
+		<method name="set_velocity">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<param index="1" name="vel" type="Vector2" />
+			<description>
+			改行速度。
+			</description>
+		</method>
+		<method name="setup">
+			<return type="void" />
+			<param index="0" name="capacity" type="int" />
+			<param index="1" name="cull" type="Rect2" />
+			<description>
+			重置容量与剔除区；会清空现有行。
+			</description>
+		</method>
+		<method name="spawn">
+			<return type="int" />
+			<param index="0" name="pos" type="Vector2" />
+			<param index="1" name="vel" type="Vector2" />
+			<param index="2" name="type" type="int" default="0" />
+			<param index="3" name="faction" type="int" default="0" />
+			<param index="4" name="color" type="Color" default="Color(1, 1, 1, 1)" />
+			<description>
+			追加一行，返回行 id；容量满返回 -1。
+			</description>
+		</method>
+		<method name="spawn_batch">
+			<return type="int" />
+			<param index="0" name="pos" type="PackedVector2Array" />
+			<param index="1" name="vel" type="PackedVector2Array" />
+			<param index="2" name="type" type="PackedInt32Array" />
+			<param index="3" name="faction" type="PackedInt32Array" />
+			<param index="4" name="color" type="PackedColorArray" />
+			<description>
+			批量追加，返回成功行数；容量不足时截断。
+			</description>
+		</method>
+		<method name="spawn_fx">
+			<return type="int" />
+			<param index="0" name="fx_type" type="int" />
+			<param index="1" name="pos" type="Vector2" />
+			<param index="2" name="color" type="Color" />
+			<param index="3" name="faction" type="int" />
+			<param index="4" name="life" type="float" />
+			<description>
+			生成纯特效行：无弹型、无速度、不碰撞；寿命与特效相位都等于 life，到期回收。faction 只用于渲染分批。
+			</description>
+		</method>
+	</methods>
+</class>

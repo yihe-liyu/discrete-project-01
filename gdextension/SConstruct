@@ -38,6 +38,11 @@ env = SConscript("godot-cpp/SConstruct", {"api_version": "4.7"})
 env.Append(CPPPATH=["src/"])
 sources = Glob("src/*.cpp")
 
+# GDExtension XML 文档只在 editor / template_debug 编进去：
+# 运行时模板不带 Help 数据，减小发布包；C++ 的 // 注释不会自动进 Godot Help。
+if env["target"] in ["editor", "template_debug"]:
+    sources.append(env.GodotCPPDocData("src/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml")))
+
 library = env.SharedLibrary(
     "bin/libdanmaku_kernel{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
     source=sources,
