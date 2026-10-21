@@ -20,7 +20,9 @@ class_name Player
 extends PlayerBase
 
 @onready var _hit_point_display: HitPointDisplay = $HitPointDisplay
+## 机体 AnimatedSprite2D；动画状态与无敌闪烁都改它。
 @onready var animation: AnimatedSprite2D = $AnimatedSprite2D
+## 枪口 Marker2D（节点保留；当前射击脚本不读它，以射击 option 位置为准）。
 @onready var muzzle: Marker2D = $Muzzle
 
 ## 场地左边界（道具扇形夹取用）。
