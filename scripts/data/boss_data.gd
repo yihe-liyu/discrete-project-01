@@ -1,66 +1,99 @@
-## Boss 定义：名称 + 视觉 + 阶段列表（构造链 + 数据 .tres）
+## Boss 定义：名称 + 视觉 + 各难度阶段 + 演出素材（构造链 + .tres）。
+##
+## [b]模型[/b][br]
+## 一份 BossData 只带“这只 Boss 自己打”的阶段；阶段编号由 [BossCatalog] 的规范阶段顺序统一决定。
+## [codeblock]
+## 关卡内容：
+##   BossCatalog.boss(stage, index) → StageDirector.boss(key, data, ...)
+##                                → StageRuntime.spawn_boss(data, ...)
+## [/codeblock]
+## [br]
+## [b]用法[/b][br]
+## [codeblock]
+## BossData.new()
+##     .name("卡摩瑞").look(visual)
+##     .normal_phase(phase).in_stage(1).at_order(0)
+## [/codeblock]
+## [br]
+## [b]边界[/b][br]
+## - 各难度阶段独立：某难度为空 = 该难度无阶段，不回退到其它难度。[br]
+## - stage_id / order 只决定 BossCatalog 的分组与 boss_index，不决定阶段编号。[br]
+## - 符卡背景 / 立绘 / 全破演出都按 Boss 配；符卡练习也复用同一份 BossData。
 extends Resource
 class_name BossData
 
+## 显示名（HUD / 日志 / 练习列表）。
 @export var boss_name: String = ""
-## 阶段列表里的**区分前缀**（如"道中"/"关底"）—— 同一关有多只 Boss 时，光看"非符1/符卡1"
-## 分不清是谁的（道中非符 vs 关底非符）。空 = 不加前缀。
+## 阶段列表前缀（如“道中”/“关底”）：同一关有多只 Boss 时，练习列表用它区分“谁的非符/符卡”。空 = 不加前缀。
 @export var section_label: String = ""
+## 外观场景；[code]StageRuntime.spawn_boss()[/code] 实例化后挂到 Boss 下。
 @export var visual: PackedScene
-## 符卡背景（**每 Boss 一张**）：压在 3D 背景之上、弹幕之下的一层**场景**。
-## 只在**符卡**期间显示（非符不显示）；空 = 该 Boss 不用符卡背景。
-## 场景由 `SpellBackdropLayer` 实例化并淡入淡出 —— 里面放什么（几张图 / 视差 / shader / 动画）
-## 完全自由；想要"一张会向上滚的图"就用 `scenes/effect/spell_backdrop_plain.tscn` 当模板
-## （Sprite2D + `SpellBackdropScroll`，速度是它自己的 @export）。
-## **坐标约定**：宿主在场地中心 ⇒ 场景里 `(0,0)` = 场地正中；整幅场地尺寸的图放 `(0,0)` 正好铺满。
+## 符卡背景场景：只在该 Boss 的符卡期间显示（非符不显示）；空 = 不用。
+## 由 SpellBackdropLayer 实例化并淡入淡出；场景里 (0,0) = 场地正中，整幅场地尺寸的图正好铺满。
+## 模板：scenes/effect/spell_backdrop_plain.tscn（Sprite2D + SpellBackdropScroll，速度在它自己的 @export）。
 @export var spell_background: PackedScene
-## 符卡宣言立绘（**每 Boss 一张**）：宣言时从游戏框右上角快慢快扫到左下角后淡出。
-## 空 = 该 Boss 不用立绘。尺寸随意 —— 以**中心**锚定，右上角进、左下角出。
+## 符卡宣言立绘：宣言时从游戏框右上角“快慢快”扫到左下角后淡出；空 = 不用。
+## 尺寸随意，以中心锚定。
 @export var portrait: Texture2D
-## **符卡练习**时该 Boss 用哪首 BGM（`AssetRegistry.BGM_PATHS` 的语义 key）。
-## 空 = 回落该面的 `StageData.bgm_key`。练习是按「单张卡」打的、一场只面对一只 Boss，
-## 所以道中 Boss 填道中曲、关底 Boss 填 Boss 曲 —— 否则整面只能听同一首（曾如此）。
-## ⚠️ 只影响练习；正常关卡的 BGM 由关卡脚本 `stage_director.bgm(key)` 起。
+## 符卡练习时该 Boss 用的 BGM key（AssetRegistry.BGM_PATHS 的语义 key）。
+## 空 = 回落该面的 StageData.bgm_key；只影响练习，正常关卡 BGM 由关卡脚本 stage_director.bgm(key) 起。
 @export var practice_bgm_key: String = ""
-## **全破演出**用的爆点特效场景（`BossHandle.defeat()` 播；池化 `HitEffect` 场景）。
-## 空 = 用默认 `AssetRegistry` 的通用全破特效（`scenes/effect/boss_defeat.tscn`）。
+## 全破爆点特效场景（BossHandle.defeat 播，池化 HitEffect）；空 = 通用 boss_defeat.tscn。
 @export var defeat_fx: PackedScene
-## 全破音效 key（`AssetRegistry.sounds`）。空 = 默认 `&"boss_die"`。
+## 全破音效 key（AssetRegistry.sounds）；空 = 默认 boss_die。
 @export var defeat_sfx: StringName = &""
-## 全破**定格**时长（秒；0 = 不定格）。原作那种"炸开之前顿一下"的手感。
+## 全破定格时长（秒；0 = 不定格）。
 @export var defeat_hitstop: float = 0.12
-## 阶段列表：各难度**独立数组，互不回退**（某难度空 = 该难度无阶段）。
-## 难度档：0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra（对应 SpellRecord.Difficulty）
+## Easy 难度阶段列表（按出战顺序；空 = 该难度无阶段，不回退）。
 @export var phases_easy: Array[PhaseData] = []
+## Normal 难度阶段列表（按出战顺序；空 = 该难度无阶段，不回退）。
 @export var phases_normal: Array[PhaseData] = []
+## Hard 难度阶段列表（按出战顺序；空 = 该难度无阶段，不回退）。
 @export var phases_hard: Array[PhaseData] = []
+## Lunatic 难度阶段列表（按出战顺序；空 = 该难度无阶段，不回退）。
 @export var phases_lunatic: Array[PhaseData] = []
+## Extra 难度阶段列表（按出战顺序；空 = 该难度无阶段，不回退）。
 @export var phases_extra: Array[PhaseData] = []
+## 击破分数（保留字段；当前 Boss 流程未读取，计分走阶段 bonus）。
 @export var score_value: int = 10000
+## Boss 判定半径（像素）；[code]Boss.setup()[/code] 写进 CircleShape2D。
 @export var hitbox_radius: float = 36.0
-## 所在关卡面（BossCatalog 按它分组）
+## 所在关卡面（BossCatalog 按它分组）。
 @export var stage_id: int = 0
-## 同面内排序（升序 = boss_index）
+## 同面内排序（升序 = boss_index）。
 @export var order: int = 0
-## 入场/退场演出脚本（可选；无则默认顶部飞入/直接退场）
+## 入场演出脚本（可选；当前 Boss 入场走默认逻辑，该字段尚未接入）。
 @export var enter_script: Script
+## 退场演出脚本（可选；当前 Boss 退场走默认逻辑，该字段尚未接入）。
 @export var exit_script: Script
 
-## ── 构造链 ──
+# ── 构造链 ──
 
+## 设显示名。
 func name(v: String) -> BossData:       boss_name = v; return self
+## 设外观场景。
 func look(v: PackedScene) -> BossData:  visual = v; return self
+## 追加 Normal 阶段。
 func normal_phase(v: PhaseData) -> BossData:  phases_normal.append(v); return self
+## 追加 Easy 阶段。
 func easy_phase(v: PhaseData) -> BossData:  phases_easy.append(v); return self
+## 追加 Hard 阶段。
 func hard_phase(v: PhaseData) -> BossData:  phases_hard.append(v); return self
+## 追加 Lunatic 阶段。
 func lunatic_phase(v: PhaseData) -> BossData:  phases_lunatic.append(v); return self
+## 追加 Extra 阶段。
 func extra_phase(v: PhaseData) -> BossData:    phases_extra.append(v); return self
+## 设击破分数（保留字段，当前流程未读取）。
 func score(v: int) -> BossData:         score_value = v; return self
+## 设判定半径（像素）。
 func hitbox(v: float) -> BossData:       hitbox_radius = v; return self
+## 设所在关卡面（BossCatalog 分组键）。
 func in_stage(v: int) -> BossData:       stage_id = v; return self
+## 设同面内排序（升序 = boss_index）。
 func at_order(v: int) -> BossData:       order = v; return self
 
-## 按难度取阶段（0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra）。**不回退**：该难度数组空即返回空。
+## 按难度取阶段（0=Easy 1=Normal 2=Hard 3=Lunatic 4=Extra）。
+## 不回退：该难度数组空即返回空；未知难度按 Normal 处理。
 func phases_for_difficulty(diff: int) -> Array[PhaseData]:
 	match diff:
 		0: return phases_easy
@@ -69,7 +102,7 @@ func phases_for_difficulty(diff: int) -> Array[PhaseData]:
 		4: return phases_extra
 		_: return phases_normal  # Normal / 未知难度
 
-## 难度名（工作台/日志用）
+## 难度显示名（工作台 / 日志用；未知难度按 Normal）。
 static func difficulty_name(diff: int) -> String:
 	match diff:
 		0: return "Easy"
@@ -80,7 +113,8 @@ static func difficulty_name(diff: int) -> String:
 		_: return "Normal"
 
 
-## 配置校验：校验默认 + 各难度阶段。返回错误列表（空 = 合法）
+## 校验各难度阶段：空条目 + 每个 PhaseData 自身校验；全难度都空 ⇒ 空 Boss 错误。
+## 返回错误列表（空 = 合法）。
 func validate() -> Array[String]:
 	var errs: Array[String] = []
 	_validate_group(errs, "Normal", phases_normal)
