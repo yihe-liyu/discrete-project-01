@@ -15,6 +15,7 @@ var stage_shift_y := 0.0
 var draw_grid := true
 
 
+## 同步阶段偏移与网格开关并重绘。
 func sync(p_shift_y: float, p_draw_grid: bool) -> void:
 	stage_shift_y = p_shift_y
 	draw_grid = p_draw_grid

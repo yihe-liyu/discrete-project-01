@@ -23,6 +23,7 @@ var is_typing: bool = false
 
 # ═══ 工厂方法 ═══
 
+## 工厂：建一个带白底圆角 / 文字的对话气泡。
 static func create(text: String) -> BubblePanel:
 	var panel := BubblePanel.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE

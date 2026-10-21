@@ -22,6 +22,7 @@ class_name UISeparator
 @export var progress: float = 1.0: set = set_progress
 
 
+## 设生长进度（0..1）并重绘；供入场动画。
 func set_progress(v: float) -> void:
 	progress = clampf(v, 0.0, 1.0)
 	queue_redraw()

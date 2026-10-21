@@ -10,6 +10,7 @@ var ctx: StageContext:
 	set(value):
 		_ctx_ref = weakref(value) if value else null
 
+## 在指定位置生成一个道具；无 ctx / stage 时静默跳过。
 func spawn(type: int, position: Vector2) -> void:
 	if not ctx or not ctx.active():
 		return

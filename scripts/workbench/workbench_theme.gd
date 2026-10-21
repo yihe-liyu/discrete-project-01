@@ -25,6 +25,7 @@ const SELECT := Color(0.92, 0.73, 0.32, 0.28)
 ## 全站共享一个 Theme 实例即单一字体来源
 static var _cached: Theme = null
 
+## 构建并缓存工作台 Theme（字体 / 面板 / 按钮样式的单一来源）。
 static func build() -> Theme:
 	if _cached != null:
 		return _cached

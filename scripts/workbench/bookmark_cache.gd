@@ -112,6 +112,7 @@ static func load(stage_id: int, script_hash: int) -> Dictionary:
 	}
 
 
+## 写入该书签缓存（auto + manual）；目录自动创建，写失败警告。
 static func save(stage_id: int, script_hash: int, auto: Array, manual: Array) -> void:
 	DirAccess.make_dir_recursive_absolute("user://bookmarks")
 	var file := FileAccess.open(_path(stage_id), FileAccess.WRITE)

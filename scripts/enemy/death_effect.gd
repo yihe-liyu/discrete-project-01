@@ -10,5 +10,6 @@ func _setup() -> void:
 	velocity = Vector2.RIGHT.rotated(RNG.randf_range(0, TAU)) * 180.0
 	rotation = velocity.angle()
 
+## 给死亡特效的 AnimatedSprite 染色。
 func set_tint(color: Color) -> void:
 	ani.modulate = color

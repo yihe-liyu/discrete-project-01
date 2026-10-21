@@ -48,6 +48,7 @@ func _setup() -> void:
 		tw.tween_callback(_finish)
 
 
+## 给动画 / 精灵染色（两种节点结构都支持）。
 func set_tint(color: Color) -> void:
 	_tint = color
 	var anim: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D")

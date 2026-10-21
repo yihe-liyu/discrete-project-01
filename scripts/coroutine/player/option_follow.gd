@@ -10,6 +10,7 @@ const FOLLOW_SPEED: float = 13.39
 
 var _lerp_factor: float
 
+## 启动跟随：设 ctx / target 并算指数追赶系数。
 func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	if p_target:

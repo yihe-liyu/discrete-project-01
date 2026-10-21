@@ -13,6 +13,7 @@ var emotion: String = "通常"
 var bubble_offset: Vector2 = Vector2(12, 0)  ## 气泡相对立绘右缘偏移（旧模型默认粘滞值）
 
 
+## 按 CharacterProfile 初始化名字 / 位置 / 翻转 / 气泡偏移 / 表情默认值。
 func setup(p_profile: CharacterProfile) -> void:
 	profile = p_profile
 	char_name = p_profile.char_name

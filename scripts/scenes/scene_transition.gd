@@ -9,6 +9,7 @@ var _parent: Node
 var _transition_rect: ColorRect
 
 
+## 绑定宿主并建全屏黑场 CanvasLayer（过渡用）。
 func setup(parent: Node) -> void:
 	_parent = parent
 	_setup_transition()

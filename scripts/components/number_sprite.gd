@@ -98,6 +98,7 @@ func _process(_delta: float) -> void:
 			_digits[i].visible = false
 
 
+## 设显示文本并标脏，下一帧重建数字精灵。
 func show_text(t: String) -> void:
 	_text = t
 	_is_dirty = true

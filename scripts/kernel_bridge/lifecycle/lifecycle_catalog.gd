@@ -64,5 +64,6 @@ func get_lifecycle(move: StringName, params: Dictionary) -> BulletLifecycle:
 	return lc
 
 
+## 当前 lifecycle 缓存条目数（测试 / 诊断）。
 func cache_size() -> int:
 	return _cache.size()

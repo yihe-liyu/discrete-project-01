@@ -16,6 +16,7 @@ var fx_pool: FxPool
 var entity_registry: EntityRegistry
 
 
+## 绑定内核后端（KernelBulletHost）；之后 process 才生效。
 func setup(p_backend: KernelBulletHost) -> void:
 	backend = p_backend
 

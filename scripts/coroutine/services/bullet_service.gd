@@ -66,6 +66,7 @@ func fire_homing_laser(origin: Vector2, player_pos: Vector2, color: Color, bend:
 	var ctrl := mid + dir.orthogonal() * bend
 	return fire_growing_laser(_bezier_curve(origin, ctrl, end), color, length / 0.5, length * 0.6, lifetime)
 
+## 清空所有激光（含生长中），全部回池。
 func clear_all_lasers() -> void:
 	if bullet_manager: bullet_manager.clear_all_lasers()
 

@@ -13,6 +13,7 @@ const TICK := 0.05          ## 假 delta（秒）
 const MAX_TICKS := 4000     ## 安全上限：剧本卡住（永远等不到输入）也不会把调用方挂死
 
 
+## 无头跑完 steps，返回 texts / speakers / emotions / events / lines / finished 报告。
 static func play(p_steps: Array) -> Dictionary:
 	var texts: Array[String] = []
 	var speakers: Array[String] = []

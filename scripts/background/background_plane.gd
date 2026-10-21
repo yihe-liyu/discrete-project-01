@@ -66,6 +66,7 @@ func _process(delta: float) -> void:
 	mat.set_shader_parameter("uv_offset", uv)
 
 
+## 设滚动倍率（speed_ramp 的 tween 用；不直接改 scroll_speed）。
 func set_scroll_mult(m: float) -> void:
 	_scroll_mult = m
 

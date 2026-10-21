@@ -23,5 +23,6 @@ func _init(p_time: float, p_cb: Callable, p_every: float = -1.0, p_times: int = 
 	_original_repeat_every = p_every
 	_original_repeat_times = p_times
 
+## 执行回调（Timeline 到点时调）。
 func execute() -> void:
 	callback.call()

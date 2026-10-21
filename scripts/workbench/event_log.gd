@@ -36,6 +36,7 @@ func _exit_tree() -> void:
 		GameEvents.boss_defeated.disconnect(_on_boss_defeated)
 
 
+## 追加一行日志，只保留最近 80 行。
 func log_line(text: String) -> void:
 	_lines.append(text)
 	while _lines.size() > 80:

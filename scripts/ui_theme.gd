@@ -4,6 +4,7 @@ class_name UiTheme
 extends RefCounted
 
 
+## 把 themes/ui_theme.tres 的常量 / 颜色 / 样式 / 字体拷进 ThemeDB 默认主题；资源缺失时静默返回。
 static func apply() -> void:
 	var ui: Theme = load("res://themes/ui_theme.tres")
 	if not ui:

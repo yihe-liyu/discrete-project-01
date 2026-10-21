@@ -81,6 +81,7 @@ func is_open() -> bool:
 	return _panel != null
 
 
+## 关闭弹窗：释放所有子节点并清空面板 / 内容引用。
 func close() -> void:
 	for child in get_children():
 		child.queue_free()

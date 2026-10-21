@@ -23,6 +23,7 @@ func _get_life_limit() -> float:
 	return LIFE
 
 
+## 记录全破演出的 tint（子节点动画用）。
 func set_tint(color: Color) -> void:
 	_tint = color
 

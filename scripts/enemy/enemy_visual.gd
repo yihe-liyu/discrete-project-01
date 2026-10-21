@@ -67,6 +67,7 @@ func _process(delta: float) -> void:
 				change_state(IDLE)
 
 
+## 切动画状态并 play；同名跳过。
 func change_state(new_state: String) -> void:
 	if anim_state == new_state:
 		return

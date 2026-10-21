@@ -23,6 +23,7 @@ func run_async(p_ctx: StageContext) -> void:
 	await p_ctx.clock.next_tick()
 
 
+## 启动 async 协程：设 ctx / target、调 _on_start、begin_async，再跑 run_async（不 await）。
 func start(p_ctx: StageContext, p_target: Node2D = null) -> void:
 	ctx = p_ctx
 	if p_target != null:
