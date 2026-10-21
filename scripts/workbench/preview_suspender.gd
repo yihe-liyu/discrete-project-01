@@ -2,7 +2,7 @@ extends RefCounted
 ## 整关预览冻结/恢复服务（D3：从 Workbench 拆出的第一块）。
 ##
 ## 为什么单独一层：
-##   - Workbench 的 $World / 背景显式 `process_mode=PAUSABLE`，根节点 DISABLED 压不住；
+##   - Workbench 的 $World / 背景显式 [code]process_mode=PAUSABLE[/code]，根节点 DISABLED 压不住；
 ##     必须递归快照整棵子树的 process_mode。
 ##   - CanvasLayer 不随父 Control visible 隐藏；stage 脚本的 logo 是运行时 add_child 的层。
 ##   - BGM 要暂停而不是 stop（恢复后原处继续）；全局 paused/time_scale 必须解掉。

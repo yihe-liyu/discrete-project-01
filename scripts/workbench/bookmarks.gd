@@ -1,21 +1,21 @@
 ## 书签模型（工作台）—— 两类书签 + 缓存读写 + 合并规则，一处持有、可无树测试。
 ##
-##   auto   ：静态提取（扫关卡脚本的 `timeline.at()` 时刻）。确定性重算，不依赖缓存。
-##   manual ：人工打点（可编辑、改时间轴右键/面板添加）。**必须持久化**。
+##   auto   ：静态提取（扫关卡脚本的 [code]timeline.at()[/code] 时刻）。确定性重算，不依赖缓存。
+##   manual ：人工打点（可编辑、改时间轴右键/面板添加）。必须持久化。
 ##
-## 为什么要单独一层（2026-09-30，S3）：这些规则原先散在 `workbench.gd`（提取/持久化/失效）
-## 与 `bookmark_panel.gd`（合并展示）里。抽出来后顺带发现并修掉一个真 bug：
-## `BookmarkCache.load()` / `has_cache()` **从来没被调用过** —— 人工打点只写不读，
+## 为什么要单独一层（2026-09-30，S3）：这些规则原先散在 [code]workbench.gd[/code]（提取/持久化/失效）
+## 与 [code]bookmark_panel.gd[/code]（合并展示）里。抽出来后顺带发现并修掉一个真 bug：
+## [code]BookmarkCache.load()[/code] / [code]has_cache()[/code] 从来没被调用过 —— 人工打点只写不读，
 ## 重启工作台就全丢（"人工打点（可编辑，持久化）"名不副实）。
 ##
-## 分工：本类不碰 UI、不播报；宿主拿 `open()` 的返回值去写日志。
+## 分工：本类不碰 UI、不播报；宿主拿 [code]open()[/code] 的返回值去写日志。
 class_name Bookmarks
 extends RefCounted
 
 const CACHE := preload("res://scripts/workbench/bookmark_cache.gd")
 const EXTRACTOR := preload("res://scripts/workbench/bookmark_extractor.gd")
 
-## 当前关卡 id（<= 0 = 未打开，`save()` 直接不写）
+## 当前关卡 id（<= 0 = 未打开，[code]save()[/code] 直接不写）
 var stage_id := 0
 ## 当前关卡内容哈希（主脚本 + 目录下全部 .gd；脚本一变 → 旧 auto 失效）
 var content_hash := 0
@@ -43,7 +43,7 @@ func open(stage: StageData) -> Dictionary:
 	}
 
 
-## 静态提取：扫关卡脚本的 `timeline.at()` 时刻 → [{t}]
+## 静态提取：扫关卡脚本的 [code]timeline.at()[/code] 时刻 → [{t}]
 func extract(script: Script) -> Array:
 	var out: Array = []
 	for bookmark in EXTRACTOR.extract_from_script(script):

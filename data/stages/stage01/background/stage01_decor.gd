@@ -1,11 +1,11 @@
 extends CoroutineScript
 ## Stage01 背景演出（时间线版）
-## 组件化：环境/太阳/蒙眼雾已抽成组件；相机 / 环境 / 雾的动词一律走 **`ctx.background`**。
+## 组件化：环境/太阳/蒙眼雾已抽成组件；相机 / 环境 / 雾的动词一律走 [code]ctx.background[/code]。
 ##
-## ⚠️ 两条纪律（BGA，2026-10-04）：
-##   ① **不许 `get_parent()`** —— 那是 R2 禁止的往上摸。要背景宿主就用 `ctx.background`；
-##   ② **不许自己 `create_tween()`** —— 要"渐变"就用现成的意图动词（如 `ground.speed_ramp`）。
-## 背景场景是**本内容自己的**场景 ⇒ 里面节点（Ground/Sun/FogFX）按名字访问**是允许的**。
+## 两条纪律（BGA，2026-10-04）：
+##   ① 不许 [code]get_parent()[/code] —— 那是 R2 禁止的往上摸。要背景宿主就用 [code]ctx.background[/code]；
+##   ② 不许自己 [code]create_tween()[/code] —— 要"渐变"就用现成的意图动词（如 [code]ground.speed_ramp[/code]）。
+## 背景场景是本内容自己的场景 ⇒ 里面节点（Ground/Sun/FogFX）按名字访问是允许的。
 
 const OAK_LAYER = preload("res://data/stages/stage01/background/oak.tres")
 

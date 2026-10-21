@@ -17,7 +17,7 @@ const BONUS_FAILED_TEXT := "失败"
 
 @onready var _boss_name: Label = $Control/BossName
 @onready var _history: HBoxContainer = $Control/History
-## 阶段倒计时（两位秒数）。位置声明在场景里（x 居中 / y = 符卡名**下方** 64px）——
+## 阶段倒计时（两位秒数）。位置声明在场景里（x 居中 / y = 符卡名下方 64px）——
 ## 名字（BOSS 大字报）右停在 y=0、视觉底约 56，倒计时别再和它同高（工作台同值，见 workbench.gd）。
 @onready var _timer_label: Label = $Control/TimerLabel
 ## 阶段点模板（场景声明，按下标复制；数量随 Boss 阶段数变化）。
@@ -147,8 +147,8 @@ func _on_tick(bonus: int) -> void:
 		_announce_label.set_bonus_text(str(bonus))
 
 
-## 本符卡奖励分**作废**（期间 miss 过 / 用过 bomb）→ 数字位换成「失败」两个字。
-## 之后 Boss 不再发 `phase_bonus_tick`（见 `Boss._process`），所以它会定格到本阶段结束。
+## 本符卡奖励分作废（期间 miss 过 / 用过 bomb）→ 数字位换成「失败」两个字。
+## 之后 Boss 不再发 [code]phase_bonus_tick[/code]（见 [code]Boss._process[/code]），所以它会定格到本阶段结束。
 func _on_bonus_failed() -> void:
 	if _announce_label and is_instance_valid(_announce_label):
 		_announce_label.set_bonus_text(BONUS_FAILED_TEXT)
@@ -166,8 +166,8 @@ func _clear_announce() -> void:
 		_announce_label = null
 
 
-## 符卡结算横幅：**正中偏上**渐显「Bonus Failed」或「Get Spell Card Bonus」+ 奖励分 + 击破时间。
-## 数据全来自 `spell_result`（`Boss` 只在符卡阶段发它），所以这里不碰 Boss 状态。
+## 符卡结算横幅：正中偏上渐显「Bonus Failed」或「Get Spell Card Bonus」+ 奖励分 + 击破时间。
+## 数据全来自 [code]spell_result[/code]（[code]Boss[/code] 只在符卡阶段发它），所以这里不碰 Boss 状态。
 func _on_spell_result(captured: bool, bonus: int, elapsed: float, bonus_failed: bool) -> void:
 	_clear_banner()
 	_phase_result_banner = RESULT_BANNER_SCENE.instantiate() as PhaseResultBanner

@@ -1,6 +1,6 @@
 extends Node
 ## 可复现随机数（replay 基础）。所有随机数必须走 RNG，不要用全局 randf()/randi()。
-## 本项目**唯一随机真源**；其他可播种 RNG（如内核 BulletSystem）跟随本 autoload 的 seed。
+## 本项目唯一随机真源；其他可播种 RNG（如内核 BulletSystem）跟随本 autoload 的 seed。
 
 signal seed_changed(seed_value: int)
 

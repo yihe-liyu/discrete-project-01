@@ -23,12 +23,12 @@ signal sfx_requested(kind: String)   # 音效意图：只喊，不碰音频；�
 const OVERLAY_FADE_IN: float = 0.2
 const OVERLAY_FADE_OUT: float = 0.15
 
-## true = `_ready` 时**自动创建/复用** `Overlay`，并把它的 `modulate.a` 归 0。
-## ⚠️ 它**不会**自动淡入 —— 子类入场时**必须自己调 `_fade_overlay_in()`**，否则遮罩会一直停在
-##    `modulate.a = 0` ⇒ 有效 alpha = `color.a × 0` = **黑幕看不见**（stage 练习菜单 2026-10-04 实测）。
-## 场景里设 `false` = 本页面**自己管**遮罩（如符卡练习菜单），BasePage 完全不碰它。
-## ⚠️ `_fade_overlay_in()` / `_fade_overlay_out()` 的默认时长就是 `OVERLAY_FADE_IN` / `OVERLAY_FADE_OUT`；
-## 调用时不传也有正常动画（旧默认 `-1.0` = 负时长，淡入瞬间完成）。
+## true = [code]_ready[/code] 时自动创建/复用 [code]Overlay[/code]，并把它的 [code]modulate.a[/code] 归 0。
+## 它不会自动淡入 —— 子类入场时必须自己调 [code]_fade_overlay_in()[/code]，否则遮罩会一直停在
+##    [code]modulate.a = 0[/code] ⇒ 有效 alpha = [code]color.a × 0[/code] = 黑幕看不见（stage 练习菜单 2026-10-04 实测）。
+## 场景里设 [code]false[/code] = 本页面自己管遮罩（如符卡练习菜单），BasePage 完全不碰它。
+## [code]_fade_overlay_in()[/code] / [code]_fade_overlay_out()[/code] 的默认时长就是 [code]OVERLAY_FADE_IN[/code] / [code]OVERLAY_FADE_OUT[/code]；
+## 调用时不传也有正常动画（旧默认 [code]-1.0[/code] = 负时长，淡入瞬间完成）。
 @export var is_auto_overlay: bool = true
 
 var overlay_color: Color = Color(0, 0, 0, 0.5)

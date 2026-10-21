@@ -1,21 +1,21 @@
-## 全屏蒙眼雾组件。**看得见的部分全部场景声明**（2026-10-04 BGA/B）：
+## 全屏蒙眼雾组件。看得见的部分全部场景声明（2026-10-04 BGA/B）：
 ##   FogFX（本节点，只装逻辑）
 ##   └── FogLayer（CanvasLayer，layer = 5 —— 背景 SubViewport 内叠在 3D 之上）
 ##       └── FogRect（ColorRect 全屏）+ ShaderMaterial(screen_fog.gdshader)
 ##
-## 参数**就在 Inspector 里调材质的 `shader_parameter/*`**（唯一来源）。
-## 旧实现是 `new()` 出来 + `@export` × 12 + `_apply_params()` 镜像 ⇒ 同一个值有三份默认
-## （shader 文件 / `@export` / `.tscn`），而运行时真值只有 `.tscn` 那份 ⇒
-## **改 shader 文件里的数字是静默 no-op**。那套镜像与 12 个 `@export` 已删。
+## 参数就在 Inspector 里调材质的 [code]shader_parameter/*[/code]（唯一来源）。
+## 旧实现是 [code]new()[/code] 出来 + [code]@export[/code] × 12 + [code]_apply_params()[/code] 镜像 ⇒ 同一个值有三份默认
+## （shader 文件 / [code]@export[/code] / [code].tscn[/code]），而运行时真值只有 [code].tscn[/code] 那份 ⇒
+## 改 shader 文件里的数字是静默 no-op。那套镜像与 12 个 [code]@export[/code] 已删。
 ##
-## 太阳屏幕位置每帧 unproject（相机动雾跟动）：**相机与太阳由宿主接进来**
-## （`StageBackground._resolve_showcase()` 按类型找本组件后调 `bind(camera, sun)`）——
-## 内容脚本**不需要**任何调用；本组件也不 `get_parent()` 摸宿主（挪层级/嵌套都不会静默失效）。
+## 太阳屏幕位置每帧 unproject（相机动雾跟动）：相机与太阳由宿主接进来
+## （[code]StageBackground._resolve_showcase()[/code] 按类型找本组件后调 [code]bind(camera, sun)[/code]）——
+## 内容脚本不需要任何调用；本组件也不 [code]get_parent()[/code] 摸宿主（挪层级/嵌套都不会静默失效）。
 ##
-## ⚠️ **声明即显示**。旧写法是内容脚本调 `setup(sun, camera)` + `_ready` 藏起来等调用
-## ⇒ **忘了调就永远隐形、且零报错**（stage02 2026-10-04 实况）。那套"记得调用才显示"已废止。
-## 噪声纹理也在场景里（材质的 `shader_parameter/noise_tex` = `cloud_noise.tres`）。
-## ⚠️ 本层在**背景 SubViewport 内** ⇒ 只压暗背景，**不挡弹幕/自机**。
+## 声明即显示。旧写法是内容脚本调 [code]setup(sun, camera)[/code] + [code]_ready[/code] 藏起来等调用
+## ⇒ 忘了调就永远隐形、且零报错（stage02 2026-10-04 实况）。那套"记得调用才显示"已废止。
+## 噪声纹理也在场景里（材质的 [code]shader_parameter/noise_tex[/code] = [code]cloud_noise.tres[/code]）。
+## 本层在背景 SubViewport 内 ⇒ 只压暗背景，不挡弹幕/自机。
 class_name ScreenFogFX
 extends Node
 
@@ -44,8 +44,8 @@ func _ready() -> void:
 		push_error("ScreenFogFX: 场景里没声明 FogLayer/FogRect —— 雾不会出现（见本文件头）")
 
 
-## 由**宿主**调用：注入投影用相机与太阳（`StageBackground._resolve_showcase()`）。
-## 幂等，重跑安全（`_process` 在 `bind` 之前不做事）。
+## 由宿主调用：注入投影用相机与太阳（[code]StageBackground._resolve_showcase()[/code]）。
+## 幂等，重跑安全（[code]_process[/code] 在 [code]bind[/code] 之前不做事）。
 func bind(p_camera: Camera3D, p_sun: Node3D = null) -> void:
 	camera = p_camera
 	sun = p_sun
@@ -67,12 +67,12 @@ func _process(delta: float) -> void:
 	_update_sun_pos()
 
 
-## 把太阳的世界位置投影到屏幕（归一化）。**相机由外部注入**（`bind()`），
-## viewport 用 `self.get_viewport()` ⇒ 本组件**不再需要知道自己的父节点是谁**。
+## 把太阳的世界位置投影到屏幕（归一化）。相机由外部注入（[code]bind()[/code]），
+## viewport 用 [code]self.get_viewport()[/code] ⇒ 本组件不再需要知道自己的父节点是谁。
 ##
-## ⚠️ 取的是 **`BackgroundSun.drawn_position()`**（真正被画出来的 `SunSprite`），
-## **不是** `sun.global_position`（本节点）—— 两者在 `SunSprite` 有局部位移时不同，
-## 而作者**在编辑器里拖的正是那个 sprite**。旧实现用本节点 ⇒ 太阳一改 y 就与黑雾错位
+## 取的是 [code]BackgroundSun.drawn_position()[/code]（真正被画出来的 [code]SunSprite[/code]），
+## 不是 [code]sun.global_position[/code]（本节点）—— 两者在 [code]SunSprite[/code] 有局部位移时不同，
+## 而作者在编辑器里拖的正是那个 sprite。旧实现用本节点 ⇒ 太阳一改 y 就与黑雾错位
 ## （2026-10-04 作者实测：「一改太阳的 y 坐标，黑雾的对准就不准了」）。
 func _update_sun_pos() -> void:
 	if _mat == null:

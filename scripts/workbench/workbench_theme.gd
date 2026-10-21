@@ -20,7 +20,7 @@ const ACCENT := Color(0.92, 0.73, 0.32, 1.0)
 const SELECT := Color(0.92, 0.73, 0.32, 0.28)
 
 
-## 构建主题：**单例缓存**——创作台（站根一套 + 每页一套）若各自 build()，
+## 构建主题：单例缓存——创作台（站根一套 + 每页一套）若各自 build()，
 ## 会产生多个 FontFile 实例，同文本被绘制两次（双绘重影 bug）；
 ## 全站共享一个 Theme 实例即单一字体来源
 static var _cached: Theme = null

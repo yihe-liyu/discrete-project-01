@@ -1,9 +1,9 @@
 extends VBoxContainer
 ## F10b 拼装面板 —— 描述符词汇 → 相位列表 → 参数表单 → 预览 → 可复制代码。
 ##
-## 边界：只拼 `BulletLifecycle`（trajectory），不拼 `_tick` / 波次调度。
+## 边界：只拼 [code]BulletLifecycle[/code]（trajectory），不拼 [code]_tick[/code] / 波次调度。
 ## 难度：4 个 BulletComposer 各存一档（Easy/Normal/Hard/Lunatic），切难度不丢。
-## 代码里的 `_spawn` / `_spawn_a` / `_spawn_b` 是占位：作者替换成自己的 BulletData。
+## 代码里的 [code]_spawn[/code] / [code]_spawn_a[/code] / [code]_spawn_b[/code] 是占位：作者替换成自己的 BulletData。
 
 signal preview_requested(lifecycle: BulletLifecycle)
 signal difficulty_changed(index: int)

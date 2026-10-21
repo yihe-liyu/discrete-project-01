@@ -8,7 +8,7 @@ class_name SpellRecordBook
 
 ## 清理幽灵记录（防御：编辑器/外部写入可能塞入空壳——
 ## 例：Godot 里编辑 .tres 删记录时块残留 + 数组引用 → 加载生成空对象）。
-## 判据 = **主键有效**（stage>=1 且 phase_index>=0）：有主键就是真记录，哪怕 uid/统计全零
+## 判据 = 主键有效（stage>=1 且 phase_index>=0）：有主键就是真记录，哪怕 uid/统计全零
 ## （调试「一键解锁」会造这种非符记录）。空壳的主键是默认的 phase_index=-1（/ stage=0）。
 func prune_empty() -> void:
 	var kept: Array[SpellRecord] = []
@@ -20,7 +20,7 @@ func prune_empty() -> void:
 
 
 ## 记录主键 = (stage, phase_index, character, difficulty)。
-## 注意：boss_index **不参与主键**（阶段身份由规范 phase_index 唯一确定；boss_index 只作归属/展示）。
+## 注意：boss_index 不参与主键（阶段身份由规范 phase_index 唯一确定；boss_index 只作归属/展示）。
 ## 参数仍保留 boss_index 以兼容调用方，但查找时忽略它。
 func get_record(stage: int, phase_index: int, _boss_index: int, character: int, difficulty: int) -> SpellRecord:
 	for record in records:

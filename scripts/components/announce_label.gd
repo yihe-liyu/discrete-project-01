@@ -19,7 +19,7 @@ const BG_FADE := 0.35
 const VISUAL_HALF := (1.0 + SHRINK) / 2.0
 ## 视觉盒贴左缘时布局框要往左挪的量：(1-SHRINK)/2。
 const EDGE_HALF := (1.0 - SHRINK) / 2.0
-## Bonus / Capture 两串之间的间距（**局部单位**；父节点 0.6 缩放 → 屏幕约 ×0.6）。
+## Bonus / Capture 两串之间的间距（局部单位；父节点 0.6 缩放 → 屏幕约 ×0.6）。
 const INFO_GAP := 32.0## 自机样式：左下停住后的停留 / 渐隐时长（秒）。
 const PLAYER_HOLD := 1.0
 const FADE_OUT := 0.6
@@ -35,15 +35,15 @@ enum Style { BOSS, PLAYER }
 ## 要"偏上"就填负 y（如 Vector2(0, -120)）。Boss 样式不受影响。
 @export var player_rest_offset: Vector2 = Vector2.ZERO
 
-## Bonus / Capture 的**说明前缀**（Boss 符卡计分信息那两行）。
+## Bonus / Capture 的说明前缀（Boss 符卡计分信息那两行）。
 ## 文案属表现 → 声明在 announce_label.tscn，改措辞不用动代码。
 @export var bonus_prefix: String = ""
 @export var capture_prefix: String = ""
 
 var _tween: Tween
 var _style: Style = Style.BOSS
-## Bonus 文本的**预留宽度**（只增不减）。
-## 为什么不能直接用当前文本宽度：本作字体数字**不等宽**（实测 "1"=15px、"8"=18px），
+## Bonus 文本的预留宽度（只增不减）。
+## 为什么不能直接用当前文本宽度：本作字体数字不等宽（实测 "1"=15px、"8"=18px），
 ## 而 bonus 是逐帧递减的 → 每掉一位/换个数字，整块「奖励分数：」就往右抽一下。
 ## bonus 单调递减 ⇒ 见过的最宽即此后最宽 ⇒ 预留只增不减就把框钉住，数字在原地缩小。
 var _bonus_reserve: float = 0.0
@@ -125,14 +125,14 @@ func play(p_text: String, parent_size: Vector2, p_background: Texture2D = null, 
 	_tween.tween_callback(_on_finished)
 
 
-## 设置底部分数（Bonus）：`说明前缀 + 数值`（前缀是表现层文案，见 `bonus_prefix`）。
+## 设置底部分数（Bonus）：[code]说明前缀 + 数值[/code]（前缀是表现层文案，见 [code]bonus_prefix[/code]）。
 func set_bonus_text(p_text: String) -> void:
 	_bonus_label.text = bonus_prefix + p_text
 	_bonus_reserve = maxf(_bonus_reserve, _bonus_label.get_minimum_size().x)   # 只增不减 → 递减时不重排
 	_align_info_labels()
 
 
-## 设置底部收取数（Capture）：`说明前缀 + n/m`。
+## 设置底部收取数（Capture）：[code]说明前缀 + n/m[/code]。
 func set_capture_text(p_text: String) -> void:
 	_capture_label.text = capture_prefix + p_text
 	_align_info_labels()
@@ -171,13 +171,13 @@ func _show_info_labels() -> void:
 	_capture_label.visible = true
 
 
-## Bonus / Capture 排成**一行**：整行**右对齐到名字视觉右缘**（= 场地右缘），向左依次排开。
+## Bonus / Capture 排成一行：整行右对齐到名字视觉右缘（= 场地右缘），向左依次排开。
 ## 三个坑（都实测过）：
 ## ① 各贴一端不行 —— 带说明前缀后两串加起来比名字视觉宽度大（276 > 230）→ 直接叠在一起；
 ## ② 按「名字宽度比例」落点也不行 —— 比例随名字宽度漂，短名字会顶出场地右缘（越界 48px）；
-## ③ 用**当前**文本宽度当 Bonus 宽度更不行 —— 数字不等宽 + bonus 递减 → 每换一个数就抽一下，
-##    故 Bonus 用 `_bonus_reserve`（只增不减）。
-## 用 `get_minimum_size()` 而不是 `size`：改文本后 size 是延迟更新的，这里要的是即时宽度。
+## ③ 用当前文本宽度当 Bonus 宽度更不行 —— 数字不等宽 + bonus 递减 → 每换一个数就抽一下，
+##    故 Bonus 用 [code]_bonus_reserve[/code]（只增不减）。
+## 用 [code]get_minimum_size()[/code] 而不是 [code]size[/code]：改文本后 size 是延迟更新的，这里要的是即时宽度。
 func _align_info_labels() -> void:
 	var label_h := size.y
 	var capture_w := _capture_label.get_minimum_size().x

@@ -220,7 +220,7 @@ func _rebuild_tree() -> void:
 			it.set_metadata(0, entry)
 
 
-## 设置描述符组开关；运行中改也要重建树（`_ready` 只建一次）。
+## 设置描述符组开关；运行中改也要重建树（[code]_ready[/code] 只建一次）。
 func set_show_descriptors(on: bool) -> void:
 	show_descriptors = on
 	if not is_inside_tree():
@@ -287,7 +287,7 @@ func _add_descriptor_group(root_item: TreeItem, want_role: String, query: String
 
 ## 拖动分隔条：分隔条位置跟随鼠标（树/信息卡以它划分）
 ## 拖拽用全局坐标（event.global_position）：分隔条移动不影响计算 → 无反馈环、不闪不跳
-## 设置搜索词 **并立即重建树**（`text_changed` 之外的入口：外部/测试驱动筛选走它）
+## 设置搜索词 并立即重建树（[code]text_changed[/code] 之外的入口：外部/测试驱动筛选走它）
 func set_search_text(text: String) -> void:
 	_search.text = text
 	_rebuild_tree()
@@ -298,7 +298,7 @@ func tree() -> Tree:
 	return _tree
 
 
-## 把输入事件交给目录树（= `_tree.gui_input` 那条路：双击进条目等）
+## 把输入事件交给目录树（= [code]_tree.gui_input[/code] 那条路：双击进条目等）
 func handle_tree_input(event: InputEvent) -> void:
 	_on_tree_input(event)
 
@@ -308,7 +308,7 @@ func info_card() -> Control:
 	return _info_panel
 
 
-## 信息区/目录区**分隔条**的当前 y（布局断言用；0 = 还没初始化）
+## 信息区/目录区分隔条的当前 y（布局断言用；0 = 还没初始化）
 func divider_y() -> float:
 	return _divider_y
 

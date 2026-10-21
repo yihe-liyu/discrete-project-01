@@ -21,7 +21,7 @@ var _stage_runtime: StageRuntime
 var _bullet_manager: BulletManager
 
 # ── 三台共用的工作区状态（原先 bullet/enemy 各写一份、phase 又抄两处；2026-09-30 上移）──
-## 内容目录（`ContentCatalog.scan()`）；三台同一份扫描
+## 内容目录（[code]ContentCatalog.scan()[/code]）；三台同一份扫描
 const CATALOG := preload("res://scripts/data/content_catalog.gd")
 var _catalog: Variant
 ## 当前"行为脚本"（发射/生成用它；热重载后替换）。不关心脚本的台子留空。
@@ -29,7 +29,7 @@ var _cur_script: Script = null
 var _cur_script_path: String = ""
 ## 参数字段面板（脚本 var → 可调控件）；不建面板的台子留空
 var _param_panel: VBoxContainer = null
-## 右下角状态条文案（热更新结果等）；三台都指向 `_toast.label`
+## 右下角状态条文案（热更新结果等）；三台都指向 [code]_toast.label[/code]
 var _reload_status: Label = null
 
 
@@ -102,7 +102,7 @@ func _rebuild_watch() -> void:
 	_hot_reload_service.rebuild()
 
 
-## 推进一次热更新轮询（子类 `_process` 调）
+## 推进一次热更新轮询（子类 [code]_process[/code] 调）
 func _process_hot_reload(delta: float) -> void:
 	_hot_reload_service.poll(delta)
 
@@ -364,7 +364,7 @@ func age_watch_mtime(path: String, seconds: float) -> void:
 	_hot_reload_service.age_mtime(path, seconds)
 
 
-## 推进一次热更新轮询（运行时每帧由 `_process` 调；测试手动步进）
+## 推进一次热更新轮询（运行时每帧由 [code]_process[/code] 调；测试手动步进）
 func poll_hot_reload(delta: float) -> void:
 	_hot_reload_service.poll(delta)
 
@@ -374,7 +374,7 @@ func force_hot_reload() -> void:
 	_hot_reload_service.force()
 
 
-## 热更新开关（关掉后 `poll_hot_reload` 直接返回）
+## 热更新开关（关掉后 [code]poll_hot_reload[/code] 直接返回）
 func set_hot_enabled(on: bool) -> void:
 	_hot_reload_service.enabled = on
 
@@ -395,12 +395,12 @@ func stage_runtime() -> StageRuntime:
 	return _stage_runtime
 
 
-## 本台的弹幕世界（画布坐标，`top_level`）
+## 本台的弹幕世界（画布坐标，[code]top_level[/code]）
 func bullet_manager() -> BulletManager:
 	return _bullet_manager
 
 
-## 本台的场地（画布坐标，`top_level`；原点 = 画布原点）
-## 名字不叫 `field()`：基类/子类里 `var field` 是个常见局部名，会触发"遮蔽成员"警告（warnings-as-errors）
+## 本台的场地（画布坐标，[code]top_level[/code]；原点 = 画布原点）
+## 名字不叫 [code]field()[/code]：基类/子类里 [code]var field[/code] 是个常见局部名，会触发"遮蔽成员"警告（warnings-as-errors）
 func playfield() -> Control:
 	return _field

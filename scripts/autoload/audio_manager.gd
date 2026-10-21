@@ -1,15 +1,15 @@
 extends Node
 ## 音频管理器 autoload
-## **音量走总线**（`Master → BGM / SE / UI`，布局在 `res://default_bus_layout.tres`；缺总线响亮告警）。
-## BGM **两路**（新曲满音量直入、旧曲淡出；不淡入）+ 关键时刻自动让位（duck）；SFX 16 路池 + 同帧去重 + 最小间隔节流。
-## 统计计数器（`sfx_stats()`）给「先量再调」用 —— 见 `tools/audio_density_probe.tscn`。
+## 音量走总线（[code]Master → BGM / SE / UI[/code]，布局在 [code]res://default_bus_layout.tres[/code]；缺总线响亮告警）。
+## BGM 两路（新曲满音量直入、旧曲淡出；不淡入）+ 关键时刻自动让位（duck）；SFX 16 路池 + 同帧去重 + 最小间隔节流。
+## 统计计数器（[code]sfx_stats()[/code]）给「先量再调」用 —— 见 [code]tools/audio_density_probe.tscn[/code]。
 
 # ── 声道 ──
-## BGM **两路**（新的直入、旧的淡出 = 交叉；**新曲不淡入**，见 `BGM_FADE_IN`）；SFX 16 路池
+## BGM 两路（新的直入、旧的淡出 = 交叉；新曲不淡入，见 [code]BGM_FADE_IN[/code]）；SFX 16 路池
 var _bgm_players: Array[AudioStreamPlayer] = []
 ## 正在播的那一路（另一路留给旧曲淡出）
 var _bgm_current: AudioStreamPlayer
-## 刚被 `stop_bgm()` 停过（淡出中）—— 用来区分「同曲续播」与「同曲重开」
+## 刚被 [code]stop_bgm()[/code] 停过（淡出中）—— 用来区分「同曲续播」与「同曲重开」
 var _bgm_stopping: bool = false
 ## 每路的淡出 tween —— 复用同一路前先 kill（否则两条 tween 抢同一个 volume_db）
 var _bgm_fades: Dictionary = {}
@@ -18,15 +18,15 @@ const SFX_POOL_SIZE := 16
 const BGM_PLAYER_COUNT := 2
 ## 旧曲淡出 / 停止淡出的默认时长（秒）
 const BGM_FADE := 0.6
-## 新曲**淡入**时长（秒）。**0 = 不淡入**（作者 2026-10-10 拍板：换曲/重开都"干脆"地满音量直入）
+## 新曲淡入时长（秒）。0 = 不淡入（作者 2026-10-10 拍板：换曲/重开都"干脆"地满音量直入）
 ## —— 想恢复"新曲渐入"就把它设成 0.6（旧曲淡出仍然照旧，交叉还在）。
 const BGM_FADE_IN := 0.0
 const SILENT_DB := -80.0
 
 # ── 总线（布局 = res://default_bus_layout.tres）──
-## 音量**一律走总线**（`AudioServer.set_bus_volume_db`）：改一下当场对所有在响的声音生效，
-## 也能在总线上挂效果器（限幅/压缩）。per-player 的 `volume_db` 只留**均衡偏移**。
-## ⚠️ 总线在布局文件里缺一条 → 音量**不会生效**（引擎静默回退 Master）⇒ `_require_bus` 响亮告警。
+## 音量一律走总线（[code]AudioServer.set_bus_volume_db[/code]）：改一下当场对所有在响的声音生效，
+## 也能在总线上挂效果器（限幅/压缩）。per-player 的 [code]volume_db[/code] 只留均衡偏移。
+## 总线在布局文件里缺一条 → 音量不会生效（引擎静默回退 Master）⇒ [code]_require_bus[/code] 响亮告警。
 const BUS_MASTER := &"Master"
 const BUS_BGM := &"BGM"
 const BUS_SE := &"SE"
@@ -44,9 +44,9 @@ var _protected_streams: Array = []
 # ── 统计（B：密度护栏「先量再调」的仪表；也留给性能工具读）──
 ## 累计起了多少路声音
 var sfx_played_total: int = 0
-## 池满、**踢掉了正在响的一路**的次数 —— 听感上就是「被掐断」
+## 池满、踢掉了正在响的一路的次数 —— 听感上就是「被掐断」
 var sfx_evicted_total: int = 0
-## 其中踢到**受保护**音效的次数（>0 说明 16 路全被重要音占满，危险信号）
+## 其中踢到受保护音效的次数（>0 说明 16 路全被重要音占满，危险信号）
 var sfx_evicted_protected_total: int = 0
 ## 本帧起了几路（每帧清零）
 var sfx_started_this_frame: int = 0
@@ -66,24 +66,24 @@ var _sfx_second_start_ms: int = 0
 var _sfx_count_this_second: int = 0
 
 # ── 密度护栏（B：实测真实关卡 ≈22 路/秒、峰值 14/16 路同时在响）──
-## 同时在响超过这个数**才开始**压制 —— 低于它 = 正常场面，一个数都不动
+## 同时在响超过这个数才开始压制 —— 低于它 = 正常场面，一个数都不动
 const DENSITY_KNEE := 8
 ## 每多一路压多少 dB
 const DENSITY_DB_PER_VOICE := 0.75
 ## 压制上限（压过头会「整片变小」）
 const DENSITY_MAX_CUT_DB := -3.0
-## 声部数的**平滑**系数（每帧）——用瞬时值会「忽大忽小」（正是要治的病）
+## 声部数的平滑系数（每帧）——用瞬时值会「忽大忽小」（正是要治的病）
 const DENSITY_SMOOTH := 0.12
-## 高优先级：**永不**吃密度压制、也最后被池驱逐（回报音 / 宣言 / 菜单）
+## 高优先级：永不吃密度压制、也最后被池驱逐（回报音 / 宣言 / 菜单）
 const SFX_PRIORITY_HIGH: Array[String] = [
 	"player_die", "boss_die", "player_card", "get_card", "get_player",
 	"ok", "cancel", "select", "pause",
 ]
-## 密集持续音（实测主力）：池满时**先踢它们**
+## 密集持续音（实测主力）：池满时先踢它们
 const SFX_PRIORITY_LOW: Array[String] = [
 	"kira", "player_shoot", "msl", "lazer", "marisa_damage", "normal_damage",
 ]
-## 平滑后的在响声部数（只有**新起**的声部吃它算出来的压制）
+## 平滑后的在响声部数（只有新起的声部吃它算出来的压制）
 var _density_ema: float = 0.0
 
 # ── 音量（线性 0..1；落到总线上）──
@@ -99,7 +99,7 @@ var sfx_volume: float = 0.7:
 	set(v):
 		sfx_volume = clampf(v, 0.0, 1.0)
 		_apply_bus_volumes()
-## BGM 总线的**动态**压低量（dB，<=0）—— 见 `duck_bgm`（D：符卡宣言/击破时音乐让位）
+## BGM 总线的动态压低量（dB，<=0）—— 见 [code]duck_bgm[/code]（D：符卡宣言/击破时音乐让位）
 var _bgm_duck_db: float = 0.0
 
 
@@ -129,8 +129,8 @@ func _process(_delta: float) -> void:
 		_sfx_second_start_ms = now_ms
 
 
-## 当前密度压制量（dB，<=0）。按**平滑后**的在响声部数算；低于 `DENSITY_KNEE` = 0。
-## 只作用于**新起**的声部（已经在响的不动），否则会「泵」——那正是要治的病。
+## 当前密度压制量（dB，<=0）。按平滑后的在响声部数算；低于 [code]DENSITY_KNEE[/code] = 0。
+## 只作用于新起的声部（已经在响的不动），否则会「泵」——那正是要治的病。
 func density_cut_db() -> float:
 	var over := _density_ema - float(DENSITY_KNEE)
 	if over <= 0.0:
@@ -138,7 +138,7 @@ func density_cut_db() -> float:
 	return maxf(DENSITY_MAX_CUT_DB, -DENSITY_DB_PER_VOICE * over)
 
 
-## 统计快照（工具 / 探针 / 测试读它；`reset_sfx_stats()` 清零后再跑一段）。
+## 统计快照（工具 / 探针 / 测试读它；[code]reset_sfx_stats()[/code] 清零后再跑一段）。
 func sfx_stats() -> Dictionary:
 	return {
 		"played": sfx_played_total,
@@ -210,7 +210,7 @@ func _init_players() -> void:
 ## 实际切换了 BGM（用于 BGM 提示等 UI 跟随）
 signal bgm_started(stream: AudioStream)
 
-## 播 BGM（换曲：**新的满音量直入**、旧的淡出；同一首正在播则不动）。
+## 播 BGM（换曲：新的满音量直入、旧的淡出；同一首正在播则不动）。
 func play_bgm(stream: AudioStream, _gap_unused: float = 0.0) -> void:
 	_play_bgm_at(stream, 0.0)
 
@@ -252,7 +252,7 @@ func _play_bgm_at(stream: AudioStream, from: float) -> void:
 	# 音乐解锁已由 AssetRegistry.get_bgm 统一处理（播放即听过）
 
 
-## 停 BGM（默认淡出，不是硬切）；`fade` = 0 立即停
+## 停 BGM（默认淡出，不是硬切）；[code]fade[/code] = 0 立即停
 func stop_bgm(fade: float = BGM_FADE) -> void:
 	for player in _bgm_players:
 		if player.playing:
@@ -280,7 +280,7 @@ func bgm_paused() -> bool:
 	return _bgm_current != null and is_instance_valid(_bgm_current) and _bgm_current.stream_paused
 
 
-## 复用**已经在放这一首**的那一路（重开 / 快速来回切）：停掉它的淡入淡出、从头播，其余各路淡出。
+## 复用已经在放这一首的那一路（重开 / 快速来回切）：停掉它的淡入淡出、从头播，其余各路淡出。
 ## 保证「同一首永远只有一路在响」。
 func _adopt_bgm(player: AudioStreamPlayer, stream: AudioStream, from: float) -> void:
 	_bgm_current = player
@@ -324,7 +324,7 @@ const BGM_DUCK_FADE := 0.12
 var _bgm_duck_tween: Tween
 
 
-## 让 BGM 让位（一般由 `play_sfx` 按 `BGM_DUCK_ON_SFX` 自动调；也可手动）
+## 让 BGM 让位（一般由 [code]play_sfx[/code] 按 [code]BGM_DUCK_ON_SFX[/code] 自动调；也可手动）
 func duck_bgm(amount_db: float = BGM_DUCK_DB, hold: float = BGM_DUCK_HOLD) -> void:
 	if _bgm_duck_tween and _bgm_duck_tween.is_valid():
 		_bgm_duck_tween.kill()
@@ -375,7 +375,7 @@ func _stop_fade(player: AudioStreamPlayer) -> void:
 
 # ═══ 总线音量 ═══
 
-## 把所有音量落到总线上（唯一出口）。三个 setter + `_ready` 都走这里。
+## 把所有音量落到总线上（唯一出口）。三个 setter + [code]_ready[/code] 都走这里。
 func _apply_bus_volumes() -> void:
 	_set_bus_volume(BUS_MASTER, master_volume)
 	_set_bus_volume(BUS_BGM, bgm_volume)
@@ -392,7 +392,7 @@ func _set_bus_volume(bus_name: StringName, linear: float) -> void:
 	AudioServer.set_bus_volume_db(idx, _to_db(linear) + _bus_offset_db(bus_name))
 
 
-## 总线上的**动态**偏移（dB）：目前只有 BGM 的 duck（见 `duck_bgm`）。静态偏移请写进布局文件。
+## 总线上的动态偏移（dB）：目前只有 BGM 的 duck（见 [code]duck_bgm[/code]）。静态偏移请写进布局文件。
 func _bus_offset_db(bus_name: StringName) -> float:
 	return _bgm_duck_db if bus_name == BUS_BGM else 0.0
 
@@ -401,7 +401,7 @@ func _bus_offset_db(bus_name: StringName) -> float:
 
 ## 播一次音效，返回播放器（返回值通常不用）。
 ## 同帧同一流不重复；min_interval > 0 时限制该流最小播放间隔（秒，高频音效防挤兑用）
-## bus 默认 `SE`；UI 音（菜单）传 `BUS_UI` —— 与 SE 分开，不被 SE 的密度护栏/限幅牵连。
+## bus 默认 [code]SE[/code]；UI 音（菜单）传 [code]BUS_UI[/code] —— 与 SE 分开，不被 SE 的密度护栏/限幅牵连。
 func play_sfx(stream: AudioStream, volume_db: float = SFX_LEVEL_DB, min_interval: float = 0.0,
 		bus: StringName = BUS_SE) -> void:
 	if _sfx_players.is_empty():
@@ -446,7 +446,7 @@ func play_sfx(stream: AudioStream, volume_db: float = SFX_LEVEL_DB, min_interval
 ## UI 音效语义键 → 资源键（音效知识唯一 owner：调用方只喊 "nav/confirm/back"，不必知道资源键）
 const UI_SFX_KEYS := {"nav": "select", "confirm": "ok", "back": "cancel"}
 
-## 播放 UI 音效（按语义 kind，如 "nav"/"confirm"/"back"）—— 走独立 `UI` 总线
+## 播放 UI 音效（按语义 kind，如 "nav"/"confirm"/"back"）—— 走独立 [code]UI[/code] 总线
 func play_ui_sfx(kind: String) -> void:
 	var key: String = UI_SFX_KEYS.get(kind, "")
 	if key == "":
@@ -459,10 +459,10 @@ func play_sfx_throttled(stream: AudioStream, min_interval: float) -> void:
 	play_sfx(stream, SFX_LEVEL_DB, min_interval)
 
 
-## 每个音效的**基准音量**（dB）：由 `AssetRegistry.SFX_DB` 按 key 给出，首次用时反查成 stream → dB。
-## 总电平现在有名字（`SFX_LEVEL_DB`）且是默认值 —— 调用点**不用再写**，均衡关系全由表决定（R17）。
+## 每个音效的基准音量（dB）：由 [code]AssetRegistry.SFX_DB[/code] 按 key 给出，首次用时反查成 stream → dB。
+## 总电平现在有名字（[code]SFX_LEVEL_DB[/code]）且是默认值 —— 调用点不用再写，均衡关系全由表决定（R17）。
 static var _base_db_cache: Dictionary = {}
-## stream → 资源 key 反查（「按 key 配置」的规则用，如 `BGM_DUCK_ON_SFX`）
+## stream → 资源 key 反查（「按 key 配置」的规则用，如 [code]BGM_DUCK_ON_SFX[/code]）
 static var _key_cache: Dictionary = {}
 
 
@@ -490,16 +490,16 @@ func _eviction_rank(stream: AudioStream) -> int:
 	return 1
 
 
-## 音效**总电平**（dB）。相对关系由 `AssetRegistry.SFX_DB` 决定，这里只管整体大小。
-## 曾因 `lc.sfx()` 的 db 默认 0.0（满音量）误压到 -15.0；真凶修好后已回到原值 -12.0。
-## ⚠️ 觉得**所有**音效整体偏大/偏小 → 动这一个数（3 dB ≈ 明显一档）；只嫌某一个吵 → 改 `SFX_DB` 里那一行。
-## 调用点**不用再写**它 —— 不传就是它。
+## 音效总电平（dB）。相对关系由 [code]AssetRegistry.SFX_DB[/code] 决定，这里只管整体大小。
+## 曾因 [code]lc.sfx()[/code] 的 db 默认 0.0（满音量）误压到 -15.0；真凶修好后已回到原值 -12.0。
+## 觉得所有音效整体偏大/偏小 → 动这一个数（3 dB ≈ 明显一档）；只嫌某一个吵 → 改 [code]SFX_DB[/code] 里那一行。
+## 调用点不用再写它 —— 不传就是它。
 const SFX_LEVEL_DB := -12.0
-## 弹幕音效的**最小间隔**（秒）。弹幕是"每颗子弹一次"的高频源，只靠同帧去重仍可到 ~60 次/秒 ——
+## 弹幕音效的最小间隔（秒）。弹幕是"每颗子弹一次"的高频源，只靠同帧去重仍可到 ~60 次/秒 ——
 ## 同一个音连打就是机关枪，听感上"格外大"。节流后最多 ~12 次/秒。
-## ⚠️ 还嫌吵就继续调大（0.15 ≈ 6.7 次/秒），或直接压 `SFX_DB` 里那个音。
+## 还嫌吵就继续调大（0.15 ≈ 6.7 次/秒），或直接压 [code]SFX_DB[/code] 里那个音。
 const BULLET_SFX_MIN_INTERVAL := 0.08
-## **额外**压低（dB，<=0）。给"某些场景该更安静"用（当前：符卡练习）。
+## 额外压低（dB，<=0）。给"某些场景该更安静"用（当前：符卡练习）。
 ## 正常流程保持 0.0 —— 不改动你已经调好的那套值。
 var sfx_trim_db: float = 0.0
 
@@ -553,8 +553,8 @@ func _to_db(linear: float) -> float:
 	return linear_to_db(linear)
 
 
-## 总线存在性守卫：**缺了就响亮告警**（引擎会静默回退 Master，音量/效果器全失效）。
-## 返回总线名（存在）或 `Master`（缺失时的兜底）。
+## 总线存在性守卫：缺了就响亮告警（引擎会静默回退 Master，音量/效果器全失效）。
+## 返回总线名（存在）或 [code]Master[/code]（缺失时的兜底）。
 func _require_bus(bus_name: StringName) -> StringName:
 	if AudioServer.get_bus_index(bus_name) >= 0:
 		return bus_name

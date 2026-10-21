@@ -15,13 +15,13 @@ const OPTIONS: Array[Dictionary] = [
 const CHAR_NAMES = SpellRecord.CHAR_NAMES
 const DIFF_NAMES = SpellRecord.DIFF_NAMES
 const SUB_COLOR := Color(0.72, 0.72, 0.78, 1.0)  # 英文小标题暗色
-## 记录行字号（`_make_row` 三个 Label 共用；行高由它决定，见 `_row_pitch`）
+## 记录行字号（[code]_make_row[/code] 三个 Label 共用；行高由它决定，见 [code]_row_pitch[/code]）
 const ROW_FONT_SIZE := 26
 ## 未遇见符卡的名字位：只显示 uid + 三个问号（与 Boss 未揭名同一套写法）
 const UNKNOWN_NAME := "？？？"
 ## 未遇见的名字位颜色（比正常名暗一档，一眼能看出"还没见过"）
 const UNKNOWN_NAME_COLOR := Color(0.42, 0.42, 0.48, 1.0)
-## **至少收取过一次**的符卡名颜色（蓝）
+## 至少收取过一次的符卡名颜色（蓝）
 const CAPTURED_NAME_COLOR := Color(0.4, 0.7, 1.0)
 
 var _view: int = View.OPTIONS
@@ -30,8 +30,8 @@ var _diff_index: int = 0
 var _cards: Array[Dictionary] = []
 var _visible: Array[Dictionary] = []  # 当前页要渲染的卡（= 当前难度的全部符卡，见 _render）
 var _page: int = 0
-## 每页行数 —— 按面板**实测**高度算（`_rows_per_page`），不写死常量。
-## 回归（2026-09-26 作者报）：曾是 `const PER_PAGE = 6`，面板下方还空一大半就翻页。
+## 每页行数 —— 按面板实测高度算（[code]_rows_per_page[/code]），不写死常量。
+## 回归（2026-09-26 作者报）：曾是 [code]const PER_PAGE = 6[/code]，面板下方还空一大半就翻页。
 var _per_page: int = 1
 
 
@@ -97,10 +97,10 @@ func _hide_record_view() -> void:
 
 # ═══ 符卡记录数据 ═══
 
-## 扫**花名册**列出当前难度下的**全部**符卡（uid != 0）——**不看记录**：
-## 没遇见过的也要占一行（显示 uid + 问号，见 `_make_row`）。
+## 扫花名册列出当前难度下的全部符卡（uid != 0）——不看记录：
+## 没遇见过的也要占一行（显示 uid + 问号，见 [code]_make_row[/code]）。
 ## key 含 uid：同槽位在不同难度可挂不同卡（如 spell53/54），按 uid 去重避免重复行。
-## 名字按**当前难度**取（本页本来就一次只看一个难度，难度切换会重扫）。
+## 名字按当前难度取（本页本来就一次只看一个难度，难度切换会重扫）。
 func _collect_cards() -> void:
 	var seen := {}
 	_cards.clear()
@@ -170,7 +170,7 @@ func _row_pitch() -> float:
 	return row_h + float(box.get_theme_constant("separation"))
 
 
-## 难度切换：卡片列表来自**花名册**（按难度取名字/uid），所以必须重扫再渲染
+## 难度切换：卡片列表来自花名册（按难度取名字/uid），所以必须重扫再渲染
 func _reload_diff() -> void:
 	_collect_cards()
 	_update_header()
@@ -181,8 +181,8 @@ func _update_header() -> void:
 	$RecordView/Header/DiffLabel.text = DIFF_NAMES[_diff_index]
 
 
-## 一页一行地渲染**全部**符卡（没遇见过的也在，显示 uid + 问号）。
-## 三档显示由 `_make_row` 决定：未遇见 = 「？？？」/ 遇见过 = 名字 / 收取过 = 名字**蓝色**。
+## 一页一行地渲染全部符卡（没遇见过的也在，显示 uid + 问号）。
+## 三档显示由 [code]_make_row[/code] 决定：未遇见 = 「？？？」/ 遇见过 = 名字 / 收取过 = 名字蓝色。
 func _render() -> void:
 	var box: VBoxContainer = $"RecordView/RecordPanel/ListBox"
 	for child in box.get_children():
@@ -235,9 +235,9 @@ func _pad_cn(v: Variant, width: int) -> String:
 
 ## 一行 = uid + 名字 + 收取/尝试。
 ## 三档（作者要求）：
-##   ① **没遇见过**（无记录）→ 名字显示 **？？？**（uid 照常显示，便于按 uid 找卡）
-##   ② **遇见过但没收取**（有记录、captures == 0）→ 显示真名（普通色）
-##   ③ **至少收取过一次**（captures > 0）→ 名字**蓝色**
+##   ① 没遇见过（无记录）→ 名字显示 ？？？（uid 照常显示，便于按 uid 找卡）
+##   ② 遇见过但没收取（有记录、captures == 0）→ 显示真名（普通色）
+##   ③ 至少收取过一次（captures > 0）→ 名字蓝色
 func _make_row(card: Dictionary) -> HBoxContainer:
 	var rec := _record_of(card)
 	var row := HBoxContainer.new()

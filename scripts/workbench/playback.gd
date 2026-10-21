@@ -1,12 +1,12 @@
-## 播放状态机（工作台）—— 只持状态、只做决策：**不碰场景树 / 不碰 Engine / 不碰音频总线**。
+## 播放状态机（工作台）—— 只持状态、只做决策：不碰场景树 / 不碰 Engine / 不碰音频总线。
 ##
 ## 为什么要单独一层（2026-09-30，S3）：暂停 / 速度 / 快进 / 逐帧 / 静音这些规则原先长在
-## `workbench.gd` 里，必须借一个 Control 台子**真跑帧**才能验。抽出来后全是"给状态、问结果"
-## 的纯投影（`desired_time_scale()` / `should_pause_tree()` / `is_audio_muted()`），可无树断言。
+## [code]workbench.gd[/code] 里，必须借一个 Control 台子真跑帧才能验。抽出来后全是"给状态、问结果"
+## 的纯投影（[code]desired_time_scale()[/code] / [code]should_pause_tree()[/code] / [code]is_audio_muted()[/code]），可无树断言。
 ##
-## 分工：本类只改自己的字段并发信号；宿主（`workbench.gd`）在 `changed` 里把状态下发到引擎
-## （`tree.paused` / `Engine.time_scale` / `max_physics_steps_per_frame` /
-## `AudioManager.set_bgm_pitch` / Master 总线静音）并同步播放控制行。
+## 分工：本类只改自己的字段并发信号；宿主（[code]workbench.gd[/code]）在 [code]changed[/code] 里把状态下发到引擎
+## （[code]tree.paused[/code] / [code]Engine.time_scale[/code] / [code]max_physics_steps_per_frame[/code] /
+## [code]AudioManager.set_bgm_pitch[/code] / Master 总线静音）并同步播放控制行。
 ##
 ## 信号：
 ##   changed      —— 状态变了 → 宿主重新下发一次运行时设置
@@ -130,7 +130,7 @@ func poll(cur: float) -> void:
 # ═══ 逐帧推进 ═══
 
 ## 进入逐帧：返回 false = 正在推进中（防重入）。会先退快进、再进暂停。
-## 推进期间树不停（见 `should_pause_tree`）、time_scale 归 1 —— 恰好一个物理步。
+## 推进期间树不停（见 [code]should_pause_tree[/code]）、time_scale 归 1 —— 恰好一个物理步。
 func begin_step() -> bool:
 	if stepping:
 		return false
@@ -170,7 +170,7 @@ func set_fixed_seed(on: bool) -> void:
 
 
 ## 本次重跑该用的固定种子（宿主据此设 RNG；开关关掉时宿主自己 randomize）。
-## 取值来自 `BenchCommon.FIXED_SEED` —— 全工作台唯一来源，别在这里抄字面量。
+## 取值来自 [code]BenchCommon.FIXED_SEED[/code] —— 全工作台唯一来源，别在这里抄字面量。
 func fixed_seed_value() -> int:
 	return COMMON.FIXED_SEED
 
@@ -191,7 +191,7 @@ func desired_physics_steps() -> int:
 	return FAST_FORWARD_MAX_STEPS if ff_active() else DEFAULT_MAX_STEPS
 
 
-## BGM 音高跟随 time_scale（慢放也同步）。**统一口径**：
+## BGM 音高跟随 time_scale（慢放也同步）。统一口径：
 ## 旧代码在"快进收尾"那一支写死 1.0，慢放档下会与 time_scale 脱钩（0.5 画面配 1.0 音高）。
 func desired_bgm_pitch() -> float:
 	return desired_time_scale()

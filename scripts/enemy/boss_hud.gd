@@ -1,4 +1,4 @@
-## BossHud —— Boss 的**显示状态**（名字文字 + 名字显隐 + 阶段进度点显隐）。
+## BossHud —— Boss 的显示状态（名字文字 + 名字显隐 + 阶段进度点显隐）。
 ## 从 Boss 抽出来：Boss 只管战斗，显示层自己攒状态、发信号，BossUI 订阅。
 class_name BossHud
 extends RefCounted

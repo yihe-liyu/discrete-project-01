@@ -1,6 +1,6 @@
-## 自机 bomb 数据**基类**：所有 bomb 共有的外观 / 编队 / 无敌。
+## 自机 bomb 数据基类：所有 bomb 共有的外观 / 编队 / 无敌。
 ## 具体炸弹类型继承它，补自己的运动与判定字段（RingBombData / MistBombData）。
-## 与弹幕数据（BulletData）分开：bomb 是**宿主实体**（个位数、宿主动作），不是弹幕。
+## 与弹幕数据（BulletData）分开：bomb 是宿主实体（个位数、宿主动作），不是弹幕。
 extends Resource
 class_name BombData
 
@@ -29,6 +29,6 @@ class_name BombData
 
 
 ## 第 index 颗 bomb 的染色（Player 逐颗 spawn 时调用）。
-## 默认 **保留贴图原色**；子类可覆写（如环状炸按色环给多颗上色）。
+## 默认 保留贴图原色；子类可覆写（如环状炸按色环给多颗上色）。
 func tint_for(_index: int, _base_hue: float) -> Color:
 	return Color.WHITE

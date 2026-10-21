@@ -1,5 +1,5 @@
 # FieldFilterLayer.gd
-## 场地颜色滤镜（Bomb）：从**游戏框中心**扩圆铺满 → 停留 → 渐隐。
+## 场地颜色滤镜（Bomb）：从游戏框中心扩圆铺满 → 停留 → 渐隐。
 ## 范围严格限制在游戏框内（ColorRect = 场地矩形），不影响框外 HUD。
 extends CanvasLayer
 class_name FieldFilterLayer
@@ -64,8 +64,8 @@ func play(p_color: Color) -> void:
 	_tween.tween_callback(_on_finished)
 
 
-## 被弹炸弹窗口开：**整框铺满**（radius 直接给满，不扩圆）+ alpha 0 → 1 渐显。
-## 必须用 `ignore_time_scale` 的 tween —— 窗口期全局被定格（`time_scale = 0`），普通 tween 一步都不走。
+## 被弹炸弹窗口开：整框铺满（radius 直接给满，不扩圆）+ alpha 0 → 1 渐显。
+## 必须用 [code]ignore_time_scale[/code] 的 tween —— 窗口期全局被定格（[code]time_scale = 0[/code]），普通 tween 一步都不走。
 func _on_deathbomb_started() -> void:
 	if deathbomb_color.a <= 0.0:
 		return
@@ -89,8 +89,8 @@ func _on_deathbomb_ended() -> void:
 	_tween.tween_callback(_on_finished)
 
 
-## 定格（`time_scale = 0`）与暂停里都照走的 tween：
-## `ignore_time_scale` 抵掉定格，`TWEEN_PAUSE_PROCESS` 抵掉 `get_tree().paused`。
+## 定格（[code]time_scale = 0[/code]）与暂停里都照走的 tween：
+## [code]ignore_time_scale[/code] 抵掉定格，[code]TWEEN_PAUSE_PROCESS[/code] 抵掉 [code]get_tree().paused[/code]。
 func _make_ignore_time_scale_tween() -> Tween:
 	var tween := create_tween()
 	tween.set_ignore_time_scale(true)

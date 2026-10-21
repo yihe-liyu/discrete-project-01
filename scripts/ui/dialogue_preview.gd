@@ -1,28 +1,28 @@
 extends Control
-## **对话预览**（独立场景，不进关卡）：把 `data/dialogue/**` 里任意一段构建函数直接播出来。
+## 对话预览（独立场景，不进关卡）：把 [code]data/dialogue/[/code] 里任意一段构建函数直接播出来。
 ## 解决"战后对话要打完整关才看得到"的痛点。
 ##
-## 三种用法（优先级：命令行 > `@export` > 默认）：
-##   ① **编辑器里**：打开本场景 → 右侧面板选「脚本 / 段落」→ 直接 F5（或改 `@export` 后 F5 即播）
-##   ② **命令行**：`--script=` / `--func=` / `--list` / `--dry` / `--shot=`（见下）
-##   ③ **窗口内**：下拉换段（换脚本自动刷新段落列表）、`▶ 播放`、R 重播、Q 退出
+## 三种用法（优先级：命令行 > [code]@export[/code] > 默认）：
+##   ① 编辑器里：打开本场景 → 右侧面板选「脚本 / 段落」→ 直接 F5（或改 [code]@export[/code] 后 F5 即播）
+##   ② 命令行：[code]--script=[/code] / [code]--func=[/code] / [code]--list[/code] / [code]--dry[/code] / [code]--shot=[/code]（见下）
+##   ③ 窗口内：下拉换段（换脚本自动刷新段落列表）、[code]▶ 播放[/code]、R 重播、Q 退出
 ##
 ##   godot --headless --path . scenes/ui/dialogue_preview.tscn -- --list
 ##   godot --headless --path . scenes/ui/dialogue_preview.tscn -- --func=战斗后 --dry
 ##   godot --path . scenes/ui/dialogue_preview.tscn -- --func=战斗后
 ##   godot --path . scenes/ui/dialogue_preview.tscn -- --func=战斗后 --shot=/tmp/dlg.png
 ##
-## 构建函数识别：`static` + 零参数 + 返回 `DialogueSteps`（元数据判据，不靠命名约定）。
+## 构建函数识别：[code]static[/code] + 零参数 + 返回 [code]DialogueSteps[/code]（元数据判据，不靠命名约定）。
 
 const BOX_SCENE := preload("res://scenes/ui/dialogue_box.tscn")
 const DEFAULT_SCRIPT := "res://data/dialogue/stage/stage01_dialogue.gd"
 const DIALOGUE_DIR := "res://data/dialogue"
 
-## 编辑器里直接选（命令行 `--script=` / `--func=` 会覆盖它们；都空 → 默认脚本的第一个构建函数）
+## 编辑器里直接选（命令行 [code]--script=[/code] / [code]--func=[/code] 会覆盖它们；都空 → 默认脚本的第一个构建函数）
 @export var dialogue_script: String = ""
 @export var dialogue_func: String = ""
-## 进场景即播（**默认关**：进来先看清面板、挑好段，再按「▶ 播放」/ R）。
-## 命令行给了 `--script=` / `--func=` / `--shot=` 时例外 —— 那本就是"现在就播"的请求，自动化不受影响。
+## 进场景即播（默认关：进来先看清面板、挑好段，再按「▶ 播放」/ R）。
+## 命令行给了 [code]--script=[/code] / [code]--func=[/code] / [code]--shot=[/code] 时例外 —— 那本就是"现在就播"的请求，自动化不受影响。
 @export var auto_play: bool = false
 
 @onready var _script_picker: OptionButton = $Panel/VBox/ScriptPicker
@@ -104,7 +104,7 @@ func _start_playback(p_steps: Array) -> void:
 	_box.play_steps(p_steps)
 
 
-## **换段只是"选好"**：停掉当前演出、提示按 ▶ / R —— 不自动播（与 `auto_play` 默认关一致）
+## 换段只是"选好"：停掉当前演出、提示按 ▶ / R —— 不自动播（与 [code]auto_play[/code] 默认关一致）
 func _show_idle() -> void:
 	if _box != null and is_instance_valid(_box):
 		_box.queue_free()
@@ -133,7 +133,7 @@ func _wire_pickers() -> void:
 	_play_button.pressed.connect(_play_current)
 
 
-## 换脚本：刷新段落列表并**只选中**它第一个构建函数（不播 —— 要播按 ▶ / R）
+## 换脚本：刷新段落列表并只选中它第一个构建函数（不播 —— 要播按 ▶ / R）
 func _on_script_picked(p_index: int) -> void:
 	if _select(String(_script_picker.get_item_metadata(p_index)), ""):
 		_show_idle()
@@ -145,7 +145,7 @@ func _on_func_picked(p_index: int) -> void:
 		_show_idle()
 
 
-## 扫描 `data/dialogue/**` 填脚本下拉
+## 扫描 [code]data/dialogue/[/code] 填脚本下拉
 func _reload_scripts() -> void:
 	_paths = _scan_scripts(DIALOGUE_DIR)
 	_script_picker.clear()
@@ -155,7 +155,7 @@ func _reload_scripts() -> void:
 		_script_picker.set_item_metadata(index, path)
 
 
-## 选定「脚本 + 构建函数」：同步两个下拉，写 `_path`/`_func_name`；失败返回 false
+## 选定「脚本 + 构建函数」：同步两个下拉，写 [code]_path[/code]/[code]_func_name[/code]；失败返回 false
 func _select(p_path: String, p_func: String) -> bool:
 	var path := p_path
 	if path.is_empty():
@@ -180,7 +180,7 @@ func _select(p_path: String, p_func: String) -> bool:
 	return true
 
 
-## 让两个下拉显示当前选择（程序 `select()` 不会触发 `item_selected`，无回环）
+## 让两个下拉显示当前选择（程序 [code]select()[/code] 不会触发 [code]item_selected[/code]，无回环）
 func _sync_pickers(p_builders: Array[String]) -> void:
 	var script_index := -1
 	for i in _script_picker.item_count:
@@ -203,7 +203,7 @@ func _sync_pickers(p_builders: Array[String]) -> void:
 
 # ═══ 参数 / 目录扫描 / 构建函数识别 ═══
 
-## 解析 `--key=value` / `--flag`（Godot 的 `--` 之后是 user args）
+## 解析 [code]--key=value[/code] / [code]--flag[/code]（Godot 的 [code]--[/code] 之后是 user args）
 func _parse_args(p_args: PackedStringArray) -> Dictionary:
 	var out := {}
 	for raw in p_args:

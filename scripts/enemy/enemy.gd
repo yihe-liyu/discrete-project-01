@@ -39,7 +39,7 @@ func _on_tree_exited():
 
 
 ## 显式注入战场实体注册表（StageRuntime.add_enemy_to_scene 的唯一入口）。
-## 取代旧实现 `if "registry" in node: node.registry = ...` 的属性名探针。
+## 取代旧实现 [code]if "registry" in node: node.registry = ...[/code] 的属性名探针。
 func set_registry(p_registry: EntityRegistry) -> void:
 	registry = p_registry
 

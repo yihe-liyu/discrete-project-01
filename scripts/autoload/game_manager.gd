@@ -3,7 +3,7 @@ extends Node
 
 enum AppState {MENU, PLAYING, PAUSED, TRANSITIONING}
 
-## 暂停菜单场景路径（**唯一来源**：覆盖层入口只引用这个常量，不再散落字面量）
+## 暂停菜单场景路径（唯一来源：覆盖层入口只引用这个常量，不再散落字面量）
 const PAUSE_MENU_SCENE := "res://scenes/ui/pause_menu.tscn"
 
 signal game_state_changed(old_state: int, new_state: int)
@@ -94,7 +94,7 @@ func change_scene(path: String, target_state: AppState = AppState.PLAYING):
 
 # ═══ 当前世界登记（取代跨场景读 BulletManager.current）═══
 
-## 当前存在世界的显式登记（GameScene 组合根 `_ready` 调）；切场时由壳统一暂停/清场/恢复。
+## 当前存在世界的显式登记（GameScene 组合根 [code]_ready[/code] 调）；切场时由壳统一暂停/清场/恢复。
 var world_bullets: BulletManager
 var entity_registry: EntityRegistry
 

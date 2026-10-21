@@ -1,6 +1,6 @@
 ## KernelBulletPhysics—— 把原项目 BulletPhysics 的规则移植到内核 SoA 池。
 ##
-## 边界：本文件是**宿主桥接层**（可引用 RNG / AudioManager 等宿主全局）；
+## 边界：本文件是宿主桥接层（可引用 RNG / AudioManager 等宿主全局）；
 ## 几何唯一实现归内核（query_circle / hit_test），本层只做"规则"（命中 / 擦弹 / 伤害 / 特效）。
 ## 覆盖：敌弹 ↔ 自机（命中 + 擦弹双阈值 + 记忆随机清弹）；自机弹 ↔ 敌人
 ## （damage 侧表 + 记忆加成 + 音效/特效）；死亡清弹扫掠（sweep_enemy_bullets）。
@@ -25,8 +25,8 @@ func _player_res() -> PlayerResources:
 	return entity_registry.get_player_resources() if entity_registry != null else null
 
 
-## 消弹消散特效的实现已上移 `KernelNativeSystem.play_clear_fx()`（单一真相）——
-## 因为生命周期 `clear_fx()` / `despawn_clear()` 也要用同一套「同色提亮 1.5×」。
+## 消弹消散特效的实现已上移 [code]KernelNativeSystem.play_clear_fx()[/code]（单一真相）——
+## 因为生命周期 [code]clear_fx()[/code] / [code]despawn_clear()[/code] 也要用同一套「同色提亮 1.5×」。
 ## 保留本薄包装只为不改 sweep 的两个调用点。
 func _play_clear(pos: Vector2, tint: Color) -> void:
 	if backend == null or backend.system == null:
@@ -162,7 +162,7 @@ func _spawn_hit_fx(system: KernelNativeSystem, id: int, bt: BulletType) -> void:
 	fx_pool.play(bt.hit_fx, system.get_position(id), system.get_velocity(id), system.get_color(id))
 
 
-## 圆-圆重叠：`query_circle`（原生宽相网格）+ 阵营过滤（原 `CollisionResolver.overlap_ids` 内联）。
+## 圆-圆重叠：[code]query_circle[/code]（原生宽相网格）+ 阵营过滤（原 [code]CollisionResolver.overlap_ids[/code] 内联）。
 func _overlap_ids(system: KernelNativeSystem, center: Vector2, radius: float, faction: BulletType.Faction) -> PackedInt32Array:
 	var out := PackedInt32Array()
 	if radius <= 0.0:

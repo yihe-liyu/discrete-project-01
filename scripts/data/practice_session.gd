@@ -11,17 +11,17 @@ static var boss_name: String
 static var stage_id: int = 1
 static var phase_index: int = 0
 static var background: PackedScene
-## 符卡背景（每 Boss 一张，PackedScene）：`start_spell_card()` 自建 BossData 会丢
-## `BossData.spell_background`，故练习载荷单独携带一份，由 game_scene 优先取 Boss 的、回落取这份。
+## 符卡背景（每 Boss 一张，PackedScene）：[code]start_spell_card()[/code] 自建 BossData 会丢
+## [code]BossData.spell_background[/code]，故练习载荷单独携带一份，由 game_scene 优先取 Boss 的、回落取这份。
 static var spell_background: PackedScene
-## 本局练习的 BGM key（菜单按选中的卡解析：`BossCatalog.practice_bgm_key()` = Boss 覆盖 → 面默认）。
+## 本局练习的 BGM key（菜单按选中的卡解析：[code]BossCatalog.practice_bgm_key()[/code] = Boss 覆盖 → 面默认）。
 ## game_scene 起场景时用它；空 = 练习静音。
 static var bgm_key: String = ""
-## 从练习返回符卡练习菜单时，要还原到的**层级与选中项**（`{section, stage, phase, diff, char}`）。
-## ⚠️ 故意**不**在 `clear()` 里清 —— 它必须活过会话拆除（`finish()` → `clear()`）。
-## 由菜单在开练习前写入、在 `on_enter()` 里消费后自行清空。
+## 从练习返回符卡练习菜单时，要还原到的层级与选中项（[code]{section, stage, phase, diff, char}[/code]）。
+## 故意不在 [code]clear()[/code] 里清 —— 它必须活过会话拆除（[code]finish()[/code] → [code]clear()[/code]）。
+## 由菜单在开练习前写入、在 [code]on_enter()[/code] 里消费后自行清空。
 static var return_menu_state: Dictionary = {}
-## **仅"从练习返回"这一趟**为 true。没有它，残留的 `return_menu_state` 会让**下次正常进入**
+## 仅"从练习返回"这一趟为 true。没有它，残留的 [code]return_menu_state[/code] 会让下次正常进入
 ## 也直接跳到第三级（曾出此 bug）—— 所以还原必须由"这次是返回"来授权，而不是"有状态就还原"。
 static var restore_menu_on_enter: bool = false
 

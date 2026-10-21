@@ -1,16 +1,16 @@
-## 符卡背景里「**一层自动向上无缝滚动**的图」——可选组件，作者把它贴在**自己背景场景内的
-## Sprite2D** 上（或以 `scenes/effect/spell_backdrop_plain.tscn` 为模板）。只管滚动这一件事：
-## 显隐 / 淡入淡出 / 层级 / 坐标都归 `SpellBackdropLayer` 与作者场景管。
+## 符卡背景里「一层自动向上无缝滚动的图」——可选组件，作者把它贴在自己背景场景内的
+## Sprite2D 上（或以 [code]scenes/effect/spell_backdrop_plain.tscn[/code] 为模板）。只管滚动这一件事：
+## 显隐 / 淡入淡出 / 层级 / 坐标都归 [code]SpellBackdropLayer[/code] 与作者场景管。
 ##
-## 做法：窗口 = **整张图**，靠 `texture_repeat` 重复采样；每帧把窗口**下移**（= 画面向上滚），
-## 对图高取模 ⇒ 循环处看不出接缝。**前提是图本身纵向可平铺**（卡摩瑞那张顶行/底行 98% 一致，
+## 做法：窗口 = 整张图，靠 [code]texture_repeat[/code] 重复采样；每帧把窗口下移（= 画面向上滚），
+## 对图高取模 ⇒ 循环处看不出接缝。前提是图本身纵向可平铺（卡摩瑞那张顶行/底行 98% 一致，
 ## 就是为平铺画的）。
 ##
-## `centered` 由作者/模板决定（模板为 true → 图心落在 `(0,0)` = 场地正中，与宿主约定一致）。
+## [code]centered[/code] 由作者/模板决定（模板为 true → 图心落在 [code](0,0)[/code] = 场地正中，与宿主约定一致）。
 class_name SpellBackdropScroll
 extends Sprite2D
 
-## 向上滚动速度（像素/秒）；**0 = 静止**（每层各调各的 → 想要视差就放两层不同速度）
+## 向上滚动速度（像素/秒）；0 = 静止（每层各调各的 → 想要视差就放两层不同速度）
 @export var scroll_speed: float = 48.0
 
 

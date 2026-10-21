@@ -1,4 +1,4 @@
-## 内容协程的 **async 风格**基类：用 `await ctx.clock.delay(...)` 代替 `_tick` 的返回值状态机。
+## 内容协程的 async 风格基类：用 [code]await ctx.clock.delay(...)[/code] 代替 [code]_tick[/code] 的返回值状态机。
 ##
 ## 用法：
 ##   extends AsyncCoroutineScript
@@ -10,15 +10,15 @@
 ##
 ## 保证：
 ##   - 时钟仍是 [CoroutineRunner] 的物理时钟 ⇒ pause / 逐帧 / 快进 / tick_manual 一致
-##   - 旧 `_tick` 脚本完全不受影响；两者可以混用
-##   - `await` 只应等 `ctx.clock.*`（或一次性 UI 信号）；不要用引擎 Timer
+##   - 旧 [code]_tick[/code] 脚本完全不受影响；两者可以混用
+##   - [code]await[/code] 只应等 [code]ctx.clock.*[/code]（或一次性 UI 信号）；不要用引擎 Timer
 ##
-## ⚠️ 不用于倒带：async 状态不能回退；向后 seek 仍需“重跑 + 快进”。
-## ⚠️ 不要让同一个实例 `start()` 两次（旧 await 可能复活）；换关请新建脚本实例。
+## 不用于倒带：async 状态不能回退；向后 seek 仍需“重跑 + 快进”。
+## 不要让同一个实例 [code]start()[/code] 两次（旧 await 可能复活）；换关请新建脚本实例。
 class_name AsyncCoroutineScript
 extends CoroutineScript
 
-## 覆写它来写内容。**必须包含 await**（基类默认只等一帧）。
+## 覆写它来写内容。必须包含 await（基类默认只等一帧）。
 func run_async(p_ctx: StageContext) -> void:
 	await p_ctx.clock.next_tick()
 

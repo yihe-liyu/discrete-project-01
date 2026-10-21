@@ -23,7 +23,7 @@ func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base
 		bullet_manager.shoot_bullet(bullet_data, at, dir)
 
 
-## 按**方向数组**逐发（pattern 用：方向已在 pattern 里算好，服务只负责发射）。
+## 按方向数组逐发（pattern 用：方向已在 pattern 里算好，服务只负责发射）。
 func shoot_directions(bullet_data: BulletData, directions: Array[Vector2], at: Vector2,
 		sfx: AudioStream = null) -> void:
 	if not is_active or bullet_data == null or directions.is_empty() or bullet_manager == null:
@@ -76,13 +76,13 @@ func clear_laser_bullets() -> void:
 		bullet_manager.clear_laser_bullets()
 
 
-## 即时清掉**全屏敌弹**，**并逐颗播消弹消散特效**（同色提亮 1.5× —— 与死亡清弹圈/`clear_fx()` 同一套）。
-## 用途：道中转场、Boss 登场前的清屏、剧情演出清场 —— 语义是"**当帧清空、看得见**"。
-## ⚠️ 与 `death_clear()` 的分工：那个是**膨胀圈**（从 start_radius 胀到 max_radius，有半径上限、
-##    分帧扫、带 `on_clear` 回调），适合"死亡 / 炸弹的可见冲击"；本动词**当帧**清空、不分帧。
-## ⚠️ 不给分 / 不给道具；只清**敌弹**：不动激光（清激光用 `clear_all_lasers()`）、不动特效池
-##    （引擎级 `BulletManager.clear_all()` 才连特效池 / MultiMesh 一起清 —— 那是拆关卡用的，内容别碰）。
-## 关卡收尾的"裸清"（无特效）走 `BulletManager.clear_bullets()`，不走本动词。
+## 即时清掉全屏敌弹，并逐颗播消弹消散特效（同色提亮 1.5× —— 与死亡清弹圈/[code]clear_fx()[/code] 同一套）。
+## 用途：道中转场、Boss 登场前的清屏、剧情演出清场 —— 语义是"当帧清空、看得见"。
+## 与 [code]death_clear()[/code] 的分工：那个是膨胀圈（从 start_radius 胀到 max_radius，有半径上限、
+##    分帧扫、带 [code]on_clear[/code] 回调），适合"死亡 / 炸弹的可见冲击"；本动词当帧清空、不分帧。
+## 不给分 / 不给道具；只清敌弹：不动激光（清激光用 [code]clear_all_lasers()[/code]）、不动特效池
+##    （引擎级 [code]BulletManager.clear_all()[/code] 才连特效池 / MultiMesh 一起清 —— 那是拆关卡用的，内容别碰）。
+## 关卡收尾的"裸清"（无特效）走 [code]BulletManager.clear_bullets()[/code]，不走本动词。
 func clear_enemy_bullets() -> void:
 	if bullet_manager: bullet_manager.clear_enemy_bullets_with_fx()
 

@@ -37,7 +37,7 @@ func get_nearest_enemy(from: Vector2, max_distance: float = -1.0) -> Node2D:
 	return best
 
 
-## 半径内的敌人（**不排序**，顺序 = 注册顺序，确定性）。
+## 半径内的敌人（不排序，顺序 = 注册顺序，确定性）。
 func get_enemies_in_radius(center: Vector2, radius: float) -> Array[Node2D]:
 	var result: Array[Node2D] = []
 	var r2: float = radius * radius

@@ -5,9 +5,9 @@ extends VBoxContainer
 
 const _label_hint_color := Color(1, 1, 0.7, 0.8)
 const RIG_COMMON = preload("res://scripts/workbench/bench_common.gd")  # 字号阶梯单一来源
-## 键名列宽（px）。键名是**要照抄进代码**的东西（`param("move_speed", v)`）→
-## 给足宽度、**不换行**；真超长就省略号 + 悬停看全名。
-## 曾经的 90px + 自动换行会把 `move_speed` 从中间断成 `move_spee` / `d`（键名断行 = 看不清）
+## 键名列宽（px）。键名是要照抄进代码的东西（[code]param("move_speed", v)[/code]）→
+## 给足宽度、不换行；真超长就省略号 + 悬停看全名。
+## 曾经的 90px + 自动换行会把 [code]move_speed[/code] 从中间断成 [code]move_spee[/code] / [code]d[/code]（键名断行 = 看不清）
 const KEY_COLUMN_W := 150.0
 
 var _rows: Array = []  # [{name, kind, ctrl}]

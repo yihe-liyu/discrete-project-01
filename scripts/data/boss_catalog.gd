@@ -14,20 +14,20 @@ const BOSS_SCAN_ROOT := "res://data/stages"
 static var _cache: Dictionary = {}
 
 
-## 名册覆盖（**仅供测试**）：直接投入 `stage → Array[BossData]`，跳过注册表/扫描。
+## 名册覆盖（仅供测试）：直接投入 [code]stage → Array[BossData][/code]，跳过注册表/扫描。
 ## 目的：机制测试（如阶段编号）不必绑真实内容 —— 内容改名/增删不该让它红。
-## ⚠️ static 缓存全局可见 —— 用完**必须** `clear_catalog_override()` 还原，否则后续测试会看到夹具内容。
+## static 缓存全局可见 —— 用完必须 [code]clear_catalog_override()[/code] 还原，否则后续测试会看到夹具内容。
 static func set_catalog_override(grouped: Dictionary) -> void:
 	_cache = grouped
 
 
-## 清掉覆盖与缓存 → 下次 `all()` 重新从真实内容构建。
+## 清掉覆盖与缓存 → 下次 [code]all()[/code] 重新从真实内容构建。
 static func clear_catalog_override() -> void:
 	_cache = {}
 
 
 ## 全部 Boss 谱（惰性构建，缓存）：stage -> Array[BossData]（boss_index = 数组下标）
-## 数据源：boss_registry.tres（回退：扫 data/stages/**/boss/*.tres）；按 stage_id 分组、order 排序。
+## 数据源：boss_registry.tres（回退：扫 data/stages//boss/*.tres）；按 stage_id 分组、order 排序。
 ## 注意：拆分"道中 / 关底"只影响"谁登场、ui 点数分段"，不影响阶段编号。
 static func all() -> Dictionary:
 	if _cache.is_empty():
@@ -48,7 +48,7 @@ static func _build_all() -> Dictionary:
 	return grouped
 
 
-## 名册加载：注册表优先，空则扫描 data/stages/**/boss/*.tres。
+## 名册加载：注册表优先，空则扫描 data/stages//boss/*.tres。
 static func _load_bosses() -> Array[BossData]:
 	if ResourceLoader.exists(REGISTRY_PATH):
 		var reg: BossRegistry = ResourceLoader.load(REGISTRY_PATH)
@@ -88,11 +88,11 @@ static func boss(stage: int, boss_index: int) -> BossData:
 
 # ═══════════ 规范阶段顺序（C 的核心：阶段身份与 Boss 组织解耦）═══════════
 
-## 该 Boss 的**槽位数** = 各难度列的最大长度（不是 `phases_normal.size()`）。
-## 各难度列同形（同槽可换卡），但**允许某难度列为空** —— 例：EX 面只有 Extra 档，
-## `phases_normal` 空而 `phases_extra` 有卡。
-## 回归（2026-09-26）：曾一律拿 `phases_normal.size()` 当槽位数 → 这种 Boss 规范序 0 槽 →
-## `resolve_identity` 越界、阶段永远解不了锁（一键解锁也跳过）→ 符卡练习里看不见。
+## 该 Boss 的槽位数 = 各难度列的最大长度（不是 [code]phases_normal.size()[/code]）。
+## 各难度列同形（同槽可换卡），但允许某难度列为空 —— 例：EX 面只有 Extra 档，
+## [code]phases_normal[/code] 空而 [code]phases_extra[/code] 有卡。
+## 回归（2026-09-26）：曾一律拿 [code]phases_normal.size()[/code] 当槽位数 → 这种 Boss 规范序 0 槽 →
+## [code]resolve_identity[/code] 越界、阶段永远解不了锁（一键解锁也跳过）→ 符卡练习里看不见。
 static func boss_slot_count(b: BossData) -> int:
 	if b == null:
 		return 0
@@ -102,7 +102,7 @@ static func boss_slot_count(b: BossData) -> int:
 	return slots
 
 
-## 该 Boss 每槽的**代表阶段**（规范序用）；长度 = `boss_slot_count`。
+## 该 Boss 每槽的代表阶段（规范序用）；长度 = [code]boss_slot_count[/code]。
 static func boss_slot_phases(b: BossData) -> Array[PhaseData]:
 	var out: Array[PhaseData] = []
 	for slot in boss_slot_count(b):
@@ -110,7 +110,7 @@ static func boss_slot_phases(b: BossData) -> Array[PhaseData]:
 	return out
 
 
-## 第 slot 槽的代表阶段：优先规范列 `phases_normal`，该槽为空则依次回落 Easy → Hard → Lunatic → Extra。
+## 第 slot 槽的代表阶段：优先规范列 [code]phases_normal[/code]，该槽为空则依次回落 Easy → Hard → Lunatic → Extra。
 static func _slot_phase(b: BossData, slot: int) -> PhaseData:
 	for arr in _difficulty_lists(b):
 		var a := arr as Array
@@ -119,7 +119,7 @@ static func _slot_phase(b: BossData, slot: int) -> PhaseData:
 	return null
 
 
-## 五个难度列（顺序即代表阶段的优先级：规范列 `phases_normal` 在前）。
+## 五个难度列（顺序即代表阶段的优先级：规范列 [code]phases_normal[/code] 在前）。
 static func _difficulty_lists(b: BossData) -> Array:
 	return [b.phases_normal, b.phases_easy, b.phases_hard, b.phases_lunatic, b.phases_extra]
 
@@ -197,8 +197,8 @@ static func boss_of_phase(stage: int, phase_index: int) -> BossData:
 	return boss(stage, boss_index_of_phase(stage, phase_index))
 
 
-## **符卡练习**该用哪首 BGM：Boss 的 `practice_bgm_key` → 回落该面的 `StageData.bgm_key`。
-## 练习按「单张卡」打、一场只面对一只 Boss，所以**道中/关底可以各配一首**
+## 符卡练习该用哪首 BGM：Boss 的 [code]practice_bgm_key[/code] → 回落该面的 [code]StageData.bgm_key[/code]。
+## 练习按「单张卡」打、一场只面对一只 Boss，所以道中/关底可以各配一首
 ## （道中 Boss 填道中曲、关底 Boss 填 Boss 曲）；两边都不给 → ""（练习静音）。
 static func practice_bgm_key(p_boss: BossData, stage: int) -> String:
 	if p_boss and p_boss.practice_bgm_key != "":

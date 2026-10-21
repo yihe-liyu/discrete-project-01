@@ -1,6 +1,6 @@
 ## 吃道具得分浮字：池化 NumberSprite，在被吃掉的位置显示本次得分，上浮 + 渐隐后回池。
 ## 数据源：GameEvents.item_score（Item.collect 发射）。组合根在 game_scene.tscn 声明（R21）。
-## 与 FxPool 分工：FxPool 是命中/爆炸的**精灵动画**池；本层是**数字**浮字池（同字体 ascii.png）。
+## 与 FxPool 分工：FxPool 是命中/爆炸的精灵动画池；本层是数字浮字池（同字体 ascii.png）。
 class_name ScorePopupLayer
 extends Node2D
 
@@ -12,7 +12,7 @@ const DIGIT_COUNT: int = 5
 ## 高亮收取（过收点线 / 记忆释放技能）时的金色
 const HIGHLIGHT_COLOR: Color = Color(1.0, 0.843, 0.0)
 
-## 字号倍率（Inspector 可调；**别缩本节点** —— 那会连 position 一起缩放）
+## 字号倍率（Inspector 可调；别缩本节点 —— 那会连 position 一起缩放）
 @export var font_scale: float = 1.0
 
 const _DIGIT_TEXTURE: Texture2D = preload("res://assets/Textures/ascii/ascii.png")

@@ -1,5 +1,5 @@
 ## 书签面板：列表显示（自动 + 人工合并）+ 添加/重命名/删除（弹窗）
-## **纯视图**：数据在 `Bookmarks` store 里（宿主注入），编辑后发 `data_changed`，
+## 纯视图：数据在 [code]Bookmarks[/code] store 里（宿主注入），编辑后发 [code]data_changed[/code]，
 ## 由 Workbench 主控制器落盘并刷新时间轴 —— 这里不再自持第二份副本（2026-09-30，S3）
 ##
 ## 信号：
@@ -176,7 +176,7 @@ func _delete_at(index: int) -> void:
 	_emit_changed()
 
 
-## 追加人工书签（唯一入口：`store.manual` 只有这里写）
+## 追加人工书签（唯一入口：[code]store.manual[/code] 只有这里写）
 func _manual_add(time_value: float, label: String) -> void:
 	store.manual.append({"t": time_value, "label": label})
 

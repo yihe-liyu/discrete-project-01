@@ -1,15 +1,15 @@
 extends Sprite2D
 ## 宣言立绘（Boss 符卡 / 自机 Bomb 共用）：从游戏框一角快慢快地扫到另一角，到位后淡出。
-## - Boss 符卡：**右上 → 左下**（`sweep()`）
-## - 自机 Bomb：**左下 → 右上**（`sweep_from_bottom_left()`，与 Boss 镜像）
-## 层级在弹幕**之下**、3D 背景之上（`LayerConfig.SPELL_PORTRAIT`）—— 看得见但不挡读弹幕。
+## - Boss 符卡：右上 → 左下（[code]sweep()[/code]）
+## - 自机 Bomb：左下 → 右上（[code]sweep_from_bottom_left()[/code]，与 Boss 镜像）
+## 层级在弹幕之下、3D 背景之上（[code]LayerConfig.SPELL_PORTRAIT[/code]）—— 看得见但不挡读弹幕。
 ##
 ## 「快慢快」与走位脚本同法：两段 tween 接力 ——
-## 前半 `EASE_OUT`（快→慢）到中点，后半 `EASE_IN`（慢→快）到左下角。
+## 前半 [code]EASE_OUT[/code]（快→慢）到中点，后半 [code]EASE_IN[/code]（慢→快）到左下角。
 
-## 场地两角。⚠️ **这两行是作者在调手感的**（当前把端点放到框外 200/150 px，让立绘从画面外进出）——
+## 场地两角。 这两行是作者在调手感的（当前把端点放到框外 200/150 px，让立绘从画面外进出）——
 ## 测试只锁「从哪个常量起 + 朝哪边走」，改这里不会让门禁红。
-## （R17：基准取 `GameConfig.FIELD_*`，不写死 832/32/64/928）
+## （R17：基准取 [code]GameConfig.FIELD_*[/code]，不写死 832/32/64/928）
 const CORNER_TOP_RIGHT := Vector2(GameConfig.FIELD_RIGHT+200, GameConfig.FIELD_TOP+150)
 const CORNER_BOTTOM_LEFT := Vector2(GameConfig.FIELD_LEFT-200, GameConfig.FIELD_BOTTOM-150)
 
@@ -33,7 +33,7 @@ func sweep_from_bottom_left(tex: Texture2D) -> void:
 	_sweep(tex, CORNER_BOTTOM_LEFT, CORNER_TOP_RIGHT)
 
 
-## 扫一遍：`corner` → `dest`（快慢快）→ 淡出。扫场中重复调用被忽略（不叠 tween）。
+## 扫一遍：[code]corner[/code] → [code]dest[/code]（快慢快）→ 淡出。扫场中重复调用被忽略（不叠 tween）。
 func _sweep(tex: Texture2D, corner: Vector2, dest: Vector2) -> void:
 	if tex == null or _busy:
 		return

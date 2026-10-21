@@ -186,7 +186,7 @@ func _exit_tree() -> void:
 
 
 ## 对话事件处理：DSL 步骤 d.event() 广播（dialogue_box 转发 GameEvents.dialogue_event）
-## 事件路由（取代大 match）：`_stage_director.on(key, handler)` 注册，handler **只写"要做什么"**：
+## 事件路由（取代大 match）：[code]_stage_director.on(key, handler)[/code] 注册，handler 只写"要做什么"：
 
 func _on_boss_enter() -> void:
 	# r2 说完：最终 Boss 本体从场外飞入（对话期间只就位，不开火）
@@ -225,7 +225,7 @@ func _on_boss_fight() -> void:
 				_stage_director.dialogue(STAGE01_REIMU.魔理沙战斗后()))
 
 
-## 战后对话收尾（`stage_end` 行间事件）：这关到此为止 → 走完整 stage_cleared
+## 战后对话收尾（[code]stage_end[/code] 行间事件）：这关到此为止 → 走完整 stage_cleared
 func _on_stage_end() -> void:
 	_stage_director.finish_stage()
 

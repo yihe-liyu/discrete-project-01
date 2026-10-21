@@ -1,8 +1,8 @@
-## Boss **全破演出**（自足、可池化；一局只播一次，不在逐弹热路径）。
+## Boss 全破演出（自足、可池化；一局只播一次，不在逐弹热路径）。
 ##
-## 与 `PlayerBulletHitEffect`（单精灵参数化、零代码加特效）不同：全破要**多层不同节奏**
+## 与 [code]PlayerBulletHitEffect[/code]（单精灵参数化、零代码加特效）不同：全破要多层不同节奏
 ## （白闪 → 冲击波 → 三层爆点 → 整体淡出），所以用一个薄子类编排；
-## 贴图 / 位置 / 缩放仍全部摆在 `scenes/effect/boss_defeat.tscn` 里（R21：结构声明在场景）。
+## 贴图 / 位置 / 缩放仍全部摆在 [code]scenes/effect/boss_defeat.tscn[/code] 里（R21：结构声明在场景）。
 extends HitEffect
 class_name BossDefeatFx
 

@@ -1,6 +1,6 @@
-## 符卡练习菜单的**数据模型**（无树 / 无 UI）。
+## 符卡练习菜单的数据模型（无树 / 无 UI）。
 ##
-## 只负责：从 `SaveData.spell_book` 生成 stage / phase / diff 数据，解析 Boss 配置，
+## 只负责：从 [code]SaveData.spell_book[/code] 生成 stage / phase / diff 数据，解析 Boss 配置，
 ## 计算练习收取进度。选中项、层级、滚动窗口仍归菜单 / 列表视图。
 class_name SpellPracticeData
 extends RefCounted
@@ -8,8 +8,8 @@ extends RefCounted
 const DIFF_NAMES = SpellRecord.DIFF_NAMES
 const DIFF_VALUES = SpellRecord.DIFF_VALUES
 
-## 菜单难度槽的**标准集合**（普通面 Easy~Lunatic）。
-## 与 `phases_for_difficulty` 解耦：某难度没配阶段 → 槽仍在，但锁定 `?`、不可选。
+## 菜单难度槽的标准集合（普通面 Easy~Lunatic）。
+## 与 [code]phases_for_difficulty[/code] 解耦：某难度没配阶段 → 槽仍在，但锁定 [code]?[/code]、不可选。
 const MENU_DIFFS: Array[int] = [0, 1, 2, 3]
 const MENU_DIFFS_EXTRA: Array[int] = [SpellRecord.Difficulty.EXTRA]
 
@@ -20,8 +20,8 @@ var phases: Array[Dictionary] = []
 var diff_entries: Array[Dictionary] = []
 
 
-## 该面的练习难度槽集合：普通面 = Easy~Lunatic（固定 4 槽，未配置的锁 `?`）；
-## **只配了 Extra 的面（EX）** = 仅 Extra 一槽。
+## 该面的练习难度槽集合：普通面 = Easy~Lunatic（固定 4 槽，未配置的锁 [code]?[/code]）；
+## 只配了 Extra 的面（EX） = 仅 Extra 一槽。
 func menu_diffs_for(stage: int) -> Array[int]:
 	var bosses: Array = BossCatalog.all().get(stage, [])
 	for b: BossData in bosses:
@@ -130,7 +130,7 @@ func change_stage(idx: int, p_char_index: int) -> void:
 
 # ═══ 难度槽 ═══
 
-## 构建当前 phase 的难度项（只填 `diff_entries`；选中项由菜单决定）。
+## 构建当前 phase 的难度项（只填 [code]diff_entries[/code]；选中项由菜单决定）。
 func build_diff_entries(p_phase_index: int) -> void:
 	diff_entries.clear()
 	if p_phase_index < 0 or p_phase_index >= phases.size():
@@ -222,7 +222,7 @@ func boss_for(info: Dictionary) -> BossData:
 	return BossCatalog.boss_of_phase(info["rec"].stage, info["rec"].phase_index)
 
 
-## 该 Boss **实际配置**的难度档（有阶段的那些；全收判定用；不回退）。
+## 该 Boss 实际配置的难度档（有阶段的那些；全收判定用；不回退）。
 func configured_diffs(boss: BossData, diffs: Array[int]) -> Array[int]:
 	var out: Array[int] = []
 	for difficulty in diffs:

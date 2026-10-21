@@ -3,7 +3,7 @@
 extends NavPage
 
 ## 标题 Label 在场景里的声明路径。
-## 本引擎**不解析节点类型 @export**（`.tscn` 里写的 `title_label = NodePath(...)` 会被丢弃），
+## 本引擎不解析节点类型 @export（[code].tscn[/code] 里写的 [code]title_label = NodePath(...)[/code] 会被丢弃），
 ## 故运行时按「路径 + 类型」兜底解析 —— 与 B3/BG6 的「场景声明 + 代码按类型/路径解析」同一风格。
 const TITLE_LABEL_PATH: String = "Panel/TitleLabel"
 

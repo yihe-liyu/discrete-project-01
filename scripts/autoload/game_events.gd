@@ -20,14 +20,14 @@ signal phase_start(phase: PhaseData)
 signal phase_end(captured: bool, bonus: int)
 @warning_ignore("unused_signal")
 signal phase_bonus_tick(bonus: int)
-## 本符卡**奖励分作废**（期间 miss 过或用过 bomb）→ UI 把数字位换成「失败」。每阶段最多发一次。
+## 本符卡奖励分作废（期间 miss 过或用过 bomb）→ UI 把数字位换成「失败」。每阶段最多发一次。
 @warning_ignore("unused_signal")
 signal phase_bonus_failed()
 
-## **符卡结算**（`Boss.clear_phase` 发；**只在符卡阶段**发 —— 非符没有奖励分这回事）。
-## 结算横幅（`PhaseResultBanner`）的数据源：
-## `captured` = 击破了（超时 / 时符撑过则为 false）；`bonus_failed` = 期间 miss / 用 bomb 作废；
-## `elapsed` = 本张符卡用时（秒）；`bonus` = 最终奖励分（作废时它**没入账** → UI 不显示分数）。
+## 符卡结算（[code]Boss.clear_phase[/code] 发；只在符卡阶段发 —— 非符没有奖励分这回事）。
+## 结算横幅（[code]PhaseResultBanner[/code]）的数据源：
+## [code]captured[/code] = 击破了（超时 / 时符撑过则为 false）；[code]bonus_failed[/code] = 期间 miss / 用 bomb 作废；
+## [code]elapsed[/code] = 本张符卡用时（秒）；[code]bonus[/code] = 最终奖励分（作废时它没入账 → UI 不显示分数）。
 @warning_ignore("unused_signal")
 signal spell_result(captured: bool, bonus: int, elapsed: float, bonus_failed: bool)
 @warning_ignore("unused_signal")
@@ -48,7 +48,7 @@ signal screen_shake_sustain(amount: float)
 signal field_filter(color: Color)
 
 ## 被弹炸弹（deathbomb）窗口开 / 关 —— FieldFilterLayer 订阅，做"框内整体渐显红滤镜"。
-## 窗口期间全局定格（`Engine.time_scale = 0`），所以订阅方的动画要走 `ignore_time_scale`。
+## 窗口期间全局定格（[code]Engine.time_scale = 0[/code]），所以订阅方的动画要走 [code]ignore_time_scale[/code]。
 @warning_ignore("unused_signal")
 signal deathbomb_started()
 @warning_ignore("unused_signal")

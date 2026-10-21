@@ -1,8 +1,8 @@
-## 对话里**某个角色**的"场景动词"句柄 —— 由 `DialogueSteps.enter()` 返回。
+## 对话里某个角色的"场景动词"句柄 —— 由 [code]DialogueSteps.enter()[/code] 返回。
 ##
-## 与 `BossHandle` 同一路子（"谁"是**接收者**而不是参数），但更简单：
-## 它只在**构建期写步骤**、不做运行时解析 —— 播放器仍按 `char_name` 查 actor，
-## 步骤载荷一个字段都没变（见 `test_stage_ops_take_profile_and_store_actor_key`）。
+## 与 [code]BossHandle[/code] 同一路子（"谁"是接收者而不是参数），但更简单：
+## 它只在构建期写步骤、不做运行时解析 —— 播放器仍按 [code]char_name[/code] 查 actor，
+## 步骤载荷一个字段都没变（见 [code]test_stage_ops_take_profile_and_store_actor_key[/code]）。
 ##
 ## 用法：
 ##   var reimu := d.enter(REIMU, Vector2(50, 230))
@@ -11,8 +11,8 @@
 ##   ka.line("哦呀，弱小的人类怎么会在永夜出门？").portrait("耍帅").move(Vector2(500, 230), 0.6)
 ##   ka.exit()
 ##
-## 动词一律返回 `self`（可链式），全部落到同一个 actor key。
-## 与 `d` 上那些"收 profile 的动词"的关系：**薄委托**（`_dialogue_steps.portrait(_character_profile, …)`），
+## 动词一律返回 [code]self[/code]（可链式），全部落到同一个 actor key。
+## 与 [code]d[/code] 上那些"收 profile 的动词"的关系：薄委托（[code]_dialogue_steps.portrait(_character_profile, …)[/code]），
 ## 没有第二套构建逻辑 —— 所以两种写法产物完全一致（可混用）。
 class_name ActorHandle
 extends RefCounted
@@ -33,19 +33,19 @@ var profile: CharacterProfile:
 	get: return _character_profile
 
 
-## 是否已 `exit()`（退场后再调度动词 = 剧本顺序多半写错了）
+## 是否已 [code]exit()[/code]（退场后再调度动词 = 剧本顺序多半写错了）
 func is_exited() -> bool:
 	return _exited
 
 
-## 说一句（等价于 `d.say(profile, text, opts)`）；`opts.emotion` 换表情、`opts.auto_advance` 自动推进
+## 说一句（等价于 [code]d.say(profile, text, opts)[/code]）；[code]opts.emotion[/code] 换表情、[code]opts.auto_advance[/code] 自动推进
 func line(text: String, opts: Dictionary = {}) -> ActorHandle:
 	_warn_if_exited()
 	_dialogue_steps.say(_character_profile, text, opts)
 	return self
 
 
-## 移动立绘（`duration` = 0 立即到位）
+## 移动立绘（[code]duration[/code] = 0 立即到位）
 func move(pos: Vector2, duration: float = 0.0) -> ActorHandle:
 	_warn_if_exited()
 	_dialogue_steps.move(_character_profile, pos, duration)
@@ -80,7 +80,7 @@ func bubble(offset: Vector2) -> ActorHandle:
 	return self
 
 
-## 退场（`actor.visible = false`）。之后再用本句柄只告警一次、不拦步骤。
+## 退场（[code]actor.visible = false[/code]）。之后再用本句柄只告警一次、不拦步骤。
 func exit() -> ActorHandle:
 	_warn_if_exited()
 	_dialogue_steps.exit(_character_profile)

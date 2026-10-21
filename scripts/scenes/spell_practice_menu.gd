@@ -197,7 +197,7 @@ func _restore_return_state() -> void:
 	_highlight()
 
 
-## 人物标签 ↔ `_char_index` 的**唯一同步点**（进场 / 切人物 / 从练习返回都走它）。
+## 人物标签 ↔ [code]_char_index[/code] 的唯一同步点（进场 / 切人物 / 从练习返回都走它）。
 func _sync_char_label() -> void:
 	_spell_practice_list_view.sync_char_label(_char_index)
 

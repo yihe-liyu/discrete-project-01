@@ -1,6 +1,6 @@
 ## ReplayRecorder —— Replay 录输入基础设施
 ## 每帧记录玩家输入位掩码 + RNG 种子，可序列化为 JSON（回放播放器后续接入）
-## ⚠️ 铁律：capture() 必须挂在 _physics_process（物理帧固定 60Hz，与渲染帧率设置无关）——
+## 铁律：capture() 必须挂在 _physics_process（物理帧固定 60Hz，与渲染帧率设置无关）——
 ##   挂渲染帧会导致不同帧率下录制长度不同、回放错乱。Engine.max_fps 只限渲染，物理 tick 不变。
 class_name ReplayRecorder
 extends RefCounted

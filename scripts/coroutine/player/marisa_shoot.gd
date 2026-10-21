@@ -2,7 +2,7 @@ extends PlayerShootScript
 class_name MarisaShoot
 
 const OPTION_VISUAL = preload("res://scripts/coroutine/player/marisa_option_visual.gd")
-## 激光条 = 图集合体格 `魔理沙子机高速弹`（512×32，8 段 ×64）；切片直接取自**原始图集**。
+## 激光条 = 图集合体格 [code]魔理沙子机高速弹[/code]（512×32，8 段 ×64）；切片直接取自原始图集。
 const LASER_SHAPE := &"魔理沙子机高速弹"
 
 const MAIN_INTERVAL: int = 3

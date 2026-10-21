@@ -1,6 +1,6 @@
 ## 震屏（trauma 模型）：挂在 game_scene 的 Camera2D 上。
-## - 冲击：`add_trauma(x)` 叠加后按 `DECAY` 衰减（一次性，如灵梦 bomb 引爆）
-## - 持续：`set_sustain(x)` 按住不衰减（整个 bomb 期间，如魔理沙），结束传 0
+## - 冲击：[code]add_trauma(x)[/code] 叠加后按 [code]DECAY[/code] 衰减（一次性，如灵梦 bomb 引爆）
+## - 持续：[code]set_sustain(x)[/code] 按住不衰减（整个 bomb 期间，如魔理沙），结束传 0
 ## 只晃 World（2D 节点）；HUD / 背景是 CanvasLayer，不受 Camera2D 影响。
 class_name ScreenShake
 extends Camera2D

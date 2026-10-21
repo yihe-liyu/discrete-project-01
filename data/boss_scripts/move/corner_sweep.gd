@@ -1,16 +1,16 @@
 extends CoroutineScript
 ## @role: boss_move
-## （上面这行是**创作台目录角色**：`const META` 只管名字/描述，角色要靠 `@role`；
-##   缺了它这个"只被 `pre_move_script` 之外没人引用"的脚本会落到「未分类」、目录里双击不跳台。）
-## 对角扫场：从游戏框**右上角**扫到**左下角**，**快 → 慢 → 快**。
-## 用作 `PhaseData.pre_move_script`（发动符卡**之前**的走位）：跑完才宣言。
+## （上面这行是创作台目录角色：[code]const META[/code] 只管名字/描述，角色要靠 [code]@role[/code]；
+##   缺了它这个"只被 [code]pre_move_script[/code] 之外没人引用"的脚本会落到「未分类」、目录里双击不跳台。）
+## 对角扫场：从游戏框右上角扫到左下角，快 → 慢 → 快。
+## 用作 [code]PhaseData.pre_move_script[/code]（发动符卡之前的走位）：跑完才宣言。
 ##
 ## 「快慢快」= 两段 tween 接力：
-##   前半 `EASE_OUT`（快→慢）走到**中点**，后半 `EASE_IN`（慢→快）走到终点。
+##   前半 [code]EASE_OUT[/code]（快→慢）走到中点，后半 [code]EASE_IN[/code]（慢→快）走到终点。
 ##   中点正好是场地中心，所以看起来是「冲到中央、缓一下、再冲出去」。
 ##
-## 参数（可在 `PhaseData.params` 覆盖）：
-##   `move_time`(总秒数) / `hold_middle`(中点停留秒数) / `from_corner`(是否先瞬移到右上角)
+## 参数（可在 [code]PhaseData.params[/code] 覆盖）：
+##   [code]move_time[/code](总秒数) / [code]hold_middle[/code](中点停留秒数) / [code]from_corner[/code](是否先瞬移到右上角)
 
 const META := {
 	"name": "对角扫场",

@@ -1,11 +1,11 @@
-## 对话**干跑**：无头把一段 steps 跑完，收集可观测量（台词 / 说话者 / 事件 / 有没有跑完）。
+## 对话干跑：无头把一段 steps 跑完，收集可观测量（台词 / 说话者 / 事件 / 有没有跑完）。
 ##
 ## 用途：
-## ① `DialoguePreview --dry`：不开窗就把整段文本按顺序打印出来（改完台词的最快检查）；
-## ② 测试：断言"整段能跑完 / 台词顺序 / 事件顺序" —— 不需要场景树（`DialogueRunner` 是纯逻辑）。
+## ① [code]DialoguePreview --dry[/code]：不开窗就把整段文本按顺序打印出来（改完台词的最快检查）；
+## ② 测试：断言"整段能跑完 / 台词顺序 / 事件顺序" —— 不需要场景树（[code]DialogueRunner[/code] 是纯逻辑）。
 ##
-## 与真实播放的差别：这里**自动翻页**（不等玩家按 Z）→ 验的是**剧本本身**，
-## 不是节奏手感（手感去 `DialoguePreview` 的窗口模式看）。
+## 与真实播放的差别：这里自动翻页（不等玩家按 Z）→ 验的是剧本本身，
+## 不是节奏手感（手感去 [code]DialoguePreview[/code] 的窗口模式看）。
 class_name DialogueDryRun
 extends RefCounted
 
@@ -47,7 +47,7 @@ static func play(p_steps: Array) -> Dictionary:
 	}
 
 
-## 排版成可读文本（预览的 `--dry` 与命令行检查直接用）
+## 排版成可读文本（预览的 [code]--dry[/code] 与命令行检查直接用）
 static func format(p_report: Dictionary) -> String:
 	var texts: Array = p_report["texts"]
 	var speakers: Array = p_report["speakers"]

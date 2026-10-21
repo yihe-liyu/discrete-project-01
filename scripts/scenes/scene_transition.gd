@@ -29,7 +29,7 @@ func _setup_transition() -> void:
 
 
 ## 世界由调用方（GameManager 组合根）经回调登记/操作，transition 不再读 .current 全局。
-## on_pause_world/on_clear_world 作用于**切出**的世界；on_resume_world 作用于**切入**的世界。
+## on_pause_world/on_clear_world 作用于切出的世界；on_resume_world 作用于切入的世界。
 func change_scene(path: String, current_scene_path: String, on_scene_left: Callable,
 		on_pause_world: Callable = Callable(), on_clear_world: Callable = Callable(),
 		on_resume_world: Callable = Callable()) -> String:

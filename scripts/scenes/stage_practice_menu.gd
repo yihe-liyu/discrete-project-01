@@ -11,11 +11,11 @@
 extends BasePage
 
 const CHAR_NAMES := SpellRecord.CHAR_NAMES
-## 普通面的难度槽（与 `difficulty_screen` 的 4 档一致）
+## 普通面的难度槽（与 [code]difficulty_screen[/code] 的 4 档一致）
 const MENU_DIFFS: Array[int] = [0, 1, 2, 3]
-## EX 面只有 Extra 一档（`SpellRecord.Difficulty.EXTRA`）
+## EX 面只有 Extra 一档（[code]SpellRecord.Difficulty.EXTRA[/code]）
 const MENU_DIFFS_EXTRA: Array[int] = [SpellRecord.Difficulty.EXTRA]
-## EX 面的 `stage_no` 约定（见 `StageData.stage_no`：1..6，EX = 7）
+## EX 面的 [code]stage_no[/code] 约定（见 [code]StageData.stage_no[/code]：1..6，EX = 7）
 const STAGE_NO_EXTRA := 7
 ## 列表行字号（行高由它决定）
 const LIST_FONT_SIZE := 28
@@ -26,9 +26,9 @@ enum Section { STAGE, DIFF }
 @onready var _diff_box: VBoxContainer = $DiffBox
 @onready var _char_name: Label = $CharPanel/CharName
 
-## 可玩清单（`StageCatalog.playable()` 的产出；下标 = 一级列表行号）
+## 可玩清单（[code]StageCatalog.playable()[/code] 的产出；下标 = 一级列表行号）
 var _stages: Array[StageData] = []
-## 当前面的难度槽（`_menu_diffs_for()` 的产出；下标 = 二级列表行号）
+## 当前面的难度槽（[code]_menu_diffs_for()[/code] 的产出；下标 = 二级列表行号）
 var _diffs: Array[int] = []
 var _stage_index: int = 0
 var _diff_index: int = 0
@@ -67,10 +67,10 @@ func on_enter() -> void:
 	tw.tween_callback(func(): _is_input_ready = true)
 
 
-## 退场只做画面；**不碰 `is_stage_practice`** —— 开局那条路走 `change_scene`，
-## 而 `MenuNav.clear_pages()` 是 `queue_free()`（**不调 `on_leave`**）：
-## 把标志清在这里会让"取消"和"开局"耦合到 `clear_pages` 的实现细节上。
-## 取消路径自己清（见 `_input` 的 `ui_cancel` 分支）。
+## 退场只做画面；不碰 [code]is_stage_practice[/code] —— 开局那条路走 [code]change_scene[/code]，
+## 而 [code]MenuNav.clear_pages()[/code] 是 [code]queue_free()[/code]（不调 [code]on_leave[/code]）：
+## 把标志清在这里会让"取消"和"开局"耦合到 [code]clear_pages[/code] 的实现细节上。
+## 取消路径自己清（见 [code]_input[/code] 的 [code]ui_cancel[/code] 分支）。
 func on_leave() -> void:
 	_is_input_ready = false
 	_stop_pulse()
@@ -89,8 +89,8 @@ func _index_of_stage(stage_id: int) -> int:
 	return 0
 
 
-## EX 面（`stage_no == 7`）只有 Extra 一档；其余面 Easy~Lunatic。
-## **static**：难度槽只由「面」决定，与菜单实例无关 ⇒ 可脱场景单测（喂夹具 StageData）。
+## EX 面（[code]stage_no == 7[/code]）只有 Extra 一档；其余面 Easy~Lunatic。
+## static：难度槽只由「面」决定，与菜单实例无关 ⇒ 可脱场景单测（喂夹具 StageData）。
 static func menu_diffs_for(stage: StageData) -> Array[int]:
 	if stage != null and stage.stage_no == STAGE_NO_EXTRA:
 		return MENU_DIFFS_EXTRA
@@ -103,7 +103,7 @@ func _current_stage() -> StageData:
 	return _stages[_stage_index]
 
 
-## 换面后**只重算**难度槽与选中项（不建 UI）—— 二级列表只在真的进二级时建（见 `confirm_current`），
+## 换面后只重算难度槽与选中项（不建 UI）—— 二级列表只在真的进二级时建（见 [code]confirm_current[/code]），
 ## 免得在一级上下移动时每按一次键就"建 4 个 Label 再全部 free"。
 func _select_diffs_for_current_stage() -> void:
 	_diffs = menu_diffs_for(_current_stage())
@@ -134,7 +134,7 @@ func _sync_char_label() -> void:
 
 # ═══ 列表行工具 ═══
 
-## 同步清空（`queue_free()` 是延迟的 ⇒ 紧接着重建会看到旧行、列表翻倍）
+## 同步清空（[code]queue_free()[/code] 是延迟的 ⇒ 紧接着重建会看到旧行、列表翻倍）
 func _clear(box: VBoxContainer) -> void:
 	for child in box.get_children():
 		box.remove_child(child)
@@ -263,9 +263,9 @@ func _move(delta: int) -> void:
 
 # ═══ 确认键（公开：状态机可脱输入单测）═══
 
-## 一级 → **进二级**（闪一下 → 建二级列）；二级 → 开局。
-## ⚠️ 进二级必须**重建**难度列：停在一级时 `_highlight()` 会把 `_diff_box` 清空
-## （免得"看着能选"），所以进二级那一步不建就是**空的**（曾出此 bug：二级不显示）。
+## 一级 → 进二级（闪一下 → 建二级列）；二级 → 开局。
+## 进二级必须重建难度列：停在一级时 [code]_highlight()[/code] 会把 [code]_diff_box[/code] 清空
+## （免得"看着能选"），所以进二级那一步不建就是空的（曾出此 bug：二级不显示）。
 func confirm_current() -> void:
 	if _is_confirming:
 		return                 # 闪烁反馈期内的重复确认一律丢弃（免得连按直接跳到底）
@@ -282,9 +282,9 @@ func confirm_current() -> void:
 		_launch()
 
 
-## 确认反馈：选中行短促闪 2 下。**参数对齐 `SpellPracticeMenu._flash_then`**，两个练习菜单手感一致。
-## 先 `_stop_pulse()`：呼吸脉冲和闪烁都在写同一个 `modulate`，不停会互相盖（符卡练习那边没停，闪得发虚）。
-## `await` 到闪完为止 —— 进下一级要**等它播完**（否则 `_highlight()` 立刻重写 modulate，看着像没闪）。
+## 确认反馈：选中行短促闪 2 下。参数对齐 [code]SpellPracticeMenu._flash_then[/code]，两个练习菜单手感一致。
+## 先 [code]_stop_pulse()[/code]：呼吸脉冲和闪烁都在写同一个 [code]modulate[/code]，不停会互相盖（符卡练习那边没停，闪得发虚）。
+## [code]await[/code] 到闪完为止 —— 进下一级要等它播完（否则 [code]_highlight()[/code] 立刻重写 modulate，看着像没闪）。
 func _flash_selected(box: VBoxContainer, idx: int) -> void:
 	var children := box.get_children()
 	if idx < 0 or idx >= children.size():
@@ -302,7 +302,7 @@ func _flash_selected(box: VBoxContainer, idx: int) -> void:
 
 # ═══ 开局 ═══
 
-## 把选中的**面 / 难度 / 自机**写进全局选择（**不切场景**：意图与副作用分开，便于测试）。
+## 把选中的面 / 难度 / 自机写进全局选择（不切场景：意图与副作用分开，便于测试）。
 ## 返回 false = 当前没有可选的面（空清单），调用方据此别切场景。
 func commit_selection() -> bool:
 	var stage := _current_stage()
@@ -316,7 +316,7 @@ func commit_selection() -> bool:
 
 
 ## 直接开这一面：提交选择 → 切到正常关卡场景，其余交给关卡流程。
-## 通关后 `game_scene._on_stage_cleared()` 会因为 `is_stage_practice` 回标题（不推进下一面）。
+## 通关后 [code]game_scene._on_stage_cleared()[/code] 会因为 [code]is_stage_practice[/code] 回标题（不推进下一面）。
 func _launch() -> void:
 	if not commit_selection():
 		return

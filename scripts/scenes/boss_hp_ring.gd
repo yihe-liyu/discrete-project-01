@@ -1,5 +1,5 @@
 extends Node2D
-## Boss 环形血条，跟随 Boss 位置。**订阅 hp_changed / phase_cleared —— 不轮询**（铁律5：UI 订阅，不拉状态）。
+## Boss 环形血条，跟随 Boss 位置。订阅 hp_changed / phase_cleared —— 不轮询（铁律5：UI 订阅，不拉状态）。
 ## hp 由 boss 的 _set_hp 统一改并广播；本环只画。
 
 @export var radius: float = 128.0

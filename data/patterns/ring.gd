@@ -11,7 +11,7 @@ extends BulletPattern
 ##
 ## 不写 class_name：具体 pattern 不进全局类表；由内容 preload / 目录扫描。
 
-## 纯方向计算（便于测试，也避免和 `shoot_spread` 的步长语义各写一份）。
+## 纯方向计算（便于测试，也避免和 [code]shoot_spread[/code] 的步长语义各写一份）。
 static func spread_directions(p_count: int, p_spread: float, p_base_dir: Vector2) -> Array[Vector2]:
 	var out: Array[Vector2] = []
 	if p_count <= 0:

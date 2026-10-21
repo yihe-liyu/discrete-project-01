@@ -1,6 +1,6 @@
 ## 对话流程 DSL —— 构建步骤序列（Array[DialogueStep]）
 ##
-## **推荐写法（句柄）**：`enter()` 返回 `ActorHandle`，"谁"是接收者而不是参数：
+## 推荐写法（句柄）：[code]enter()[/code] 返回 [code]ActorHandle[/code]，"谁"是接收者而不是参数：
 ##   var d := DialogueSteps.new()
 ##   var reimu := d.enter(reimu_profile, Vector2(200, 200))
 ##   reimu.line("啊，什么线索都没有…")                 # 顺序说完可链式
@@ -12,22 +12,22 @@
 ##   ka.exit()
 ##   ctx.play_dialogue_steps(d.steps)
 ##
-## 低层写法（同样有效，句柄就是薄委托）：`d.say(p, …)` / `d.move(p, …)` —— 收 profile。
-## **多角色同屏**用 `d.screen([...])`（句柄表达不了"一屏多泡"）。
+## 低层写法（同样有效，句柄就是薄委托）：[code]d.say(p, …)[/code] / [code]d.move(p, …)[/code] —— 收 profile。
+## 多角色同屏用 [code]d.screen([...])[/code]（句柄表达不了"一屏多泡"）。
 ##
 ## 原则：只描述"变化"；位置/flip/明暗/表情等在状态里"声明即改变，不声明不动"。
-## `d.line()` 的说话者默认延续上一句（enter 也会更新延续者）；想在句柄上显式指定就用 `handle.line()`。
+## [code]d.line()[/code] 的说话者默认延续上一句（enter 也会更新延续者）；想在句柄上显式指定就用 [code]handle.line()[/code]。
 class_name DialogueSteps
 extends RefCounted
 
 var steps: Array[DialogueStep] = []
 
 var _character_profile: CharacterProfile  ## line() 默认说话者（延续机制）
-## 已登场且未退场的 actor key（`enter` 重复登场 / `exit` 之后再登场 的判据）
+## 已登场且未退场的 actor key（[code]enter[/code] 重复登场 / [code]exit[/code] 之后再登场 的判据）
 var _on_stage: Dictionary = {}
 
-## 所有"演出版"动词（exit/move/flip/dim/portrait/bubble）都收 **CharacterProfile**，
-## 与 enter/say 一致 —— 步骤里落的是 actor key（`char_name`），但内容层不该知道这个 stringly key：
+## 所有"演出版"动词（exit/move/flip/dim/portrait/bubble）都收 CharacterProfile，
+## 与 enter/say 一致 —— 步骤里落的是 actor key（[code]char_name[/code]），但内容层不该知道这个 stringly key：
 ## 角色改名不会静默漏掉编排，写错也没法拼错字符串。
 func _actor_key(profile: CharacterProfile) -> String:
 	if profile == null:
@@ -120,7 +120,7 @@ func _build_line(speaker: CharacterProfile, text: String, opts: Dictionary) -> D
 
 
 ## 登场：profile 决定立绘/表情集；opts 可带 flip/dim/emotion。
-## **返回 `ActorHandle`** —— 之后这个角色的演出/台词都挂它（"谁"是接收者，不会传错人）。
+## 返回 [code]ActorHandle[/code] —— 之后这个角色的演出/台词都挂它（"谁"是接收者，不会传错人）。
 ## 同一角色连续两次 enter（没先 exit）会告警：剧本多半漏了 exit。
 func enter(profile: CharacterProfile, pos: Vector2, opts: Dictionary = {}) -> ActorHandle:
 	if profile == null:

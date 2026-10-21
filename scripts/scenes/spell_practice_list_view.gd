@@ -1,6 +1,6 @@
-## 符卡练习菜单的**列表视图**（三级列表 + 高亮 + 滚动窗口）。
+## 符卡练习菜单的列表视图（三级列表 + 高亮 + 滚动窗口）。
 ##
-## 只管画：数据来自 `SpellPracticeData`，选中项/层级由菜单传入。
+## 只管画：数据来自 [code]SpellPracticeData[/code]，选中项/层级由菜单传入。
 ## 不碰 SaveData、不生成记录、不做练习启动。
 class_name SpellPracticeListView
 extends RefCounted
@@ -21,7 +21,7 @@ var _diff_box: VBoxContainer
 var _char_name: Label
 var _phase_scroll_hint: Label
 
-## 二级（阶段）列表的**可视窗口起点**：超长时只渲染这一段，选中项永远在窗口内。
+## 二级（阶段）列表的可视窗口起点：超长时只渲染这一段，选中项永远在窗口内。
 var _phase_offset: int = 0
 var _pulse_tween: Tween
 
@@ -71,7 +71,7 @@ func build_lists(data: SpellPracticeData, char_index: int, phase_index: int) -> 
 
 # ═══ 列表开窗（超长不撑爆面板）═══
 
-## 该列表的**可视行数**：按容器实测高度 / 一行行距算。`-1` = 量不到（尚未布局）→ 不裁剪。
+## 该列表的可视行数：按容器实测高度 / 一行行距算。[code]-1[/code] = 量不到（尚未布局）→ 不裁剪。
 func rows_visible(vbox: VBoxContainer) -> int:
 	var available: float = vbox.size.y
 	var pitch: float = _row_pitch(vbox)
@@ -92,8 +92,8 @@ func _row_pitch(vbox: VBoxContainer) -> float:
 	return row_h + float(vbox.get_theme_constant("separation"))
 
 
-## 窗口起点：保证选中项落在 `limit` 行窗口内 —— 上下移动时窗口跟着滚，而不是把列表撑长。
-## `limit <= 0`（量不到高度）→ 起点 0 = 不裁剪（旧行为，测试直调 `_build_*` 时走这条）。
+## 窗口起点：保证选中项落在 [code]limit[/code] 行窗口内 —— 上下移动时窗口跟着滚，而不是把列表撑长。
+## [code]limit <= 0[/code]（量不到高度）→ 起点 0 = 不裁剪（旧行为，测试直调 [code]_build_*[/code] 时走这条）。
 func _window_start(current: int, selected: int, total: int, limit: int) -> int:
 	if limit <= 0 or total <= limit:
 		return 0
@@ -123,7 +123,7 @@ func build_phase_list(data: SpellPracticeData, char_index: int, phase_index: int
 	sync_phase_scroll_hint(data)
 
 
-## 二级滚动提示：`▲` = 上面还有、`▼` = 下面还有，中间是当前可见区间 / 总数。
+## 二级滚动提示：[code]▲[/code] = 上面还有、[code]▼[/code] = 下面还有，中间是当前可见区间 / 总数。
 ## 全部看得见（没被窗口裁掉）→ 空串，不占版面、不制造噪音。
 ## 箭头位用全角空格占位 —— 只有一侧有箭头时字串长度不变，不会左右抖。
 func sync_phase_scroll_hint(data: SpellPracticeData) -> void:
@@ -139,7 +139,7 @@ func sync_phase_scroll_hint(data: SpellPracticeData) -> void:
 		"▼" if has_below else "　"]
 
 
-## 选中项**在当前窗口内的行号**（渲染用的 child index）。
+## 选中项在当前窗口内的行号（渲染用的 child index）。
 func phase_local_index(phase_index: int) -> int:
 	return clampi(phase_index - _phase_offset, 0, maxi(_phase_box.get_child_count() - 1, 0))
 

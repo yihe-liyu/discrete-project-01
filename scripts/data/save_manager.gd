@@ -1,11 +1,11 @@
 ## 高分 / 设置存档管理（从 SaveData 拆出，职责单一）。
 ##
-## 写盘策略：**临时文件 → 轮换备份 → 提交**。
+## 写盘策略：临时文件 → 轮换备份 → 提交。
 ##   - 直接写正式档时，写到一半崩溃会同时毁掉设置和高分；
-##   - 先用 `save_data.cfg.tmp` 写完，再把旧档轮换成 `.bak`，最后 rename 成正式档；
-##   - 主档损坏时自动回退到 `.bak`，并把坏档隔离成 `.corrupt`（不会再被下一次保存覆盖）。
+##   - 先用 [code]save_data.cfg.tmp[/code] 写完，再把旧档轮换成 [code].bak[/code]，最后 rename 成正式档；
+##   - 主档损坏时自动回退到 [code].bak[/code]，并把坏档隔离成 [code].corrupt[/code]（不会再被下一次保存覆盖）。
 ##
-## 格式：`meta/version` 当前为 [constant FORMAT_VERSION]；读档时对设置/高分做类型与范围校验，
+## 格式：[code]meta/version[/code] 当前为 [constant FORMAT_VERSION]；读档时对设置/高分做类型与范围校验，
 ## 坏值回退到默认值（不再让手改/旧版本档把运行时搞崩）。
 class_name SaveManager
 extends RefCounted
@@ -16,7 +16,7 @@ const SETTINGS_SECTION := "settings"
 const HIGH_SCORES_SECTION := "high_scores"
 const FORMAT_VERSION := 1
 
-## 设置默认值也是**校验白名单**：未知 key 原样保留，已知 key 按这里的类型收敛。
+## 设置默认值也是校验白名单：未知 key 原样保留，已知 key 按这里的类型收敛。
 const SETTING_DEFAULTS := {
 	"volume_master": 1.0,
 	"volume_bgm": 1.0,
@@ -95,7 +95,7 @@ func get_last_save_error() -> Error:
 	return _last_save_error
 
 
-## 清空玩家数据：高分归零（**设置保留**）。
+## 清空玩家数据：高分归零（设置保留）。
 func clear_player_data() -> bool:
 	high_scores.clear()
 	# 全新档没有任何东西可清：别为了"清空"凭空创建一份存档。

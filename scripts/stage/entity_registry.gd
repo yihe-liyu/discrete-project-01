@@ -1,5 +1,5 @@
 ## 战场实体注册表 —— 自机 / 在场敌机（含 Boss）的显式引用。
-## 替代旧的全局运行时引用：由关卡组合根（`StageRuntime`）持有，随关卡场景存亡（R9）。
+## 替代旧的全局运行时引用：由关卡组合根（[code]StageRuntime[/code]）持有，随关卡场景存亡（R9）。
 ## 过渡期宿主门面（自机 / active_enemies 属性）转发到本对象，
 ## 迁移完成后删除转发；内核/实体改经注入读取。
 class_name EntityRegistry
@@ -30,7 +30,7 @@ func get_active_enemies() -> Array:
 	return enemies
 
 
-## 当前**可选目标**的敌机（过滤"在场但未开战"的实体，如对话中的 Boss）。
+## 当前可选目标的敌机（过滤"在场但未开战"的实体，如对话中的 Boss）。
 ## 目标查询（WorldQuery → 内核 steer / near / homing）走这个；碰撞 / UI 仍用 get_active_enemies()。
 func get_targetable_enemies() -> Array:
 	var targets: Array = []
@@ -41,7 +41,7 @@ func get_targetable_enemies() -> Array:
 
 
 ## 当前自机的单局资源（无自机 / 非 PlayerBase 接口 = null）——消费者统一经此读。
-## 走 `PlayerBase.resources` **类型化属性**，不再 `player.get("resources")` 字符串键
+## 走 [code]PlayerBase.resources[/code] 类型化属性，不再 [code]player.get("resources")[/code] 字符串键
 ## （属性名打错/改名会静默变 null；现在只认类型，编译期即可查）。
 func get_player_resources() -> PlayerResources:
 	if not is_instance_valid(player):

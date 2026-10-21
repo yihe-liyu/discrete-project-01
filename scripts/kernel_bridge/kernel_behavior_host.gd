@@ -19,7 +19,7 @@ func get_boss():
 	return _backend.entity_registry.get_boss() if _backend != null and _backend.entity_registry != null else null
 
 
-## 入队一次发射。**入队瞬间快照 per-shot 状态**（backend.prepare_shot）：
+## 入队一次发射。入队瞬间快照 per-shot 状态（backend.prepare_shot）：
 ## 内容复用同一 BulletData 模板改速度 / 染色再入队是 M2 的正常写法；
 ## 若拖到 flush 时才读实例，同一帧所有入队项会被最后一次写入覆盖（non_mid01 红弹速度梯度消失即此因）。
 func queue_spawn(data: BulletData, pos: Vector2, dir: Vector2) -> void:

@@ -25,7 +25,7 @@ class _LayerGroup:
 
 var _groups: Dictionary = {}
 var _elapsed: float = 0.0
-## 已报过"未声明层"的层名（限流：每个名字只报一次，见 `_require_layer`）
+## 已报过"未声明层"的层名（限流：每个名字只报一次，见 [code]_require_layer[/code]）
 var _warned_missing_layers: Dictionary = {}
 
 ## 实例 transform 写入计数（调试/回归测试用）：
@@ -53,9 +53,9 @@ func add_layer(layer: DecorLayer) -> void:
 	_groups[key] = g
 
 
-## 取层；**找不到就响亮**（报出已声明的层名），但**每个层名只报一次**。
-## 旧行为是静默 `return` —— 于是"漏了 add_layer / 层名打错"表现为**背景空着 + 控制台一句话没有**
-## （stage02 2026-10-04 实况）。限流是必须的：`spawn` 会被演出按帧调用，
+## 取层；找不到就响亮（报出已声明的层名），但每个层名只报一次。
+## 旧行为是静默 [code]return[/code] —— 于是"漏了 add_layer / 层名打错"表现为背景空着 + 控制台一句话没有
+## （stage02 2026-10-04 实况）。限流是必须的：[code]spawn[/code] 会被演出按帧调用，
 ## 不限流时一个漏配的层名会把控制台刷爆（实测 2 帧 4 条）。
 func _require_layer(layer_name: String) -> _LayerGroup:
 	var g: _LayerGroup = _groups.get(layer_name)

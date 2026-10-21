@@ -14,8 +14,8 @@ static func load_registry() -> void:
 		registry = ResourceLoader.load(REGISTRY_PATH)
 
 
-## 按 id 取 StageData：注册表优先；**未收录则回退目录扫描**。
-## 分工：注册表 = **可玩清单**（`StageData.validate` 要求 create_script）；
+## 按 id 取 StageData：注册表优先；未收录则回退目录扫描。
+## 分工：注册表 = 可玩清单（[code]StageData.validate[/code] 要求 create_script）；
 ## 仅用于命名/背景的舞台（如还没做关卡脚本的 B 线）不进注册表，走扫描兜底。
 static func find(stage_id: int) -> StageData:
 	if registry:
@@ -25,7 +25,7 @@ static func find(stage_id: int) -> StageData:
 	return scan(stage_id)
 
 
-## 扫描 `data/stages/**/stage_data/*.tres` 找匹配 id（注册表未收录时的回退）
+## 扫描 [code]data/stages//stage_data/*.tres[/code] 找匹配 id（注册表未收录时的回退）
 static func scan(stage_id: int) -> StageData:
 	for stage_data in _load_all():
 		if stage_data.stage_id == stage_id:
@@ -40,8 +40,8 @@ static func all() -> Array[StageData]:
 	return _load_all()
 
 
-## **可玩清单**：`all()` 里**真有 `create_script`** 的那些。
-## ⚠️ `all()` 在注册表缺失时会回退目录扫描，而那个回退**会**带上没做关卡脚本的面（如 3B / EX）
+## 可玩清单：[code]all()[/code] 里真有 [code]create_script[/code] 的那些。
+## [code]all()[/code] 在注册表缺失时会回退目录扫描，而那个回退会带上没做关卡脚本的面（如 3B / EX）
 ## ⇒ 凡是要问"这面能不能开局"的地方（关卡练习菜单 / 工作台关卡下拉）一律走这里，
 ## 别再各写一遍过滤（抄第二遍就会漂）。
 static func playable() -> Array[StageData]:
@@ -58,8 +58,8 @@ static func background(stage_id: int) -> PackedScene:
 	return stage_data.background_scene if stage_data else null
 
 
-## **给人看**的关卡名：`StageData.display_name` → 回落 `"Stage %d"`。
-## UI 一律走这里，别自己拼 `"Stage %d"` —— 否则「3 面 B 线」这类就没法显示。
+## 给人看的关卡名：[code]StageData.display_name[/code] → 回落 [code]"Stage %d"[/code]。
+## UI 一律走这里，别自己拼 [code]"Stage %d"[/code] —— 否则「3 面 B 线」这类就没法显示。
 static func display_name_of(stage_id: int) -> String:
 	var stage_data := find(stage_id)
 	if stage_data and stage_data.display_name != "":
@@ -67,8 +67,8 @@ static func display_name_of(stage_id: int) -> String:
 	return "Stage %d" % stage_id
 
 
-## 符卡奖励分用的**面序号**（`StageData.stage_no` → 未指定回落 `stage_id`）。
-## ⚠️ 别拿 `stage_id` 直接算奖励分：3B 面是 4、EX 是 9，而公式要的是 3 / 7。
+## 符卡奖励分用的面序号（[code]StageData.stage_no[/code] → 未指定回落 [code]stage_id[/code]）。
+## 别拿 [code]stage_id[/code] 直接算奖励分：3B 面是 4、EX 是 9，而公式要的是 3 / 7。
 static func stage_no_of(stage_id: int) -> int:
 	var stage_data := find(stage_id)
 	if stage_data and stage_data.stage_no > 0:
@@ -76,16 +76,16 @@ static func stage_no_of(stage_id: int) -> int:
 	return stage_id
 
 
-## 该面的**默认 BGM key**（`StageData.bgm_key`；无 StageData / 未填 → ""）。
-## 用途：符卡练习的**回落曲** —— 见 `BossCatalog.practice_bgm_key()`。
+## 该面的默认 BGM key（[code]StageData.bgm_key[/code]；无 StageData / 未填 → ""）。
+## 用途：符卡练习的回落曲 —— 见 [code]BossCatalog.practice_bgm_key()[/code]。
 static func bgm_key_of(stage_id: int) -> String:
 	var stage_data := find(stage_id)
 	return stage_data.bgm_key if stage_data else ""
 
 
-## 递归扫 `data/stages/**/stage_data/*.tres`。
-## ⚠️ 曾经只看 `res://data/stages/` **顶层** .tres，而文件一直在 `<面>/stage_data/`（嵌套）
-## → 扫描兜底从未生效（`scan` / `all` / `background` 在注册表缺项时全死）。回归见 test_stage_catalog。
+## 递归扫 [code]data/stages//stage_data/*.tres[/code]。
+## 曾经只看 [code]res://data/stages/[/code] 顶层 .tres，而文件一直在 [code]<面>/stage_data/[/code]（嵌套）
+## → 扫描兜底从未生效（[code]scan[/code] / [code]all[/code] / [code]background[/code] 在注册表缺项时全死）。回归见 test_stage_catalog。
 static func _load_all() -> Array[StageData]:
 	var result: Array[StageData] = []
 	for path in _find_stage_data_files("res://data/stages"):
@@ -95,7 +95,7 @@ static func _load_all() -> Array[StageData]:
 	return result
 
 
-## 递归收集 `<dir>/**/stage_data/*.tres`（只认约定目录，避免把别的 .tres 当舞台）。
+## 递归收集 [code]<dir>//stage_data/*.tres[/code]（只认约定目录，避免把别的 .tres 当舞台）。
 static func _find_stage_data_files(dir_path: String) -> Array[String]:
 	var out: Array[String] = []
 	var dir := DirAccess.open(dir_path)

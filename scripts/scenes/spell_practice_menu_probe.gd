@@ -1,7 +1,7 @@
-## 符卡练习菜单的测试/调试探针：把内部状态收口到一处，测试不再散落 `menu._xxx`。
+## 符卡练习菜单的测试/调试探针：把内部状态收口到一处，测试不再散落 [code]menu._xxx[/code]。
 ## 生产代码不调用；菜单内部重构时只需同步这里。
 ##
-## 用法：`var p = menu.probe()`，然后 p.set_phases(...) / p.build_diff_list() / p.diff_index() ...
+## 用法：[code]var p = menu.probe()[/code]，然后 p.set_phases(...) / p.build_diff_list() / p.diff_index() ...
 class_name SpellPracticeMenuProbe
 extends RefCounted
 

@@ -1,9 +1,9 @@
-## BulletLifecycle 的**纯编译器**：只读 phases/slots，输出原生 packed program。
+## BulletLifecycle 的纯编译器：只读 phases/slots，输出原生 packed program。
 ##
 ## 边界（DSL10）：
-##   · 不持有 BulletData / Callable / sfx 等宿主对象 → `compile_program()` 可脱离宿主单测；
+##   · 不持有 BulletData / Callable / sfx 等宿主对象 → [code]compile_program()[/code] 可脱离宿主单测；
 ##   · action 的 local id 按「EMIT / EMIT_VARIANT / CALL 共用 actions 序号，SFX 单独 sfx 序号」
-##     纯结构分配；`LifecycleHostTable.build()` 按同一遍历顺序填模板表，两边天然对齐。
+##     纯结构分配；[code]LifecycleHostTable.build()[/code] 按同一遍历顺序填模板表，两边天然对齐。
 ##   · op / target / dirk 的整数编码必须与 C++ DanmakuStore.behavior_tick 一致。
 class_name LifecycleCompiler
 extends RefCounted
@@ -296,7 +296,7 @@ static func _args_cond(c: Dictionary, state: Array) -> Array:
 	return head
 
 
-## action 参数**不含** local id；compile_program 的循环按 op 类型前置 id。
+## action 参数不含 local id；compile_program 的循环按 op 类型前置 id。
 static func _args_act(a: Dictionary, state: Array) -> Array:
 	match a[&"op"]:
 		A_EMIT:

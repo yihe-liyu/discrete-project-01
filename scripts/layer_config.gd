@@ -1,5 +1,5 @@
 ## 渲染图层常量（R17：不散落魔术数字）——静态常量类，不再是 autoload。
-## 用法不变：`LayerConfig.PLAYER_BULLET`。
+## 用法不变：[code]LayerConfig.PLAYER_BULLET[/code]。
 class_name LayerConfig
 
 

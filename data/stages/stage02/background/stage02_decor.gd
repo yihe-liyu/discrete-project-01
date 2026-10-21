@@ -1,11 +1,11 @@
 extends CoroutineScript
 ## Stage02 背景演出（时间线版）
-## 与 stage01 同口径：相机 / 环境 / 雾的动词走 **`ctx.background`**；
-## **不** `get_parent()`（R2）、**不**自己 `create_tween()`（渐变走意图动词）。
+## 与 stage01 同口径：相机 / 环境 / 雾的动词走 [code]ctx.background[/code]；
+## 不 [code]get_parent()[/code]（R2）、不自己 [code]create_tween()[/code]（渐变走意图动词）。
 ##
-## ⚠️ 还没建 `oak.tres`、`add_layer` 也还注释着 ⇒ 下面 `batch_spawn` / `spawn("橡树", …)`
-##    会走 `DecorManager._require_layer()` 的**响亮**分支（报「未声明的层 '橡树'」）——树不会出现。
-##    要出树：建 `oak.tres` + 打开下面那行 `add_layer`。
+## 还没建 [code]oak.tres[/code]、[code]add_layer[/code] 也还注释着 ⇒ 下面 [code]batch_spawn[/code] / [code]spawn("橡树", …)[/code]
+##    会走 [code]DecorManager._require_layer()[/code] 的响亮分支（报「未声明的层 '橡树'」）——树不会出现。
+##    要出树：建 [code]oak.tres[/code] + 打开下面那行 [code]add_layer[/code]。
 
 const OAK_LAYER = preload("res://data/stages/stage01/background/oak.tres")
 

@@ -1,12 +1,12 @@
 extends RefCounted
-## DescriptorCatalog —— `BulletLifecycle` 原语的**元数据 + 唯一 apply 分发**。
+## DescriptorCatalog —— [code]BulletLifecycle[/code] 原语的元数据 + 唯一 apply 分发。
 ##
 ## F10 拼装器只做两件事：
-##   1. 把 UI 的 `{op, args}` 通过本文件翻译成 builder 调用（组合逻辑仍只在 BulletLifecycle）；
+##   1. 把 UI 的 [code]{op, args}[/code] 通过本文件翻译成 builder 调用（组合逻辑仍只在 BulletLifecycle）；
 ##   2. 用 MOVES/UNTILS/ACTIONS/DIRS 给 UI 提供词汇表和参数表单。
 ##
-## **不加 class_name**：工作台/测试用 preload，避免新 class_name 全局缓存未导入。
-## **不复制组合**：`apply_*()` 只调 `BulletLifecycle` 的公开 builder；预设的展开也走这里。
+## 不加 class_name：工作台/测试用 preload，避免新 class_name 全局缓存未导入。
+## 不复制组合：[code]apply_*()[/code] 只调 [code]BulletLifecycle[/code] 的公开 builder；预设的展开也走这里。
 
 const MOVES: Array = [
 	{id = &"accel_world", label = "世界加速", signature = "accel_world(v: Vector2)",

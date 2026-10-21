@@ -74,7 +74,7 @@ func record_practice_capture(pid: PhaseIdentity) -> void:
 
 # ═══ 调试 ═══
 
-## 一键解锁所有符卡练习：遍历名册每个 stage × Boss × 难度 × 角色，为**每个阶段**
+## 一键解锁所有符卡练习：遍历名册每个 stage × Boss × 难度 × 角色，为每个阶段
 ## （符卡 + 非符）补一条空白记录（"见到即记"，不记 attempts / 不覆盖已有成绩）。返回新建条数。
 ## 零统计非符能落盘，靠 SpellRecordBook.prune_empty() 改按主键判活（phase_index>=0 即保留）。
 func debug_unlock_all_spells() -> int:
@@ -109,7 +109,7 @@ func debug_unlock_all_spells() -> int:
 	return added
 
 
-## 规范顺序里第 phase_index 个位置是第几张**同类**（符卡/非符，与 resolve_identity 同源；仅调试用）。
+## 规范顺序里第 phase_index 个位置是第几张同类（符卡/非符，与 resolve_identity 同源；仅调试用）。
 func _debug_phase_number(stage: int, phase_index: int, is_spell: bool) -> int:
 	var count := 0
 	var order := BossCatalog.stage_phase_order(stage)

@@ -5,20 +5,20 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
-## 当前 Boss（符卡背景取它的 `BossData.spell_background`）；由 boss_spawned/defeated 维护
+## 当前 Boss（符卡背景取它的 [code]BossData.spell_background[/code]）；由 boss_spawned/defeated 维护
 var _current_boss: Boss
-## 本局是否**已进入结算**。中弹(延迟 2s) / 击破 / 通关是三条独立的路，
+## 本局是否已进入结算。中弹(延迟 2s) / 击破 / 通关是三条独立的路，
 ## 而结算菜单挂在 autoload 的菜单栈上（切场景后仍在）——不加闸门就会「主菜单 + Game Over」叠一起。
 ## 规则：谁先到谁生效，其余一律放弃。
 var _ending: bool = false
-## 符卡练习的 SE 额外压低（dB）。**当前 0.0 = 关闭** ——
-## 真凶已修（`lc.sfx()` 的 db 默认 0.0 = 满音量，比正常大 15 dB），所以这条补偿先撤掉。
+## 符卡练习的 SE 额外压低（dB）。当前 0.0 = 关闭 ——
+## 真凶已修（[code]lc.sfx()[/code] 的 db 默认 0.0 = 满音量，比正常大 15 dB），所以这条补偿先撤掉。
 ## 若还是嫌大，从这里往负调（-3 → -6 → -9）；旋钮保留着，改一个数即可。
 const PRACTICE_SFX_TRIM_DB := 0.0
 
 @onready var _sub_viewport: SubViewport = %SubViewport
 @onready var _world: Node2D = %World
-## 符卡背景层（每 Boss 一张**场景**，压在 3D 背景之上、弹幕之下；见 spell_backdrop_layer.gd）
+## 符卡背景层（每 Boss 一张场景，压在 3D 背景之上、弹幕之下；见 spell_backdrop_layer.gd）
 @onready var _spell_backdrop: SpellBackdropLayer = %SpellBackdrop
 ## 符卡宣言立绘层（右上一→左下，快慢快 → 淡出；见 spell_portrait.gd）
 @onready var _spell_portrait: Sprite2D = %SpellPortrait
@@ -206,9 +206,9 @@ func _setup_player() -> void:
 
 ## ── 符卡背景（每 Boss 一张，只在符卡期间显示）──
 
-## 记下当前 Boss —— 背景图取自它的 `BossData.spell_background`。
-## 参数用 `Node` + `as Boss`（与 boss_ui 同法）：信号声明写的是 `Enemy`，但 `Boss` 与 `Enemy`
-## 是**兄弟**（都 extends Area2D），实际发的就是 `Boss` —— 那句声明是错的，见 BEST_PRACTICES_LOG。
+## 记下当前 Boss —— 背景图取自它的 [code]BossData.spell_background[/code]。
+## 参数用 [code]Node[/code] + [code]as Boss[/code]（与 boss_ui 同法）：信号声明写的是 [code]Enemy[/code]，但 [code]Boss[/code] 与 [code]Enemy[/code]
+## 是兄弟（都 extends Area2D），实际发的就是 [code]Boss[/code] —— 那句声明是错的，见 BEST_PRACTICES_LOG。
 func _on_boss_spawned(boss: Node) -> void:
 	_current_boss = boss as Boss
 
@@ -218,24 +218,24 @@ func _on_boss_defeated(_boss: Node) -> void:
 	_spell_backdrop.clear()
 
 
-## 判据在 `spell_backdrop.should_show()`：符卡显示、非符/没图淡出
+## 判据在 [code]spell_backdrop.should_show()[/code]：符卡显示、非符/没图淡出
 func _on_phase_start(phase: PhaseData) -> void:
 	_spell_backdrop.apply(phase, _resolve_spell_background())
 	_spell_portrait.sweep(_resolve_spell_portrait(phase))
 
 
-## 阶段结束（符卡打完 / 超时 / 被击破）→ 符卡背景**渐隐**。
+## 阶段结束（符卡打完 / 超时 / 被击破）→ 符卡背景渐隐。
 ## 只靠 phase_start 更新的话，背景会一直挂到下一阶段开始 —— 符卡结束后本该收掉。
 func _on_phase_end(_captured: bool, _bonus: int) -> void:
 	_spell_backdrop.clear()
 
 
-## 自机用 Bomb：立绘**左下 → 右上**扫场（与 Boss 的符卡立绘镜像）
+## 自机用 Bomb：立绘左下 → 右上扫场（与 Boss 的符卡立绘镜像）
 func _on_player_bomb(_spell_name: String) -> void:
 	_player_portrait.sweep_from_bottom_left(_resolve_player_portrait())
 
 
-## 自机立绘：取当前机体 `PlayerData.portrait`（`%Player` 已按角色装配）
+## 自机立绘：取当前机体 [code]PlayerData.portrait[/code]（[code]%Player[/code] 已按角色装配）
 func _resolve_player_portrait() -> Texture2D:
 	var player: Player = %Player
 	if player != null and player.player_data != null:
@@ -243,8 +243,8 @@ func _resolve_player_portrait() -> Texture2D:
 	return null
 
 
-## 符卡立绘：**只在符卡期间**扫场；取当前 Boss 的 `BossData.portrait`。
-## 练习模式回落用 `BossCatalog` 现查（`start_spell_card` 自建 BossData 会丢字段）。
+## 符卡立绘：只在符卡期间扫场；取当前 Boss 的 [code]BossData.portrait[/code]。
+## 练习模式回落用 [code]BossCatalog[/code] 现查（[code]start_spell_card[/code] 自建 BossData 会丢字段）。
 func _resolve_spell_portrait(phase: PhaseData) -> Texture2D:
 	if phase == null or phase.uid == 0:
 		return null
@@ -260,9 +260,9 @@ func _resolve_spell_portrait(phase: PhaseData) -> Texture2D:
 	return null
 
 
-## 符卡背景场景：优先**当前 Boss** 的 `BossData.spell_background`；
-## 练习模式回落到会话载荷 —— `start_spell_card()` 自建 BossData（只带 phase/visual/name），
-## 会把 `spell_background` 丢掉，故 `PracticeSession` 单独携带一张。
+## 符卡背景场景：优先当前 Boss 的 [code]BossData.spell_background[/code]；
+## 练习模式回落到会话载荷 —— [code]start_spell_card()[/code] 自建 BossData（只带 phase/visual/name），
+## 会把 [code]spell_background[/code] 丢掉，故 [code]PracticeSession[/code] 单独携带一张。
 func _resolve_spell_background() -> PackedScene:
 	if is_instance_valid(_current_boss) and _current_boss.boss_data != null \
 			and _current_boss.boss_data.spell_background != null:

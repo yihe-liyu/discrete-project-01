@@ -1,7 +1,7 @@
 extends Control
 ## 创作台（四页签）—— 单窗口统一入口：整关预览 | 弹幕台 | 敌人台 | 阶段台
 ## 试验台实例常驻（切换保留选择状态）；切走时清运行时残留（弹/敌人/Boss）
-## 目录是**全局抽屉**：四个页签下都能打开，双击直达对应台（不再只活在整关预览里）。
+## 目录是全局抽屉：四个页签下都能打开，双击直达对应台（不再只活在整关预览里）。
 
 const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const WORKBENCH := preload("res://scenes/workbench.tscn")

@@ -2,12 +2,12 @@
 extends RefCounted
 
 ## 参数注入校验（把"类型不匹配静默失效"变成"校验 + 响亮报错"）。
-## 用法：把注入点原来那个 `for k in params: if k in script: script.set(...)`
-##       替换成 `ParamValidator.apply(script, params)`。
+## 用法：把注入点原来那个 [code]for k in params: if k in script: script.set(...)[/code]
+##       替换成 [code]ParamValidator.apply(script, params)[/code]。
 ## - 未在脚本属性列表里的键 → 静默跳过（共享字典跨脚本合法：PhaseData.params 同灌 move+shoot，
 ##   未知键通常属于兄弟脚本，无法与"打错键名"可靠区分，故不警告以免刷屏——validate_unknown_keys 仍保留供按需用）。
-## - `apply(..., p_strict=true)`：未知键也 push_error（只灌一个脚本时用，如 EnemyData.params）。
-## - `validate_unknown_keys_union(scripts, params)`：多脚本共享 params 的并集校验（如 PhaseData.params）。
+## - [code]apply(..., p_strict=true)[/code]：未知键也 push_error（只灌一个脚本时用，如 EnemyData.params）。
+## - [code]validate_unknown_keys_union(scripts, params)[/code]：多脚本共享 params 的并集校验（如 PhaseData.params）。
 ## - 类型明显不匹配（数字/向量/颜色等互不兼容）→ push_error。
 ## - 宽松放行：int↔float、String↔数字（Godot 会 coerce），避免误报。
 ## 返回错误列表（供测试/更细处理；apply 会 push_error）。
@@ -59,7 +59,7 @@ static func validate_unknown_keys_union(scripts: Array, params: Dictionary) -> A
 
 
 ## 校验 + 只设合法键 + 类型错响亮报错。
-## `p_strict=true` 时未知键也 push_error（只灌一个脚本的场景，如 EnemyData.params）。
+## [code]p_strict=true[/code] 时未知键也 push_error（只灌一个脚本的场景，如 EnemyData.params）。
 static func apply(target: Object, params: Dictionary, p_strict: bool = false) -> void:
 	if target == null:
 		return

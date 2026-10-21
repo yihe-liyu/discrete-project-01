@@ -34,14 +34,14 @@ func move_to(enemy: Node2D, target_pos: Vector2, duration: float,
 	return tween
 
 
-## 回收一只敌人 —— **静默**：不掉道具、不计分、不发 `enemy_killed`、不播死亡特效。
-## 用途：离场 / 超时清理（多数回收都属于这两类 —— 对齐子弹 `despawn()` 的"静默"口径）。
-## ⚠️ **"被打死"是另一条路**：让 hp≤0（`Enemy.die()`）—— 那条才掉道具 / 播特效 / 计分。
-## ⚠️ **只收杂兵 `Enemy`**：`Boss` 是 `Area2D` 的**兄弟类**不是子类，Boss 有自己的退场路径。
-## 参数收 `Node2D`（= `CoroutineScript.target` 的静态类型 ⇒ 内容直接 `despawn(target)`，不必写 `as`），
-## 类型不对时**响亮报出它到底是什么** —— 而不是像 `target as Enemy` 那样静默变 null
+## 回收一只敌人 —— 静默：不掉道具、不计分、不发 [code]enemy_killed[/code]、不播死亡特效。
+## 用途：离场 / 超时清理（多数回收都属于这两类 —— 对齐子弹 [code]despawn()[/code] 的"静默"口径）。
+## "被打死"是另一条路：让 hp≤0（[code]Enemy.die()[/code]）—— 那条才掉道具 / 播特效 / 计分。
+## 只收杂兵 [code]Enemy[/code]：[code]Boss[/code] 是 [code]Area2D[/code] 的兄弟类不是子类，Boss 有自己的退场路径。
+## 参数收 [code]Node2D[/code]（= [code]CoroutineScript.target[/code] 的静态类型 ⇒ 内容直接 [code]despawn(target)[/code]，不必写 [code]as[/code]），
+## 类型不对时响亮报出它到底是什么 —— 而不是像 [code]target as Enemy[/code] 那样静默变 null
 ## 再被误诊成"敌人为空"（2026-10-04：这个误诊就是被测试顶出来的）。
-## 不需要 ctx / stage（只是一次 `queue_free`，注销由 `Enemy._on_tree_exited` 自动做）。
+## 不需要 ctx / stage（只是一次 [code]queue_free[/code]，注销由 [code]Enemy._on_tree_exited[/code] 自动做）。
 ## 返回是否真的回收了（空/已释放/类型不对 ⇒ false + 响亮；已排队释放 ⇒ false，静默不算错）。
 func despawn(enemy: Node2D) -> bool:
 	if enemy == null or not is_instance_valid(enemy):
@@ -57,11 +57,11 @@ func despawn(enemy: Node2D) -> bool:
 	return true
 
 
-## 回收一只敌人 **并播击破特效**（= `despawn()` + `ctx.effects.play_hit_effect(death_effect, 弹位置)`）。
-## 用途：**看得见**的收兵（屏上清场）—— 与 `despawn()`（静默：屏外 / 超时回收）相对，
-## 正好对应子弹那边的 `despawn()` / `despawn_clear()` 之分（2026-10-04 作者要求"清场要有击破特效"）。
-## ⚠️ 仍然**不算战果**：不掉道具、不计分、不发 `enemy_killed`、不播死亡音效（那些是 `Enemy.die()`）。
-## 敌人没配 `death_effect`（无 `EnemyData`）⇒ 只回收，不报错。
+## 回收一只敌人 并播击破特效（= [code]despawn()[/code] + [code]ctx.effects.play_hit_effect(death_effect, 弹位置)[/code]）。
+## 用途：看得见的收兵（屏上清场）—— 与 [code]despawn()[/code]（静默：屏外 / 超时回收）相对，
+## 正好对应子弹那边的 [code]despawn()[/code] / [code]despawn_clear()[/code] 之分（2026-10-04 作者要求"清场要有击破特效"）。
+## 仍然不算战果：不掉道具、不计分、不发 [code]enemy_killed[/code]、不播死亡音效（那些是 [code]Enemy.die()[/code]）。
+## 敌人没配 [code]death_effect[/code]（无 [code]EnemyData[/code]）⇒ 只回收，不报错。
 func despawn_clear(enemy: Node2D) -> bool:
 	if enemy == null or not is_instance_valid(enemy) or not (enemy is Enemy):
 		return despawn(enemy)      # 让 despawn 出**那一条**精确诊断（空 / 不是 Enemy）
@@ -73,10 +73,10 @@ func despawn_clear(enemy: Node2D) -> bool:
 	return despawn(e)
 
 
-## 回收场上**所有杂兵**（**不动 Boss**：Boss 不是 `Enemy`，天然被筛掉），**并逐只播击破特效**。
-## 返回实际回收数量。用途：道中收尾 / 换段落时清场 —— 与 `EntityRegistry.clear()` 的区别是
-## **那个连 Boss 一起释放**且清空名单（那是"拆关卡"语义），本动词是内容语义的"清杂兵"。
-## ⚠️ 要**静默**逐只清场（不想满屏爆特效）就自己循环 `despawn()`。
+## 回收场上所有杂兵（不动 Boss：Boss 不是 [code]Enemy[/code]，天然被筛掉），并逐只播击破特效。
+## 返回实际回收数量。用途：道中收尾 / 换段落时清场 —— 与 [code]EntityRegistry.clear()[/code] 的区别是
+## 那个连 Boss 一起释放且清空名单（那是"拆关卡"语义），本动词是内容语义的"清杂兵"。
+## 要静默逐只清场（不想满屏爆特效）就自己循环 [code]despawn()[/code]。
 func despawn_all() -> int:
 	if ctx == null or ctx.stage == null:
 		return 0

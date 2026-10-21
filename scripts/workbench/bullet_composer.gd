@@ -1,10 +1,10 @@
 extends RefCounted
-## BulletComposer —— F10 的**无 UI 模型**：相位 → Move/Until/Action → BulletLifecycle。
+## BulletComposer —— F10 的无 UI 模型：相位 → Move/Until/Action → BulletLifecycle。
 ##
 ## 设计边界：
-## - 只做**线性相位**（与 BulletLifecycle 一致，没有跳转/分支）；
-## - 组合逻辑不复制：每个 op 都走 `DescriptorCatalog.apply_*()` → `BulletLifecycle` builder；
-## - 难度变体不进本类：一个 Composer 代表**一个难度变体**；UI 用 4 个实例装 4 档；
+## - 只做线性相位（与 BulletLifecycle 一致，没有跳转/分支）；
+## - 组合逻辑不复制：每个 op 都走 [code]DescriptorCatalog.apply_*()[/code] → [code]BulletLifecycle[/code] builder；
+## - 难度变体不进本类：一个 Composer 代表一个难度变体；UI 用 4 个实例装 4 档；
 ## - 表达式/代码生成是 UI 层的事；本类只保证“拼出来的 lifecycle 与手写等价”。
 ##
 ## 数据结构：
@@ -38,14 +38,14 @@ func move_count(index: int) -> int:
 	return (phases[index]["moves"] as Array).size()
 
 
-## 给某个相位追加 Move；args 里可以有任意键，`op` 由这里统一写入。
+## 给某个相位追加 Move；args 里可以有任意键，[code]op[/code] 由这里统一写入。
 func add_move(phase_index: int, op: StringName, args: Dictionary = {}) -> void:
 	var op_call: Dictionary = args.duplicate(true)
 	op_call["op"] = op
 	(phases[phase_index]["moves"] as Array).append(op_call)
 
 
-## 设置某相位的 Until；`every` / `every_ticks` 是 Until 的修饰键，放在 args 里。
+## 设置某相位的 Until；[code]every[/code] / [code]every_ticks[/code] 是 Until 的修饰键，放在 args 里。
 func set_until(phase_index: int, op: StringName, args: Dictionary = {}) -> void:
 	var op_call: Dictionary = args.duplicate(true)
 	op_call["op"] = op
@@ -80,7 +80,7 @@ func to_spec() -> Dictionary:
 
 
 ## 核心：按顺序调 builder，得到与手写完全同构的 lifecycle。
-## 注意：每个相位都要显式 apply_until（默认 never），保证 `_set_until` 的修饰键语义一致。
+## 注意：每个相位都要显式 apply_until（默认 never），保证 [code]_set_until[/code] 的修饰键语义一致。
 func to_lifecycle() -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
 	for i in phases.size():
@@ -95,8 +95,8 @@ func to_lifecycle() -> BulletLifecycle:
 	return lc
 
 
-## 生成可粘贴的 GDScript。`_spawn` 是占位：内容里换成自己的 BulletData（或当前弹）。
-## 只生成“弹道”这段，不生成 `_tick` / 波次调度 —— 与 F10 的边界一致。
+## 生成可粘贴的 GDScript。[code]_spawn[/code] 是占位：内容里换成自己的 BulletData（或当前弹）。
+## 只生成“弹道”这段，不生成 [code]_tick[/code] / 波次调度 —— 与 F10 的边界一致。
 func to_code() -> String:
 	var lines: Array[String] = ["var lc := BulletLifecycle.new()"]
 	for i in phases.size():

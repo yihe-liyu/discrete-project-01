@@ -1,17 +1,17 @@
-## 工作台的**画框层**：东方框金边 + 网格 / 幽灵路径参考线。
+## 工作台的画框层：东方框金边 + 网格 / 幽灵路径参考线。
 ##
-## **为什么单独一层**：画框必须画在 **3D 背景之上**。这两样以前都在 `workbench.gd::_draw()` 里，
-## 而根 Control 的 `_draw` 渲染在**子节点之前** ⇒ 背景一铺就盖住金边（当年为此把背景**内缩 3px**
+## 为什么单独一层：画框必须画在 3D 背景之上。这两样以前都在 [code]workbench.gd::_draw()[/code] 里，
+## 而根 Control 的 [code]_draw[/code] 渲染在子节点之前 ⇒ 背景一铺就盖住金边（当年为此把背景内缩 3px
 ## 绕开，代价是预览与真游戏差 ≈4% 横向 FOV）。拆成叠在背景之上的独立节点后，背景可以照真游戏的
-## **over-scan** 规格铺（`GameConfig.BACKGROUND_OVERSCAN`），金边照样在最上层。
+## over-scan 规格铺（[code]GameConfig.BACKGROUND_OVERSCAN[/code]），金边照样在最上层。
 ##
-## 由 `workbench.gd::_redraw_stage()` 在**页面偏移变化 / 背景开关变化 / 载入关卡**时 `sync()`。
+## 由 [code]workbench.gd::_redraw_stage()[/code] 在页面偏移变化 / 背景开关变化 / 载入关卡时 [code]sync()[/code]。
 extends Control
 class_name FrameOverlay
 
 ## 嵌入创作台时的页面偏移（舞台视觉归一回游戏坐标用）
 var stage_shift_y := 0.0
-## 只在**无背景**时画网格/路径线（有背景时线会浮在 3D 上，很难看）
+## 只在无背景时画网格/路径线（有背景时线会浮在 3D 上，很难看）
 var draw_grid := true
 
 

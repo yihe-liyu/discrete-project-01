@@ -1,7 +1,7 @@
-## 弹型内容定义（外观 + 碰撞 + 朝向）—— `data/bullets/*.tres` 的唯一内容资源。
-## 只放「共享、换发不换」的那点数据；阵营 / 染色 / 特效 / 伤害 / 出生雾等**变化多**的属性
-## 交给 `BulletData` 构造链按需给 —— 构造链的存在就是为了「只改一点属性不必新建资源」。
-## 运行时类型是 `BulletType`（由 `BulletData.to_bullet_type()` 建，内核/渲染读它）；本资源不参与运行时。
+## 弹型内容定义（外观 + 碰撞 + 朝向）—— [code]data/bullets/*.tres[/code] 的唯一内容资源。
+## 只放「共享、换发不换」的那点数据；阵营 / 染色 / 特效 / 伤害 / 出生雾等变化多的属性
+## 交给 [code]BulletData[/code] 构造链按需给 —— 构造链的存在就是为了「只改一点属性不必新建资源」。
+## 运行时类型是 [code]BulletType[/code]（由 [code]BulletData.to_bullet_type()[/code] 建，内核/渲染读它）；本资源不参与运行时。
 class_name BulletDef
 extends Resource
 
@@ -9,7 +9,7 @@ extends Resource
 @export var id: StringName = &""
 
 @export_group("Visual | Collision")
-## atlas 形状 key（经 BulletShapes 解析成图集格）。**外观与碰撞放一起**。
+## atlas 形状 key（经 BulletShapes 解析成图集格）。外观与碰撞放一起。
 @export var texture_key: StringName = &""
 ## 受击判定半径（圆判定；hitbox_size 非零时忽略）。
 @export var hitbox_radius: float = 4.0

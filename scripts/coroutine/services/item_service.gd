@@ -18,9 +18,9 @@ func spawn(type: int, position: Vector2) -> void:
 		pool.spawn(position, type)
 
 
-## 扇形爆发投点：把 `targets`（一般在自机处）一次撒出，每个点用 `hang` 秒**直线飞到目标**，
-## 随后径向初速归零 → 竖直下落。目标点由 `fan_targets()` 算（含左右边界夹取）。
-## 典型用法：miss 时 `spawn_fan(POWER, 自机, ItemService.fan_targets(…), hang)` → 向上半圆扇形。
+## 扇形爆发投点：把 [code]targets[/code]（一般在自机处）一次撒出，每个点用 [code]hang[/code] 秒直线飞到目标，
+## 随后径向初速归零 → 竖直下落。目标点由 [code]fan_targets()[/code] 算（含左右边界夹取）。
+## 典型用法：miss 时 [code]spawn_fan(POWER, 自机, ItemService.fan_targets(…), hang)[/code] → 向上半圆扇形。
 func spawn_fan(type: int, origin: Vector2, targets: Array[Vector2], hang: float) -> void:
 	if not ctx or not ctx.active():
 		return
@@ -28,7 +28,7 @@ func spawn_fan(type: int, origin: Vector2, targets: Array[Vector2], hang: float)
 	spawn_fan_in_pool(pool, type, origin, targets, hang)
 
 
-## `spawn_fan` 的实体部分（不依赖 ctx，便于直接喂池测试）——返回真正撒出的个数。
+## [code]spawn_fan[/code] 的实体部分（不依赖 ctx，便于直接喂池测试）——返回真正撒出的个数。
 static func spawn_fan_in_pool(pool: ItemPool, type: int, origin: Vector2,
 		targets: Array[Vector2], hang: float) -> int:
 	if pool == null:
@@ -43,9 +43,9 @@ static func spawn_fan_in_pool(pool: ItemPool, type: int, origin: Vector2,
 	return spawned
 
 
-## 扇形**目标点**（弧向飞行的终点，纯函数、便于测试）：`count` 个点排在以 `origin` 为心、
-## `radius` 为半径、以 `center_dir` 为中轴、张角 `spread_deg` 的**均匀圆弧**上（含两端点）；
-## 再把横坐标**夹进 [x_min, x_max]** —— 贴左右墙时靠墙一侧横向压扁（**纵向半径不变**），
+## 扇形目标点（弧向飞行的终点，纯函数、便于测试）：[code]count[/code] 个点排在以 [code]origin[/code] 为心、
+## [code]radius[/code] 为半径、以 [code]center_dir[/code] 为中轴、张角 [code]spread_deg[/code] 的均匀圆弧上（含两端点）；
+## 再把横坐标夹进 [x_min, x_max] —— 贴左右墙时靠墙一侧横向压扁（纵向半径不变），
 ## 于是这 10 个点（以及随后从它们竖直下落的轨迹）都不会跑出场地框。
 static func fan_targets(count: int, origin: Vector2, center_dir: Vector2, spread_deg: float,
 		radius: float, x_min: float, x_max: float) -> Array[Vector2]:
@@ -57,9 +57,9 @@ static func fan_targets(count: int, origin: Vector2, center_dir: Vector2, spread
 	return targets
 
 
-## 均匀圆弧方向（纯函数，便于测试）：`count` 个**单位向量**，以 `center_dir` 为中轴、总张角
-## `spread_deg`，**含两端点**（故相邻夹角 = spread/(count-1)，10 个 / 180° → 每档 20°）。
-## 例：`fan_directions(10, Vector2.UP, 180)` = 从正左 → 正上 → 正右（向上半圆）。
+## 均匀圆弧方向（纯函数，便于测试）：[code]count[/code] 个单位向量，以 [code]center_dir[/code] 为中轴、总张角
+## [code]spread_deg[/code]，含两端点（故相邻夹角 = spread/(count-1)，10 个 / 180° → 每档 20°）。
+## 例：[code]fan_directions(10, Vector2.UP, 180)[/code] = 从正左 → 正上 → 正右（向上半圆）。
 static func fan_directions(count: int, center_dir: Vector2, spread_deg: float) -> Array[Vector2]:
 	var dirs: Array[Vector2] = []
 	if count <= 0 or center_dir == Vector2.ZERO:

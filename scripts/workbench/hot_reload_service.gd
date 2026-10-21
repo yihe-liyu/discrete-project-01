@@ -1,20 +1,20 @@
-## 工作台**热更新服务**（2026-09-30 S2：从 `BenchBase` 抽出）。
+## 工作台热更新服务（2026-09-30 S2：从 [code]BenchBase[/code] 抽出）。
 ##
-## 设计要点：**不依赖场景树、也不认识 toast** —— 调用方用两个 `Callable` 说明
-## 「监听哪些路径 / 主脚本是谁」，结果走**信号**（`status` / `reloaded` / `failed`）。
-## 于是"防抖语义 / 连坐重载 / 失败保旧版"这些规则可以**无树测试**（见 `test_hot_reload`）。
+## 设计要点：不依赖场景树、也不认识 toast —— 调用方用两个 [code]Callable[/code] 说明
+## 「监听哪些路径 / 主脚本是谁」，结果走信号（[code]status[/code] / [code]reloaded[/code] / [code]failed[/code]）。
+## 于是"防抖语义 / 连坐重载 / 失败保旧版"这些规则可以无树测试（见 [code]test_hot_reload[/code]）。
 ##
 ## 两个术语（原来的注释里散着）：
-##   * **防抖（debounce）**：文件停止变化 `DEBOUNCE` 秒后才重载 —— 编辑器保存会连写几帧，
+##   * 防抖（debounce）：文件停止变化 [code]DEBOUNCE[/code] 秒后才重载 —— 编辑器保存会连写几帧，
 ##     不等稳就重载会拿到半截脚本；
-##   * **连坐**：主脚本 `preload` 的同伴改了，只重载主脚本**看不到**新代码 ⇒
-##     主脚本 + 它同目录的全部 `.gd` 一起重载。
+##   * 连坐：主脚本 [code]preload[/code] 的同伴改了，只重载主脚本看不到新代码 ⇒
+##     主脚本 + 它同目录的全部 [code].gd[/code] 一起重载。
 class_name HotReloadService
 extends RefCounted
 
-## 状态条文案（"＊ 检测到修改…" / "⚠ 重载失败…"）；调用方接去自己的 toast/标签
+## 状态条文案（"＊ 检测到修改…" / " 重载失败…"）；调用方接去自己的 toast/标签
 signal status(text: String, color: Color)
-## 重载成功：带**新编译的**主脚本（调用方拿它替换当前脚本并重演）
+## 重载成功：带新编译的主脚本（调用方拿它替换当前脚本并重演）
 signal reloaded(main_new: Script)
 ## 重载失败：带出错的文件路径（旧版继续跑）
 signal failed(path: String)
@@ -24,7 +24,7 @@ const POLL_INTERVAL := 0.5
 ## 修改稳定防抖（秒）：文件这段时间不再变化才算"保存完成"
 const DEBOUNCE := 0.8
 
-## 关掉后 `poll()` 直接返回（子类的"热更新"勾选框接它）
+## 关掉后 [code]poll()[/code] 直接返回（子类的"热更新"勾选框接它）
 var enabled := true
 
 ## () -> Array[String]：要监听的路径；() -> String：主脚本路径
@@ -37,13 +37,13 @@ var _poll := 0.0
 var _dirty_since := -1.0
 
 
-## 注入两个来源（子类虚函数包成 Callable 传进来；可在 `_init` 里调）
+## 注入两个来源（子类虚函数包成 Callable 传进来；可在 [code]_init[/code] 里调）
 func setup(collect: Callable, main_path: Callable) -> void:
 	_collect = collect
 	_main_path = main_path
 
 
-## 主脚本 + 其同目录全部 `.gd`（连坐重载；顺序稳定、去重）
+## 主脚本 + 其同目录全部 [code].gd[/code]（连坐重载；顺序稳定、去重）
 static func with_dir_scripts(p_paths: Array) -> Array[String]:
 	var out: Array[String] = []
 	var dirs := {}
@@ -64,7 +64,7 @@ static func with_dir_scripts(p_paths: Array) -> Array[String]:
 	return out
 
 
-## 重建监听集 = `_collect` 给出的路径连坐展开，然后刷新 mtime 基线
+## 重建监听集 = [code]_collect[/code] 给出的路径连坐展开，然后刷新 mtime 基线
 func rebuild() -> void:
 	var collected: Array[String] = []
 	if _collect.is_valid():
@@ -97,7 +97,7 @@ func age_mtime(path: String, seconds: float) -> void:
 	_mtimes[path] = int(_mtimes[path]) - int(seconds)
 
 
-## 推进一次轮询：到间隔才查 mtime；改了 → 起/续防抖；稳够 `DEBOUNCE` 秒 → 真重载
+## 推进一次轮询：到间隔才查 mtime；改了 → 起/续防抖；稳够 [code]DEBOUNCE[/code] 秒 → 真重载
 func poll(delta: float) -> void:
 	if not enabled or _paths.is_empty():
 		return

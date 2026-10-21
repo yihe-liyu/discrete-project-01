@@ -1,7 +1,7 @@
 ## KernelBomb —— 宿主节点版 bomb（不走内核池）。
 ## 为什么不用内核行：bomb 需要 out_grace（轨道越界不被剔除），而 A 方案下内核 cull 是统一的，
 ## 没有 per-type grace；且 bomb 只有个位数、还要做清弹/伤害/视觉等宿主动作 → 宿主节点最干净。
-## **本类只做机制**：所有数值来自 RingBombData（内容数据，.tres 可调）。
+## 本类只做机制：所有数值来自 RingBombData（内容数据，.tres 可调）。
 extends BombEntity
 
 ## 从 data 拷来的运行值

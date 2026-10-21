@@ -1,12 +1,12 @@
-## 符卡背景**宿主层**（`game_scene.tscn` 里 `World` 下那个 Node2D）：
-## 「什么时候显示 / 在哪一层 / 怎么淡」由它定；「长什么样」交给 `BossData.spell_background`
-## 指向的**场景**（PackedScene）—— 作者在场景里随便放多少层、加 shader、加动画。
+## 符卡背景宿主层（[code]game_scene.tscn[/code] 里 [code]World[/code] 下那个 Node2D）：
+## 「什么时候显示 / 在哪一层 / 怎么淡」由它定；「长什么样」交给 [code]BossData.spell_background[/code]
+## 指向的场景（PackedScene）—— 作者在场景里随便放多少层、加 shader、加动画。
 ##
-## 规则：**只在符卡期间**（`phase.uid != 0`）+ 配了场景才显示；非符 / 没配 / 阶段结束都淡出。
-## **同一张场景不重播淡入、也不重建**（同 Boss 连打两张符卡不闪）；换场景才换实例。
+## 规则：只在符卡期间（[code]phase.uid != 0[/code]）+ 配了场景才显示；非符 / 没配 / 阶段结束都淡出。
+## 同一张场景不重播淡入、也不重建（同 Boss 连打两张符卡不闪）；换场景才换实例。
 ##
-## 坐标约定：宿主在**场地中心** ⇒ 作者场景里 `(0,0)` = 场地正中，
-## 768×896 的整幅图放 `(0,0)`（`centered = true`）正好铺满场地。**不做任何裁剪**——
+## 坐标约定：宿主在场地中心 ⇒ 作者场景里 [code](0,0)[/code] = 场地正中，
+## 768×896 的整幅图放 [code](0,0)[/code]（[code]centered = true[/code]）正好铺满场地。不做任何裁剪——
 ## 想让图只铺场地就照场地尺寸画；想铺满整屏也可以（那是作者的自由）。
 class_name SpellBackdropLayer
 extends Node2D
@@ -14,13 +14,13 @@ extends Node2D
 ## 淡入 / 淡出时长（秒）
 const FADE_SEC := 0.4
 
-## 当前挂着的场景 + 其实例（实例是**本节点的子节点**，因此继承宿主的位置/层级/透明度）
+## 当前挂着的场景 + 其实例（实例是本节点的子节点，因此继承宿主的位置/层级/透明度）
 var _scene: PackedScene
 var _instance: Node
 var _tween: Tween
 
 
-## 该阶段该不该显示符卡背景：**符卡才有**（非符不显示）。
+## 该阶段该不该显示符卡背景：符卡才有（非符不显示）。
 ## 「用哪个场景」由调用方解析（当前 Boss 的 / 练习会话载荷的）——本层只管显隐规则。
 static func should_show(phase: PhaseData) -> bool:
 	return phase != null and phase.uid != 0
@@ -56,7 +56,7 @@ func show_for(p_scene: PackedScene) -> void:
 	_tween.tween_property(self, "modulate:a", 1.0, FADE_SEC)
 
 
-## 淡出并隐藏（实例在淡完之后才释放；中途再 `show_for` 同一张会**复用**同一个实例）
+## 淡出并隐藏（实例在淡完之后才释放；中途再 [code]show_for[/code] 同一张会复用同一个实例）
 func clear() -> void:
 	if not visible:
 		return

@@ -5,7 +5,7 @@ extends RefCounted
 ##   - 右面板顶部下移
 ##   - World / 背景 / 画框归一到游戏坐标
 ##   - phase 计时器跟着下移
-## 但**不能**把舞台整体上移 pos.y（会裁掉场地顶边）——只上移 FIELD_TOP。
+## 但不能把舞台整体上移 pos.y（会裁掉场地顶边）——只上移 FIELD_TOP。
 ##
 ## 本服务只碰节点坐标，不碰 StageRuntime / 播放状态；重绘由宿主回调。
 

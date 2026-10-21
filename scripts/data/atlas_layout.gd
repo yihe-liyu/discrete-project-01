@@ -1,13 +1,13 @@
 ## 图集布局（内容资源，R17）：atlas 尺寸 + 「形状 key → 像素 Rect2」表。
-## 数据存 data/atlas/*.tres，改布局不必动代码；key 是**内容槽**（可中文），只被 `bullet_configs` 的 `shape` 引用。
+## 数据存 data/atlas/*.tres，改布局不必动代码；key 是内容槽（可中文），只被 [code]bullet_configs[/code] 的 [code]shape[/code] 引用。
 ## ATTENTION: atlas_size 必须与贴图实际尺寸一致——换图/重排后忘了改，UV 会整片错位且不报错（test_atlas_layout 是哨兵）。
-## @tool：@tool 查看器/弹型在编辑器里要调这里的**实例方法**（非 @tool → placeholder instance 报错）。
+## @tool：@tool 查看器/弹型在编辑器里要调这里的实例方法（非 @tool → placeholder instance 报错）。
 @tool
 class_name AtlasLayout
 extends Resource
 
 ## 图集贴图实际尺寸（像素）；uv_rect() 用它归一化。
-## **默认 ZERO = 未配置**：必须由 .tres 显式给（否则资源会因"等于默认"而不写盘，尺寸又藏回代码）。
+## 默认 ZERO = 未配置：必须由 .tres 显式给（否则资源会因"等于默认"而不写盘，尺寸又藏回代码）。
 @export var atlas_size: Vector2 = Vector2.ZERO
 ## 形状 key → 像素矩形。
 @export var shapes: Dictionary = {}

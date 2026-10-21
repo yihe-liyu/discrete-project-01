@@ -8,7 +8,7 @@
 ## 能力：
 ##   · 播放/暂停/重跑（真实引擎时钟）
 ##   · 跳转：12x 快进到目标时刻（真实关卡不支持任意 seek）
-##   · 关卡切换（`StageCatalog.playable()`）+ 难度切换 / 静音 / 背景开关 / 固定种子（重跑弹幕序列可复现）
+##   · 关卡切换（[code]StageCatalog.playable()[/code]）+ 难度切换 / 静音 / 背景开关 / 固定种子（重跑弹幕序列可复现）
 ##   · 实时状态（时间/子弹数/敌人/Boss/FPS）+ 事件日志
 ##   · 逐帧推进（暂停中 F）：弹幕排布/碰撞细节逐帧检查
 ##   · 书签（协程关卡静态提取 + 人工打点）+ 12x 快进跳转
@@ -22,7 +22,7 @@
 ##          B 打书签 · Ctrl+S 保存 · Home 回开头（弹窗/输入框聚焦时不拦截）
 ##
 ## 结构（组件化；纯预览沙盒）：
-##   workbench.gd        —— 主控制器：装配 + 关卡生命周期 + 状态路由（**只接线**）
+##   workbench.gd        —— 主控制器：装配 + 关卡生命周期 + 状态路由（只接线）
 ##   playback.gd         —— 播放状态机（暂停/速度/快进/逐帧/静音）· 无树可测
 ##   bookmarks.gd        —— 书签模型（静态提取/人工打点持久化/合并）· 无树可测
 ##   playback_bar.gd     —— 播放控制行（信号 → 主控制器）
@@ -59,11 +59,11 @@ const DIFFICULTIES: Array[String] = ["Easy", "Normal", "Hard", "Lunatic"]
 @onready var _stage_grid: GridContainer = %StageGrid
 @onready var _world: Node2D = $World
 @onready var _stage_runtime: StageRuntime = %StageRuntime
-## 3D 背景专用子视口。**与真游戏同规格**（2026-10-02 BG7 对齐）：
-##   场地本体（东方框）= 768×896 @(64,32)，唯一来源 `GameConfig`；
-##   容器 = **场地每边 over-scan** `GameConfig.BACKGROUND_OVERSCAN`（16px）⇒ 800×928，
-##     与 `game_scene.tscn` 的容器**同尺寸**、相机/fov 相同 ⇒ 预览与真游戏同构图；
-##   ⚠️ 画框（金边/网格）在 `FrameOverlay` 里、**画在背景之上** ⇒ 别再为"别盖住金边"把背景内缩
+## 3D 背景专用子视口。与真游戏同规格（2026-10-02 BG7 对齐）：
+##   场地本体（东方框）= 768×896 @(64,32)，唯一来源 [code]GameConfig[/code]；
+##   容器 = 场地每边 over-scan [code]GameConfig.BACKGROUND_OVERSCAN[/code]（16px）⇒ 800×928，
+##     与 [code]game_scene.tscn[/code] 的容器同尺寸、相机/fov 相同 ⇒ 预览与真游戏同构图；
+## 画框（金边/网格）在 [code]FrameOverlay[/code] 里、画在背景之上 ⇒ 别再为"别盖住金边"把背景内缩
 ##     （以前内缩 3px，代价是预览与真游戏差 ≈4% 横向 FOV）。
 @onready var _bg_viewport: SubViewport = %BgViewport
 ## 画框层（金边/网格）：必须叠在 3D 背景之上，故单独成节点
@@ -119,7 +119,7 @@ var _preview_bookmarks
 # UI 控件（关卡/难度下拉）
 var _stage_sel: OptionButton
 var _diff_sel: OptionButton
-## 关卡下拉的数据源 = `StageCatalog.playable()`（**下标 = 下拉项下标**）
+## 关卡下拉的数据源 = [code]StageCatalog.playable()[/code]（下标 = 下拉项下标）
 var _stages: Array[StageData] = []
 
 
@@ -277,7 +277,7 @@ func stop_stage() -> void:
 	_stage_runtime.stop_stage()
 
 
-## 创作台切走：冻结舞台 + 暂停 BGM，但**保留运行时/时间/书签/播放状态**。
+## 创作台切走：冻结舞台 + 暂停 BGM，但保留运行时/时间/书签/播放状态。
 ## 必须解掉全局 paused / time_scale / 静音，否则切到别的台会被整关预览的暂停状态卡住。
 func suspend_preview() -> void:
 	if _preview_suspender != null:
@@ -426,8 +426,8 @@ func _sync_bg_viewport() -> void:
 	_bg_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED \
 		if not has_bg or frozen or preview_suspended() else SubViewport.UPDATE_ALWAYS
 
-## 舞台视觉重画：根 `_draw`（框外压暗）+ 画框层（金边 / 网格）。
-## 画框必须画在 3D 背景**之上**，所以它在 `FrameOverlay` 里而不是根 `_draw`（见 frame_overlay.gd）。
+## 舞台视觉重画：根 [code]_draw[/code]（框外压暗）+ 画框层（金边 / 网格）。
+## 画框必须画在 3D 背景之上，所以它在 [code]FrameOverlay[/code] 里而不是根 [code]_draw[/code]（见 frame_overlay.gd）。
 func _redraw_stage() -> void:
 	queue_redraw()
 	if _frame_overlay == null:

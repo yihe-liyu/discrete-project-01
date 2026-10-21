@@ -1,18 +1,18 @@
-## 舞台世界装配（**唯一实现**）—— 真游戏 / 工作台整关预览 / 三个组合台原先各写一份同一段接线。
+## 舞台世界装配（唯一实现）—— 真游戏 / 工作台整关预览 / 三个组合台原先各写一份同一段接线。
 ##
 ## 为什么值得抽（2026-09-30，S4）：三处的差别只在"节点从哪来、摆哪儿"，
-## 而**接线**是逐字相同的一段，且每一句漏掉都是隐性 bug：
-##   · 少 `fx_parent`               → 炸弹爆炸贴图挂错层（旧写法是全树找 World，已删）
-##   · 少 `inject_stage_runtime`    → 子弹的共享 ctx 回退到全局（切场就串台）
-##   · 少 `inject_entity_registry`  → 内核后端看不到自机（自机狙全部打空）
-##   · 少 `player_data`             → `Player._ready` 应用不到角色数据（数值全默认）
+## 而接线是逐字相同的一段，且每一句漏掉都是隐性 bug：
+##   · 少 [code]fx_parent[/code]               → 炸弹爆炸贴图挂错层（旧写法是全树找 World，已删）
+##   · 少 [code]inject_stage_runtime[/code]    → 子弹的共享 ctx 回退到全局（切场就串台）
+##   · 少 [code]inject_entity_registry[/code]  → 内核后端看不到自机（自机狙全部打空）
+##   · 少 [code]player_data[/code]             → [code]Player._ready[/code] 应用不到角色数据（数值全默认）
 ##
-## 分工：**节点来源**由调用方决定 —— 真游戏按 R21 在 `game_scene.tscn` 里声明，
+## 分工：节点来源由调用方决定 —— 真游戏按 R21 在 [code]game_scene.tscn[/code] 里声明，
 ## 工作台与组合台代码建。所以本类只给"建"与"接"两条最小入口：
-##   建：`make_bullet_world()` / `make_player()`（真游戏不用，节点是场景声明的）
-##   接：`wire_world()` / `wire_player()` / `wire()`
+##   建：[code]make_bullet_world()[/code] / [code]make_player()[/code]（真游戏不用，节点是场景声明的）
+##   接：[code]wire_world()[/code] / [code]wire_player()[/code] / [code]wire()[/code]
 ##
-## 放在 `scripts/stage/`（核心层）而不是 `scripts/workbench/`：真游戏也要用，
+## 放在 [code]scripts/stage/[/code]（核心层）而不是 [code]scripts/workbench/[/code]：真游戏也要用，
 ## 依赖方向只能是 工具 → 核心。
 class_name StageHost
 extends RefCounted
@@ -23,7 +23,7 @@ const PLAYER_SCENE := preload("res://scenes/player.tscn")
 # ═══ 建（代码搭舞台的宿主：工作台 + 三个组合台）═══
 
 ## 造弹幕世界并挂到 parent。
-## top_level = true 给**嵌入页面**的宿主（组合台）：世界原点 = 画布原点，
+## top_level = true 给嵌入页面的宿主（组合台）：世界原点 = 画布原点，
 ## 不叠页签偏移，否则整场弹幕偏一个页签高度。
 static func make_bullet_world(parent: Node, top_level: bool = false) -> BulletManager:
 	var bullet_manager := BulletManager.new()
@@ -33,8 +33,8 @@ static func make_bullet_world(parent: Node, top_level: bool = false) -> BulletMa
 	return bullet_manager
 
 
-## 造自机（`player.tscn` + 指定脚本 + `PlayerData`）并挂到 parent。
-## `p_data` **必须给**：`Player._ready` 会立刻应用角色数据。
+## 造自机（[code]player.tscn[/code] + 指定脚本 + [code]PlayerData[/code]）并挂到 parent。
+## [code]p_data[/code] 必须给：[code]Player._ready[/code] 会立刻应用角色数据。
 ## 摆位/走位模式由调用方随后设属性（预览 = 固定路径；组合台 = 鼠标跟随 + 位置 + z）。
 static func make_player(parent: Node, p_script: Script, p_name: String, p_data: PlayerData) -> Player:
 	var player: Player = PLAYER_SCENE.instantiate()
@@ -54,8 +54,8 @@ static func wire_world(runtime: StageRuntime, bullet_manager: BulletManager, fx_
 	bullet_manager.inject_stage_runtime(runtime)
 
 
-## 自机接上舞台：显式认领自机引用（`_inject_player_ctx` 只认它）+ 实体注册表 + 内核弹幕后端。
-## 真游戏在**选好机体之后**才接（`setup_character()` 先跑）——所以这两步与 `wire_world` 分开。
+## 自机接上舞台：显式认领自机引用（[code]_inject_player_ctx[/code] 只认它）+ 实体注册表 + 内核弹幕后端。
+## 真游戏在选好机体之后才接（[code]setup_character()[/code] 先跑）——所以这两步与 [code]wire_world[/code] 分开。
 static func wire_player(runtime: StageRuntime, player: Player) -> void:
 	if not _registry_ready(runtime, "wire_player"):
 		return          # 前置没满足就**什么都不做**（不许只绑自机、后端却没接）
@@ -65,16 +65,16 @@ static func wire_player(runtime: StageRuntime, player: Player) -> void:
 
 
 ## 只把实体注册表交给内核弹幕后端（不绑自机）。
-## 给**异常路径**用：真游戏选机体失败 / 场景里没有 Player 时，注册表仍要交给后端。
-## 也不要在调用点直接写 `bullet_manager.inject_entity_registry(...)` —— 那正是 S4 要收掉的分叉，
-## `tools/check_structure.sh` 会检查这类调用只出现在本文件。
+## 给异常路径用：真游戏选机体失败 / 场景里没有 Player 时，注册表仍要交给后端。
+## 也不要在调用点直接写 [code]bullet_manager.inject_entity_registry(...)[/code] —— 那正是 S4 要收掉的分叉，
+## [code]tools/check_structure.sh[/code] 会检查这类调用只出现在本文件。
 static func wire_registry(runtime: StageRuntime) -> void:
 	if not _registry_ready(runtime, "wire_registry"):
 		return
 	runtime.bullet_manager.inject_entity_registry(runtime.entity_registry)
 
 
-## 注入注册表的前置条件：子弹世界已接上。缺了就**响亮报错**并让调用方早退（不许绑一半）。
+## 注入注册表的前置条件：子弹世界已接上。缺了就响亮报错并让调用方早退（不许绑一半）。
 static func _registry_ready(runtime: StageRuntime, who: String) -> bool:
 	if runtime.bullet_manager != null:
 		return true

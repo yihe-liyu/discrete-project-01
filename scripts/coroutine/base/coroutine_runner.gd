@@ -20,8 +20,8 @@ extends Node
 class_name CoroutineRunner
 
 signal finished()
-## 每个物理 tick 后发一次（含 `tick_manual`）；`AsyncCoroutineScript` 的 `ctx.clock` 等它。
-## 注意：`stop()` 也会发一次 `ticked(0.0)`，用于唤醒挂起的 await（调用方必须检查 is_running）。
+## 每个物理 tick 后发一次（含 [code]tick_manual[/code]）；[code]AsyncCoroutineScript[/code] 的 [code]ctx.clock[/code] 等它。
+## 注意：[code]stop()[/code] 也会发一次 [code]ticked(0.0)[/code]，用于唤醒挂起的 await（调用方必须检查 is_running）。
 signal ticked(delta: float)
 
 var is_running: bool = false

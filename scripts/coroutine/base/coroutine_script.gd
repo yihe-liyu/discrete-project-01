@@ -29,7 +29,7 @@ func start_timeline() -> Timeline:
 	return _timeline
 
 
-## 启动协程：设 ctx/target → `_on_start()` → 开跑 `_tick`。
+## 启动协程：设 ctx/target → [code]_on_start()[/code] → 开跑 [code]_tick[/code]。
 func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	if p_target != null:
@@ -38,8 +38,8 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	run(_tick.bind(ctx))
 
 
-## start() 的一次性初始化钩子（空默认）：首次 _tick 之前调一次，`ctx`/`target` 已就绪。
-## 覆写它 = 「发射前建弹型 / 注册钩子」等，**不必**再覆写 start() + super.start(...)。
+## start() 的一次性初始化钩子（空默认）：首次 _tick 之前调一次，[code]ctx[/code]/[code]target[/code] 已就绪。
+## 覆写它 = 「发射前建弹型 / 注册钩子」等，不必再覆写 start() + super.start(...)。
 func _on_start() -> void:
 	pass
 
