@@ -12,16 +12,18 @@
 ## [b]边界[/b][br]
 ## - 无 stage 绑定时 bullets / effects / entity_registry 等为 null 或静默 no-op，测试友好。[br]
 ## - 不读 BulletManager.current / 全局实体注册表；由宿主显式注入 stage。[br]
+## - boss / diff / enemies 是内部服务，不注册全局 class_name，由本类 preload 构造；
+##   避免全局类名与 StageContext ↔ Service 的相互类型引用。[br]
 ## - objects 是 per-ctx 命名对象表，随关卡生命周期，不是 autoload。[br]
 ## - dialogue.play_steps 会暂停 runner 直到对话框结束。
 class_name StageContext
 extends RefCounted
 
-## BossService 脚本（ctx.boss 的懒加载实现）。
+## BossService 脚本（ctx.boss 的内部实现；不注册 class_name，只在本类 preload 构造）。
 const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
-## DifficultyService 脚本（ctx.diff 的懒加载实现）。
+## DifficultyService 脚本（ctx.diff 的内部实现；不注册 class_name，只在本类 preload 构造）。
 const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
-## EnemyService 脚本（ctx.enemies 的懒加载实现）。
+## EnemyService 脚本（ctx.enemies 的内部实现；不注册 class_name，只在本类 preload 构造）。
 const EnemyService = preload("res://scripts/coroutine/services/enemy_service.gd")
 
 ## 协程时钟 / 生命周期（active、对话暂停都看它）。
