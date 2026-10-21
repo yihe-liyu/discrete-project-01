@@ -23,18 +23,25 @@ const LINE_GAPS := 2
 
 ## 每行错开渐显的间隔（秒；0 = 三行一起淡入）
 @export var line_stagger: float = 0.1
+## 渐显时长（秒）。
 @export var fade_in: float = 0.2
+## 停留时长（秒）。
 @export var hold: float = 1.4
+## 渐隐时长（秒）。
 @export var fade_out: float = 0.3
 ## 文案（值由代码拼在前缀后面；标题两种结果各一条）
 @export var failed_title: String = "Bonus Failed"
+## 干净收取时的标题。
 @export var captured_title: String = "Get Spell Card Bonus"
+## 奖励分前缀。
 @export var bonus_prefix: String = "Bonus："
+## 击破时间前缀。
 @export var time_prefix: String = "击破时间："
 ## 用时格式（秒）
 @export var time_format: String = "%.2f"
 ## 标题配色：失败偏红 / 干净收取金色（与阶段进度点的红/金同源）
 @export var failed_color: Color = Color(1.0, 0.45, 0.45)
+## 干净收取时的标题色。
 @export var captured_color: Color = Color(0.95, 0.839, 0.475)
 
 var _tween: Tween

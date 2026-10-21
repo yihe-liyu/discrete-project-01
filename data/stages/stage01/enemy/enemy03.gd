@@ -4,7 +4,8 @@ extends CoroutineScript
 const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 
 var target_pos: Vector2
-var heavy_wave: bool = true  ## 强化波：Hard+ 时额外发射金色重力弹
+## 强化波：Hard+ 时额外发射金色重力弹
+var heavy_wave: bool = true
 var rate: int = 1
 var bullet_color: Color = Color.RED
 ## 复用弹型实例（M2）

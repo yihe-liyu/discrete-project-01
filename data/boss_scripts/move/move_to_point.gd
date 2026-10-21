@@ -13,8 +13,10 @@ const META := {
 	"desc": "移动到指定站位后结束（用作 PhaseData.pre_move_script 的发动前走位）。",
 }
 
-var dest: Vector2 = Vector2(448.0, 240.0)   ## 目标站位
-var move_time: float = 1.0                  ## 移动耗时（秒）
+## 目标站位
+var dest: Vector2 = Vector2(448.0, 240.0)
+## 移动耗时（秒）
+var move_time: float = 1.0
 
 var _moving: bool = false
 

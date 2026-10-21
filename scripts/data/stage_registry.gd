@@ -4,7 +4,8 @@
 extends Resource
 class_name StageRegistry
 
-@export var stages: Array[StageData] = []  ## 所有关卡（一个 stage_id 一个文件）
+## 所有关卡（一个 stage_id 一个文件）
+@export var stages: Array[StageData] = []
 
 
 ## 按 stage_id 查找

@@ -10,7 +10,8 @@ var _pool: Array[LaserBeam] = []
 var _is_active: Array[LaserBeam] = []
 var _parent: Node
 var _pool_index: int = 0
-var on_graze: Callable = Callable()  ## 擦弹结算回调（BulletManager 注入；命名契约：回调值用 on_x）
+## 擦弹结算回调（BulletManager 注入；命名契约：回调值用 on_x）
+var on_graze: Callable = Callable()
 ## 实体注册表（BulletManager 注入）——自机判定用；空则跳过
 var entity_registry: EntityRegistry
 var _graze_cooldown: int = 0

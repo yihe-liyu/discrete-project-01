@@ -15,9 +15,12 @@ static func preset(idx: int) -> Vector2:
 
 var tex_key: String = "小玉"
 var tint: Color = Color.WHITE
-var is_blend: bool = false       ## 加色混合（视觉效果：弹幕质感差异大）
-var speed: float = 300.0         ## 初速 px/s
-var dir: Vector2 = Vector2.DOWN  ## 发射方向（自由角度；右键场地设指向 / 8 方位预设快捷）
+## 加色混合（视觉效果：弹幕质感差异大）
+var is_blend: bool = false
+## 初速 px/s
+var speed: float = 300.0
+## 发射方向（自由角度；右键场地设指向 / 8 方位预设快捷）
+var dir: Vector2 = Vector2.DOWN
 
 ## 按配置缓存（M2：弹型缓存在 BulletData 实例上，连发不得每发 new）
 var _bullet_data: BulletData

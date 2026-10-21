@@ -17,9 +17,12 @@ const META := {
 	"desc": "从游戏框右上角快慢快地扫到左下角（用作 PhaseData.pre_move_script 的发动前走位）。",
 }
 
-var move_time: float = 1.6      ## 总耗时（秒）
-var hold_middle: float = 0.0    ## 在中点停留（秒），0 = 不停留
-var from_corner: bool = true    ## true = 起跑前先瞬移到右上角
+## 总耗时（秒）
+var move_time: float = 1.6
+## 在中点停留（秒），0 = 不停留
+var hold_middle: float = 0.0
+## true = 起跑前先瞬移到右上角
+var from_corner: bool = true
 
 var _moving: bool = false
 

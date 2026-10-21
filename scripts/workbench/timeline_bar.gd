@@ -15,10 +15,14 @@ class_name TimelineBar
 signal jump_to(time_sec: float)
 signal right_clicked(time_sec: float)
 
-var time: float = 0.0                 ## 当前游戏内时间（秒）
-var window_start: float = 0.0         ## 时间窗口起点（滚动/缩放后）
-var window_len: float = 60.0          ## 时间窗口（秒）
-var bookmarks: Array[Dictionary] = [] ## [{t, label}]，升序
+## 当前游戏内时间（秒）
+var time: float = 0.0
+## 时间窗口起点（滚动/缩放后）
+var window_start: float = 0.0
+## 时间窗口（秒）
+var window_len: float = 60.0
+## [{t, label}]，升序
+var bookmarks: Array[Dictionary] = []
 ## 演出事件标记（bgm=绿 / dialogue=紫 / custom=黄）
 var events: Array = []
 

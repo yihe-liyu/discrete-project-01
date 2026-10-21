@@ -22,8 +22,10 @@ var _dialogue_line: DialogueLine = null
 var _wait_left: float = 0.0
 var _auto_left: float = 0.0
 
-var is_waiting_line: bool = false  ## 停在某句，等 advance / auto_advance
-var is_waiting_time: bool = false  ## 停在 WAIT 计时
+## 停在某句，等 advance / auto_advance
+var is_waiting_line: bool = false
+## 停在 WAIT 计时
+var is_waiting_time: bool = false
 
 
 ## 重置舞台状态与索引，开始步骤序列。

@@ -8,14 +8,22 @@ enum Phase { GROW, SUSTAIN, CONTRACT, FADE, DEAD }
 
 # ── 配置（spawn 前设置，默认值合理）──
 var laser_color: Color = Color(1.0, 0.2, 0.1)
-var core_width: float = 16.0        ## 视觉光柱宽度
-var hitbox_width: float = 6.0       ## 命中判定宽度（细线！）
-var graze_width: float = 22.0       ## 擦弹判定宽度
-var grow_speed: float = 600.0       ## 生长/收缩速度（px/s）
-var tail_distance: float = 300.0    ## 生长型：尾部滞后距离
-var max_lifetime: float = 8.0       ## 持续时长（0 = 无限）
-var is_grow_on_spawn: bool = true      ## true=生长型；false=瞬间全开（固定/直线型）
-var laser_texture: Texture2D          ## 自定义贴图（null=内置 laser.png）
+## 视觉光柱宽度
+var core_width: float = 16.0
+## 命中判定宽度（细线！）
+var hitbox_width: float = 6.0
+## 擦弹判定宽度
+var graze_width: float = 22.0
+## 生长/收缩速度（px/s）
+var grow_speed: float = 600.0
+## 生长型：尾部滞后距离
+var tail_distance: float = 300.0
+## 持续时长（0 = 无限）
+var max_lifetime: float = 8.0
+## true=生长型；false=瞬间全开（固定/直线型）
+var is_grow_on_spawn: bool = true
+## 自定义贴图（null=内置 laser.png）
+var laser_texture: Texture2D
 
 # ── 运行时 ──
 var skeleton: LaserSkeleton

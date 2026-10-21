@@ -7,7 +7,8 @@ extends NavPage
 ## 故运行时按「路径 + 类型」兜底解析 —— 与 B3/BG6 的「场景声明 + 代码按类型/路径解析」同一风格。
 const TITLE_LABEL_PATH: String = "Panel/TitleLabel"
 
-@export var title_label: Label          ## 引擎不解析：留作编辑器声明 + 未来引擎修好后的兼容；运行时靠 _resolve_title_label()
+## 引擎不解析：留作编辑器声明 + 未来引擎修好后的兼容；运行时靠 _resolve_title_label()
+@export var title_label: Label
 @export var title_text: String = "Game Over"
 
 

@@ -7,10 +7,13 @@ var char_name: String = ""
 var profile: CharacterProfile
 var position: Vector2 = Vector2(50, 230)
 var is_flip_h: bool = false
-var light: float = 1.0      ## 明暗：1=正常，<1=暗（沉默在场者 0.35）
-var is_visible: bool = false   ## 在场与否
+## 明暗：1=正常，<1=暗（沉默在场者 0.35）
+var light: float = 1.0
+## 在场与否
+var is_visible: bool = false
 var emotion: String = "通常"
-var bubble_offset: Vector2 = Vector2(12, 0)  ## 气泡相对立绘右缘偏移（旧模型默认粘滞值）
+## 气泡相对立绘右缘偏移（旧模型默认粘滞值）
+var bubble_offset: Vector2 = Vector2(12, 0)
 
 
 ## 按 CharacterProfile 初始化名字 / 位置 / 翻转 / 气泡偏移 / 表情默认值。

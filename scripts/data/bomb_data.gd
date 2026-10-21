@@ -19,13 +19,18 @@ class_name BombData
 @export var field_filter_color: Color = Color(0, 0, 0, 0)
 
 @export_group("外观")
-@export var texture: Texture2D                              ## 炸弹贴图（单帧）
-@export var z_index: int = LayerConfig.BOMB                 ## 渲染层
+## 炸弹贴图（单帧）
+@export var texture: Texture2D
+## 渲染层
+@export var z_index: int = LayerConfig.BOMB
 
 @export_group("编队（一次 bomb 的生成方式）")
-@export var count: int = 8                                  ## 生成几颗（Player 逐颗 spawn）
-@export var interval: float = 0.1                           ## 每颗间隔（秒）
-@export var invincible_time: float = 5.0                    ## 自机无敌时长
+## 生成几颗（Player 逐颗 spawn）
+@export var count: int = 8
+## 每颗间隔（秒）
+@export var interval: float = 0.1
+## 自机无敌时长
+@export var invincible_time: float = 5.0
 
 
 ## 第 index 颗 bomb 的染色（Player 逐颗 spawn 时调用）。

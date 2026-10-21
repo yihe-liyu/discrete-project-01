@@ -3,14 +3,23 @@
 class_name EnemyShell
 extends RefCounted
 
+## 外观 key（AssetRegistry.enemy_visuals）。
 var visual_key: String = "red_little_fairy"
+## 最大生命。
 var max_hp: int = 100
+## 判定半径（像素）。
 var hitbox_radius: float = 25.0
+## 掉落 P 道具数。
 var item_power: int = 2
+## 掉落点道具数。
 var item_point: int = 0
+## 掉落命碎片数。
 var item_life: int = 0
+## 掉落雷碎片数。
 var item_bomb: int = 0
+## 掉落整命数。
 var item_life_full: int = 0
+## 掉落整雷数。
 var item_bomb_full: int = 0
 
 

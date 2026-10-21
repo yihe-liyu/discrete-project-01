@@ -4,14 +4,19 @@
 class_name PhaseIdentity
 extends RefCounted
 
-var uid: int               ## 展示用 No.xxx
+## 展示用 No.xxx
+var uid: int
 var character: int
 var difficulty: int
 var stage_id: int
-var boss_index: int = 0    ## 第几个 Boss（0 = 第一个/唯一；多 Boss 关卡区分记录）
-var phase_index: int       ## 在 phases 数组中的索引（真正的唯一标识）
-var phase_type: int        ## SpellRecord.PhaseType
-var phase_number: int      ## 第几张非符/第几张符卡
+## 第几个 Boss（0 = 第一个/唯一；多 Boss 关卡区分记录）
+var boss_index: int = 0
+## 在 phases 数组中的索引（真正的唯一标识）
+var phase_index: int
+## SpellRecord.PhaseType
+var phase_type: int
+## 第几张非符/第几张符卡
+var phase_number: int
 
 
 ## 从 Boss 运行时的 PhaseData + 上下文推导

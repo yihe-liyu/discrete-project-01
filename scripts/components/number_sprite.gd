@@ -4,15 +4,25 @@
 extends Node2D
 class_name NumberSprite
 
+## 数字 sprite sheet。
 var digit_texture: Texture2D
+## 图集里的字符数。
 var char_count: int
+## 小数点帧下标；-1 = 不支持。
 var dot_index: int = -1
+## 斜杠帧下标；-1 = 不支持。
 var slash_index: int = -1
+## 百分号帧下标；-1 = 不支持。
 var pct_index: int = -1
+## 负号帧下标；-1 = 不支持。
 var minus_index: int = -1
+## true = 左对齐 / 不补零；false = 右对齐补零。
 var is_left_align: bool = false
+## 位数（右对齐补零用）。
 var digit_count: int = 8
+## 位间距（像素）。
 var digit_spacing: float = 24.0
+## 显示值；set 时标脏，下一帧重建。
 @export var value: int = 0:
 	set(v):
 		if value == v and _text == "":

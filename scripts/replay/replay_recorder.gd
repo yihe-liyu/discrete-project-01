@@ -9,10 +9,14 @@ extends RefCounted
 const ACTIONS := ["move_left", "move_right", "move_up", "move_down", "shoot", "focus", "memory_release"]
 const FORMAT_VERSION := 1
 
-var frames: PackedByteArray = PackedByteArray()  ## 每帧输入位掩码
-var rng_seed: int = 0                             ## 录制起始 RNG 种子（勿叫 seed：会遮蔽内建 seed()）
-var recording := false                            ## 是否正在录制
-var duration_frames := 0                          ## 已录帧数
+## 每帧输入位掩码
+var frames: PackedByteArray = PackedByteArray()
+## 录制起始 RNG 种子（勿叫 seed：会遮蔽内建 seed()）
+var rng_seed: int = 0
+## 是否正在录制
+var recording := false
+## 已录帧数
+var duration_frames := 0
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子

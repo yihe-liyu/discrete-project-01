@@ -21,14 +21,18 @@ extends Node
 
 # ── 仅**预生成工具**用（运行时纹理在场景里；改这两个值要重跑
 #    tools/regenerate_fog_tex.gd，**不影响已生成的纹理**）──
-@export var texture_size: int = 512          ## 云斑纹理分辨率
-@export var texture_contrast: float = 1.8    ## 云斑对比度
+## 云斑纹理分辨率
+@export var texture_size: int = 512
+## 云斑对比度
+@export var texture_contrast: float = 1.8
 
 @onready var _layer: CanvasLayer = get_node_or_null("FogLayer") as CanvasLayer
 @onready var _rect: ColorRect = get_node_or_null("FogLayer/FogRect") as ColorRect
 
-var sun: Node3D          ## 太阳（把它的世界位置投影到屏幕）
-var camera: Camera3D     ## 投影用相机（宿主注入）
+## 太阳（把它的世界位置投影到屏幕）
+var sun: Node3D
+## 投影用相机（宿主注入）
+var camera: Camera3D
 var _mat: ShaderMaterial
 var _is_bound := false
 ## 雾的本地时间：不用 shader 的 TIME（全局时间不会随 process 冻结，切页回来会跳）
