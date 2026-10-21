@@ -4,7 +4,14 @@ extends RefCounted
 ## 内容只问"有没有/取哪个"，内部查 StageContext.entity_registry（机制）。
 ## 注意：不叫 get() —— 会遮蔽 Object.get(property)，故用 current()/exists()。
 
-var ctx: StageContext
+## 弱引用 ctx：避免 StageContext ↔ BossService 形成 RefCounted 环导致关卡退出后泄漏
+var _ctx_ref: WeakRef
+## 绑定给本服务的关卡上下文；null 时所有查询安全返回空值。
+var ctx: StageContext:
+	get:
+		return _ctx_ref.get_ref() as StageContext if _ctx_ref else null
+	set(value):
+		_ctx_ref = weakref(value) if value else null
 
 
 ## 当前场上的 Boss（无 → null）

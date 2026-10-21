@@ -3,7 +3,14 @@ extends RefCounted
 ## 敌人生成服务 —— ctx.enemies 下的"生成 / 回收敌人"动词。
 ## 与 ctx.bullets.shoot_spread 对称：内容只说"生成这份配置"，机制（实例化/挂载协程/入场景）在 StageRuntime。
 
-var ctx: StageContext
+## 弱引用 ctx：避免 StageContext ↔ EnemyService 形成 RefCounted 环导致关卡退出后泄漏
+var _ctx_ref: WeakRef
+## 绑定给本服务的关卡上下文；null 时所有查询安全返回空值。
+var ctx: StageContext:
+	get:
+		return _ctx_ref.get_ref() as StageContext if _ctx_ref else null
+	set(value):
+		_ctx_ref = weakref(value) if value else null
 
 
 ## 按 EnemyData 生成敌人（配置非法 → 响亮报错并返回 null；无 ctx/stage → null）

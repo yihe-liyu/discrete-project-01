@@ -59,6 +59,54 @@ func test_stage_context_with_item_service_is_freed():
 	assert_null(svc_ref.get_ref(), "ItemService 应随 ctx 释放")
 
 
+func test_stage_context_with_player_service_is_freed():
+	var runner := _make_runner()
+	var ctx := StageContext.new(runner)
+	var svc: RefCounted = ctx.player
+	assert_not_null(svc, "player 服务应创建成功")
+	assert_eq(svc.get("ctx"), ctx, "服务应能访问回 ctx")
+	var ctx_ref: WeakRef = weakref(ctx)
+	var svc_ref: WeakRef = weakref(svc)
+	ctx = null
+	svc = null
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_null(ctx_ref.get_ref(), "StageContext 应被释放（无 RefCounted 环）")
+	assert_null(svc_ref.get_ref(), "PlayerService 应随 ctx 释放")
+
+
+func test_stage_context_with_boss_service_is_freed():
+	var runner := _make_runner()
+	var ctx := StageContext.new(runner)
+	var svc: RefCounted = ctx.boss
+	assert_not_null(svc, "boss 服务应创建成功")
+	assert_eq(svc.get("ctx"), ctx, "服务应能访问回 ctx")
+	var ctx_ref: WeakRef = weakref(ctx)
+	var svc_ref: WeakRef = weakref(svc)
+	ctx = null
+	svc = null
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_null(ctx_ref.get_ref(), "StageContext 应被释放（无 RefCounted 环）")
+	assert_null(svc_ref.get_ref(), "BossService 应随 ctx 释放")
+
+
+func test_stage_context_with_enemy_service_is_freed():
+	var runner := _make_runner()
+	var ctx := StageContext.new(runner)
+	var svc: RefCounted = ctx.enemies
+	assert_not_null(svc, "enemies 服务应创建成功")
+	assert_eq(svc.get("ctx"), ctx, "服务应能访问回 ctx")
+	var ctx_ref: WeakRef = weakref(ctx)
+	var svc_ref: WeakRef = weakref(svc)
+	ctx = null
+	svc = null
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_null(ctx_ref.get_ref(), "StageContext 应被释放（无 RefCounted 环）")
+	assert_null(svc_ref.get_ref(), "EnemyService 应随 ctx 释放")
+
+
 ## ═══ B3 守卫：DecorManager 由背景**声明式持有**，不按名字找、不动态建节点 ═══
 
 func _decor_child_count(parent: Node) -> int:
