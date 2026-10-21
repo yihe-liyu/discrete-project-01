@@ -1,25 +1,44 @@
+## 内容目录：从 res://data/ 自动派生的索引（创作台 / 工作台用）。
+##
+## [b]模型[/b][br]
+## 索引永不手写：按目录 / 命名约定 + 顶部 @role 注解扫描 .gd / .tres 自动生成。
+## 角色判定优先级：@role 注解 > 路径 / 命名约定；约定 = misc 时 @role 只补空缺，不算冲突。
+## [codeblock]
+## var catalog := ContentCatalog.new().scan()
+## catalog.by_role(ContentCatalog.ROLE_PHASE)
+## [/codeblock]
+## [br]
+## [b]边界[/b][br]
+## - 只扫 data/；只收 extends CoroutineScript / CoroutineRunner / AsyncCoroutineScript 的 .gd。[br]
+## - dialogue/ 目录排除；阶段 .tres 必须在 /phase/ 下且加载成 PhaseData。[br]
+## - refs_from / refs_to 是派生信息，只供目录面板显示，不参与路由。[br]
+## - 无人引用的脚本保持“未分类”，这是正确结果。
 class_name ContentCatalog
 extends RefCounted
-## 内容目录 —— 从 res://data/ 自动派生的索引（创作台）
-##
-## 铁律：索引永不手写清单；按「目录/命名约定 + ## @role 注解」从文件自动生成。
-## 角色判定优先级：@role 注解 > 路径/命名约定；两者打架 → warning（响亮，不静默）。
-## 边界：只扫 data/（内容边界）；只收 extends CoroutineScript/CoroutineRunner/AsyncCoroutineScript 的 .gd；
-##       dialogue/ 目录排除（对话脚本非演出逻辑）。
 
+## 角色：关卡编排。
 const ROLE_STAGE := "stage"
+## 角色：阶段（阶段资源 .tres）。
 const ROLE_PHASE := "phase"
+## 角色：Boss 移动。
 const ROLE_BOSS_MOVE := "boss_move"
+## 角色：Boss 弹幕发射。
 const ROLE_BOSS_SHOOT := "boss_shoot"
+## 角色：弹丸行为。
 const ROLE_BULLET := "bullet"
+## 角色：敌人行为。
 const ROLE_ENEMY := "enemy"
+## 角色：背景演出。
 const ROLE_BG := "bg"
+## 角色：未分类。
 const ROLE_MISC := "misc"
 
+## 角色展示顺序（目录面板按此排）。
 const ROLE_ORDER: Array[String] = [
 	ROLE_STAGE, ROLE_PHASE, ROLE_BOSS_MOVE, ROLE_BOSS_SHOOT, ROLE_BULLET, ROLE_ENEMY, ROLE_BG, ROLE_MISC,
 ]
 
+## 角色显示名。
 const ROLE_LABELS := {
 	ROLE_STAGE: "关卡编排",
 	ROLE_PHASE: "阶段",
@@ -31,20 +50,30 @@ const ROLE_LABELS := {
 	ROLE_MISC: "未分类",
 }
 
+## 默认扫描根。
 const DEFAULT_ROOT := "res://data"
 
 
+## 一个目录条目：脚本或阶段资源。
 class Entry:
-	## 一个目录条目：要么是脚本（stage/move/shoot/bullet/enemy/misc），要么是阶段资源
+	## 角色；取本类 ROLE_*。
 	var role: String = ""
+	## res:// 路径。
 	var path: String = ""
-	var name: String = ""          ## @name 或注释首行
-	var description: String = ""   ## 注释块剩余行
-	var stage_key: String = ""     ## 所属关卡的目录名（stage01 / stage03B…）
+	## 显示名（const META / @name / 顶部注释首行）。
+	var name: String = ""
+	## 描述（注释块剩余行 / META.desc）。
+	var description: String = ""
+	## 所属关卡的目录名（stage01 / stage03B…）。
+	var stage_key: String = ""
+	## 顶部注解（@role / @name / @desc 等）。
 	var annotations: Dictionary = {}
-	var refs_from: Array[String] = []   ## 引用它的资源/脚本路径（派生）
-	var refs_to: Array[String] = []     ## 它引用的资源/脚本路径（派生）
-	var extra: Dictionary = {}          ## 角色附加信息（阶段：uid/hp/时限/脚本引用…）
+	## 引用它的资源 / 脚本路径（派生）。
+	var refs_from: Array[String] = []
+	## 它引用的资源 / 脚本路径（派生）。
+	var refs_to: Array[String] = []
+	## 角色附加信息（阶段：uid / hp / 时限 / 脚本引用…）。
+	var extra: Dictionary = {}
 
 
 var _entries: Array = []         # Array[Entry]
@@ -52,7 +81,8 @@ var _by_path: Dictionary = {}    # path -> Entry
 var _warnings: Array[String] = []
 
 
-## 全量扫描（默认 res://data）。可传其他根目录（测试用夹具）。
+## 全量扫描（默认 res://data）：清空旧结果，扫 .gd / .tres，建引用关系，返回 self。
+## 可传其他根目录（测试用夹具）。
 func scan(p_root: String = DEFAULT_ROOT) -> ContentCatalog:
 	_entries.clear()
 	_by_path.clear()
@@ -70,16 +100,12 @@ func scan(p_root: String = DEFAULT_ROOT) -> ContentCatalog:
 
 ## ── 查询 ──
 
+## 全部条目（扫描顺序）。
 func get_entries() -> Array:
 	return _entries
 
 
-## 按角色取条目。**阶段排序**：有 uid 的（符卡）在前、按 uid 升序（uid = 符卡编号，也就等于面序），
-## 没有 uid 的（非符 / 道中）在后、按路径定序；其余角色保持扫描顺序（脚本没有 uid）。
-## 为什么这么排：① 作者要"符卡按 uid 看"；② uid 0 并列时**必须**有第二键 ——
-## 否则 `sort_custom`（非稳定排序）会让非符的顺序每次不一样，UI 顺序必须确定。
-## 排序放在这里做，是因为阶段台的 5 处调用与工作台目录面板**都只走 by_role** → 一处排序、
-## 下拉索引与查找索引不会错位（2026-09-30）。
+## 按角色取条目。阶段按 uid 升序（符卡在前），并列 / 无 uid 按 path；其余角色保持扫描顺序。
 func by_role(role: String) -> Array:
 	var out: Array = []
 	for entry in _entries:
@@ -97,14 +123,17 @@ func by_role(role: String) -> Array:
 	return out
 
 
+## 按 res:// 路径取条目；不存在 = null。
 func find(path: String) -> Entry:
 	return _by_path.get(path, null) as Entry
 
 
+## 扫描期警告（角色冲突 / 无显示名 / 资源加载失败等）。
 func get_warnings() -> Array[String]:
 	return _warnings
 
 
+## 统计：total / by_role / warnings。
 func get_stats() -> Dictionary:
 	var role_counts := {}
 	for role in ROLE_ORDER:
@@ -154,8 +183,8 @@ func _scan_script(path: String) -> void:
 	var role := convention
 	if ann.has("role"):
 		role = ann["role"]
-		# 只有"约定真是规则"时才算**冲突**；约定 = misc 只是"没规则匹配上"，
-		# 此时 `@role` 是在**补空缺**（如孤儿走位脚本 corner_sweep）→ 不该报冲突（2026-09-30）
+		# 只有“约定真是规则”时才算冲突；约定 = misc 只是“没规则匹配上”，
+		# 此时 @role 是在补空缺（如孤儿走位脚本 corner_sweep），不该报冲突。
 		if role != convention and convention != ROLE_MISC:
 			_warnings.append(
 				"角色分类冲突 [%s]：约定=%s 注解=%s（注解优先）"
@@ -276,12 +305,9 @@ func _build_refs_from() -> void:
 
 ## ── 角色判定 ──
 
-## 引用反推（两遍）：约定/注解都判不出来时，用真实引用关系定角色
-## ① 阶段 .tres 的 move_script / **pre_move_script** / shoot_script 字段 → boss_move / boss_shoot
-##    （`pre_move_script` = 符卡发动**前**的走位。2026-09-30 补：漏了它 → `move_to_point.gd`
-##     这种"只被 pre_move_script 引用"的脚本显示成「未分类」，目录里双击也不跳台）
-## ② boss_shoot 脚本 preload 的 misc 脚本 → bullet 行为（如 orbit_probe）
-## 注：**没人引用**的脚本仍是「未分类」——那是正确结果（目录会列出来，但当不了路由目标）
+## 引用反推（约定 / 注解都判不出来时）：阶段 .tres 的 move_script / pre_move_script / shoot_script
+## → boss_move / boss_shoot；boss_shoot 脚本 preload 的 misc 脚本 → bullet。
+## 没人引用的脚本保持“未分类”（正确结果，但不能当路由目标）。
 func _apply_reference_fixes() -> void:
 	for entry in _entries:
 		var ent := entry as Entry
@@ -298,20 +324,9 @@ func _apply_reference_fixes() -> void:
 			_assign_if_misc(tpath, ROLE_BULLET)
 
 
-## 目录显示名：砍掉「角色标签」（`红杂鱼: 向下减速…` → `向下减速…`），再按长度截断。
-## 有标签 → 18 字符；无标签 → 24 字符（保持短名完整）
-##
-## 判定「冒号前是角色标签」而不是句子，要**两个条件同时成立**（2026-10-02 收紧，见下）：
-##   ① role == enemy —— 「标签: 行为」是**敌人脚本**的写法（红杂鱼 / 蓝妖精 / 红YY玉）；
-##      其余角色（走位 / 发射 / 背景 / 关卡）用「整句标题」或 `const META`。
-##   ② 前缀是**标签形状**：非空、≤ 6 字、无空白、无标点（`（）—，、/·` 等）。
-##      半角 `:` 还必须是 **`": "`**（冒号 + 空格）——「标签: 行为」的写法；
-##      全角 `：` 无空格要求（中文习惯）。
-##
-## 为什么收紧：旧规则是"第一个 `：` 一律砍"，于是
-## `stage01_decor.gd` 的 `## Stage01 背景演出 —— 时间线版（组件化：环境/太阳…）`
-## 被**句中的冒号**从中间劈开 → 目录里显示成 `环境/太阳/蒙眼雾已抽成组件与基类 …`（实测）。
-## 半角 `:` 也被漏掉 → `enemy01/03` 的 `红杂鱼: …` 标签没砍、名字偏长。
+## 目录显示名：敌人脚本可砍掉“角色标签: ”，再按长度截断（有标签 18 字 / 无标签 24 字）。
+## 标签需同时满足：role == enemy；前缀非空、≤ 6 字、无空白 / 标点；半角冒号必须是 ": "。
+## 其它角色用整句标题或 const META；冒号在句中时不能当标签，否则会把标题从中间劈开。
 func _short_name(raw: String, role: String) -> String:
 	var text := raw.strip_edges()
 	var limit := 24
@@ -342,7 +357,7 @@ func _tag_separator(text: String) -> int:
 	for ch in [" ", "\t", "（", "）", "，", "、", "。", "—", "/", "·", "「", "」"]:
 		if tag.contains(ch):
 			return -1
-	# 冒号后要有内容（`## 红杂鱼:` 光杆标签不算）
+	# 冒号后要有内容（“## 红杂鱼:”这种光杆标签不算）
 	var rest := text.substr(idx).lstrip(":：").strip_edges()
 	if rest.is_empty():
 		return -1
@@ -382,24 +397,15 @@ func _is_coroutine_script(text: String) -> bool:
 		or text.contains("async_coroutine_script.gd")
 
 
-## 解析**文件顶部**注释块，取显示名/描述/角色注解：
-##   ## @role: xxx    注解（角色覆盖，最高优先级）
-##   ## @name: xxx    显示名覆盖
-##   ## @desc: xxx    描述覆盖
-##   ## 普通行          → 默认显示名（第一行）/ 描述（后续行）
-##
-## 「顶部」= ① 第一条语句之前（前面只允许空行 / `extends`·`class_name`·`@tool` / `#` 注释），
-## 且 ② **与下面的声明隔开**（块后是空行或文件结束）—— 否则那块 `##` 是**成员文档**
-## （`## 速度` 紧贴 `var speed`），拿去当脚本名就是错的：
-## 曾经的实现是"文件里第一个 `##`"，于是 `enemy04.gd` 的下拉项显示成
-## `匀速下移速度（px/s），外部可用 param(…`（2026-09-30 修）。
-## 例外：块里含 `@` 注解 = 显式意图，贴住声明也认（`@name` 本就是给人纠名用的）。
+## 解析文件顶部注释块：@role / @name / @desc 注解，普通行 → 默认名（首行）/ 描述（后续行）。
+## “顶部”= 第一条语句之前，且注释块与下面声明之间有空行；否则那块是成员文档，不能当脚本名。
+## 含 @ 注解的块即使贴住声明也认（显式意图）。
 func _parse_header(text: String) -> Dictionary:
 	var ann := {}
 	var first := text.find("##")
 	if first < 0:
 		return ann
-	# ① 顶部：`##` 之前不许有代码
+	# ① 顶部：## 之前不许有代码
 	for line in text.substr(0, first).split("\n"):
 		var above := line.strip_edges()
 		if above.is_empty() or above.begins_with("#") or above.begins_with("extends") \
