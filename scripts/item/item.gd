@@ -1,26 +1,53 @@
+## 掉落物：P 点 / 点 / 命碎片 / 雷碎片 / 整命 / 整雷。
+## Area2D，池化于 ItemPool；自行下落 / 吸附 / 收取，收完回收。
+##
+## [b]模型[/b][br]
+## ItemPool.spawn() 调 [method setup]（上抛初速）→ 重力下落；
+## 靠近自机或过收点线 → 吸附；碰到自机 → [method collect] 改 PlayerResources → 回收。
+## [br]
+## [b]边界[/b][br]
+## - 金色只对 POINT 生效：过收点线 / 强收拿满 max_point；P 点、碎片、整命整雷不吃这套。[br]
+## - 非金色 POINT 按拾取高度在 max_point 与 MIN_POINT_SCORE 之间线性递减。[br]
+## - [method burst] 宽限内不重力 / 不吸附 / 碰到不收；宽限结束径向速度清零，竖直下落。[br]
+## - [method collect] 只生效一次（重复调用无效）。
 class_name Item
 extends Area2D
 
-enum Type { POWER, POINT, LIFE_FRAGMENT, BOMB_FRAGMENT, LIFE_FULL, BOMB_FULL }
+## 道具类型。
+enum Type {
+	## P 点：火力 +1、分数 +POWER_SCORE。
+	POWER,
+	## 点：按 max_point / 拾取高度给分；过收点线为金色。
+	POINT,
+	## 命碎片：满 5 合 1 命。
+	LIFE_FRAGMENT,
+	## 雷碎片：满 5 合 1 雷。
+	BOMB_FRAGMENT,
+	## 整命：直接 +1 命。
+	LIFE_FULL,
+	## 整雷：直接 +1 雷。
+	BOMB_FULL,
+}
 
-## P 点吃下给的分（东方规则：+1 火力并 +10 分）
+## P 点吃下给的分（东方规则：+1 火力并 +10 分）。
 const POWER_SCORE: int = 10
-## 点被**非金色**收取时的最低分（越靠近框底越接近它；收点线附近 = max_point）
+## 非金色点的最低分（越靠近框底越接近它；收点线附近 = max_point）。
 const MIN_POINT_SCORE: int = 5000
-## 拿到**完整残机**时的回报音 key（`AssetRegistry.sounds`）：残机碎片第 5 片合成 / 吃到整命道具。
-## **只在真的多了一条命时播** —— 见 `collect()`（8 命上限时不播）。
+## 拿到完整残机时的回报音 key（AssetRegistry.sounds）：第 5 片碎片合成 / 整命道具。
+## 只在真的多了一条命时播（8 命上限不播）。
 const EXTEND_SFX := &"get_player"
 
+## 道具类型；由 [method setup] 设置。
 var item_type: Type = Type.POINT
-## 吃下时给的分数（POWER 用；POINT 的分是动态 max_point，不吃这个字段）
+## 吃下时给的分数（POWER 用；POINT 的分是动态 max_point，不吃这个字段）。
 var value: int = 0
-## 实体注册表（ItemPool 注入）——取自机与单局资源
+## 实体注册表（ItemPool 注入）——取自机与单局资源。
 var entity_registry: EntityRegistry
-## 吸附半径（像素）
+## 碰到自机收取的判定半径（像素）；_ready 写进 CircleShape2D。
 var collect_radius: float = 32.0
 
-## 吸附半径（像素）—— 道具进这个圈就自动飞向自机；`burst()` 的爆发半径必须**大于**它，
-## 否则弧向飞行一结束就被吸走、"下落"那一段根本不会发生。
+## 靠近自机自动吸附的半径（像素）；focus 时 ×1.5。
+## burst() 的爆发半径必须大于它，否则弧向飞行一结束就被吸走、没有“下落”那一段。
 const PROXIMITY_RANGE: float = 128.0
 
 var _velocity: Vector2
@@ -28,12 +55,10 @@ var _gravity: float = 240.0
 var _max_fall_speed: float = 180.0
 var _collect_speed: float = 800.0
 var _auto_collect: bool = false
-## 收取是否该金色：**过收点线** 或 **记忆释放技能强收**（靠近吸附不算）。
-## **只对「点」(POINT) 生效** —— 见 `_mark_highlight()`。
+## 收取是否该金色：过收点线 / 强收（靠近吸附不算）；只对 POINT 生效。
 var _is_highlight: bool = false
-## 爆发宽限（秒）：> 0 时只按 `_velocity` 径向飞，**不落重力、不吸附、不被碰到就收**。
-## 用途：在自机处一次撒出的道具（miss 的 P 点扇形）需要先"飞成弧形"才看得见 —— 否则
-## 生成当帧就落进吸附半径被吸走。到 0 后立刻恢复正常（吸附 + 重力 + 碰到收）。
+## 爆发宽限（秒）：> 0 时只按 _velocity 径向飞，不落重力 / 不吸附 / 碰到不收。
+## 到 0 后立刻恢复吸附 + 重力 + 碰到收。
 var _collect_grace: float = 0.0
 var _auto_collect_line: float = 256.0
 var _proximity_range: float = PROXIMITY_RANGE  # 靠近自机即吸
@@ -60,7 +85,7 @@ func _physics_process(delta: float) -> void:
 		if _collect_grace > 0.0:
 			global_position += _velocity * delta
 		else:
-			# 阶段 2 · 交还常规物理：**清掉径向初速** → 之后只受重力 = **竖直下落**
+			# 阶段 2 · 交还常规物理：清掉径向初速 → 之后只受重力 = 竖直下落
 			# （横向不再飘；下落途中回到吸附范围/收点线时才被正常收走）
 			_velocity = Vector2.ZERO
 			_tick_collect_or_fall(delta)
@@ -101,6 +126,8 @@ func _tick_collect_or_fall(delta: float) -> void:
 		global_position += _velocity * delta
 
 
+## 池化初始化：设类型 / 位置 / 上抛初速，清掉上一轮的金色与爆发宽限，按类型换贴图。
+## 由 [code]ItemPool.spawn()[/code] 调用。
 func setup(type: Type, pos: Vector2) -> void:
 	_is_dead = false
 	item_type = type
@@ -127,27 +154,29 @@ func setup(type: Type, pos: Vector2) -> void:
 	_sprite.modulate = Color.WHITE
 
 
-## 标记为"金色收取"。**只有「点」(POINT) 有金色这一说**：过收点线 / 强收能拿满 `max_point` 并弹金色浮字。
-## **P 点（火力）/ 碎片 / 整命整 B 不吃这套** —— 吃 P 点就是 +1 火力 +10 分，浮字保持白色。
+## 标记为金色收取：只有 POINT 有金色，过收点线 / 强收拿满 max_point 并弹金色浮字。
+## P 点、碎片、整命整雷不吃这套。
 func _mark_highlight() -> void:
 	if item_type == Type.POINT:
 		_is_highlight = true
 
 
-## 强制收取（记忆释放技能 / 它炸出的道具）。金色只对「点」生效（见 `_mark_highlight`）。
+## 强制收取（记忆释放技能 / 它炸出的道具）；金色仍只对 POINT 生效。
 func force_collect() -> void:
 	_auto_collect = true
 	_mark_highlight()
 
 
-## 爆发初速：沿 `direction` 以 `speed` 飞 `grace` 秒（期间不吸附 / 不受重力），
-## 用来在自机处一次撒出一圈/一弧道具（`ItemService.spawn_fan`）。
-## **宽限结束的那一刻径向初速归零** → 接着只受重力 = **竖直下落**（不再向外飘）。
+## 爆发初速：沿 direction 以 speed 飞 grace 秒（期间不吸附 / 不受重力 / 碰到不收）。
+## 用来在自机处一次撒出一圈 / 一弧道具（[code]ItemService.spawn_fan()[/code]）。
+## 宽限结束的那一刻径向初速归零 → 接着只受重力，竖直下落。
 func burst(direction: Vector2, speed: float, grace: float) -> void:
 	_velocity = direction.normalized() * speed
 	_collect_grace = maxf(grace, 0.0)
 
 
+## 收取一次：按类型改 PlayerResources、播 item 音 / 弹分数浮字，然后回收。
+## 已收取的道具重复调用无效。
 func collect() -> void:
 	if _is_dead:
 		return
@@ -158,7 +187,7 @@ func collect() -> void:
 	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
 	# 本次吃到的分（P 点 = value，点 = 当前 max_point）；>0 才弹浮字。
 	var gained := 0
-	# 本次是否**真的多了一条命**（碎片集满 5 片 / 整命道具且未到 8 命上限）
+	# 本次是否真的多了一条命（碎片集满 5 片 / 整命道具且未到 8 命上限）
 	var got_life := false
 	if res != null:
 		match item_type:
@@ -177,7 +206,7 @@ func collect() -> void:
 				got_life = res.collect_life_full()
 			Type.BOMB_FULL:
 				res.collect_bomb_full()
-	# 拿到完整残机 = 里程碑事件，单独给一声（与上面那声 `item` 不冲突：两道不同的流）
+	# 拿到完整残机 = 里程碑事件，单独给一声（与上面那声 item 不冲突：两道不同的流）
 	if got_life:
 		AudioManager.play_sfx(AssetRegistry.sounds[EXTEND_SFX])
 	if gained > 0:
