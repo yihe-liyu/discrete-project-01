@@ -240,6 +240,9 @@ Bullet / Enemy 暂不做向导：它们没有注册表，先保持代码 + 工�
 
 **安全边界**：第一版只允许“新建”，不覆盖已有文件；所有 `edits` 必须可 dry-run、可显示 diff；真正的自动写入等 CommandBus 落地后再开放。
 
+> 当前落地（2026-10-22）：`StageVariant` 已接 `ScaffoldService` + 创作台「整关预览」顶栏「＋变体」向导；
+> Stage / Boss / Phase 的向导与 CLI 共用层仍按本节设计待做。
+
 ### 4.5 接进 verify
 
 `tools/check_content.sh --fail` 成为 `verify.sh` 的一步：

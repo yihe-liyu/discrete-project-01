@@ -7,6 +7,7 @@ const WORKBENCH_THEME := preload("res://scripts/workbench/workbench_theme.gd")
 const WORKBENCH := preload("res://scenes/workbench.tscn")
 const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
 const WORKSPACE_STORE := preload("res://scripts/workbench/workspace_store.gd")
+const SCAFFOLD_WIZARD := preload("res://scripts/workbench/scaffold_wizard.gd")
 const BENCHS := [
 	preload("res://scenes/workbench/bullet_bench.tscn"),
 	preload("res://scenes/workbench/enemy_bench.tscn"),
@@ -28,6 +29,8 @@ var _bench_restored: Array[bool] = [false, false, false]
 
 # ── 全局目录抽屉（CanvasLayer(3)：高于顶栏(2)与各页自带 UI(1)）──
 var _catalog_btn: Button
+var _new_variant_btn: Button
+var _scaffold_wizard: ScaffoldWizard
 var _catalog_header: Label
 var _catalog_layer: CanvasLayer
 var _catalog_drawer: PanelContainer
@@ -74,6 +77,8 @@ func _build_ui() -> void:
 		_slot_buttons.append(button)
 	_catalog_btn = bar.get_node("CatalogButton") as Button
 	_catalog_btn.toggled.connect(set_catalog_open)
+	_new_variant_btn = bar.get_node("NewVariantButton") as Button
+	_new_variant_btn.pressed.connect(_on_new_variant)
 	_catalog_header = $BarLayer/CatalogHeader as Label
 	_catalog_header.theme = theme
 	_configure_catalog_drawer()
@@ -334,6 +339,28 @@ func _on_slot(slot_index: int) -> void:
 	_save_workspace()
 	for button_index in _slot_buttons.size():
 		_slot_buttons[button_index].button_pressed = button_index == slot_index
+	_refresh_scaffold_button()
+
+## 顶栏「＋变体」：只对整关预览开放；选中 Stage 由 Workbench 提供。
+func _refresh_scaffold_button() -> void:
+	if _new_variant_btn == null:
+		return
+	var stage: StageData = _workbench_view.current_stage_data() if _workbench_view != null else null
+	_new_variant_btn.visible = _current_slot == 0
+	_new_variant_btn.disabled = stage == null
+
+
+func _on_new_variant() -> void:
+	if _workbench_view == null:
+		return
+	var stage: StageData = _workbench_view.current_stage_data()
+	if stage == null:
+		return
+	if _scaffold_wizard == null:
+		_scaffold_wizard = SCAFFOLD_WIZARD.new()
+		add_child(_scaffold_wizard)
+	_scaffold_wizard.open_for(stage)
+
 
 ## 目录双击条目 → 切对应台并装配
 ## 把目录条目路由到对应试验台并装配（目录双击走这条；测试/外部也可直接调）

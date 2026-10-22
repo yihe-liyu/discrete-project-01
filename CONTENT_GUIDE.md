@@ -318,6 +318,7 @@ variants = [
   后者会被 `StageCatalog` 的目录扫描当成 `StageData` 读取。
 - 示例：`data/stages/stage01/stage_variants/` 已有 Easy / Normal / Hard / Lunatic 四份，
   目前都引用同一个 `stage01.gd`；以后哪个难度要独立，只改对应 `.tres`。
+- 创作台「整关预览」顶栏的「＋变体」可以直接按当前 Stage 建一个变体；难度下拉只列还没用过的槽位。
 - **UID 规则**：真符卡全局唯一（建议 1 面 100-199、2 面 200-299…）；非符 uid=0；角色共用 UID，SpellRecordBook 主键区分
 
 ---

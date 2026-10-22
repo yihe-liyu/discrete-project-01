@@ -314,6 +314,11 @@ func stage_runtime() -> StageRuntime:
 	return _stage_runtime
 
 
+## 当前整关预览的 StageData（创作台脚手架用）。
+func current_stage_data() -> StageData:
+	return _stage_data
+
+
 ## 嵌入创作台：隐藏内部“目录”页签（全局抽屉接管），右侧默认落在书签页。
 func set_embedded(on: bool) -> void:
 	_embedded = on

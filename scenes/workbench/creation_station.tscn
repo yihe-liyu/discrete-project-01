@@ -111,6 +111,14 @@ theme_override_font_sizes/font_size = 16
 toggle_mode = true
 text = "目录 ▾"
 
+[node name="NewVariantButton" type="Button" parent="BarLayer/Bar"]
+custom_minimum_size = Vector2(88, 0)
+layout_mode = 2
+size_flags_horizontal = 8
+tooltip_text = "为当前关卡新建难度变体"
+theme_override_font_sizes/font_size = 16
+text = "＋变体"
+
 [node name="CatalogLayer" type="CanvasLayer" parent="." unique_id=447678217]
 layer = 3
 
