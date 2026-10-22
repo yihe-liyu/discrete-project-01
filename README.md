@@ -43,7 +43,7 @@
 
 ---
 
-## 📖 文档（8 份主文档）
+## 📖 文档（9 份主文档）
 
 > 日常只需要 2 份：**[CONTENT_GUIDE](CONTENT_GUIDE.md)**（写内容）+ **[TEST_INDEX](docs/TEST_INDEX.md)**（改哪里看哪条）。
 > 其余是按需查的契约/参考和不必通读的历史；`docs/archive/` 是历史，不是待读清单。
@@ -51,7 +51,7 @@
 | 层 | 文档 | 什么时候看 |
 |---|---|---|
 | **日常** | [CONTENT_GUIDE](CONTENT_GUIDE.md) · [TEST_INDEX](docs/TEST_INDEX.md) | 每次动手前 |
-| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/弹道路径**速查**） · [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) | 改对应系统 / 做内容工具时 |
+| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/弹道路径**速查**） · [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) · [CREATION_STATION_V2](docs/CREATION_STATION_V2.md) | 改对应系统 / 做内容工具时 |
 | **历史 / 附录** | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md)（只看索引） · [archive](docs/archive/ARCHIVE_INDEX.md) | 查“为什么/当时怎么想” |
 
 ### 我在做什么？看哪份？
@@ -66,11 +66,11 @@
 | 写对话 | [CONTENT_GUIDE](CONTENT_GUIDE.md) 附录 D | `--list` / `--dry` / `--shot` |
 | 改背景 | [archive/BACKGROUND_VISUAL_PLAN.md](docs/archive/BACKGROUND_VISUAL_PLAN.md)（已冻结） · [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) §2.5 | 现役 3D 背景；别重开视觉线 |
 | 改引擎 / 内核 | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [archive/GDEXTENSION_KERNEL_DESIGN.md](docs/archive/GDEXTENSION_KERNEL_DESIGN.md) | 改 C++ 必须重编扩展 |
-| 优化内容流程 / 做工具 | [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) | 先看「建议顺序」，别先造编辑器 |
+| 优化内容流程 / 做工具 | [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) · [CREATION_STATION_V2](docs/CREATION_STATION_V2.md) | 先看「建议顺序」，别先造编辑器 |
 | 查“为什么当初这么改” | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md) 索引 → [archive](docs/archive/ARCHIVE_INDEX.md) | 正文只留最近十余条 |
 
 > **分工（同一信息只写一处）**：规则/状态 = [BASELINE](docs/BEST_PRACTICES_BASELINE.md)；架构 = [ARCHITECTURE](docs/ARCHITECTURE.md)；
-> 弹幕参考 = [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/路径速查）；内容 = [CONTENT_GUIDE](CONTENT_GUIDE.md)（含对话附录）；内容管线 = [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md)；
+> 弹幕参考 = [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/路径速查）；内容 = [CONTENT_GUIDE](CONTENT_GUIDE.md)（含对话附录）；内容管线 = [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md)；创作台 v2 = [CREATION_STATION_V2](docs/CREATION_STATION_V2.md)；
 > 测试 = [TEST_INDEX](docs/TEST_INDEX.md)；历史 = [LOG](docs/BEST_PRACTICES_LOG.md) + [archive](docs/archive/ARCHIVE_INDEX.md)。
 > 原始设定资料 = `docs/reference/*.txt`；`TODO_TEMP.md` 是作者本地临时待办（不进 Git）。
 
