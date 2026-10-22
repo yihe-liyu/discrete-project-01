@@ -31,31 +31,35 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	# 不用 VBox 直挂 Window：Window 不会给直挂 Control 做二次布局，
-	# 首次按未折行内容算出的高度会一直保留。这里用显式位置/尺寸。
+	# Window 会把**直接子 Control** 全部拉到同一个内容区；所以只放一个根 Control，
+	# 其余控件都是它的子节点，用显式位置/尺寸布局（不会被 Window 二次拉满）。
+	var content_root := Control.new()
+	content_root.name = "ContentRoot"
+	add_child(content_root)
+
 	var intro := _label("为当前关卡新建一个 StageVariant；未选择的字段沿用基准。")
 	intro.position = Vector2(8, 8)
 	intro.size = Vector2(604, 32)
-	add_child(intro)
+	content_root.add_child(intro)
 
 	_difficulty = OptionButton.new()
 	_difficulty.item_selected.connect(func(_i: int) -> void: _refresh_plan())
-	add_child(_row("难度", _difficulty, 48))
+	content_root.add_child(_row("难度", _difficulty, 48))
 
 	_script = OptionButton.new()
 	_script.item_selected.connect(func(_i: int) -> void: _refresh_plan())
-	add_child(_row("脚本", _script, 88))
+	content_root.add_child(_row("脚本", _script, 88))
 
 	_bgm = LineEdit.new()
 	_bgm.placeholder_text = "留空 = 沿用 StageData.bgm_key（普通 + 练习）"
 	_bgm.text_changed.connect(func(_t: String) -> void: _refresh_plan())
-	add_child(_row("BGM key", _bgm, 128))
+	content_root.add_child(_row("BGM key", _bgm, 128))
 
 	var plan_scroll := ScrollContainer.new()
 	plan_scroll.position = Vector2(8, 168)
 	plan_scroll.size = Vector2(604, 210)
 	plan_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(plan_scroll)
+	content_root.add_child(plan_scroll)
 	_plan_label = _label("")
 	_plan_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_plan_label.custom_minimum_size = Vector2(580, 0)
