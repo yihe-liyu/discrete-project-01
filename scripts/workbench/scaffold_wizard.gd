@@ -21,6 +21,7 @@ var _plan: Dictionary = {}
 func _ready() -> void:
 	title = "新建难度变体"
 	ok_button_text = "创建"
+	wrap_controls = false
 	dialog_hide_on_ok = false
 	_scaffold_service = SERVICE.new()
 	_build_ui()
@@ -80,7 +81,14 @@ func open_for(stage_data: StageData) -> void:
 		_script.set_item_metadata(0, stage_data.create_script)
 	_bgm.text = ""
 	_refresh_plan()
+	# 第一次 open_for 时 VBox 还没完成布局；此时 popup_centered 会按未折行的
+	# _plan_label 算出 1000+ 高度，窗口看起来从顶上拉下来。延迟一帧再定尺寸。
+	call_deferred("_show_popup")
+
+
+func _show_popup() -> void:
 	popup_centered(Vector2i(620, 360))
+	size = Vector2i(620, 360)
 
 
 func _refresh_plan() -> void:
@@ -112,4 +120,4 @@ func _on_confirmed() -> void:
 		hide()
 		return
 	_plan_label.text = "创建失败：\n- " + "\n- ".join(errs)
-	popup_centered(Vector2i(620, 360))
+	_show_popup()

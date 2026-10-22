@@ -1,6 +1,6 @@
 # 测试索引（改哪里 → 看哪条）
 
-> **这是什么**：125 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
+> **这是什么**：126 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
 > **这不是**：规格说明、待办清单、覆盖率报告（本项目**没有**覆盖率度量）。
 >
 > **怎么用**：改动前扫一眼对应层的表，改动后跑门禁。
@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：125 脚本 / **885 用例（885 通过 / 0 红 —— ✅ 全绿）/ 8080 断言 / 58.105s** / 19 orphans / **0 pending**。
+**现状**：126 脚本 / **886 用例（886 通过 / 0 红 —— ✅ 全绿）/ 8081 断言 / 58.152s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 49 | 401 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 50 | 402 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 13 | 86 | `scripts/workbench/**`、创作站 |
@@ -106,9 +106,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（49 / 401）
+## C · 宿主 · 运行时系统（50 / 402）
 
-### C1 组合根 / 服务 / 时间线（14 / 77）
+### C1 组合根 / 服务 / 时间线（15 / 78）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -121,6 +121,7 @@
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData / 难度变体取曲** | 12 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** | 6 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
+| [test_scaffold_wizard](../test/test_scaffold_wizard.gd) | 回归：创作台第一次打开「＋变体」时，窗口固定 620×360，不被未折行内容从顶上拉高 | 1 | 0 |
 | [test_scaffold_service](../test/test_scaffold_service.gd) | `ScaffoldService`：生成 StageVariant 计划、保留 UID 文本、拒绝重复难度、apply 到临时副本 | 3 | 0 |
 | [test_stage_variants](../test/test_stage_variants.gd) | `StageData` 难度变体：只覆盖脚本 / 背景 / BGM，未覆盖回落基准；`StageRuntime` 真的使用变体脚本；重复 / 空变体响错 | 4 | 0 |
 | [test_difficulty](../test/test_difficulty.gd) | 难度维度契约：0..4 / 展示名；`diff_pick` / `diff_get` 的非法难度、空数组、Extra 用 4 项数组会响亮报错并回落最后一项 | 6 | 0 |
