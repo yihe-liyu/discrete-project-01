@@ -258,7 +258,8 @@ Bullet / Enemy 暂不做向导：它们没有注册表，先保持代码 + 工�
 ```
 
 第一版已落地：Stage / Boss 注册表、脚本 / 背景 / BGM 引用、`StageVariant` 难度与目录位置。
-manifest 生成与内容图仍是下一步。
+`ContentManifest` 只读 JSON 已落地；`check_content` 已消费 manifest 做一致性 / 孤儿检查。
+UI 消费方与内容图仍是下一步。
 
 ---
 

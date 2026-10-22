@@ -113,7 +113,7 @@
 >
 > 第 4 步是**结构契约**（`tools/check_structure.sh`）：组合台必须有同名场景壳 · **测试白盒预算只减不增** ·
 > 第 4 步同时跑**内容契约**（`tools/check_content.sh`）：Stage / Boss 注册表、脚本 / 背景 / BGM 引用、
-> `StageVariant` 的难度唯一性与目录位置 —— 漏注册、断引用、错放文件在 verify 阶段就会红。
+> `StageVariant` 的难度唯一性与目录位置、manifest 一致性、孤儿内容 warning —— 漏注册、断引用、错放文件在 verify 阶段就会红。
 > 生成只读内容清单：`./tools/build_content_manifest.sh` → `.godot/probe/content_manifest.json`。
 > **唯一来源常量**（抄第二遍就红）· **舞台接线唯一**（`.inject_*` 只许在 `stage_host.gd`）。
 
