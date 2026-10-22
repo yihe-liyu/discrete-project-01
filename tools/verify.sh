@@ -63,8 +63,9 @@ echo "== [3/7] 命名契约（含形参/局部/循环遮蔽成员） =="
 ./tools/check_naming.sh --fail
 
 echo ""
-echo "== [4/7] 结构契约（组合台同名场景 / 测试白盒预算 / 唯一来源常量 / 舞台接线唯一） =="
+echo "== [4/7] 结构契约 + 内容契约（组合台同名场景 / 测试白盒预算 / 唯一来源常量 / 舞台接线唯一 / 注册表与引用） =="
 ./tools/check_structure.sh --fail
+./tools/check_content.sh
 
 echo ""
 echo "== [5/7] 真实启动 + 原生 API 对齐（$TARGET_SCENE） =="

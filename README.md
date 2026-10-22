@@ -99,7 +99,7 @@
 > 分片仍是同一批 `test/test_*.gd`（每个文件恰好进一片）；`test_sfx_mix` / `test_stage_background`
 > 这两个慢文件各占一片，避免一片拖住整个墙钟。`GUT_SHARDS=4 ./test/run_tests_sharded.sh` 可指定片数。
 
-### 一键验证（文档哨兵 + 语法 + 命名 + 结构 + 启动 + 测试 + 所有权）
+### 一键验证（文档哨兵 + 语法 + 命名 + 结构 / 内容 + 启动 + 测试 + 所有权）
 
 ```bash
 ./tools/verify.sh            # 全量（默认并行分片，~18s）
@@ -112,6 +112,8 @@
 > —— 文档数字再也不会静默腐烂。
 >
 > 第 4 步是**结构契约**（`tools/check_structure.sh`）：组合台必须有同名场景壳 · **测试白盒预算只减不增** ·
+> 第 4 步同时跑**内容契约**（`tools/check_content.sh`）：Stage / Boss 注册表、脚本 / 背景 / BGM 引用、
+> `StageVariant` 的难度唯一性与目录位置 —— 漏注册、断引用、错放文件在 verify 阶段就会红。
 > **唯一来源常量**（抄第二遍就红）· **舞台接线唯一**（`.inject_*` 只许在 `stage_host.gd`）。
 
 ### 开发常用

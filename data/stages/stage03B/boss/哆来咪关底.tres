@@ -13,7 +13,6 @@ script = ExtResource("2_gdoqd")
 boss_name = "哆来咪"
 section_label = "关底"
 visual = ExtResource("3_gdoqd")
-practice_bgm_key = "stage3B_boss"
 phases_easy = Array[ExtResource("1_rooi5")]([ExtResource("2_feed6")])
 phases_normal = Array[ExtResource("1_rooi5")]([ExtResource("5_xv4fe")])
 phases_hard = Array[ExtResource("1_rooi5")]([ExtResource("3_8ac4r")])

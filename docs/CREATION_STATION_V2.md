@@ -245,17 +245,20 @@ Bullet / Enemy 暂不做向导：它们没有注册表，先保持代码 + 工�
 
 ### 4.5 接进 verify
 
-`tools/check_content.sh --fail` 成为 `verify.sh` 的一步：
+`tools/check_content.sh` 已接进 `verify.sh` 第 4 步（与结构契约同一步，不增加对外步骤数）：
 
 ```text
 [1] docs
 [2] syntax
 [3] naming
-[4] structure
-[5] content（新）
-[6] startup / native API
-[7] GUT
+[4] structure + content
+[5] startup / native API
+[6] GUT
+[7] ownership
 ```
+
+第一版已落地：Stage / Boss 注册表、脚本 / 背景 / BGM 引用、`StageVariant` 难度与目录位置。
+manifest 生成与内容图仍是下一步。
 
 ---
 
@@ -413,7 +416,7 @@ v2 是否成功，不看“页面多不多”，看：
 
 按依赖顺序：
 
-1. `tools/check_content.gd` + `tools/check_content.sh`
+1. ✅ `tools/check_content.gd` + `tools/check_content.sh`（2026-10-22 已接 verify）
 2. `ContentManifest`（只读 JSON）
 3. `ContentGraph`（只读）
 4. `CreationWorkspace` v2 壳（Browser + Preview + Console）
