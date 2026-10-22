@@ -52,7 +52,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	ctx = p_ctx
 	_dir = StageDirector.new(ctx)          # 导演：场景动词 + 事件路由
 	var timeline := start_timeline()       # 纯排程器：无 ctx、无导演依赖
-	timeline.at(0.0).do(func(): _dir.bgm("stage1"))   # 按 key（走 _dir.bgm；_dir 是唯一实现）
+	timeline.at(0.0).do(func(): _dir.stage_bgm())   # 从 StageData.bgm_key（含当前难度变体）起默认曲
 	timeline.at(1.0).do(func(): ctx.enemies.spawn(EnemyData.new().with_script(ENEMY01)...
 		.pos(Vector2(...)).red_little_fairy().param("target_y", 200)))
 	# Boss 进场：spawn + register + 隐藏名 + tween —— 全在 _dir.boss 里
@@ -190,7 +190,7 @@ timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))         
 > 于是「道中 Boss 放道中曲、关底 Boss 放 Boss 曲」= 面默认填道中曲 + **关底 Boss 填 Boss 曲**
 > （本仓库现状：`stage01` 面默认 `stage1`、`卡摩瑞关底` 填 `stage1_boss`；`stageEX` 面默认 `stageEX`、
 > `似新存关底` 填 `stageEX_boss`）。想反过来（面默认 Boss 曲、道中 Boss 覆盖道中曲）也行，链是一样的。
-> ⚠️ 只影响练习；正常关卡的 BGM 由关卡脚本 `stage_director.bgm(key)` 起。
+> ⚠️ 只影响练习；正常关卡默认曲由 `stage_director.stage_bgm()` 从 `StageData.bgm_key` 起，中途换曲才用 `bgm(key)`。
 
 > **奖励分（bonus）不用手填** —— 由规则算（`SpellBonus`）：
 > 初始值 = **难度权重 × 面序号 × 500,000**（乘法）。难度权重：**E/N/H/L = 1/2/3/4，EX = 2**（Extra 单独破例）；

@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：125 脚本 / **884 用例（884 通过 / 0 红 —— ✅ 全绿）/ 8078 断言 / 57.901s** / 19 orphans / **0 pending**。
+**现状**：125 脚本 / **885 用例（885 通过 / 0 红 —— ✅ 全绿）/ 8080 断言 / 58.105s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 49 | 400 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 49 | 401 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 开发台** | 13 | 86 | `scripts/workbench/**`、创作站 |
@@ -106,9 +106,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（49 / 400）
+## C · 宿主 · 运行时系统（49 / 401）
 
-### C1 组合根 / 服务 / 时间线（14 / 76）
+### C1 组合根 / 服务 / 时间线（14 / 77）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -118,7 +118,7 @@
 | [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 | 10 | 0 |
 | [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：**即时全屏清敌弹**（当帧清空、与距离无关）—— 与 `death_clear()` 的**膨胀圈**语义差是本文件重点（把它写成膨胀圈 ⇒ 两条断言红）+ **每颗被清的弹各留一条消弹特效**（退回裸清 ⇒ 报 0 vs 2）；无管理器 = 静默 no-op。⚠️ 数弹只数 `get_type(i) != null` 的真弹 —— 特效行与弹**共用同一个 store** | 2 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
-| [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 | 11 | 0 |
+| [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData / 难度变体取曲** | 12 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** | 6 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
 | [test_scaffold_service](../test/test_scaffold_service.gd) | `ScaffoldService`：生成 StageVariant 计划、保留 UID 文本、拒绝重复难度、apply 到临时副本 | 3 | 0 |

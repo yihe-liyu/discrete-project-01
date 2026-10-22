@@ -31,7 +31,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	var logo_tex: Texture2D = preload("res://assets/Textures/front/logo/logo1.png")
 
 	# 0s: BGM
-	timeline.at(0.0).do(func(): _stage_director.bgm("stage1"))
+	timeline.at(0.0).do(func(): _stage_director.stage_bgm())
 
 	# 1~3s: 妖精波 (左右交替)
 	for i in 7:

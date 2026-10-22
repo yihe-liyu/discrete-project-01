@@ -17,8 +17,8 @@ extends Resource
 ## 显示名才是可读标签 —— 所以「3 面 B 线」这种可以有 id=4 + display_name="Stage 3B"，
 ## 不必把路线后缀编进 int。
 @export var display_name: String = ""
-## 本关 BGM 的语义 key（[code]AssetRegistry.BGM_PATHS[/code] 里的，如 [code]stage1[/code] / [code]stage3B[/code]）。
-## 练习模式没有关卡脚本、没人起 BGM（SE 没有衬托会显得特别响）→ 由这里起。
+## 本关默认 BGM 的语义 key（[code]AssetRegistry.BGM_PATHS[/code] 里的，如 [code]stage1[/code] / [code]stage3B[/code]）。
+## 普通关卡开场由 [code]StageDirector.stage_bgm()[/code] 读取；符卡练习没有关卡脚本，也回落这里。
 ## 关卡脚本仍可在战中等时机自己切（如 Boss 曲）。
 @export var bgm_key: String = ""
 ## 关卡脚本：新建后必须得到 [code]CoroutineScript[/code]（开局时实例化并启动）。

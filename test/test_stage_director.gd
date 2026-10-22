@@ -191,3 +191,27 @@ func test_boss_spawns_when_slot_empty():
 	d.dispose()
 	spy.free()
 
+
+
+## StageData.bgm_key 是普通关卡与练习的共同来源；变体按当前难度覆盖。
+func test_stage_bgm_key_reads_stage_data_and_variant():
+	var prev_diff := SaveData.selected_difficulty
+	var rt := StageRuntime.new()
+	var data := StageData.new()
+	data.bgm_key = "stage1"
+	rt.current_stage = data
+	var ctx := StageContext.new(null)
+	ctx.stage = rt
+	var director := StageDirector.new(ctx)
+
+	assert_eq(director.stage_bgm_key(), "stage1", "普通面读 StageData.bgm_key")
+
+	var variant := StageVariant.new()
+	variant.difficulty = Difficulty.EXTRA
+	variant.bgm_key = "stageEX"
+	data.variants.append(variant)
+	SaveData.selected_difficulty = Difficulty.EXTRA
+	assert_eq(director.stage_bgm_key(), "stageEX", "Extra 变体覆盖 BGM")
+
+	SaveData.selected_difficulty = prev_diff
+	rt.free()

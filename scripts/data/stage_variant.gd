@@ -13,7 +13,7 @@ extends Resource
 @export var create_script: Script
 ## 覆盖背景场景；null = 用 StageData.background_scene。
 @export var background_scene: PackedScene
-## 覆盖 BGM key；空 = 用 StageData.bgm_key。
+## 覆盖 BGM key；空 = 用 StageData.bgm_key。普通关卡开场与练习回落都生效。
 @export var bgm_key: String = ""
 
 

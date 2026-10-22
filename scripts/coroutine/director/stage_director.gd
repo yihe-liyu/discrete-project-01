@@ -25,6 +25,22 @@ func bgm(key: String) -> StageDirector:
 		push_warning("StageDirector.bgm: 未找到 BGM '%s'" % key)
 	return self
 
+
+## 当前面的默认 BGM key（StageData.bgm_key → 当前难度变体；空 = 未配置）。
+func stage_bgm_key() -> String:
+	if ctx.stage == null or ctx.stage.current_stage == null:
+		return ""
+	return ctx.stage.current_stage.bgm_key_for_difficulty(SaveData.selected_difficulty)
+
+
+## 播当前面的默认 BGM（普通关卡开场用；中途换曲仍用 bgm(key)）。
+func stage_bgm() -> StageDirector:
+	var key := stage_bgm_key()
+	if key == "":
+		push_warning("StageDirector.stage_bgm: 当前面没有配置 bgm_key")
+		return self
+	return bgm(key)
+
 ## 生成 Boss：spawn + 注册命名槽位 + 进场，返回 BossHandle（默认隐藏真名）。
 ## 同名槽位幂等：已经有一只就只返回句柄（不重复生成/进场）——
 ## 于是内容侧不必自己写 [code]if not handle.exists()[/code] 之类的防重入判断。

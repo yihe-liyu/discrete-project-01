@@ -39,7 +39,7 @@ func _build_ui() -> void:
 	_script.item_selected.connect(func(_i: int) -> void: _refresh_plan())
 	box.add_child(_row("脚本", _script))
 	_bgm = LineEdit.new()
-	_bgm.placeholder_text = "留空 = 沿用 StageData.bgm_key"
+	_bgm.placeholder_text = "留空 = 沿用 StageData.bgm_key（普通 + 练习）"
 	_bgm.text_changed.connect(func(_t: String) -> void: _refresh_plan())
 	box.add_child(_row("BGM key", _bgm))
 	_plan_label = _label("")

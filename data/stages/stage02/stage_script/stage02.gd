@@ -16,7 +16,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	var logo_tex: Texture2D = preload("res://assets/Textures/front/logo/logo2.png")
 
 	# 0s: BGM
-	timeline.at(0.0).do(func(): _stage_director.bgm("stage2"))
+	timeline.at(0.0).do(func(): _stage_director.stage_bgm())
 	
 	for i in 7:
 		var x = GameConfig.FIELD_CENTER_X + 325 - i * 100

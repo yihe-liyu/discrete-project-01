@@ -36,7 +36,7 @@ class_name BossData
 ## 尺寸随意，以中心锚定。
 @export var portrait: Texture2D
 ## 符卡练习时该 Boss 用的 BGM key（AssetRegistry.BGM_PATHS 的语义 key）。
-## 空 = 回落该面的 StageData.bgm_key；只影响练习，正常关卡 BGM 由关卡脚本 stage_director.bgm(key) 起。
+## 空 = 回落该面的 StageData.bgm_key；只影响练习，正常关卡默认曲由 stage_director.stage_bgm() 起，中途换曲用 bgm(key)。
 @export var practice_bgm_key: String = ""
 ## 全破爆点特效场景（BossHandle.defeat 播，池化 HitEffect）；空 = 通用 boss_defeat.tscn。
 @export var defeat_fx: PackedScene
