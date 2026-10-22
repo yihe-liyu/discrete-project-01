@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-886%20tests%20/%20126%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-889%20tests%20/%20127%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -114,6 +114,7 @@
 > 第 4 步是**结构契约**（`tools/check_structure.sh`）：组合台必须有同名场景壳 · **测试白盒预算只减不增** ·
 > 第 4 步同时跑**内容契约**（`tools/check_content.sh`）：Stage / Boss 注册表、脚本 / 背景 / BGM 引用、
 > `StageVariant` 的难度唯一性与目录位置 —— 漏注册、断引用、错放文件在 verify 阶段就会红。
+> 生成只读内容清单：`./tools/build_content_manifest.sh` → `.godot/probe/content_manifest.json`。
 > **唯一来源常量**（抄第二遍就红）· **舞台接线唯一**（`.inject_*` 只许在 `stage_host.gd`）。
 
 ### 开发常用

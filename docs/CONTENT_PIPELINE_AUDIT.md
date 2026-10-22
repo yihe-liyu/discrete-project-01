@@ -283,7 +283,7 @@
 
 ### 3.5 内容级回归缺失
 
-现有 886 个测试主要保护机制与契约；内容本身只有「结构冒烟 / 不数数量」的测试。结果是：
+现有 889 个测试主要保护机制与契约；内容本身只有「结构冒烟 / 不数数量」的测试。结果是：
 
 - 机制改对了，内容手感可能变了；
 - 内容改坏了，测试不一定红；
@@ -383,7 +383,7 @@
 ### P0：先把「漏了就消失」变成「启动就报」
 
 1. **内容 manifest / 校验器**：扫描 StageData / BossData / PhaseData，校验 ID、引用、可玩性；`verify` 接入。
-   已落地第一版 `tools/check_content.sh`（注册表 / 引用 / BGM / StageVariant）；manifest 生成待做。
+   已落地 `tools/check_content.sh` 与只读 `ContentManifest`（`tools/build_content_manifest.sh`）；manifest 消费方待做。
 2. **新内容脚手架**：新面 / 新 Boss / 新阶段模板，生成注册表占位与最小检查。
 3. **`params` 命名空间**：至少禁止 move / shoot 同名键，报错信息指出冲突键。
 4. **文档漂移检查**：像本次这样，用脚本检查关键字段清单是否还在代码里。

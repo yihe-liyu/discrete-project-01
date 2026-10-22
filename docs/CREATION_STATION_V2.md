@@ -417,7 +417,7 @@ v2 是否成功，不看“页面多不多”，看：
 按依赖顺序：
 
 1. ✅ `tools/check_content.gd` + `tools/check_content.sh`（2026-10-22 已接 verify）
-2. `ContentManifest`（只读 JSON）
+2. ✅ `ContentManifest`（只读 JSON，`tools/build_content_manifest.sh`）
 3. `ContentGraph`（只读）
 4. `CreationWorkspace` v2 壳（Browser + Preview + Console）
 5. 迁移整关预览
