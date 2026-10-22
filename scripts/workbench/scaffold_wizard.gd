@@ -23,30 +23,44 @@ func _ready() -> void:
 	ok_button_text = "创建"
 	wrap_controls = false
 	dialog_hide_on_ok = false
+	# 内容用显式位置/尺寸（不用直挂 VBox）；窗口尺寸在 show 后再钉一次。
+	size = Vector2i(620, 460)
 	_scaffold_service = SERVICE.new()
 	_build_ui()
 	confirmed.connect(_on_confirmed)
 
 
 func _build_ui() -> void:
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	add_child(box)
-	box.add_child(_label("为当前关卡新建一个 StageVariant；未选择的字段沿用基准。"))
+	# 不用 VBox 直挂 Window：Window 不会给直挂 Control 做二次布局，
+	# 首次按未折行内容算出的高度会一直保留。这里用显式位置/尺寸。
+	var intro := _label("为当前关卡新建一个 StageVariant；未选择的字段沿用基准。")
+	intro.position = Vector2(8, 8)
+	intro.size = Vector2(604, 32)
+	add_child(intro)
+
 	_difficulty = OptionButton.new()
 	_difficulty.item_selected.connect(func(_i: int) -> void: _refresh_plan())
-	box.add_child(_row("难度", _difficulty))
+	add_child(_row("难度", _difficulty, 48))
+
 	_script = OptionButton.new()
 	_script.item_selected.connect(func(_i: int) -> void: _refresh_plan())
-	box.add_child(_row("脚本", _script))
+	add_child(_row("脚本", _script, 88))
+
 	_bgm = LineEdit.new()
 	_bgm.placeholder_text = "留空 = 沿用 StageData.bgm_key（普通 + 练习）"
 	_bgm.text_changed.connect(func(_t: String) -> void: _refresh_plan())
-	box.add_child(_row("BGM key", _bgm))
+	add_child(_row("BGM key", _bgm, 128))
+
+	var plan_scroll := ScrollContainer.new()
+	plan_scroll.position = Vector2(8, 168)
+	plan_scroll.size = Vector2(604, 210)
+	plan_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(plan_scroll)
 	_plan_label = _label("")
 	_plan_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_plan_label.custom_minimum_size = Vector2(520, 100)
-	box.add_child(_plan_label)
+	_plan_label.custom_minimum_size = Vector2(580, 0)
+	_plan_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	plan_scroll.add_child(_plan_label)
 
 
 func _label(text: String) -> Label:
@@ -56,8 +70,10 @@ func _label(text: String) -> Label:
 	return label
 
 
-func _row(p_title: String, control: Control) -> HBoxContainer:
+func _row(p_title: String, control: Control, y: float) -> HBoxContainer:
 	var row := HBoxContainer.new()
+	row.position = Vector2(8, y)
+	row.size = Vector2(604, 30)
 	var label := Label.new()
 	label.text = p_title
 	label.custom_minimum_size = Vector2(72, 0)
@@ -81,14 +97,14 @@ func open_for(stage_data: StageData) -> void:
 		_script.set_item_metadata(0, stage_data.create_script)
 	_bgm.text = ""
 	_refresh_plan()
-	# 第一次 open_for 时 VBox 还没完成布局；此时 popup_centered 会按未折行的
-	# _plan_label 算出 1000+ 高度，窗口看起来从顶上拉下来。延迟一帧再定尺寸。
+	# 首次 open_for 时控件还没完成布局；延迟到本帧结束后再 popup / 定尺寸，
+	# 避免按未折行文本算出夸张高度。
 	call_deferred("_show_popup")
 
 
 func _show_popup() -> void:
-	popup_centered(Vector2i(620, 360))
-	size = Vector2i(620, 360)
+	popup_centered(Vector2i(620, 460))
+	size = Vector2i(620, 460)
 
 
 func _refresh_plan() -> void:

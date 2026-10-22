@@ -11,5 +11,5 @@ func test_first_open_uses_fixed_size() -> void:
 	wizard.open_for(load(STAGE01))
 	await get_tree().process_frame
 	await get_tree().process_frame
-	assert_eq(wizard.size, Vector2i(620, 360), "第一次打开应为固定 620x360")
+	assert_eq(wizard.size, Vector2i(620, 460), "第一次打开应为固定 620x460")
 	wizard.hide()

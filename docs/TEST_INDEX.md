@@ -121,7 +121,7 @@
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData / 难度变体取曲** | 12 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** | 6 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
-| [test_scaffold_wizard](../test/test_scaffold_wizard.gd) | 回归：创作台第一次打开「＋变体」时，窗口固定 620×360，不被未折行内容从顶上拉高 | 1 | 0 |
+| [test_scaffold_wizard](../test/test_scaffold_wizard.gd) | 回归：创作台第一次打开「＋变体」时，窗口固定 620×460，不被未折行内容从顶上拉高 | 1 | 0 |
 | [test_scaffold_service](../test/test_scaffold_service.gd) | `ScaffoldService`：生成 StageVariant 计划、保留 UID 文本、拒绝重复难度、apply 到临时副本 | 3 | 0 |
 | [test_stage_variants](../test/test_stage_variants.gd) | `StageData` 难度变体：只覆盖脚本 / 背景 / BGM，未覆盖回落基准；`StageRuntime` 真的使用变体脚本；重复 / 空变体响错 | 4 | 0 |
 | [test_difficulty](../test/test_difficulty.gd) | 难度维度契约：0..4 / 展示名；`diff_pick` / `diff_get` 的非法难度、空数组、Extra 用 4 项数组会响亮报错并回落最后一项 | 6 | 0 |
