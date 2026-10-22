@@ -155,6 +155,13 @@ Stage → Boss → Phase → Script → Bullet / Background
 
 ### 4.4 Scaffold
 
+Scaffold 不是一个 shell 脚本，而是 **ScaffoldService + 两个前端**：
+
+- CLI：批处理 / CI / 快速创建
+- UI：创作台里的向导（有选择、有预览、有确认）
+
+两边必须调用同一份 `ScaffoldService`，不能各写一套模板。
+
 ```bash
 ./tools/new_content.sh stage 3B
 ./tools/new_content.sh boss 3 stage03B
@@ -162,6 +169,76 @@ Stage → Boss → Phase → Script → Bullet / Background
 ```
 
 生成目录、`.tres` 骨架、脚本骨架、注册表占位、最小检查项。
+
+#### 4.4.1 ScaffoldService
+
+```text
+ScaffoldRequest {
+  kind: stage | boss | phase | variant
+  parent: ContentRef?          # 选中上下文；新 Boss/阶段必填
+  id / slug / display_name
+  difficulties: [0..4]
+  copy_from: ContentRef?       # 复制现有脚本/背景/BGM，而不是空白
+  create_scripts: bool
+  create_background: bool
+  register: bool
+}
+
+ScaffoldPlan {
+  files: [{ path, template, content }]
+  edits: [{ path, field, action, value }]   # 注册表 / BossData array
+  issues: []
+  preview: string                           # 文件树 + diff 摘要
+}
+```
+
+`ScaffoldService.plan(request)` 只生成计划，不写文件；`apply(plan)` 才落盘。
+
+这样 CLI 可以 `--dry-run`，UI 可以先给作者看“将创建什么 / 将改哪一行”。
+
+#### 4.4.2 UI 入口与选择
+
+创作台的入口不是“一个孤立的 New 按钮”，而是 **上下文 + 选择驱动**：
+
+| 当前选择 | 可用创建 |
+|---|---|
+| 无 | 新 Stage |
+| 某个 Stage | 新 Boss、新阶段、新难度变体 |
+| 某个 Boss | 新阶段（自动填 stage / boss） |
+| 某个 Phase | 复制为新阶段 / 新变体 |
+
+另外保留全局 `+ New`：先选 kind，再选 parent。
+
+#### 4.4.3 向导流程
+
+```text
+① 类型       Stage / Boss / Phase / Variant（按当前选择预选）
+② 身份       id / slug / 显示名（自动建议，实时查重）
+③ 结构       难度列（E/N/H/L/EX）、脚本、背景、BGM、模板来源
+④ 计划       文件树 + 注册表/数组改动 diff + 校验 issue
+⑤ 创建       先 dry-run，再 apply；成功后选中新内容并载入预览
+```
+
+设计原则：
+
+- **能选就不让手打**：脚本 / 背景 / BGM / 模板都用资源选择器；id 只输入一次。
+- **默认走“像当前内容”**：从选中的 Stage/Boss 复制脚本、背景、BGM；新手不会从空白开始。
+- **高级选项折叠**：难度列、是否建背景、是否注册，默认展开最常用项。
+- **计划先于写入**：④ 必须显示将创建的文件和将修改的注册表行，确认后才写。
+- **创建后闭环**：自动刷新 manifest、选中新内容、打开预览；失败则只留下 `ScaffoldPlan`，不改源文件。
+
+#### 4.4.4 第一版范围
+
+先做 **Stage / Boss / Phase / StageVariant** 四种，因为它们有明确的 parent 和注册表关系：
+
+- Stage：生成 `StageData` + 可选背景场景 + 注册表项
+- Boss：生成 `BossData` + 各难度 phase 数列 + 注册表项
+- Phase：生成目录 + `.tres` + move/shoot 脚本 + 追加到 BossData 的难度列
+- Variant：生成 `StageVariant.tres` + 追加到 `StageData.variants`
+
+Bullet / Enemy 暂不做向导：它们没有注册表，先保持代码 + 工作台组合台。
+
+**安全边界**：第一版只允许“新建”，不覆盖已有文件；所有 `edits` 必须可 dry-run、可显示 diff；真正的自动写入等 CommandBus 落地后再开放。
 
 ### 4.5 接进 verify
 
