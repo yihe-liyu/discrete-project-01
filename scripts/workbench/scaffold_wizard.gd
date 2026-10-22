@@ -21,6 +21,7 @@ var _plan: Dictionary = {}
 func _ready() -> void:
 	title = "新建难度变体"
 	ok_button_text = "创建"
+	get_cancel_button().text = "取消"
 	wrap_controls = false
 	dialog_hide_on_ok = false
 	# 内容用显式位置/尺寸（不用直挂 VBox）；窗口尺寸在 show 后再钉一次。

@@ -12,6 +12,7 @@ func test_first_open_uses_fixed_size() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_eq(wizard.size, Vector2i(620, 460), "第一次打开应为固定 620x460")
+	assert_eq(wizard.get_cancel_button().text, "取消", "取消按钮应与创建按钮同为中文")
 	var content := wizard.get_child(0)
 	assert_eq(content.get_class(), "Control", "内容只用一个根 Control，避免 Window 二次拉满")
 	var plan_scroll: ScrollContainer = null
