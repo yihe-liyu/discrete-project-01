@@ -8,6 +8,7 @@ const WORKBENCH := preload("res://scenes/workbench.tscn")
 const RIG_COMMON := preload("res://scripts/workbench/bench_common.gd")
 const WORKSPACE_STORE := preload("res://scripts/workbench/workspace_store.gd")
 const SCAFFOLD_WIZARD := preload("res://scripts/workbench/scaffold_wizard.gd")
+const PHASE_SCAFFOLD_WIZARD := preload("res://scripts/workbench/phase_scaffold_wizard.gd")
 const BENCHS := [
 	preload("res://scenes/workbench/bullet_bench.tscn"),
 	preload("res://scenes/workbench/enemy_bench.tscn"),
@@ -30,7 +31,9 @@ var _bench_restored: Array[bool] = [false, false, false]
 # ── 全局目录抽屉（CanvasLayer(3)：高于顶栏(2)与各页自带 UI(1)）──
 var _catalog_btn: Button
 var _new_variant_btn: Button
+var _new_phase_btn: Button
 var _scaffold_wizard: ScaffoldWizard
+var _phase_scaffold_wizard: PhaseScaffoldWizard
 var _catalog_header: Label
 var _catalog_layer: CanvasLayer
 var _catalog_drawer: PanelContainer
@@ -79,6 +82,8 @@ func _build_ui() -> void:
 	_catalog_btn.toggled.connect(set_catalog_open)
 	_new_variant_btn = bar.get_node("NewVariantButton") as Button
 	_new_variant_btn.pressed.connect(_on_new_variant)
+	_new_phase_btn = bar.get_node("NewPhaseButton") as Button
+	_new_phase_btn.pressed.connect(_on_new_phase)
 	_catalog_header = $BarLayer/CatalogHeader as Label
 	_catalog_header.theme = theme
 	_configure_catalog_drawer()
@@ -348,6 +353,9 @@ func _refresh_scaffold_button() -> void:
 	var stage: StageData = _workbench_view.current_stage_data() if _workbench_view != null else null
 	_new_variant_btn.visible = _current_slot == 0
 	_new_variant_btn.disabled = stage == null
+	if _new_phase_btn != null:
+		_new_phase_btn.visible = _current_slot == 0
+		_new_phase_btn.disabled = stage == null
 
 
 func _on_new_variant() -> void:
@@ -360,6 +368,18 @@ func _on_new_variant() -> void:
 		_scaffold_wizard = SCAFFOLD_WIZARD.new()
 		add_child(_scaffold_wizard)
 	_scaffold_wizard.open_for(stage)
+
+
+func _on_new_phase() -> void:
+	if _workbench_view == null:
+		return
+	var stage: StageData = _workbench_view.current_stage_data()
+	if stage == null:
+		return
+	if _phase_scaffold_wizard == null:
+		_phase_scaffold_wizard = PHASE_SCAFFOLD_WIZARD.new()
+		add_child(_phase_scaffold_wizard)
+	_phase_scaffold_wizard.open_for(stage)
 
 
 ## 目录双击条目 → 切对应台并装配
