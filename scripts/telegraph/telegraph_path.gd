@@ -1,7 +1,7 @@
 extends Node2D
 ## 只读路径展示层：把 LifecyclePreview 算出的折线画出来，不挂任何判定。
 ##
-## 用 MultiMeshInstance2D 合批：每个线段 = 一个 quad（亮核 + 外发光各一个实例），
+## 用 MultiMeshInstance2D 合批：每个线段 = 一个 quad，亮核/外发光由同一个 shader 画；
 ## 整批路径一次提交；只做视觉，不生成弹、不参与碰撞。
 ## [code]points[/code] 使用本节点的局部坐标；通常把本节点挂在 World 原点下。
 
@@ -9,11 +9,12 @@ extends Node2D
 const CORE_WIDTH := 1.5
 ## 外发光线宽倍率。
 const GLOW_WIDTH_MULT := 2.5
-## 外发光 alpha 系数。
-const GLOW_ALPHA := 0.28
+## 外发光 shader。
+const GLOW_SHADER := preload("res://gdshader/telegraph_glow.gdshader")
 
 var _batch: MultiMeshInstance2D
 var _multimesh: MultiMesh
+var _material: ShaderMaterial
 var _paths: Array[PackedVector2Array] = []
 var _is_showing: bool = false
 var _remaining: float = 0.0
@@ -106,7 +107,7 @@ func _ensure_batch() -> void:
 		return
 	_multimesh = MultiMesh.new()
 	_multimesh.transform_format = MultiMesh.TRANSFORM_2D
-	_multimesh.use_colors = true
+	_multimesh.use_colors = false
 	var quad := QuadMesh.new()
 	quad.size = Vector2.ONE
 	_multimesh.mesh = quad
@@ -114,13 +115,15 @@ func _ensure_batch() -> void:
 	_batch = MultiMeshInstance2D.new()
 	_batch.multimesh = _multimesh
 	_batch.texture = _make_white_texture()
+	_material = ShaderMaterial.new()
+	_material.shader = GLOW_SHADER
+	_batch.material = _material
 	_batch.visible = false
 	add_child(_batch)
 
 
 func _rebuild_batch(color: Color, width: float) -> void:
 	var transforms: Array[Transform2D] = []
-	var colors: Array[Color] = []
 	for path in _paths:
 		for i in path.size() - 1:
 			var a: Vector2 = path[i]
@@ -131,17 +134,16 @@ func _rebuild_batch(color: Color, width: float) -> void:
 				continue
 			var direction := segment / length
 			var perpendicular := Vector2(-direction.y, direction.x)
-			var center := (a + b) * 0.5
-			# 亮核
-			transforms.append(Transform2D(direction * length, perpendicular * width, center))
-			colors.append(color)
-			# 外发光
-			transforms.append(Transform2D(direction * length, perpendicular * width * GLOW_WIDTH_MULT, center))
-			colors.append(Color(color.r, color.g, color.b, color.a * GLOW_ALPHA))
+			# 一个 quad 覆盖外发光宽度；亮核由 shader 的中心遮罩画。
+			transforms.append(Transform2D(
+				direction * length,
+				perpendicular * width * GLOW_WIDTH_MULT,
+				(a + b) * 0.5))
 	_multimesh.instance_count = transforms.size()
 	for i in transforms.size():
 		_multimesh.set_instance_transform_2d(i, transforms[i])
-		_multimesh.set_instance_color(i, colors[i])
+	_material.set_shader_parameter("line_color", color)
+	_material.set_shader_parameter("core_ratio", 1.0 / GLOW_WIDTH_MULT)
 	_batch.visible = true
 
 
