@@ -16,11 +16,15 @@ var _paths_by_uid = {}
 var _phases_by_uid = {}
 var _cursors_by_uid = {}
 var _emitted_lifecycles: Array = []
+var _max_times_by_uid = {}
+var _emitted_max_times = {}
 var _tracked_age: float = 0.0
 ## 绘制折线简化阈值（像素）。
 const PATH_EPSILON := 1.25
-## 一次生成整条路径的上限；通常出屏/生命周期终点会先到。
+## 一次生成整条路径的默认上限；通常生命周期终点会先到。
 const FULL_PATH_MAX_TIME := 12.0
+## 当前默认最大路径时长；内容可在发射前改。
+var path_max_time: float = FULL_PATH_MAX_TIME
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 1.5
 
@@ -57,11 +61,12 @@ func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Ar
 	return results
 
 ## 让 emit 出来的指定 lifecycle 自动进入跟踪；可重复调用注册多种子代。
-func track_emitted(lifecycle: BulletLifecycle) -> bool:
+func track_emitted(lifecycle: BulletLifecycle, max_time: float = -1.0) -> bool:
 	if bullet_manager == null or lifecycle == null:
 		return false
 	if not _emitted_lifecycles.has(lifecycle):
 		_emitted_lifecycles.append(lifecycle)
+	_emitted_max_times[lifecycle] = max_time if max_time > 0.0 else path_max_time
 	if not bullet_manager.bullet_spawned.is_connected(_on_emitted_bullet_spawned):
 		bullet_manager.bullet_spawned.connect(_on_emitted_bullet_spawned)
 	return true
@@ -69,33 +74,37 @@ func track_emitted(lifecycle: BulletLifecycle) -> bool:
 
 func _on_emitted_bullet_spawned(uid: int, lifecycle: BulletLifecycle) -> void:
 	if _emitted_lifecycles.has(lifecycle):
-		add_tracked_bullets([uid], lifecycle, _tracked_color, _tracked_width)
+		add_tracked_bullets([uid], lifecycle, _tracked_color, _tracked_width,
+			float(_emitted_max_times.get(lifecycle, path_max_time)))
 
 
 ## 一行入口：发射并立即跟踪这一发的真实弹；返回是否成功进入跟踪。
 ## 无 bullet_service / lifecycle 时仍正常发射，只是不画路径。
 func shoot_tracked(bullet_data: BulletData, count: int, spread_angle: float,
 		base_dir: Vector2, at: Vector2, sfx: AudioStream = null,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5,
+		max_time: float = -1.0) -> bool:
 	if bullet_service == null or bullet_data == null:
 		return false
 	var uids := bullet_service.shoot_spread_ids(
 		bullet_data, count, spread_angle, base_dir, at, sfx)
 	if bullet_data.lifecycle == null:
 		return false
-	return add_tracked_bullets(uids, bullet_data.lifecycle, color, width)
+	return add_tracked_bullets(uids, bullet_data.lifecycle, color, width, max_time)
 
 
 ## 绑定一颗真实弹；单颗便捷入口。路径按当前 pos / phase 滚动刷新。
 func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
-	return track_bullets([bullet_uid], lifecycle, color, width)
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5,
+		max_time: float = -1.0) -> bool:
+	return track_bullets([bullet_uid], lifecycle, color, width, max_time)
 
 
 ## 追加多颗真实弹到当前跟踪列表；允许来自不同敌人实例 / 不同 lifecycle。
 ## phase 起点缓存 chain，之后按当前 pos 裁前缀；旧弹路径继续更新。
 func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5,
+		max_time: float = -1.0) -> bool:
 	if telegraph_path == null or not is_instance_valid(telegraph_path) \
 			or bullet_manager == null or lifecycle == null:
 		return false
@@ -105,6 +114,7 @@ func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 		if value > 0 and not _tracked_uids.has(value):
 			_tracked_uids.append(value)
 			_lifecycles_by_uid[value] = lifecycle
+			_max_times_by_uid[value] = max_time if max_time > 0.0 else path_max_time
 			added = true
 	if not added:
 		return not _tracked_uids.is_empty()
@@ -121,9 +131,10 @@ func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 
 ## 绑定多颗真实弹；死一颗掉一条。
 func track_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5,
+		max_time: float = -1.0) -> bool:
 	_stop_tracking()
-	return add_tracked_bullets(bullet_uids, lifecycle, color, width)
+	return add_tracked_bullets(bullet_uids, lifecycle, color, width, max_time)
 
 ## 清掉当前预览。
 func clear() -> void:
@@ -176,7 +187,8 @@ func _rebuild_cache(uid: int, phase: int, position: Vector2, lifecycle: BulletLi
 	var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
 	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
 	var result: Dictionary = PREVIEW.evaluate_chain(
-		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, FULL_PATH_MAX_TIME)
+		lifecycle, phase, position, velocity, heading, 1.0 / 60.0,
+		float(_max_times_by_uid.get(uid, path_max_time)))
 	# 不按场地裁剪：发射点可能在边缘外，裁掉会让路径只剩一两个点。
 	_paths_by_uid[uid] = PREVIEW.simplify_path(result.points, PATH_EPSILON)
 	_phases_by_uid[uid] = phase
@@ -202,6 +214,7 @@ func _find_cursor(uid: int, path: PackedVector2Array, position: Vector2) -> int:
 func _stop_tracking() -> void:
 	_tracked_uids.clear()
 	_lifecycles_by_uid.clear()
+	_max_times_by_uid.clear()
 	_paths_by_uid.clear()
 	_phases_by_uid.clear()
 	_cursors_by_uid.clear()
