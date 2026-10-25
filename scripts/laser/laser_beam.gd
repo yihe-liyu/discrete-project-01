@@ -25,6 +25,13 @@ var max_lifetime: float = 8.0
 var is_grow_on_spawn: bool = true
 ## 自定义贴图（null=内置 laser.png）
 var laser_texture: Texture2D
+## 亮核颜色覆盖（alpha=0 用 laser_color）。
+var core_color_override: Color = Color(0, 0, 0, 0)
+## 光晕颜色覆盖（alpha=0 用 laser_color 提亮色）。
+var glow_color_override: Color = Color(0, 0, 0, 0)
+## 光晕透明度 / 宽度倍率。
+var glow_alpha: float = 0.35
+var glow_width_mult: float = 2.2
 
 # ── 运行时 ──
 ## 激光骨架（判定与渲染共用采样）。
@@ -59,6 +66,7 @@ func spawn(p_skeleton: LaserSkeleton, p_color: Color) -> void:
 	visible = true
 	process_mode = Node.PROCESS_MODE_INHERIT
 	_ensure_meshes()
+	_apply_colors()
 	if is_grow_on_spawn and grow_speed > 0.0:
 		phase = Phase.GROW
 		head_dist = 0.0
@@ -175,13 +183,8 @@ func _ensure_meshes() -> void:
 	if _core_line:
 		return
 	var tex: Texture2D = laser_texture if laser_texture else AssetRegistry.LASER_TEXTURE
-	var glow := Color(
-		minf(laser_color.r * 1.5, 1.0),
-		minf(laser_color.g * 1.5, 1.0),
-		minf(laser_color.b * 1.5, 1.0),
-		0.35)
 	_core_line = _make_stretch_line(core_width, laser_color, tex)
-	_glow_line = _make_stretch_line(core_width * 2.2, glow, tex)
+	_glow_line = _make_stretch_line(core_width * glow_width_mult, laser_color, tex)
 	# 头部光点：圆形光球（径向渐变 shader + 白点纹理）
 	_head_sprite = Sprite2D.new()
 	_head_sprite.texture = preload("res://assets/Textures/effect/glow_dot.png")
@@ -191,6 +194,29 @@ func _ensure_meshes() -> void:
 	_head_sprite.scale = Vector2(1.2, 1.2)
 	_head_sprite.z_index = LayerConfig.ENEMY_BULLET + 1  # 光球在激光主体之上
 	add_child(_head_sprite)
+
+
+## 池复用 / 每次 spawn 都刷新颜色和宽度（贴图也允许逐发换）。
+func _apply_colors() -> void:
+	if _core_line == null:
+		return
+	var core := core_color_override if core_color_override.a > 0.0 else laser_color
+	var glow := glow_color_override
+	if glow.a <= 0.0:
+		glow = Color(
+			minf(laser_color.r * 1.5, 1.0),
+			minf(laser_color.g * 1.5, 1.0),
+			minf(laser_color.b * 1.5, 1.0),
+			glow_alpha)
+	else:
+		glow.a *= glow_alpha if glow_alpha >= 0.0 else 1.0
+	_core_line.default_color = core
+	_glow_line.default_color = glow
+	_core_line.width = core_width
+	_glow_line.width = core_width * glow_width_mult
+	var tex: Texture2D = laser_texture if laser_texture else AssetRegistry.LASER_TEXTURE
+	_core_line.texture = tex
+	_glow_line.texture = tex
 
 
 ## 一条拉伸纹理的 Line2D（整张激光贴图沿线条均匀分布）

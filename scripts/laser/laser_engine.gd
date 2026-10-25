@@ -54,6 +54,10 @@ func spawn(skeleton: LaserSkeleton, color: Color, opts: Dictionary = {}) -> Lase
 	beam.hitbox_width = opts.get("hitbox_width", beam.hitbox_width)
 	beam.graze_width = opts.get("graze_width", beam.graze_width)
 	beam.laser_texture = opts.get("tex", opts.get("texture", beam.laser_texture))
+	beam.core_color_override = opts.get("core_color", Color(0, 0, 0, 0))
+	beam.glow_color_override = opts.get("glow_color", Color(0, 0, 0, 0))
+	beam.glow_alpha = float(opts.get("glow_alpha", 0.35))
+	beam.glow_width_mult = float(opts.get("glow_width_mult", 2.2))
 	beam.spawn(skeleton, color)
 	_is_active.append(beam)
 	return beam
