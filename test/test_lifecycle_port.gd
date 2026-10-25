@@ -31,6 +31,7 @@ func test_port_accepts_prebuilt_lifecycle() -> void:
 	var spec: Dictionary = backend.prepare_shot(data, Vector2(300.0, 400.0), Vector2.UP)
 	assert_eq(spec.get("move"), LifecycleCatalog.MOVE_LIFECYCLE, "应走 lifecycle 入口，而不是命名 move")
 	assert_true(spec.get("params", {}).get(&"lifecycle") is BulletLifecycle, "应带上预拼描述符")
+	backend.reset_registries()   # 端口探测实例由 host 保活，测试结束前清掉
 
 
 ## 执行层：手写两段组合被原生跑起来（不是直线）。

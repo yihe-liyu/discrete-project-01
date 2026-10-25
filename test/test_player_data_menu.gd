@@ -82,7 +82,7 @@ func test_row_shows_three_tiers() -> void:
 	]
 
 	# ① 未遇见：名字位只有问号（uid 照常显示，便于按 uid 找卡）
-	var unknown_row: HBoxContainer = menu._make_row(menu._cards[2])
+	var unknown_row: HBoxContainer = autofree(menu._make_row(menu._cards[2]))
 	var unknown_name := unknown_row.get_child(1) as Label
 	assert_eq(unknown_name.text, MENU_SCRIPT.UNKNOWN_NAME, "未遇见 → uid + 问号")
 	assert_ne(unknown_name.get_theme_color("font_color"), MENU_SCRIPT.CAPTURED_NAME_COLOR,
@@ -92,13 +92,15 @@ func test_row_shows_three_tiers() -> void:
 	assert_true(uid_shown.contains(uid_cn), "uid 仍要显示（全角数字 %s，实得 %s）" % [uid_cn, uid_shown])
 
 	# ② 遇见过未收取：真名、非蓝
-	var enc_name := (menu._make_row(encountered).get_child(1)) as Label
+	var enc_row: HBoxContainer = autofree(menu._make_row(encountered))
+	var enc_name := enc_row.get_child(1) as Label
 	assert_ne(enc_name.text, MENU_SCRIPT.UNKNOWN_NAME, "遇见过 → 显示真名")
 	assert_ne(enc_name.get_theme_color("font_color"), MENU_SCRIPT.CAPTURED_NAME_COLOR,
 		"没收取过 → 不是蓝色")
 
 	# ③ 收取过：真名 + 蓝
-	var cap_name := (menu._make_row(captured).get_child(1)) as Label
+	var cap_row: HBoxContainer = autofree(menu._make_row(captured))
+	var cap_name := cap_row.get_child(1) as Label
 	assert_ne(cap_name.text, MENU_SCRIPT.UNKNOWN_NAME, "收取过 → 显示真名")
 	assert_eq(cap_name.get_theme_color("font_color"), MENU_SCRIPT.CAPTURED_NAME_COLOR,
 		"至少收取过一次 → 符卡名蓝色")

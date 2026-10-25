@@ -427,7 +427,8 @@ class RingLayerSpy:
 ## 5 发同半径、圆心呈十字 ±100 偏移，外加 1 发延迟补闪 —— 共 6 发。
 func test_play_defeat_spawns_miss_style_inverted_rings():
 	var rt := StageRuntime.new()
-	rt.miss_layer = RingLayerSpy.new()   # 注入槽可直接写 → 拿来数圈
+	var layer: RingLayerSpy = autofree(RingLayerSpy.new())   # 注入槽可直接写 → 拿来数圈
+	rt.miss_layer = layer
 	var ctx := StageContext.new(null)
 	ctx.stage = rt
 	var boss := Boss.new()
@@ -437,7 +438,6 @@ func test_play_defeat_spawns_miss_style_inverted_rings():
 
 	boss.play_defeat()
 
-	var layer: RingLayerSpy = rt.miss_layer
 	assert_eq(layer.centers.size(), 6, "5 发十字 + 1 发延迟补闪 = 6 发")
 	var expected_centers := 0
 	for offset in Boss.DEFEAT_RING_OFFSETS:

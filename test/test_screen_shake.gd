@@ -5,7 +5,7 @@ extends GutTest
 const MIST_BOMB := preload("res://scripts/kernel_bridge/kernel_mist_bomb.gd")
 
 func test_add_trauma_clamps_to_one() -> void:
-	var s := ScreenShake.new()
+	var s: ScreenShake = autofree(ScreenShake.new())
 	s.add_trauma(0.4)
 	assert_almost_eq(s.amount(), 0.4, 0.001)
 	s.add_trauma(5.0)
@@ -13,7 +13,7 @@ func test_add_trauma_clamps_to_one() -> void:
 
 
 func test_trauma_decays_to_zero() -> void:
-	var s := ScreenShake.new()
+	var s: ScreenShake = autofree(ScreenShake.new())
 	s.add_trauma(1.0)
 	s._process(0.25)
 	assert_almost_eq(s.amount(), 1.0 - ScreenShake.DECAY * 0.25, 0.001, "按 DECAY 线性衰减")
@@ -23,7 +23,7 @@ func test_trauma_decays_to_zero() -> void:
 
 
 func test_sustain_holds_until_cleared() -> void:
-	var s := ScreenShake.new()
+	var s: ScreenShake = autofree(ScreenShake.new())
 	s.set_sustain(0.3)
 	s._process(5.0)
 	assert_almost_eq(s.amount(), 0.3, 0.001, "持续震不随时间衰减")
@@ -33,8 +33,8 @@ func test_sustain_holds_until_cleared() -> void:
 
 
 func test_bound_layer_follows_camera_offset_negated() -> void:
-	var s := ScreenShake.new()
-	var layer := CanvasLayer.new()
+	var s: ScreenShake = autofree(ScreenShake.new())
+	var layer: CanvasLayer = autofree(CanvasLayer.new())
 	s.bind_layer(layer)
 	s.add_trauma(1.0)
 	s._process(0.0)
