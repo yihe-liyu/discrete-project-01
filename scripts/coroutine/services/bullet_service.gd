@@ -11,17 +11,24 @@ var bullet_manager: BulletManager
 
 ## 扇形散弹。count == 1 打一发（忽略 spread_angle）；不发弹（active=false / count ≤ 0）时静默返回。
 func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void:
+	shoot_spread_ids(bullet_data, count, spread_angle, base_dir, at, sfx)
+
+
+## 同 shoot_spread，但返回生成的内核行 id；供逐弹预览 / 调试绑定。
+func shoot_spread_ids(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> Array[int]:
+	var ids: Array[int] = []
 	if not is_active or count <= 0 or bullet_manager == null:
-		return
+		return ids
 	if sfx:
 		AudioManager.play_sfx(sfx)
 	if count == 1:
-		bullet_manager.shoot_bullet(bullet_data, at, base_dir)
-		return
+		ids.append(bullet_manager.shoot_bullet(bullet_data, at, base_dir))
+		return ids
 	var step := spread_angle / (count - 1) if spread_angle < TAU - 0.001 else spread_angle / count
 	for i in count:
 		var dir := base_dir.rotated(-spread_angle / 2.0 + step * i)
-		bullet_manager.shoot_bullet(bullet_data, at, dir)
+		ids.append(bullet_manager.shoot_bullet(bullet_data, at, dir))
+	return ids
 
 
 ## 按方向数组逐发（pattern 用：方向已在 pattern 里算好，服务只负责发射）。

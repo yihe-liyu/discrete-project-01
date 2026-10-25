@@ -409,6 +409,12 @@ func get_life_left(id: int) -> float:
 func get_fx_phase(id: int) -> float:
 	return _fx_phase[id]
 
+## 单行当前 lifecycle phase；无效 / 无原生 = -1。
+func get_phase(id: int) -> int:
+	if _accel == null:
+		return -1
+	return int(_accel.get_phase(id))
+
 ## 单行自定义计时器。
 func get_timer(id: int) -> float:
 	return _timer[id]

@@ -177,6 +177,7 @@ public:
 	void set_position(int p_id, const Vector2 &p_pos); // 直接写位置（锚定型行为用）。
 	float get_life_left(int p_id) const; // 无效 → 0。
 	float get_fx_phase(int p_id) const; // 无效 → 0。
+	int get_phase(int p_id) const; // 当前 lifecycle phase；无效 → -1。
 	float get_timer(int p_id) const; // 无效 → 0。
 	PackedFloat32Array get_life_lefts() const; // 寿命快照。
 	PackedFloat32Array get_fx_phases() const; // 特效相位快照。

@@ -74,19 +74,17 @@ func _tick(p_ctx: StageContext) -> Variant:
 	if SaveData.selected_difficulty >= Difficulty.HARD:
 		# Hard 以上：一圈开花弹；整圈随机旋转，避免每次都从同一角度开始。
 		var 随机角度 := Vector2.DOWN.rotated(RNG.randf() * TAU)
-		# 路径预测试验：先画一颗代表弹；多线等演出接口稳定后再扩。
-		if 显示未来路径:
-			p_ctx.telegraph.show_chain(
-				开花弹.lifecycle, target.global_position, 随机角度,
-				开花弹.velocity.length(), 4.0)
-		p_ctx.bullets.shoot_spread(开花弹, 个数, TAU, 随机角度, target.global_position)
+		# 路径预测试验：先绑定真实弹的第 0 颗；多线与稳定身份再扩。
+		var ids: Array[int] = p_ctx.bullets.shoot_spread_ids(
+			开花弹, 个数, TAU, 随机角度, target.global_position)
+		if 显示未来路径 and not ids.is_empty():
+			p_ctx.telegraph.track_bullet(ids[0], 开花弹.lifecycle)
 	else:
 		# Easy / Normal：只发一颗种子弹，落点略随机；开花弹由种子弹自己生成。
 		var 随机角度 := Vector2.DOWN.rotated(deg_to_rad(RNG.randf_range(-30.0, 30.0)))
-		if 显示未来路径:
-			p_ctx.telegraph.show_chain(
-				种子弹.lifecycle, target.global_position, 随机角度,
-				种子弹.velocity.length(), 2.0)
-		p_ctx.bullets.shoot_spread(种子弹, 1, 0.0, 随机角度, target.global_position)
+		var ids: Array[int] = p_ctx.bullets.shoot_spread_ids(
+			种子弹, 1, 0.0, 随机角度, target.global_position)
+		if 显示未来路径 and not ids.is_empty():
+			p_ctx.telegraph.track_bullet(ids[0], 种子弹.lifecycle)
 
 	return p_ctx.clock.wait(发射间隔)

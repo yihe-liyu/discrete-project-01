@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：116 脚本 / **815 用例（815 通过 / 0 红 —— ✅ 全绿）/ 6593 断言 / 52.7s** / 0 orphans / **0 pending**。
+**现状**：116 脚本 / **816 用例（816 通过 / 0 红 —— ✅ 全绿）/ 6603 断言 / 52.7s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 51 | 408 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 51 | 409 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -106,7 +106,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（51 / 408）
+## C · 宿主 · 运行时系统（51 / 409）
 
 ### C1 组合根 / 服务 / 时间线（18 / 86）
 
@@ -116,7 +116,7 @@
 | [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 真游戏真的在用它 —— 注册表里有自机 / **运行时显式认领 `player`（B2）** / 内核后端拿到同一张注册表 / fx 挂舞台 / 异常路径只交注册表 | 9 | 0 |
 | [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop | 9 | 0 |
 | [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 + **`ctx.bullets` 绑定 stage 后会刷新 BulletManager**（自机射击 ctx 早于组合根注入） | 11 | 0 |
-| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：**即时全屏清敌弹**（当帧清空、与距离无关）—— 与 `death_clear()` 的**膨胀圈**语义差是本文件重点（把它写成膨胀圈 ⇒ 两条断言红）+ **每颗被清的弹各留一条消弹特效**（退回裸清 ⇒ 报 0 vs 2）；无管理器 = 静默 no-op。⚠️ 数弹只数 `get_type(i) != null` 的真弹 —— 特效行与弹**共用同一个 store** | 2 | 0 |
+| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids` 返回可跟踪行，读到 phase / velocity；无管理器静默 | 3 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData / 难度变体取曲** | 12 | 0 |
 | [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：内容一行 → chain → TelegraphPath；`clear` 清空；无注入节点时静默返回结果 | 2 | 0 |

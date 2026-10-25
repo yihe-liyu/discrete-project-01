@@ -305,6 +305,19 @@ ctx.telegraph.clear()
 ```
 
 服务会把 chain 的 [code]end_state.elapsed[/code] 作为显示寿命；到点自动清空，不会一直挂在屏幕上。
+
+逐弹原型（只支持单颗；50 颗需要稳定身份 + 多线合批）：
+
+```gdscript
+var ids := ctx.bullets.shoot_spread_ids(
+    弹型, 1, 0.0, 方向, 发射点)
+if not ids.is_empty():
+    ctx.telegraph.track_bullet(ids[0], 弹型.lifecycle)
+```
+
+[code]track_bullet[/code] 会按真实弹的当前 phase / pos / vel 刷新；`get_phase` 返回 -1 时自动清线。
+目前只适合“一颗代表弹”；swap-remove 后行 id 可能变，50 颗不要直接共用这套绑定。
+
 只做视觉时也可以直接用 [code]TelegraphPath[/code]：
 
 ```gdscript
@@ -329,6 +342,7 @@ ctx.bullets.shoot_spread(bullet_data: BulletData, count: int, spread_angle: floa
 - `count > 1`：`spread_angle >= TAU` → 铺满一圈，step = spread/count；否则以 base_dir 为中心左右展开，step = spread/(count-1)。
 - 每发速度 = `bullet_data.velocity.length()`；方向来自这里，不是 data.velocity 的方向。
 - 想逐发不同速度/颜色：复用实例、每发改 `velocity` / `tint` 后再发射（入队瞬间快照，安全）。
+- 需要逐弹 id（预览 / 调试）时用 [code]shoot_spread_ids[/code]；普通发射仍用 [code]shoot_spread[/code]。
 
 ### 4.2 激光
 

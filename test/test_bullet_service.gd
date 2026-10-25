@@ -82,3 +82,21 @@ func test_clear_is_immediate_unlike_death_clear() -> void:
 
 	svc.clear_enemy_bullets()
 	assert_eq(_bullet_count(sys), 0, "即时清弹不分距离、当帧清空")
+
+
+## 逐弹预览原型：发射返回内核行 id，且能读到该行的 phase / velocity。
+func test_shoot_spread_ids_returns_trackable_rows() -> void:
+	var bm := _mk_manager()
+	await get_tree().process_frame
+	var sys := bm.kernel_system()
+	if sys == null or not sys.is_native_ready():
+		pending("无原生扩展")
+		return
+	var svc = _bind(bm)
+	var ids: Array[int] = svc.shoot_spread_ids(
+		_mk_data(), 3, TAU, Vector2.DOWN, Vector2(448, 240))
+	assert_eq(ids.size(), 3, "三发应返回三个 id")
+	for id in ids:
+		assert_true(id >= 0, "id 应为有效行")
+		assert_eq(bm.bullet_phase(id), 0, "新弹应处于 phase 0")
+		assert_gt(bm.bullet_velocity(id).length(), 0.0, "应能读到真实速度")

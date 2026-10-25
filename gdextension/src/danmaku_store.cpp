@@ -62,6 +62,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_position", "id", "pos"), &DanmakuStore::set_position);
 	ClassDB::bind_method(D_METHOD("get_life_left", "id"), &DanmakuStore::get_life_left);
 	ClassDB::bind_method(D_METHOD("get_fx_phase", "id"), &DanmakuStore::get_fx_phase);
+	ClassDB::bind_method(D_METHOD("get_phase", "id"), &DanmakuStore::get_phase);
 	ClassDB::bind_method(D_METHOD("get_timer", "id"), &DanmakuStore::get_timer);
 	ClassDB::bind_method(D_METHOD("get_life_lefts"), &DanmakuStore::get_life_lefts);
 	ClassDB::bind_method(D_METHOD("get_fx_phases"), &DanmakuStore::get_fx_phases);
@@ -397,6 +398,7 @@ void DanmakuStore::set_position(int p_id, const Vector2 &p_pos) {
 }
 float DanmakuStore::get_life_left(int p_id) const { return _valid(p_id) ? _life[p_id] : 0.0f; }
 float DanmakuStore::get_fx_phase(int p_id) const { return _valid(p_id) ? _fx[p_id] : 0.0f; }
+int DanmakuStore::get_phase(int p_id) const { return _valid(p_id) ? _pphase[p_id] : -1; }
 float DanmakuStore::get_timer(int p_id) const { return _valid(p_id) ? _timer[p_id] : 0.0f; }
 
 PackedFloat32Array DanmakuStore::get_life_lefts() const {

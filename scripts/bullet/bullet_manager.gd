@@ -120,6 +120,20 @@ func _physics_process(_delta: float) -> void:
 func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return _kernel_bullet_host.shoot(data, pos, direction)
 
+## 按内核行 id 取当前 lifecycle phase（无效 / 后端未初始化 → -1）。
+func bullet_phase(id: int) -> int:
+	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
+		return -1
+	return _kernel_bullet_host.system.get_phase(id)
+
+
+## 按内核行 id 取速度（无效 / 后端未初始化 → ZERO）。
+func bullet_velocity(id: int) -> Vector2:
+	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
+		return Vector2.ZERO
+	return _kernel_bullet_host.system.get_velocity(id)
+
+
 ## 按内核行 id 取全局位置（id 越界/已回收 → Vector2.ZERO）。
 ## 热路径不查它；调试/测试（“这颗弹出生在哪”）用，免得外面去摸内核宿主的私有存储。
 func bullet_global_position(id: int) -> Vector2:

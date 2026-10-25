@@ -14,6 +14,8 @@ var _glow: Line2D
 var _is_showing: bool = false
 var _remaining: float = 0.0
 var _has_lifetime: bool = false
+## 逐帧跟踪回调（TelegraphService 绑定真实弹时设置；空 = 不跟踪）。
+var tracker: Callable = Callable()
 
 
 func _ready() -> void:
@@ -47,7 +49,7 @@ func show_path(points: PackedVector2Array, color: Color = Color(1.0, 0.82, 0.35,
 	visible = true
 	_has_lifetime = lifetime > 0.0
 	_remaining = lifetime
-	set_process(_has_lifetime)
+	set_process(_has_lifetime or tracker.is_valid())
 
 
 ## 立即清空路径并隐藏。
@@ -60,7 +62,7 @@ func clear_path() -> void:
 	_is_showing = false
 	_has_lifetime = false
 	_remaining = 0.0
-	set_process(false)
+	set_process(tracker.is_valid())
 	visible = false
 
 
@@ -74,7 +76,15 @@ func point_count() -> int:
 	return _core.points.size() if _core != null else 0
 
 
+## 设置逐帧跟踪回调；空 Callable = 停止跟踪。
+func set_tracker(value: Callable) -> void:
+	tracker = value
+	set_process(tracker.is_valid() or _has_lifetime)
+
+
 func _process(delta: float) -> void:
+	if tracker.is_valid():
+		tracker.call(delta)
 	if not _has_lifetime:
 		return
 	_remaining -= delta
