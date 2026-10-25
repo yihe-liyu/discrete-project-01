@@ -400,6 +400,7 @@ ctx.bullets.clear_all_lasers()
 | glow_color | 用 color 提亮 | 光晕颜色覆盖 |
 | glow_alpha | 0.35 | 光晕透明度 |
 | glow_width_mult | 2.2 | 光晕宽度倍率 |
+| additive | false | core/glow 用加色混合（更亮） |
 
 ### 4.3 清弹 / 炸弹
 

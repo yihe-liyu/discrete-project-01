@@ -32,6 +32,8 @@ var glow_color_override: Color = Color(0, 0, 0, 0)
 ## 光晕透明度 / 宽度倍率。
 var glow_alpha: float = 0.35
 var glow_width_mult: float = 2.2
+## true = core/glow 用加色混合（更亮；适合能量激光）。
+var additive_blend: bool = false
 
 # ── 运行时 ──
 ## 激光骨架（判定与渲染共用采样）。
@@ -214,6 +216,12 @@ func _apply_colors() -> void:
 	_glow_line.default_color = glow
 	_core_line.width = core_width
 	_glow_line.width = core_width * glow_width_mult
+	var blend_material: CanvasItemMaterial = null
+	if additive_blend:
+		blend_material = CanvasItemMaterial.new()
+		blend_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_core_line.material = blend_material
+	_glow_line.material = blend_material
 	var tex: Texture2D = laser_texture if laser_texture else AssetRegistry.LASER_TEXTURE
 	_core_line.texture = tex
 	_glow_line.texture = tex

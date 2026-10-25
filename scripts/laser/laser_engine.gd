@@ -58,6 +58,7 @@ func spawn(skeleton: LaserSkeleton, color: Color, opts: Dictionary = {}) -> Lase
 	beam.glow_color_override = opts.get("glow_color", Color(0, 0, 0, 0))
 	beam.glow_alpha = float(opts.get("glow_alpha", 0.35))
 	beam.glow_width_mult = float(opts.get("glow_width_mult", 2.2))
+	beam.additive_blend = bool(opts.get("additive", false))
 	beam.spawn(skeleton, color)
 	_is_active.append(beam)
 	return beam
