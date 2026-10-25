@@ -205,6 +205,7 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	# 弹道 = 每角度一个描述符（缓存）；锚点是 per-shot（同角度、不同子机各一份 program）
 	bullet_data.trajectory(_laser_trajectory(angle_rad), _laser_anchor(player, source))
 
-	# 段在发射口生成（offset=0），drift 从 0 独立累积 → 根部永远在子机
-	# 段参数已走 bullet_data.trajectory（每角度一个描述符 + per-shot 锚点）
-	ctx.bullets.shoot_spread(bullet_data, 1, 0.0, Vector2.UP, source.global_position)
+	# 出生方向必须就是激光的漂移方向：首帧 behavior 还没跑，
+	# follow_dir 先用 velocity 定贴图朝向；若这里传 UP，首帧会竖一下再转。
+	var spawn_dir := Vector2(sin(angle_rad), -cos(angle_rad))
+	ctx.bullets.shoot_spread(bullet_data, 1, 0.0, spawn_dir, source.global_position)
