@@ -81,3 +81,14 @@ func test_track_bullets_prunes_dead_uids() -> void:
 	bm.despawn_bullet(0)
 	path.call("_process", 0.2)
 	assert_eq(path.path_count(), 4, "死一颗应掉一条")
+
+
+func test_empty_add_does_not_clear_existing_path() -> void:
+	var path = PATH.new()
+	add_child_autofree(path)
+	path.show_path(PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]))
+	var service = SERVICE.new()
+	service.telegraph_path = path
+	assert_false(service.add_tracked_bullets([], _lc()), "空列表不应安装 tracker")
+	path.call("_process", 0.2)
+	assert_true(path.is_showing(), "空列表不应清掉已有路径")
