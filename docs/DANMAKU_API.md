@@ -238,6 +238,32 @@ b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_
 
 - `id=0` → 自机 + offset；`use_global=true` → 锚点 global_position + offset；`use_global=false` → 锚点局部 position（focus 子机）。
 
+### 3.11 求值时机（最容易踩的知识税）
+
+> 先记一句：**builder 是建造期，move 是每帧，until 是检查点，on_end 是相位结束，宿主事件是落地时。**
+> 同一个方向表达式放在不同位置，求值频率和 RNG 消耗完全不同。
+
+| 对象 | 何时求值 | 每次读什么 | RNG |
+|---|---|---|---|
+| `lc.accel_*` / `rotate` / `steer` / `speed_*` / `set_*` / `position` | 每帧、每个 active 弹 | 当前 pos / vel / heading、相位 elapsed、目标位置 | 无 |
+| `until_*` | 每帧；`.every(sec)` / `.every_ticks(n)` 只控制检查频率 | elapsed、目标、pos、speed、状态槽 | 无 |
+| `emit` / `on_end_heading` 的 `dir` | 相位结束、逐颗 | `at` 落点、目标、发射者当前 heading、当前 vel、场边 | `random_dir` 1 次/颗 |
+| `emit_variant` | 相位结束、逐颗 | 同上 | 分支 1 次；选中分支若含 `random_dir` 另计 |
+| `emit_speed_rel` | 宿主事件落地、逐颗 | base speed + `[min, max]` 倍率 | 1 次/颗 |
+| `emit` 的 spawn 模板 | 宿主事件落地 | `BulletData` / `Callable`；每发 velocity 由事件写 | 无 |
+| `sfx` / `on_end_call` | 宿主事件落地（原生只回事件） | key / db / pos / boss 信息 | 无 |
+| `despawn` / `clear_fx` | 相位结束，按 append 顺序 | 当前 pos / color | 无 |
+| builder 参数、`DirSpec` 的 kind / target / angle / p、`emit_speed_rel` 的 min/max | 构建时（内容脚本里） | 无 | 无 |
+| `compile_program()` / `content_signature()` | 首次使用 / 内容变化后，按缓存 | 结构 + 宿主表身份 | 无 |
+
+> 内容脚本自己的 `_tick` / 波次循环不在 DSL 内：`shoot_spread(...)` 的参数在**调用那一刻**求值，
+> 该次发射的弹型 / velocity 在入队时快照；这不是 lifecycle 的 phase-end 求值。
+
+**由此得到两条实用判断：**
+
+- `random_dir` 放在 `set_heading` / `set_speed` 这类 Move 里 = **每帧抽一次**；放在 `emit` / `on_end_heading` 里 = **每个相位结束抽一次**。放错位置通常不报错，只会悄悄改变随机序列。
+- `toward` / `away` / `forward` 的“目标 / 朝向”是**求值那一刻**再读，不是构造时烘死；`heading` 才是绝对常量。
+
 ## 4. 发射 API（`ctx.bullets`）
 
 `scripts/coroutine/services/bullet_service.gd`
