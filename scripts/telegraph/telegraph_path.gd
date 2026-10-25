@@ -6,9 +6,9 @@ extends Node2D
 ## [code]points[/code] 使用本节点的局部坐标；通常把本节点挂在 World 原点下。
 
 ## 亮核线宽（像素）。
-const CORE_WIDTH := 3.0
+const CORE_WIDTH := 1.5
 ## 外发光线宽倍率。
-const GLOW_WIDTH_MULT := 3.0
+const GLOW_WIDTH_MULT := 2.5
 ## 外发光 alpha 系数。
 const GLOW_ALPHA := 0.28
 

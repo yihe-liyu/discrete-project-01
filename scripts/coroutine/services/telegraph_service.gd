@@ -12,13 +12,13 @@ var _tracked_uids: Array[int] = []
 var _lifecycles_by_uid = {}
 var _tracked_age: float = 0.0
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
-var _tracked_width: float = 3.0
+var _tracked_width: float = 1.5
 
 ## 从当前 phase 起顺序预览，并立即显示。
 ## [code]max_time[/code] 是整个 chain 的上限；[code]phase_index[/code] 通常 0。
 func show_chain(lifecycle: BulletLifecycle, origin: Vector2, direction: Vector2,
 		speed: float, max_time: float = 4.0, phase_index: int = 0,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> Dictionary:
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> Dictionary:
 	var results := show_chain_many(lifecycle, origin, [direction], speed, max_time,
 		phase_index, color, width)
 	return results[0] if not results.is_empty() else {}
@@ -27,7 +27,7 @@ func show_chain(lifecycle: BulletLifecycle, origin: Vector2, direction: Vector2,
 ## 多方向同时预览：每个方向一条独立 chain；用于“每颗弹一条线”的试验。
 func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Array,
 		speed: float, max_time: float = 4.0, phase_index: int = 0,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> Array[Dictionary]:
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> Array[Dictionary]:
 	_stop_tracking()
 	var results: Array[Dictionary] = []
 	var paths: Array[PackedVector2Array] = []
@@ -48,14 +48,14 @@ func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Ar
 
 ## 绑定一颗真实弹；单颗便捷入口。路径按当前 pos / phase 滚动刷新。
 func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
 	return track_bullets([bullet_uid], lifecycle, color, width)
 
 
 ## 追加多颗真实弹到当前跟踪列表；允许来自不同敌人实例 / 不同 lifecycle。
 ## 每次 tick 从当前 pos / phase 重算未来 chain，旧弹路径继续更新。
 func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
 	if telegraph_path == null or not is_instance_valid(telegraph_path) \
 			or bullet_manager == null or lifecycle == null:
 		return false
@@ -81,7 +81,7 @@ func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 
 ## 绑定多颗真实弹；死一颗掉一条。
 func track_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
-		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
 	_stop_tracking()
 	return add_tracked_bullets(bullet_uids, lifecycle, color, width)
 
