@@ -69,8 +69,11 @@ func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 			_tracked_uids.append(value)
 			_capture_path(value)
 			added = true
-	if not added and not _tracked_uids.is_empty():
-		return true
+	if not added:
+		return not _tracked_uids.is_empty()
+	if _tracked_uids.is_empty():
+		_stop_tracking()
+		return false
 	_tracked_color = color
 	_tracked_width = width
 	_tracked_age = 0.1
