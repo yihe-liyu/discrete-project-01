@@ -721,6 +721,9 @@ Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector
 	if (p_dk == 3) {   // 自身朝向（forward）旋转 angle
 		return forward.rotated(angle);
 	}
+	if (p_dk == 7) {   // 当前速度方向；零速度回落朝向
+		return (vel.length_squared() > 0.0f ? vel.normalized() : forward).rotated(angle);
+	}
 	if (p_dk == 6) {   // 镜面（reflect）：把当前速度按 pos 所在的场边翻分量，再转 angle
 		// 左右边翻 x、上边翻 y；角落（同时贴两条边）两边都翻 = 原路返回。
 		// pos 由调用方给：emit(at=AT_PHASE_END) 时 = 撞墙落点（at_wall 的相位结束输出），

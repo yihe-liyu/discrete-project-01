@@ -184,6 +184,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | away | `away(target, angle=0)` | 背对 target 再转 angle |
 | world_heading | `world_heading(angle)` | 显式世界角；emit / on_end_heading 专用（不随发射者变） |
 | forward | `forward(angle=0)` | 沿**自身朝向**再转 angle |
+| velocity | `velocity(angle=0)` | 沿**当前速度**再转 angle；零速度回落到朝向 |
 | random_dir | `random_dir(spread)` | 沿自身朝向 ±spread 随机（确定性 RNG，每次求值抽 1 次） |
 | chance_toward | `chance_toward(target, p, spread=0)` | p 概率精确朝 target；否则沿自身朝向转 spread；**仅作 `emit_variant` 的 dir** |
 | reflect | `reflect(angle=0)` | 把**当前速度**按发射点所在场边翻分量，再转 angle；需配 `at=AT_PHASE_END` |
@@ -274,7 +275,7 @@ b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_
 **由此得到两条实用判断：**
 
 - `random_dir` 放在 `set_heading` / `set_speed` 这类 Move 里 = **每帧抽一次**；放在 `emit` / `on_end_heading` 里 = **每个相位结束抽一次**。放错位置通常不报错，只会悄悄改变随机序列。
-- `toward` / `away` / `forward` 的“目标 / 朝向”是**求值那一刻**再读，不是构造时烘死；`heading` 才是绝对常量。
+- `toward` / `away` / `forward` / `velocity` 的“目标 / 朝向 / 速度”是**求值那一刻**再读，不是构造时烘死；`heading` 才是绝对常量。
 
 ### 3.12 单 phase + 顺序 chain 路径预览（实验）
 

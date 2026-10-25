@@ -196,6 +196,11 @@ static func forward(angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.forward(angle)
 
 
+## 沿当前速度的方向表达式；速度为零时回落到朝向。
+static func velocity(angle: float = 0.0) -> RefCounted:
+	return DIR_SPEC.velocity(angle)
+
+
 ## 随机方向；以当前朝向为中心 ±[code]spread[/code] 均匀随机（单侧张角，总张角 = 2×spread），由内核 RNG 求值。
 static func random_dir(spread: float) -> RefCounted:
 	return DIR_SPEC.random_dir(spread)

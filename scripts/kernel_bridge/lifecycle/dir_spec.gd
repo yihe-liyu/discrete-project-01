@@ -52,8 +52,10 @@ const RANDOM := &"random"
 const CHANCE := &"chance"
 ## 方向 kind：把当前速度按发射点所在场边翻分量，再转 angle。
 const REFLECT := &"reflect"
+## 方向 kind：沿发射者当前速度（不是朝向）。
+const VELOCITY := &"velocity"
 
-## 方向 kind；取本类 HEADING / TOWARD / AWAY / FORWARD / RANDOM / CHANCE / REFLECT 之一。
+## 方向 kind；取本类 HEADING / TOWARD / AWAY / FORWARD / RANDOM / CHANCE / REFLECT / VELOCITY 之一。
 var kind: StringName = HEADING
 ## 目标 key，仅 TOWARD / AWAY / CHANCE 使用；可取 BulletLifecycle.T_PLAYER / T_BOSS / T_NEAREST_ENEMY。
 var target: StringName = &""
@@ -118,6 +120,11 @@ static func forward(p_angle: float = 0.0) -> RefCounted:
 	return _make(FORWARD, &"", p_angle, 0.0, EvalPhase.EMITTER)
 
 
+## 沿发射者当前速度；速度为零时回落到朝向。
+static func velocity(p_angle: float = 0.0) -> RefCounted:
+	return _make(VELOCITY, &"", p_angle, 0.0, EvalPhase.EMITTER)
+
+
 ## 以发射者当前朝向为中心、±spread 均匀随机；spread 是单侧张角（总张角 = 2×spread）。
 ## 每次求值消耗一次内核 RNG。
 static func random_dir(p_spread: float) -> RefCounted:
@@ -162,4 +169,5 @@ static func _phase_of(k: StringName) -> int:
 		TOWARD, AWAY, CHANCE: return EvalPhase.TARGET
 		FORWARD, RANDOM: return EvalPhase.EMITTER
 		REFLECT: return EvalPhase.WALL
+		VELOCITY: return EvalPhase.EMITTER
 		_: return EvalPhase.WORLD

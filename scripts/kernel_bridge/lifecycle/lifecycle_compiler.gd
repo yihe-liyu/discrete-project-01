@@ -106,6 +106,7 @@ const DK_FORWARD := 3
 const DK_RANDOM := 4
 const DK_CHANCE := 5
 const DK_REFLECT := 6
+const DK_VELOCITY := 7
 
 
 ## 纯编译：只读 lc.phases / lc.slots；输出不含任何宿主对象。
@@ -264,6 +265,7 @@ static func _dir_args(d: Variant, state: Array) -> Array:
 		DIR_SPEC.RANDOM: dk = DK_RANDOM
 		DIR_SPEC.CHANCE: dk = DK_CHANCE
 		DIR_SPEC.REFLECT: dk = DK_REFLECT
+		DIR_SPEC.VELOCITY: dk = DK_VELOCITY
 		_:
 			push_error("BulletLifecycle.compile(): 未知方向 kind '%s'" % str(spec.kind))
 			state[0] = true
