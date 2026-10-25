@@ -166,3 +166,22 @@ func test_simplify_keeps_sharp_corner() -> void:
 	])
 	var simplified := PREVIEW.simplify_path(points, 1.25)
 	assert_eq(simplified.size(), 3, "明显拐点应保留")
+
+
+func test_preview_matches_native_until_x() -> void:
+	var lc := BulletLifecycle.new()
+	lc.accel_world(Vector2(200.0, 0.0)).until_x(BulletLifecycle.CMP_GE, 500.0)
+	_assert_matches_native(lc, Vector2(400.0, 300.0), Vector2.ZERO, 1.2)
+	_assert_matches_native(lc, Vector2(400.0, 300.0), Vector2.ZERO, 1.0)
+
+
+func test_preview_matches_native_until_y() -> void:
+	var lc := BulletLifecycle.new()
+	lc.accel_world(Vector2(0.0, 200.0)).until_y(BulletLifecycle.CMP_GE, 500.0)
+	_assert_matches_native(lc, Vector2(400.0, 300.0), Vector2.ZERO, 1.0)
+
+
+func test_preview_matches_native_until_rect_inside() -> void:
+	var lc := BulletLifecycle.new()
+	lc.accel_world(Vector2(200.0, 0.0)).until_rect(Rect2(500.0, 250.0, 100.0, 100.0), true)
+	_assert_matches_native(lc, Vector2(400.0, 300.0), Vector2.ZERO, 1.0)

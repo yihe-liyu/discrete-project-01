@@ -143,6 +143,9 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | near | `until_near(target, r)` | 距 target < r |
 | at_wall | `until_at_wall(mask)` | 越界检测（左 1 / 右 2 / 上 4）；**纯谓词**：只输出相位结束落点（不改弹位置），供 `emit(..., at=AT_PHASE_END)` |
 | speed | `until_speed(cmp, value)` | `|v|` 与 value 比较（`CMP_GE` / `CMP_LE`） |
+| x | `until_x(cmp, value)` | 当前 x 与 value 比较 |
+| y | `until_y(cmp, value)` | 当前 y 与 value 比较 |
+| rect | `until_rect(rect, inside=false)` | 进入 / 离开矩形时结束；`inside=true` = 进入时结束 |
 | turned（糖） | `until_turned()` | 当前相位 `rotate` 累计转角 ≥ limit；**必须跟在同相位 rotate 之后** |
 
 > 通用节流：任何 Until 都可链式 `.every(sec)` / `.every_ticks(n)`。
@@ -289,7 +292,7 @@ LifecyclePreview.evaluate_chain(
 ```
 
 - 只支持确定性 move：`accel_world` / `accel_heading` / `rotate` / `speed_lerp` / `speed_mul` / `set_speed` / 静态 `set_heading`。
-- 支持确定性 until：`elapsed` / `at_wall` / `speed` / `state`（`until_turned`）。
+- 支持确定性 until：`elapsed` / `at_wall` / `speed` / `state` / `x` / `y` / `rect`（`until_turned`）。
 - `steer` / 目标方向：忽略瞄准，保持当前朝向继续走，并标记 `approximate=true`。
 - `position`（需要外部锚点）直接返回 `ok=false`、`reason="unsupported"`，不画假线。
 - `until_near` 无法在“忽略目标”的前提下知道终点：画到 `max_time`，`approximate=true`、`reason="target_until"`。

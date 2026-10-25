@@ -49,6 +49,9 @@ const C_NEAR := COMPILER.C_NEAR
 const C_AT_WALL := COMPILER.C_AT_WALL
 const C_STATE := COMPILER.C_STATE
 const C_SPEED := COMPILER.C_SPEED
+const C_X := COMPILER.C_X
+const C_Y := COMPILER.C_Y
+const C_RECT := COMPILER.C_RECT
 const A_EMIT := COMPILER.A_EMIT
 const A_EMIT_VARIANT := COMPILER.A_EMIT_VARIANT
 const A_SFX := COMPILER.A_SFX
@@ -315,6 +318,24 @@ func until_at_wall(mask: int) -> BulletLifecycle:
 ## 典型：撞墙后 [code]accel_heading(-b)[/code] 减速，[code]until_speed(CMP_LE, v_min)[/code] 降到 v_min 即停。
 func until_speed(cmp: int, value: float) -> BulletLifecycle:
 	_set_until(C_SPEED, {&"cmp": cmp, &"value": value})
+	return self
+
+
+## 当前 x 与 value 比较时结束（cmp = CMP_GE / CMP_LE）。
+func until_x(cmp: int, value: float) -> BulletLifecycle:
+	_set_until(C_X, {&"cmp": cmp, &"value": value})
+	return self
+
+
+## 当前 y 与 value 比较时结束（cmp = CMP_GE / CMP_LE）。
+func until_y(cmp: int, value: float) -> BulletLifecycle:
+	_set_until(C_Y, {&"cmp": cmp, &"value": value})
+	return self
+
+
+## 当前点进入 / 离开矩形时结束；inside=true 表示进入矩形结束，false 表示离开矩形结束。
+func until_rect(rect: Rect2, inside: bool = false) -> BulletLifecycle:
+	_set_until(C_RECT, {&"rect": rect, &"inside": inside})
 	return self
 
 

@@ -30,6 +30,9 @@ const C_NEAR := &"near"
 const C_AT_WALL := &"at_wall"
 const C_STATE := &"state"
 const C_SPEED := &"speed"
+const C_X := &"x"
+const C_Y := &"y"
+const C_RECT := &"rect"
 
 # ---- Action 词汇 ----
 const A_EMIT := &"emit"
@@ -75,6 +78,9 @@ const OP_C_NEAR := 22
 const OP_C_AT_WALL := 23
 const OP_C_STATE := 24
 const OP_C_SPEED := 25
+const OP_C_X := 26
+const OP_C_Y := 27
+const OP_C_RECT := 28
 const OP_A_EMIT := 40
 const OP_A_SFX := 41
 const OP_A_DESPAWN := 42
@@ -204,6 +210,9 @@ static func _op_cond(op: StringName, state: Array) -> int:
 		C_AT_WALL: return OP_C_AT_WALL
 		C_STATE: return OP_C_STATE
 		C_SPEED: return OP_C_SPEED
+		C_X: return OP_C_X
+		C_Y: return OP_C_Y
+		C_RECT: return OP_C_RECT
 	push_error("BulletLifecycle.compile(): 未知 Until op '%s'" % str(op))
 	state[0] = true
 	return 0
@@ -293,6 +302,10 @@ static func _args_cond(c: Dictionary, state: Array) -> Array:
 		C_AT_WALL: return head + [float(c[&"mask"])]
 		C_STATE: return head + [float(c[&"slot"]), float(c[&"cmp"]), float(c[&"value"])]
 		C_SPEED: return head + [float(c[&"cmp"]), float(c[&"value"])]
+		C_X, C_Y: return head + [float(c[&"cmp"]), float(c[&"value"])]
+		C_RECT:
+			var rect: Rect2 = c[&"rect"]
+			return head + [rect.position.x, rect.position.y, rect.size.x, rect.size.y, 1.0 if bool(c[&"inside"]) else 0.0]
 	return head
 
 

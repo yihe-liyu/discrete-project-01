@@ -59,6 +59,9 @@ class DanmakuStore : public RefCounted {
 	static constexpr int OP_M_POSITION = 9;
 	static constexpr int OP_C_NEVER = 20;
 	static constexpr int OP_C_SPEED = 25;
+	static constexpr int OP_C_X = 26;
+	static constexpr int OP_C_Y = 27;
+	static constexpr int OP_C_RECT = 28;
 	static constexpr int OP_A_EMIT = 40;
 	static constexpr int OP_A_CLEAR_FX = 47;
 	static constexpr int OP_M_ROTATE = 3;

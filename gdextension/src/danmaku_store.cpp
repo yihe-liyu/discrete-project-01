@@ -630,7 +630,7 @@ int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFl
 			}
 		}
 		const int uop = p_ops[ui];
-		if (uop < OP_C_NEVER || uop > OP_C_SPEED) { return -1; }
+		if (uop < OP_C_NEVER || uop > OP_C_RECT) { return -1; }
 		if (uop == OP_C_STATE) {
 			const int slot = (int)arg(ui, 2);
 			if (slot < 0 || slot >= SLOT_STRIDE) { return -1; }
@@ -954,6 +954,15 @@ bool DanmakuStore::_check_until(int i, float *slots, int ins, const Vector2 &pla
 		case 25: { // speed（|v| 与 value 比较，cmp 0=GE / 1=LE）
 			const float sp = Vector2(_vx[i], _vy[i]).length();
 			return (int)a[2] == 0 ? sp >= a[3] : sp <= a[3];
+		}
+		case 26: // x 与 value 比较
+			return (int)a[2] == 0 ? _x[i] >= a[3] : _x[i] <= a[3];
+		case 27: // y 与 value 比较
+			return (int)a[2] == 0 ? _y[i] >= a[3] : _y[i] <= a[3];
+		case 28: { // 点进入 / 离开矩形
+			const Rect2 r(a[2], a[3], a[4], a[5]);
+			const bool inside = r.has_point(Vector2(_x[i], _y[i]));
+			return (int)a[6] != 0 ? inside : !inside;
 		}
 		default:
 			return false;

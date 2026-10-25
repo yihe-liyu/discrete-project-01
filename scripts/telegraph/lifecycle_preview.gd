@@ -45,6 +45,9 @@ const C_NEAR := &"near"
 const C_AT_WALL := &"at_wall"
 const C_STATE := &"state"
 const C_SPEED := &"speed"
+const C_X := &"x"
+const C_Y := &"y"
+const C_RECT := &"rect"
 
 const ROT_VELOCITY := 1
 const ROT_HEADING := 2
@@ -422,6 +425,18 @@ static func _check_until(until: Dictionary, position: Vector2, velocity: Vector2
 			var value := float(until.get(&"value", 0.0))
 			var speed := velocity.length()
 			return {"done": speed >= value if cmp == 0 else speed <= value, "reason": &"speed", "next": next_check}
+		C_X:
+			var cmp := int(until.get(&"cmp", 0))
+			var value := float(until.get(&"value", 0.0))
+			return {"done": position.x >= value if cmp == 0 else position.x <= value, "reason": &"x", "next": next_check}
+		C_Y:
+			var cmp := int(until.get(&"cmp", 0))
+			var value := float(until.get(&"value", 0.0))
+			return {"done": position.y >= value if cmp == 0 else position.y <= value, "reason": &"y", "next": next_check}
+		C_RECT:
+			var rect: Rect2 = until.get(&"rect", Rect2())
+			var inside := rect.has_point(position)
+			return {"done": inside if bool(until.get(&"inside", false)) else not inside, "reason": &"rect", "next": next_check}
 		C_STATE:
 			var slot := int(until.get(&"slot", -1))
 			if slot < 0 or slot >= slots.size():
