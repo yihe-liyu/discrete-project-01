@@ -155,6 +155,9 @@ func _sync_laser_anchors(player: Player) -> void:
 		if is_instance_valid(_options[i]) and is_instance_valid(_laser_anchors[i]):
 			_laser_anchors[i].global_position = _options[i].global_position
 	while _laser_anchors.size() > _options.size():
+		# 子机减少：旧激光可能还锚在这个槽；先清段，再收锚点。
+		if ctx != null:
+			ctx.bullets.clear_laser_bullets()
 		var anchor: Node2D = _laser_anchors.pop_back()
 		if is_instance_valid(anchor):
 			anchor.queue_free()
