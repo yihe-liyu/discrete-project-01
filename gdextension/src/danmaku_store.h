@@ -69,6 +69,7 @@ class DanmakuStore : public RefCounted {
 	// 每行运行态：program / 相位 / tick / elapsed / pending emit 落点 / slots。
 	std::vector<int> _program, _pphase, _ptick;
 	std::vector<int64_t> _uids; // 稳定句柄：随行一起 swap-remove，永不复用。
+	std::vector<unsigned char> _wrap; // 场边环绕（左右/上下）
 	int64_t _next_uid = 1;
 	std::vector<float> _pelapsed, _pnext, _pendx, _pendy, _pslots;
 	std::vector<unsigned char> _phasend;
@@ -137,6 +138,7 @@ public:
 	void set_margin(float p_margin); // 剔除余量。
 	// 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
 	void set_out_grace(int p_id, float p_grace);
+	void set_wrap(int p_id, bool p_wrap); // 出界后从对边回来。
 	float get_out_grace(int p_id) const; // 无效 → 0。
 	void set_default_life(float p_life); // 新行默认寿命。
 	void set_field(float p_left, float p_right, float p_top); // 反射/边界场地范围。

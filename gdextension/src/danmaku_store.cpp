@@ -35,6 +35,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_cull", "cull"), &DanmakuStore::set_cull);
 	ClassDB::bind_method(D_METHOD("set_margin", "margin"), &DanmakuStore::set_margin);
 	ClassDB::bind_method(D_METHOD("set_out_grace", "id", "grace"), &DanmakuStore::set_out_grace);
+	ClassDB::bind_method(D_METHOD("set_wrap", "id", "wrap"), &DanmakuStore::set_wrap);
 	ClassDB::bind_method(D_METHOD("get_out_grace", "id"), &DanmakuStore::get_out_grace);
 	ClassDB::bind_method(D_METHOD("set_default_life", "life"), &DanmakuStore::set_default_life);
 	ClassDB::bind_method(D_METHOD("set_hitbox", "id", "radius", "offset", "size", "follow_dir", "dir_offset"), &DanmakuStore::set_hitbox);
@@ -96,6 +97,7 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_pphase.assign(p_capacity, 0);
 	_ptick.assign(p_capacity, 0);
 	_uids.assign(p_capacity, 0);
+	_wrap.assign(p_capacity, 0);
 	_next_uid = 1;
 	_pelapsed.assign(p_capacity, 0.0f);
 	_pnext.assign(p_capacity, 0.0f);
@@ -220,6 +222,7 @@ int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_c
 	_type[i] = -1;
 	_faction[i] = p_faction;
 	_uids[i] = 0;
+	_wrap[i] = 0;
 	_fx_type[i] = p_fx_type;
 	_color[i] = p_color;
 	_life[i] = p_life;
@@ -256,6 +259,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_life.resize(p_n); _fx.resize(p_n); _timer.resize(p_n);
 	_program.resize(p_n); _pphase.resize(p_n); _ptick.resize(p_n);
 	_uids.resize(p_n);
+	_wrap.resize(p_n);
 	_pelapsed.resize(p_n); _pnext.resize(p_n); _pendx.resize(p_n); _pendy.resize(p_n);
 	_pslots.resize(p_n * SLOT_STRIDE);
 	_pslot_fresh.resize(p_n); _phasend.resize(p_n);
@@ -281,6 +285,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_type[p_id] = _type[last];
 	_faction[p_id] = _faction[last];
 	_uids[p_id] = _uids[last];
+	_wrap[p_id] = _wrap[last];
 	_fx_type[p_id] = _fx_type[last];
 	_color[p_id] = _color[last];
 	_life[p_id] = _life[last];
@@ -334,6 +339,10 @@ void DanmakuStore::integrate(double p_delta) {
 		}
 		_x[i] += _vx[i] * dt;
 		_y[i] += _vy[i] * dt;
+		if (_wrap[i] && _cull.size.x > 0.0f && _cull.size.y > 0.0f) {
+			_x[i] = _cull.position.x + Math::fposmod(_x[i] - _cull.position.x, _cull.size.x);
+			_y[i] = _cull.position.y + Math::fposmod(_y[i] - _cull.position.y, _cull.size.y);
+		}
 		if (_timer[i] > 0.0f) {
 			_timer[i] -= dt;
 		}
@@ -364,6 +373,11 @@ void DanmakuStore::set_out_grace(int p_id, float p_grace) {
 	}
 	_out_grace[p_id] = p_grace;
 	_out_time[p_id] = 0.0f;
+}
+void DanmakuStore::set_wrap(int p_id, bool p_wrap) {
+	if (_valid(p_id)) {
+		_wrap[p_id] = p_wrap ? 1 : 0;
+	}
 }
 float DanmakuStore::get_out_grace(int p_id) const {
 	return _valid(p_id) ? _out_grace[p_id] : 0.0f;

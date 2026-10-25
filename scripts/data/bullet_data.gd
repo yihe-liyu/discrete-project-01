@@ -58,6 +58,7 @@ var lifecycle_anchor: Variant = null
 ## 命中音效注册器 key；空 = normal_damage。
 var hit_sfx: String = ""
 ## 出界宽限（秒）：出界后仍存活这段时间再回收；0 = 出界立即回收。
+var wrap_field: bool = false
 var out_grace: float = 0.0
 
 ## ---- 构造链方法 ----
@@ -161,6 +162,13 @@ func grace(v: float) -> BulletData:
 	return self
 
 
+## 出界后从对边回来（左右 / 上下环绕）。
+func wrap_around() -> BulletData:
+	wrap_field = true
+	invalidate_bullet_type()
+	return self
+
+
 # ═══ 内核弹型（词汇合一：BulletData 是构造助手，产出 BulletType）═══
 
 # 本实例的内核弹型缓存；首次 to_bullet_type() 时构建。
@@ -193,6 +201,7 @@ func _build_bullet_type() -> BulletType:
 	bt.follow_dir = follow_dir
 	bt.dir_offset = dir_offset
 	bt.out_grace = out_grace
+	bt.wrap_field = wrap_field
 	bt.hit_fx = hit_effect
 	bt.is_spawn_fog = is_spawn_fog
 	bt.spawn_fx = spawn_fx

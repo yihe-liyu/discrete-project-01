@@ -41,6 +41,8 @@ enum TintMode { MULTIPLY, BLEND }
 @export var follow_dir: bool = true
 ## 贴图朝向补偿（仅在 follow_dir 时生效）：素材朝右 = 0；朝上 = +PI/2；朝下 = -PI/2；朝左 = PI。
 @export var dir_offset: float = 0.0
+## 出界后从对边回来（左右/上下环绕）。与 out_grace 互斥使用。
+@export var wrap_field: bool = false
 ## 出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
 ## 与 [code]hitbox_*[/code] 同规格：类型级字段 → 发射时逐行 [code]set_out_grace[/code] 推给内核（内核解释它）。
 ## 用于「出界再回来」的弹（往返探针）；bounce / radial_accel 在界内撞墙回收，不需要它。
