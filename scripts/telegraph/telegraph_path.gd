@@ -146,7 +146,8 @@ func _ensure_extra(index: int) -> void:
 
 func _make_line(depth: float) -> Line2D:
 	var line := Line2D.new()
-	line.z_index = int(depth)   # 外发光在下、亮核在上
+	# 父节点 z=ENEMY_BULLET-1；亮核用 0、外发光用 -1，保证两者都在敌弹层之下。
+	line.z_index = int(depth) - 1
 	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	line.end_cap_mode = Line2D.LINE_CAP_ROUND
 	line.joint_mode = Line2D.LINE_JOINT_ROUND
