@@ -89,6 +89,21 @@ func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = 
 	return bomb
 
 
+## 行为 emit_laser 的落地点：平移骨架后交给 BulletManager 的 LaserEngine。
+func spawn_behavior_laser(skeleton: LaserSkeleton, color: Color,
+		opts: Dictionary, offset: Vector2) -> LaserBeam:
+	if bullet_manager == null or skeleton == null:
+		return null
+	var final_skeleton := skeleton
+	if offset != Vector2.ZERO:
+		var points := PackedVector2Array()
+		for point in skeleton.points:
+			points.append(point + offset)
+		final_skeleton = LaserSkeleton.new()
+		final_skeleton.from_points(points)
+	return bullet_manager.spawn_laser(final_skeleton, color, opts)
+
+
 ## 清掉所有 LASER 类子弹（魔理沙非 focus 激光段；供子机重建 / 熄火时清锚点）。
 ## 倒序：system.despawn 是 swap-with-last。
 func clear_laser_bullets() -> void:

@@ -8,6 +8,7 @@ extends RefCounted
 ## V13：backend 私有化 —— on_end_call 内容回调只能经 queue_spawn 入队，拿不到整个后端。
 var _backend   # KernelBulletHost
 var _spawns: Array[Dictionary] = []
+var _lasers: Array[Dictionary] = []
 
 
 func setup(p_backend) -> void:
@@ -28,12 +29,23 @@ func queue_spawn(data: BulletData, pos: Vector2, dir: Vector2) -> void:
 	_spawns.append(_backend.prepare_shot(data, pos, dir))
 
 
-func flush() -> void:
-	if _spawns.is_empty():
+## 入队一条激光（骨架 / 颜色 / opts / 平移量）；flush 时交宿主 LaserEngine。
+func queue_laser(skeleton: LaserSkeleton, color: Color, opts: Dictionary, offset: Vector2) -> void:
+	if _backend == null or skeleton == null:
 		return
+	_lasers.append({&"skeleton": skeleton, &"color": color, &"opts": opts, &"offset": offset})
+
+
+func flush() -> void:
 	var pending := _spawns
 	_spawns = []   # 先取走：flush 中若再入队不丢
 	for spec in pending:
 		if _backend != null:
 			var id: int = _backend.spawn_prepared(spec)
 			_backend.notify_behavior_spawned(id, spec)
+	var lasers := _lasers
+	_lasers = []
+	for entry in lasers:
+		if _backend != null:
+			_backend.spawn_behavior_laser(
+				entry[&"skeleton"], entry[&"color"], entry[&"opts"], entry[&"offset"])

@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：117 脚本 / **835 用例（833 通过 / 2 红）/ 7172 断言 / 52.7s** / 0 orphans / **0 pending**。
+**现状**：118 脚本 / **837 用例（835 通过 / 2 红）/ 7177 断言 / 52.7s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 52 | 428 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 53 | 430 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -106,9 +106,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（52 / 428）
+## C · 宿主 · 运行时系统（53 / 430）
 
-### C1 组合根 / 服务 / 时间线（18 / 88）
+### C1 组合根 / 服务 / 时间线（19 / 90）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -122,6 +122,7 @@
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData / 难度变体取曲** | 12 | 0 |
 | [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪；`shoot_tracked`；`track_emitted` lifecycle 过滤；空列表防护 | 7 | 0 |
 | [test_telegraph_path](../test/test_telegraph_path.gd) | 路径展示层：单线 / 多线显示与清空；单点不成线；lifetime 到点自动清空；路径在敌弹之下；MultiMesh 合批 | 6 | 0 |
+| [test_lifecycle_emit_laser](../test/test_lifecycle_emit_laser.gd) | lifecycle.emit_laser 生成 phase-end 激光请求；宿主队列 flush 到 LaserEngine | 2 | 0 |
 | [test_lifecycle_preview](../test/test_lifecycle_preview.gd) | 路径预览：单 phase / chain；坐标 until；位置写入；`end_state`；RDP 折线简化；`steer` / 目标方向标近似 | 17 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** + **敌人行为先入树、再 `_on_start()`**（不再需要 `_ready` + `call_deferred`） | 7 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |

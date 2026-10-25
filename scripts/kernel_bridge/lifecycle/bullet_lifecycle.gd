@@ -288,7 +288,8 @@ func set_position(p: Vector2) -> BulletLifecycle:
 	return self
 
 
-## 在当前积分位置上追加偏移。写入时机同 set_position。
+## 在当前积分位置上追加偏移；这是每帧 move，会逐帧累计。
+## 一次性位移请用「空相位 + then()」或改 spawn 位置。
 func offset_position(delta: Vector2) -> BulletLifecycle:
 	_moves.append({&"op": M_OFFSET_POSITION, &"p": delta, &"slot": -1})
 	return self
@@ -419,6 +420,19 @@ func _append_emit(spawn: Variant, spec: RefCounted, speed: float, at: int,
 	_on_end.append(act)
 	return self
 
+## 相位结束时发射一条激光；[code]skeleton[/code] 默认是世界坐标，[code]offset[/code] 可整体平移。
+## [code]at_current=true[/code] 时，骨架视为相对相位结束位置，宿主会用当前弹位置平移它。
+## 激光不进内核弹池，走宿主 LaserEngine；帧内不生成，phase 结束后 flush。
+func emit_laser(skeleton: LaserSkeleton, color: Color, opts: Dictionary = {},
+		offset: Vector2 = Vector2.ZERO, at_current: bool = false) -> BulletLifecycle:
+	var callback := func(pos: Vector2, _boss: Vector2, _has_boss: bool, host) -> void:
+		if host == null or not host.has_method("queue_laser"):
+			return
+		var shifted := pos + offset if at_current else offset
+		host.queue_laser(skeleton, color, opts, shifted)
+	return on_end_call(callback)
+
+
 ## 变体发射：内核抽一次 RNG 决定分支，宿主按分支号取 spawns 里哪个模板（0=未命中，1=命中）。
 ## [code]dir[/code] 必须是 [code]chance_toward(target, p, spread)[/code]：命中→精确朝 target，未命中→forward 旋转 spread。
 ## 分支由内核显式抽取，不再藏在方向求值里。
@@ -460,7 +474,7 @@ func on_end_heading(dir: Variant) -> BulletLifecycle:
 	return self
 
 ## 低频内容回调（逃逸口）：fn.call(pos, boss_pos, has_boss, host)。
-## 契约：每相位结束最多一次、宿主侧执行、非热路径；host 只暴露 [code]queue_spawn[/code]。
+## 契约：每相位结束最多一次、宿主侧执行、非热路径；host 暴露 [code]queue_spawn[/code] / [code]queue_laser[/code]。
 ## 用了它，描述符就不再是唯一行为来源 —— 仅在「一次性散圈 / 难度分支」等极少数场合用。
 ## hook = StringName（推荐：注册表解析，可序列化、跨实例共用 program；需先 LIFECYCLE_HOOKS_SCRIPT.register）
 ## 或 Callable（旧写法 / oracle）。未注册的名字静默不调。

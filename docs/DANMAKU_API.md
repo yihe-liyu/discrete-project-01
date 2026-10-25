@@ -129,7 +129,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | anchor_drift | `anchor_drift(anchor_id, offset, angle, speed, use_global=true, initial=0, render_heading=false)` | `position`(ANCHOR) 的糖：`pos = anchor_base + dir(angle)·drift`；需 `trajectory(lc, anchor)` |
 | drift | `drift(angle, speed, initial=0)` | `position`(PHASE_START) 的糖：从**本弹相位起点**平移，不改速度/朝向 |
 | set_position | `set_position(Vector2)` | 直接把位置写成绝对坐标；behavior move 阶段生效 |
-| offset_position | `offset_position(Vector2)` | 在当前积分位置上追加偏移 |
+| offset_position | `offset_position(Vector2)` | 每帧在当前积分位置上追加偏移（会累计；一次性位移用空相位 + `then()`） |
 
 > 位置来源（V18「模式派」）：位置由**一个** `position` op 的**来源模式**决定 —— `ANCHOR`（外部节点，激光）/ `PHASE_START`（本弹相位起点）/ 缺省 `FREE`（自由积分）。
 > `set_position` / `offset_position` 在 behavior 的 move 阶段执行；本帧 integrate 的 cull / wrap 已经过去，下一帧才处理新位置。
@@ -161,11 +161,12 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | sfx | `sfx(key, db=AudioManager.SFX_LEVEL_DB)` | 播音效（key 见 §7.2；默认是总电平，不是 0 dB） |
 | emit | `emit(spawn, dir, speed=0, at=AT_CURRENT)` | 生成替换弹；`spawn` = BulletData / Callable / 数组；`at` = AT_CURRENT / AT_PHASE_END |
 | emit_variant | `emit_variant(spawns, dir, speed=0, at=AT_CURRENT)` | 内核抽一次 RNG 定分支（0=未中→spawns[0]，1=命中→spawns[1]）；`dir` 必须是 `chance_toward(...)` |
+| emit_laser | `emit_laser(skeleton, color, opts={}, offset=ZERO, at_current=false)` | 相位结束时发激光；骨架默认世界坐标；`at_current=true` 时按相位结束位置平移；不进内核弹池 |
 | despawn | `despawn()` | 回收自己（静默，不播特效） |
 | clear_fx | `clear_fx()` | 在弹**此刻位置**播一次消弹特效（颜色提亮 1.5×），不改状态，弹继续飞 |
 | despawn_clear | `despawn_clear()` | `clear_fx().despawn()` —— 消散 + 回收 |
 | on_end_heading | `on_end_heading(dir)` | 转向（保速度大小） |
-| on_end_call | `on_end_call(hook)` | **逃逸口**：每相位结束最多一次、宿主侧、非热路径；`host` 只暴露 `queue_spawn` |
+| on_end_call | `on_end_call(hook)` | **逃逸口**：每相位结束最多一次、宿主侧、非热路径；`host` 暴露 `queue_spawn` / `queue_laser` |
 
 > **`despawn` vs `despawn_clear`**：默认 `despawn()`；只有**确实想让人看见消散**时才用 `despawn_clear()`。
 > 撞墙/屏外回收别用（屏外闪光 + 特效风暴）；消散特效与死亡清弹圈共用同一实现。
