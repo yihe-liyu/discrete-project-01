@@ -19,8 +19,12 @@ var _emitted_lifecycles: Array = []
 var _tracked_age: float = 0.0
 ## 绘制折线简化阈值（像素）。
 const PATH_EPSILON := 1.25
-## 单次缓存的前瞻上限；走到缓存尾部后会从当前位置续算，避免长命弹路径断掉。
+## 单次缓存的前瞻上限；走到缓存尾部前会从当前位置续算，避免长命弹路径断掉。
 const TRACK_MAX_TIME := 8.0
+## 距离缓存尾部还有多少点就开始续算（约 1.5 秒）。
+const EXTEND_AHEAD_POINTS := 90
+## 每个 tick 最多续算几颗，避免同一帧 50 颗一起重算造成顿感。
+const EXTEND_BUDGET := 8
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 1.5
 
@@ -143,6 +147,7 @@ func _tick_tracked(delta: float) -> void:
 	_tracked_age = 0.0
 	var alive: Array[int] = []
 	var paths: Array[PackedVector2Array] = []
+	var extended := 0
 	for uid in _tracked_uids:
 		var phase: int = bullet_manager.bullet_phase_uid(uid)
 		if phase < 0:
@@ -154,9 +159,12 @@ func _tick_tracked(delta: float) -> void:
 		var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
 		var cached: PackedVector2Array = _paths_by_uid.get(uid, PackedVector2Array())
 		var cursor: int = int(_cursors_by_uid.get(uid, 0))
-		if cached.size() < 2 or int(_phases_by_uid.get(uid, -1)) != phase \
-				or cursor >= cached.size() - 2:
+		var phase_changed := int(_phases_by_uid.get(uid, -1)) != phase
+		if cached.size() < 2 or phase_changed:
 			_rebuild_cache(uid, phase, position, lifecycle)
+		elif cursor >= cached.size() - EXTEND_AHEAD_POINTS and extended < EXTEND_BUDGET:
+			_rebuild_cache(uid, phase, position, lifecycle)
+			extended += 1
 		var trimmed := _trim_to_current(uid, position)
 		if trimmed.size() >= 2:
 			paths.append(trimmed)
