@@ -14,6 +14,8 @@ var _paths_by_uid = {}
 var _phases_by_uid = {}
 var _cursors_by_uid = {}
 var _tracked_age: float = 0.0
+## 绘制折线简化阈值（像素）。
+const PATH_EPSILON := 1.25
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 1.5
 
@@ -135,7 +137,7 @@ func _rebuild_cache(uid: int, phase: int, position: Vector2, lifecycle: BulletLi
 	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
 	var result: Dictionary = PREVIEW.evaluate_chain(
 		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
-	_paths_by_uid[uid] = result.points
+	_paths_by_uid[uid] = PREVIEW.simplify_path(result.points, PATH_EPSILON)
 	_phases_by_uid[uid] = phase
 	_cursors_by_uid[uid] = 0
 

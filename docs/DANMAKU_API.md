@@ -327,6 +327,7 @@ if not uids.is_empty():
 多颗用 [code]track_bullets(uids, lifecycle)[/code]：每颗各一条，死一颗掉一条。
 同一波继续追加用 [code]add_tracked_bullets(uids, lifecycle)[/code]：不清掉上一波还没死的弹，旧路径继续跟着旧弹更新。
 这是滚动预测，不是短前瞻：路径始终从当前弹位置开始，但 chain 只在 phase 变化时重算。
+显示前会用 RDP 简化折线（默认 1.25px），减少 MultiMesh 实例数。
 
 只做视觉时也可以直接用 [code]TelegraphPath[/code]：
 

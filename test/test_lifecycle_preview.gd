@@ -148,3 +148,21 @@ func test_chain_applies_static_on_end_heading() -> void:
 	assert_true(chain.ok)
 	assert_eq(chain.segments.size(), 2, "on_end 后应继续第二段")
 	assert_gt(Vector2(chain.end_state.velocity).x, 0.0, "第二段应朝右")
+
+
+func test_simplify_collinear_path_to_endpoints() -> void:
+	var points := PackedVector2Array()
+	for i in 11:
+		points.append(Vector2(float(i) * 10.0, 0.0))
+	var simplified := PREVIEW.simplify_path(points, 1.25)
+	assert_eq(simplified.size(), 2, "直线只需保留两个端点")
+	assert_almost_eq(simplified[0].x, 0.0, 0.001)
+	assert_almost_eq(simplified[1].x, 100.0, 0.001)
+
+
+func test_simplify_keeps_sharp_corner() -> void:
+	var points := PackedVector2Array([
+		Vector2(0.0, 0.0), Vector2(5.0, 5.0), Vector2(10.0, 0.0),
+	])
+	var simplified := PREVIEW.simplify_path(points, 1.25)
+	assert_eq(simplified.size(), 3, "明显拐点应保留")

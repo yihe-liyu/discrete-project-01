@@ -196,6 +196,47 @@ static func evaluate_phase(
 	return _with_state(result, position, velocity, heading, elapsed)
 
 
+## 折线简化（Ramer-Douglas-Peucker）：保留端点和超过 epsilon 的拐点。
+## 用于把 60Hz 采样压成更少的绘制点；epsilon 单位 = 像素。
+static func simplify_path(points: PackedVector2Array, epsilon: float = 1.25) -> PackedVector2Array:
+	if points.size() <= 2 or epsilon <= 0.0:
+		return points
+	var keep := PackedByteArray()
+	keep.resize(points.size())
+	keep[0] = 1
+	keep[points.size() - 1] = 1
+	var stack: Array[Vector2i] = [Vector2i(0, points.size() - 1)]
+	while not stack.is_empty():
+		var span: Vector2i = stack.pop_back()
+		var start := span.x
+		var end := span.y
+		var farthest := -1.0
+		var index := -1
+		for i in range(start + 1, end):
+			var distance := _point_to_segment_distance(points[i], points[start], points[end])
+			if distance > farthest:
+				farthest = distance
+				index = i
+		if index >= 0 and farthest > epsilon:
+			keep[index] = 1
+			stack.append(Vector2i(start, index))
+			stack.append(Vector2i(index, end))
+	var simplified := PackedVector2Array()
+	for i in points.size():
+		if keep[i] != 0:
+			simplified.append(points[i])
+	return simplified
+
+
+static func _point_to_segment_distance(point: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var length_squared := ab.length_squared()
+	if length_squared <= 0.000001:
+		return point.distance_to(a)
+	var t: float = clampf((point - a).dot(ab) / length_squared, 0.0, 1.0)
+	return point.distance_to(a + ab * t)
+
+
 ## 给 result 写入结束状态；chain 用这个状态继续下一段。
 static func _with_state(result: Dictionary, position: Vector2, velocity: Vector2,
 		heading: Vector2, elapsed: float) -> Dictionary:
