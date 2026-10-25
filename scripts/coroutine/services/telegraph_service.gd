@@ -9,7 +9,7 @@ var telegraph_path: Node
 ## 弹幕管理器（组合根注入；逐弹跟踪用）。
 var bullet_manager: BulletManager
 var _tracked_uids: Array[int] = []
-var _paths_by_uid = {}
+var _lifecycles_by_uid = {}
 var _tracked_age: float = 0.0
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 3.0
@@ -46,13 +46,14 @@ func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Ar
 		telegraph_path.call("show_paths", paths, color, width, lifetime)
 	return results
 
-## 绑定一颗真实弹；单颗便捷入口。路径在加入时钉在出生状态。
+## 绑定一颗真实弹；单颗便捷入口。路径按当前 pos / phase 滚动刷新。
 func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
 	return track_bullets([bullet_uid], lifecycle, color, width)
 
 
 ## 追加多颗真实弹到当前跟踪列表；允许来自不同敌人实例 / 不同 lifecycle。
+## 每次 tick 从当前 pos / phase 重算未来 chain，旧弹路径继续更新。
 func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
 	if telegraph_path == null or not is_instance_valid(telegraph_path) \
@@ -63,7 +64,7 @@ func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 		var value := int(uid)
 		if value > 0 and not _tracked_uids.has(value):
 			_tracked_uids.append(value)
-			_capture_path(value, lifecycle)
+			_lifecycles_by_uid[value] = lifecycle
 			added = true
 	if not added:
 		return not _tracked_uids.is_empty()
@@ -78,7 +79,7 @@ func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 	return not _tracked_uids.is_empty()
 
 
-## 绑定多颗真实弹：每颗在加入时按出生状态钉一条路径；死一颗掉一条。
+## 绑定多颗真实弹；死一颗掉一条。
 func track_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
 	_stop_tracking()
@@ -103,12 +104,20 @@ func _tick_tracked(delta: float) -> void:
 	var alive: Array[int] = []
 	var paths: Array[PackedVector2Array] = []
 	for uid in _tracked_uids:
-		if bullet_manager.bullet_phase_uid(uid) < 0:
+		var phase: int = bullet_manager.bullet_phase_uid(uid)
+		if phase < 0:
 			continue
 		alive.append(uid)
-		var path: PackedVector2Array = _paths_by_uid.get(uid, PackedVector2Array())
-		if path.size() >= 2:
-			paths.append(path)
+		var lifecycle: BulletLifecycle = _lifecycles_by_uid.get(uid)
+		if lifecycle == null:
+			continue
+		var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
+		var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
+		var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
+		var result: Dictionary = PREVIEW.evaluate_chain(
+			lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
+		if result.points.size() >= 2:
+			paths.append(result.points)
 	_tracked_uids = alive
 	if _tracked_uids.is_empty():
 		_stop_tracking()
@@ -117,22 +126,10 @@ func _tick_tracked(delta: float) -> void:
 		telegraph_path.call("show_paths", paths, _tracked_color, _tracked_width, 0.0)
 
 
-## 在加入时把路径钉在出生状态上；之后只检查存活，不再用当前 pos 重算。
-func _capture_path(uid: int, lifecycle: BulletLifecycle) -> void:
-	var phase: int = bullet_manager.bullet_phase_uid(uid)
-	if phase < 0:
-		return
-	var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
-	var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
-	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
-	var result: Dictionary = PREVIEW.evaluate_chain(
-		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
-	if result.points.size() >= 2:
-		_paths_by_uid[uid] = result.points
 
 func _stop_tracking() -> void:
 	_tracked_uids.clear()
-	_paths_by_uid.clear()
+	_lifecycles_by_uid.clear()
 	_tracked_age = 0.0
 	if telegraph_path != null and is_instance_valid(telegraph_path):
 		telegraph_path.call("set_tracker", Callable())

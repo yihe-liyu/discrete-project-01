@@ -323,10 +323,10 @@ if not uids.is_empty():
 ```
 
 [code]shoot_spread_ids[/code] 返回的是稳定 uid，不是行号：原生 swap-remove 搬行时 uid 跟着搬，外部引用不会指到另一颗弹。
-[code]track_bullet[/code] 在加入时把路径钉在出生状态（pos / vel / phase），之后只检查存活；弹死亡自动清线。
+[code]track_bullet[/code] 按真实弹当前 phase / pos / vel 滚动刷新：每 0.1 秒从当前位置重算未来路径；弹死亡自动清线。
 多颗用 [code]track_bullets(uids, lifecycle)[/code]：每颗各一条，死一颗掉一条。
-同一波继续追加用 [code]add_tracked_bullets(uids, lifecycle)[/code]：不会清掉上一波还没死的弹。
-路径不会跟着子弹当前位置滑动；phase 变化后仍使用出生时算出的整条 chain。
+同一波继续追加用 [code]add_tracked_bullets(uids, lifecycle)[/code]：不清掉上一波还没死的弹，旧路径继续跟着旧弹更新。
+这是滚动预测，不是短前瞻：每次从当前位置画出当前 phase 往后的完整 chain。
 
 只做视觉时也可以直接用 [code]TelegraphPath[/code]：
 
