@@ -131,9 +131,13 @@ func _laser_trajectory(angle_rad: float) -> BulletLifecycle:
 	return lc
 
 
-## 激光段锚点：per-shot（发射口 = 子机；marisa 子机是 World 兄弟 → use_global）
-func _laser_anchor(source: Node2D) -> Dictionary:
-	return {&"id": source.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
+## 激光段锚点：锚到稳定的自机，而不是可能被重建/释放的子机节点。
+## 子机只贡献发射瞬间的相对偏移；子机之后被换掉也不会留下失效 id。
+func _laser_anchor(player: Player, source: Node2D) -> Dictionary:
+	var offset := Vector2.ZERO
+	if is_instance_valid(source) and source != player:
+		offset = source.global_position - player.global_position
+	return {&"id": player.get_instance_id(), &"offset": offset, &"use_global": true}
 
 
 ## 段弹型：按帧缓存（同一帧复用同一 BulletData 实例 → 内核弹型表不随发射增长）。
@@ -172,7 +176,7 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	var angle_rad: float = deg_to_rad(angles[opt_idx] if opt_idx < angles.size() else 0.0)
 
 	# 弹道 = 每角度一个描述符（缓存）；锚点是 per-shot（同角度、不同子机各一份 program）
-	bullet_data.trajectory(_laser_trajectory(angle_rad), _laser_anchor(source))
+	bullet_data.trajectory(_laser_trajectory(angle_rad), _laser_anchor(player, source))
 
 	# 段在发射口生成（offset=0），drift 从 0 独立累积 → 根部永远在子机
 	# 段参数已走 bullet_data.trajectory（每角度一个描述符 + per-shot 锚点）
