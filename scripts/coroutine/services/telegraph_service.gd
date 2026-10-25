@@ -9,6 +9,7 @@ var telegraph_path: Node
 ## 弹幕管理器（组合根注入；逐弹跟踪用）。
 var bullet_manager: BulletManager
 var _tracked_uids: Array[int] = []
+var _paths_by_uid = {}
 var _bullet_lifecycle: BulletLifecycle
 var _tracked_age: float = 0.0
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
@@ -46,7 +47,7 @@ func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Ar
 		telegraph_path.call("show_paths", paths, color, width, lifetime)
 	return results
 
-## 绑定一颗真实弹；单颗便捷入口。
+## 绑定一颗真实弹；单颗便捷入口。路径在加入时钉在出生状态。
 func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
 	return track_bullets([bullet_uid], lifecycle, color, width)
@@ -60,42 +61,29 @@ func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 		return false
 	if not _tracked_uids.is_empty() and _bullet_lifecycle != lifecycle:
 		_stop_tracking()
+	_bullet_lifecycle = lifecycle
 	var added := false
 	for uid in bullet_uids:
 		var value := int(uid)
 		if value > 0 and not _tracked_uids.has(value):
 			_tracked_uids.append(value)
+			_capture_path(value)
 			added = true
 	if not added and not _tracked_uids.is_empty():
 		return true
-	_bullet_lifecycle = lifecycle
 	_tracked_color = color
 	_tracked_width = width
+	_tracked_age = 0.1
 	telegraph_path.call("set_tracker", Callable(self, "_tick_tracked"))
 	_tick_tracked(0.0)
 	return not _tracked_uids.is_empty()
 
 
-## 绑定多颗真实弹：每颗按自己的 uid / phase / pos / vel 刷新；死一颗掉一条。
+## 绑定多颗真实弹：每颗在加入时按出生状态钉一条路径；死一颗掉一条。
 func track_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
-	if telegraph_path == null or not is_instance_valid(telegraph_path) \
-			or bullet_manager == null or lifecycle == null:
-		return false
 	_stop_tracking()
-	for uid in bullet_uids:
-		var value := int(uid)
-		if value > 0:
-			_tracked_uids.append(value)
-	if _tracked_uids.is_empty():
-		return false
-	_bullet_lifecycle = lifecycle
-	_tracked_age = 0.0
-	_tracked_color = color
-	_tracked_width = width
-	telegraph_path.call("set_tracker", Callable(self, "_tick_tracked"))
-	_tick_tracked(0.0)
-	return not _tracked_uids.is_empty()
+	return add_tracked_bullets(bullet_uids, lifecycle, color, width)
 
 ## 清掉当前预览。
 func clear() -> void:
@@ -115,29 +103,37 @@ func _tick_tracked(delta: float) -> void:
 	_tracked_age = 0.0
 	var alive: Array[int] = []
 	var paths: Array[PackedVector2Array] = []
-	var lifetime := 0.0
 	for uid in _tracked_uids:
-		var phase: int = bullet_manager.bullet_phase_uid(uid)
-		if phase < 0:
+		if bullet_manager.bullet_phase_uid(uid) < 0:
 			continue
 		alive.append(uid)
-		var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
-		var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
-		var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
-		var result: Dictionary = PREVIEW.evaluate_chain(
-			_bullet_lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
-		if result.points.size() >= 2:
-			paths.append(result.points)
-			lifetime = maxf(lifetime, float(result.end_state.get("elapsed", 0.0)))
+		var path: PackedVector2Array = _paths_by_uid.get(uid, PackedVector2Array())
+		if path.size() >= 2:
+			paths.append(path)
 	_tracked_uids = alive
 	if _tracked_uids.is_empty():
 		_stop_tracking()
 		return
 	if not paths.is_empty():
-		telegraph_path.call("show_paths", paths, _tracked_color, _tracked_width, lifetime)
+		telegraph_path.call("show_paths", paths, _tracked_color, _tracked_width, 0.0)
+
+
+## 在加入时把路径钉在出生状态上；之后只检查存活，不再用当前 pos 重算。
+func _capture_path(uid: int) -> void:
+	var phase: int = bullet_manager.bullet_phase_uid(uid)
+	if phase < 0:
+		return
+	var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
+	var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
+	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
+	var result: Dictionary = PREVIEW.evaluate_chain(
+		_bullet_lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
+	if result.points.size() >= 2:
+		_paths_by_uid[uid] = result.points
 
 func _stop_tracking() -> void:
 	_tracked_uids.clear()
+	_paths_by_uid.clear()
 	_bullet_lifecycle = null
 	_tracked_age = 0.0
 	if telegraph_path != null and is_instance_valid(telegraph_path):
