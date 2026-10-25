@@ -19,6 +19,8 @@ var _emitted_lifecycles: Array = []
 var _tracked_age: float = 0.0
 ## 绘制折线简化阈值（像素）。
 const PATH_EPSILON := 1.25
+## 单次缓存的前瞻上限；走到缓存尾部后会从当前位置续算，避免长命弹路径断掉。
+const TRACK_MAX_TIME := 8.0
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 1.5
 
@@ -150,7 +152,10 @@ func _tick_tracked(delta: float) -> void:
 		if lifecycle == null:
 			continue
 		var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
-		if not _paths_by_uid.has(uid) or int(_phases_by_uid.get(uid, -1)) != phase:
+		var cached: PackedVector2Array = _paths_by_uid.get(uid, PackedVector2Array())
+		var cursor: int = int(_cursors_by_uid.get(uid, 0))
+		if cached.size() < 2 or int(_phases_by_uid.get(uid, -1)) != phase \
+				or cursor >= cached.size() - 2:
 			_rebuild_cache(uid, phase, position, lifecycle)
 		var trimmed := _trim_to_current(uid, position)
 		if trimmed.size() >= 2:
@@ -169,7 +174,7 @@ func _rebuild_cache(uid: int, phase: int, position: Vector2, lifecycle: BulletLi
 	var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
 	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
 	var result: Dictionary = PREVIEW.evaluate_chain(
-		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
+		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, TRACK_MAX_TIME)
 	_paths_by_uid[uid] = PREVIEW.simplify_path(result.points, PATH_EPSILON)
 	_phases_by_uid[uid] = phase
 	_cursors_by_uid[uid] = 0
