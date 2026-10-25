@@ -286,6 +286,15 @@ LifecyclePreview.evaluate_phase(
 
 > 这是演出/调试的近似，不是第二套物理；不要在游戏逻辑里用它替代真实弹道。
 
+视觉层用 [code]TelegraphPath[/code]：把 [code]points[/code] 原样交给它显示，不挂判定。
+
+```gdscript
+var path := TelegraphPath.new()
+add_child(path)
+path.show_path(preview.points)
+path.clear_path()
+```
+
 ## 4. 发射 API（`ctx.bullets`）
 
 `scripts/coroutine/services/bullet_service.gd`
