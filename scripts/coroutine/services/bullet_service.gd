@@ -14,7 +14,7 @@ func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base
 	shoot_spread_ids(bullet_data, count, spread_angle, base_dir, at, sfx)
 
 
-## 同 shoot_spread，但返回生成的内核行 id；供逐弹预览 / 调试绑定。
+## 同 shoot_spread，但返回稳定句柄（uid，不是行号）；供逐弹预览 / 调试绑定。
 func shoot_spread_ids(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> Array[int]:
 	var ids: Array[int] = []
 	if not is_active or count <= 0 or bullet_manager == null:
@@ -22,12 +22,18 @@ func shoot_spread_ids(bullet_data: BulletData, count: int, spread_angle: float, 
 	if sfx:
 		AudioManager.play_sfx(sfx)
 	if count == 1:
-		ids.append(bullet_manager.shoot_bullet(bullet_data, at, base_dir))
+		var row := bullet_manager.shoot_bullet(bullet_data, at, base_dir)
+		var uid := bullet_manager.bullet_uid(row)
+		if uid > 0:
+			ids.append(uid)
 		return ids
 	var step := spread_angle / (count - 1) if spread_angle < TAU - 0.001 else spread_angle / count
 	for i in count:
 		var dir := base_dir.rotated(-spread_angle / 2.0 + step * i)
-		ids.append(bullet_manager.shoot_bullet(bullet_data, at, dir))
+		var row := bullet_manager.shoot_bullet(bullet_data, at, dir)
+		var uid := bullet_manager.bullet_uid(row)
+		if uid > 0:
+			ids.append(uid)
 	return ids
 
 

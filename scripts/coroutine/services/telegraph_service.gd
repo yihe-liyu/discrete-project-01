@@ -8,7 +8,7 @@ const PREVIEW := preload("res://scripts/telegraph/lifecycle_preview.gd")
 var telegraph_path: Node
 ## 弹幕管理器（组合根注入；逐弹跟踪用）。
 var bullet_manager: BulletManager
-var _tracked_id: int = -1
+var _tracked_uid: int = -1
 var _bullet_lifecycle: BulletLifecycle
 var _tracked_phase: int = -1
 var _tracked_age: float = 0.0
@@ -50,13 +50,13 @@ func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Ar
 
 ## 绑定一颗真实弹：按它的当前 phase / pos / vel 逐帧刷新路径；弹死自动清线。
 ## 只用于单颗原型；50 颗要先做多线合批与稳定身份。
-func track_bullet(bullet_id: int, lifecycle: BulletLifecycle,
+func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
 	if telegraph_path == null or not is_instance_valid(telegraph_path) \
-			or bullet_manager == null or bullet_id < 0 or lifecycle == null:
+			or bullet_manager == null or bullet_uid <= 0 or lifecycle == null:
 		return false
 	_stop_tracking()
-	_tracked_id = bullet_id
+	_tracked_uid = bullet_uid
 	_bullet_lifecycle = lifecycle
 	_tracked_phase = -1
 	_tracked_age = 0.0
@@ -64,7 +64,7 @@ func track_bullet(bullet_id: int, lifecycle: BulletLifecycle,
 	_tracked_width = width
 	telegraph_path.call("set_tracker", Callable(self, "_tick_tracked"))
 	_tick_tracked(0.0)
-	return _tracked_id >= 0
+	return _tracked_uid >= 0
 
 
 ## 清掉当前预览。
@@ -75,11 +75,11 @@ func clear() -> void:
 
 
 func _tick_tracked(delta: float) -> void:
-	if _tracked_id < 0 or _bullet_lifecycle == null or bullet_manager == null \
+	if _tracked_uid < 0 or _bullet_lifecycle == null or bullet_manager == null \
 			or telegraph_path == null or not is_instance_valid(telegraph_path):
 		_stop_tracking()
 		return
-	var phase: int = bullet_manager.bullet_phase(_tracked_id)
+	var phase: int = bullet_manager.bullet_phase_uid(_tracked_uid)
 	if phase < 0:
 		_stop_tracking()
 		return
@@ -87,8 +87,8 @@ func _tick_tracked(delta: float) -> void:
 	if phase == _tracked_phase and _tracked_age < 0.1:
 		return
 	_tracked_age = 0.0
-	var position: Vector2 = bullet_manager.bullet_global_position(_tracked_id)
-	var velocity: Vector2 = bullet_manager.bullet_velocity(_tracked_id)
+	var position: Vector2 = bullet_manager.bullet_global_position_uid(_tracked_uid)
+	var velocity: Vector2 = bullet_manager.bullet_velocity_uid(_tracked_uid)
 	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
 	var result: Dictionary = PREVIEW.evaluate_chain(
 		_bullet_lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
@@ -99,7 +99,7 @@ func _tick_tracked(delta: float) -> void:
 
 
 func _stop_tracking() -> void:
-	_tracked_id = -1
+	_tracked_uid = -1
 	_bullet_lifecycle = null
 	_tracked_phase = -1
 	_tracked_age = 0.0

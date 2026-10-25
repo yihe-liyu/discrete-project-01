@@ -415,6 +415,18 @@ func get_phase(id: int) -> int:
 		return -1
 	return int(_accel.get_phase(id))
 
+## 行 → 稳定句柄；纯特效 / 无效 / 无原生 = 0。
+func get_uid(id: int) -> int:
+	if _accel == null:
+		return 0
+	return int(_accel.get_uid(id))
+
+## 稳定句柄 → 当前行；已回收 / 无原生 = -1。
+func find_uid(uid: int) -> int:
+	if _accel == null:
+		return -1
+	return int(_accel.find_uid(uid))
+
 ## 单行自定义计时器。
 func get_timer(id: int) -> float:
 	return _timer[id]

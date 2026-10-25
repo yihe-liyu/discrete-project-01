@@ -95,8 +95,29 @@ func test_shoot_spread_ids_returns_trackable_rows() -> void:
 	var svc = _bind(bm)
 	var ids: Array[int] = svc.shoot_spread_ids(
 		_mk_data(), 3, TAU, Vector2.DOWN, Vector2(448, 240))
-	assert_eq(ids.size(), 3, "三发应返回三个 id")
-	for id in ids:
-		assert_true(id >= 0, "id 应为有效行")
-		assert_eq(bm.bullet_phase(id), 0, "新弹应处于 phase 0")
-		assert_gt(bm.bullet_velocity(id).length(), 0.0, "应能读到真实速度")
+	assert_eq(ids.size(), 3, "三发应返回三个 uid")
+	for uid in ids:
+		assert_gt(uid, 0, "uid 应为有效稳定句柄")
+		assert_true(bm.find_bullet_uid(uid) >= 0, "uid 应能查到当前行")
+		assert_eq(bm.bullet_phase_uid(uid), 0, "新弹应处于 phase 0")
+		assert_gt(bm.bullet_velocity_uid(uid).length(), 0.0, "应能读到真实速度")
+
+
+## 稳定句柄：行 swap-remove 后，被搬走的弹仍能用原 uid 找到。
+func test_uid_survives_swap_remove() -> void:
+	var bm := _mk_manager()
+	await get_tree().process_frame
+	var sys := bm.kernel_system()
+	if sys == null or not sys.is_native_ready():
+		pending("无原生扩展")
+		return
+	var svc = _bind(bm)
+	var uids: Array[int] = svc.shoot_spread_ids(
+		_mk_data(), 3, TAU, Vector2.DOWN, Vector2(448, 240))
+	assert_eq(uids.size(), 3)
+	var row := bm.find_bullet_uid(uids[2])
+	assert_true(row >= 0, "最后一颗应有行")
+	bm.despawn_bullet(0)   # 删第一颗 → 尾行搬进 0
+	assert_eq(bm.find_bullet_uid(uids[0]), -1, "被删的 uid 应失效")
+	assert_eq(bm.find_bullet_uid(uids[2]), 0, "被搬走的弹仍应能找到新行")
+	assert_eq(bm.bullet_phase_uid(uids[2]), 0, "搬走后 phase 仍可读")

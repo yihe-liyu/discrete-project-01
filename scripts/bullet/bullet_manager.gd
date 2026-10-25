@@ -120,6 +120,44 @@ func _physics_process(_delta: float) -> void:
 func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return _kernel_bullet_host.shoot(data, pos, direction)
 
+## 行 → 稳定句柄；纯特效 / 无效 → 0。
+func bullet_uid(id: int) -> int:
+	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
+		return 0
+	return _kernel_bullet_host.system.get_uid(id)
+
+
+## 稳定句柄 → 当前行；已回收 → -1。
+func find_bullet_uid(uid: int) -> int:
+	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
+		return -1
+	return _kernel_bullet_host.system.find_uid(uid)
+
+
+## 稳定句柄 → 当前 phase；已回收 → -1。
+func bullet_phase_uid(uid: int) -> int:
+	var row := find_bullet_uid(uid)
+	return bullet_phase(row) if row >= 0 else -1
+
+
+## 稳定句柄 → 当前速度；已回收 → ZERO。
+func bullet_velocity_uid(uid: int) -> Vector2:
+	var row := find_bullet_uid(uid)
+	return bullet_velocity(row) if row >= 0 else Vector2.ZERO
+
+
+## 稳定句柄 → 当前全局位置；已回收 → ZERO。
+func bullet_global_position_uid(uid: int) -> Vector2:
+	var row := find_bullet_uid(uid)
+	return bullet_global_position(row) if row >= 0 else Vector2.ZERO
+
+
+## 按行回收一颗弹（测试 / 工具用；正常清场走 clear_* / 物理）。
+func despawn_bullet(id: int) -> void:
+	if _kernel_bullet_host != null and _kernel_bullet_host.system != null:
+		_kernel_bullet_host.system.despawn(id)
+
+
 ## 按内核行 id 取当前 lifecycle phase（无效 / 后端未初始化 → -1）。
 func bullet_phase(id: int) -> int:
 	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:

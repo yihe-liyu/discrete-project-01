@@ -63,6 +63,8 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_life_left", "id"), &DanmakuStore::get_life_left);
 	ClassDB::bind_method(D_METHOD("get_fx_phase", "id"), &DanmakuStore::get_fx_phase);
 	ClassDB::bind_method(D_METHOD("get_phase", "id"), &DanmakuStore::get_phase);
+	ClassDB::bind_method(D_METHOD("get_uid", "id"), &DanmakuStore::get_uid);
+	ClassDB::bind_method(D_METHOD("find_uid", "uid"), &DanmakuStore::find_uid);
 	ClassDB::bind_method(D_METHOD("get_timer", "id"), &DanmakuStore::get_timer);
 	ClassDB::bind_method(D_METHOD("get_life_lefts"), &DanmakuStore::get_life_lefts);
 	ClassDB::bind_method(D_METHOD("get_fx_phases"), &DanmakuStore::get_fx_phases);
@@ -93,6 +95,8 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_program.assign(p_capacity, -1);
 	_pphase.assign(p_capacity, 0);
 	_ptick.assign(p_capacity, 0);
+	_uids.assign(p_capacity, 0);
+	_next_uid = 1;
 	_pelapsed.assign(p_capacity, 0.0f);
 	_pnext.assign(p_capacity, 0.0f);
 	_pendx.assign(p_capacity, 0.0f);
@@ -127,6 +131,7 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	{ const Vector2 h = p_vel == Vector2() ? Vector2(0, 1) : p_vel.normalized(); _hx[i] = h.x; _hy[i] = h.y; }
 	_type[i] = p_type;
 	_faction[i] = p_faction;
+	_uids[i] = _next_uid++;
 	_fx_type[i] = -1;
 	_color[i] = p_color;
 	_life[i] = _default_life;
@@ -170,6 +175,7 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		{ const Vector2 h = vel == Vector2() ? Vector2(0, 1) : vel.normalized(); _hx[i] = h.x; _hy[i] = h.y; }
 		_type[i] = k < p_type.size() ? p_type[k] : 0;
 		_faction[i] = k < p_faction.size() ? p_faction[k] : 0;
+		_uids[i] = _next_uid++;
 		_fx_type[i] = -1;
 		_color[i] = k < p_color.size() ? p_color[k] : Color(1, 1, 1, 1);
 		_life[i] = _default_life;
@@ -213,6 +219,7 @@ int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_c
 	_hy[i] = 1.0f;
 	_type[i] = -1;
 	_faction[i] = p_faction;
+	_uids[i] = 0;
 	_fx_type[i] = p_fx_type;
 	_color[i] = p_color;
 	_life[i] = p_life;
@@ -248,6 +255,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_type.resize(p_n); _faction.resize(p_n); _fx_type.resize(p_n); _color.resize(p_n);
 	_life.resize(p_n); _fx.resize(p_n); _timer.resize(p_n);
 	_program.resize(p_n); _pphase.resize(p_n); _ptick.resize(p_n);
+	_uids.resize(p_n);
 	_pelapsed.resize(p_n); _pnext.resize(p_n); _pendx.resize(p_n); _pendy.resize(p_n);
 	_pslots.resize(p_n * SLOT_STRIDE);
 	_pslot_fresh.resize(p_n); _phasend.resize(p_n);
@@ -272,6 +280,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_hy[p_id] = _hy[last];
 	_type[p_id] = _type[last];
 	_faction[p_id] = _faction[last];
+	_uids[p_id] = _uids[last];
 	_fx_type[p_id] = _fx_type[last];
 	_color[p_id] = _color[last];
 	_life[p_id] = _life[last];
@@ -399,6 +408,14 @@ void DanmakuStore::set_position(int p_id, const Vector2 &p_pos) {
 float DanmakuStore::get_life_left(int p_id) const { return _valid(p_id) ? _life[p_id] : 0.0f; }
 float DanmakuStore::get_fx_phase(int p_id) const { return _valid(p_id) ? _fx[p_id] : 0.0f; }
 int DanmakuStore::get_phase(int p_id) const { return _valid(p_id) ? _pphase[p_id] : -1; }
+int64_t DanmakuStore::get_uid(int p_id) const { return _valid(p_id) ? _uids[p_id] : 0; }
+int DanmakuStore::find_uid(int64_t p_uid) const {
+	if (p_uid <= 0) { return -1; }
+	for (int i = 0; i < _count; ++i) {
+		if (_uids[i] == p_uid) { return i; }
+	}
+	return -1;
+}
 float DanmakuStore::get_timer(int p_id) const { return _valid(p_id) ? _timer[p_id] : 0.0f; }
 
 PackedFloat32Array DanmakuStore::get_life_lefts() const {

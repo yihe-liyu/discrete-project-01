@@ -68,6 +68,8 @@ class DanmakuStore : public RefCounted {
 	PackedFloat32Array _p_args;
 	// 每行运行态：program / 相位 / tick / elapsed / pending emit 落点 / slots。
 	std::vector<int> _program, _pphase, _ptick;
+	std::vector<int64_t> _uids; // 稳定句柄：随行一起 swap-remove，永不复用。
+	int64_t _next_uid = 1;
 	std::vector<float> _pelapsed, _pnext, _pendx, _pendy, _pslots;
 	std::vector<unsigned char> _phasend;
 	// 相位首帧标志从「每弹一个 bool」改为「每槽一个 bit」——否则同相位的两个有状态
@@ -178,6 +180,8 @@ public:
 	float get_life_left(int p_id) const; // 无效 → 0。
 	float get_fx_phase(int p_id) const; // 无效 → 0。
 	int get_phase(int p_id) const; // 当前 lifecycle phase；无效 → -1。
+	int64_t get_uid(int p_id) const; // 行 → 稳定句柄；纯特效 / 无效 → 0。
+	int find_uid(int64_t p_uid) const; // 稳定句柄 → 当前行；已回收 → -1。
 	float get_timer(int p_id) const; // 无效 → 0。
 	PackedFloat32Array get_life_lefts() const; // 寿命快照。
 	PackedFloat32Array get_fx_phases() const; // 特效相位快照。
