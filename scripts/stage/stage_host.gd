@@ -1,4 +1,4 @@
-## 舞台世界装配（唯一实现）—— 真游戏 / 工作台整关预览 / 三个组合台原先各写一份同一段接线。
+## 舞台世界装配（唯一实现）—— 真游戏 / 测试宿主原先各写一份同一段接线。
 ##
 ## 为什么值得抽（2026-09-30，S4）：三处的差别只在"节点从哪来、摆哪儿"，
 ## 而接线是逐字相同的一段，且每一句漏掉都是隐性 bug：
@@ -8,23 +8,21 @@
 ##   · 少 [code]player_data[/code]             → [code]Player._ready[/code] 应用不到角色数据（数值全默认）
 ##
 ## 分工：节点来源由调用方决定 —— 真游戏按 R21 在 [code]game_scene.tscn[/code] 里声明，
-## 工作台与组合台代码建。所以本类只给"建"与"接"两条最小入口：
+## 测试/无头宿主代码建。所以本类只给"建"与"接"两条最小入口：
 ##   建：[code]make_bullet_world()[/code] / [code]make_player()[/code]（真游戏不用，节点是场景声明的）
 ##   接：[code]wire_world()[/code] / [code]wire_player()[/code] / [code]wire()[/code]
 ##
-## 放在 [code]scripts/stage/[/code]（核心层）而不是 [code]scripts/workbench/[/code]：真游戏也要用，
-## 依赖方向只能是 工具 → 核心。
+## 放在 [code]scripts/stage/[/code]（核心层）：真游戏也要用，依赖方向只能是 工具 → 核心。
 class_name StageHost
 extends RefCounted
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 
 
-# ═══ 建（代码搭舞台的宿主：工作台 + 三个组合台）═══
+# ═══ 建（代码搭舞台的测试 / 无头宿主）═══
 
 ## 造弹幕世界并挂到 parent。
-## top_level = true 给嵌入页面的宿主（组合台）：世界原点 = 画布原点，
-## 不叠页签偏移，否则整场弹幕偏一个页签高度。
+## top_level = true 给嵌入页面的宿主：世界原点 = 画布原点，不叠页面偏移。
 static func make_bullet_world(parent: Node, top_level: bool = false) -> BulletManager:
 	var bullet_manager := BulletManager.new()
 	bullet_manager.name = "BulletManager"

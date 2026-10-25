@@ -1,7 +1,4 @@
 extends CoroutineScript
-## @role: boss_move
-## （上面这行是创作台目录角色：[code]const META[/code] 只管名字/描述，角色要靠 [code]@role[/code]；
-##   缺了它这个"只被 [code]pre_move_script[/code] 之外没人引用"的脚本会落到「未分类」、目录里双击不跳台。）
 ## 对角扫场：从游戏框右上角扫到左下角，快 → 慢 → 快。
 ## 用作 [code]PhaseData.pre_move_script[/code]（发动符卡之前的走位）：跑完才宣言。
 ##
@@ -12,10 +9,6 @@ extends CoroutineScript
 ## 参数（可在 [code]PhaseData.params[/code] 覆盖）：
 ##   [code]move_time[/code](总秒数) / [code]hold_middle[/code](中点停留秒数) / [code]from_corner[/code](是否先瞬移到右上角)
 
-const META := {
-	"name": "对角扫场",
-	"desc": "从游戏框右上角快慢快地扫到左下角（用作 PhaseData.pre_move_script 的发动前走位）。",
-}
 
 ## 总耗时（秒）
 var move_time: float = 1.6
@@ -37,13 +30,13 @@ func _tick(p_ctx: StageContext):
 		return false
 	if _moving:
 		return false                      # 第二轮：扫完了 → 结束 → 宣言
-	var corner := Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_TOP)          # 右上角
-	var dest := Vector2(GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM)         # 左下角
-	var mid := (corner + dest) * 0.5                                             # 中点 = 场地中心
+	var 右上角 := Vector2(GameConfig.FIELD_RIGHT, GameConfig.FIELD_TOP)
+	var 左下角 := Vector2(GameConfig.FIELD_LEFT, GameConfig.FIELD_BOTTOM)
+	var 中点 := (右上角 + 左下角) * 0.5   # 中点 = 场地中心
 	_moving = true
 	if from_corner:
-		target.global_position = corner   # 瞬移到右上角再起跑
-	var half := maxf(move_time, 0.0) * 0.5
-	p_ctx.boss.move_path(target, [mid, dest], [half, half],
+		target.global_position = 右上角   # 瞬移到右上角再起跑
+	var 半程 := maxf(move_time, 0.0) * 0.5
+	p_ctx.boss.move_path(target, [中点, 左下角], [半程, 半程],
 		[Tween.EASE_OUT, Tween.EASE_IN], hold_middle)
 	return p_ctx.clock.wait(move_time + hold_middle)

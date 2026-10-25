@@ -296,7 +296,7 @@ func test_same_stream_does_not_restart():
 	assert_eq(_active_bgm(), player, "同一首应仍在原来那一路（没有重头播）")
 	AudioManager.stop_bgm(0.0)
 	await get_tree().process_frame
-	assert_false(player.playing, "stop_bgm(0) 应立即停（工作台重跑靠这个）")
+	assert_false(player.playing, "stop_bgm(0) 应立即停（重开场景靠这个）")
 
 
 ## 停止默认是**淡出**，`fade = 0` 才是立即停

@@ -28,7 +28,7 @@
 | S7 | 难度曲线 | 🚧 | R17 R8 | 曲线靠调校；同种子端到端验证待补 |
 | S8 | 反馈与演出 | ✔ | R2 R7 R20 | — |
 | S9 | 性能（几千发弹下的余量） | 🚧 | R10 R19 | MultiMesh 同步每帧分组/拼 key 有分配；满载 60fps 待实机确认 |
-| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | 回放**播放器**待接入；工作台“续跑”待核 |
+| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | 回放**播放器**待接入 |
 | S11 | 场景流程与演出 | ✔ | R1 R20 R21 | — |
 | S12 | 玩家体验与可访问 | ✔ | R4 R6 R7 R20 | — |
 | S13 | 素材与图集 | ✔ | R12 R17 | —（`laser` 按拍板留独立 PNG） |
@@ -53,7 +53,7 @@
 | R14 | 运行时存档走 `user://`，不写 `res://` |
 | R15 | 命名：文件/目录 snake_case，节点 PascalCase；标识符 ASCII，中文只进内容槽 |
 | R16 | 大二进制用 Git LFS；`.gitignore` 忽略 `.godot/` 与 `user://` 类存档 |
-| R17 | 数据驱动：数值走 `.tres`/`Resource`/集中配置，不散落魔术数字 |
+| R17 | 数据驱动：数值走 `.tres`/`Resource`/集中配置，不散落魔术数字；行为/编排仍写代码（code-first，见 `AGENTS.md`） |
 | R18 | 单一职责：上帝对象要拆，一个类只做一件事 |
 | R19 | DRY：公共逻辑抽层，不复制粘贴（含常量与阈值） |
 | R20 | 可复用子系统拆独立子场景；公共 UI/组件抽独立 |
@@ -150,10 +150,9 @@
 - preset/builder 不覆写显式开关（`.enemy()` 别设 `is_spawn_fog`）。
 - Godot 的 `erase_section` / `remove_*` 对不存在目标会 `ERR_FAIL`：先 `has_section` / `file_exists` 守卫。
 - 存档写盘走 `SaveManager` 的 tmp → `.bak` → 提交，不要直接 `ConfigFile.save` 正式档；`ConfigFile.load` 对垃圾文件也可能返回 OK（无任何段）⇒ 必须检查已知段，别把空档当好档。
-- 重构成果靠机械护栏：`tools/check_structure.sh` 看住组合台同名场景壳 / 测试白盒预算只减不增（现 327）/ 唯一来源常量 / 舞台接线唯一 / **内容层不直连**；护栏要先证明会红。
-- 内容层 `data/**` 不自己 `get_parent()` / `create_tween()`：移动走 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path`，Logo 走 `ctx.stage.show_logo`（`check_structure` ⑥ 会红）。
-- `BulletData.duplicate()` 会丢**未导出**的脚本 var（`faction/tint/tint_mode/lifecycle`）⇒ 复用请直接按引用，或用构造链重建；pattern 的 `template` 不要 `duplicate()`（否则阵营回默认 PLAYER，阶段台会打 Boss）。
-- 被托管视图的输入领地要显式划分：宿主 chrome 占更高 `CanvasLayer`（GUI 拾取按画布层从高到低）。
+- 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（现 327）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
+- 内容层 `data/**` 不自己 `get_parent()` / `create_tween()`：移动走 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path`，Logo 走 `ctx.stage.show_logo`（`check_structure` ⑤ 会红）。
+- `BulletData.duplicate()` 会丢**未导出**的脚本 var（`faction/tint/tint_mode/lifecycle`）⇒ 复用请直接按引用，或用构造链重建；pattern 的 `template` 不要 `duplicate()`（否则阵营回默认 PLAYER）。
 - 测试用夹具，别拿真实内容当断言标准；内容只做“不数数量、不写死路径”的结构冒烟。
 
 > 其余跨子系统教训见 `BEST_PRACTICES_LOG.md`；内核/lifecycle 专项见 `DANMAKU_API.md` §3 / 附录 A（速查）。
@@ -163,9 +162,8 @@
 - **bomb 数据模型**（`BombData` 家族 + `KernelBulletHost.spawn_bomb` 按实际类型分派）→ `ARCHITECTURE.md` §6 · `CONTENT_GUIDE.md` §四。
 - **弹型与贴图**（`data/bullets/*.tres` = 外观+碰撞+朝向；贴图 = 1024² 图集）→ `DANMAKU_API.md` §7.1。
 - **纹理插座**（`_texture_by_index` / `texture_for_index()` 是设计 seam，不是债）→ `docs/archive/M3_TEXTURE_OWNERSHIP_DECISION.md`。
-- **Pattern（实验）**：`BulletPattern` 基类 + `PatternParams`（手感 `.tres`）+ `data/patterns/ring.gd`；具体 pattern **不写 `class_name`**，由内容 preload / 目录扫描；只给基类/参数类进全局类表。
+- **Pattern（实验）**：`BulletPattern` 基类 + `PatternParams`（手感 `.tres`）+ `data/patterns/ring.gd`；具体 pattern **不写 `class_name`**，由内容 preload；只给基类/参数类进全局类表。
 - **内容协程 async（实验）**：`extends AsyncCoroutineScript` + `run_async(ctx)`；只 `await ctx.clock.delay/next_tick`（跟 `CoroutineRunner` 时钟）；不要用 `Timer`/`SceneTreeTimer` 做内容时间。旧 `_tick` 返回秒数风格保留。
-- **目录扫描**：`ContentCatalog` 必须同时认 `extends AsyncCoroutineScript`；新增协程基类时同步改 `_is_coroutine_script`，否则脚本会静默从创作台消失。
 - **API 文档**：核心 `class_name` 用 `##`（`[codeblock]` / `[code]` / `[method]`）写“描述 + 模型 + 用法 + 边界”；长教程留在 `docs/`，代码只放链接。试点：`BulletLifecycle`。
 - **文档注释风格**：不写内部版本号（V18/DSL7）和 `**` 强调；用平实中文、`[code]`/`[codeblock]`；长文留 `docs/`。
 - **Marisa 激光锚点**：激光段 anchor 到子机节点；子机重建 / cleanup 前必须 `ctx.bullets.clear_laser_bullets()`，否则旧段 anchor id 失效（退回自机 + `push_error`）。激光段用 `BulletData.kind = LASER` 标记，`MarisaLaserFade` 才能整批淡出。
@@ -173,9 +171,8 @@
 ## 🔴 待改进（达标后清空）
 
 - [ ] **R16**：47MB 二进制未配 Git LFS（`.gitattributes` 仅 EOL 规范化）。
-- [ ] **R18/R19**：`composer_panel.gd`（1109）仍是工作台最大单体；`spell_practice_menu.gd` 已从 769 拆到 348（`SpellPracticeData` / `SpellPracticeListView` / Probe），`workbench.gd` 455（10 个预览服务），`creation_station.gd` 274；判据是“一个类只做一件事”，行数只是提示。
-- [ ] **R21**：`workbench` 11 处 `.new()` + 15 处 `add_child`（开发工具，可后）。
-- [ ] **编排路线**（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 2 书签原生 / Step 6 `ctx.background` 注入服务待做；5/7 暂缓。
+- [ ] **R18/R19**：`spell_practice_menu.gd` 已从 769 拆到 348（`SpellPracticeData` / `SpellPracticeListView` / Probe）；判据是“一个类只做一件事”，行数只是提示。
+- [ ] **编排路线**（`docs/archive/STAGE_FLOW_PLAN.md`）：Step 6 `ctx.background` 注入服务待做；其余暂缓。
 - [ ] **内核融合（M3）**：M1/M2 完成、M3 已拍板「纹理句柄」；判据改为结构性（0 类型映射 / 0 内容签名侧表）。
 
 > 历史“重审说明 + K0 审计表”见 [`archive/BASELINE_EVIDENCE.md`](archive/BASELINE_EVIDENCE.md)（只增不改）。

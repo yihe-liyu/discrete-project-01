@@ -70,8 +70,12 @@ func clear_all() -> void:
 
 
 func _update_shader() -> void:
-	var view_size: Vector2 = _view_size
+	var current_size: Vector2 = get_viewport().get_visible_rect().size
+	if current_size != _view_size:
+		_view_size = current_size
+		_mat.set_shader_parameter("view_size", _view_size)
 	var canvas: Transform2D = get_viewport().get_canvas_transform()
+	var pixel_scale: float = canvas.get_scale().x
 
 	for i in MAX_CIRCLES:
 		var pf: String = _prefixes[i]
@@ -83,9 +87,9 @@ func _update_shader() -> void:
 				_mat.set_shader_parameter("%s_alpha" % pf, 0.0)
 				continue
 			var t := clampf(c.age / c.duration, 0.0, 1.0)
-			var radius_px := lerpf(c.start_r, c.max_r, t)
+			var radius_px := lerpf(c.start_r, c.max_r, t) * pixel_scale
 			var screen_pos: Vector2 = canvas * c.world_pos
-			var uv_pos := screen_pos / view_size
+			var uv_pos := screen_pos / _view_size
 			# 渐隐
 			var alpha: float = 1.0
 			if c.fade_out > 0.0 and c.age > c.duration:

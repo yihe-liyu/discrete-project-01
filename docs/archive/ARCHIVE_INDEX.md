@@ -17,7 +17,7 @@
 | [N2_NATIVE_INTEGRATION_PLAN.md](N2_NATIVE_INTEGRATION_PLAN.md) | 原生弹幕系统替换 `BulletSystem` 的**接入 + 拆除清单 + 终局决策**；L3.5 每一步的验收数字（4a / 4b-pre / 4e / 4f） | ✅ 已完成（2026-09-14） | `archive/GDEXTENSION_KERNEL_DESIGN.md`、`DANMAKU_API.md` §3、`ARCHITECTURE.md` §7、`kernel_bullet_host.gd` 的报错文案 |
 | [M3_TEXTURE_OWNERSHIP_DECISION.md](M3_TEXTURE_OWNERSHIP_DECISION.md) | M3 决策记录：**纹理插座不是债**（拍板 ③ 纹理句柄）—— 防止后人"顺手修掉"设计 seam | ✅ 已拍板 | 基线「其他契约」、`TODO_TEMP` |
 | [SPELL_SYSTEM_TARGET.md](SPELL_SYSTEM_TARGET.md) | 符卡系统目标蓝图：卡定义 / 卡记录分离 + **uid 当身份证** + 三张表各司其职 | 🕰 蓝图早于实现（核心已由 `boss_catalog.gd` 落地） | `ARCHITECTURE.md` §7 |
-| [CREATION_STATION_V1.md](CREATION_STATION_V1.md) | 创作台（工作台）设计 V1：与作者逐条拍板 —— **预览沙盒，不是编辑器** | 🕰 已被实现/演进取代 | —（工作台现状看 `scripts/workbench/`） |
+| [CREATION_STATION_V1.md](CREATION_STATION_V1.md) | 创作台（工作台）设计 V1：与作者逐条拍板 —— **预览沙盒，不是编辑器** | 🕰 已退役 | 两套 UI 已于 2026-10-24 删除，现行工具见 `tools/` |
 | [REBUILD_REPO_STATUS.md](REBUILD_REPO_STATUS.md) | 重建版仓库归档登记：`1-st-touhou-star-rebuild` 完成历史使命；**「重建版改 → tag → vendor」流程已废止** | 📦 归档登记 | `TODO_TEMP.md`（内核方向） |
 | [BEST_PRACTICES_BASELINE_OLD_AUDIT.md](BEST_PRACTICES_BASELINE_OLD_AUDIT.md) | 当前基线的前身（只记状态 + 旧 🔴 TODO 审计）—— 与今天基线对照可看出判据怎么演进的 | 🕰 已被取代 | 基线头部（说明出处） |
 | [BACKGROUND_VISUAL_PLAN.md](BACKGROUND_VISUAL_PLAN.md) | 背景视觉计划（**2026-10-04 已冻结**）：现役 3D 背景 + 已完成记录 + 未做项留痕；**§A–§I 不再投入** | ⛔ 已冻结 | `README.md`、`ARCHITECTURE.md` §7 |

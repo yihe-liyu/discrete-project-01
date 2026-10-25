@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-894%20tests%20/%20129%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-799%20tests%20/%20113%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -51,7 +51,7 @@
 | 层 | 文档 | 什么时候看 |
 |---|---|---|
 | **日常** | [CONTENT_GUIDE](CONTENT_GUIDE.md) · [TEST_INDEX](docs/TEST_INDEX.md) | 每次动手前 |
-| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/弹道路径**速查**） · [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) · [CREATION_STATION_V2](docs/CREATION_STATION_V2.md) | 改对应系统 / 做内容工具时 |
+| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/弹道路径**速查**） · [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) | 改对应系统 / 做内容工具时 |
 | **历史 / 附录** | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md)（只看索引） · [archive](docs/archive/ARCHIVE_INDEX.md) | 查“为什么/当时怎么想” |
 
 ### 我在做什么？看哪份？
@@ -59,18 +59,18 @@
 | 任务 | 打开 | 提醒 |
 |---|---|---|
 | 跑游戏 / 跑测试 | 本页 · [TEST_INDEX](docs/TEST_INDEX.md) | `./tools/verify.sh` 是总门禁 |
-| 加一个波次 / 一张符卡 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §0 / §四 / §六 | 阶段台有热更新；整关预览切页保活，改脚本仍要重启 |
+| 加一个波次 / 一张符卡 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §0 / §四 / §六 | 改完用符卡练习看手感；先跑 `tools/check_content.sh` |
 | 加敌人 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §三 | `EnemyData` 构造链 + 行为脚本 + `AssetRegistry` |
 | 加一面 / 新 Boss | [CONTENT_GUIDE](CONTENT_GUIDE.md) §四 / §八 · [ARCHITECTURE](docs/ARCHITECTURE.md) §6 | **必须进 `stage_registry.tres` / `boss_registry.tres`** |
-| 改某颗弹的飞行规律 | [DANMAKU_API](docs/DANMAKU_API.md) · [CONTENT_GUIDE](CONTENT_GUIDE.md) §六 | 直接拼原语或用弹幕台拼装页；`until` 顺序有坑 |
+| 改某颗弹的飞行规律 | [DANMAKU_API](docs/DANMAKU_API.md) · [CONTENT_GUIDE](CONTENT_GUIDE.md) §六 | 直接拼原语；`until` 顺序有坑 |
 | 写对话 | [CONTENT_GUIDE](CONTENT_GUIDE.md) 附录 D | `--list` / `--dry` / `--shot` |
 | 改背景 | [archive/BACKGROUND_VISUAL_PLAN.md](docs/archive/BACKGROUND_VISUAL_PLAN.md)（已冻结） · [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) §2.5 | 现役 3D 背景；别重开视觉线 |
 | 改引擎 / 内核 | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [archive/GDEXTENSION_KERNEL_DESIGN.md](docs/archive/GDEXTENSION_KERNEL_DESIGN.md) | 改 C++ 必须重编扩展 |
-| 优化内容流程 / 做工具 | [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) · [CREATION_STATION_V2](docs/CREATION_STATION_V2.md) | 先看「建议顺序」，别先造编辑器 |
+| 优化内容流程 / 做工具 | [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) · [内容作者契约](docs/CONTENT_AUTHORING_CONTRACT.md) | 先看「建议顺序」，别先造编辑器 |
 | 查“为什么当初这么改” | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md) 索引 → [archive](docs/archive/ARCHIVE_INDEX.md) | 正文只留最近十余条 |
 
 > **分工（同一信息只写一处）**：规则/状态 = [BASELINE](docs/BEST_PRACTICES_BASELINE.md)；架构 = [ARCHITECTURE](docs/ARCHITECTURE.md)；
-> 弹幕参考 = [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/路径速查）；内容 = [CONTENT_GUIDE](CONTENT_GUIDE.md)（含对话附录）；内容管线 = [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md)；创作台 v2 = [CREATION_STATION_V2](docs/CREATION_STATION_V2.md)；
+> 弹幕参考 = [DANMAKU_API](docs/DANMAKU_API.md)（含生命周期/路径速查）；内容 = [CONTENT_GUIDE](CONTENT_GUIDE.md)（含对话附录）；内容管线 = [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md)；
 > 测试 = [TEST_INDEX](docs/TEST_INDEX.md)；历史 = [LOG](docs/BEST_PRACTICES_LOG.md) + [archive](docs/archive/ARCHIVE_INDEX.md)。
 > 原始设定资料 = `docs/reference/*.txt`；`TODO_TEMP.md` 是作者本地临时待办（不进 Git）。
 
@@ -111,9 +111,11 @@
 > README 徽章 / `DANMAKU_API` 的弹型与音效 key 表 / README 链接 / 滚动日志，全部对着代码与数据机械核对
 > —— 文档数字再也不会静默腐烂。
 >
-> 第 4 步是**结构契约**（`tools/check_structure.sh`）：组合台必须有同名场景壳 · **测试白盒预算只减不增** ·
+> 第 4 步是**结构契约**（`tools/check_structure.sh`）：**测试白盒预算只减不增** ·
 > 第 4 步同时跑**内容契约**（`tools/check_content.sh`）：Stage / Boss 注册表、脚本 / 背景 / BGM 引用、
 > `StageVariant` 的难度唯一性与目录位置、manifest 一致性、孤儿内容 warning —— 漏注册、断引用、错放文件在 verify 阶段就会红。
+> 随后跑**内容预检**（`tools/content_preflight.sh`）：对话事件有没有发送者/接收者、Boss 有没有阶段、
+> 阶段有没有进任何难度槽、`params` 键是否认得 —— 只读，warning 不红。
 > 生成只读内容清单：`./tools/build_content_manifest.sh` → `.godot/probe/content_manifest.json`。
 > **唯一来源常量**（抄第二遍就红）· **舞台接线唯一**（`.inject_*` 只许在 `stage_host.gd`）。
 
@@ -127,24 +129,16 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 # 添加新符卡/Boss → 见 CONTENT_GUIDE.md 第四章
 ```
 
-### 内容创作台（四页签：整关预览 / 弹幕台 / 敌人台 / 阶段台）
+### 内容工具（无 UI）
 
-```bash
-# F6 运行 scenes/workbench/creation_station.tscn —— 内容创作总入口
-# 只跑整关预览：scenes/workbench.tscn（就是创作台的「整关预览」页签）
-```
+> 创作台 / 工作台已退役（2026-10-24）。不再有 F6 内容编辑器；反馈回路回到游戏内与无头命令。
 
-- 真实运行时沙盒：跑的就是游戏代码（`StageRuntime` / `BulletManager` / 协程），非模拟
-- **写代码在 Godot 编辑器**：关卡编排 = stage01.gd（Timeline API）；Boss 弹幕 = PhaseData.tres 显式引用脚本
-- **调参工具**：固定种子（可复现）· 命中框 · 逐帧（F）· 12x 快进跳转 · 书签（静态提取 + 人工打点）
-- 幽灵玩家提供自机狙目标；静音/背景开关/事件日志/实时状态
-- **1600 布局 / 常驻左栏**：1600×960 时左侧 384 目录常驻（不提供关闭按钮，贴住场地金框）、页签从内容区 384 开始；1280 时自动收起为可开合覆盖抽屉；**1–4 直达四台 / Ctrl+Tab 循环 / Alt+← 返回**；双击条目直达对应台
-- **弹幕台两种模式**：直射（初始弹外形/方向/发射）· 拼装（初始弹 + A/B 替换弹模板 + Move/Until/Action/Dir → 预览 → 生成/复制代码；目录里有「弹道描述符」组）· 操作四键在两种模式顶部共用
-- **弹幕 / 敌人 / 阶段三个组合台有热更新**（改脚本约 1.3s 自动重载）；**整关预览没有**，改关卡脚本/时间线后重启（切页不再丢进度）
-- **整关预览与游戏同场地坐标**：嵌入后 Workbench 场地也是 x 64..832 / y 32..928（顶栏 32px），与真游戏一致；ghost 活动范围/初始点同真自机（x 88..808 / y 64..896，y=840）
-- **整关预览保活**：切走冻结、切回继续；工作区配置 v2（旧 v1 自动读入，坏数据降级为空）
-- 目录自动扫描 `res://data/`，双击条目直达对应组合台（面板显示条数 / 警告数）
-- 创作流程见 [CONTENT_GUIDE.md](CONTENT_GUIDE.md)；架构决策见 [docs/archive/ARCHITECTURE_ROADMAP.md](docs/archive/ARCHITECTURE_ROADMAP.md)「内容工作台演进」专节（已归档）
+- **写代码**：关卡编排 = `stage01.gd`（Timeline API）；Boss 弹幕 = `PhaseData.tres` 显式引用脚本。
+- **看手感**：主菜单 → Spell Practice（单张符卡最快）或 Start 整关；没有单独的预览沙盒。
+- **守契约**：`./tools/check_content.sh`（注册表 / 引用 / UID / manifest）+ `./tools/content_preflight.sh`（对话事件闭环 / 无人 Boss / 孤儿阶段 / 参数键）。
+- **对话预览**：`scenes/ui/dialogue_preview.tscn`，`--list` / `--dry` / `--shot`，不用打关卡。
+- **背景截图 / 耗时**：`tools/background_capture.tscn`（固定种子、同帧对比）。
+- **录制 / 观测**：`FlightRecorder` + `ParamTrace` 保留为无头调试库；不再有 UI 面板。
 
 ---
 

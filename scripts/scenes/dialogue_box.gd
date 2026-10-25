@@ -22,6 +22,8 @@ signal finished()
 
 const POS_TWEEN_DEFAULT := 0.35  ## 无 duration 时立绘位置渐变时长
 const MOD_TWEEN_DEFAULT := 0.25  ## 明暗渐变时长
+## 对话舞台的设计分辨率：立绘 / 台词坐标都按它排。
+const DESIGN_SIZE := Vector2(1280.0, 960.0)
 
 @onready var _root: Control = $Control
 
@@ -36,6 +38,8 @@ var _is_closing: bool = false
 func _ready() -> void:
 	visible = false
 	_root.modulate.a = 0.0
+	_fit_to_viewport()
+	get_viewport().size_changed.connect(_fit_to_viewport)
 
 ## 播放一段对话（DialogueSteps 步骤序列，台词已内联）
 func play_steps(steps: Array) -> void:
@@ -55,9 +59,45 @@ func play_steps(steps: Array) -> void:
 	if not GameManager.game_state_changed.is_connected(_on_game_state):
 		GameManager.game_state_changed.connect(_on_game_state)
 
+
+## 推进一句（创作台自动推进用）；输入未就绪 / 已关闭时忽略。
+## 与按 Z 等价：会正常走完步骤、触发 d.event()，不会跳过事件。
+func advance_line() -> void:
+	if _is_closing or not _is_input_ready or _dialogue_runner == null:
+		return
+	_advance()
+
+
+## 跳过整段对话（创作台 / 调试用）：淡出、发 finished、恢复宿主 runner。
+## 会丢掉尚未执行的行间事件；自动推进请用 [method advance_line]。
+func skip_all() -> void:
+	if _is_closing or _dialogue_runner == null:
+		return
+	_close()
+
+
 func _exit_tree() -> void:
 	if GameManager.game_state_changed.is_connected(_on_game_state):
 		GameManager.game_state_changed.disconnect(_on_game_state)
+	if get_viewport() != null and get_viewport().size_changed.is_connected(_fit_to_viewport):
+		get_viewport().size_changed.disconnect(_fit_to_viewport)
+
+
+## 创作台的 SubViewport 不是 1280×960：把整个对话舞台等比缩进当前视口并居中。
+## 游戏内视口就是设计分辨率时 scale=1，不改任何东西。
+func _fit_to_viewport() -> void:
+	if _root == null:
+		return
+	var target := get_viewport().get_visible_rect().size
+	if target.x <= 0.0 or target.y <= 0.0:
+		return
+	var fit := minf(target.x / DESIGN_SIZE.x, target.y / DESIGN_SIZE.y)
+	if is_equal_approx(fit, 1.0):
+		_root.scale = Vector2.ONE
+		_root.position = Vector2.ZERO
+		return
+	_root.scale = Vector2(fit, fit)
+	_root.position = (target - DESIGN_SIZE * fit) * 0.5
 
 
 func _process(delta: float) -> void:

@@ -24,6 +24,10 @@ signal stage_started()
 signal stage_cleared()
 ## 整关结束时与 stage_cleared 同时发；不要拿它当“场上敌人清空”的实时信号。
 signal all_enemies_defeated()
+## 生成一只带行为脚本的杂兵（创作台记录仪 / 调试工具用；内容不订阅）。
+signal enemy_spawned(data: EnemyData, enemy: Enemy)
+## 生成 Boss（创作台记录仪 / 调试工具用；内容不订阅）。
+signal boss_spawned(data: BossData, boss: Boss)
 
 ## 敌人场景。
 const ENEMY_SCENE = preload("res://scenes/enemy.tscn")
@@ -170,8 +174,12 @@ func spawn_enemy_data(data: EnemyData, p_ctx: StageContext = null) -> Enemy:
 	if cs.has_method("setup_custom"):
 		cs.setup_custom(params)
 	enemy.add_child(cs)
+	# 先入树再 start：行为的 _on_start() 里可以直接 ctx.enemies.move_to（create_tween 要求节点在树）。
+	# 旧顺序是先 start 后入树，敌人脚本只能靠 _ready + call_deferred 兜一层。
+	if not add_enemy_to_scene(enemy):
+		return null
 	cs.start(p_ctx, enemy)
-	add_enemy_to_scene(enemy)
+	enemy_spawned.emit(data, enemy)
 	return enemy
 
 
@@ -180,7 +188,8 @@ func spawn_enemy(data: EnemyData, position: Vector2, auto_start: bool = true) ->
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
 	enemy.enemy_data = data
 	enemy.global_position = position
-	add_enemy_to_scene(enemy)
+	if not add_enemy_to_scene(enemy):
+		return null
 	if auto_start:
 		enemy.start.call_deferred()
 	return enemy
@@ -196,6 +205,7 @@ func spawn_boss(data: BossData, position: Vector2, p_ctx: StageContext = null) -
 	add_enemy_to_scene(boss)
 	boss.setup(data, p_ctx)
 	boss.start_boss()
+	boss_spawned.emit(data, boss)
 	return boss
 
 
@@ -268,7 +278,7 @@ func _inject_player_ctx(p_ctx: StageContext) -> void:
 
 ## 把敌人 / Boss 挂进 World：先按类型注入注册表（Boss 还有 HUD 层），再 add_child。
 ## 无 world 时挂到场景根；两者都不可用则 queue_free。
-func add_enemy_to_scene(node: Node2D) -> void:
+func add_enemy_to_scene(node: Node2D) -> bool:
 	# 注入注册表：Enemy 在 _ready 自注册、Boss 在 start_boss 注册（都在 add_child 之后，故先给引用）。
 	# 显式类型化接口：Enemy.set_registry / Boss.set_registry / Boss.set_ui_layer。
 	var enemy := node as Enemy
@@ -285,5 +295,6 @@ func add_enemy_to_scene(node: Node2D) -> void:
 		parent = get_tree().root
 	if parent:
 		parent.add_child(node)
-	else:
-		node.queue_free()
+		return true
+	node.queue_free()
+	return false

@@ -28,6 +28,7 @@ static func display_name(value: int) -> String:
 ## 按难度取数组项；空数组 / 越界 / 非法难度都 push_error，并返回安全回落值。
 ## 普通 4 项数组只覆盖 Easy~Lunatic；EX 内容需要 5 项（或在 Extra 下走别的分支）。
 static func pick(values: Array, difficulty: int, context: String = "diff_pick") -> Variant:
+	ParamTrace.record(values, difficulty, context)
 	if values.is_empty():
 		push_error("%s: 难度数组为空" % context)
 		return null

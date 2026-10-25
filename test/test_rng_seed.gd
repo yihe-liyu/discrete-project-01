@@ -49,3 +49,13 @@ func test_randi_range_bounds():
 		var v: int = rng.randi_range(3, 7)
 		assert_gte(v, 3, "randi_range 下界越界")
 		assert_lte(v, 7, "randi_range 上界越界")
+
+
+func test_snapshot_restore_state():
+	var rng = _make_rng(20261024)
+	for i in 5:
+		rng.randf()
+	var snapshot: Dictionary = rng.snapshot_state()
+	var next: float = rng.randf()
+	rng.restore_state(snapshot)
+	assert_eq(rng.randf(), next, "快照恢复后应回到同一 RNG 状态")

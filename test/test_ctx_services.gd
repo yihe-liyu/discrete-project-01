@@ -148,3 +148,20 @@ func test_enemy_despawn_clear_without_effect_is_fine():
 	add_child_autofree(e)
 	assert_true(ctx.enemies.despawn_clear(e), "仍应回收成功")
 	assert_eq(pool.played.size(), 0, "没配特效就只回收")
+
+
+## ctx.bullets 不能缓存第一次读到的 null：自机射击 ctx 在 Player._ready 里创建，
+## 那时组合根还没把 BulletManager 接进 StageRuntime。若缓存 null，实战按 Z 就永远不出弹。
+func test_bullets_service_refreshes_after_stage_binding():
+	var ctx := StageContext.new(null)
+	assert_null(ctx.bullets.bullet_manager, "绑定 stage 前应没有弹幕世界")
+
+	var rt := StageRuntime.new()
+	var manager := BulletManager.new()
+	rt.bullet_manager = manager
+	ctx.stage = rt
+	assert_eq(ctx.bullets.bullet_manager, manager, "绑定 stage 后应重新指向当前 BulletManager")
+
+	ctx.stage = null
+	rt.free()
+	manager.free()

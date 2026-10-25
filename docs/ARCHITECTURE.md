@@ -50,7 +50,6 @@
 | **记录** | 持久化符卡簿 | `RecordService.record_phase_*` | `scripts/data/spell_*.gd` |
 | **背景** | 环境/装饰/相机/太阳/雾 | `StageBackground`（相机/太阳/雾命令，待接 `ctx.background`） | `scripts/background/*` |
 | **时间线/关卡** | 编排“何时做什么” | `timeline.at()` / `do(callable)` / `start_phase` | `scripts/coroutine/timeline/*` / `stage_manager.gd` |
-| **工作台** | 预览/调试/书签 | `workbench` | `scripts/workbench/*` |
 
 ---
 
@@ -102,7 +101,7 @@
 
 `StageDirector`（`scripts/coroutine/director/stage_director.gd`）+ `BossHandle`（`…/boss_handle.gd`）：`dir.boss/dialogue/bgm/on/dispose` + 句柄 `reveal/hide_name/enter/phase/retreat`。`stage01.gd` 的 Boss 段与 `_on_dialogue_event` 大 match 已改为动词 + 事件路由。`Timeline.start_phase(boss_getter, data)` 接口未变（有测试锁定）。
 
-**服务动词补齐（b）**：`ctx.boss`（`BossService`：`current/exists`）+ `ctx.diff`（`DifficultyService`：`picked/pick/pick_from/at_least`）。内容里的 `GameState.get_boss()`、`GameState.selected_difficulty`、`AudioManager.play_sfx` 改用 `ctx.*`（仅改关卡/行为/玩家协程内容；UI/菜单/工作台属表现/基建层仍可直接摸全局）。两个服务用 **preload const（无 class_name）**，避免 headless 全局类缓存问题（同 `ParamValidator`）。
+**服务动词补齐（b）**：`ctx.boss`（`BossService`：`current/exists`）+ `ctx.diff`（`DifficultyService`：`picked/pick/pick_from/at_least`）。内容里的 `GameState.get_boss()`、`GameState.selected_difficulty`、`AudioManager.play_sfx` 改用 `ctx.*`（仅改关卡/行为/玩家协程内容；UI/菜单/工具属表现/基建层仍可直接摸全局）。两个服务用 **preload const（无 class_name）**，避免 headless 全局类缓存问题（同 `ParamValidator`）。
 
 ## 3. 接口契约原则（好/坏接口的判据）
 
@@ -226,7 +225,7 @@
 ### 8.3 现状 / 待补 / 债务（**粗粒度摘要**；逐条权威 = 基线 S 表 + 「🔴 待改进」）
 - ✅ 已实现：引擎核心/Autoload、弹幕（原生权威）、敌人 Boss、玩家与 Bomb（`BombData`/`RingBombData`/`MistBombData` + `PlayerResources.use_bomb`）、协程框架、道具、特效、背景、音频、UI/菜单、对话、记忆释放、数据类、Stage 1。
 - ⏳ 待补：Stage 2~6 内容（面脚本 / Boss / 符卡脚本）、Boss 战多面、部分美术占位、各页面 F6 逐页核验。
-- 🐛 债务：`DifficultyScreen`(287) 与基类 `NavPage`(353) 同名函数 **12/23**（`navigate` / `_nav_directional` / `refresh_colors` / `accept_current` …）→ 抽差分化；`workbench.gd` 已拆出 10 个预览服务（786→439，含 Playback/Bookmarks），`creation_station.gd` 390→274（chrome 节点化 + WorkspaceStore）；只剩装配/选项回调/公开接缝；`spell_practice_menu.gd` 仍是上帝对象（R18/R19）。
+- 🐛 债务：`DifficultyScreen`(287) 与基类 `NavPage`(353) 同名函数 **12/23**（`navigate` / `_nav_directional` / `refresh_colors` / `accept_current` …）→ 抽差分化；创作台 / 工作台已退役（2026-10-24）；`spell_practice_menu.gd` 仍是上帝对象（R18/R19）。
 - 🚧 缺：Replay（只录不放）、Continue/Result 结算。
 
 > 曾经登记的「`PauseMenu`/`GameOverMenu` 的 `_on_leave` 重复」已随基类收口消失（全项目已无 `_on_leave`）；「Bomb 释放未接」也已落地 —— 修完即删，别留在本文。

@@ -8,10 +8,6 @@ extends CoroutineScript
 ## 写 pre_move 脚本的铁律：必须能结束 —— 它不结束这张符卡就永远不会发动。
 ## 本脚本靠 [code]auto_stop = true[/code] + 第二轮 [code]_tick[/code] 返回 [code]false[/code] 收尾。
 
-const META := {
-	"name": "走位到点",
-	"desc": "移动到指定站位后结束（用作 PhaseData.pre_move_script 的发动前走位）。",
-}
 
 ## 目标站位
 var dest: Vector2 = Vector2(448.0, 240.0)

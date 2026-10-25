@@ -9,10 +9,10 @@ Godot 4.7 + GDScript + 原生 GDExtension 的东方 STG。先读：
 
 ## 规则
 
-- **内容 code-first**：`data/**` 是真实脚本/资源，不是编辑器数据；不要恢复数据关卡或工作台写回。
+- **内容 code-first**：`data/**` 是真实脚本/资源，不是编辑器数据；不要恢复数据关卡，也不要让工具写回 `data/**`。
 - `data/**` 不写 `get_parent()` / `create_tween()`；内容时间用 `ctx.clock` / `Timeline`，不用 `Timer`。
 - 改代码前先读相关文件；保持现有中文命名/注释风格。
-- 改内容后至少跑对应阶段 / 阶段台冒烟；GUT 不验手感。
+- 改内容后至少跑对应符卡练习 / 整关冒烟；GUT 不验手感。
 - 公开 API 用 Godot 文档注释（`##`）+ BBCode（`b` / `br` / `code` / `codeblock` / `method` / `member` / `signal` / `constant` / `enum`）；私有实现用 `#`。
 - 文档注释不用 Markdown 粗体、反引号或内部版本号；长教程只留 `docs/` 链接。
 - 新增 `class_name` 后跑 `godot --headless --import`；`.uid` 文件入库。
@@ -29,4 +29,6 @@ Godot 4.7 + GDScript + 原生 GDExtension 的东方 STG。先读：
 ```bash
 ./tools/verify.sh --shards=8
 ./test/run_tests.sh -gtest=res://test/test_xxx.gd
+./tools/check_content.sh
+./tools/content_preflight.sh
 ```

@@ -18,7 +18,7 @@ const BONUS_FAILED_TEXT := "失败"
 @onready var _boss_name: Label = $Control/BossName
 @onready var _history: HBoxContainer = $Control/History
 ## 阶段倒计时（两位秒数）。位置声明在场景里（x 居中 / y = 符卡名下方 64px）——
-## 名字（BOSS 大字报）右停在 y=0、视觉底约 56，倒计时别再和它同高（工作台同值，见 workbench.gd）。
+## 名字（BOSS 大字报）右停在 y=0、视觉底约 56，倒计时别再和它同高。
 @onready var _timer_label: Label = $Control/TimerLabel
 ## 阶段点模板（场景声明，按下标复制；数量随 Boss 阶段数变化）。
 @onready var _dot_template: ColorRect = $Control/DotTemplate

@@ -21,6 +21,20 @@ func randomize_seed() -> void:
 func get_seed() -> int:
 	return _rng.seed
 
+
+## 快照完整 RNG 状态（seed + state）；创作台反射探针用完恢复。
+func snapshot_state() -> Dictionary:
+	return {"seed": _rng.seed, "state": _rng.state}
+
+
+func restore_state(snapshot: Dictionary, p_emit: bool = false) -> void:
+	if snapshot.is_empty():
+		return
+	_rng.seed = int(snapshot.get("seed", _rng.seed))
+	_rng.state = int(snapshot.get("state", _rng.state))
+	if p_emit:
+		seed_changed.emit(_rng.seed)
+
 func randf() -> float:
 	return _rng.randf()
 

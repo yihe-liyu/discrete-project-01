@@ -1,7 +1,7 @@
 shader_type canvas_item;
 
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
-uniform vec2 vs = vec2(1280.0, 960.0);
+uniform vec2 view_size = vec2(1280.0, 960.0);
 
 uniform vec2 c0_pos = vec2(-1.0);
 uniform float c0_radpx = 0.0;
@@ -32,8 +32,8 @@ uniform float edge_soft = 0.03;
 
 #define ACCUM(i, pos, radpx, alp) \
 	if (pos.x >= -0.5) { \
-		float dx = (UV.x - pos.x) * vs.x; \
-		float dy = (UV.y - pos.y) * vs.y; \
+		float dx = (UV.x - pos.x) * view_size.x; \
+		float dy = (UV.y - pos.y) * view_size.y; \
 		float dist = sqrt(dx * dx + dy * dy); \
 		float ci = 1.0 - smoothstep(radpx - edge_soft * radpx, radpx + edge_soft * radpx, dist); \
 		raw_mask += ci * alp; \

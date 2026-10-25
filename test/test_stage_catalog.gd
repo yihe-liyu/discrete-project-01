@@ -29,7 +29,7 @@ func test_bgm_key_of_reads_stage_data():
 	assert_eq(StageCatalog.bgm_key_of(-99), "", "未收录的面 → 空串（不是崩 / 不是乱猜）")
 
 
-## **可玩清单**（关卡练习菜单 / 工作台关卡下拉的共同数据源）：必须有 `create_script`。
+## **可玩清单**（关卡练习菜单的数据源）：必须有 `create_script`。
 ## ⚠️ 判据要落在**扫描兜底**路径上：注册表是"可玩清单"（已由 `test_data_validity` 守卫），
 ## 所以走注册表时本用例会空转；而 `all()` 的**目录扫描**回退**会**带上无关卡脚本的面
 ## （3B / EX 就在盘上）—— `playable()` 的价值正是在这里把它们滤掉。
@@ -50,3 +50,15 @@ func test_playable_filters_scriptless_from_scan_fallback():
 		assert_not_null(stage.create_script,
 			"可玩清单只许收能开局的：%s" % StageCatalog.display_name_of(stage.stage_id))
 	assert_eq(playable.size(), all_stages.size() - scriptless, "可玩数应 = 全部 − 无关卡脚本的")
+
+
+func test_known_includes_scriptless_surfaces_for_desk():
+	var known := StageCatalog.known()
+	var ids: Array[int] = []
+	for stage in known:
+		ids.append(stage.stage_id)
+	assert_true(ids.has(4), "known() 应包含 3B（阶段树可看）")
+	assert_true(ids.has(9), "known() 应包含 EX（阶段树可看）")
+	for stage in StageCatalog.playable():
+		assert_ne(stage.stage_id, 4, "3B 没有整关脚本，不应进可玩清单")
+		assert_ne(stage.stage_id, 9, "EX 没有整关脚本，不应进可玩清单")

@@ -18,18 +18,18 @@ extends Node
 ##   `--shots 180,540` 在第 N 帧各存一张图 + 打一行数字（默认 180=3s / 540=9s；1s = 60 帧）
 ##   `--until 600`     跑到第 N 帧退出（默认 = 最大 shot + 60）
 ##   `--shrink 2`      背景视口按 1/N 分辨率渲染（1/2 ⇒ 1/4 像素；**默认 2 = 出厂口径**）
-##   `--seed <整数>`   固定 RNG 种子，默认 = 项目唯一来源 `BenchCommon.FIXED_SEED`
+##   `--seed <整数>`   固定 RNG 种子，默认 = 项目唯一来源 `ToolDefaults.FIXED_SEED`
 ##                     （树是 `DecorManager.batch_spawn` **随机**撒的：不固定种子，两次跑的画面不可比）
 ##   `--no-srgb`       不做线性→sRGB 修正（默认做：视口纹理是线性的，直接存 PNG 会偏暗）
 ##
 ## 出图文件名带 **stage**：`bg_s<stage>_f<帧>_<宽>x<高>.png` —— 同一目录跑多面不会互相覆盖。
 
-const BENCH_COMMON := preload("res://scripts/workbench/bench_common.gd")
+const TOOL_DEFAULTS := preload("res://scripts/debug/tool_defaults.gd")
 const CAMERA_HOME := preload("res://scripts/background/background_camera_home.gd")
 
 ## 抓哪一面（`--stage` 覆盖）
 const DEFAULT_STAGE_ID := 1
-## 与 `game_scene.tscn` 的 SubViewport 同规格（BG7 已把工作台统一到此值）
+## 与 `game_scene.tscn` 的 SubViewport 同规格
 const FIELD_SIZE := Vector2i(800, 928)
 ## 相机姿态唯一来源：scripts/background/background_camera_home.gd
 const CAM_POS := CAMERA_HOME.POSITION
@@ -46,7 +46,7 @@ var _shot_frames: Array[int] = [180, 540]
 var _until_frame := -1
 ## 默认 **2 = 出厂口径**（`stretch_shrink = 2`）；用 1 量出来的像素量是出厂的 4 倍，别混着比
 var _shrink := 2
-var _seed: int = BENCH_COMMON.FIXED_SEED
+var _seed: int = TOOL_DEFAULTS.FIXED_SEED
 var _srgb := true
 var _frame := 0
 var _last_usec := 0

@@ -8,7 +8,7 @@ extends GutTest
 const SPELL053 := preload("res://data/stages/stage03B/phase/哆来咪三符/哆来咪三符.gd")
 
 
-## 按难度建一份内容脚本：`难度高于Hard` 在 .new() 时就读取难度，所以必须先设；
+## 按难度建一份内容脚本：`难度为Hard以上` 在 .new() 时就读取难度，所以必须先设；
 ## `_on_start()` 是建弹型钩子（不依赖 ctx / target），可独立调用。
 func _build(difficulty: int):
 	var saved := int(SaveData.selected_difficulty)

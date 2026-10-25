@@ -40,6 +40,22 @@ static func all() -> Array[StageData]:
 	return _load_all()
 
 
+## 已知舞台清单：注册表 + 目录扫描的并集（含 3B / EX 这类无关卡脚本的面）。
+## 创作台阶段树用：这些面不能开整关，但 Boss / 阶段数据完整。
+static func known() -> Array[StageData]:
+	var out: Array[StageData] = []
+	var seen: Dictionary = {}
+	for stage in all():
+		if stage != null and not seen.has(stage.stage_id):
+			seen[stage.stage_id] = true
+			out.append(stage)
+	for stage in _load_all():
+		if stage != null and not seen.has(stage.stage_id):
+			seen[stage.stage_id] = true
+			out.append(stage)
+	return out
+
+
 ## 可玩清单：[code]all()[/code] 里真有 [code]create_script[/code] 的那些。
 ## [code]all()[/code] 在注册表缺失时会回退目录扫描，而那个回退会带上没做关卡脚本的面（如 3B / EX）
 ## ⇒ 凡是要问"这面能不能开局"的地方（关卡练习菜单 / 工作台关卡下拉）一律走这里，

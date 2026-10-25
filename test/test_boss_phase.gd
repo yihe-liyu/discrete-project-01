@@ -387,12 +387,12 @@ func test_without_pre_move_declares_immediately():
 # ═══════════ 全破演出（play_defeat） ═══════════
 
 ## 全破定格必须**保存原 time_scale 再恢复**，不能硬写 1.0 ——
-## 工作台有 12x 快进（同样是 Engine.time_scale），硬写会把工具拉回常速。
+## 调试工具会用高 time_scale 快进，硬写会把调用方拉回常速。
 ## 无 ctx 时演出其余部分全走守卫（静默跳过），所以本用例只锁定格这条不变量。
 func test_play_defeat_hitstop_saves_and_restores_time_scale():
 	add_child(_boss)                     # create_tween / 计时器需要入树
 	var original := Engine.time_scale
-	Engine.time_scale = 4.0              # 模拟工作台快进
+	Engine.time_scale = 4.0              # 模拟调试快进
 	_boss.play_defeat()
 	assert_almost_eq(Engine.time_scale, 4.0 * Boss.DEFEAT_HITSTOP_SCALE, 0.001,
 		"定格应把时间倍率压低（保存原值 × 倍率）")

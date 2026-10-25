@@ -1,10 +1,9 @@
 extends GutTest
-## `StageHost`（舞台世界装配）—— S4 把"真游戏 / 工作台整关预览 / 三个组合台"各写一份的
-## 接线收成**一条实现**。本文件既验 StageHost 自己，也**锁住四个宿主真的在用它**：
-## 组合台 / 工作台 / 真游戏各装一个真场景，断言同一条不变量
+## `StageHost`（舞台世界装配）—— S4 把"真游戏 / 预览宿主"各写一份的接线收成**一条实现**。
+## 本文件既验 StageHost 自己，也**锁住真游戏真的在用它**
 ## （注册表里是自机 / 内核后端拿到同一张注册表 / 特效挂舞台）。
 
-const GHOST := preload("res://scripts/workbench/ghost_player.gd")
+const GHOST := preload("res://scripts/debug/ghost_player.gd")
 const REIMU := preload("res://data/player_data/reimu_data.tres")
 
 var _stage_runtime: StageRuntime
@@ -91,26 +90,7 @@ func test_wire_player_without_bullet_world_is_loud_and_inert() -> void:
 	assert_null(_stage_runtime.entity_registry.player, "没接上就不该绑一半")
 
 
-# ═══ 四个宿主：真的在用这条接线 ═══
-
-func test_bench_scene_uses_stage_host() -> void:
-	var bench = preload("res://scenes/workbench/phase_bench.tscn").instantiate()
-	add_child_autofree(bench)
-	await get_tree().process_frame
-	var rt: StageRuntime = bench.stage_runtime()
-	_assert_wired(rt, bench.bullet_manager(), rt.world)
-
-
-func test_workbench_scene_uses_stage_host() -> void:
-	# 真装配整关预览（会真加载 stage01；user:// 由 run_tests.sh 隔离）
-	var wb: Node = load("res://scenes/workbench.tscn").instantiate()
-	add_child_autofree(wb)
-	await get_tree().process_frame
-	_assert_wired(
-		wb.get_node("World/StageRuntime"),
-		wb.get_node("BulletManager"),
-		wb.get_node("World"))
-
+# ═══ 真游戏：真的在用这条接线 ═══
 
 func test_game_scene_uses_stage_host() -> void:
 	var inst: Node = load("res://scenes/game_scene.tscn").instantiate()

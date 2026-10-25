@@ -6,7 +6,7 @@ extends GutTest
 ##
 ## 相关：`StageDirector.finish_stage()`（内容动词）→ 本方法。
 
-const GHOST_SCRIPT := preload("res://scripts/workbench/ghost_player.gd")
+const GHOST_SCRIPT := preload("res://scripts/debug/ghost_player.gd")
 const REIMU_DATA := preload("res://data/player_data/reimu_data.tres")
 
 
@@ -118,3 +118,37 @@ func test_inject_player_ctx_uses_injected_player_not_world_name_lookup():
 	assert_null(rt.world.get_node_or_null("Player"), "（前提）World 下确实没有叫 Player 的子节点")
 
 
+
+
+## ═══ 敌人行为启动顺序：先入树，再 _on_start() ═══
+
+const ENEMY_START_PROBE := preload("res://test/fixtures/enemy_start_probe.gd")
+
+
+## 回归：旧顺序是 `cs.start()` → `add_enemy_to_scene()`，所以敌人脚本只能在 _ready 里
+## `call_deferred("_init_enemy")` 等一帧。现在改成先入树再 start，_on_start() 里可以直接
+## 调 `ctx.enemies.move_to`（create_tween 要求 target 在树里）。
+func test_enemy_behavior_starts_after_entering_tree():
+	var rt := _runtime()
+	var runner := CoroutineRunner.new()
+	runner.is_running = true
+	add_child_autofree(runner)
+	var ctx := StageContext.new(runner)
+	ctx.stage = rt
+
+	var data := EnemyData.new().red_little_fairy() \
+		.with_script(ENEMY_START_PROBE) \
+		.pos(Vector2(100.0, 100.0))
+	var enemy := rt.spawn_enemy_data(data, ctx)
+	assert_not_null(enemy, "敌人应生成成功")
+	if enemy == null:
+		return
+	var probe: CoroutineScript = null
+	for child in enemy.get_children():
+		if child is CoroutineScript:
+			probe = child
+			break
+	assert_not_null(probe, "敌人下应挂上行为协程")
+	if probe:
+		assert_true(probe.started_in_tree, "行为 _on_start 时 target 应已经在场景树里")
+	enemy.queue_free()

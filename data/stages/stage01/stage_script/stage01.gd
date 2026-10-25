@@ -28,7 +28,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	关底卡摩瑞句柄 = BossHandle.new("boss_final", 关底卡摩瑞, "？？？", ctx.objects)
 	var timeline: Timeline = start_timeline()
-	var logo_tex: Texture2D = preload("res://assets/Textures/front/logo/logo1.png")
+	var 标题纹理: Texture2D = preload("res://assets/Textures/front/logo/logo1.png")
 
 	# 0s: BGM
 	timeline.at(0.0).do(func(): _stage_director.stage_bgm())
@@ -49,24 +49,24 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	# 7s: Logo（内容只给纹理与位置，淡入/停留/淡出机制在 StageRuntime）
 	timeline.at(7.0).do(func():
-		ctx.stage.show_logo(logo_tex, Vector2(GameConfig.FIELD_CENTER_X, 250))
+		ctx.stage.show_logo(标题纹理, Vector2(GameConfig.FIELD_CENTER_X, 250))
 	)
 
 	# 11~26s: 中线妖精波
 	for i in 6:
-		var local_enemy = EnemyData.new().with_script(ENEMY02)
-		var target_y = 175 + i * 50
+		var 敌人模板 = EnemyData.new().with_script(ENEMY02)
+		var 停靠高度 = 175 + i * 50
 		if i % 2 == 0:
 			timeline.at(11.0 + i * 3.0).do(func():
-				ctx.enemies.spawn(local_enemy.red_middle_fairy()\
-				.pos(Vector2(0, target_y))\
-				.param("target_pos", Vector2(GameConfig.FIELD_CENTER_X + 100 + i * 25, target_y)))
+				ctx.enemies.spawn(敌人模板.red_middle_fairy()\
+				.pos(Vector2(0, 停靠高度))\
+				.param("target_pos", Vector2(GameConfig.FIELD_CENTER_X + 100 + i * 25, 停靠高度)))
 			)
 		else:
 			timeline.at(11.0 + i * 3.0).do(func():
-				ctx.enemies.spawn(local_enemy.blue_middle_fairy()\
-				.pos(Vector2(914, target_y))\
-				.param("target_pos", Vector2(GameConfig.FIELD_CENTER_X - 100 - i * 25, target_y)))
+				ctx.enemies.spawn(敌人模板.blue_middle_fairy()\
+				.pos(Vector2(914, 停靠高度))\
+				.param("target_pos", Vector2(GameConfig.FIELD_CENTER_X - 100 - i * 25, 停靠高度)))
 			)
 
 	for i in 7:
@@ -205,11 +205,11 @@ func _on_bgm_switch() -> void:
 func _on_boss_fight() -> void:
 	# 最后一句说完 → 最终 Boss 开战：按难度取阶段表连打。
 	# 只剩两个**语义**守卫：不在场上（内容事件顺序错）、已开战（防重入）。
-	var fb: Boss = 关底卡摩瑞句柄.resolve()
-	if fb == null:
+	var 最终Boss: Boss = 关底卡摩瑞句柄.resolve()
+	if 最终Boss == null:
 		push_warning("stage01: boss_fight 时最终 Boss 不在场上（boss_enter 没跑？）")
 		return
-	if fb.current_phase() != null:
+	if 最终Boss.current_phase() != null:
 		return
 	关底卡摩瑞句柄.show_phase_dots()
 	_timeline.start_sequence_now(
@@ -232,21 +232,21 @@ func _on_stage_end() -> void:
 
 ## Boss 后横穿增援：side 0=右→左，1=左→右（i 决定颜色/位置随机偏移）
 func _spawn_mid_enemy(side: int, i: int, heavy_wave: bool, start_time: float = 2.0) -> void:
-	var from_right := side == 0
-	var x: float = GameConfig.FIELD_RIGHT + 50 if from_right else GameConfig.FIELD_LEFT - 50
-	var tx: float = GameConfig.FIELD_LEFT + 175 if from_right else GameConfig.FIELD_RIGHT - 175
-	var y: float = 431
-	var off: int = RNG.randi() % 200 - 100
-	var e := EnemyData.new()
+	var 从右侧 := side == 0
+	var 生成x: float = GameConfig.FIELD_RIGHT + 50 if 从右侧 else GameConfig.FIELD_LEFT - 50
+	var 目标x: float = GameConfig.FIELD_LEFT + 175 if 从右侧 else GameConfig.FIELD_RIGHT - 175
+	var 生成y: float = 431
+	var 偏移: int = RNG.randi() % 200 - 100
+	var 敌人数据 := EnemyData.new()
 	if i % 2:
-		e.red_little_fairy()
+		敌人数据.red_little_fairy()
 	else:
-		e.blue_little_fairy()
+		敌人数据.blue_little_fairy()
 	if !heavy_wave:
-		e.param("rate", 4)
-	ctx.enemies.spawn(e.with_script(ENEMY03) \
-		.pos(Vector2(x, y + off - 175)) \
-		.param("target_pos", Vector2(tx + off, y + off)) \
+		敌人数据.param("rate", 4)
+	ctx.enemies.spawn(敌人数据.with_script(ENEMY03) \
+		.pos(Vector2(生成x, 生成y + 偏移 - 175)) \
+		.param("target_pos", Vector2(目标x + 偏移, 生成y + 偏移)) \
 		.param("bullet_color", Color.RED if i % 2 else Color.BLUE) \
 		.param("heavy_wave", heavy_wave) \
 		.param("start_time", start_time))

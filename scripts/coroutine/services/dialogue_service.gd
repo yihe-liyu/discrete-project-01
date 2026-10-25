@@ -23,8 +23,16 @@ func play_steps(steps: Array) -> float:
 	var box := DIALOGUE_BOX_SCENE.instantiate()
 	# 对话框自己是 CanvasLayer；挂到组合根注入的 StageRuntime 即可，层级由 box.layer=40 决定。
 	ctx.stage.add_child(box)
-	ctx.runner.pause()
-	box.finished.connect(func(): ctx.runner.resume(), CONNECT_ONE_SHOT)
+	var runner := ctx.runner
+	runner.pause()
+	# 对话结束时宿主 runner 可能已被关卡收尾队列释放（如最后一句 stage_end → finish_stage），
+	# 弱引用 + is_instance_valid 避免对已释放的 runner 调 resume()。
+	var runner_ref: WeakRef = weakref(runner)
+	box.finished.connect(func():
+		var alive := runner_ref.get_ref() as CoroutineRunner
+		if alive != null and is_instance_valid(alive):
+			alive.resume()
+	, CONNECT_ONE_SHOT)
 	box.play_steps(steps)
 	return 0.0
 

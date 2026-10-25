@@ -1,5 +1,5 @@
 extends GutTest
-## 内核注册表重置（工作台清场 / 重开演回收 program / 弹型 —— 原生 store 只增不减）。
+## 内核注册表重置（重开 / 清场回收 program / 弹型 —— 原生 store 只增不减）。
 
 
 func test_system_reset_registries_drops_programs_types_and_bullets() -> void:

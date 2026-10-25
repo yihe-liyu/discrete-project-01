@@ -54,12 +54,13 @@ var clock: ClockService:
 		return _clock_service
 
 ## 弹幕 / 激光服务；无 stage 绑定 = null，方法静默 no-op。
+## 每次取都重新指向当前 stage 的 BulletManager：自机射击 ctx 在 Player._ready 里创建，
+## 那时组合根还没注入 bullet_manager，不能把第一次读到的 null 缓存下来。
 var bullets: BulletService:
 	get:
 		if _bullet_service == null:
 			_bullet_service = BulletService.new()
-			# 只认绑定的 stage，不回退 BulletManager.current（无 stage 的 ctx 由宿主显式绑 stage）。
-			_bullet_service.bullet_manager = stage.bullet_manager if stage else null
+		_bullet_service.bullet_manager = stage.bullet_manager if stage else null
 		return _bullet_service
 
 ## 只读自机查询：get_player / get_position（无自机 = null / ZERO）。

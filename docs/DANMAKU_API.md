@@ -199,7 +199,7 @@ BulletLifecycle.CMP_GE / CMP_LE                       # 0 / 1
 
 ### 3.8 弹道组合（preset 已删除，直接拼原语）
 
-F10c 删掉了 9 个 typed preset；`BulletLifecycle` 只保留原语。工作台「弹幕台 → 拼装」生成同样的代码，可复制回内容。
+F10c 删掉了 9 个 typed preset；`BulletLifecycle` 只保留原语，内容直接写 builder。
 
 ```gdscript
 var lc := BulletLifecycle.new()
@@ -220,8 +220,7 @@ data.trajectory(lc)
 | 躲避自机 | `until_near(T_PLAYER, prox).every(jump)` + `on_end_heading(away(T_PLAYER))` + `then()` + `until_elapsed(flee)` + `despawn()` |
 | 锚定激光 | `anchor_drift(anchor, offset, angle, speed, use_global, initial, render_heading)` + `until_never()` |
 
-> 不再新增 preset：组合由内容直接写，或由工作台拼装器生成。拼装页的 `emit` / `emit_variant`
-> 有 A/B 替换弹模板；生成的代码里 `_spawn` / `_spawn_a` / `_spawn_b` 是占位，填自己的 `BulletData`。
+> 不再新增 preset：组合由内容直接写。`emit` / `emit_variant` 用 `BulletData` 模板。
 > `LifecycleCatalog` 只保留 `{lifecycle: BulletLifecycle}` 的兼容入口；旧 `{move: ...}` preset 名一律返回 null。
 
 ### 3.9 编译与共享
@@ -432,22 +431,15 @@ data/stages/<stage>/
 | uid | 全局唯一符卡编号（0 = 非符不记） |
 | time_limit / hp | 时限 / 血量 |
 | is_timeout_only | 时符 |
-| move_script / shoot_script | **两个槽都必须填**（`test_data_validity` 强制）；「不走位」显式挂 `stay_still.gd`，别留空 |
+| move_script / shoot_script | 空 = 本阶段不移动 / 无弹幕（纯演出 / 纯走位合法）；常规卡建议两个都填 |
 | pre_move_script | 宣言前走位（会推迟宣言，必须能结束） |
 | params | 注入脚本同名属性（`PhaseData.validate` 按三脚本并集查未知键） |
 | item_* / open_reduce_* | 掉落 / 开局减伤 |
 
-### 8.3 目录注解（创作台索引）
+### 8.3 注释（不再自动索引）
 
-```gdscript
-extends CoroutineScript
-## 非符一：三向扇形
-## @name: 非符一
-## @desc: 扇开三向、每向 5 连
-## @role: boss_shoot     # 角色覆盖（约定判错时才用）
-```
-
-角色约定：`*_move.gd`→Boss移动 · `*_shoot.gd`→弹幕发射 · `enemy/`→敌人行为 · `stage_script/`→关卡编排 · `background/`→背景演出。
+文件头注释仍建议写清「这张卡做什么」；`@name` / `@desc` / `@role` 随创作台退役，不再被工具消费。
+命名约定（`*_move.gd` / `*_shoot.gd` / `enemy/` / `stage_script/`）只用于人类阅读。
 
 ## 9. 陷阱清单（必读）
 

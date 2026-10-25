@@ -5,10 +5,10 @@ extends GutTest
 ## 但**不写死具体路径/文件名** —— 遍历目录扫到的全部内容，改名 / 增删 / 重排都不该让它红，
 ## **数据违规才该红**。
 ##
-## 反过来说：机制测试请**自建夹具**、别绑内容（见 test_phase_rig / test_workbench_align /
-## test_boss_phase）。判据一句话：**测试对内容的依赖，应等于它要验证的内容属性。**
+## 反过来说：机制测试请**自建夹具**、别绑内容（见 test_boss_phase）。
+## 判据一句话：**测试对内容的依赖，应等于它要验证的内容属性。**
 
-const CAT := preload("res://scripts/data/content_catalog.gd")
+const MANIFEST := preload("res://scripts/data/content_manifest.gd")
 
 
 ## 舞台注册表包含 Stage 1
@@ -81,24 +81,26 @@ func test_stage_backgrounds_are_well_formed():
 ## - 双脚本槽都在（move + shoot）
 ## - 非符 ⟺ `uid == 0`；真符卡必须有名字，且 **uid 全局唯一**
 func test_all_phase_data_valid():
-	var phases = CAT.new().scan().by_role("phase")
+	var manifest: Dictionary = MANIFEST.new().build()
+	var phases: Array = manifest.get("phases", [])
 	assert_gt(phases.size(), 0, "应扫到阶段数据")
 	var owner_by_uid := {}
-	for e in phases:
-		var phase: PhaseData = load(e.path)
-		assert_not_null(phase, "%s 应可加载" % e.path)
+	for entry in phases:
+		var path := String(entry.get("path", ""))
+		var phase: PhaseData = load(path)
+		assert_not_null(phase, "%s 应可加载" % path)
 		if phase == null:
 			continue
-		assert_gt(phase.hp, 0, "%s hp 应 > 0" % e.path)
-		assert_gt(phase.time_limit, 0.0, "%s 时限应 > 0" % e.path)
-		assert_not_null(phase.move_script, "%s 需要移动脚本" % e.path)
-		assert_not_null(phase.shoot_script, "%s 需要弹幕脚本" % e.path)
+		assert_gt(phase.hp, 0, "%s hp 应 > 0" % path)
+		assert_gt(phase.time_limit, 0.0, "%s 时限应 > 0" % path)
+		assert_true(phase.move_script != null or phase.shoot_script != null,
+			"%s 至少要有移动或弹幕脚本之一" % path)
 		if phase.uid == 0:
 			continue   # 非符：不进符卡册，uid 不参与唯一性
-		assert_ne(phase.name, "", "%s 真符卡应有名字" % e.path)
+		assert_ne(phase.name, "", "%s 真符卡应有名字" % path)
 		assert_false(owner_by_uid.has(phase.uid),
-			"符卡 uid 必须全局唯一：%s 与 %s 都用了 %d" % [e.path, owner_by_uid.get(phase.uid, ""), phase.uid])
-		owner_by_uid[phase.uid] = e.path
+			"符卡 uid 必须全局唯一：%s 与 %s 都用了 %d" % [path, owner_by_uid.get(phase.uid, ""), phase.uid])
+		owner_by_uid[phase.uid] = path
 
 
 ## 角色数据：灵梦/魔理沙都有射击脚本

@@ -1,6 +1,6 @@
 # 测试索引（改哪里 → 看哪条）
 
-> **这是什么**：129 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
+> **这是什么**：131 个测试文件的**地图**。一行一条：它保护什么、属于哪一层、多少个用例、有多白盒。
 > **这不是**：规格说明、待办清单、覆盖率报告（本项目**没有**覆盖率度量）。
 >
 > **怎么用**：改动前扫一眼对应层的表，改动后跑门禁。
@@ -14,12 +14,12 @@
 ./test/run_tests.sh                                  # GUT 全量串行（~54s，排查用）
 ./test/run_tests.sh -gtest=res://test/test_laser.gd  # 单文件（~1.4s）
 ./test/run_tests.sh -gtest=res://test/test_x.gd -gtest_func=test_xxx   # 单用例
-./tools/check_structure.sh                          # 结构契约（组合台/白盒预算/唯一来源/接线唯一）
+./tools/check_structure.sh                          # 结构契约（白盒预算/唯一来源/接线唯一/跨语言/内容直连）
 ./tools/verify.sh                                    # 七步门禁（默认并行分片，~18s）
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：129 脚本 / **894 用例（894 通过 / 0 红 —— ✅ 全绿）/ 8195 断言 / 58.436s** / 19 orphans / **0 pending**。
+**现状**：113 脚本 / **799 用例（799 通过 / 0 红 —— ✅ 全绿）/ 6370 断言 / 52.8s** / 19 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,10 +27,10 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 53 | 410 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 48 | 392 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
-| **F 工具 · 开发台** | 13 | 86 | `scripts/workbench/**`、创作站 |
+| **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
 
 > 「白盒」列 = 私有成员访问次数（`._xxx`，粗计）。**它越高，重构时越容易断。**
@@ -85,7 +85,7 @@
 | [test_spell_backdrop](../test/test_spell_backdrop.gd) | **符卡背景 = 每 Boss 一个场景**：宿主层显隐/淡入淡出/层级/同场景不重建不重播 + 换场景换实例 + 淡出中途折返复用 + 滚动层（速度可调/取模无缝）+ plain 模板可用 | 10 | 0 |
 | [test_spell_portrait](../test/test_spell_portrait.gd) | **符卡宣言立绘**：右上角→左下角快慢快→淡出；层级在弹幕之下 | 5 | 0 |
 | [test_kernel_random](../test/test_kernel_random.gd) | K1：内核 PRNG 确定性（同种子同结果）+ `random_dir` / `chance_toward` | 5 | 0 |
-| [test_kernel_reset](../test/test_kernel_reset.gd) | 内核注册表重置（工作台清场：回收 program / 弹型） | 2 | 5 |
+| [test_kernel_reset](../test/test_kernel_reset.gd) | 内核注册表重置（重开/清场：回收 program / 弹型） | 2 | 5 |
 | [test_native_behavior_batch](../test/test_native_behavior_batch.gd) | 无状态 `behavior_batch` ↔ 有状态 `behavior_tick` 1:1 + dead 返回 | 3 | 0 |
 | [test_native_event_dispatch](../test/test_native_event_dispatch.gd) | 行为事件必须按**事件自己的 program**（`eprog`）派发 | 1 | 0 |
 | [test_native_laser_anchor](../test/test_native_laser_anchor.gd) | 端到端桥接：魔理沙激光段必须贴**子机锚点**而非自机 + **只清 LASER kind、不动普通弹** | 2 | 0 |
@@ -106,26 +106,22 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（53 / 410）
+## C · 宿主 · 运行时系统（48 / 392）
 
 ### C1 组合根 / 服务 / 时间线（18 / 86）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |
-| [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 四个宿主（真游戏 / 工作台 / 组合台）真的在用它 —— 注册表里有自机 / **运行时显式认领 `player`（B2）** / 内核后端拿到同一张注册表 / fx 挂舞台 / 异常路径只交注册表 | 11 | 0 |
+| [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 真游戏真的在用它 —— 注册表里有自机 / **运行时显式认领 `player`（B2）** / 内核后端拿到同一张注册表 / fx 挂舞台 / 异常路径只交注册表 | 9 | 0 |
 | [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop | 9 | 0 |
-| [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 | 10 | 0 |
+| [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 + **`ctx.bullets` 绑定 stage 后会刷新 BulletManager**（自机射击 ctx 早于组合根注入） | 11 | 0 |
 | [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：**即时全屏清敌弹**（当帧清空、与距离无关）—— 与 `death_clear()` 的**膨胀圈**语义差是本文件重点（把它写成膨胀圈 ⇒ 两条断言红）+ **每颗被清的弹各留一条消弹特效**（退回裸清 ⇒ 报 0 vs 2）；无管理器 = 静默 no-op。⚠️ 数弹只数 `get_type(i) != null` 的真弹 —— 特效行与弹**共用同一个 store** | 2 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData / 难度变体取曲** | 12 | 0 |
-| [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** | 6 | 0 |
+| [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** + **敌人行为先入树、再 `_on_start()`**（不再需要 `_ready` + `call_deferred`） | 7 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
-| [test_scaffold_wizard](../test/test_scaffold_wizard.gd) | 回归：创作台第一次打开「＋变体」时，窗口固定 620×460，不被未折行内容从顶上拉高 | 1 | 0 |
-| [test_phase_scaffold_service](../test/test_phase_scaffold_service.gd) | `PhaseScaffoldService`：只追加、UID 校验、BossData 文本追加、临时副本 apply | 4 | 0 |
-| [test_phase_scaffold_wizard](../test/test_phase_scaffold_wizard.gd) | Phase 向导冒烟：按当前 Stage 打开、固定尺寸、空名称时禁用创建 | 1 | 0 |
 | [test_content_manifest](../test/test_content_manifest.gd) | `ContentManifest`：Stage / Boss / Phase / Variant 去重索引、难度变体来源、Boss 槽引用一致性 | 3 | 0 |
-| [test_scaffold_service](../test/test_scaffold_service.gd) | `ScaffoldService`：生成 StageVariant 计划、保留 UID 文本、拒绝重复难度、apply 到临时副本 | 3 | 0 |
 | [test_stage_variants](../test/test_stage_variants.gd) | `StageData` 难度变体：只覆盖脚本 / 背景 / BGM，未覆盖回落基准；`StageRuntime` 真的使用变体脚本；重复 / 空变体响错 | 4 | 0 |
 | [test_difficulty](../test/test_difficulty.gd) | 难度维度契约：0..4 / 展示名；`diff_pick` / `diff_get` 的非法难度、空数组、Extra 用 4 项数组会响亮报错并回落最后一项 | 6 | 0 |
 | [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：12 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
@@ -166,7 +162,7 @@
 |---|---|---|---|
 | [test_miss_circle_layer](../test/test_miss_circle_layer.gd) | Miss 圈特效：autoload → 场景节点 + 组合根注入 | 8 | 7 |
 | [test_decor_manager](../test/test_decor_manager.gd) | `DecorManager`：静态路径（SCISSOR 层）性能优化后行为不变 + **「树与地面同速」**（跟随速度取平面 `world_scroll_per_second()`，**含加速倍率** ——回归：2026-10-04 作者实测「树和地面的速度不一样了」，比值 1.0002 vs 期望 7） | 8 | 1 |
-| [test_stage_background](../test/test_stage_background.gd) | 背景环境接线：**父节点 `_ready` 之前应用预设也必须生效**（子节点 `_ready` 先于父节点 ⇒ 旧实现静默 no-op，练习模式改预设不变）+ `build_environment()` 每次全新实例（防「越重跑越暗」）+ **预设必须带真天球且不被 `fog_sky_affect` 洗掉** + **地平线联动真的生效** + **`Sky.radiance_size` 必须压低**（默认 256 ⇒ 每帧重算立方图，实测 8.9 → 44.8 ms）+ **雾色不许是亮灰**（`Color.DARK_GRAY` = CSS #A9A9A9 = 0.663 会把远处洗亮）+ **相机按类型找**（不按名字：改名不再静默改变行为）+ **背景视口必须 `own_world_3d = true`**（否则与根视口共享 World3D，环境被同 world 的另一个 `WorldEnvironment` 抢） + **B3：场景必须声明 `DecorManager` 子节点**（`get_decor_manager()` 按类型解析） + **相机复位回初始姿态（不只 fov）** + **`env_preset` 由场景声明、入树即应用**（环境不再依赖内容脚本的 `_ready`；练习模式同样覆盖） + **蒙眼雾：可见部分场景声明、参数唯一来源 = 材质**（旧实现三份默认 + 编辑器里看不见） + **`setup()` 不依赖父节点是 `StageBackground`**（旧实现 `get_parent()` ⇒ 挪层级就静默拿 null、雾不再跟相机） + **雾材质每实例独立**（`.tscn` sub_resource 默认跨实例共享 ⇒ 需 `resource_local_to_scene`） + **太阳 `SunSprite` 场景声明且纹理来自场景**（裸 `Image` 资源 ⇒ 编辑器里是空白，连位置都没法拖；实测圆心在画面顶边外 7 像素） + **宿主自动接线故事演出层**（`_resolve_showcase()` 按类型接相机+太阳 ⇒ **内容脚本零调用**；旧设计"记得调 setup() 才显示"已废止 —— 忘了就隐形且零报错，stage02 实况） + **太阳对准取"画出来的 sprite"而非 `Sun` 节点**（`SunSprite` 有局部位移 ⇒ 旧实现一改 y 就与黑雾错位） + **相机初始姿态可由背景声明**（`override_camera_home`，在抓 home **之前**应用 ⇒ `reset_camera()` 回**声明的**那套） + **相机动词绝对/相对分名 + 目标记忆**（相对动词从"上一条指令的**目标**"累加而非实时值，并先杀同属性旧 tween ⇒ 重叠不漂移；作者实测「Y 没回到 0」已成回归） + **BGT5：切走/暂停时背景视口停渲染**（`render_target_update_mode` 与 process_mode 无关） + **BGA9：地面材质/网格每实例独立**（工作台+游戏同时跑不串 `uv_offset`） | 22 | 0 |
+| [test_stage_background](../test/test_stage_background.gd) | 背景环境接线：**父节点 `_ready` 之前应用预设也必须生效**（子节点 `_ready` 先于父节点 ⇒ 旧实现静默 no-op，练习模式改预设不变）+ `build_environment()` 每次全新实例（防「越重跑越暗」）+ **预设必须带真天球且不被 `fog_sky_affect` 洗掉** + **地平线联动真的生效** + **`Sky.radiance_size` 必须压低**（默认 256 ⇒ 每帧重算立方图，实测 8.9 → 44.8 ms）+ **雾色不许是亮灰**（`Color.DARK_GRAY` = CSS #A9A9A9 = 0.663 会把远处洗亮）+ **相机按类型找**（不按名字：改名不再静默改变行为）+ **背景视口必须 `own_world_3d = true`**（否则与根视口共享 World3D，环境被同 world 的另一个 `WorldEnvironment` 抢） + **B3：场景必须声明 `DecorManager` 子节点**（`get_decor_manager()` 按类型解析） + **相机复位回初始姿态（不只 fov）** + **`env_preset` 由场景声明、入树即应用**（环境不再依赖内容脚本的 `_ready`；练习模式同样覆盖） + **蒙眼雾：可见部分场景声明、参数唯一来源 = 材质**（旧实现三份默认 + 编辑器里看不见） + **`setup()` 不依赖父节点是 `StageBackground`**（旧实现 `get_parent()` ⇒ 挪层级就静默拿 null、雾不再跟相机） + **雾材质每实例独立**（`.tscn` sub_resource 默认跨实例共享 ⇒ 需 `resource_local_to_scene`） + **太阳 `SunSprite` 场景声明且纹理来自场景**（裸 `Image` 资源 ⇒ 编辑器里是空白，连位置都没法拖；实测圆心在画面顶边外 7 像素） + **宿主自动接线故事演出层**（`_resolve_showcase()` 按类型接相机+太阳 ⇒ **内容脚本零调用**；旧设计"记得调 setup() 才显示"已废止 —— 忘了就隐形且零报错，stage02 实况） + **太阳对准取"画出来的 sprite"而非 `Sun` 节点**（`SunSprite` 有局部位移 ⇒ 旧实现一改 y 就与黑雾错位） + **相机初始姿态可由背景声明**（`override_camera_home`，在抓 home **之前**应用 ⇒ `reset_camera()` 回**声明的**那套） + **相机动词绝对/相对分名 + 目标记忆**（相对动词从"上一条指令的**目标**"累加而非实时值，并先杀同属性旧 tween ⇒ 重叠不漂移；作者实测「Y 没回到 0」已成回归） + **BGA9：地面材质/网格每实例独立**（多实例同时跑不串 `uv_offset`） | 21 | 0 |
 | [test_screen_shake](../test/test_screen_shake.gd) | `ScreenShake`：trauma 按 DECAY 衰减、sustain 保持到清零、强度封顶 1 | 6 | 6 |
 | [test_hit_effect](../test/test_hit_effect.gd) | 通用击中特效：一个类驱动所有特效场景（数据驱动验证） | 6 | 0 |
 | [test_spawn_fx](../test/test_spawn_fx.gd) | 出生雾 / 消弹消散统一特效模型（`EffectType` + 行 `fx_type`） | 5 | 2 |
@@ -182,24 +178,23 @@
 | [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类 | 5 | 0 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
-### C7 存档 / 回放 / 随机（5 / 27）
+### C7 存档 / 回放 / 随机（5 / 28）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_replay_recorder](../test/test_replay_recorder.gd) | `ReplayRecorder` 录输入基础设施 | 7 | 0 |
-| [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 | 5 | 0 |
+| [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |
 | [test_enemy_data_serializable](../test/test_enemy_data_serializable.gd) | 债 C 第一步：`EnemyData` 可序列化 + `validate()` | 3 | 0 |
 
-### C8 对话逻辑 / 内容目录（3 / 33）
+### C8 对话逻辑 / 内容目录（3 / 34）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_dialogue_preview](../test/test_dialogue_preview.gd) | 对话预览交互契约：**默认不自动播**（进场景预选但不播 / 换段只选中并停演出 / 换脚本同理） | 3 | 0 |
 | [test_dialogue_steps](../test/test_dialogue_steps.gd) | 对话系统：`StageState` / `DialogueSteps` DSL / `DialogueRunner`（纯逻辑，不进树） | 28 | 0 |
-| [test_content_catalog](../test/test_content_catalog.gd) | `ContentCatalog` 目录扫描器（创作台）：角色分类 / 注解覆盖 / 边界 / const META / 引用反查 · **`pre_move_script` 反推角色** · **显示名只认「顶部且隔开」的注释块** · **阶段按 uid 升序（符卡优先、非符路径定序）** · `@role` 补空缺不算冲突 · **角色标签只在敌人脚本里砍、前缀要「标签形状」** · **`AsyncCoroutineScript` 也入目录** | 10 | 0 |
-| [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底**（回归：曾只扫顶层 .tres）+ 显示名回落 `Stage %d` + **`playable()`（可玩清单）在扫描兜底下滤掉无关卡脚本的面** | 4 | 0 |
+| [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底** + 显示名回落 + `playable()` 过滤 + **`known()` 覆盖 3B/EX（无 `create_script`，预检用）** | 5 | 0 |
 
 ## D · UI / 菜单（16 / 113）
 
@@ -233,34 +228,16 @@
 | [test_stage01_dialogue](../test/test_stage01_dialogue.gd) | 第一面战前对话构建：台词/说话者/表情/事件顺序 | 9 | 0 |
 | [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断） | 1 | 0 |
 
-## F · 工具 · 开发台（13 / 86）
+## F · 工具 · 无头工具（2 / 9）
 
-> ✅ **这一层已接缝化**（2026-09-30，S1）：原先 26 个用例里 181 处私有成员访问，现在**0**——
-> 六个文件全部改走 `BenchBase` / `CreationStation` / `CatalogPanel` 的**公开接口**（见下节）。
->
-> ✅ **S2 又抽出一个可无树测试的服务**：`HotReloadService`（防抖 / 连坐 / 失败保旧版 / 基线刷新），
-> 于是 `test_hot_reload` 不用 Control 台子就能验这四条规则（6 个用例）。
->
-> ✅ **S3 再把"播放状态机"与"书签模型"从 `workbench.gd` 里抽出来**（`Playback` / `Bookmarks`）：
-> 暂停 / 速度 / 快进 / 逐帧 / 静音 + 提取 / 持久化 / 合并 全部变成可无树断言的纯决策（31 个用例）。
-> 抽的过程中**顺手抓到一个真 bug**：`BookmarkCache.load()` / `has_cache()` 从来没被调用过 ——
-> 人工打点只写不读，**重启工作台就全丢**（"可编辑、持久化"名不副实）→ 已修 + 立回归。
+> 创作台 / 工作台 UI 已退役（2026-10-24）。这一层只保留**可无树测试**的工具：
+> 飞行记录仪（事件/采样/来源行）与内容源码事实扫描（cue / wait / var / diff_pick / 对话事件）。
+> 内容契约不再靠 UI：`tools/check_content.sh` + `tools/content_preflight.sh` 在 verify 里守。
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_enemy_rig](../test/test_enemy_rig.gd) | 敌人组合台：壳组装 / 真实生成 / 热重载重演（`load_script` / `spawn_at` / `force_hot_reload`） | 4 | 0 |
-| [test_bullet_rig](../test/test_bullet_rig.gd) | 弹幕试验台：热更新成功重演 / 失败保旧版（`poll_hot_reload` / `age_watch_mtime` / `param_panel`）· **F10b 拼装模式加 op / 生成代码 / 预览发射 / 初始弹编辑 / A/B 模板快照** | 4 | 0 |
-| [test_creation_station](../test/test_creation_station.gd) | 创作台（四页签）：页签切换 / 实例保持 / 运行时清理 / 路由切台+装配· **真点击验页签不被子视图吃掉**（作者报的回归）· **全局目录抽屉四页签可开 / 从台子里路由**· **描述符组双击路由到拼装页**· **Phase 2：整关预览冻结保活（时间/实例/process/关卡+背景+敌人协程继续推进）/ 工作区 v1→v2 迁移与坏数据降级**· **1–4 / Ctrl+Tab / Alt+← 快捷键与历史** | 11 | 0 |
-| [test_catalog_panel](../test/test_catalog_panel.gd) | `CatalogPanel` 目录树渲染：组头完整 / 重名消歧 / 拖拽 / **搜索真的在筛**（原先那半条是空转的） | 3 | 0 |
-| [test_phase_rig](../test/test_phase_rig.gd) | 阶段组合台：壳副本 / 双槽默认 / 开演真实生成（`select_phase` / `hp_value` / `selected_shoot_script` / `play`） | 4 | 0 |
-| [test_workbench_align](../test/test_workbench_align.gd) | 工作台坐标一致性：场地 / `BulletManager` / `BenchWorld` 同在画布坐标（`playfield` / `bullet_manager` / `bullet_global_position`）；ghost 中心活动范围 = 真自机 clamp 范围、默认起点 y=840 | 2 | 0 |
-| [test_bullet_shell](../test/test_bullet_shell.gd) | `BulletShell`（试验台"壳"）：自由方向 + 显示辅助 | 3 | 0 |
-| [test_hot_reload](../test/test_hot_reload.gd) | **热更新管线服务**（无树）：防抖要稳够才放行 / 轮询间隔节流 / 没改就静默 / 失败保旧版 / 基线刷新不反复重载 / 连坐同目录 / 关掉即惰性 | 6 | 0 |
-| [test_playback](../test/test_playback.gd) | **播放状态机**（无树）：暂停幂等 / 暂停先收快进 / 快进压过档位 / 物理步上限与 BGM 音高 / 到达收尾（含无 runner）/ 慢放音高不脱钩 / 跳转容差 / 逐帧放行物理 + 防重入 / 静音三源 | 20 | 0 |
-| [test_bookmarks](../test/test_bookmarks.gd) | **书签模型**（无树）：人工覆盖同刻自动并排序 / adopt 存副本 / 静态提取 / **人工打点重开还在**（只写不读的回归）/ 哈希不符保人工 / 串档不认 / 内容哈希可复现 | 11 | 0 |
-| [test_param_panel](../test/test_param_panel.gd) | **参数面板键名列**：不换行 / 不截断 / 悬停看全名 / 列宽放得下最长键名（作者报的 `move_spee`/`d` 断词回归；夹具带长键名哨兵） | 2 | 0 |
-| [test_bookmark_extractor](../test/test_bookmark_extractor.gd) | 书签提取器：字面量 + 循环展开 | 4 | 0 |
-| [test_bullet_composer_golden](../test/test_bullet_composer_golden.gd) | **F10a 拼装器 golden**：4 张复杂符卡（难度分支 / 表达式 / emit 循环 / emit_variant）+ 简单组合 / 双相位，与真实内容 `compile()` 逐字段一致；另验 `until_turned` 前置、`emit_variant` chance、**to_code 生成（含 `_spawn_a/_spawn_b`）** | 12 | 0 |
+| [test_flight_recorder](../test/test_flight_recorder.gd) | 运行时记录仪：环形缓冲 / 来源行挑选 / JSON 导出（事件 + 采样） | 3 | 0 |
+| [test_content_source_facts](../test/test_content_source_facts.gd) | 内容源码事实：cue / wait / var / diff_pick / `_init` 闸 + 对话 event / stage handler 扫描 | 6 | 0 |
 
 ## G · 性能基准（2 / 3）
 
@@ -271,61 +248,14 @@
 
 ---
 
-## ✅ D3 债已还：181 → 0 处私有成员访问（2026-09-30 · S1 接缝化）
+## 🧹 创作台 / 工作台退役（2026-10-24）
 
-原状：`workbench.gd` 是排着要拆的上帝对象（D3：694 行 + 3 个超长 `_build_ui`），
-六个测试文件**直接摸它的内部**（`_cur_script` / `_watch_paths` / `_view` / `_divider_y` … **181 处**）
-—— 于是"想重构"和"测试会一起断"互相锁死。
+两套 UI 已删除（`scenes/workbench/**`、`scenes/workbench.tscn`、`scripts/workbench/**`、
+`scenes/desk/**`、`scripts/desk/**`），连同只服务 UI 的 18 个测试文件。
 
-**S1 只做一件事：先立公开接缝，把测试抬到接口上。**
-- `BenchBase`：把三台重复的那几份状态上移（`_cur_script` / `_cur_script_path` / `_param_panel` /
-  `_reload_status` / `_catalog` / `CATALOG`），并公开
-  `load_script` / `current_script` / `current_script_path` / `watch_paths` / `set_watch_paths` /
-  `age_watch_mtime` / `poll_hot_reload` / `force_hot_reload` / `reload_status_text` / `param_panel` /
-  `catalog` / `selected_index` / `stage_runtime` / `bullet_manager` / `playfield`。
-- 三台各自补语义接缝：`fire_once` / `set_burst` / `burst_remaining`（弹幕台）、
-  `spawn_at` / `select_difficulty`（敌人台）、
-  `select_phase` / `play` / `clear_all` / `hp_value` / `time_value` / `move_slot_index` /
-  `set_move_slot_index` / `set_shoot_slot_index` / `selected_move_script` / `selected_shoot_script` /
-  `move_script_path` / `boss_spawn_pos` / `set_boss_spawn_pos` / `boss_scene`（阶段台）。
-- `CreationStation`：`slot_names` / `slot_count` / `current_slot` / `current_view` / `bench_instance` /
-  `open_slot` / `route_preset`（原私有 `_route_preset` 正名）。
-- `CatalogPanel`：`divider_y` / `split_area_height` / `drag_divider` / `set_search_text` / `tree` /
-  `handle_tree_input` / `info_card`。
-- `BulletManager.bullet_global_position(id)`：按 id 取全局位置 —— 外面不必再摸内核宿主的私有存储。
-
-> 接缝**不是为测试开的旁路**：`load_script()` 就是"用户在下拉里选一条"、
-> `force_hot_reload()` 就是"防抖到点那一次"、`open_slot()` 就是"用户点页签"。
->
-> 顺带发现的**空转测试**：`test_catalog_panel` 的搜索那半条以前是假绿 ——
-> 直接写给 `_search.text` **不会**触发 `text_changed`，而未筛选的树本来就只有 2 条含"夹具符卡"
-> ⇒ 断言恒真。接缝化时补成"真的在筛"（搜到 1 条 / 2 条 / 0 条 / 清空恢复）。
-
-> 全项目白盒 Top（2026-10-19 更新）：`test_boss_phase`(20)、`test_laser`(20)、`test_option_menu`(14)；
-> `test_spell_practice_menu` 已从 45 降到 0（内部状态收口到 `Probe`）。
-
-### S2 / S3：把"规则"从上帝对象里搬出去（无树可测）
-
-S1 → S2 → S3 是一条链：**先立接缝**（测试抬到接口上）→ **再搬规则**（每搬一块，就给那块规则配上无树用例，
-不必借 Control 台子 + 真跑帧）。搬走的两块：
-
-- `hot_reload_service.gd`（152 行）—— 防抖 / 连坐重载 / 失败保旧版 / 基线刷新（6 个用例）。
-- `playback.gd`（201 行）—— 暂停 / 速度 / 快进 / 逐帧 / 静音。宿主只剩"下发"：
-  `changed` 一次把 `tree.paused` / `Engine.time_scale` / 物理步上限 / BGM 音高 / 总线静音按**投影**写出去。
-- `bookmarks.gd`（85 行）—— 自动书签静态提取 + 人工打点持久化 + 合并视图；
-  `bookmark_panel.gd` 从"自持一份数据"变成**纯视图**（数据只有一份，在 store 里）。
-
-**诚实记账**：方案里我写的是"`workbench.gd` 695 → ≤200"，**这个估计是错的**（和 S2 那次估错同因）——
-S3 实际只把它搬到 **695 → 619 行（-76）**，因为：
-① S1 自己加了 ~160 行接缝与文档，起点就不是 695；
-② 抽服务的同时宿主多了"下发"这一层（`_apply_playback_runtime` 等 ~40 行，本来散在 6 处副作用里）；
-③ 剩下的大头是**装配代码**（`_build_ui` / `_setup_world` / `_load_stage`）—— 那正是 **S4** 的活。
-S3 的价值不在行数，在 ①**31 个新用例**（这些规则原先覆盖率是 0）②**抓到一个真 bug**（见下）③播放状态与书签数据各只剩**一份**。
-
-> **S3 顺手抓到的真 bug**：`BookmarkCache.load()` / `has_cache()` 写得挺好的，**但从来没被调用过** ——
-> 人工打点只写不读，重启工作台就全丢（面板注释还写着"可编辑，持久化"）。
-> 抽 store 时把"读回来"接上，并立 `test_manual_survives_reopen` 回归
-> （反向验证过：把读回那行去掉 → 该用例精确红在"人工打点必须读回来"）。
+- 保留：`StageHost` / `StageRuntime` / `GhostPlayer`、`FlightRecorder`、`SourceFacts`、`ContentIndex`、`Preflight`、`ParamTrace`。
+- 内容门禁：`tools/check_content.sh` + `tools/content_preflight.sh`；反馈回路 = 游戏内符卡练习。
+- 历史设计留在 `docs/archive/`；不再恢复编辑器。
 
 ## ⚠️ 已知的坑
 
@@ -339,7 +269,7 @@ S3 的价值不在行数，在 ①**31 个新用例**（这些规则原先覆盖
    加载失败即失败；已双向验证（造一个 pending → exit 1；撤掉 → exit 0）。
 2. **perf 测试混在正确性门禁里**（G 层 2 个）。CI 机器负载抖动时可能误报。
    *建议*：挪到 opt-in（如 `-gdir=res://test/perf_stress` 或按 tag 跳过），让 22s 门禁保持确定性。
-3. **无覆盖率度量**（GUT 自带没有）。705 用例 ≠ 覆盖面；`scripts/workbench`(4835 行) / `scenes/**/*.tscn`(2201 行)
+3. **无覆盖率度量**（GUT 自带没有）。797 用例 ≠ 覆盖面；`scripts/**` / `scenes/**/*.tscn`
    主要靠本层测试 + `verify.sh` 的启动烟测兜底。**在没有覆盖率之前不要按数量删测试**——那是盲删。
 4. **退出噪音**：19 orphans + 31452 ObjectDB 泄漏 + 26 resources 仍在使用。
    现在只是噪音，但会掩盖将来真正的泄漏。*建议*：立预算（元测试断言 orphans == 0）。
@@ -359,17 +289,15 @@ S3 的价值不在行数，在 ①**31 个新用例**（这些规则原先覆盖
 
 | 类别 | 内容依赖 | 写法 | 谁 |
 |---|---|---|---|
-| **机制测试** | ❌ 零 | **自建夹具**：合成 `PhaseData` / `BulletData`，或用 `test/fixtures/**`；需要"目录"就注入夹具根 | `test_spell_practice_menu`（经 `info["boss"]` 注入）、`test_phase_rig`、`test_workbench_align`、`test_boss_phase`、`test_content_catalog` |
+| **机制测试** | ❌ 零 | **自建夹具**：合成 `PhaseData` / `BulletData`，或用 `test/fixtures/**`；需要"目录"就注入夹具根 | `test_spell_practice_menu`（经 `info["boss"]` 注入）、`test_boss_phase` |
 | **内容校验** | ✅ 必须 | 读**真实内容**，但**不写死路径**：遍历目录扫到的全部，断言**不变量** | `test_data_validity`（遍历全部阶段） |
 | **内容形状/行为** | ✅ 故意 | 绑具体内容 —— 红了是**信号**（作者复核），不是噪音 | `test_probe_descriptor`、`test_enemy04_move`、`test_stage01_dialogue` |
 
 **可注入的接缝 / 现成夹具（要隔离内容就从这里走）**：
 
 - `test/fixtures/fixture_lib.gd` —— 夹具工厂：`player_data()`（含 SpriteFrames + `PlayerShootScript`）、`effect()`
-- `test/fixtures/param_panel_probe.gd` —— 组合台参数面板夹具（float/int/Vector2/Color + 零值陷阱 + **长键名 `radial_spawn_delay` 当键列宽度哨兵，别删**）
 - `test/fixtures/player_shoot_probe.gd` —— 机体射击脚本夹具（`Player` 有 `is PlayerShootScript` 断言，必须继承它）
 - `test/fixtures/{no,lifecycle}_port_behavior.gd` / `param_probe.gd` —— 通用 `extends CoroutineScript` 替身
-- `ContentCatalog.scan(root)` —— 传夹具根目录（已支持）
 - `BossCatalog.set_catalog_override({stage: [BossData]})` + `clear_catalog_override()` —— 直接投名册
   （⚠️ static 缓存全局可见，**测完必须 clear**，否则污染后续测试）
 

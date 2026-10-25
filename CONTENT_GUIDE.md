@@ -1,6 +1,6 @@
 # 🛠️ 东方星 STG 引擎 — 内容制作流程
 
-> 版本：2026-09 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `BulletData.trajectory(lc)`，原生执行**；工作台只做预览/调试）
+> 版本：2026-10 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `BulletData.trajectory(lc)`，原生执行**；创作台 / 工作台 UI 已退役，反馈走游戏内练习 + 无头检查）
 
 ---
 
@@ -9,15 +9,14 @@
 1. 在 Godot 编辑器里打开 `data/stages/stage01/stage_script/stage01.gd`（Timeline 编排）
 2. 加 `timeline.at(时刻).do(func(): ctx.enemies.spawn(EnemyData.new().with_script(...).pos(...)))`
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
-3. F6 运行 `scenes/workbench/creation_station.tscn`（四页签：整关预览 / 弹幕台 / 敌人台 / 阶段台）→ 命中框/固定种子/逐帧看效果
-   - **弹幕 / 敌人 / 阶段三个组合台有热更新**（改脚本约 1.3s 自动重载）；**整关预览没有**，改关卡脚本/时间线后切页或重启
-4. Boss 阶段/弹幕脚本（阶段目录下，如 `data/stages/stage01/phase/non_mid01/`）改完在「阶段台」看（热更新）；也可在「整关预览」按时间线看
-5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`BulletData.trajectory(lc)` 直接用 builder 拼原语，或用工作台拼装页生成代码）
+3. 跑起来看手感：主菜单 → **Spell Practice**（单张符卡最快）或 **Start** 整关；没有单独的预览沙盒
+4. 改完先跑契约检查：`./tools/check_content.sh` + `./tools/content_preflight.sh`；测试用 `./tools/verify.sh`
+5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`BulletData.trajectory(lc)` 直接用 builder 拼原语）
 
-> 创作台/工作台**不是编辑器**：不写数据、不保存 `.tres`，是「跑真实代码看效果」的预览沙盒。
+> 创作台 / 工作台**已退役**（2026-10-24）：不再有 F6 内容编辑器，也不再有预览 UI。
 > 流程层面的自由度 / 触点 / 摩擦与下一步，见 [内容创作流程审查](docs/CONTENT_PIPELINE_AUDIT.md)。
-> 三个组合台**有脚本热更新**；整关预览没有（改时间线/关卡脚本要重启）。
-> 数据（关卡/Boss/阶段）全部以代码 + .tres 形式存在，由 AI/人直接写。
+> 分层规范（谁拥有什么 / 加一张卡的最小路径）：[内容作者契约](docs/CONTENT_AUTHORING_CONTRACT.md)。
+> 数据（关卡/Boss/阶段）全部以代码 + .tres 形式存在，由 AI/人直接写；工具只读、不写回 `data/**`。
 
 ---
 
@@ -27,11 +26,11 @@
 ① 关卡编排：stage01.gd（Timeline API，代码声明节奏/Boss/阶段）
 ② 行为层：  协程脚本 .gd（敌人行为 + Boss 移动/弹幕/入场/退场）
 ③ 数据层：  .tres 资源（BossData/PhaseData/敌人预设/符卡记录）
-④ 预览层：  工作台 = 真实运行时沙盒（幽灵玩家 + 命中框 + 固定种子 + 书签）
+④ 工具层：  无头检查（内容契约 / 预检）+ 游戏内符卡练习 + 对话预览
 ```
 
 数据关卡（wave_stage/StageTimeline/波次表）与脚本页/编排页已**移除**（2026-08 决策）：
-弹幕的核心是逻辑不是数据，代码直写 + 工作台预览是当前唯一流程。
+弹幕的核心是逻辑不是数据，代码直写 + 游戏内练习是当前流程。
 
 ---
 
@@ -312,13 +311,13 @@ variants = [
 ```
 
 - `StageVariant` 只覆盖 `create_script` / `background_scene` / `bgm_key`；空字段 = 沿用 `StageData` 基准。
-- 普通关卡、练习模式、工作台都按**当前难度**解析变体；没有变体时行为与以前完全一样。
+- 普通关卡、练习模式都按**当前难度**解析变体；没有变体时行为与以前完全一样。
 - 基类的 `create_script` 仍是必填（`StageCatalog.playable()` 用它判断可玩），变体只做覆盖。
 - 变体建议放 `data/stages/<面>/stage_variants/*.tres`，不要放 `stage_data/` ——
   后者会被 `StageCatalog` 的目录扫描当成 `StageData` 读取。
 - 示例：`data/stages/stage01/stage_variants/` 已有 Easy / Normal / Hard / Lunatic 四份，
   目前都引用同一个 `stage01.gd`；以后哪个难度要独立，只改对应 `.tres`。
-- 创作台「整关预览」顶栏的「＋变体」可以直接按当前 Stage 建一个变体；难度下拉只列还没用过的槽位。
+- 变体手写在 `data/stages/<面>/stage_variants/`；`StageData.variants` 里按难度引用，别复制整份 `StageData`。
 - **UID 规则**：真符卡全局唯一（建议 1 面 100-199、2 面 200-299…）；非符 uid=0；角色共用 UID，SpellRecordBook 主键区分
 
 ---
@@ -326,7 +325,7 @@ variants = [
 ## 六、脚本层约定
 
 > 旧 `_tick` 风格继承 `CoroutineScript`（`scripts/coroutine/base/coroutine_script.gd`）；
-> async 风格继承 `AsyncCoroutineScript`（仍是 `CoroutineScript` 子类，目录/阶段台无需改类型）。
+> async 风格继承 `AsyncCoroutineScript`（仍是 `CoroutineScript` 子类，工具无需改类型）。
 
 ### 协程返回值约定
 
@@ -391,38 +390,27 @@ var target_y: float = 300
 var heavy_wave: bool = true
 var rate: int = 1
 
-func _ready() -> void:
-	call_deferred("_init_enemy")
-
-func _init_enemy() -> void:
-	var parent := get_parent()
-	# 移动 tween + 发弹（ctx.bullets.shoot_spread / ctx.clock.wait / timeline.at ...）
+func _on_start() -> void:
+	# ctx / target 已就绪，且 Enemy 已入树；移动、发弹直接用 ctx.*
+	ctx.enemies.move_to(target, Vector2(target.global_position.x, target_y), 1.5)
+	var timeline := start_timeline()
+	timeline.at(0.0).every(2.5).do(func():
+		ctx.bullets.shoot_spread(...)
+	)
 ```
 
-### 目录注解（创作台自动索引，2026-08+）
+### 注释与命名（给人看，不再有自动索引）
 
-协程脚本会被**自动扫描**进创作台目录（`ContentCatalog`，只扫 `res://data/`、只收 `extends CoroutineScript/CoroutineRunner`）。
-角色默认按**路径/命名约定**判定（`*_move.gd`→Boss移动 · `*_shoot.gd`→弹幕发射 ·
-`enemy/`→敌人行为 · `stage_script/`→关卡编排 · `background/`→背景演出）；约定判不出时按**真实引用**反推（阶段 .tres 的 move/shoot 字段）。
-`*_bullet.gd` / `bullet/` 约定仍在代码里，但 `data/**` 已无文件使用（飞行规律直接挂在发射脚本的 `BulletData` 上）。
-
-**注解可选，优先级最高**（写在文件头部注释块，与普通描述行混排即可）：
-
-```gdscript
-extends CoroutineScript
-## 非符一：三向扇形
-## @name: 非符一                 # 目录显示名（默认=注释首行）
-## @desc: 扇开三向、每向 5 连      # 描述（默认=其余注释行；@name 存在时=全部注释行）
-## @role: boss_shoot             # 角色覆盖（约定判错时才用；打架会出 warning）
-```
+文件头注释仍建议写清「这张卡/这个行为做什么」；`@name` / `@desc` / `@role` 注解随创作台退役，**不再被任何工具消费**。
+命名约定（`*_move.gd` / `*_shoot.gd` / `enemy/` / `stage_script/`）仍用于人类阅读与按路径查文件，但不再驱动目录 UI。
 
 ### 弹幕行为（由浅入深）
 
 一颗弹的飞行规律**只有一个入口**：`BulletData.trajectory(lc)`（`lc` = `BulletLifecycle`，fluent builder）。
-**不改 C++** 就能拼出绝大多数弹幕 —— 下面从"直接拼原语 / 工作台拼装"讲到"自己排相位"。
+**不改 C++** 就能拼出绝大多数弹幕 —— 下面从"直接拼原语"讲到"自己排相位"。
 > 完整字典（每个函数的精确签名 / 原生语义 / 素材 key 表 / 陷阱清单）见 **[docs/DANMAKU_API.md](docs/DANMAKU_API.md)**；本节是教学路径。
 
-#### ① 最简：直接拼原语（或工作台拼装）
+#### ① 最简：直接拼原语
 
 ```gdscript
 var _bullet: BulletData          # 成员：复用实例（见「弹型实例复用」）
@@ -437,8 +425,7 @@ func _fire(p_ctx: StageContext) -> void:
 	p_ctx.bullets.shoot_spread(_bullet, 8, TAU, Vector2.RIGHT, global_position)
 ```
 
-> 不想手写？F6 创作台 → 弹幕台 → **拼装**：选 Move/Until/Action、调参数、预览、复制代码。
-> 拼装页顶部可编辑**初始弹**（贴图/染色/加色/速度/方向）；`emit` / `emit_variant` 可分别用 A/B 两个替换弹模板。
+> 原语就是唯一写法：Move / Until / Action 直接链在 `BulletLifecycle` 上；`emit` / `emit_variant` 用 `BulletData` 模板。没有可视化拼装器了。
 
 #### ② 常见组合（preset 已删，照着拼）
 
@@ -512,24 +499,19 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 
 ---
 
-## 七、调试（工作台工具链）
+## 七、调试（无头工具）
 
 | 工具 | 用法 |
 |------|------|
-| **创作台** | F6 `scenes/workbench/creation_station.tscn`：整关预览 / 弹幕台 / 敌人台 / 阶段台；**1600 时左侧 384 目录常驻且不可关（贴住场地金框），页签从内容区开始；1–4 直达 / Ctrl+Tab 循环 / Alt+← 返回；1280 自动收起为可开合抽屉（含「弹道描述符」组）**；弹幕台有 **直射（初始弹外形/方向）/ 拼装（相位 + A/B 模板 + 代码）** 两模式，发射/连发/清场/换种子共用顶部操作栏 |
-| **对话预览** | `godot --path . scenes/ui/dialogue_preview.tscn -- --func=战斗后`（`--list` 列目录 / `--dry` 无头打印整段 / `--shot=x.png` 截图）—— 不用打关卡就能看对话 |
-| 固定种子 | 播放区开关：重跑弹幕序列可复现（调参必备） |
-| 命中框 | 播放区开关：红=敌弹判定、绿=敌人、青=自机、蓝=擦弹 |
-| 逐帧 | 暂停中按 F：精确走 1/60s |
-| 跳转 | 点时间轴/书签/←→ = 12x 快进到目标（真实关卡无任意 seek） |
-| 书签 | 时间轴右键/快捷键 B 打点；协程关卡静态提取 timeline.at() 时刻 + 人工打点 |
-| 幽灵玩家 | 自机狙目标（不攻击，看弹幕用） |
+| **内容契约** | `./tools/check_content.sh`：注册表 / 引用 / UID / manifest / 孤儿内容 |
+| **内容预检** | `./tools/content_preflight.sh`：对话事件闭环 / 无人 Boss / 孤儿阶段 / `params` 未知键 |
+| **总门禁** | `./tools/verify.sh`：文档 + 语法 + 命名 + 结构 + 内容 + 启动 + GUT + 原生指纹 |
+| **对话预览** | `godot --path . scenes/ui/dialogue_preview.tscn -- --func=战斗后`（`--list` / `--dry` / `--shot`）—— 不用打关卡 |
+| **背景截图 / 耗时** | `tools/background_capture.tscn`：固定种子 + 同帧号对比（`--stage` / `--shots` / `--seed`） |
+| **运行时观测** | `FlightRecorder`（事件 / 0.25s 采样）与 `ParamTrace`（`diff_pick` 实际取值）保留为无头库；不再有 UI 面板 |
 
-快捷键：`Space` 暂停/继续 · `R` 重跑 · `F` 逐帧 · `1~7` 速度 · `←/→` ±1s（Ctrl ±5s）·
-`B` 书签 · `Home` 回开头
-
-> 整关预览改关卡脚本/时间线后**重启**（无热重载）；弹幕 / 敌人 / 阶段三个组合台**有热更新**（约 1.3s）。
-> 写代码在 Godot 编辑器，看效果在创作台。
+> 写代码在 Godot 编辑器，看手感在游戏内符卡练习，守契约用上面三条命令。
+> 改脚本后重启游戏 / 场景；没有热更新预览了。
 
 ---
 
@@ -567,7 +549,7 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 ## 十、已知边界
 
 - 运行时保存 .tres 依赖 res:// 可写（开发模式）；导出包只读，符卡簿保存会失败（待数据迁移方案）
-- **弹丸协程脚本**（gravity_bullet.gd 等，被行为脚本 preload）与所有脚本改动都需**重启工作台**生效
+- **弹丸协程脚本**（gravity_bullet.gd 等，被行为脚本 preload）与所有脚本改动都需**重启游戏 / 场景**生效
 - 敌人/Boss 脚本零注册：preload/直接引用即用
 
 ## 发动符卡前的走位（`PhaseData.pre_move_script`）
@@ -777,4 +759,4 @@ godot --path . scenes/ui/dialogue_preview.tscn -- --func=战斗后 --shot=/tmp/d
 >   名字写错 → 告警并回落到第一个（不静默）。
 > - 构建函数识别看**元数据**（`static` + 零参数 + 返回 `DialogueSteps`），不靠命名约定。
 > - 预览背景只是参照（游戏里立绘画在**全屏** CanvasLayer 上，不受场地框限制）；
->   要连背景一起看就进关卡或用工作台。
+>   要连背景一起看就进关卡。

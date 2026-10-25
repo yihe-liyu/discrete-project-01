@@ -1,5 +1,5 @@
 extends CoroutineScript
-## 2面
+## Stage 2：道中妖精波 → 大妖精 → 收尾。当前没有 Boss / 阶段，属于半关。
 
 const ENEMY01 = preload("res://data/stages/stage02/enemy/enemy01.gd")
 const ENEMY02 = preload("res://data/stages/stage02/enemy/enemy02.gd")
@@ -13,7 +13,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	_stage_director = StageDirector.new(ctx)
 	
 	var timeline: Timeline = start_timeline()
-	var logo_tex: Texture2D = preload("res://assets/Textures/front/logo/logo2.png")
+	var 标题纹理: Texture2D = preload("res://assets/Textures/front/logo/logo2.png")
 
 	# 0s: BGM
 	timeline.at(0.0).do(func(): _stage_director.stage_bgm())
@@ -43,7 +43,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		)
 	
 	timeline.at(7.0).do(func():
-		ctx.stage.show_logo(logo_tex, Vector2(GameConfig.FIELD_CENTER_X, 250))
+		ctx.stage.show_logo(标题纹理, Vector2(GameConfig.FIELD_CENTER_X, 250))
 	)
 	
 	timeline.at(10.0).do(func():
