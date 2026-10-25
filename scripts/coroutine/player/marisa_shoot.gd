@@ -50,11 +50,12 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	if ctx == null:
-		return
-	var player: Player = ctx.player.get_player()
-	if is_instance_valid(player):
-		_sync_laser_anchors(player)
+	if ctx != null:
+		var player: Player = ctx.player.get_player()
+		if is_instance_valid(player):
+			_sync_laser_anchors(player)
+	# 不能吞掉 CoroutineRunner 的 tick，否则射击状态机/子机同步全停。
+	super._physics_process(_delta)
 
 
 func _seg_count() -> int:
