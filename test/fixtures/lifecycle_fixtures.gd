@@ -23,7 +23,7 @@ static func bounce(accel_rate: float, bounce_angle: float, spawn_speed: float, s
 		sfx_key: StringName = &"kira", sfx_db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
 	lc.accel_heading(accel_rate)
-	lc.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+	lc.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
 	if sfx_key != &"":
 		lc.sfx(sfx_key, sfx_db)
 	lc.emit(spawn, BulletLifecycle.toward(BulletLifecycle.T_BOSS, bounce_angle), spawn_speed, BulletLifecycle.AT_PHASE_END)
@@ -34,7 +34,7 @@ static func bounce(accel_rate: float, bounce_angle: float, spawn_speed: float, s
 static func radial_accel(rate: float, spawn: Variant, sfx_key: StringName = &"", sfx_db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
 	lc.accel_heading(rate)
-	lc.until_at_wall(BulletLifecycle.WALL_TOP)
+	lc.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_TOP)
 	if sfx_key != &"":
 		lc.sfx(sfx_key, sfx_db)
 	lc.emit(spawn, BulletLifecycle.world_heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)

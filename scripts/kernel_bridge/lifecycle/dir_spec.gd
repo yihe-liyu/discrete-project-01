@@ -138,7 +138,7 @@ static func chance_toward(p_target: StringName, p_chance: float, p_spread: float
 
 
 ## 把当前速度按发射点所在场边翻分量，再转角度参数；未贴边时退化为当前朝向。
-## 配 until_at_wall + AT_PHASE_END 使用。
+## 配 until_rect(..., edges) + AT_PHASE_END 使用。
 static func reflect(p_angle: float = 0.0) -> RefCounted:
 	return _make(REFLECT, &"", p_angle, 0.0, EvalPhase.WALL)
 

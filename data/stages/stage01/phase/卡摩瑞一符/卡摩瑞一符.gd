@@ -46,7 +46,7 @@ func _on_start() -> void:
 	开花弹 = BulletData.new().tex("鳞弹").color(Color.RED).blend(true).enemy()
 	lifecycle = BulletLifecycle.new()
 	lifecycle.accel_heading(开花弹加速度)
-	lifecycle.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+	lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
 	lifecycle.sfx(&"kira")
 	lifecycle.emit(反射弹, BulletLifecycle.toward(BulletLifecycle.T_BOSS), 反射弹速度, BulletLifecycle.AT_PHASE_END)
 	lifecycle.despawn()

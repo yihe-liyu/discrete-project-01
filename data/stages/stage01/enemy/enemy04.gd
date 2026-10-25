@@ -25,7 +25,7 @@ func _on_start() -> void:
 		# 棱弹沿各自发射角加速扩散；到顶墙后换成米弹并竖直向上飘走。
 		var lifecycle := BulletLifecycle.new()
 		lifecycle.accel_heading(150.0)
-		lifecycle.until_at_wall(BulletLifecycle.WALL_TOP)
+		lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_TOP)
 		lifecycle.sfx(&"kira", -18.0)
 		lifecycle.emit(_radial_spawn_bullet_data, BulletLifecycle.world_heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
 		lifecycle.despawn()

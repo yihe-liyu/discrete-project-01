@@ -11,6 +11,8 @@ const FIELD_LEFT: float = 64.0
 const FIELD_RIGHT: float = 832.0
 const FIELD_TOP: float = 32.0
 const FIELD_BOTTOM: float = 928.0
+## 弹幕活动区矩形（until_rect 的场地预设；不是特例 op）。
+const FIELD_RECT := Rect2(FIELD_LEFT, FIELD_TOP, FIELD_RIGHT - FIELD_LEFT, FIELD_BOTTOM - FIELD_TOP)
 const FIELD_CENTER_X: float = 448.0
 const FIELD_CENTER_Y: float = 480.0
 

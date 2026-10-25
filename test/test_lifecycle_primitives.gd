@@ -341,15 +341,15 @@ func test_primitive_until_near() -> void:
 	_parity("until:near", lc, 60, spawns, ctx, player.global_position)
 
 
-func test_primitive_until_at_wall() -> void:
-	## 碰到掩码指定的墙 → 相位结束（这里只测顶墙）。
+func test_primitive_until_field_edges() -> void:
+	## until_rect + 场边掩码 → 相位结束（这里只测顶边）。
 	var lc := BulletLifecycle.new()
-	lc.until_at_wall(BulletLifecycle.WALL_TOP)
+	lc.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_TOP)
 	lc.despawn()
 	var spawns: Array = []
 	for i in 3:
 		spawns.append([Vector2(200.0 + i * 30.0, GameConfig.FIELD_TOP + 8.0), Vector2(0.0, -200.0)])
-	_parity("until:at_wall", lc, 30, spawns, BehaviorContext.new())
+	_parity("until:field_edges", lc, 30, spawns, BehaviorContext.new())
 
 
 func test_primitive_until_speed() -> void:
@@ -394,10 +394,10 @@ func test_primitive_action_emit() -> void:
 
 
 func test_action_emit_at_phase_end_uses_wall_point() -> void:
-	## V7：at=AT_PHASE_END 用 until(at_wall) 输出的相位结束落点（夹到框上）。
+	## V7：at=AT_PHASE_END 用 until_rect 输出的相位结束夹边落点。
 	if not _available(): pending("未构建原生扩展"); return
 	var lc := BulletLifecycle.new()
-	lc.until_at_wall(BulletLifecycle.WALL_TOP)
+	lc.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_TOP)
 	lc.emit(func() -> BulletData: return BulletData.new(), BulletLifecycle.world_heading(PI), 100.0, BulletLifecycle.AT_PHASE_END)
 	var store = _combo_store()
 	var c: Dictionary = lc.compile()
@@ -408,7 +408,7 @@ func test_action_emit_at_phase_end_uses_wall_point() -> void:
 	var res: Dictionary = store.behavior_tick(DT, Vector2.ZERO, Vector2.ZERO, false, PackedVector2Array())
 	var ys: PackedFloat32Array = res["y"]
 	assert_gt(ys.size(), 0, "应产生 emit 事件")
-	assert_almost_eq(ys[0], GameConfig.FIELD_TOP, 0.5, "at=AT_PHASE_END 应用夹到墙上的落点")
+	assert_almost_eq(ys[0], GameConfig.FIELD_TOP, 0.5, "at=AT_PHASE_END 应用夹到边上的落点")
 	pass_test("AT_PHASE_END 用 until 落点")
 
 

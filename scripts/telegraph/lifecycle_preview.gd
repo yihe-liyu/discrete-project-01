@@ -44,7 +44,6 @@ const M_OFFSET_POSITION := &"offset_position"
 const C_NEVER := &"never"
 const C_ELAPSED := &"elapsed"
 const C_NEAR := &"near"
-const C_AT_WALL := &"at_wall"
 const C_STATE := &"state"
 const C_SPEED := &"speed"
 const C_X := &"x"
@@ -402,7 +401,7 @@ static func _static_direction(dir: Variant, heading: Vector2) -> Vector2:
 ## 检查 until；[code]next[/code] 是下一次秒级节流的触发时间。
 static func _check_until(until: Dictionary, position: Vector2, velocity: Vector2,
 		elapsed: float, tick: int, slots: PackedFloat32Array,
-		field_rect: Rect2, next_check: float) -> Dictionary:
+		_field_rect: Rect2, next_check: float) -> Dictionary:
 	var every_ticks := int(until.get(&"every_ticks", 0))
 	if every_ticks > 0 and tick % every_ticks != 0:
 		return {"done": false, "next": next_check}
@@ -417,16 +416,6 @@ static func _check_until(until: Dictionary, position: Vector2, velocity: Vector2
 			return {"done": false, "next": next_check}
 		C_ELAPSED:
 			return {"done": elapsed >= float(until.get(&"t", 0.0)), "reason": &"elapsed", "next": next_check}
-		C_AT_WALL:
-			var mask := int(until.get(&"mask", 0))
-			var hit := false
-			if (mask & 1) != 0 and position.x <= field_rect.position.x:
-				hit = true
-			elif (mask & 2) != 0 and position.x >= field_rect.end.x:
-				hit = true
-			if (mask & 4) != 0 and position.y <= field_rect.position.y:
-				hit = true
-			return {"done": hit, "reason": &"wall", "next": next_check}
 		C_SPEED:
 			var cmp := int(until.get(&"cmp", 0))
 			var value := float(until.get(&"value", 0.0))
@@ -455,7 +444,7 @@ static func _check_until(until: Dictionary, position: Vector2, velocity: Vector2
 				hit = true
 			elif (edges & 8) != 0 and position.y >= rect.end.y:
 				hit = true
-			return {"done": hit, "reason": &"wall" if bool(until.get(&"wall", false)) else &"rect", "next": next_check}
+			return {"done": hit, "reason": &"rect", "next": next_check}
 		C_STATE:
 			var slot := int(until.get(&"slot", -1))
 			if slot < 0 or slot >= slots.size():

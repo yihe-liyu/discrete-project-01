@@ -80,13 +80,13 @@ func test_preview_matches_native_speed_lerp() -> void:
 
 func test_preview_stops_at_wall() -> void:
 	var lc := BulletLifecycle.new()
-	lc.until_at_wall(BulletLifecycle.WALL_RIGHT)
+	lc.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_RIGHT)
 	var start := Vector2(GameConfig.FIELD_RIGHT - 2.0, 300.0)
 	var sys := _native(lc, start, Vector2(120.0, 0.0))
 	var native := _native_points(sys, 5)
 	var preview := _preview(lc, start, Vector2(120.0, 0.0), 0.2)
-	assert_true(preview.ok, "at_wall 应能预览")
-	assert_eq(preview.reason, &"wall", "应停在右墙")
+	assert_true(preview.ok, "until_rect 应能预览")
+	assert_eq(preview.reason, &"rect", "应停在右边")
 	assert_true(native.size() >= preview.points.size(), "原生至少覆盖预览到的帧")
 	if preview.ok and not preview.points.is_empty():
 		assert_almost_eq(preview.points[-1].x, native[preview.points.size() - 1].x, 0.01, "墙边落点应一致")

@@ -29,7 +29,6 @@ const POS_ANCHOR := 1
 const C_NEVER := &"never"
 const C_ELAPSED := &"elapsed"
 const C_NEAR := &"near"
-const C_AT_WALL := &"at_wall"
 const C_STATE := &"state"
 const C_SPEED := &"speed"
 const C_X := &"x"
@@ -80,7 +79,6 @@ const OP_M_OFFSET_POSITION := 11
 const OP_C_NEVER := 20
 const OP_C_ELAPSED := 21
 const OP_C_NEAR := 22
-const OP_C_AT_WALL := 23
 const OP_C_STATE := 24
 const OP_C_SPEED := 25
 const OP_C_X := 26
@@ -216,7 +214,6 @@ static func _op_cond(op: StringName, state: Array) -> int:
 		C_NEVER: return OP_C_NEVER
 		C_ELAPSED: return OP_C_ELAPSED
 		C_NEAR: return OP_C_NEAR
-		C_AT_WALL: return OP_C_AT_WALL
 		C_STATE: return OP_C_STATE
 		C_SPEED: return OP_C_SPEED
 		C_X: return OP_C_X
@@ -313,7 +310,6 @@ static func _args_cond(c: Dictionary, state: Array) -> Array:
 				push_error("BulletLifecycle.compile(): until_near 的 target 为空（打错目标？）")
 				state[0] = true
 			return head + [_target_code(c[&"target"], state), float(c[&"r"])]
-		C_AT_WALL: return head + [float(c[&"mask"])]
 		C_STATE: return head + [float(c[&"slot"]), float(c[&"cmp"]), float(c[&"value"])]
 		C_SPEED: return head + [float(c[&"cmp"]), float(c[&"value"])]
 		C_X, C_Y: return head + [float(c[&"cmp"]), float(c[&"value"])]

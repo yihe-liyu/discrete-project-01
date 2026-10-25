@@ -144,7 +144,6 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | never | `until_never()` | 永不结束（靠 emit/despawn 手动结束） |
 | elapsed | `until_elapsed(t)` | 相位经过 t 秒 |
 | near | `until_near(target, r)` | 距 target < r |
-| at_wall | `until_at_wall(mask)` | `until_rect(场地矩形, false, mask)` 的糖（左 1 / 右 2 / 上 4 / 下 8）；输出相位结束夹墙落点 |
 | speed | `until_speed(cmp, value)` | `|v|` 与 value 比较（`CMP_GE` / `CMP_LE`） |
 | x | `until_x(cmp, value)` | 当前 x 与 value 比较 |
 | y | `until_y(cmp, value)` | 当前 y 与 value 比较 |
@@ -189,14 +188,14 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | chance_toward | `chance_toward(target, p, spread=0)` | p 概率精确朝 target；否则沿自身朝向转 spread；**仅作 `emit_variant` 的 dir** |
 | reflect | `reflect(angle=0)` | 把**当前速度**按发射点所在场边翻分量，再转 angle；需配 `at=AT_PHASE_END` |
 
-> 镜面反射示例：`lc.until_at_wall(WALL_LEFT|WALL_RIGHT|WALL_TOP)` → `lc.emit(反射弹, reflect(), 150, AT_PHASE_END)` → `lc.despawn()`。
+> 镜面反射示例：`lc.until_rect(GameConfig.FIELD_RECT, false, WALL_LEFT|WALL_RIGHT|WALL_TOP)` → `lc.emit(反射弹, reflect(), 150, AT_PHASE_END)` → `lc.despawn()`。
 > 撞哪面墙不用声明（内核按落点判）；「镜面 + 微散」用 `reflect(deg_to_rad(8.0))`。原生用例：`test/test_native_reflect.gd`。
 
 ### 3.6 常量
 
 ```gdscript
 BulletLifecycle.T_PLAYER / T_NEAREST_ENEMY / T_BOSS   # 0 / 1 / 2
-BulletLifecycle.WALL_LEFT / WALL_RIGHT / WALL_TOP     # 1 / 2 / 4（无下墙）
+BulletLifecycle.WALL_LEFT / WALL_RIGHT / WALL_TOP / WALL_BOTTOM  # 1 / 2 / 4 / 8
 BulletLifecycle.AT_CURRENT / AT_PHASE_END             # 0 / 1
 BulletLifecycle.ROT_BOTH / ROT_VELOCITY / ROT_HEADING # 0 / 1 / 2
 BulletLifecycle.CMP_GE / CMP_LE                       # 0 / 1
@@ -228,8 +227,8 @@ data.trajectory(lc)
 | 沿朝向加速 | `accel_heading(a)` + `until_never()` |
 | 弧线 | `rotate(w, limit)` + `until_turned()` + `then()` |
 | 追踪 | `steer(T_NEAREST_ENEMY, angle, accel, prox, duration)` + `speed_lerp(min, max, accel)` + `until_never()` |
-| 碰框换弹 | `accel_heading(accel)` + `until_at_wall(L\|R\|T)` + `sfx` + `emit(spawn, toward(T_BOSS, angle), speed, AT_PHASE_END)` + `despawn()` |
-| 碰顶分裂 | `accel_heading(rate)` + `until_at_wall(TOP)` + `sfx` + `emit(spawn, heading(PI), 0, AT_PHASE_END)` + `despawn()` |
+| 碰框换弹 | `accel_heading(accel)` + `until_rect(FIELD_RECT, false, L\|R\|T)` + `sfx` + `emit(spawn, toward(T_BOSS, angle), speed, AT_PHASE_END)` + `despawn()` |
+| 碰顶分裂 | `accel_heading(rate)` + `until_rect(FIELD_RECT, false, TOP)` + `sfx` + `emit(spawn, heading(PI), 0, AT_PHASE_END)` + `despawn()` |
 | 躲避自机 | `until_near(T_PLAYER, prox).every(jump)` + `on_end_heading(away(T_PLAYER))` + `then()` + `until_elapsed(flee)` + `despawn()` |
 | 锚定激光 | `anchor_drift(anchor, offset, angle, speed, use_global, initial, render_heading)` + `until_never()` |
 
@@ -298,7 +297,7 @@ LifecyclePreview.evaluate_chain(
 ```
 
 - 只支持确定性 move：`accel_world` / `accel_heading` / `rotate` / `speed_lerp` / `speed_mul` / `set_speed` / 静态 `set_heading`。
-- 支持确定性 until：`elapsed` / `at_wall` / `speed` / `state` / `x` / `y` / `rect`（`until_turned`）。
+- 支持确定性 until：`elapsed` / `speed` / `state` / `x` / `y` / `rect`（`until_turned`）。
 - `steer` / 目标方向：忽略瞄准，保持当前朝向继续走，并标记 `approximate=true`。
 - `position`（需要外部锚点）直接返回 `ok=false`、`reason="unsupported"`，不画假线。
 - `until_near` 无法在“忽略目标”的前提下知道终点：画到 `max_time`，`approximate=true`、`reason="target_until"`。
@@ -586,7 +585,7 @@ data/stages/<stage>/
 3. **速度来自 `data.velocity.length()`，方向来自发射参数**；别指望 `data.velocity` 的方向。
 4. **`then()` 的新相位 `until=never`**，挂 `on_end` 永不触发。
 5. **`speed_mul` 是每帧乘**（复利/指数）；线性用 `speed_lerp`、瞬时用 `set_speed`。
-6. **`at_wall` 只支持 左/右/上**（无下墙）；`emit(..., at=AT_PHASE_END)` 用其输出落点。
+6. **`until_rect` 的 `edges` 只在 outside 模式生效**；`emit(..., at=AT_PHASE_END)` 用它输出的夹边落点。
 7. **`toward` / `away` 目标不可用时退化为向下**；`chance_toward` 命中时 angle 被忽略。
 8. **`on_end_call` 的 hook 名要先注册**；否则静默不调。
 9. **变体发射的模板要与分支数对齐**：`chance_toward` 只有 0/1 两支。

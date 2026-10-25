@@ -73,7 +73,7 @@ func 发射一圈(p_ctx: StageContext) -> void:
 	var lifecycle := BulletLifecycle.new()
 	# 每多开一圈，棱弹的加速度略减，让后面的圈更“散”。
 	lifecycle.accel_heading(100.0 - 本波已发圈数 * 4.0)
-	lifecycle.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+	lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
 	lifecycle.sfx(&"kira")
 	lifecycle.emit(反弹弹, BulletLifecycle.toward(BulletLifecycle.T_BOSS, 单圈反弹附加角), 0.0, BulletLifecycle.AT_PHASE_END)
 	lifecycle.despawn()

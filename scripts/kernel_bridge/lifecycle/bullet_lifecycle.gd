@@ -48,7 +48,6 @@ const POS_ANCHOR := COMPILER.POS_ANCHOR
 const C_NEVER := COMPILER.C_NEVER
 const C_ELAPSED := COMPILER.C_ELAPSED
 const C_NEAR := COMPILER.C_NEAR
-const C_AT_WALL := COMPILER.C_AT_WALL
 const C_STATE := COMPILER.C_STATE
 const C_SPEED := COMPILER.C_SPEED
 const C_X := COMPILER.C_X
@@ -82,7 +81,7 @@ const CMP_GE := COMPILER.CMP_GE
 const CMP_LE := COMPILER.CMP_LE
 ## [code]emit()[/code] 落点：当前弹位置。
 const AT_CURRENT := COMPILER.AT_CURRENT
-## [code]emit()[/code] 落点：[code]until_at_wall()[/code] 记录的相位结束落点。
+## [code]emit()[/code] 落点：[code]until_rect()[/code] 记录的相位结束夹边落点。
 const AT_PHASE_END := COMPILER.AT_PHASE_END
 ## [code]rotate()[/code] 模式：速度与朝向一起转。
 const ROT_BOTH := COMPILER.ROT_BOTH
@@ -213,7 +212,7 @@ static func chance_toward(target: StringName, p: float, spread: float = 0.0) -> 
 
 
 ## 把当前速度按发射点所在场边翻分量，再转 [code]angle[/code]；未贴边时退化为当前朝向。
-## 配 [method until_at_wall] + [code]AT_PHASE_END[/code] 使用。
+## 配 [method until_rect] + [code]AT_PHASE_END[/code] 使用。
 static func reflect(angle: float = 0.0) -> RefCounted:
 	return DIR_SPEC.reflect(angle)
 
@@ -330,20 +329,9 @@ func until_near(target: StringName, r: float) -> BulletLifecycle:
 	_set_until(C_NEAR, {&"target": target, &"r": r})
 	return self
 
-## 碰到掩码指定的场边（左 1 / 右 2 / 上 4 / 下 8）时结束。
-## 这是 until_rect(场地矩形) 的糖；仍保留 phase-end 夹墙落点。
-func until_at_wall(mask: int) -> BulletLifecycle:
-	var rect := Rect2(
-		GameConfig.FIELD_LEFT,
-		GameConfig.FIELD_TOP,
-		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT,
-		GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
-	until_rect(rect, false, mask)
-	_until[&"wall"] = true
-	return self
+
 
 ## 速度大小满足比较时结束（|v| cmp value；cmp = CMP_GE / CMP_LE）。
-## 典型：撞墙后 [code]accel_heading(-b)[/code] 减速，[code]until_speed(CMP_LE, v_min)[/code] 降到 v_min 即停。
 func until_speed(cmp: int, value: float) -> BulletLifecycle:
 	_set_until(C_SPEED, {&"cmp": cmp, &"value": value})
 	return self

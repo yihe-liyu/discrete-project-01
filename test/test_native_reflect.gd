@@ -34,7 +34,7 @@ func _reg(store, lc: BulletLifecycle) -> int:
 ## 撞墙 → 发射替换弹（方向 = reflect([angle])）
 func _mirror_lifecycle(mask: int, angle: float = 0.0) -> BulletLifecycle:
 	var lc := BulletLifecycle.new()
-	lc.until_at_wall(mask)
+	lc.until_rect(GameConfig.FIELD_RECT, false, mask)
 	lc.emit(Callable(), BulletLifecycle.reflect(angle), 100.0, BulletLifecycle.AT_PHASE_END)
 	lc.despawn()
 	return lc

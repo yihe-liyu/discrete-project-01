@@ -53,7 +53,7 @@ func _on_start() -> void:
 	开花弹 = BulletData.new().tex("鳞弹").blend(true).enemy().speed(开花弹速度) \
 		.color(Color.CORNFLOWER_BLUE)
 	lifecycle = BulletLifecycle.new()
-	lifecycle.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+	lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
 	lifecycle.sfx(&"kira")
 	lifecycle.emit(反射弹, BulletLifecycle.reflect(), 0.01, BulletLifecycle.AT_PHASE_END)
 	lifecycle.despawn()
@@ -64,7 +64,7 @@ func _on_start() -> void:
 		金开花弹 = BulletData.new().tex("鳞弹").blend(true).enemy().speed(开花弹速度) \
 			.color(Color.GOLDENROD)
 		lifecycle = BulletLifecycle.new()
-		lifecycle.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
+		lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
 		lifecycle.sfx(&"kira")
 		lifecycle.emit(金反射弹, BulletLifecycle.reflect(), 0.01, BulletLifecycle.AT_PHASE_END)
 		lifecycle.despawn()

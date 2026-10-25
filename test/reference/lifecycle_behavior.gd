@@ -193,21 +193,6 @@ func _check_until(system: BulletSystem, id: int, st: Dictionary, cond: Dictionar
 			if tp == null:
 				return false
 			return system.get_position(id).distance_to(tp) < float(cond[&"r"])
-		BulletLifecycle.C_AT_WALL:
-			var mask: int = int(cond[&"mask"])
-			var pos := system.get_position(id)
-			var clamped := pos
-			if (mask & BulletLifecycle.WALL_LEFT) and pos.x <= GameConfig.FIELD_LEFT:
-				clamped.x = GameConfig.FIELD_LEFT
-			elif (mask & BulletLifecycle.WALL_RIGHT) and pos.x >= GameConfig.FIELD_RIGHT:
-				clamped.x = GameConfig.FIELD_RIGHT
-			if (mask & BulletLifecycle.WALL_TOP) and pos.y <= GameConfig.FIELD_TOP:
-				clamped.y = GameConfig.FIELD_TOP
-			if clamped != pos:
-				st[&"end_pos"] = clamped
-				st[&"has_end_pos"] = true
-				return true
-			return false
 		BulletLifecycle.C_STATE:
 			var si: int = int(cond[&"slot"])
 			var slots: Array = st[&"slots"]

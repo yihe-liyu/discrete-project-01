@@ -941,21 +941,6 @@ bool DanmakuStore::_check_until(int i, float *slots, int ins, const Vector2 &pla
 			if (!ok) { return false; }
 			return from.distance_to(tp) < a[3];
 		}
-		case 23: { // at_wall（纯谓词：只输出相位结束落点，不改弹自身位置）
-			const int mask = (int)a[2];
-			const Vector2 pos(_x[i], _y[i]);
-			Vector2 cl = pos;
-			if ((mask & 1) && pos.x <= _field_left) { cl.x = _field_left; }
-			else if ((mask & 2) && pos.x >= _field_right) { cl.x = _field_right; }
-			if ((mask & 4) && pos.y <= _field_top) { cl.y = _field_top; }
-			if (cl != pos) {
-				_pendx[i] = cl.x;
-				_pendy[i] = cl.y;
-				_phasend[i] = 1;
-				return true;
-			}
-			return false;
-		}
 		case 24: { // state
 			const int si = (int)a[2];
 			if (si < 0 || si >= SLOT_STRIDE) { return false; }   // slot 边界守卫
