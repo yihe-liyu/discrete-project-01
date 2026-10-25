@@ -47,4 +47,11 @@ func test_wrap_left_to_right() -> void:
 
 func test_wrap_flag_reaches_bullet_type() -> void:
 	var data := BulletData.new().enemy().wrap_around()
-	assert_true(data.to_bullet_type().wrap_field, "wrap 标记应进入 BulletType")
+	assert_eq(data.to_bullet_type().wrap_mask, 15, "四边环绕掩码应进入 BulletType")
+
+
+func test_wrap_mask_selects_edges() -> void:
+	var horizontal := BulletData.new().enemy().wrap_horizontal()
+	assert_eq(horizontal.wrap_mask, 3, "左右环绕 = LEFT | RIGHT")
+	var vertical := BulletData.new().enemy().wrap_vertical()
+	assert_eq(vertical.wrap_mask, 12, "上下环绕 = TOP | BOTTOM")

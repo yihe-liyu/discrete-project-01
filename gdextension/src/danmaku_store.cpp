@@ -35,7 +35,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_cull", "cull"), &DanmakuStore::set_cull);
 	ClassDB::bind_method(D_METHOD("set_margin", "margin"), &DanmakuStore::set_margin);
 	ClassDB::bind_method(D_METHOD("set_out_grace", "id", "grace"), &DanmakuStore::set_out_grace);
-	ClassDB::bind_method(D_METHOD("set_wrap", "id", "wrap"), &DanmakuStore::set_wrap);
+	ClassDB::bind_method(D_METHOD("set_wrap", "id", "mask"), &DanmakuStore::set_wrap);
 	ClassDB::bind_method(D_METHOD("get_out_grace", "id"), &DanmakuStore::get_out_grace);
 	ClassDB::bind_method(D_METHOD("set_default_life", "life"), &DanmakuStore::set_default_life);
 	ClassDB::bind_method(D_METHOD("set_hitbox", "id", "radius", "offset", "size", "follow_dir", "dir_offset"), &DanmakuStore::set_hitbox);
@@ -339,9 +339,14 @@ void DanmakuStore::integrate(double p_delta) {
 		}
 		_x[i] += _vx[i] * dt;
 		_y[i] += _vy[i] * dt;
-		if (_wrap[i] && _cull.size.x > 0.0f && _cull.size.y > 0.0f) {
-			_x[i] = _cull.position.x + Math::fposmod(_x[i] - _cull.position.x, _cull.size.x);
-			_y[i] = _cull.position.y + Math::fposmod(_y[i] - _cull.position.y, _cull.size.y);
+		if (_wrap[i] != 0 && _cull.size.x > 0.0f && _cull.size.y > 0.0f) {
+			const float right = _cull.position.x + _cull.size.x;
+			const float bottom = _cull.position.y + _cull.size.y;
+			const int mask = _wrap[i];
+			if ((mask & 1) && _x[i] < _cull.position.x) { _x[i] += _cull.size.x; }
+			else if ((mask & 2) && _x[i] > right) { _x[i] -= _cull.size.x; }
+			if ((mask & 4) && _y[i] < _cull.position.y) { _y[i] += _cull.size.y; }
+			else if ((mask & 8) && _y[i] > bottom) { _y[i] -= _cull.size.y; }
 		}
 		if (_timer[i] > 0.0f) {
 			_timer[i] -= dt;
@@ -374,9 +379,9 @@ void DanmakuStore::set_out_grace(int p_id, float p_grace) {
 	_out_grace[p_id] = p_grace;
 	_out_time[p_id] = 0.0f;
 }
-void DanmakuStore::set_wrap(int p_id, bool p_wrap) {
+void DanmakuStore::set_wrap(int p_id, int p_mask) {
 	if (_valid(p_id)) {
-		_wrap[p_id] = p_wrap ? 1 : 0;
+		_wrap[p_id] = (unsigned char)(p_mask & 15);
 	}
 }
 float DanmakuStore::get_out_grace(int p_id) const {

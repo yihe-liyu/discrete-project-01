@@ -57,8 +57,10 @@ var lifecycle: BulletLifecycle
 var lifecycle_anchor: Variant = null
 ## 命中音效注册器 key；空 = normal_damage。
 var hit_sfx: String = ""
+## 环绕边掩码：1 左 / 2 右 / 4 上 / 8 下。
+enum WrapEdge { LEFT = 1, RIGHT = 2, TOP = 4, BOTTOM = 8 }
+var wrap_mask: int = 0
 ## 出界宽限（秒）：出界后仍存活这段时间再回收；0 = 出界立即回收。
-var wrap_field: bool = false
 var out_grace: float = 0.0
 
 ## ---- 构造链方法 ----
@@ -162,11 +164,26 @@ func grace(v: float) -> BulletData:
 	return self
 
 
-## 出界后从对边回来（左右 / 上下环绕）。
+## 四边都环绕。
 func wrap_around() -> BulletData:
-	wrap_field = true
+	return wrap_edges(WrapEdge.LEFT | WrapEdge.RIGHT | WrapEdge.TOP | WrapEdge.BOTTOM)
+
+
+## 只对指定边起效；mask 用 [enum WrapEdge]。
+func wrap_edges(mask: int) -> BulletData:
+	wrap_mask = mask & 15
 	invalidate_bullet_type()
 	return self
+
+
+## 只左右环绕。
+func wrap_horizontal() -> BulletData:
+	return wrap_edges(WrapEdge.LEFT | WrapEdge.RIGHT)
+
+
+## 只上下环绕。
+func wrap_vertical() -> BulletData:
+	return wrap_edges(WrapEdge.TOP | WrapEdge.BOTTOM)
 
 
 # ═══ 内核弹型（词汇合一：BulletData 是构造助手，产出 BulletType）═══
@@ -201,7 +218,7 @@ func _build_bullet_type() -> BulletType:
 	bt.follow_dir = follow_dir
 	bt.dir_offset = dir_offset
 	bt.out_grace = out_grace
-	bt.wrap_field = wrap_field
+	bt.wrap_mask = wrap_mask
 	bt.hit_fx = hit_effect
 	bt.is_spawn_fog = is_spawn_fog
 	bt.spawn_fx = spawn_fx

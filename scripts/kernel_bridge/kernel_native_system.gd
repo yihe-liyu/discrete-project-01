@@ -182,7 +182,7 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 		_accel.set_fx_type(nid, _fx_type_index[id])
 		_accel.set_timer(nid, _timer[id])
 		_accel.set_out_grace(nid, _out_grace[id])
-		_accel.set_wrap(nid, bullet_data.wrap_field)
+		_accel.set_wrap(nid, bullet_data.wrap_mask)
 		# program 在发射时就绑定（与 enable_native_behaviors 是否执行无关）；未映射 move → -1。
 		var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
 		var prog: int = _program_for(move, params)

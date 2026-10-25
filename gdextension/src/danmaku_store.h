@@ -138,7 +138,7 @@ public:
 	void set_margin(float p_margin); // 剔除余量。
 	// 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
 	void set_out_grace(int p_id, float p_grace);
-	void set_wrap(int p_id, bool p_wrap); // 出界后从对边回来。
+	void set_wrap(int p_id, int p_mask); // 边掩码：1 左 / 2 右 / 4 上 / 8 下。
 	float get_out_grace(int p_id) const; // 无效 → 0。
 	void set_default_life(float p_life); // 新行默认寿命。
 	void set_field(float p_left, float p_right, float p_top); // 反射/边界场地范围。

@@ -65,7 +65,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 | is_spawn_fog | bool | true | 是否跟随阵营出生雾；`.no_spawn_fog()` 逐型关（与 `.enemy()` 顺序无关） |
 | spawn_fx | EffectType | null | 这型的出生特效（null=用阵营默认） |
 | out_grace | float | 0.0 | **逐弹出界宽限（秒）**：出界后仍活这么久；0 = 出界立即回收 |
-| wrap_field | bool | false | 四边环绕：下→上、上→下、左→右、右→左 |
+| wrap_mask | int | 0 | 环绕边掩码：1 左 / 2 右 / 4 上 / 8 下 |
 | lifecycle | BulletLifecycle | null | 弹道描述符（**推荐主路**） |
 | lifecycle_anchor | Variant | null | per-shot 锚点 `{id, offset, use_global}`（激光用） |
 | coroutine_script / params | — | — | **已弃用**：旧端口载体 |
@@ -85,7 +85,9 @@ func _tick(p_ctx: StageContext) -> Variant:
 | `.with_spawn_fog(effect)` / `.no_spawn_fog()` | 打开/换出生雾 / 关掉出生雾 |
 | `.trajectory(lc, anchor)` | **挂描述符**（主路） |
 | `.grace(v)` | out_grace |
-| `.wrap_around()` | 四边环绕（改的是类型级字段，会 invalidate 弹型缓存） |
+| `.wrap_around()` | 四边环绕（会 invalidate 弹型缓存） |
+| `.wrap_horizontal()` / `.wrap_vertical()` | 只左右 / 只上下环绕 |
+| `.wrap_edges(mask)` | 自定义边，mask 用 `BulletData.WrapEdge` |
 | `.behavior(script)` | **已弃用** |
 
 > **未知 tex key 会 `push_warning` + 保持默认**（不静默回退，但弹仍会发出去）——只从 §7.1 表取 key。
