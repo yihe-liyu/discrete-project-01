@@ -154,13 +154,8 @@ func _sync_laser_anchors(player: Player) -> void:
 	for i in _options.size():
 		if is_instance_valid(_options[i]) and is_instance_valid(_laser_anchors[i]):
 			_laser_anchors[i].global_position = _options[i].global_position
-	while _laser_anchors.size() > _options.size():
-		# 子机减少：旧激光可能还锚在这个槽；先清段，再收锚点。
-		if ctx != null:
-			ctx.bullets.clear_laser_bullets()
-		var anchor: Node2D = _laser_anchors.pop_back()
-		if is_instance_valid(anchor):
-			anchor.queue_free()
+	# 不主动删旧槽 Marker：子机减少时旧激光可能还持有它的 id。
+	# 留着空 Marker 成本可忽略；下次数量增加直接复用，清理时统一释放。
 
 
 ## 激光段锚点：优先用对应子机槽的稳定 Marker；无子机时退回自机。
