@@ -16,6 +16,7 @@ var _is_showing: bool = false
 
 func _ready() -> void:
 	z_index = LayerConfig.EFFECT
+	z_as_relative = false
 	_ensure_lines()
 	visible = false
 
