@@ -120,7 +120,7 @@
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData / 难度变体取曲** | 12 | 0 |
 | [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪与死弹剪枝；空列表不装 tracker；`clear` 清空；无节点静默 | 5 | 0 |
-| [test_telegraph_path](../test/test_telegraph_path.gd) | 路径展示层：单线 / 多线显示与清空；单点不成线；lifetime 到点自动清空；路径在敌弹之下；只画 Line2D | 6 | 0 |
+| [test_telegraph_path](../test/test_telegraph_path.gd) | 路径展示层：单线 / 多线显示与清空；单点不成线；lifetime 到点自动清空；路径在敌弹之下；MultiMesh 合批 | 6 | 0 |
 | [test_lifecycle_preview](../test/test_lifecycle_preview.gd) | 路径预览：单 phase 与原生逐帧对照；`end_state`；chain 续算 / 静态 `on_end` / despawn 停止；`steer` / 目标方向标近似 | 10 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** + **敌人行为先入树、再 `_on_start()`**（不再需要 `_ready` + `call_deferred`） | 7 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
