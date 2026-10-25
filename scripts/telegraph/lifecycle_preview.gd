@@ -1,11 +1,12 @@
 extends RefCounted
-## 单颗弹「当前 phase」的确定性路径预览。
+## 单颗弹的确定性路径预览：单 phase 积分 + 顺序 chain。
 ##
-## 只做一件事：给定当前 [code]pos / vel / heading[/code] 和某个 phase 的 moves / until，
-## 按固定步长往前积分，返回一条折线。它不是第二套物理：
+## 给定当前 [code]pos / vel / heading[/code] 和某个 phase 的 moves / until，
+## 按固定步长往前积分，返回一条折线；[method evaluate_chain] 会一次算一段、
+## 用上一段的结束状态接着算下一段。它不是第二套物理：
 ## - 不生成真弹、不参与碰撞、不消耗游戏 RNG；
-## - 不跨 phase，不模拟 emit；
-## - 目标相关行为（steer / toward / random / until_near）不猜，直接拒绝或标记近似。
+## - 不一次性模拟全部 phase，不模拟 emit 子代；
+## - 目标相关行为（steer / toward / random / until_near）不猜，标记近似或停止。
 ##
 ## 典型用法：
 ## [codeblock]
@@ -20,6 +21,8 @@ const DIR_SPEC := preload("res://scripts/kernel_bridge/lifecycle/dir_spec.gd")
 const DEFAULT_DT := 1.0 / 60.0
 ## 默认最长预览时间；phase 永不结束时用。
 const DEFAULT_MAX_TIME := 1.2
+## chain 默认最多续算的 phase 数。
+const DEFAULT_MAX_PHASES := 8
 ## 默认场地（只用到左 / 右 / 上三面墙）。
 const DEFAULT_FIELD := Rect2(
 	GameConfig.FIELD_LEFT, GameConfig.FIELD_TOP,
@@ -47,8 +50,9 @@ const ROT_VELOCITY := 1
 const ROT_HEADING := 2
 
 
-## 预览一个 phase；返回 [code]{ok, points, reason, phase_index, approximate}[/code]。
+## 预览一个 phase；返回 [code]{ok, points, reason, phase_index, approximate, end_state}[/code]。
 ## [code]ok=false[/code] 表示这个 phase 含无法可靠预测的行为（steer / 目标方向 / position 等）。
+## [code]end_state[/code] 含 [code]position / velocity / heading / elapsed[/code]，供 chain 续算。
 static func evaluate_phase(
 		lifecycle: BulletLifecycle,
 		phase_index: int,
@@ -64,6 +68,12 @@ static func evaluate_phase(
 		"reason": &"invalid",
 		"phase_index": phase_index,
 		"approximate": false,
+		"end_state": {
+			"position": start_position,
+			"velocity": start_velocity,
+			"heading": start_heading,
+			"elapsed": 0.0,
+		},
 	}
 	if lifecycle == null or phase_index < 0 or phase_index >= lifecycle.phases.size():
 		return result
@@ -83,13 +93,13 @@ static func evaluate_phase(
 		if op == M_POSITION:
 			result["reason"] = &"unsupported"
 			result["points"] = points
-			return result
+			return _with_state(result, start_position, start_velocity, start_heading, 0.0)
 		if op != M_ACCEL_WORLD and op != M_ACCEL_HEADING and op != M_ROTATE \
 				and op != M_STEER and op != M_SPEED_LERP and op != M_SPEED_MUL \
 				and op != M_SET_HEADING and op != M_SET_SPEED:
 			result["reason"] = &"unsupported"
 			result["points"] = points
-			return result
+			return _with_state(result, start_position, start_velocity, start_heading, 0.0)
 		if op == M_STEER or (op == M_SET_HEADING and not _is_static_direction(move.get(&"dir"))):
 			approximate = true
 
@@ -165,7 +175,7 @@ static func evaluate_phase(
 				_:
 					result["reason"] = &"unsupported"
 					result["points"] = points
-					return result
+					return _with_state(result, position, velocity, heading, elapsed)
 
 		var check := _check_until(until, position, velocity, elapsed, tick, slots, field_rect, next_check)
 		next_check = float(check.get("next", next_check))
@@ -177,12 +187,143 @@ static func evaluate_phase(
 			result["approximate"] = approximate
 			result["points"] = points
 			result["reason"] = &"target_until" if approximate else StringName(check.get("reason", &"done"))
-			return result
+			return _with_state(result, position, velocity, heading, elapsed)
 
 	result["ok"] = not approximate
 	result["approximate"] = approximate
 	result["points"] = points
 	result["reason"] = &"target_until" if approximate else &"max_time"
+	return _with_state(result, position, velocity, heading, elapsed)
+
+
+## 给 result 写入结束状态；chain 用这个状态继续下一段。
+static func _with_state(result: Dictionary, position: Vector2, velocity: Vector2,
+		heading: Vector2, elapsed: float) -> Dictionary:
+	result["end_state"] = {
+		"position": position,
+		"velocity": velocity,
+		"heading": heading,
+		"elapsed": elapsed,
+	}
+	return result
+
+
+## 顺序预览多个 phase：每次只算一段，用上段的 end_state 续下一段。
+## 不模拟 emit 子代；遇到 despawn / 近似 / 超时就停。
+static func evaluate_chain(
+		lifecycle: BulletLifecycle,
+		start_phase_index: int,
+		start_position: Vector2,
+		start_velocity: Vector2,
+		start_heading: Vector2 = Vector2.ZERO,
+		dt: float = DEFAULT_DT,
+		max_time: float = DEFAULT_MAX_TIME,
+		field_rect: Rect2 = DEFAULT_FIELD,
+		max_phases: int = DEFAULT_MAX_PHASES) -> Dictionary:
+	var result := {
+		"ok": false,
+		"approximate": false,
+		"segments": [],
+		"points": PackedVector2Array(),
+		"reason": &"invalid",
+		"phase_index": start_phase_index,
+		"end_state": {
+			"position": start_position,
+			"velocity": start_velocity,
+			"heading": start_heading,
+			"elapsed": 0.0,
+		},
+	}
+	if lifecycle == null or dt <= 0.0 or max_time <= 0.0 or max_phases <= 0:
+		return result
+	if start_phase_index < 0 or start_phase_index >= lifecycle.phases.size():
+		return result
+
+	var position := start_position
+	var velocity := start_velocity
+	var heading := start_heading
+	if heading == Vector2.ZERO:
+		heading = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
+	var remaining := max_time
+	var segments: Array[PackedVector2Array] = []
+	var approximate := false
+	var reason := &"no_next_phase"
+	var phase := start_phase_index
+
+	for _i in max_phases:
+		if phase < 0 or phase >= lifecycle.phases.size():
+			reason = &"chain_end"
+			break
+		var piece := evaluate_phase(lifecycle, phase, position, velocity, heading,
+			dt, remaining, field_rect)
+		if piece.points.size() >= 2:
+			segments.append(piece.points)
+		var state: Dictionary = piece.end_state
+		position = Vector2(state.get("position", position))
+		velocity = Vector2(state.get("velocity", velocity))
+		heading = Vector2(state.get("heading", heading))
+		remaining -= float(state.get("elapsed", 0.0))
+		approximate = approximate or bool(piece.approximate)
+
+		if not bool(piece.ok):
+			reason = StringName(piece.reason)
+			break
+		if StringName(piece.reason) in [&"max_time", &"target_until", &"unsupported"]:
+			reason = StringName(piece.reason)
+			break
+
+		var stop := false
+		for action in lifecycle.phases[phase].get(&"on_end", []):
+			var op := StringName(action.get(&"op", &""))
+			match op:
+				&"despawn":
+					stop = true
+				&"set_heading":
+					var direction := _static_direction(action.get(&"dir"), heading)
+					if direction == Vector2.ZERO:
+						approximate = true
+					else:
+						var speed := velocity.length()
+						velocity = direction * speed
+						heading = direction
+				&"set_speed":
+					var length := velocity.length()
+					var direction := velocity / length if length > 0.0 else heading
+					if direction != Vector2.ZERO:
+						velocity = direction * float(action.get(&"speed", 0.0))
+				&"emit", &"emit_variant", &"sfx", &"clear_fx", &"call":
+					pass
+				_:
+					approximate = true
+			if stop:
+				break
+		if stop:
+			reason = &"despawn"
+			break
+
+		phase += 1
+		if phase >= lifecycle.phases.size():
+			reason = &"chain_end"
+			break
+		if remaining <= 0.0:
+			reason = &"max_time"
+			break
+
+	var points := PackedVector2Array()
+	for segment in segments:
+		for point in segment:
+			points.append(point)
+	result["ok"] = not approximate
+	result["approximate"] = approximate
+	result["segments"] = segments
+	result["points"] = points
+	result["reason"] = reason
+	result["end_state"] = {
+		"position": position,
+		"velocity": velocity,
+		"heading": heading,
+		"elapsed": max_time - remaining,
+	}
 	return result
 
 

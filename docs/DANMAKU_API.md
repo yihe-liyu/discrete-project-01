@@ -264,9 +264,9 @@ b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_
 - `random_dir` 放在 `set_heading` / `set_speed` 这类 Move 里 = **每帧抽一次**；放在 `emit` / `on_end_heading` 里 = **每个相位结束抽一次**。放错位置通常不报错，只会悄悄改变随机序列。
 - `toward` / `away` / `forward` 的“目标 / 朝向”是**求值那一刻**再读，不是构造时烘死；`heading` 才是绝对常量。
 
-### 3.12 单 phase 路径预览（实验）
+### 3.12 单 phase + 顺序 chain 路径预览（实验）
 
-给 Boss 演出 / 调试用的“这颗弹接下来会走哪”：只取**当前 phase**，不跨 phase，不生成真弹。
+给 Boss 演出 / 调试用的“这颗弹接下来会走哪”：一次只算**一个 phase**，再用结束状态续下一段；不生成真弹。
 
 ```gdscript
 LifecyclePreview.evaluate_phase(
@@ -274,7 +274,14 @@ LifecyclePreview.evaluate_phase(
     position, velocity, heading,
     dt = 1.0 / 60.0, max_time = 1.2,
     field_rect = <场地>
-) -> { ok, approximate, points, reason, phase_index }
+) -> { ok, approximate, points, reason, phase_index, end_state }
+
+LifecyclePreview.evaluate_chain(
+    lifecycle, start_phase_index,
+    position, velocity, heading,
+    dt = 1.0 / 60.0, max_time = 1.2,
+    field_rect = <场地>, max_phases = 8
+) -> { ok, approximate, segments, points, reason, end_state }
 ```
 
 - 只支持确定性 move：`accel_world` / `accel_heading` / `rotate` / `speed_lerp` / `speed_mul` / `set_speed` / 静态 `set_heading`。
@@ -282,7 +289,9 @@ LifecyclePreview.evaluate_phase(
 - `steer` / 目标方向：忽略瞄准，保持当前朝向继续走，并标记 `approximate=true`。
 - `position`（需要外部锚点）直接返回 `ok=false`、`reason="unsupported"`，不画假线。
 - `until_near` 无法在“忽略目标”的前提下知道终点：画到 `max_time`，`approximate=true`、`reason="target_until"`。
-- phase 变了，由调用方用新的 `pos/vel/heading` 重新调用；预览本身不追踪阶段变化。
+- `evaluate_phase` 返回 `end_state`（position / velocity / heading / elapsed），chain 用它续算下一段。
+- `evaluate_chain` 只处理 `on_end` 的静态 `set_heading` / `set_speed` / `despawn`；`emit` 子代不模拟。
+- 目标相关导致近似时，chain 停止，不把近似状态继续带到下一段。
 
 > 这是演出/调试的近似，不是第二套物理；不要在游戏逻辑里用它替代真实弹道。
 

@@ -109,3 +109,42 @@ func test_preview_marks_target_until_as_approximate() -> void:
 	assert_true(preview.approximate, "应标记为近似")
 	assert_eq(preview.reason, &"target_until", "应说明停在目标相关条件")
 	assert_gt(preview.points.size(), 1, "仍可画到时间上限")
+
+
+func test_phase_returns_end_state() -> void:
+	var lc := BulletLifecycle.new()
+	lc.accel_world(Vector2(0.0, 240.0)).until_elapsed(0.5)
+	var preview := _preview(lc, Vector2(400.0, 200.0), Vector2(0.0, -100.0), 0.5)
+	assert_true(preview.ok)
+	var end_state: Dictionary = preview.end_state
+	assert_almost_eq(Vector2(end_state.position).x, preview.points[-1].x, 0.01, "结束位置应与最后一点一致")
+	assert_almost_eq(float(end_state.elapsed), 0.5, 0.001, "结束时间应为 phase 时长")
+
+
+func test_chain_continues_to_next_phase() -> void:
+	var lc := BulletLifecycle.new()
+	lc.accel_world(Vector2(0.0, 240.0)).until_elapsed(0.25)
+	lc.then()
+	lc.accel_heading(300.0).until_elapsed(0.25).despawn()
+	var chain := PREVIEW.evaluate_chain(
+		lc, 0, Vector2(400.0, 200.0), Vector2(0.0, -100.0),
+		Vector2.UP, DT, 0.6)
+	assert_true(chain.ok, "两段都是确定性 phase")
+	assert_eq(chain.segments.size(), 2, "应有两段")
+	assert_eq(chain.reason, &"despawn", "第二段 despawn 后停止")
+	var total := float(chain.end_state.elapsed)
+	assert_gt(total, 0.5, "总时长应覆盖两段")
+	assert_lt(total, 0.6, "不应超过两段 + 一帧")
+
+
+func test_chain_applies_static_on_end_heading() -> void:
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(0.1).on_end_heading(BulletLifecycle.world_heading(PI / 2.0))
+	lc.then()
+	lc.until_elapsed(0.1)
+	var chain := PREVIEW.evaluate_chain(
+		lc, 0, Vector2(400.0, 300.0), Vector2(0.0, -100.0),
+		Vector2.UP, DT, 0.2)
+	assert_true(chain.ok)
+	assert_eq(chain.segments.size(), 2, "on_end 后应继续第二段")
+	assert_gt(Vector2(chain.end_state.velocity).x, 0.0, "第二段应朝右")
