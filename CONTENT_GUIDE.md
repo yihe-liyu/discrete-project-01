@@ -25,7 +25,7 @@
 ```
 ① 关卡编排：stage01.gd（Timeline API，代码声明节奏/Boss/阶段）
 ② 行为层：  协程脚本 .gd（敌人行为 + Boss 移动/弹幕/入场/退场）
-③ 数据层：  .tres 资源（BossData/PhaseData/敌人预设/符卡记录）
+③ 数据层：  .tres 资源（BossData/PhaseData/符卡记录）+ EnemyData 构造链（代码）
 ④ 工具层：  无头检查（内容契约 / 预检）+ 游戏内符卡练习 + 对话预览
 ```
 

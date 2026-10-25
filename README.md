@@ -147,7 +147,7 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 | 键 | 功能 |
 |----|------|
 | Z | 射击 / 确认 |
-| X | Bomb（未实装） |
+| X | Bomb / 被弹炸弹（deathbomb） |
 | C | 释放记忆 |
 | Shift | 低速移动 |
 | Esc | 暂停 |
