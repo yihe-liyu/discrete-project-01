@@ -44,3 +44,17 @@ func test_lifetime_clears_path() -> void:
 	path.call("_process", 0.1)
 	assert_false(path.is_showing(), "超过 lifetime 应自动清空")
 	assert_eq(path.point_count(), 0)
+
+
+func test_show_multiple_paths() -> void:
+	var path: Node2D = PATH.new()
+	add_child_autofree(path)
+	path.show_paths([
+		PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]),
+		PackedVector2Array([Vector2(0, 10), Vector2(10, 10)]),
+		PackedVector2Array([Vector2(0, 20), Vector2(10, 20)]),
+	], Color.WHITE, 3.0, 0.5)
+	assert_true(path.is_showing())
+	assert_eq(path.path_count(), 3, "三条独立线")
+	path.clear_path()
+	assert_eq(path.path_count(), 0)

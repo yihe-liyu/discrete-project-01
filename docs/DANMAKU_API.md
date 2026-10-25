@@ -304,6 +304,13 @@ ctx.telegraph.show_chain(
 ctx.telegraph.clear()
 ```
 
+多方向同时预览（试验；不要一次画满 50 条）：
+
+```gdscript
+ctx.telegraph.show_chain_many(
+    lifecycle, origin, [方向1, 方向2, 方向3], speed, 4.0)
+```
+
 服务会把 chain 的 [code]end_state.elapsed[/code] 作为显示寿命；到点自动清空，不会一直挂在屏幕上。
 
 逐弹原型（只支持单颗；50 颗需要稳定身份 + 多线合批）：

@@ -21,17 +21,32 @@ var _tracked_width: float = 3.0
 func show_chain(lifecycle: BulletLifecycle, origin: Vector2, direction: Vector2,
 		speed: float, max_time: float = 4.0, phase_index: int = 0,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> Dictionary:
-	_stop_tracking()
-	var heading := direction.normalized() if direction != Vector2.ZERO else Vector2.UP
-	var result := PREVIEW.evaluate_chain(
-		lifecycle, phase_index, origin, heading * speed, heading,
-		1.0 / 60.0, max_time)
-	if telegraph_path != null and is_instance_valid(telegraph_path) \
-			and result.points.size() >= 2:
-		var lifetime: float = float(result.end_state.get("elapsed", 0.0))
-		telegraph_path.call("show_path", result.points, color, width, lifetime)
-	return result
+	var results := show_chain_many(lifecycle, origin, [direction], speed, max_time,
+		phase_index, color, width)
+	return results[0] if not results.is_empty() else {}
 
+
+## 多方向同时预览：每个方向一条独立 chain；用于“每颗弹一条线”的试验。
+func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Array,
+		speed: float, max_time: float = 4.0, phase_index: int = 0,
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> Array[Dictionary]:
+	_stop_tracking()
+	var results: Array[Dictionary] = []
+	var paths: Array[PackedVector2Array] = []
+	var lifetime := 0.0
+	for direction in directions:
+		var vec := Vector2(direction)
+		var heading := vec.normalized() if vec != Vector2.ZERO else Vector2.UP
+		var result := PREVIEW.evaluate_chain(
+			lifecycle, phase_index, origin, heading * speed, heading,
+			1.0 / 60.0, max_time)
+		results.append(result)
+		if result.points.size() >= 2:
+			paths.append(result.points)
+			lifetime = maxf(lifetime, float(result.end_state.get("elapsed", 0.0)))
+	if telegraph_path != null and is_instance_valid(telegraph_path) and not paths.is_empty():
+		telegraph_path.call("show_paths", paths, color, width, lifetime)
+	return results
 
 ## 绑定一颗真实弹：按它的当前 phase / pos / vel 逐帧刷新路径；弹死自动清线。
 ## 只用于单颗原型；50 颗要先做多线合批与稳定身份。

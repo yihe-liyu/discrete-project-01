@@ -11,6 +11,8 @@ const GLOW_WIDTH_MULT := 3.0
 
 var _core: Line2D
 var _glow: Line2D
+var _extra_cores: Array[Line2D] = []
+var _extra_glows: Array[Line2D] = []
 var _is_showing: bool = false
 var _remaining: float = 0.0
 var _has_lifetime: bool = false
@@ -30,21 +32,43 @@ func _ready() -> void:
 ## [code]lifetime > 0[/code] 时到点自动清空；0 = 保持到下一次 show/clear。
 func show_path(points: PackedVector2Array, color: Color = Color(1.0, 0.82, 0.35, 0.85),
 		width: float = CORE_WIDTH, lifetime: float = 0.0) -> void:
+	show_paths([points], color, width, lifetime)
+
+
+## 同时显示多条路径（每颗弹一条）；点不足 2 的路径跳过。
+func show_paths(paths: Array, color: Color = Color(1.0, 0.82, 0.35, 0.85),
+		width: float = CORE_WIDTH, lifetime: float = 0.0) -> void:
 	_ensure_lines()
-	if points.size() < 2:
+	var used := 0
+	for path in paths:
+		if path.size() < 2:
+			continue
+		var core: Line2D
+		var glow: Line2D
+		if used == 0:
+			core = _core
+			glow = _glow
+		else:
+			_ensure_extra(used)
+			core = _extra_cores[used - 1]
+			glow = _extra_glows[used - 1]
+		glow.points = path
+		glow.width = width * GLOW_WIDTH_MULT
+		glow.default_color = Color(color.r, color.g, color.b, color.a * 0.28)
+		glow.visible = true
+		core.points = path
+		core.width = width
+		core.default_color = color
+		core.visible = true
+		used += 1
+	if used == 0:
 		clear_path()
 		return
-
-	_glow.points = points
-	_glow.width = width * GLOW_WIDTH_MULT
-	_glow.default_color = Color(color.r, color.g, color.b, color.a * 0.28)
-	_glow.visible = true
-
-	_core.points = points
-	_core.width = width
-	_core.default_color = color
-	_core.visible = true
-
+	for i in range(used - 1, _extra_cores.size()):
+		_extra_cores[i].clear_points()
+		_extra_cores[i].visible = false
+		_extra_glows[i].clear_points()
+		_extra_glows[i].visible = false
 	_is_showing = true
 	visible = true
 	_has_lifetime = lifetime > 0.0
@@ -59,6 +83,11 @@ func clear_path() -> void:
 	_glow.clear_points()
 	_core.visible = false
 	_glow.visible = false
+	for i in _extra_cores.size():
+		_extra_cores[i].clear_points()
+		_extra_cores[i].visible = false
+		_extra_glows[i].clear_points()
+		_extra_glows[i].visible = false
 	_is_showing = false
 	_has_lifetime = false
 	_remaining = 0.0
@@ -74,6 +103,15 @@ func is_showing() -> bool:
 ## 当前路径点数（测试 / 调试用）。
 func point_count() -> int:
 	return _core.points.size() if _core != null else 0
+
+
+## 当前可见路径条数（多线试验用）。
+func path_count() -> int:
+	var n := 1 if _core != null and _core.visible else 0
+	for core in _extra_cores:
+		if core.visible:
+			n += 1
+	return n
 
 
 ## 设置逐帧跟踪回调；空 Callable = 停止跟踪。
@@ -97,6 +135,12 @@ func _ensure_lines() -> void:
 		return
 	_glow = _make_line(0.0)
 	_core = _make_line(1.0)
+
+
+func _ensure_extra(index: int) -> void:
+	while _extra_cores.size() <= index:
+		_extra_glows.append(_make_line(0.0))
+		_extra_cores.append(_make_line(1.0))
 
 
 func _make_line(depth: float) -> Line2D:

@@ -32,3 +32,15 @@ func test_no_injected_path_is_silent() -> void:
 	var result: Dictionary = service.show_chain(
 		_lc(), Vector2(400.0, 300.0), Vector2.DOWN, 200.0, 0.5)
 	assert_true(result.ok, "没有展示节点时仍应返回 chain 结果")
+
+
+func test_show_chain_many_draws_multiple_paths() -> void:
+	var path = PATH.new()
+	add_child_autofree(path)
+	var service = SERVICE.new()
+	service.telegraph_path = path
+	var results: Array[Dictionary] = service.show_chain_many(
+		_lc(), Vector2(400.0, 300.0),
+		[Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT], 200.0, 0.5)
+	assert_eq(results.size(), 3, "三个方向各一份结果")
+	assert_eq(path.path_count(), 3, "应画三条线")
