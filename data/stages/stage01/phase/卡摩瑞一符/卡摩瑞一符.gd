@@ -78,13 +78,13 @@ func _tick(p_ctx: StageContext) -> Variant:
 		var ids: Array[int] = p_ctx.bullets.shoot_spread_ids(
 			开花弹, 个数, TAU, 随机角度, target.global_position)
 		if 显示未来路径 and not ids.is_empty():
-			p_ctx.telegraph.track_bullets(ids, 开花弹.lifecycle)
+			p_ctx.telegraph.add_tracked_bullets(ids, 开花弹.lifecycle)
 	else:
 		# Easy / Normal：只发一颗种子弹，落点略随机；开花弹由种子弹自己生成。
 		var 随机角度 := Vector2.DOWN.rotated(deg_to_rad(RNG.randf_range(-30.0, 30.0)))
 		var ids: Array[int] = p_ctx.bullets.shoot_spread_ids(
 			种子弹, 1, 0.0, 随机角度, target.global_position)
 		if 显示未来路径 and not ids.is_empty():
-			p_ctx.telegraph.track_bullet(ids[0], 种子弹.lifecycle)
+			p_ctx.telegraph.add_tracked_bullets([ids[0]], 种子弹.lifecycle)
 
 	return p_ctx.clock.wait(发射间隔)

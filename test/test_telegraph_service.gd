@@ -72,6 +72,12 @@ func test_track_bullets_prunes_dead_uids() -> void:
 	path.call("_process", 0.2)
 	assert_eq(path.path_count(), 3, "三颗应各一条线")
 
+	var more: Array[int] = bs.shoot_spread_ids(
+		data, 2, TAU, Vector2.DOWN, Vector2(448, 240))
+	assert_true(service.add_tracked_bullets(more, lc), "新弹应追加而不是重置")
+	path.call("_process", 0.2)
+	assert_eq(path.path_count(), 5, "旧弹 + 新弹应同时保留")
+
 	bm.despawn_bullet(0)
 	path.call("_process", 0.2)
-	assert_eq(path.path_count(), 2, "死一颗应掉一条")
+	assert_eq(path.path_count(), 4, "死一颗应掉一条")

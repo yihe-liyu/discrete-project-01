@@ -52,6 +52,30 @@ func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,
 	return track_bullets([bullet_uid], lifecycle, color, width)
 
 
+## 追加多颗真实弹到当前跟踪列表（同一 lifecycle）；不清掉旧弹的路径。
+func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
+	if telegraph_path == null or not is_instance_valid(telegraph_path) \
+			or bullet_manager == null or lifecycle == null:
+		return false
+	if not _tracked_uids.is_empty() and _bullet_lifecycle != lifecycle:
+		_stop_tracking()
+	var added := false
+	for uid in bullet_uids:
+		var value := int(uid)
+		if value > 0 and not _tracked_uids.has(value):
+			_tracked_uids.append(value)
+			added = true
+	if not added and not _tracked_uids.is_empty():
+		return true
+	_bullet_lifecycle = lifecycle
+	_tracked_color = color
+	_tracked_width = width
+	telegraph_path.call("set_tracker", Callable(self, "_tick_tracked"))
+	_tick_tracked(0.0)
+	return not _tracked_uids.is_empty()
+
+
 ## 绑定多颗真实弹：每颗按自己的 uid / phase / pos / vel 刷新；死一颗掉一条。
 func track_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
