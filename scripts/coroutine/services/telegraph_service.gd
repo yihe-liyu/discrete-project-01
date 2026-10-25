@@ -167,7 +167,9 @@ func _tick_tracked(delta: float) -> void:
 			extended += 1
 		var trimmed := _trim_to_current(uid, position)
 		if trimmed.size() >= 2:
-			paths.append(trimmed)
+			var simplified := PREVIEW.simplify_path(trimmed, PATH_EPSILON)
+			if simplified.size() >= 2:
+				paths.append(simplified)
 	_tracked_uids = alive
 	if _tracked_uids.is_empty():
 		_stop_tracking()
@@ -183,7 +185,8 @@ func _rebuild_cache(uid: int, phase: int, position: Vector2, lifecycle: BulletLi
 	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
 	var result: Dictionary = PREVIEW.evaluate_chain(
 		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, TRACK_MAX_TIME)
-	_paths_by_uid[uid] = PREVIEW.simplify_path(result.points, PATH_EPSILON)
+	# 缓存保留完整采样点，RDP 只用于最终绘制；否则直线会被压成 2 点，裁前缀/续算就失去中间点。
+	_paths_by_uid[uid] = result.points
 	_phases_by_uid[uid] = phase
 	_cursors_by_uid[uid] = 0
 
