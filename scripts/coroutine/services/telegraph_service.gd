@@ -19,7 +19,8 @@ func show_chain(lifecycle: BulletLifecycle, origin: Vector2, direction: Vector2,
 		1.0 / 60.0, max_time)
 	if telegraph_path != null and is_instance_valid(telegraph_path) \
 			and result.points.size() >= 2:
-		telegraph_path.call("show_path", result.points, color, width)
+		var lifetime := float(result.end_state.get("elapsed", 0.0))
+		telegraph_path.call("show_path", result.points, color, width, lifetime)
 	return result
 
 

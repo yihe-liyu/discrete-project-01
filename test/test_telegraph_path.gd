@@ -33,3 +33,14 @@ func test_show_path_replaces_previous_points() -> void:
 	path.show_path(PackedVector2Array([Vector2(0, 0), Vector2(0, 10), Vector2(10, 10)]))
 	assert_eq(path.point_count(), 3, "第二次应替换而不是追加")
 	assert_true(path.is_showing())
+
+
+func test_lifetime_clears_path() -> void:
+	var path: Node2D = PATH.new()
+	add_child_autofree(path)
+	path.show_path(PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]),
+		Color.WHITE, 3.0, 0.05)
+	assert_true(path.is_showing())
+	path.call("_process", 0.1)
+	assert_false(path.is_showing(), "超过 lifetime 应自动清空")
+	assert_eq(path.point_count(), 0)

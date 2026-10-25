@@ -12,18 +12,22 @@ const GLOW_WIDTH_MULT := 3.0
 var _core: Line2D
 var _glow: Line2D
 var _is_showing: bool = false
+var _remaining: float = 0.0
+var _has_lifetime: bool = false
 
 
 func _ready() -> void:
 	z_index = LayerConfig.EFFECT
 	z_as_relative = false
 	_ensure_lines()
+	set_process(false)
 	visible = false
 
 
 ## 显示一条路径；少于 2 个点视为清空。
+## [code]lifetime > 0[/code] 时到点自动清空；0 = 保持到下一次 show/clear。
 func show_path(points: PackedVector2Array, color: Color = Color(1.0, 0.82, 0.35, 0.85),
-		width: float = CORE_WIDTH) -> void:
+		width: float = CORE_WIDTH, lifetime: float = 0.0) -> void:
 	_ensure_lines()
 	if points.size() < 2:
 		clear_path()
@@ -41,6 +45,9 @@ func show_path(points: PackedVector2Array, color: Color = Color(1.0, 0.82, 0.35,
 
 	_is_showing = true
 	visible = true
+	_has_lifetime = lifetime > 0.0
+	_remaining = lifetime
+	set_process(_has_lifetime)
 
 
 ## 立即清空路径并隐藏。
@@ -51,6 +58,9 @@ func clear_path() -> void:
 	_core.visible = false
 	_glow.visible = false
 	_is_showing = false
+	_has_lifetime = false
+	_remaining = 0.0
+	set_process(false)
 	visible = false
 
 
@@ -62,6 +72,14 @@ func is_showing() -> bool:
 ## 当前路径点数（测试 / 调试用）。
 func point_count() -> int:
 	return _core.points.size() if _core != null else 0
+
+
+func _process(delta: float) -> void:
+	if not _has_lifetime:
+		return
+	_remaining -= delta
+	if _remaining <= 0.0:
+		clear_path()
 
 
 func _ensure_lines() -> void:

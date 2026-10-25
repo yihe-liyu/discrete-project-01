@@ -304,12 +304,13 @@ ctx.telegraph.show_chain(
 ctx.telegraph.clear()
 ```
 
+服务会把 chain 的 [code]end_state.elapsed[/code] 作为显示寿命；到点自动清空，不会一直挂在屏幕上。
 只做视觉时也可以直接用 [code]TelegraphPath[/code]：
 
 ```gdscript
 var path := TelegraphPath.new()
 add_child(path)
-path.show_path(preview.points)
+path.show_path(preview.points, Color.WHITE, 3.0, 0.5)
 path.clear_path()
 ```
 
