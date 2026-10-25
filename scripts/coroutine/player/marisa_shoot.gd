@@ -37,6 +37,9 @@ var _focus_bullet_data: BulletData
 var _laser_bullets: Array[BulletData] = []
 ## 激光段描述符缓存（按角度）—— 同角度共用 1 个 program；锚点走 per-shot lifecycle_anchor
 var _laser_trajectories: Dictionary = {}
+## 子机的稳定锚点：不直接引用会被重建/释放的 Option 节点。
+## 每帧把锚点移到对应子机的 global_position；激光锚点 id 永远有效。
+var _laser_anchors: Array[Node2D] = []
 
 
 func _seg_count() -> int:
@@ -63,6 +66,14 @@ func _option_setup() -> Dictionary:
 			[Vector2(-60, -60), Vector2(-20, -80), Vector2(20, -80), Vector2(60, -60)],
 		],
 	}
+
+
+func _cleanup_options() -> void:
+	super._cleanup_options()
+	for anchor in _laser_anchors:
+		if is_instance_valid(anchor):
+			anchor.queue_free()
+	_laser_anchors.clear()
 
 
 func _main_shoot(_ctx: StageContext, player: Player) -> float:
@@ -93,6 +104,7 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 		var player: Player = ctx.player.get_player()
 		if not is_instance_valid(player):
 			return ctx.clock.wait_frames(OPTION_INTERVAL)
+		_sync_laser_anchors(player)
 		var dt := get_dt()
 		_spawn_accumulator += LASER_DRIFT_SPEED * dt
 		var spacing: float = SEG_W * LASER_SPACING_OVERLAP
@@ -131,13 +143,30 @@ func _laser_trajectory(angle_rad: float) -> BulletLifecycle:
 	return lc
 
 
-## 激光段锚点：锚到稳定的自机，而不是可能被重建/释放的子机节点。
-## 子机只贡献发射瞬间的相对偏移；子机之后被换掉也不会留下失效 id。
+## 子机锚点：每个子机槽一个持久 Marker2D，每帧跟随子机位置。
+## 激光只持有 Marker 的 id；子机节点被重建也不会让 id 失效。
+func _sync_laser_anchors(player: Player) -> void:
+	while _laser_anchors.size() < _options.size():
+		var anchor := Node2D.new()
+		anchor.name = "LaserAnchor_%d" % _laser_anchors.size()
+		player.add_child(anchor)
+		_laser_anchors.append(anchor)
+	for i in _options.size():
+		if is_instance_valid(_options[i]) and is_instance_valid(_laser_anchors[i]):
+			_laser_anchors[i].global_position = _options[i].global_position
+	while _laser_anchors.size() > _options.size():
+		var anchor: Node2D = _laser_anchors.pop_back()
+		if is_instance_valid(anchor):
+			anchor.queue_free()
+
+
+## 激光段锚点：优先用对应子机槽的稳定 Marker；无子机时退回自机。
 func _laser_anchor(player: Player, source: Node2D) -> Dictionary:
-	var offset := Vector2.ZERO
-	if is_instance_valid(source) and source != player:
-		offset = source.global_position - player.global_position
-	return {&"id": player.get_instance_id(), &"offset": offset, &"use_global": true}
+	var anchor: Node2D = player
+	var index := _options.find(source)
+	if index >= 0 and index < _laser_anchors.size() and is_instance_valid(_laser_anchors[index]):
+		anchor = _laser_anchors[index]
+	return {&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
 
 
 ## 段弹型：按帧缓存（同一帧复用同一 BulletData 实例 → 内核弹型表不随发射增长）。
