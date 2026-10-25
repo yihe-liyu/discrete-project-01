@@ -21,8 +21,6 @@ var _tracked_age: float = 0.0
 const PATH_EPSILON := 1.25
 ## 一次生成整条路径的上限；通常出屏/生命周期终点会先到。
 const FULL_PATH_MAX_TIME := 12.0
-## 出屏裁剪的边距（像素）。
-const CLIP_MARGIN := 16.0
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 1.5
 
@@ -178,9 +176,8 @@ func _rebuild_cache(uid: int, phase: int, position: Vector2, lifecycle: BulletLi
 	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
 	var result: Dictionary = PREVIEW.evaluate_chain(
 		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, FULL_PATH_MAX_TIME)
-	var points := PREVIEW.simplify_path(result.points, PATH_EPSILON)
-	var clipped := _clip_outside(points)
-	_paths_by_uid[uid] = clipped
+	# 不按场地裁剪：发射点可能在边缘外，裁掉会让路径只剩一两个点。
+	_paths_by_uid[uid] = PREVIEW.simplify_path(result.points, PATH_EPSILON)
 	_phases_by_uid[uid] = phase
 	_cursors_by_uid[uid] = 0
 
@@ -199,22 +196,6 @@ func _find_cursor(uid: int, path: PackedVector2Array, position: Vector2) -> int:
 	return nearest
 
 
-## 出屏即停；保留最后一个界内点，避免线画到场地外。
-func _clip_outside(points: PackedVector2Array) -> PackedVector2Array:
-	var clipped := PackedVector2Array()
-	for point in points:
-		if not clipped.is_empty() and not _inside_field(point):
-			clipped.append(point)   # 保留出界首点，线才能延伸到屏幕边缘
-			break
-		clipped.append(point)
-	return clipped
-
-
-func _inside_field(point: Vector2) -> bool:
-	return point.x >= GameConfig.FIELD_LEFT - CLIP_MARGIN \
-		and point.x <= GameConfig.FIELD_RIGHT + CLIP_MARGIN \
-		and point.y >= GameConfig.FIELD_TOP - CLIP_MARGIN \
-		and point.y <= GameConfig.FIELD_BOTTOM + CLIP_MARGIN
 
 
 func _stop_tracking() -> void:

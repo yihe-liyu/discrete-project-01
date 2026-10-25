@@ -332,7 +332,7 @@ ctx.bullets.shoot_spread(开花弹, ...)
 ```
 同一波继续追加用 [code]add_tracked_bullets(uids, lifecycle)[/code]：不清掉上一波还没死的弹，旧路径继续跟着旧弹更新。
 这是滚动预测，不是短前瞻：路径始终从当前弹位置开始，但 chain 只在 phase 变化时重算。
-路径在 phase 起点一次生成到出屏 / lifecycle 终点（上限 12 秒）；之后只按当前位置隐藏已消费前缀，不续算、不重建。
+路径在 phase 起点一次生成到 lifecycle 终点（上限 12 秒）；之后只按当前位置隐藏已消费前缀，不续算、不重建。
 缓存保留完整采样点，绘制前再用 RDP 简化（默认 1.25px）；否则直线被压成 2 点后无法裁前缀。
 
 只做视觉时也可以直接用 [code]TelegraphPath[/code]：
