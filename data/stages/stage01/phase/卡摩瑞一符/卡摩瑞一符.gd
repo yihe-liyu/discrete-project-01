@@ -39,6 +39,7 @@ func _on_start() -> void:
 		var 反射弹重力: float = diff_pick([0.0, 0.0, 25.0, 35.0])
 		lifecycle.accel_world(Vector2(0.0, 反射弹重力))
 	反射弹.trajectory(lifecycle)
+	ctx.telegraph.track_emitted(反射弹.lifecycle)
 
 	# 开花弹：沿发射方向加速，撞到左/右/上墙后向 Boss 反射一颗，再消失。
 	# 不写底墙：弹从 Boss 位置向下发射，底部靠出界清理。

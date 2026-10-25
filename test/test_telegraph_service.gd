@@ -119,3 +119,33 @@ func test_shoot_tracked_is_one_call() -> void:
 		data, 2, TAU, Vector2.DOWN, Vector2(448, 240)), "一行入口应发射并跟踪")
 	path.call("_process", 0.2)
 	assert_eq(path.path_count(), 2, "两发应各一条路径")
+
+
+func test_track_emitted_filters_lifecycle() -> void:
+	var bm := BulletManager.new()
+	add_child_autofree(bm)
+	await get_tree().process_frame
+	if bm.kernel_system() == null or not bm.kernel_system().is_native_ready():
+		pending("无原生扩展")
+		return
+	var bs = BULLET_SERVICE.new()
+	bs.bullet_manager = bm
+	var lc1 := BulletLifecycle.new()
+	lc1.until_elapsed(5.0).despawn()
+	var lc2 := BulletLifecycle.new()
+	lc2.until_elapsed(5.0).despawn()
+	var d1 := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc1)
+	var d2 := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc2)
+	var uid1: int = bs.shoot_spread_ids(d1, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
+	var uid2: int = bs.shoot_spread_ids(d2, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
+
+	var path = PATH.new()
+	add_child_autofree(path)
+	var service = SERVICE.new()
+	service.telegraph_path = path
+	service.bullet_manager = bm
+	assert_true(service.track_emitted(lc1), "应注册 emit lifecycle")
+	bm.bullet_spawned.emit(uid1, lc1)
+	bm.bullet_spawned.emit(uid2, lc2)
+	path.call("_process", 0.2)
+	assert_eq(path.path_count(), 1, "只跟踪注册过的 emit lifecycle")

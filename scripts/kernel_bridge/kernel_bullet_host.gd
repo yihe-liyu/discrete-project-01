@@ -7,6 +7,9 @@
 class_name KernelBulletHost
 extends Node
 
+## 行为内 emit 出来的弹（含子代）落库后广播稳定 uid；正常 shoot 不发这个信号。
+signal behavior_bullet_spawned(uid: int, lifecycle: BulletLifecycle)
+
 const MARISA_LASER_FADE_SCRIPT = preload("res://scripts/kernel_bridge/marisa_laser_fade.gd")
 const KERNEL_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_bomb.gd")
 const KERNEL_MIST_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_mist_bomb.gd")
@@ -178,6 +181,20 @@ func spawn_prepared(spec: Dictionary) -> int:
 	var id: int = system.spawn(spec.type, spec.pos, spec.vel, spec.tint, spec.move, spec.params)
 	_sync_host_tables(id, spec.texture)
 	return id
+
+
+## 行为队列 flush 后通知：把 emit 子代接到 uid / lifecycle（路径跟踪用）。
+func notify_behavior_spawned(id: int, spec: Dictionary) -> void:
+	if id < 0 or system == null:
+		return
+	var uid: int = system.get_uid(id)
+	if uid <= 0:
+		return
+	var params: Variant = spec.get("params")
+	if params is Dictionary:
+		var lifecycle: BulletLifecycle = params.get(&"lifecycle")
+		if lifecycle != null:
+			behavior_bullet_spawned.emit(uid, lifecycle)
 
 
 ## 发射一颗弹（立即）。语义对齐原项目 [code]Bullet.bind[/code]：[code]direction[/code] 定方向，[code]data.velocity[/code] 只取速度大小。

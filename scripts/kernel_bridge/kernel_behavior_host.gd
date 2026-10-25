@@ -35,4 +35,5 @@ func flush() -> void:
 	_spawns = []   # 先取走：flush 中若再入队不丢
 	for spec in pending:
 		if _backend != null:
-			_backend.spawn_prepared(spec)
+			var id: int = _backend.spawn_prepared(spec)
+			_backend.notify_behavior_spawned(id, spec)

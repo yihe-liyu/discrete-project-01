@@ -324,6 +324,12 @@ ctx.telegraph.shoot_tracked(
 [code]shoot_tracked[/code] 是发射 + 跟踪的一行入口；也可以手写 [code]shoot_spread_ids[/code] + [code]track_bullet[/code]。
 [code]track_bullet[/code] 按真实弹当前 phase / pos / vel 滚动刷新：phase 起点缓存完整 chain，之后只按当前位置裁掉前缀；弹死亡自动清线。
 多颗用 [code]track_bullets(uids, lifecycle)[/code]：每颗各一条，死一颗掉一条。
+`emit` 子代用 [code]track_emitted(lifecycle)[/code] 注册，之后 native 行为里生成的同 lifecycle 子弹会自动进入跟踪：
+
+```gdscript
+ctx.telegraph.track_emitted(反射弹.lifecycle)
+ctx.bullets.shoot_spread(开花弹, ...)
+```
 同一波继续追加用 [code]add_tracked_bullets(uids, lifecycle)[/code]：不清掉上一波还没死的弹，旧路径继续跟着旧弹更新。
 这是滚动预测，不是短前瞻：路径始终从当前弹位置开始，但 chain 只在 phase 变化时重算。
 显示前会用 RDP 简化折线（默认 1.25px），减少 MultiMesh 实例数。

@@ -15,6 +15,7 @@ var _lifecycles_by_uid = {}
 var _paths_by_uid = {}
 var _phases_by_uid = {}
 var _cursors_by_uid = {}
+var _emitted_lifecycles: Array = []
 var _tracked_age: float = 0.0
 ## 绘制折线简化阈值（像素）。
 const PATH_EPSILON := 1.25
@@ -52,6 +53,22 @@ func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Ar
 	if telegraph_path != null and is_instance_valid(telegraph_path) and not paths.is_empty():
 		telegraph_path.call("show_paths", paths, color, width, lifetime)
 	return results
+
+## 让 emit 出来的指定 lifecycle 自动进入跟踪；可重复调用注册多种子代。
+func track_emitted(lifecycle: BulletLifecycle) -> bool:
+	if bullet_manager == null or lifecycle == null:
+		return false
+	if not _emitted_lifecycles.has(lifecycle):
+		_emitted_lifecycles.append(lifecycle)
+	if not bullet_manager.bullet_spawned.is_connected(_on_emitted_bullet_spawned):
+		bullet_manager.bullet_spawned.connect(_on_emitted_bullet_spawned)
+	return true
+
+
+func _on_emitted_bullet_spawned(uid: int, lifecycle: BulletLifecycle) -> void:
+	if _emitted_lifecycles.has(lifecycle):
+		add_tracked_bullets([uid], lifecycle, _tracked_color, _tracked_width)
+
 
 ## 一行入口：发射并立即跟踪这一发的真实弹；返回是否成功进入跟踪。
 ## 无 bullet_service / lifecycle 时仍正常发射，只是不画路径。

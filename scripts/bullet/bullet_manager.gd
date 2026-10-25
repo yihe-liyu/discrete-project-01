@@ -21,6 +21,9 @@
 class_name BulletManager
 extends Node2D
 
+## 行为内 emit 子代落库后的转发信号（供路径预览过滤）。
+signal bullet_spawned(uid: int, lifecycle: BulletLifecycle)
+
 ## 当前弹幕世界（组合根 _ready 登记）。
 ## 只给测试 / 调试 / 工作台；游戏运行时走组合根注入，不读本静态。
 static var current: BulletManager
@@ -119,6 +122,10 @@ func _physics_process(_delta: float) -> void:
 ## direction 只定方向（零向量 = 用 data.velocity 的方向）；速度大小取 data.velocity 的长度。
 func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return _kernel_bullet_host.shoot(data, pos, direction)
+
+func _on_behavior_bullet_spawned(uid: int, lifecycle: BulletLifecycle) -> void:
+	bullet_spawned.emit(uid, lifecycle)
+
 
 ## 行 → 稳定句柄；纯特效 / 无效 → 0。
 func bullet_uid(id: int) -> int:
@@ -347,6 +354,8 @@ func _enable_kernel() -> void:
 	if _kernel_bullet_host != null:
 		_kernel_bullet_host.entity_registry = entity_registry
 		_kernel_bullet_host.bullet_manager = self
+		if not _kernel_bullet_host.behavior_bullet_spawned.is_connected(_on_behavior_bullet_spawned):
+			_kernel_bullet_host.behavior_bullet_spawned.connect(_on_behavior_bullet_spawned)
 	if _kernel_bullet_physics != null:
 		_kernel_bullet_physics.entity_registry = entity_registry
 	if _laser_engine != null:
