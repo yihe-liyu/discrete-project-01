@@ -3,6 +3,7 @@ extends GutTest
 
 const SERVICE := preload("res://scripts/coroutine/services/telegraph_service.gd")
 const PATH := preload("res://scripts/telegraph/telegraph_path.gd")
+const BULLET_SERVICE := preload("res://scripts/coroutine/services/bullet_service.gd")
 
 
 func _lc() -> BulletLifecycle:
@@ -44,3 +45,33 @@ func test_show_chain_many_draws_multiple_paths() -> void:
 		[Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT], 200.0, 0.5)
 	assert_eq(results.size(), 3, "三个方向各一份结果")
 	assert_eq(path.path_count(), 3, "应画三条线")
+
+
+func test_track_bullets_prunes_dead_uids() -> void:
+	var bm := BulletManager.new()
+	add_child_autofree(bm)
+	await get_tree().process_frame
+	if bm.kernel_system() == null or not bm.kernel_system().is_native_ready():
+		pending("无原生扩展")
+		return
+	var bs = BULLET_SERVICE.new()
+	bs.bullet_manager = bm
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(5.0).despawn()
+	var data := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
+	var uids: Array[int] = bs.shoot_spread_ids(
+		data, 3, TAU, Vector2.DOWN, Vector2(448, 240))
+	assert_eq(uids.size(), 3)
+
+	var path = PATH.new()
+	add_child_autofree(path)
+	var service = SERVICE.new()
+	service.telegraph_path = path
+	service.bullet_manager = bm
+	assert_true(service.track_bullets(uids, lc), "三颗都应进入跟踪")
+	path.call("_process", 0.2)
+	assert_eq(path.path_count(), 3, "三颗应各一条线")
+
+	bm.despawn_bullet(0)
+	path.call("_process", 0.2)
+	assert_eq(path.path_count(), 2, "死一颗应掉一条")

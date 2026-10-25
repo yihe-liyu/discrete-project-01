@@ -324,6 +324,7 @@ if not uids.is_empty():
 
 [code]shoot_spread_ids[/code] 返回的是稳定 uid，不是行号：原生 swap-remove 搬行时 uid 跟着搬，外部引用不会指到另一颗弹。
 [code]track_bullet[/code] 用 uid 查当前行，按真实 phase / pos / vel 刷新；查不到（已回收）时自动清线。
+多颗用 [code]track_bullets(uids, lifecycle)[/code]：每颗各一条，死一颗掉一条。
 
 只做视觉时也可以直接用 [code]TelegraphPath[/code]：
 

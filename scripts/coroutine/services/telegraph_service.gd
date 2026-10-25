@@ -8,13 +8,11 @@ const PREVIEW := preload("res://scripts/telegraph/lifecycle_preview.gd")
 var telegraph_path: Node
 ## 弹幕管理器（组合根注入；逐弹跟踪用）。
 var bullet_manager: BulletManager
-var _tracked_uid: int = -1
+var _tracked_uids: Array[int] = []
 var _bullet_lifecycle: BulletLifecycle
-var _tracked_phase: int = -1
 var _tracked_age: float = 0.0
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 3.0
-
 
 ## 从当前 phase 起顺序预览，并立即显示。
 ## [code]max_time[/code] 是整个 chain 的上限；[code]phase_index[/code] 通常 0。
@@ -48,24 +46,32 @@ func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Ar
 		telegraph_path.call("show_paths", paths, color, width, lifetime)
 	return results
 
-## 绑定一颗真实弹：按它的当前 phase / pos / vel 逐帧刷新路径；弹死自动清线。
-## 只用于单颗原型；50 颗要先做多线合批与稳定身份。
+## 绑定一颗真实弹；单颗便捷入口。
 func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
+	return track_bullets([bullet_uid], lifecycle, color, width)
+
+
+## 绑定多颗真实弹：每颗按自己的 uid / phase / pos / vel 刷新；死一颗掉一条。
+func track_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 3.0) -> bool:
 	if telegraph_path == null or not is_instance_valid(telegraph_path) \
-			or bullet_manager == null or bullet_uid <= 0 or lifecycle == null:
+			or bullet_manager == null or lifecycle == null:
 		return false
 	_stop_tracking()
-	_tracked_uid = bullet_uid
+	for uid in bullet_uids:
+		var value := int(uid)
+		if value > 0:
+			_tracked_uids.append(value)
+	if _tracked_uids.is_empty():
+		return false
 	_bullet_lifecycle = lifecycle
-	_tracked_phase = -1
 	_tracked_age = 0.0
 	_tracked_color = color
 	_tracked_width = width
 	telegraph_path.call("set_tracker", Callable(self, "_tick_tracked"))
 	_tick_tracked(0.0)
-	return _tracked_uid >= 0
-
+	return not _tracked_uids.is_empty()
 
 ## 清掉当前预览。
 func clear() -> void:
@@ -75,33 +81,40 @@ func clear() -> void:
 
 
 func _tick_tracked(delta: float) -> void:
-	if _tracked_uid < 0 or _bullet_lifecycle == null or bullet_manager == null \
+	if _tracked_uids.is_empty() or _bullet_lifecycle == null or bullet_manager == null \
 			or telegraph_path == null or not is_instance_valid(telegraph_path):
 		_stop_tracking()
 		return
-	var phase: int = bullet_manager.bullet_phase_uid(_tracked_uid)
-	if phase < 0:
-		_stop_tracking()
-		return
 	_tracked_age += delta
-	if phase == _tracked_phase and _tracked_age < 0.1:
+	if _tracked_age < 0.1:
 		return
 	_tracked_age = 0.0
-	var position: Vector2 = bullet_manager.bullet_global_position_uid(_tracked_uid)
-	var velocity: Vector2 = bullet_manager.bullet_velocity_uid(_tracked_uid)
-	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
-	var result: Dictionary = PREVIEW.evaluate_chain(
-		_bullet_lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
-	if result.points.size() >= 2:
-		var lifetime: float = float(result.end_state.get("elapsed", 0.0))
-		telegraph_path.call("show_path", result.points, _tracked_color, _tracked_width, lifetime)
-	_tracked_phase = phase
-
+	var alive: Array[int] = []
+	var paths: Array[PackedVector2Array] = []
+	var lifetime := 0.0
+	for uid in _tracked_uids:
+		var phase: int = bullet_manager.bullet_phase_uid(uid)
+		if phase < 0:
+			continue
+		alive.append(uid)
+		var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
+		var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
+		var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
+		var result: Dictionary = PREVIEW.evaluate_chain(
+			_bullet_lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
+		if result.points.size() >= 2:
+			paths.append(result.points)
+			lifetime = maxf(lifetime, float(result.end_state.get("elapsed", 0.0)))
+	_tracked_uids = alive
+	if _tracked_uids.is_empty():
+		_stop_tracking()
+		return
+	if not paths.is_empty():
+		telegraph_path.call("show_paths", paths, _tracked_color, _tracked_width, lifetime)
 
 func _stop_tracking() -> void:
-	_tracked_uid = -1
+	_tracked_uids.clear()
 	_bullet_lifecycle = null
-	_tracked_phase = -1
 	_tracked_age = 0.0
 	if telegraph_path != null and is_instance_valid(telegraph_path):
 		telegraph_path.call("set_tracker", Callable())
