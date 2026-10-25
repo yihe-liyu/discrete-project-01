@@ -435,7 +435,17 @@
 
 **删除**：`scenes/workbench/**`、`scenes/workbench.tscn`、`scripts/workbench/**`、`scenes/desk/**`、`scripts/desk/**` 及其专属测试 / 文档 / 截图。
 
-## 8. 一句话版本
+## 8. 2026-10-04 三块评审的落点
+
+不再补一份“完整会话稿”——那会和实现记录形成第二真相。三块结论已分别沉淀：
+
+- **弹幕 DSL**：本文 §3.4「求值时机」+ `BEST_PRACTICES_LOG.md` 的 DSL1/2/7/9/10/12 条目。
+- **原生内核**：`BEST_PRACTICES_LOG.md` 的 NK 系列条目（NK6 仍开放）+ `archive/GDEXTENSION_KERNEL_DESIGN.md`。
+- **背景**：`archive/LOG_2026-10.md`「BG 线冻结」+ `archive/BACKGROUND_VISUAL_PLAN.md`。
+
+G8 关闭：不重建一份重复评审；以后要查明细，按上面三组入口走。
+
+## 9. 一句话版本
 
 **自由度已经够；下一步不是加更多写法，也不是加编辑器，而是让内容可发现、可校验、可回归。**
 先守住 manifest + 契约检查 + 预检；脚手架只在同一个摩擦出现第二次时再做。
