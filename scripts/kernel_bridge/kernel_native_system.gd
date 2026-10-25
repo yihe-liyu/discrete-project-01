@@ -528,6 +528,11 @@ func _anchor_spec_for(move: StringName, params: Dictionary) -> Variant:
 
 # ═══ 每帧 ═══
 
+## 手动推进一帧（无树 / 测试 / 预览工具用；与 _physics_process 同一条路径）。
+func step(delta: float) -> void:
+	_physics_process(delta)
+
+
 func _physics_process(delta: float) -> void:
 	_ensure_native()
 	if _accel == null:
