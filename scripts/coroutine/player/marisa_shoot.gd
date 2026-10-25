@@ -16,6 +16,8 @@ const LASER_FRAME: int = 0             # 所有段公用这一帧（0~段数-1�
 const LASER_DAMAGE: float = 1.2           # 每段伤害（支持小数，累积到整才扣血）
 const LASER_DRIFT_SPEED: float = 2000.0    # 激光流动速度（px/s）
 const LASER_SPACING_OVERLAP: float = 0.85  # 段间距 = 段宽 × 0.85（轻微重叠→遮住图案边缘空隙）
+## 首帧也要移动：出生位置和 anchor_drift 初始位移都先走一小步，避免原地停一帧。
+const LASER_FIRST_STEP: float = LASER_DRIFT_SPEED / 60.0
 ## 频率自动跟随速度：每漂移一个间距喷一段，任何速度都无缝
 ## 各 power 等级下每道激光的发射角度（度：0=垂直向上，正=右偏，负=左偏）
 ## 外层索引 = power 等级（0..3），内层 = 子机索引（0,1,2...）—— 按你的设计填！
@@ -137,7 +139,7 @@ func _laser_trajectory(angle_rad: float) -> BulletLifecycle:
 	var lc: BulletLifecycle = _laser_trajectories.get(angle_rad)
 	if lc == null:
 		lc = BulletLifecycle.new()
-		lc.anchor_drift(0, Vector2.ZERO, angle_rad, LASER_DRIFT_SPEED, true, 0.0, true)
+		lc.anchor_drift(0, Vector2.ZERO, angle_rad, LASER_DRIFT_SPEED, true, LASER_FIRST_STEP, true)
 		lc.until_never()
 		_laser_trajectories[angle_rad] = lc
 	return lc
@@ -208,4 +210,6 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	# 出生方向必须就是激光的漂移方向：首帧 behavior 还没跑，
 	# follow_dir 先用 velocity 定贴图朝向；若这里传 UP，首帧会竖一下再转。
 	var spawn_dir := Vector2(sin(angle_rad), -cos(angle_rad))
-	ctx.bullets.shoot_spread(bullet_data, 1, 0.0, spawn_dir, source.global_position)
+	# 第一帧的渲染位置 = 第一次 anchor_drift 写出的位置，避免在子机原点多停一帧。
+	var spawn_pos := source.global_position + spawn_dir * LASER_FIRST_STEP
+	ctx.bullets.shoot_spread(bullet_data, 1, 0.0, spawn_dir, spawn_pos)
