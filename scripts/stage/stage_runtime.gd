@@ -49,6 +49,8 @@ var miss_layer: MissCircleLayer
 var fx_pool: FxPool
 ## 道具池（组合根注入；消费端经 ctx.stage.item_pool）。
 var item_pool: ItemPool
+## 路径预览节点（组合根注入；消费端经 ctx.telegraph）。
+var telegraph: Node2D
 ## Boss 位置指示器所属 HUD 层（组合根注入）。
 var ui_layer: CanvasLayer
 ## 背景场景实例（组合根在 load_stage 前注入）。

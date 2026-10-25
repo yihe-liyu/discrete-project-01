@@ -295,7 +295,16 @@ LifecyclePreview.evaluate_chain(
 
 > 这是演出/调试的近似，不是第二套物理；不要在游戏逻辑里用它替代真实弹道。
 
-视觉层用 [code]TelegraphPath[/code]：把 [code]points[/code] 原样交给它显示，不挂判定。
+内容层推荐直接用 [code]ctx.telegraph[/code]（场景里已有 [code]TelegraphPath[/code]，由组合根注入）：
+
+```gdscript
+ctx.telegraph.show_chain(
+    lifecycle, origin, direction, speed,
+    4.0, 0)
+ctx.telegraph.clear()
+```
+
+只做视觉时也可以直接用 [code]TelegraphPath[/code]：
 
 ```gdscript
 var path := TelegraphPath.new()

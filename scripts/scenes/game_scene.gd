@@ -29,6 +29,7 @@ const PRACTICE_SFX_TRIM_DB := 0.0
 @onready var _stage_runtime: StageRuntime = %StageRuntime
 @onready var _game_ui: GameUI = $GameUI
 @onready var _item_pool: ItemPool = %ItemPool
+@onready var _telegraph_path: Node2D = %TelegraphPath
 @onready var _bullet_manager: BulletManager = %BulletManager   # R21：弹幕世界（game_scene.tscn 声明）
 @onready var _miss_circle_layer: MissCircleLayer = %MissCircleLayer
 @onready var _screen_shake: ScreenShake = $ScreenShake
@@ -43,6 +44,7 @@ func _ready():
 	_stage_runtime.miss_layer = _miss_circle_layer
 	_stage_runtime.fx_pool = _fx_pool
 	_stage_runtime.item_pool = _item_pool
+	_stage_runtime.telegraph = _telegraph_path
 	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层
 
 	_bullet_manager.inject_fx_pool(_fx_pool)

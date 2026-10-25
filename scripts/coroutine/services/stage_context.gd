@@ -5,7 +5,7 @@
 ## [codeblock]
 ## ctx.clock / bullets / player / enemies / boss / diff
 ## ctx.items / audio / effects / dialogue / objects
-## ctx.background / decor / entity_registry / stage / runner
+## ctx.background / decor / entity_registry / stage / runner / telegraph
 ## [/codeblock]
 ## 高频路径（每颗协程弹一个 ctx）只建实际用到的服务，默认从 8 个对象降到 2 个。
 ## [br]
@@ -25,6 +25,8 @@ const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
 const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
 ## EnemyService 脚本（ctx.enemies 的内部实现；不注册 class_name，只在本类 preload 构造）。
 const EnemyService = preload("res://scripts/coroutine/services/enemy_service.gd")
+## TelegraphService 脚本（ctx.telegraph 的内部实现；不注册 class_name，只在本类 preload 构造）。
+const TelegraphService = preload("res://scripts/coroutine/services/telegraph_service.gd")
 
 ## 协程时钟 / 生命周期（active、对话暂停都看它）。
 var runner: CoroutineRunner
@@ -43,6 +45,7 @@ var _effect_service: EffectService
 var _boss: BossService
 var _diff: DifficultyService
 var _enemy_service: EnemyService
+var _telegraph_service: TelegraphService
 var _stage_objects: StageObjects
 
 ## 时间服务：wait / wait_frames / next_tick / delay；内容的唯一时钟。
@@ -123,6 +126,14 @@ var diff: DifficultyService:
 	get:
 		if _diff == null: _diff = DifficultyService.new()
 		return _diff
+
+## 路径预览服务：show_chain / clear；无 stage 时静默 no-op。
+var telegraph: TelegraphService:
+	get:
+		if _telegraph_service == null:
+			_telegraph_service = TelegraphService.new()
+		_telegraph_service.telegraph_path = stage.telegraph if stage else null
+		return _telegraph_service
 
 ## 战场实体注册表（自机 / 敌机 / Boss）——只认绑定的 stage。
 ## 无 stage 的 ctx（自机射击 / 子弹共享 ctx）由宿主显式绑定同一 StageRuntime，不再回退全局。

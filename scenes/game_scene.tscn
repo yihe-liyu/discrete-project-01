@@ -23,6 +23,7 @@
 [ext_resource type="Script" uid="uid://7b3tfc32hhho" path="res://scripts/effect/screen_shake.gd" id="21_shake"]
 [ext_resource type="PackedScene" path="res://scenes/effect/field_filter_layer.tscn" id="22_field_filter"]
 [ext_resource type="Script" uid="uid://86lktry7ibf8" path="res://scripts/scenes/spell_portrait.gd" id="22_playerpt"]
+[ext_resource type="Script" uid="uid://ddkvq8qs6nm6t" path="res://scripts/telegraph/telegraph_path.gd" id="23_telegraph"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
 atlas = ExtResource("6_mw25s")
@@ -159,6 +160,10 @@ script = ExtResource("17_stage")
 [node name="BulletManager" type="Node2D" parent="World" unique_id=2025091105]
 unique_name_in_owner = true
 script = ExtResource("18_bullets")
+
+[node name="TelegraphPath" type="Node2D" parent="World" unique_id=2025091107]
+unique_name_in_owner = true
+script = ExtResource("23_telegraph")
 
 [node name="ScreenShake" type="Camera2D" parent="." unique_id=476199]
 limit_left = 0
