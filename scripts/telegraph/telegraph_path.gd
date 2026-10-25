@@ -16,6 +16,10 @@ var _batch: MultiMeshInstance2D
 var _multimesh: MultiMesh
 var _material: ShaderMaterial
 var _paths: Array[PackedVector2Array] = []
+var _slots: Dictionary = {}
+var _active_keys: Dictionary = {}
+var _total_instances: int = 0
+var _line_width: float = CORE_WIDTH
 var _is_showing: bool = false
 var _remaining: float = 0.0
 var _has_lifetime: bool = false
@@ -43,6 +47,9 @@ func show_path(points: PackedVector2Array, color: Color = Color(1.0, 0.82, 0.35,
 func show_paths(paths: Array, color: Color = Color(1.0, 0.82, 0.35, 0.85),
 		width: float = CORE_WIDTH, lifetime: float = 0.0) -> void:
 	_ensure_batch()
+	_slots.clear()
+	_active_keys.clear()
+	_total_instances = 0
 	_paths.clear()
 	for path in paths:
 		if path.size() >= 2:
@@ -50,6 +57,7 @@ func show_paths(paths: Array, color: Color = Color(1.0, 0.82, 0.35, 0.85),
 	if _paths.is_empty():
 		clear_path()
 		return
+	_line_width = width
 	_rebuild_batch(color, width)
 	_is_showing = true
 	visible = true
@@ -58,10 +66,100 @@ func show_paths(paths: Array, color: Color = Color(1.0, 0.82, 0.35, 0.85),
 	set_process(_has_lifetime or tracker.is_valid())
 
 
+## 跟踪模式：按 key 固定实例槽位；只隐藏已经走过的前缀，不重建剩余段。
+## [code]keys[/code] 通常是 Vector2i(uid, phase)，[code]cursors[/code] 是当前段下标。
+func show_tracked(paths: Array, keys: Array, cursors: Array,
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = CORE_WIDTH) -> void:
+	_ensure_batch()
+	_line_width = width
+	_material.set_shader_parameter("line_color", color)
+	_material.set_shader_parameter("core_ratio", 1.0 / GLOW_WIDTH_MULT)
+	_active_keys.clear()
+	for i in paths.size():
+		if i >= keys.size() or i >= cursors.size():
+			break
+		var path: PackedVector2Array = paths[i]
+		if path.size() < 2:
+			continue
+		var key: Variant = keys[i]
+		_active_keys[key] = true
+		if not _slots.has(key):
+			_append_slot(key, path)
+		var slot: Dictionary = _slots[key]
+		if int(slot.count) != path.size() - 1:
+			_append_slot(key, path)
+			slot = _slots[key]
+		var cursor: int = clampi(int(cursors[i]), 0, int(slot.count))
+		var old: int = int(slot.cursor)
+		if cursor < old:
+			_append_slot(key, path)
+			slot = _slots[key]
+			old = 0
+			cursor = clampi(cursor, 0, int(slot.count))
+		for s in range(old, cursor):
+			_hide_instance(int(slot.offset) + s)
+		slot.cursor = cursor
+	for key in _slots:
+		if not _active_keys.has(key):
+			_hide_slot(_slots[key])
+	_paths = paths.duplicate()
+	_paths.clear()
+	for path in paths:
+		if path.size() >= 2:
+			_paths.append(path)
+	_is_showing = not _paths.is_empty()
+	_has_lifetime = false
+	_remaining = 0.0
+	_batch.visible = _is_showing
+	visible = _is_showing
+	set_process(tracker.is_valid())
+
+
+func _append_slot(key: Variant, path: PackedVector2Array) -> void:
+	if _slots.has(key):
+		_hide_slot(_slots[key])
+	var offset := _total_instances
+	var count := path.size() - 1
+	_total_instances += count
+	_multimesh.instance_count = _total_instances
+	for i in count:
+		var a: Vector2 = path[i]
+		var b: Vector2 = path[i + 1]
+		var segment := b - a
+		var length := segment.length()
+		if length < 0.001:
+			_multimesh.set_instance_transform_2d(offset + i, _hidden_transform())
+			continue
+		var direction := segment / length
+		var perpendicular := Vector2(-direction.y, direction.x)
+		_multimesh.set_instance_transform_2d(offset + i, Transform2D(
+			direction * length,
+			perpendicular * _line_width * GLOW_WIDTH_MULT,
+			(a + b) * 0.5))
+	_slots[key] = {"offset": offset, "count": count, "cursor": 0}
+
+
+func _hide_slot(slot: Dictionary) -> void:
+	var offset := int(slot.offset)
+	for i in int(slot.count):
+		_hide_instance(offset + i)
+
+
+func _hide_instance(index: int) -> void:
+	_multimesh.set_instance_transform_2d(index, _hidden_transform())
+
+
+func _hidden_transform() -> Transform2D:
+	return Transform2D(Vector2(0.0001, 0.0), Vector2(0.0, 0.0001), Vector2.ZERO)
+
+
 ## 立即清空路径并隐藏。
 func clear_path() -> void:
 	_ensure_batch()
 	_paths.clear()
+	_slots.clear()
+	_active_keys.clear()
+	_total_instances = 0
 	_multimesh.instance_count = 0
 	_batch.visible = false
 	_is_showing = false

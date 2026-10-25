@@ -19,12 +19,10 @@ var _emitted_lifecycles: Array = []
 var _tracked_age: float = 0.0
 ## 绘制折线简化阈值（像素）。
 const PATH_EPSILON := 1.25
-## 单次缓存的前瞻上限；距尾部 1 秒就从当前位置续算，保证长命弹的线始终连贯。
-const TRACK_MAX_TIME := 2.0
-## 距离缓存尾部还有多少点就开始续算（1 秒）。
-const EXTEND_AHEAD_POINTS := 60
-## 每个 tick 最多续算几颗，避免同一帧 50 颗一起重算造成顿感。
-const EXTEND_BUDGET := 16
+## 一次生成整条路径的上限；通常出屏/生命周期终点会先到。
+const FULL_PATH_MAX_TIME := 12.0
+## 出屏裁剪的边距（像素）。
+const CLIP_MARGIN := 16.0
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 1.5
 
@@ -147,7 +145,8 @@ func _tick_tracked(delta: float) -> void:
 	_tracked_age = 0.0
 	var alive: Array[int] = []
 	var paths: Array[PackedVector2Array] = []
-	var extended := 0
+	var keys: Array[Vector2i] = []
+	var cursors: Array[int] = []
 	for uid in _tracked_uids:
 		var phase: int = bullet_manager.bullet_phase_uid(uid)
 		if phase < 0:
@@ -157,60 +156,65 @@ func _tick_tracked(delta: float) -> void:
 		if lifecycle == null:
 			continue
 		var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
+		if not _paths_by_uid.has(uid) or int(_phases_by_uid.get(uid, -1)) != phase:
+			_rebuild_cache(uid, phase, position, lifecycle)
 		var cached: PackedVector2Array = _paths_by_uid.get(uid, PackedVector2Array())
-		var cursor: int = int(_cursors_by_uid.get(uid, 0))
-		var phase_changed := int(_phases_by_uid.get(uid, -1)) != phase
-		if cached.size() < 2 or phase_changed:
-			_rebuild_cache(uid, phase, position, lifecycle)
-		elif cursor >= cached.size() - EXTEND_AHEAD_POINTS and extended < EXTEND_BUDGET:
-			_rebuild_cache(uid, phase, position, lifecycle)
-			extended += 1
-		var trimmed := _trim_to_current(uid, position)
-		if trimmed.size() >= 2:
-			var simplified := PREVIEW.simplify_path(trimmed, PATH_EPSILON)
-			if simplified.size() >= 2:
-				paths.append(simplified)
+		if cached.size() < 2:
+			continue
+		paths.append(cached)
+		keys.append(Vector2i(uid, phase))
+		cursors.append(_find_cursor(uid, cached, position))
 	_tracked_uids = alive
 	if _tracked_uids.is_empty():
 		_stop_tracking()
 		return
 	if not paths.is_empty():
-		telegraph_path.call("show_paths", paths, _tracked_color, _tracked_width, 0.0)
+		telegraph_path.call("show_tracked", paths, keys, cursors, _tracked_color, _tracked_width)
 
 
-
-## 在 phase 起点算一次完整 chain，缓存起来；phase 变了才重算。
+## 在 phase 起点一次生成到出屏 / lifecycle 终点；之后不再续算。
 func _rebuild_cache(uid: int, phase: int, position: Vector2, lifecycle: BulletLifecycle) -> void:
 	var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
 	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
 	var result: Dictionary = PREVIEW.evaluate_chain(
-		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, TRACK_MAX_TIME)
-	# 缓存保留完整采样点，RDP 只用于最终绘制；否则直线会被压成 2 点，裁前缀/续算就失去中间点。
-	_paths_by_uid[uid] = result.points
+		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, FULL_PATH_MAX_TIME)
+	var points := PREVIEW.simplify_path(result.points, PATH_EPSILON)
+	var clipped := _clip_outside(points)
+	_paths_by_uid[uid] = clipped
 	_phases_by_uid[uid] = phase
 	_cursors_by_uid[uid] = 0
 
 
-## 把缓存路径裁成“当前弹位置 → 未来”：只画还没走到的后缀。
-func _trim_to_current(uid: int, position: Vector2) -> PackedVector2Array:
-	var cached: PackedVector2Array = _paths_by_uid.get(uid, PackedVector2Array())
-	if cached.size() < 2:
-		return PackedVector2Array()
+## 当前弹在缓存路径上的最近点下标；只向前扫，避免回头找。
+func _find_cursor(uid: int, path: PackedVector2Array, position: Vector2) -> int:
 	var start := int(_cursors_by_uid.get(uid, 0))
 	var nearest := start
 	var best := INF
-	for i in range(start, cached.size()):
-		var distance := cached[i].distance_squared_to(position)
+	for i in range(start, path.size()):
+		var distance := path[i].distance_squared_to(position)
 		if distance < best:
 			best = distance
 			nearest = i
 	_cursors_by_uid[uid] = nearest
-	if nearest >= cached.size() - 1:
-		return PackedVector2Array()
-	var trimmed := PackedVector2Array([position])
-	for i in range(nearest + 1, cached.size()):
-		trimmed.append(cached[i])
-	return trimmed
+	return nearest
+
+
+## 出屏即停；保留最后一个界内点，避免线画到场地外。
+func _clip_outside(points: PackedVector2Array) -> PackedVector2Array:
+	var clipped := PackedVector2Array()
+	for point in points:
+		if not clipped.is_empty() and not _inside_field(point):
+			clipped.append(point)   # 保留出界首点，线才能延伸到屏幕边缘
+			break
+		clipped.append(point)
+	return clipped
+
+
+func _inside_field(point: Vector2) -> bool:
+	return point.x >= GameConfig.FIELD_LEFT - CLIP_MARGIN \
+		and point.x <= GameConfig.FIELD_RIGHT + CLIP_MARGIN \
+		and point.y >= GameConfig.FIELD_TOP - CLIP_MARGIN \
+		and point.y <= GameConfig.FIELD_BOTTOM + CLIP_MARGIN
 
 
 func _stop_tracking() -> void:
