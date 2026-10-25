@@ -19,12 +19,12 @@ var _emitted_lifecycles: Array = []
 var _tracked_age: float = 0.0
 ## 绘制折线简化阈值（像素）。
 const PATH_EPSILON := 1.25
-## 单次缓存的前瞻上限；走到缓存尾部前会从当前位置续算，避免长命弹路径断掉。
-const TRACK_MAX_TIME := 8.0
-## 距离缓存尾部还有多少点就开始续算（约 1.5 秒）。
-const EXTEND_AHEAD_POINTS := 90
+## 单次缓存的前瞻上限；距尾部 1 秒就从当前位置续算，保证长命弹的线始终连贯。
+const TRACK_MAX_TIME := 2.0
+## 距离缓存尾部还有多少点就开始续算（1 秒）。
+const EXTEND_AHEAD_POINTS := 60
 ## 每个 tick 最多续算几颗，避免同一帧 50 颗一起重算造成顿感。
-const EXTEND_BUDGET := 8
+const EXTEND_BUDGET := 16
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 1.5
 
