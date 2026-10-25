@@ -33,7 +33,27 @@ func queue_spawn(data: BulletData, pos: Vector2, dir: Vector2) -> void:
 func queue_laser(skeleton: LaserSkeleton, color: Color, opts: Dictionary, offset: Vector2) -> void:
 	if _backend == null or skeleton == null:
 		return
-	_lasers.append({&"skeleton": skeleton, &"color": color, &"opts": opts, &"offset": offset})
+	_lasers.append({&"skeleton": skeleton, &"color": color, &"opts": opts,
+		&"offset": offset, &"direction": Vector2.ZERO})
+
+
+## emit_laser_dir 的落地：位置按 at_current 决定，方向交给后端旋转骨架。
+func queue_laser_dir(payload: Dictionary, position: Vector2, direction: Vector2) -> void:
+	if _backend == null:
+		return
+	var skeleton: LaserSkeleton = payload.get(&"skeleton")
+	if skeleton == null:
+		return
+	var offset: Vector2 = payload.get(&"offset", Vector2.ZERO)
+	if bool(payload.get(&"at_current", true)):
+		offset += position
+	_lasers.append({
+		&"skeleton": skeleton,
+		&"color": payload.get(&"color", Color.WHITE),
+		&"opts": payload.get(&"opts", {}),
+		&"offset": offset,
+		&"direction": direction,
+	})
 
 
 func flush() -> void:
@@ -48,4 +68,5 @@ func flush() -> void:
 	for entry in lasers:
 		if _backend != null:
 			_backend.spawn_behavior_laser(
-				entry[&"skeleton"], entry[&"color"], entry[&"opts"], entry[&"offset"])
+				entry[&"skeleton"], entry[&"color"], entry[&"opts"],
+				entry[&"offset"], entry[&"direction"])

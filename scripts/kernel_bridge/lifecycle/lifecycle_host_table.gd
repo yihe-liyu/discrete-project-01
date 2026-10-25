@@ -27,6 +27,9 @@ static func build(lc) -> Dictionary:
 				COMPILER.A_CALL:
 					actions.append(a[&"call"])
 					speed_specs.append(null)
+				COMPILER.A_EMIT_LASER:
+					actions.append(a[&"laser"])
+					speed_specs.append(null)
 				COMPILER.A_SFX:
 					sfx.append(a[&"key"])
 	return {&"actions": actions, &"sfx": sfx, &"speed_specs": speed_specs}
@@ -54,6 +57,9 @@ static func _hash_action(a: Variant) -> int:
 		return int(a.get_instance_id())
 	if a is StringName:
 		return hash(a)
+	if a is Dictionary and a.has(&"skeleton"):
+		var sk: LaserSkeleton = a[&"skeleton"]
+		return hash(sk.get_instance_id()) * 31 + hash(a.get(&"offset", Vector2.ZERO))
 	return 0
 
 

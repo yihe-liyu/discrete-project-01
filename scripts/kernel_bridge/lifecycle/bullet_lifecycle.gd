@@ -62,6 +62,7 @@ const A_SET_HEADING := COMPILER.A_SET_HEADING
 const A_SET_SPEED := COMPILER.A_SET_SPEED
 const A_CALL := COMPILER.A_CALL
 const A_CLEAR_FX := COMPILER.A_CLEAR_FX
+const A_EMIT_LASER := COMPILER.A_EMIT_LASER
 ## 目标：自机。
 const T_PLAYER := COMPILER.T_PLAYER
 ## 目标：最近的敌人。
@@ -431,6 +432,28 @@ func emit_laser(skeleton: LaserSkeleton, color: Color, opts: Dictionary = {},
 		var shifted := pos + offset if at_current else offset
 		host.queue_laser(skeleton, color, opts, shifted)
 	return on_end_call(callback)
+
+
+## 相位结束时发射一条激光，并按 [code]dir[/code]（通常 [code]forward()[/code]）对齐骨架整体朝向。
+## [code]at_current=true[/code] 时骨架是相对坐标，宿主用相位结束位置平移；默认 true。
+## 骨架的“基准方向”取首尾点方向，旋转到 dir；因此骨架可以按任意方向画。
+func emit_laser_dir(skeleton: LaserSkeleton, color: Color, dir: Variant,
+		opts: Dictionary = {}, offset: Vector2 = Vector2.ZERO,
+		at_current: bool = true) -> BulletLifecycle:
+	var payload := {
+		&"skeleton": skeleton,
+		&"color": color,
+		&"opts": opts,
+		&"offset": offset,
+		&"at_current": at_current,
+	}
+	_on_end.append({
+		&"op": A_EMIT_LASER,
+		&"laser": payload,
+		&"dir": DIR_SPEC.from_variant(dir),
+		&"at": AT_CURRENT,
+	})
+	return self
 
 
 ## 变体发射：内核抽一次 RNG 决定分支，宿主按分支号取 spawns 里哪个模板（0=未命中，1=命中）。

@@ -66,6 +66,7 @@ class DanmakuStore : public RefCounted {
 	static constexpr int OP_C_RECT = 28;
 	static constexpr int OP_A_EMIT = 40;
 	static constexpr int OP_A_CLEAR_FX = 47;
+	static constexpr int OP_A_EMIT_LASER = 48;
 	static constexpr int OP_M_ROTATE = 3;
 	static constexpr int OP_C_STATE = 24;
 	// packed program 表：op/参数/until/action 的偏移与长度；program 只存偏移。

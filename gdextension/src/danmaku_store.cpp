@@ -637,7 +637,7 @@ int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFl
 		}
 		for (int k = as; k < as + ac; ++k) {
 			const int op = p_ops[k];
-			if (op < OP_A_EMIT || op > OP_A_CLEAR_FX) { return -1; }
+			if (op < OP_A_EMIT || op > OP_A_EMIT_LASER) { return -1; }
 		}
 	}
 	const int pid = _p_phase_base.size();
@@ -1047,6 +1047,22 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 			_ev_val.push_back(speed);
 			_ev_color.push_back(_color[i]);
 			_ev_variant.push_back(hit ? 1 : 0);
+			break;
+		}
+		case 48: { // emit_laser_dir：携带相位结束位置 + 解析后的方向；骨架由宿主表提供
+			Vector2 at(_x[i], _y[i]);
+			if ((int)a[5] == 1 && _phasend[i]) { at = Vector2(_pendx[i], _pendy[i]); }
+			const int dk = (int)a[1];
+			const Vector2 dir = _resolve_dir(dk, (int)a[2], a[3], at, player, boss, has_boss, enemies, Vector2(_hx[i], _hy[i]), Vector2(_vx[i], _vy[i]), a[4], _draw_dir_rnd(dk));
+			_ev_kind.push_back(4);
+			_ev_prog.push_back(prog);
+			_ev_local.push_back((int)a[0]);
+			_ev_bullet.push_back(i);
+			_ev_x.push_back(at.x); _ev_y.push_back(at.y);
+			_ev_dx.push_back(dir.x); _ev_dy.push_back(dir.y);
+			_ev_val.push_back(0);
+			_ev_color.push_back(_color[i]);
+			_ev_variant.push_back(0);
 			break;
 		}
 		case 47: // clear_fx：纯 action —— 只回传「该弹此刻位置 + 颜色」，不改任何状态（宿主据此播消散特效）

@@ -665,6 +665,14 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 					if not _warned_hooks.has(hook_key):
 						_warned_hooks[hook_key] = true
 						push_warning("[KernelNativeSystem] on_end_call 未注册 hook '%s'（静默不调）" % hook_key)
+			4:
+				# op 48（emit_laser_dir）：宿主表存骨架；原生只回传位置 + 解析后的方向。
+				var payload: Variant = actions[local[k]]
+				if payload is Dictionary and behavior_host != null:
+					behavior_host.queue_laser_dir(
+						payload,
+						Vector2(xs[k], ys[k]),
+						Vector2(dxs[k], dys[k]))
 			3:
 				# op 47（clear_fx / despawn_clear）：原地播消散，颜色用该弹自己的色（原生随事件回传）。
 				# 行此刻可能已被 swap-remove，所以颜色只能来自事件载荷 —— 不能用 res.bullet[k] 回查。

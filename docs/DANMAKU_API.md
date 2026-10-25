@@ -162,6 +162,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | emit | `emit(spawn, dir, speed=0, at=AT_CURRENT)` | 生成替换弹；`spawn` = BulletData / Callable / 数组；`at` = AT_CURRENT / AT_PHASE_END |
 | emit_variant | `emit_variant(spawns, dir, speed=0, at=AT_CURRENT)` | 内核抽一次 RNG 定分支（0=未中→spawns[0]，1=命中→spawns[1]）；`dir` 必须是 `chance_toward(...)` |
 | emit_laser | `emit_laser(skeleton, color, opts={}, offset=ZERO, at_current=false)` | 相位结束时发激光；骨架默认世界坐标；`at_current=true` 时按相位结束位置平移；不进内核弹池 |
+| emit_laser_dir | `emit_laser_dir(skeleton, color, dir, opts={}, offset=ZERO, at_current=true)` | 相位结束发激光，按 `dir`（常用 `forward()`）旋转骨架；首尾点方向作为基准 |
 | despawn | `despawn()` | 回收自己（静默，不播特效） |
 | clear_fx | `clear_fx()` | 在弹**此刻位置**播一次消弹特效（颜色提亮 1.5×），不改状态，弹继续飞 |
 | despawn_clear | `despawn_clear()` | `clear_fx().despawn()` —— 消散 + 回收 |

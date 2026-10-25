@@ -91,14 +91,25 @@ func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = 
 
 ## 行为 emit_laser 的落地点：平移骨架后交给 BulletManager 的 LaserEngine。
 func spawn_behavior_laser(skeleton: LaserSkeleton, color: Color,
-		opts: Dictionary, offset: Vector2) -> LaserBeam:
+		opts: Dictionary, offset: Vector2, direction: Vector2 = Vector2.ZERO) -> LaserBeam:
 	if bullet_manager == null or skeleton == null:
 		return null
-	var final_skeleton := skeleton
+	var points := skeleton.points
+	if direction != Vector2.ZERO and points.size() >= 2:
+		var base := points[points.size() - 1] - points[0]
+		if base.length_squared() > 0.0001:
+			var angle := base.angle_to(direction)
+			var rotated := PackedVector2Array()
+			for point in points:
+				rotated.append(point.rotated(angle))
+			points = rotated
 	if offset != Vector2.ZERO:
-		var points := PackedVector2Array()
-		for point in skeleton.points:
-			points.append(point + offset)
+		var shifted := PackedVector2Array()
+		for point in points:
+			shifted.append(point + offset)
+		points = shifted
+	var final_skeleton := skeleton
+	if points != skeleton.points:
 		final_skeleton = LaserSkeleton.new()
 		final_skeleton.from_points(points)
 	return bullet_manager.spawn_laser(final_skeleton, color, opts)

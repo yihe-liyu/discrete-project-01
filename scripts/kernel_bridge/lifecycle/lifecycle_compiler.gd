@@ -45,6 +45,7 @@ const A_SET_HEADING := &"set_heading"
 const A_SET_SPEED := &"set_speed"
 const A_CALL := &"call"
 const A_CLEAR_FX := &"clear_fx"
+const A_EMIT_LASER := &"emit_laser_dir"
 
 # ---- 目标 / 墙位 / 比较 ----
 const T_PLAYER := &"player"
@@ -93,6 +94,7 @@ const OP_A_SET_SPEED := 44
 const OP_A_CALL := 45
 const OP_A_EMIT_VARIANT := 46
 const OP_A_CLEAR_FX := 47
+const OP_A_EMIT_LASER := 48
 
 const TG_PLAYER := 0
 const TG_NEAREST := 1
@@ -136,7 +138,7 @@ static func compile_program(lc) -> Dictionary:
 			var op: StringName = a[&"op"]
 			var act_args := _args_act(a, state)
 			match op:
-				A_EMIT, A_EMIT_VARIANT, A_CALL:
+				A_EMIT, A_EMIT_VARIANT, A_CALL, A_EMIT_LASER:
 					act_args = [float(action_idx)] + act_args
 					action_idx += 1
 				A_SFX:
@@ -234,6 +236,7 @@ static func _op_act(op: StringName, state: Array) -> int:
 		A_SET_SPEED: return OP_A_SET_SPEED
 		A_CALL: return OP_A_CALL
 		A_CLEAR_FX: return OP_A_CLEAR_FX
+		A_EMIT_LASER: return OP_A_EMIT_LASER
 	push_error("BulletLifecycle.compile(): 未知 Action op '%s'" % str(op))
 	state[0] = true
 	return 0
@@ -323,6 +326,8 @@ static func _args_act(a: Dictionary, state: Array) -> Array:
 	match a[&"op"]:
 		A_EMIT:
 			return _dir_args(a[&"dir"], state) + [float(a[&"speed"]), float(a[&"at"])]
+		A_EMIT_LASER:
+			return _dir_args(a[&"dir"], state) + [float(a[&"at"])]
 		A_EMIT_VARIANT:
 			var ch := DIR_SPEC.from_variant(a[&"chance"])
 			if ch.target == &"":
