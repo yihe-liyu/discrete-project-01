@@ -38,6 +38,8 @@ const M_SPEED_MUL := &"speed_mul"
 const M_SET_HEADING := &"set_heading"
 const M_SET_SPEED := &"set_speed"
 const M_POSITION := &"position"
+const M_SET_POSITION := &"set_position"
+const M_OFFSET_POSITION := &"offset_position"
 
 const C_NEVER := &"never"
 const C_ELAPSED := &"elapsed"
@@ -99,7 +101,8 @@ static func evaluate_phase(
 			return _with_state(result, start_position, start_velocity, start_heading, 0.0)
 		if op != M_ACCEL_WORLD and op != M_ACCEL_HEADING and op != M_ROTATE \
 				and op != M_STEER and op != M_SPEED_LERP and op != M_SPEED_MUL \
-				and op != M_SET_HEADING and op != M_SET_SPEED:
+				and op != M_SET_HEADING and op != M_SET_SPEED \
+				and op != M_SET_POSITION and op != M_OFFSET_POSITION:
 			result["reason"] = &"unsupported"
 			result["points"] = points
 			return _with_state(result, start_position, start_velocity, start_heading, 0.0)
@@ -170,6 +173,10 @@ static func evaluate_phase(
 						var speed := velocity.length()
 						velocity = direction * speed
 						heading = direction
+				M_SET_POSITION:
+					position = move.get(&"p", position)
+				M_OFFSET_POSITION:
+					position += move.get(&"p", Vector2.ZERO)
 				M_SET_SPEED:
 					var length := velocity.length()
 					var direction := velocity / length if length > 0.0 else heading

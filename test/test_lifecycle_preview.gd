@@ -185,3 +185,15 @@ func test_preview_matches_native_until_rect_inside() -> void:
 	var lc := BulletLifecycle.new()
 	lc.accel_world(Vector2(200.0, 0.0)).until_rect(Rect2(500.0, 250.0, 100.0, 100.0), true)
 	_assert_matches_native(lc, Vector2(400.0, 300.0), Vector2.ZERO, 1.0)
+
+
+func test_preview_matches_native_set_position() -> void:
+	var lc := BulletLifecycle.new()
+	lc.set_position(Vector2(500.0, 300.0)).until_elapsed(0.1)
+	_assert_matches_native(lc, Vector2(400.0, 300.0), Vector2.ZERO, 0.1)
+
+
+func test_preview_matches_native_offset_position() -> void:
+	var lc := BulletLifecycle.new()
+	lc.offset_position(Vector2(10.0, 0.0)).until_elapsed(0.1)
+	_assert_matches_native(lc, Vector2(400.0, 300.0), Vector2.ZERO, 0.1)

@@ -612,7 +612,7 @@ int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFl
 		if (as < 0 || ac < 0 || as + ac > op_count) { return -1; }
 		for (int k = ms; k < ms + mc; ++k) {
 			const int op = p_ops[k];
-			if (op < OP_M_ACCEL_WORLD || op > OP_M_POSITION) { return -1; }
+			if (op < OP_M_ACCEL_WORLD || op > OP_M_OFFSET_POSITION) { return -1; }
 			if (op == OP_M_ROTATE) {
 				const int slot = (int)arg(k, 2);
 				if (slot < 0 || slot >= SLOT_STRIDE) { return -1; }
@@ -862,6 +862,14 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			break;
 		case 8: // set_speed
 			_apply_set_speed(i, a);
+			break;
+		case 10: // set_position（绝对坐标）
+			_x[i] = a[0];
+			_y[i] = a[1];
+			break;
+		case 11: // offset_position（相对偏移）
+			_x[i] += a[0];
+			_y[i] += a[1];
 			break;
 		case 9: { // position —— 位置来源统一 op（mode 0=PHASE_START / 1=ANCHOR）
 			// 布局：[mode, anchor_id, off.x, off.y, angle, speed, flags, initial, slot, base_sx, base_sy]

@@ -57,6 +57,8 @@ class DanmakuStore : public RefCounted {
 	// register_program 的 opcode 白名单（与 GDScript LifecycleCompiler 编码一致）。
 	static constexpr int OP_M_ACCEL_WORLD = 1;
 	static constexpr int OP_M_POSITION = 9;
+	static constexpr int OP_M_SET_POSITION = 10;
+	static constexpr int OP_M_OFFSET_POSITION = 11;
 	static constexpr int OP_C_NEVER = 20;
 	static constexpr int OP_C_SPEED = 25;
 	static constexpr int OP_C_X = 26;

@@ -39,6 +39,8 @@ const M_SPEED_MUL := COMPILER.M_SPEED_MUL
 const M_SET_HEADING := COMPILER.M_SET_HEADING
 const M_SET_SPEED := COMPILER.M_SET_SPEED
 const M_POSITION := COMPILER.M_POSITION
+const M_SET_POSITION := COMPILER.M_SET_POSITION
+const M_OFFSET_POSITION := COMPILER.M_OFFSET_POSITION
 const POS_PHASE_START := COMPILER.POS_PHASE_START
 const POS_ANCHOR := COMPILER.POS_ANCHOR
 
@@ -277,6 +279,18 @@ func drift(angle: float, speed: float, initial: float = 0.0) -> BulletLifecycle:
 	var sy := _alloc()
 	var sd := _alloc()
 	_moves.append({&"op": M_POSITION, &"mode": POS_PHASE_START, &"angle": angle, &"speed": speed, &"sx": sx, &"sy": sy, &"initial": initial, &"slot": sd})
+	return self
+
+
+## 直接把位置写成绝对坐标。写入发生在 behavior 的 move 阶段；下一帧 integrate 才会处理 cull / wrap。
+func set_position(p: Vector2) -> BulletLifecycle:
+	_moves.append({&"op": M_SET_POSITION, &"p": p, &"slot": -1})
+	return self
+
+
+## 在当前积分位置上追加偏移。写入时机同 set_position。
+func offset_position(delta: Vector2) -> BulletLifecycle:
+	_moves.append({&"op": M_OFFSET_POSITION, &"p": delta, &"slot": -1})
 	return self
 
 

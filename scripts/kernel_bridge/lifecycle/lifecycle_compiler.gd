@@ -20,6 +20,8 @@ const M_SPEED_MUL := &"speed_mul"
 const M_SET_HEADING := &"set_heading"
 const M_SET_SPEED := &"set_speed"
 const M_POSITION := &"position"
+const M_SET_POSITION := &"set_position"
+const M_OFFSET_POSITION := &"offset_position"
 const POS_PHASE_START := 0
 const POS_ANCHOR := 1
 
@@ -72,6 +74,8 @@ const OP_M_SPEED_MUL := 6
 const OP_M_SET_HEADING := 7
 const OP_M_SET_SPEED := 8
 const OP_M_POSITION := 9
+const OP_M_SET_POSITION := 10
+const OP_M_OFFSET_POSITION := 11
 const OP_C_NEVER := 20
 const OP_C_ELAPSED := 21
 const OP_C_NEAR := 22
@@ -197,6 +201,8 @@ static func _op_move(op: StringName, state: Array) -> int:
 		M_SET_HEADING: return OP_M_SET_HEADING
 		M_SET_SPEED: return OP_M_SET_SPEED
 		M_POSITION: return OP_M_POSITION
+		M_SET_POSITION: return OP_M_SET_POSITION
+		M_OFFSET_POSITION: return OP_M_OFFSET_POSITION
 	push_error("BulletLifecycle.compile(): 未知 Move op '%s'" % str(op))
 	state[0] = true
 	return 0
@@ -279,6 +285,9 @@ static func _args_move(m: Dictionary, state: Array) -> Array:
 		M_SPEED_MUL: return [float(m[&"f"])]
 		M_SET_HEADING: return _dir_args(m[&"dir"], state)
 		M_SET_SPEED: return [float(m[&"speed"])]
+		M_SET_POSITION, M_OFFSET_POSITION:
+			var p: Vector2 = m[&"p"]
+			return [p.x, p.y]
 		M_POSITION:
 			if int(m[&"mode"]) == POS_PHASE_START:
 				return [0.0, 0.0, 0.0, 0.0, float(m[&"angle"]), float(m[&"speed"]), 0.0, float(m[&"initial"]), float(m[&"slot"]), float(m[&"sx"]), float(m[&"sy"])]

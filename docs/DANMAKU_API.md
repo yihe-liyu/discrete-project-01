@@ -113,7 +113,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 - 相位切换**清零所有状态槽**；最后一个相位结束后，弹按当前速度自由积分（出界 cull）。
 - **陷阱**：`then()` 生成的新相位 `until = never`；在它上面挂 `on_end` 永不触发。
 
-### 3.2 Move（每帧施加，9 个 op；`anchor_drift` / `drift` 是 `position` 的糖）
+### 3.2 Move（每帧施加，11 个 op；`anchor_drift` / `drift` 是 `position` 的糖）
 
 | Move | 签名 | 语义 |
 |---|---|---|
@@ -128,8 +128,11 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | set_speed | `set_speed(speed)` | 设速度大小；方向不变，**v=0 时用「朝向」定方向** |
 | anchor_drift | `anchor_drift(anchor_id, offset, angle, speed, use_global=true, initial=0, render_heading=false)` | `position`(ANCHOR) 的糖：`pos = anchor_base + dir(angle)·drift`；需 `trajectory(lc, anchor)` |
 | drift | `drift(angle, speed, initial=0)` | `position`(PHASE_START) 的糖：从**本弹相位起点**平移，不改速度/朝向 |
+| set_position | `set_position(Vector2)` | 直接把位置写成绝对坐标；behavior move 阶段生效 |
+| offset_position | `offset_position(Vector2)` | 在当前积分位置上追加偏移 |
 
 > 位置来源（V18「模式派」）：位置由**一个** `position` op 的**来源模式**决定 —— `ANCHOR`（外部节点，激光）/ `PHASE_START`（本弹相位起点）/ 缺省 `FREE`（自由积分）。
+> `set_position` / `offset_position` 在 behavior 的 move 阶段执行；本帧 integrate 的 cull / wrap 已经过去，下一帧才处理新位置。
 > 模式只写 `pos`：`v` / `h` 不受影响；`render_heading=true` 走独立渲染朝向通道。
 > 离开模式（相位结束、下一相位无 position op）：`pos` 留在最后结果，积分从该点接力 → 弹按速度轴自由飞。
 > 同相位多个 position op = **模式切换（last-wins）**，不是叠加；位置模式与速度 op 混用会让速度变化在位置上看不见。
