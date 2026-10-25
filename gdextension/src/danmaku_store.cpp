@@ -726,7 +726,7 @@ Vector2 DanmakuStore::_resolve_dir(int p_dk, int p_tg, float angle, const Vector
 	}
 	if (p_dk == 6) {   // 镜面（reflect）：把当前速度按 pos 所在的场边翻分量，再转 angle
 		// 左右边翻 x、上边翻 y；角落（同时贴两条边）两边都翻 = 原路返回。
-		// pos 由调用方给：emit(at=AT_PHASE_END) 时 = 撞墙落点（at_wall 的相位结束输出），
+		// pos 由调用方给：emit(at=AT_PHASE_END) 时 = until_rect 夹到边上的相位结束输出，
 		// 不贴边（如 AT_CURRENT 未撞墙）→ 不翻，退化为自身朝向，不会静默乱转向。
 		Vector2 v = (vel != Vector2()) ? vel : forward;
 		bool flipped = false;
@@ -1180,7 +1180,7 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 		_pelapsed[i] = i < p_elapsed.size() ? p_elapsed[i] : 0.0f;
 		// batch 路径没有 set_program：新弹首帧（tick/phase 都为 0）把「不随数组传入」的
 		// 内部状态初始化成 set_program 同款，否则会残留上一颗弹的值（anchor_drift 首帧漂移错、
-		// near 节流错、at_wall 落点残留）。
+		// near 节流错、until_rect 落点残留）。
 		if (_ptick[i] == 0 && _pphase[i] == 0) {
 			_pnext[i] = 0.0f; _pslot_fresh[i] = 0xFFFFFFFFu; _phasend[i] = 0;
 			_pendx[i] = 0.0f; _pendy[i] = 0.0f;
