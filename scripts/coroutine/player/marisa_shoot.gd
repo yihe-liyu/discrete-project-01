@@ -44,6 +44,19 @@ var _laser_trajectories: Dictionary = {}
 var _laser_anchors: Array[Node2D] = []
 
 
+func _ready() -> void:
+	# 子机锚点必须在弹幕 behavior 之前更新；默认 0 会晚一帧。
+	process_physics_priority = -100
+
+
+func _physics_process(_delta: float) -> void:
+	if ctx == null:
+		return
+	var player: Player = ctx.player.get_player()
+	if is_instance_valid(player):
+		_sync_laser_anchors(player)
+
+
 func _seg_count() -> int:
 	if _segments < 0:
 		_segments = maxi(1, int(BulletShapes.pixel_rect(LASER_SHAPE).size.x / SEG_W))
