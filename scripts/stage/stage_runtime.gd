@@ -51,6 +51,8 @@ var fx_pool: FxPool
 var item_pool: ItemPool
 ## 路径预览节点（组合根注入；消费端经 ctx.telegraph）。
 var telegraph: Node2D
+## 路径预览服务（关卡级共享；不能随敌人 ctx 一起释放，否则敌人退场会清掉它发射的弹路径）。
+var telegraph_service: RefCounted
 ## Boss 位置指示器所属 HUD 层（组合根注入）。
 var ui_layer: CanvasLayer
 ## 背景场景实例（组合根在 load_stage 前注入）。

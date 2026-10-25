@@ -127,10 +127,15 @@ var diff: DifficultyService:
 		if _diff == null: _diff = DifficultyService.new()
 		return _diff
 
-## 路径预览服务：show_chain / clear；无 stage 时静默 no-op。
+## 路径预览服务：show_chain / track_bullets / clear。
+## 有 stage 时挂在 StageRuntime 上共享：敌人 ctx 释放不应清掉它发射的弹路径。
 var telegraph: TelegraphService:
 	get:
-		if _telegraph_service == null:
+		if stage:
+			if stage.telegraph_service == null:
+				stage.telegraph_service = TelegraphService.new()
+			_telegraph_service = stage.telegraph_service as TelegraphService
+		elif _telegraph_service == null:
 			_telegraph_service = TelegraphService.new()
 		_telegraph_service.telegraph_path = stage.telegraph if stage else null
 		_telegraph_service.bullet_manager = stage.bullet_manager if stage else null
