@@ -319,7 +319,8 @@ static func _args_cond(c: Dictionary, state: Array) -> Array:
 		C_X, C_Y: return head + [float(c[&"cmp"]), float(c[&"value"])]
 		C_RECT:
 			var rect: Rect2 = c[&"rect"]
-			return head + [rect.position.x, rect.position.y, rect.size.x, rect.size.y, 1.0 if bool(c[&"inside"]) else 0.0]
+			return head + [rect.position.x, rect.position.y, rect.size.x, rect.size.y,
+				1.0 if bool(c[&"inside"]) else 0.0, float(c.get(&"edges", 15))]
 	return head
 
 

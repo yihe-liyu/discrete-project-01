@@ -443,7 +443,19 @@ static func _check_until(until: Dictionary, position: Vector2, velocity: Vector2
 		C_RECT:
 			var rect: Rect2 = until.get(&"rect", Rect2())
 			var inside := rect.has_point(position)
-			return {"done": inside if bool(until.get(&"inside", false)) else not inside, "reason": &"rect", "next": next_check}
+			if bool(until.get(&"inside", false)):
+				return {"done": inside, "reason": &"rect", "next": next_check}
+			var edges := int(until.get(&"edges", 15))
+			var hit := false
+			if (edges & 1) != 0 and position.x <= rect.position.x:
+				hit = true
+			elif (edges & 2) != 0 and position.x >= rect.end.x:
+				hit = true
+			if (edges & 4) != 0 and position.y <= rect.position.y:
+				hit = true
+			elif (edges & 8) != 0 and position.y >= rect.end.y:
+				hit = true
+			return {"done": hit, "reason": &"wall" if bool(until.get(&"wall", false)) else &"rect", "next": next_check}
 		C_STATE:
 			var slot := int(until.get(&"slot", -1))
 			if slot < 0 or slot >= slots.size():

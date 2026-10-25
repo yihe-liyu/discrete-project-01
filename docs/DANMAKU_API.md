@@ -144,11 +144,11 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | never | `until_never()` | 永不结束（靠 emit/despawn 手动结束） |
 | elapsed | `until_elapsed(t)` | 相位经过 t 秒 |
 | near | `until_near(target, r)` | 距 target < r |
-| at_wall | `until_at_wall(mask)` | 越界检测（左 1 / 右 2 / 上 4）；**纯谓词**：只输出相位结束落点（不改弹位置），供 `emit(..., at=AT_PHASE_END)` |
+| at_wall | `until_at_wall(mask)` | `until_rect(场地矩形, false, mask)` 的糖（左 1 / 右 2 / 上 4 / 下 8）；输出相位结束夹墙落点 |
 | speed | `until_speed(cmp, value)` | `|v|` 与 value 比较（`CMP_GE` / `CMP_LE`） |
 | x | `until_x(cmp, value)` | 当前 x 与 value 比较 |
 | y | `until_y(cmp, value)` | 当前 y 与 value 比较 |
-| rect | `until_rect(rect, inside=false)` | 进入 / 离开矩形时结束；`inside=true` = 进入时结束 |
+| rect | `until_rect(rect, inside=false, edges=15)` | 进入 / 离开矩形；`inside=true` = 进入时结束；`edges` 控制离开时看哪几条边 |
 | turned（糖） | `until_turned()` | 当前相位 `rotate` 累计转角 ≥ limit；**必须跟在同相位 rotate 之后** |
 
 > 通用节流：任何 Until 都可链式 `.every(sec)` / `.every_ticks(n)`。

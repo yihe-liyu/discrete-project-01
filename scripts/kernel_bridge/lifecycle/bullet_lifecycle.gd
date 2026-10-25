@@ -75,6 +75,7 @@ const WALL_LEFT := COMPILER.WALL_LEFT
 const WALL_RIGHT := COMPILER.WALL_RIGHT
 ## 墙掩码：上边界。
 const WALL_TOP := COMPILER.WALL_TOP
+const WALL_BOTTOM := 8
 ## [code]until_speed()[/code] 比较：[code]|v| >= value[/code]。
 const CMP_GE := COMPILER.CMP_GE
 ## [code]until_speed()[/code] 比较：[code]|v| <= value[/code]。
@@ -329,10 +330,16 @@ func until_near(target: StringName, r: float) -> BulletLifecycle:
 	_set_until(C_NEAR, {&"target": target, &"r": r})
 	return self
 
-## 碰到掩码指定的墙（左 1 / 右 2 / 上 4）时结束。
-## 纯谓词：只在越界时把相位结束落点写进 Until 输出（不改弹自身位置），供 emit(..., at=AT_PHASE_END) 使用。
+## 碰到掩码指定的场边（左 1 / 右 2 / 上 4 / 下 8）时结束。
+## 这是 until_rect(场地矩形) 的糖；仍保留 phase-end 夹墙落点。
 func until_at_wall(mask: int) -> BulletLifecycle:
-	_set_until(C_AT_WALL, {&"mask": mask})
+	var rect := Rect2(
+		GameConfig.FIELD_LEFT,
+		GameConfig.FIELD_TOP,
+		GameConfig.FIELD_RIGHT - GameConfig.FIELD_LEFT,
+		GameConfig.FIELD_BOTTOM - GameConfig.FIELD_TOP)
+	until_rect(rect, false, mask)
+	_until[&"wall"] = true
 	return self
 
 ## 速度大小满足比较时结束（|v| cmp value；cmp = CMP_GE / CMP_LE）。
@@ -355,8 +362,9 @@ func until_y(cmp: int, value: float) -> BulletLifecycle:
 
 
 ## 当前点进入 / 离开矩形时结束；inside=true 表示进入矩形结束，false 表示离开矩形结束。
-func until_rect(rect: Rect2, inside: bool = false) -> BulletLifecycle:
-	_set_until(C_RECT, {&"rect": rect, &"inside": inside})
+## edges 只在 inside=false 时生效（1 左 / 2 右 / 4 上 / 8 下）；默认四边。
+func until_rect(rect: Rect2, inside: bool = false, edges: int = 15) -> BulletLifecycle:
+	_set_until(C_RECT, {&"rect": rect, &"inside": inside, &"edges": edges})
 	return self
 
 

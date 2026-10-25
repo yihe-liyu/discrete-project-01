@@ -137,6 +137,10 @@ func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, 
 			if d4 == Vector2.ZERO:
 				d4 = Vector2(0, 1)   # V15：参考侧无朝向，用零速出生的默认朝向 (0,1) 近似
 			system.set_velocity(id, d4 * float(mv[&"speed"]))
+		BulletLifecycle.M_SET_POSITION:
+			system.set_position(id, mv[&"p"])
+		BulletLifecycle.M_OFFSET_POSITION:
+			system.set_position(id, system.get_position(id) + Vector2(mv[&"p"]))
 		BulletLifecycle.M_POSITION:
 			# V18：位置来源统一（mode 0=PHASE_START / 1=ANCHOR）；只有本 op 写 pos。
 			var mode: int = int(mv[&"mode"])
@@ -214,6 +218,36 @@ func _check_until(system: BulletSystem, id: int, st: Dictionary, cond: Dictionar
 		BulletLifecycle.C_SPEED:
 			var sp: float = system.get_velocity(id).length()
 			return sp >= float(cond[&"value"]) if int(cond[&"cmp"]) == BulletLifecycle.CMP_GE else sp <= float(cond[&"value"])
+		BulletLifecycle.C_X:
+			var px: float = system.get_position(id).x
+			return px >= float(cond[&"value"]) if int(cond[&"cmp"]) == BulletLifecycle.CMP_GE else px <= float(cond[&"value"])
+		BulletLifecycle.C_Y:
+			var py: float = system.get_position(id).y
+			return py >= float(cond[&"value"]) if int(cond[&"cmp"]) == BulletLifecycle.CMP_GE else py <= float(cond[&"value"])
+		BulletLifecycle.C_RECT:
+			var rect: Rect2 = cond[&"rect"]
+			var pos2 := system.get_position(id)
+			if bool(cond.get(&"inside", false)):
+				return rect.has_point(pos2)
+			var edges: int = int(cond.get(&"edges", 15))
+			var clamped2 := pos2
+			var hit2 := false
+			if (edges & 1) and pos2.x <= rect.position.x:
+				clamped2.x = rect.position.x
+				hit2 = true
+			elif (edges & 2) and pos2.x >= rect.end.x:
+				clamped2.x = rect.end.x
+				hit2 = true
+			if (edges & 4) and pos2.y <= rect.position.y:
+				clamped2.y = rect.position.y
+				hit2 = true
+			elif (edges & 8) and pos2.y >= rect.end.y:
+				clamped2.y = rect.end.y
+				hit2 = true
+			if hit2:
+				st[&"end_pos"] = clamped2
+				st[&"has_end_pos"] = true
+			return hit2
 		_:
 			return false
 

@@ -970,10 +970,30 @@ bool DanmakuStore::_check_until(int i, float *slots, int ins, const Vector2 &pla
 			return (int)a[2] == 0 ? _x[i] >= a[3] : _x[i] <= a[3];
 		case 27: // y 与 value 比较
 			return (int)a[2] == 0 ? _y[i] >= a[3] : _y[i] <= a[3];
-		case 28: { // 点进入 / 离开矩形
+		case 28: { // 点进入 / 离开矩形（edges 只在 outside 模式生效）
 			const Rect2 r(a[2], a[3], a[4], a[5]);
-			const bool inside = r.has_point(Vector2(_x[i], _y[i]));
-			return (int)a[6] != 0 ? inside : !inside;
+			if ((int)a[6] != 0) {
+				return r.has_point(Vector2(_x[i], _y[i]));
+			}
+			int edges = (int)a[7];
+			if (edges == 0) { edges = 15; }
+			const float left = r.position.x;
+			const float right = r.position.x + r.size.x;
+			const float top = r.position.y;
+			const float bottom = r.position.y + r.size.y;
+			float px = _x[i];
+			float py = _y[i];
+			bool hit = false;
+			if ((edges & 1) && _x[i] <= left) { hit = true; px = left; }
+			else if ((edges & 2) && _x[i] >= right) { hit = true; px = right; }
+			if ((edges & 4) && _y[i] <= top) { hit = true; py = top; }
+			else if ((edges & 8) && _y[i] >= bottom) { hit = true; py = bottom; }
+			if (hit) {
+				_pendx[i] = px;
+				_pendy[i] = py;
+				_phasend[i] = 1;
+			}
+			return hit;
 		}
 		default:
 			return false;
