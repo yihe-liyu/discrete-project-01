@@ -139,6 +139,7 @@ var telegraph: TelegraphService:
 			_telegraph_service = TelegraphService.new()
 		_telegraph_service.telegraph_path = stage.telegraph if stage else null
 		_telegraph_service.bullet_manager = stage.bullet_manager if stage else null
+		_telegraph_service.bullet_service = bullets if stage else null
 		return _telegraph_service
 
 ## 战场实体注册表（自机 / 敌机 / Boss）——只认绑定的 stage。

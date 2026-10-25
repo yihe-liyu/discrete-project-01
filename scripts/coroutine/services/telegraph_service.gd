@@ -8,6 +8,8 @@ const PREVIEW := preload("res://scripts/telegraph/lifecycle_preview.gd")
 var telegraph_path: Node
 ## 弹幕管理器（组合根注入；逐弹跟踪用）。
 var bullet_manager: BulletManager
+## 发射服务（组合根注入；shoot_tracked 一行入口）。
+var bullet_service: BulletService
 var _tracked_uids: Array[int] = []
 var _lifecycles_by_uid = {}
 var _paths_by_uid = {}
@@ -50,6 +52,20 @@ func show_chain_many(lifecycle: BulletLifecycle, origin: Vector2, directions: Ar
 	if telegraph_path != null and is_instance_valid(telegraph_path) and not paths.is_empty():
 		telegraph_path.call("show_paths", paths, color, width, lifetime)
 	return results
+
+## 一行入口：发射并立即跟踪这一发的真实弹；返回是否成功进入跟踪。
+## 无 bullet_service / lifecycle 时仍正常发射，只是不画路径。
+func shoot_tracked(bullet_data: BulletData, count: int, spread_angle: float,
+		base_dir: Vector2, at: Vector2, sfx: AudioStream = null,
+		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
+	if bullet_service == null or bullet_data == null:
+		return false
+	var uids := bullet_service.shoot_spread_ids(
+		bullet_data, count, spread_angle, base_dir, at, sfx)
+	if bullet_data.lifecycle == null:
+		return false
+	return add_tracked_bullets(uids, bullet_data.lifecycle, color, width)
+
 
 ## 绑定一颗真实弹；单颗便捷入口。路径按当前 pos / phase 滚动刷新。
 func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,

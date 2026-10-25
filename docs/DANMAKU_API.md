@@ -316,13 +316,12 @@ ctx.telegraph.show_chain_many(
 逐弹原型（只支持单颗；50 颗需要稳定身份 + 多线合批）：
 
 ```gdscript
-var uids := ctx.bullets.shoot_spread_ids(
+ctx.telegraph.shoot_tracked(
     弹型, 1, 0.0, 方向, 发射点)
-if not uids.is_empty():
-    ctx.telegraph.track_bullet(uids[0], 弹型.lifecycle)
 ```
 
 [code]shoot_spread_ids[/code] 返回的是稳定 uid，不是行号：原生 swap-remove 搬行时 uid 跟着搬，外部引用不会指到另一颗弹。
+[code]shoot_tracked[/code] 是发射 + 跟踪的一行入口；也可以手写 [code]shoot_spread_ids[/code] + [code]track_bullet[/code]。
 [code]track_bullet[/code] 按真实弹当前 phase / pos / vel 滚动刷新：phase 起点缓存完整 chain，之后只按当前位置裁掉前缀；弹死亡自动清线。
 多颗用 [code]track_bullets(uids, lifecycle)[/code]：每颗各一条，死一颗掉一条。
 同一波继续追加用 [code]add_tracked_bullets(uids, lifecycle)[/code]：不清掉上一波还没死的弹，旧路径继续跟着旧弹更新。

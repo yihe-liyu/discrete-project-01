@@ -95,3 +95,27 @@ func test_empty_add_does_not_clear_existing_path() -> void:
 	assert_false(service.add_tracked_bullets([], _lc()), "空列表不应安装 tracker")
 	path.call("_process", 0.2)
 	assert_true(path.is_showing(), "空列表不应清掉已有路径")
+
+
+func test_shoot_tracked_is_one_call() -> void:
+	var bm := BulletManager.new()
+	add_child_autofree(bm)
+	await get_tree().process_frame
+	if bm.kernel_system() == null or not bm.kernel_system().is_native_ready():
+		pending("无原生扩展")
+		return
+	var bs = BULLET_SERVICE.new()
+	bs.bullet_manager = bm
+	var lc := BulletLifecycle.new()
+	lc.until_elapsed(5.0).despawn()
+	var data := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
+	var path = PATH.new()
+	add_child_autofree(path)
+	var service = SERVICE.new()
+	service.telegraph_path = path
+	service.bullet_manager = bm
+	service.bullet_service = bs
+	assert_true(service.shoot_tracked(
+		data, 2, TAU, Vector2.DOWN, Vector2(448, 240)), "一行入口应发射并跟踪")
+	path.call("_process", 0.2)
+	assert_eq(path.path_count(), 2, "两发应各一条路径")
