@@ -72,9 +72,12 @@ func test_track_bullets_prunes_dead_uids() -> void:
 	path.call("_process", 0.2)
 	assert_eq(path.path_count(), 3, "三颗应各一条线")
 
+	var lc2 := BulletLifecycle.new()
+	lc2.until_elapsed(5.0).despawn()
+	var data2 := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc2)
 	var more: Array[int] = bs.shoot_spread_ids(
-		data, 2, TAU, Vector2.DOWN, Vector2(448, 240))
-	assert_true(service.add_tracked_bullets(more, lc), "新弹应追加而不是重置")
+		data2, 2, TAU, Vector2.DOWN, Vector2(448, 240))
+	assert_true(service.add_tracked_bullets(more, lc2), "不同敌人实例的 lifecycle 也应追加")
 	path.call("_process", 0.2)
 	assert_eq(path.path_count(), 5, "旧弹 + 新弹应同时保留")
 
