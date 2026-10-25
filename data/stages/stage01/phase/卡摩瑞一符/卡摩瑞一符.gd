@@ -11,6 +11,8 @@ extends CoroutineScript
 
 ## 两次发射的间隔（秒）。
 var 发射间隔: float = diff_pick([2.0, 1.75, 1.5, 1.25])
+## 临时演出试验：每次发射前画一颗代表弹的路径；多线稳定后再正式化。
+const 显示未来路径 := true
 ## Hard 以上一圈开花弹的数量。
 var 个数: int = diff_pick([25, 35, 45, 50])
 ## 开花弹沿当前朝向的加速度（像素/秒²）。
@@ -72,10 +74,19 @@ func _tick(p_ctx: StageContext) -> Variant:
 	if SaveData.selected_difficulty >= Difficulty.HARD:
 		# Hard 以上：一圈开花弹；整圈随机旋转，避免每次都从同一角度开始。
 		var 随机角度 := Vector2.DOWN.rotated(RNG.randf() * TAU)
+		# 路径预测试验：先画一颗代表弹；多线等演出接口稳定后再扩。
+		if 显示未来路径:
+			p_ctx.telegraph.show_chain(
+				开花弹.lifecycle, target.global_position, 随机角度,
+				开花弹.velocity.length(), 4.0)
 		p_ctx.bullets.shoot_spread(开花弹, 个数, TAU, 随机角度, target.global_position)
 	else:
 		# Easy / Normal：只发一颗种子弹，落点略随机；开花弹由种子弹自己生成。
 		var 随机角度 := Vector2.DOWN.rotated(deg_to_rad(RNG.randf_range(-30.0, 30.0)))
+		if 显示未来路径:
+			p_ctx.telegraph.show_chain(
+				种子弹.lifecycle, target.global_position, 随机角度,
+				种子弹.velocity.length(), 2.0)
 		p_ctx.bullets.shoot_spread(种子弹, 1, 0.0, 随机角度, target.global_position)
 
 	return p_ctx.clock.wait(发射间隔)
