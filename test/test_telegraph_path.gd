@@ -58,3 +58,10 @@ func test_show_multiple_paths() -> void:
 	assert_eq(path.path_count(), 3, "三条独立线")
 	path.clear_path()
 	assert_eq(path.path_count(), 0)
+
+
+func test_layer_below_enemy_bullets() -> void:
+	var path: Node2D = PATH.new()
+	add_child_autofree(path)
+	assert_eq(path.z_index, LayerConfig.ENEMY_BULLET - 1, "路径应压在敌弹之下")
+	assert_false(path.z_as_relative, "路径使用绝对层")

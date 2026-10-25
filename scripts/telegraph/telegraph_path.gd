@@ -21,7 +21,8 @@ var tracker: Callable = Callable()
 
 
 func _ready() -> void:
-	z_index = LayerConfig.EFFECT
+	# 路径是辅助信息，压在敌弹之下，避免盖住真正要躲的东西。
+	z_index = LayerConfig.ENEMY_BULLET - 1
 	z_as_relative = false
 	_ensure_lines()
 	set_process(false)
