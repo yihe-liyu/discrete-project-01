@@ -10,6 +10,9 @@ var telegraph_path: Node
 var bullet_manager: BulletManager
 var _tracked_uids: Array[int] = []
 var _lifecycles_by_uid = {}
+var _paths_by_uid = {}
+var _phases_by_uid = {}
+var _cursors_by_uid = {}
 var _tracked_age: float = 0.0
 var _tracked_color: Color = Color(1.0, 0.82, 0.35, 0.85)
 var _tracked_width: float = 1.5
@@ -53,7 +56,7 @@ func track_bullet(bullet_uid: int, lifecycle: BulletLifecycle,
 
 
 ## 追加多颗真实弹到当前跟踪列表；允许来自不同敌人实例 / 不同 lifecycle。
-## 每次 tick 从当前 pos / phase 重算未来 chain，旧弹路径继续更新。
+## phase 起点缓存 chain，之后按当前 pos 裁前缀；旧弹路径继续更新。
 func add_tracked_bullets(bullet_uids: Array, lifecycle: BulletLifecycle,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5) -> bool:
 	if telegraph_path == null or not is_instance_valid(telegraph_path) \
@@ -112,12 +115,11 @@ func _tick_tracked(delta: float) -> void:
 		if lifecycle == null:
 			continue
 		var position: Vector2 = bullet_manager.bullet_global_position_uid(uid)
-		var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
-		var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
-		var result: Dictionary = PREVIEW.evaluate_chain(
-			lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
-		if result.points.size() >= 2:
-			paths.append(result.points)
+		if not _paths_by_uid.has(uid) or int(_phases_by_uid.get(uid, -1)) != phase:
+			_rebuild_cache(uid, phase, position, lifecycle)
+		var trimmed := _trim_to_current(uid, position)
+		if trimmed.size() >= 2:
+			paths.append(trimmed)
 	_tracked_uids = alive
 	if _tracked_uids.is_empty():
 		_stop_tracking()
@@ -127,9 +129,45 @@ func _tick_tracked(delta: float) -> void:
 
 
 
+## 在 phase 起点算一次完整 chain，缓存起来；phase 变了才重算。
+func _rebuild_cache(uid: int, phase: int, position: Vector2, lifecycle: BulletLifecycle) -> void:
+	var velocity: Vector2 = bullet_manager.bullet_velocity_uid(uid)
+	var heading: Vector2 = velocity.normalized() if velocity != Vector2.ZERO else Vector2.UP
+	var result: Dictionary = PREVIEW.evaluate_chain(
+		lifecycle, phase, position, velocity, heading, 1.0 / 60.0, 4.0)
+	_paths_by_uid[uid] = result.points
+	_phases_by_uid[uid] = phase
+	_cursors_by_uid[uid] = 0
+
+
+## 把缓存路径裁成“当前弹位置 → 未来”：只画还没走到的后缀。
+func _trim_to_current(uid: int, position: Vector2) -> PackedVector2Array:
+	var cached: PackedVector2Array = _paths_by_uid.get(uid, PackedVector2Array())
+	if cached.size() < 2:
+		return PackedVector2Array()
+	var start := int(_cursors_by_uid.get(uid, 0))
+	var nearest := start
+	var best := INF
+	for i in range(start, cached.size()):
+		var distance := cached[i].distance_squared_to(position)
+		if distance < best:
+			best = distance
+			nearest = i
+	_cursors_by_uid[uid] = nearest
+	if nearest >= cached.size() - 1:
+		return PackedVector2Array()
+	var trimmed := PackedVector2Array([position])
+	for i in range(nearest + 1, cached.size()):
+		trimmed.append(cached[i])
+	return trimmed
+
+
 func _stop_tracking() -> void:
 	_tracked_uids.clear()
 	_lifecycles_by_uid.clear()
+	_paths_by_uid.clear()
+	_phases_by_uid.clear()
+	_cursors_by_uid.clear()
 	_tracked_age = 0.0
 	if telegraph_path != null and is_instance_valid(telegraph_path):
 		telegraph_path.call("set_tracker", Callable())
