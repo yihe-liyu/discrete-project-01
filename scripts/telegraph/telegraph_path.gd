@@ -75,6 +75,7 @@ func show_tracked(paths: Array, keys: Array, cursors: Array,
 	_material.set_shader_parameter("line_color", color)
 	_material.set_shader_parameter("core_ratio", 1.0 / GLOW_WIDTH_MULT)
 	_active_keys.clear()
+	var total_before := _total_instances
 	for i in paths.size():
 		if i >= keys.size() or i >= cursors.size():
 			break
@@ -102,6 +103,8 @@ func show_tracked(paths: Array, keys: Array, cursors: Array,
 	for key in _slots:
 		if not _active_keys.has(key):
 			_hide_slot(_slots[key])
+	if _total_instances != total_before:
+		_rewrite_all_slots()
 	_paths = paths.duplicate()
 	_paths.clear()
 	for path in paths:
@@ -121,14 +124,27 @@ func _append_slot(key: Variant, path: PackedVector2Array) -> void:
 	var offset := _total_instances
 	var count := path.size() - 1
 	_total_instances += count
+	_slots[key] = {"offset": offset, "count": count, "cursor": 0, "points": path}
+
+
+func _rewrite_all_slots() -> void:
+	# 扩大 instance_count 会重置旧实例；集中扩容后必须重写全部槽位。
 	_multimesh.instance_count = _total_instances
+	for key in _slots:
+		_rewrite_slot(_slots[key])
+
+
+func _rewrite_slot(slot: Dictionary) -> void:
+	var offset := int(slot.offset)
+	var count := int(slot.count)
+	var points: PackedVector2Array = slot.points
 	for i in count:
-		var a: Vector2 = path[i]
-		var b: Vector2 = path[i + 1]
+		var a: Vector2 = points[i]
+		var b: Vector2 = points[i + 1]
 		var segment := b - a
 		var length := segment.length()
 		if length < 0.001:
-			_multimesh.set_instance_transform_2d(offset + i, _hidden_transform())
+			_hide_instance(offset + i)
 			continue
 		var direction := segment / length
 		var perpendicular := Vector2(-direction.y, direction.x)
@@ -136,7 +152,8 @@ func _append_slot(key: Variant, path: PackedVector2Array) -> void:
 			direction * length,
 			perpendicular * _line_width * GLOW_WIDTH_MULT,
 			(a + b) * 0.5))
-	_slots[key] = {"offset": offset, "count": count, "cursor": 0}
+	for i in int(slot.cursor):
+		_hide_instance(offset + i)
 
 
 func _hide_slot(slot: Dictionary) -> void:
