@@ -77,3 +77,13 @@ git clone rebuild.bundle 1-st-touhou-star-rebuild
 - `git fsck` 报 2 个缺失 tree，只挂在**无 ref 可达**的游离提交 `abde839`（"命中音效音量 -10 → -14dB"）
   上 —— 属**先前**的局部 prune 残留，与本次目录清理无关（主仓无 `alternates`）；
   4 个本地分支 + 上述归档 ref 的 tree 递归读取**全部完整**。
+
+---
+
+## 2026-10-25 · G1 结论：归档 docs 不清理
+
+重建版工作树已不存在，只剩本仓 `refs/archive/rebuild/*` 的只读历史快照；其中 `docs/` 的 4 个文件是当时的快照。
+
+- 不追改、不把主仓现行文档同步进去 —— 那等于改写归档历史；
+- 要清理只清主仓现行 `docs/`，归档保持原样；
+- `TODO_TEMP.md` 的 G1 关闭。
