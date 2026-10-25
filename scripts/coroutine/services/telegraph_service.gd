@@ -143,8 +143,6 @@ func _tick_tracked(delta: float) -> void:
 	_tracked_age = 0.0
 	var alive: Array[int] = []
 	var paths: Array[PackedVector2Array] = []
-	var keys: Array[Vector2i] = []
-	var cursors: Array[int] = []
 	for uid in _tracked_uids:
 		var phase: int = bullet_manager.bullet_phase_uid(uid)
 		if phase < 0:
@@ -159,15 +157,18 @@ func _tick_tracked(delta: float) -> void:
 		var cached: PackedVector2Array = _paths_by_uid.get(uid, PackedVector2Array())
 		if cached.size() < 2:
 			continue
-		paths.append(cached)
-		keys.append(Vector2i(uid, phase))
-		cursors.append(_find_cursor(uid, cached, position))
+		var cursor: int = _find_cursor(uid, cached, position)
+		var trimmed := PackedVector2Array([position])
+		for i in range(cursor + 1, cached.size()):
+			trimmed.append(cached[i])
+		if trimmed.size() >= 2:
+			paths.append(trimmed)
 	_tracked_uids = alive
 	if _tracked_uids.is_empty():
 		_stop_tracking()
 		return
 	if not paths.is_empty():
-		telegraph_path.call("show_tracked", paths, keys, cursors, _tracked_color, _tracked_width)
+		telegraph_path.call("show_paths", paths, _tracked_color, _tracked_width)
 
 
 ## 在 phase 起点一次生成到出屏 / lifecycle 终点；之后不再续算。

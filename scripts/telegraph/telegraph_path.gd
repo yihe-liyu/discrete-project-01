@@ -99,13 +99,13 @@ func show_tracked(paths: Array, keys: Array, cursors: Array,
 			cursor = clampi(cursor, 0, int(slot.count))
 		for s in range(old, cursor):
 			_hide_instance(int(slot.offset) + s)
-		slot.cursor = cursor
+		_slots[key].cursor = cursor
+		print("AFTER HIDE key=", key, " cursor=", cursor, " total=", _multimesh.instance_count, " t0=", _multimesh.get_instance_transform_2d(0))
 	for key in _slots:
 		if not _active_keys.has(key):
 			_hide_slot(_slots[key])
 	if _total_instances != total_before:
 		_rewrite_all_slots()
-	_paths = paths.duplicate()
 	_paths.clear()
 	for path in paths:
 		if path.size() >= 2:
@@ -167,7 +167,8 @@ func _hide_instance(index: int) -> void:
 
 
 func _hidden_transform() -> Transform2D:
-	return Transform2D(Vector2(0.0001, 0.0), Vector2(0.0, 0.0001), Vector2.ZERO)
+	# 部分后端会把零缩放钳成 identity；用远在屏外的原点隐藏更稳。
+	return Transform2D(Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(-100000.0, -100000.0))
 
 
 ## 立即清空路径并隐藏。
@@ -266,3 +267,13 @@ func _make_white_texture() -> Texture2D:
 	var image := Image.create(1, 1, false, Image.FORMAT_RGBA8)
 	image.fill(Color.WHITE)
 	return ImageTexture.create_from_image(image)
+
+
+## 可见线段数（测试 / 调试用）。
+func visible_segment_count() -> int:
+	var n := 0
+	for i in _multimesh.instance_count if _multimesh != null else 0:
+		var t := _multimesh.get_instance_transform_2d(i)
+		if t.origin.x > -50000.0 and t.origin.y > -50000.0:
+			n += 1
+	return n
