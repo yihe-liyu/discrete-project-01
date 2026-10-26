@@ -39,28 +39,27 @@ func test_without_variant_falls_back_to_base() -> void:
 	assert_null(data.background_for_difficulty(Difficulty.EXTRA), "无变体时回落基准背景")
 
 
-func test_variant_overrides_only_declared_fields() -> void:
+func test_variant_overrides_script_but_presentation_stays_shared() -> void:
 	var data := _stage_data()
 	var variant := StageVariant.new()
 	variant.difficulty = Difficulty.EXTRA
 	variant.create_script = VARIANT_SCRIPT
-	variant.bgm_key = "extra"
 	data.variants.append(variant)
 
 	assert_eq(data.script_for_difficulty(Difficulty.EXTRA), VARIANT_SCRIPT, "Extra 应用变体脚本")
-	assert_eq(data.bgm_key_for_difficulty(Difficulty.EXTRA), "extra", "Extra 应用变体 BGM")
 	assert_eq(data.script_for_difficulty(Difficulty.NORMAL), CoroutineScript, "Normal 仍用基准脚本")
-	assert_eq(data.bgm_key_for_difficulty(Difficulty.NORMAL), "base", "Normal 仍用基准 BGM")
+	assert_eq(data.bgm_key_for_difficulty(Difficulty.EXTRA), "base", "BGM 跨难度共享")
+	assert_null(data.background_for_difficulty(Difficulty.EXTRA), "背景跨难度共享")
 
 
 func test_validation_rejects_duplicate_and_empty_variants() -> void:
 	var data := _stage_data()
 	var first := StageVariant.new()
 	first.difficulty = Difficulty.HARD
-	first.bgm_key = "hard"
+	first.create_script = VARIANT_SCRIPT
 	var second := StageVariant.new()
 	second.difficulty = Difficulty.HARD
-	second.bgm_key = "hard_2"
+	second.create_script = VARIANT_SCRIPT
 	var empty := StageVariant.new()
 	data.variants.append_array([first, second, empty])
 
@@ -84,3 +83,13 @@ func test_stage_runtime_uses_variant_script() -> void:
 		return
 	assert_eq(rt.current_stage_script().get_script(), VARIANT_SCRIPT, "StageRuntime 应使用 Extra 变体脚本")
 	rt.stop_stage()
+
+
+func test_deprecated_presentation_overrides_are_validation_errors() -> void:
+	var data := _stage_data()
+	var variant := StageVariant.new()
+	variant.difficulty = Difficulty.EXTRA
+	variant.bgm_key = "stageEX"
+	data.variants.append(variant)
+	var errs := data.validate()
+	assert_true(errs.any(func(e: String) -> bool: return "bgm_key 已废弃" in e), "BGM 变体应被判定为废弃配置")

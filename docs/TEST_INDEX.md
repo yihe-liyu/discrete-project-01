@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：119 脚本 / **846 用例（845 通过 / 1 红）/ 7218 断言 / 52.7s** / 0 orphans / **0 pending**。
+**现状**：119 脚本 / **847 用例（846 通过 / 1 红）/ 7219 断言 / 52.7s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 54 | 439 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 54 | 440 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -106,9 +106,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（54 / 439）
+## C · 宿主 · 运行时系统（54 / 440）
 
-### C1 组合根 / 服务 / 时间线（20 / 99）
+### C1 组合根 / 服务 / 时间线（20 / 100）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -120,7 +120,7 @@
 | [test_bullet_wrap](../test/test_bullet_wrap.gd) | 弹幕边环绕：下→上、左→右；上下/左右/四边掩码进入 BulletType | 4 | 0 |
 | [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids` 返回稳定 uid，swap-remove 后仍能跟踪 phase / velocity；无管理器静默 | 4 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
-| [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData / 难度变体取曲** | 12 | 0 |
+| [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData 基准取曲（跨难度共享）** | 12 | 0 |
 | [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪；`shoot_tracked`；`track_emitted` lifecycle 过滤；空列表防护 | 7 | 0 |
 | [test_telegraph_path](../test/test_telegraph_path.gd) | 路径展示层：单线 / 多线显示与清空；单点不成线；lifetime 到点自动清空；路径在敌弹之下；MultiMesh 合批 | 6 | 0 |
 | [test_lifecycle_emit_laser](../test/test_lifecycle_emit_laser.gd) | lifecycle.emit_laser / emit_laser_dir；宿主队列、方向透传、原生 action | 5 | 0 |
@@ -128,7 +128,7 @@
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** + **敌人行为先入树、再 `_on_start()`**（不再需要 `_ready` + `call_deferred`） | 7 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
 | [test_content_manifest](../test/test_content_manifest.gd) | `ContentManifest`：Stage / Boss / Phase / Variant 去重索引、难度变体来源、Boss 槽引用一致性 | 3 | 0 |
-| [test_stage_variants](../test/test_stage_variants.gd) | `StageData` 难度变体：只覆盖脚本 / 背景 / BGM，未覆盖回落基准；`StageRuntime` 真的使用变体脚本；重复 / 空变体响错 | 4 | 0 |
+| [test_stage_variants](../test/test_stage_variants.gd) | `StageData` 难度变体：只覆盖结构脚本；背景 / BGM 跨难度共享；重复 / 空变体 / 废弃展示覆盖响错 | 5 | 0 |
 | [test_difficulty](../test/test_difficulty.gd) | 难度维度契约：0..4 / 展示名；`diff_pick` / `diff_get` 的非法难度、空数组、Extra 用 4 项数组会响亮报错并回落最后一项 | 6 | 0 |
 | [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：12 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
 | [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环（Dialogue / Item / Player / Boss / Enemy 五个服务都有回归） + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 7 | 0 |

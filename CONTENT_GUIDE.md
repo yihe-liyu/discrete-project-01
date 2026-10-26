@@ -300,18 +300,19 @@ data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见
 
 ### 关卡整面变体（StageData.variants）
 
-如果整面不只是数值变化（例如 Extra 换关卡脚本 / 背景 / BGM），不要复制整份 `StageData`：
+如果整面不只是数值变化（例如 Extra 换**结构脚本**），不要复制整份 `StageData`：
 
 ```gdscript
 # data/stages/<面>/stage_data/<面>.tres 里的 StageData
 variants = [
-    # difficulty = Difficulty.EXTRA；只覆盖需要变化的字段
-    # create_script = ...  background_scene = ...  bgm_key = "stageEX"
+    # difficulty = Difficulty.EXTRA；只覆盖结构
+    # create_script = ...
 ]
 ```
 
-- `StageVariant` 只覆盖 `create_script` / `background_scene` / `bgm_key`；空字段 = 沿用 `StageData` 基准。
-- 普通关卡、练习模式都按**当前难度**解析变体；没有变体时行为与以前完全一样。
+- `StageVariant` 现在只覆盖 `create_script`；背景 / BGM 默认跨难度共享。
+- `background_scene` / `bgm_key` 字段已废弃；旧数据保留字段，但配置后会校验报错。
+- 普通关卡、练习模式都按**当前难度**解析脚本变体；背景 / BGM 始终用基准。
 - 基类的 `create_script` 仍是必填（`StageCatalog.playable()` 用它判断可玩），变体只做覆盖。
 - 变体建议放 `data/stages/<面>/stage_variants/*.tres`，不要放 `stage_data/` ——
   后者会被 `StageCatalog` 的目录扫描当成 `StageData` 读取。
