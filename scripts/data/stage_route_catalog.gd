@@ -73,6 +73,30 @@ static func route_for(difficulty: int) -> StageRoute:
 	return _by_difficulty.get(difficulty)
 
 
+## 路线中的 StageData 顺序（按难度路线依次去重）。
+## include_unrouted=true 时，把“不在任何路线里的可玩面”追加到末尾 —— 迁移期兼容
+## （练习仍能看到全部可玩面；路线成员优先）。
+static func ordered_stages(include_unrouted: bool = true) -> Array[StageData]:
+	_ensure_loaded()
+	var out: Array[StageData] = []
+	var seen: Dictionary = {}
+	for difficulty in Difficulty.COUNT:
+		var route: StageRoute = _by_difficulty.get(difficulty)
+		if route == null:
+			continue
+		for stage in route.stages:
+			if stage == null or seen.has(stage.stage_id):
+				continue
+			seen[stage.stage_id] = true
+			out.append(stage)
+	if include_unrouted:
+		for stage in StageCatalog.playable():
+			if stage != null and not seen.has(stage.stage_id):
+				seen[stage.stage_id] = true
+				out.append(stage)
+	return out
+
+
 ## 重新扫描（内容重载 / 工具用）。
 static func reload() -> void:
 	_is_loaded = false

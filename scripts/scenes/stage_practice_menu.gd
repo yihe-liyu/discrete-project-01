@@ -26,7 +26,7 @@ enum Section { STAGE, DIFF }
 @onready var _diff_box: VBoxContainer = $DiffBox
 @onready var _char_name: Label = $CharPanel/CharName
 
-## 可玩清单（[code]StageCatalog.playable()[/code] 的产出；下标 = 一级列表行号）
+## 一级列表：路线成员优先按 route 顺序，未入路线的可玩面追加在末尾（迁移期）。
 var _stages: Array[StageData] = []
 ## 当前面的难度槽（[code]_menu_diffs_for()[/code] 的产出；下标 = 二级列表行号）
 var _diffs: Array[int] = []
@@ -47,7 +47,7 @@ func on_enter() -> void:
 	SaveData.reset_session()             # 唯一复位入口：先清干净上一局
 	SaveData.is_stage_practice = true    # 置位点（复位点 = reset_session；见基线会话契约）
 	_char_index = clampi(SaveData.selected_character, 0, CHAR_NAMES.size() - 1)
-	_stages = StageCatalog.playable()
+	_stages = StageRouteCatalog.ordered_stages()
 	_stage_index = _index_of_stage(SaveData.current_stage_id)
 	_build_stage_list()
 	_select_diffs_for_current_stage()

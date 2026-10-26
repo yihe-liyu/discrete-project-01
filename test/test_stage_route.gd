@@ -64,3 +64,13 @@ func test_route_order_does_not_change_record_key() -> void:
 	book.record_attempt(1, 2, 0, 0, Difficulty.NORMAL, true, 100, 1.0)
 	assert_eq(book.records.size(), 1, "route / route_index 不应拆出第二条记录")
 	assert_eq(record.captures, 1)
+
+
+func test_ordered_stages_puts_route_members_first_and_keeps_playable_tail() -> void:
+	StageRouteCatalog.load_routes()
+	var ordered := StageRouteCatalog.ordered_stages()
+	assert_gt(ordered.size(), 0)
+	assert_eq(ordered[0].stage_id, 1, "路线第一关应在最前")
+	assert_eq(ordered[1].stage_id, 2, "路线第二关应在第二")
+	for stage in StageCatalog.playable():
+		assert_true(ordered.has(stage), "迁移期未入路线的可玩面也不能从练习列表消失")
