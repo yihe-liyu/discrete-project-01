@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StageRoute" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/stage_route.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/data/stage_data.gd" id="2"]
+[ext_resource type="Resource" path="res://data/stages/stage01/stage_data/stage01.tres" id="3"]
+[ext_resource type="Resource" path="res://data/stages/stage02/stage_data/stage02.tres" id="4"]
+[ext_resource type="Resource" path="res://data/stages/stageEX/stage_data/stageex.tres" id="5"]
+
+[resource]
+script = ExtResource("1")
+route_id = &"hard"
+difficulty = 2
+stages = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4")])

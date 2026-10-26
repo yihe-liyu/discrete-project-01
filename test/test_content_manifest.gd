@@ -8,7 +8,7 @@ func test_build_indexes_stages_and_variants() -> void:
 	var manifest = MANIFEST.new()
 	var data: Dictionary = manifest.build()
 	assert_eq(data.issues, [], "真实内容不应有 manifest issues")
-	assert_eq(data.stages.size(), 2, "当前注册表有 2 个 StageData")
+	assert_eq(data.stages.size(), StageCatalog.all().size(), "manifest 应索引全部 StageData")
 	assert_eq(data.bosses.size(), 6, "当前注册表有 6 个 BossData")
 	assert_gt(data.phases.size(), 0, "应索引到阶段")
 

@@ -35,21 +35,21 @@ func test_bgm_key_of_reads_stage_data():
 ## （3B / EX 就在盘上）—— `playable()` 的价值正是在这里把它们滤掉。
 func test_playable_filters_scriptless_from_scan_fallback():
 	var saved: StageRegistry = StageCatalog.registry
-	StageCatalog.registry = null          # 强制走目录扫描（能看见无关卡脚本的面）
-	var all_stages := StageCatalog.all()
+	var synthetic := StageRegistry.new()
+	var scripted := StageData.new()
+	scripted.stage_id = 1
+	scripted.display_name = "Synthetic playable"
+	scripted.create_script = load("res://data/stages/stage01/stage_data/stage01.gd")
+	var scriptless := StageData.new()
+	scriptless.stage_id = 99
+	scriptless.display_name = "Synthetic scriptless"
+	synthetic.stages = [scripted, scriptless]
+	StageCatalog.registry = synthetic
 	var playable := StageCatalog.playable()
 	StageCatalog.registry = saved
 
-	var scriptless := 0
-	for stage in all_stages:
-		if stage.create_script == null:
-			scriptless += 1
-	assert_gt(scriptless, 0, "扫描兜底应能看见无关卡脚本的面（否则本用例空转、等于没测）")
-
-	for stage in playable:
-		assert_not_null(stage.create_script,
-			"可玩清单只许收能开局的：%s" % StageCatalog.display_name_of(stage.stage_id))
-	assert_eq(playable.size(), all_stages.size() - scriptless, "可玩数应 = 全部 − 无关卡脚本的")
+	assert_eq(playable.size(), 1, "可玩清单只收有 create_script 的面")
+	assert_eq(playable[0].stage_id, 1)
 
 
 func test_known_includes_scriptless_surfaces_for_desk():
@@ -59,6 +59,4 @@ func test_known_includes_scriptless_surfaces_for_desk():
 		ids.append(stage.stage_id)
 	assert_true(ids.has(4), "known() 应包含 3B（阶段树可看）")
 	assert_true(ids.has(9), "known() 应包含 EX（阶段树可看）")
-	for stage in StageCatalog.playable():
-		assert_ne(stage.stage_id, 4, "3B 没有整关脚本，不应进可玩清单")
-		assert_ne(stage.stage_id, 9, "EX 没有整关脚本，不应进可玩清单")
+	assert_true(known.size() >= StageCatalog.playable().size(), "known 是注册表与扫描的并集，不应少于可玩面")

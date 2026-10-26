@@ -22,6 +22,12 @@ static var selected_character: int = 0
 ## 当前打到的关卡主键（StageData.stage_id；3B 面 = 4、EX 面 = 9，不等于面序号）。
 static var current_stage_id: int = 1
 
+# ═══ 当前路线（Route 管成员 / 顺序；stage_id 只是派生结果）═══
+## 当前路线稳定 id；空 = 未进入任何路线（练习 / 标题）。
+static var current_route_id: StringName = &""
+## 当前走到路线中的第几关（0-based）。
+static var current_route_index: int = 0
+
 # ═══ 符卡簿 / 存档 ═══
 
 ## 运行期符卡簿（boot / load 后可用）。
@@ -49,6 +55,7 @@ static func boot() -> void:
 	save_mgr.load()
 	apply_settings()
 	StageCatalog.load_registry()
+	StageRouteCatalog.load_routes()
 
 
 ## 把存档设置应用到音频 / 全屏 / 帧率；缺 key 跳过。
@@ -99,7 +106,7 @@ static func clear_player_data() -> void:
 	spell_book_mgr.clear_player_data()
 	spell_book = spell_book_mgr.spell_book
 	save_mgr.clear_player_data()
-	current_stage_id = 1
+	reset_route_state()
 
 
 # ═══ 会话生命周期 ═══
@@ -154,9 +161,60 @@ static func reset_practice(entity_registry: EntityRegistry) -> void:
 ## 新游戏与进练习都必须经过它；它不动自机资源（资源另走 reset_all / reset_practice）。
 static func reset_session() -> void:
 	PracticeSession.clear()
-	current_stage_id = 1
+	reset_route_state()
 	is_restarting = false
 	is_stage_practice = false
+
+
+## 清掉当前路线状态，回到第 1 面；不碰难度 / 自机 / 练习标志。
+static func reset_route_state() -> void:
+	current_route_id = &""
+	current_route_index = 0
+	current_stage_id = 1
+
+
+## 当前路线资源；没有 = null。
+static func current_route() -> StageRoute:
+	if current_route_id == &"":
+		return null
+	return StageRouteCatalog.find(current_route_id)
+
+
+## 按难度从路线开头开始；失败（无路线 / 空链）响亮报错并返回 false。
+static func begin_route_for_difficulty(difficulty: int) -> bool:
+	var route := StageRouteCatalog.route_for(difficulty)
+	if route == null or route.stages.is_empty():
+		push_error("SaveData.begin_route_for_difficulty: 难度 %s 没有可用路线" % Difficulty.display_name(difficulty))
+		return false
+	current_route_id = route.route_id
+	current_route_index = 0
+	current_stage_id = route.stages[0].stage_id
+	return true
+
+
+## 保证当前路线属于该难度；正常开局调用，切下一关的重载不会重置进度。
+static func ensure_route_for_difficulty(difficulty: int) -> bool:
+	var route := current_route()
+	if route != null and route.difficulty == difficulty:
+		return true
+	return begin_route_for_difficulty(difficulty)
+
+
+## 前进一关；返回下一关 StageData，路线结束 = null（不修改 current_stage_id）。
+static func advance_route() -> StageData:
+	var route := current_route()
+	if route == null:
+		return null
+	var next_index := current_route_index + 1
+	if next_index < 0 or next_index >= route.stages.size():
+		return null
+	var next_stage := route.stages[next_index]
+	if next_stage == null:
+		push_error("SaveData.advance_route: 路线 '%s' 第 %d 项为空" % [route.route_id, next_index])
+		return null
+	current_route_index = next_index
+	current_stage_id = next_stage.stage_id
+	return next_stage
 
 
 # ═══ 符卡记录（委托 SpellBookManager）═══

@@ -83,6 +83,11 @@ func _ready():
 
 
 func _start_normal_game() -> void:
+	# Route = 本局成员/顺序；stage_id 是路线当前位置的派生结果。
+	# 关卡练习不经过路线：它由菜单直接指定 current_stage_id，不能被 route 重置回第 1 面。
+	if not SaveData.is_stage_practice:
+		if not SaveData.ensure_route_for_difficulty(SaveData.selected_difficulty):
+			return
 	var data: StageData = _resolve_stage_data()
 	if not data:
 		push_error("GameScene: 找不到关卡 stage_id=%d difficulty=%d" % [SaveData.current_stage_id, SaveData.selected_difficulty])
@@ -309,12 +314,11 @@ func _on_stage_cleared():
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 	elif not PracticeSession.is_practice_mode:
-		var next_id: int = SaveData.current_stage_id + 1
-		if StageCatalog.find(next_id) != null:
-			SaveData.current_stage_id = next_id
+		var next_stage := SaveData.advance_route()
+		if next_stage != null:
 			GameManager.reload_current_scene()
 		else:
-			# 没有下一关 = 通关：回标题并复位会话（否则 +1 会随 current_stage_id 泄漏到下一局）
+			# 路线结束 = 通关：回标题并复位会话（路线状态不会泄漏到下一局）
 			SaveData.reset_session()
 			GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
