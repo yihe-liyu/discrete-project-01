@@ -47,3 +47,20 @@ func test_reset_session_clears_route_but_keeps_difficulty() -> void:
 	assert_eq(SaveData.current_route_index, 0)
 	assert_eq(SaveData.current_stage_id, 1)
 	assert_eq(SaveData.selected_difficulty, Difficulty.HARD)
+
+
+func test_route_order_does_not_change_record_key() -> void:
+	var book := SpellRecordBook.new()
+	book.record_attempt(1, 2, 0, 0, Difficulty.NORMAL, false, 0, 0.0)
+	var record := book.get_record(1, 2, 0, 0, Difficulty.NORMAL)
+	assert_not_null(record, "按内容身份建记录")
+	assert_eq(book.records.size(), 1)
+
+	# 换一条路线、换一个 route_index：同一张卡仍应命中同一条记录。
+	var route := StageRoute.new()
+	route.route_id = &"reordered"
+	route.difficulty = Difficulty.NORMAL
+	route.stages = [StageCatalog.find(2), StageCatalog.find(1)]
+	book.record_attempt(1, 2, 0, 0, Difficulty.NORMAL, true, 100, 1.0)
+	assert_eq(book.records.size(), 1, "route / route_index 不应拆出第二条记录")
+	assert_eq(record.captures, 1)

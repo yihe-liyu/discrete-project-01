@@ -1,6 +1,7 @@
 # SpellRecord.gd
 ## 符卡簿中的一条记录：身份 + 各难度/角色的尝试、收取、最高分与最快时间。
 ## 主键 = (stage, phase_index, character, difficulty)；纯数据 Resource，逻辑在 SpellRecordBook。
+## route_id / route_index 不参与主键：难度链重排不影响记录。
 extends Resource
 class_name SpellRecord
 

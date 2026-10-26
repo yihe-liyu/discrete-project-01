@@ -1,6 +1,7 @@
 # SpellRecordBook.gd
 ## 符卡簿：SpellRecord 集合 + 增删查 / 统计 / 清理幽灵记录。
 ## 主键 = (stage, phase_index, character, difficulty)；落盘由 SpellBookManager 负责。
+## route_id / route_index 不参与主键：改难度链顺序不会拆出第二份符卡记录。
 extends Resource
 class_name SpellRecordBook
 
