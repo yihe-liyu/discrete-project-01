@@ -46,6 +46,23 @@ func build_from(stage_reg: StageRegistry, boss_reg: BossRegistry) -> Dictionary:
 			continue
 		stages.append(_stage_entry(stage, bosses_by_stage.get(stage.stage_id, [])))
 
+	var routes: Array[Dictionary] = []
+	for route in StageRouteCatalog.all():
+		if route == null:
+			continue
+		for err in route.validate():
+			issues.append("StageRoute[%s]: %s" % [route.route_id, err])
+		var stage_ids: Array[int] = []
+		for stage in route.stages:
+			if stage != null:
+				stage_ids.append(stage.stage_id)
+		routes.append({
+			"route_id": String(route.route_id),
+			"difficulty": route.difficulty,
+			"path": route.resource_path,
+			"stage_ids": stage_ids,
+		})
+
 	bosses.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		if a.stage_id == b.stage_id:
 			return a.order < b.order
@@ -56,6 +73,7 @@ func build_from(stage_reg: StageRegistry, boss_reg: BossRegistry) -> Dictionary:
 		"version": 1,
 		"generated_by": "ContentManifest",
 		"stages": stages,
+		"routes": routes,
 		"bosses": bosses,
 		"phases": phase_list,
 		"issues": issues.duplicate(),

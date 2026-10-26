@@ -97,6 +97,10 @@ func _build_manifest() -> void:
 		_boss_paths[boss.path] = true
 	for phase in _manifest.get("phases", []):
 		_phase_paths[phase.path] = true
+	for route in _manifest.get("routes", []):
+		for stage_id in route.stage_ids:
+			if StageCatalog.find(stage_id) == null:
+				_error("StageRoute %s 引用了不存在的 stage_id=%d" % [route.route_id, stage_id])
 
 
 ## manifest 的字段必须和 ResourceLoader 读到的真实资源一致。
