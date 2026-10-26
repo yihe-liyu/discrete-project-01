@@ -30,7 +30,7 @@ func bgm(key: String) -> StageDirector:
 func stage_bgm_key() -> String:
 	if ctx.stage == null or ctx.stage.current_stage == null:
 		return ""
-	return ctx.stage.current_stage.bgm_key_for_difficulty(SaveData.selected_difficulty)
+	return ctx.stage.current_stage.bgm_key
 
 
 ## 播当前面的默认 BGM（普通关卡开场用；中途换曲仍用 bgm(key)）。

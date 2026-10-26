@@ -298,27 +298,13 @@ data/stages/stage03B/phase/spell03/      # 测试符卡（3 面 Boss「梦外见
   4 项数组遇 Extra 会由 `Difficulty.pick()` **响亮报错并回落最后一项**，不会再越界崩溃。
 - **分化手段优先级**：难度轴 → `diff_pick()`（首选，值放脚本里）；内容轴 → 另写脚本；`params` 最后（见 §四）
 
-### 关卡整面变体（StageData.variants）
+### 难度链 / 展示共享
 
-如果整面不只是数值变化（例如 Extra 换**结构脚本**），不要复制整份 `StageData`：
+难度链由 `StageRoute` 决定“走哪些 StageData / 顺序”；内容内部用 `diff_pick()` 调强度。
 
-```gdscript
-# data/stages/<面>/stage_data/<面>.tres 里的 StageData
-variants = [
-    # difficulty = Difficulty.EXTRA；只覆盖结构
-    # create_script = ...
-]
-```
+背景 / BGM 默认跨难度共享；不要再给某难度单独换背景或 BGM。
+`StageVariant` 已移除，`StageData` 不再提供难度展示覆盖。
 
-- `StageVariant` 现在只覆盖 `create_script`；背景 / BGM 默认跨难度共享。
-- `background_scene` / `bgm_key` 字段已废弃；旧数据保留字段，但配置后会校验报错。
-- 普通关卡、练习模式都按**当前难度**解析脚本变体；背景 / BGM 始终用基准。
-- 基类的 `create_script` 仍是必填（`StageCatalog.playable()` 用它判断可玩），变体只做覆盖。
-- 变体建议放 `data/stages/<面>/stage_variants/*.tres`，不要放 `stage_data/` ——
-  后者会被 `StageCatalog` 的目录扫描当成 `StageData` 读取。
-- 示例：`data/stages/stage01/stage_variants/` 已有 Easy / Normal / Hard / Lunatic 四份，
-  目前都引用同一个 `stage01.gd`；以后哪个难度要独立，只改对应 `.tres`。
-- 变体手写在 `data/stages/<面>/stage_variants/`；`StageData.variants` 里按难度引用，别复制整份 `StageData`。
 - **UID 规则**：真符卡全局唯一（建议 1 面 100-199、2 面 200-299…）；非符 uid=0；角色共用 UID，SpellRecordBook 主键区分
 
 ---

@@ -55,10 +55,9 @@ func _scan_dialogue() -> void:
 	for stage in StageCatalog.known():
 		if stage == null:
 			continue
-		for diff in Difficulty.COUNT:
-			var script := stage.script_for_difficulty(diff)
-			if script != null and script.resource_path != "":
-				stage_paths[script.resource_path] = stage.stage_id
+		var script := stage.create_script
+		if script != null and script.resource_path != "":
+			stage_paths[script.resource_path] = stage.stage_id
 	for path in stage_paths:
 		for entry in SourceFacts.scan_stage_handlers(String(path)):
 			var key := String((entry as Dictionary).get("event", ""))

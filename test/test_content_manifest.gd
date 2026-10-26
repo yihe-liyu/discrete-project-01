@@ -4,7 +4,7 @@ extends GutTest
 const MANIFEST := preload("res://scripts/data/content_manifest.gd")
 
 
-func test_build_indexes_stages_and_variants() -> void:
+func test_build_indexes_stages() -> void:
 	var manifest = MANIFEST.new()
 	var data: Dictionary = manifest.build()
 	assert_eq(data.issues, [], "真实内容不应有 manifest issues")
@@ -14,10 +14,7 @@ func test_build_indexes_stages_and_variants() -> void:
 
 	var stage1: Dictionary = data.stages[0]
 	assert_eq(stage1.stage_id, 1, "第一个面是 stage 1")
-	assert_eq(stage1.variants.size(), 4, "stage01 有 4 个难度变体")
-	assert_eq(stage1.difficulties.size(), Difficulty.COUNT, "难度表覆盖 0..4")
-	assert_eq(stage1.difficulties[Difficulty.EASY].source, "variant", "Easy 来自变体")
-	assert_eq(stage1.difficulties[Difficulty.EXTRA].source, "base", "Extra 回落基准")
+	assert_eq(stage1.create_script, "res://data/stages/stage01/stage_data/stage01.gd", "stage01 直接使用基准脚本")
 
 
 func test_phases_are_deduped_and_referenced() -> void:

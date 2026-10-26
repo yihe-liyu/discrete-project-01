@@ -14,7 +14,6 @@ var _warnings: Array[String] = []
 var _phase_uids: Dictionary = {}
 var _manifest: Dictionary = {}
 var _stage_paths: Dictionary = {}
-var _variant_paths: Dictionary = {}
 var _boss_paths: Dictionary = {}
 var _phase_paths: Dictionary = {}
 
@@ -58,15 +57,6 @@ func _check_stage_registry() -> void:
 		if stage.background_scene != null and not stage.background_scene.can_instantiate():
 			_error("%s: background_scene 不可实例化" % path)
 		_check_bgm(stage.bgm_key, path + ".bgm_key")
-		for variant in stage.variants:
-			if variant == null:
-				continue
-			var vpath: String = variant.resource_path
-			if not vpath.contains("/stage_variants/"):
-				_error("%s: StageVariant 必须放在 stage_variants/（当前在 stage_data/？）" % vpath)
-			if variant.create_script != null and not variant.create_script.can_instantiate():
-				_error("%s: create_script 不可实例化" % vpath)
-			_check_bgm(variant.bgm_key, vpath + ".bgm_key")
 
 
 func _check_boss_registry() -> void:
@@ -103,8 +93,6 @@ func _build_manifest() -> void:
 		_error("ContentManifest: " + str(issue))
 	for stage in _manifest.get("stages", []):
 		_stage_paths[stage.path] = true
-		for variant in stage.variants:
-			_variant_paths[variant.path] = true
 	for boss in _manifest.get("bosses", []):
 		_boss_paths[boss.path] = true
 	for phase in _manifest.get("phases", []):
@@ -126,15 +114,6 @@ func _check_manifest_consistency() -> void:
 			_error("%s: manifest background_scene 与资源不一致" % entry.path)
 		if stage.bgm_key != entry.bgm_key:
 			_error("%s: manifest bgm_key 与资源不一致" % entry.path)
-		if stage.variants.size() != entry.variants.size():
-			_error("%s: manifest variants 数量与资源不一致" % entry.path)
-		for diff in entry.difficulties:
-			if _path_of(stage.script_for_difficulty(diff.difficulty)) != diff.create_script:
-				_error("%s: 难度 %s 的 script 与资源不一致" % [entry.path, diff.label])
-			if _path_of(stage.background_for_difficulty(diff.difficulty)) != diff.background_scene:
-				_error("%s: 难度 %s 的 background 与资源不一致" % [entry.path, diff.label])
-			if stage.bgm_key_for_difficulty(diff.difficulty) != diff.bgm_key:
-				_error("%s: 难度 %s 的 bgm_key 与资源不一致" % [entry.path, diff.label])
 
 	for entry in _manifest.get("bosses", []):
 		var boss := _load_any(entry.path) as BossData
@@ -181,9 +160,6 @@ func _check_orphans() -> void:
 			"stage_data":
 				if res is StageData and not _stage_paths.has(path):
 					_warn("%s: StageData 未进入 StageRegistry（测试面 / 未启用？）" % path)
-			"stage_variants":
-				if res is StageVariant and not _variant_paths.has(path):
-					_warn("%s: StageVariant 没有被任何 StageData 引用" % path)
 			"boss":
 				if res is BossData and not _boss_paths.has(path):
 					_warn("%s: BossData 未进入 BossRegistry" % path)
@@ -207,10 +183,6 @@ func _check_stage_folders() -> void:
 			var res = _load_any(path)
 			if not res is StageData:
 				_error("%s: stage_data/ 下的 .tres 必须是 StageData" % path)
-		elif dir == "stage_variants":
-			var res = _load_any(path)
-			if not res is StageVariant:
-				_error("%s: stage_variants/ 下的 .tres 必须是 StageVariant" % path)
 
 
 

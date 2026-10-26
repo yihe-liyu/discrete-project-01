@@ -194,7 +194,7 @@ func test_boss_spawns_when_slot_empty():
 
 
 ## StageData.bgm_key 是普通关卡与练习的共同来源；背景 / BGM 不再按难度覆盖。
-func test_stage_bgm_key_reads_stage_data_and_variant():
+func test_stage_bgm_key_reads_stage_data_base():
 	var prev_diff := SaveData.selected_difficulty
 	var rt := StageRuntime.new()
 	var data := StageData.new()
@@ -205,13 +205,8 @@ func test_stage_bgm_key_reads_stage_data_and_variant():
 	var director := StageDirector.new(ctx)
 
 	assert_eq(director.stage_bgm_key(), "stage1", "普通面读 StageData.bgm_key")
-
-	var variant := StageVariant.new()
-	variant.difficulty = Difficulty.EXTRA
-	variant.bgm_key = "stageEX"
-	data.variants.append(variant)
 	SaveData.selected_difficulty = Difficulty.EXTRA
-	assert_eq(director.stage_bgm_key(), "stage1", "Extra 不应再用变体覆盖 BGM")
+	assert_eq(director.stage_bgm_key(), "stage1", "BGM 跨难度共享，不按难度覆盖")
 
 	SaveData.selected_difficulty = prev_diff
 	rt.free()

@@ -27,33 +27,6 @@ extends Resource
 ## 该面的背景场景（根节点应为 [code]StageBackground[/code]）。null = 不加背景。
 ## 普通关卡与符卡练习共用这一张；工作台 / 截图工具也从这里取。
 @export var background_scene: PackedScene
-## 可选难度变体：只保留结构例外（换关卡脚本）；背景 / BGM 默认共享。
-## background_scene / bgm_key 的变体字段已废弃，不再参与解析。
-@export var variants: Array[StageVariant] = []
-
-
-## 该难度的变体；找不到 = null。
-func variant_for(difficulty: int) -> StageVariant:
-	for variant in variants:
-		if variant != null and variant.difficulty == difficulty:
-			return variant
-	return null
-
-
-## 该难度最终使用的关卡脚本（变体 > 基准）。
-func script_for_difficulty(difficulty: int) -> Script:
-	var variant := variant_for(difficulty)
-	return variant.create_script if variant != null and variant.create_script != null else create_script
-
-
-## 该难度最终使用的背景场景：背景跨难度共享，变体不再覆盖。
-func background_for_difficulty(_difficulty: int) -> PackedScene:
-	return background_scene
-
-
-## 该难度最终使用的 BGM key：BGM 跨难度共享，变体不再覆盖。
-func bgm_key_for_difficulty(_difficulty: int) -> String:
-	return bgm_key
 
 
 ## 配置校验：返回错误列表（空 = 合法）
@@ -63,13 +36,4 @@ func validate() -> Array[String]:
 		errs.append("StageData.stage_id = %s 必须 >= 1" % stage_id)
 	if create_script == null:
 		errs.append("StageData[%d] 缺少 create_script（关卡无法生成）" % stage_id)
-	var seen_difficulties: Dictionary = {}
-	for variant in variants:
-		if variant == null:
-			errs.append("StageData[%d] 含空 StageVariant" % stage_id)
-			continue
-		if seen_difficulties.has(variant.difficulty):
-			errs.append("StageData[%d] 难度 %s 的变体重复" % [stage_id, Difficulty.display_name(variant.difficulty)])
-		seen_difficulties[variant.difficulty] = true
-		errs.append_array(variant.validate())
 	return errs

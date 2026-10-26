@@ -90,7 +90,7 @@ func load_stage(data: StageData) -> void:
 	current_stage = data
 	_is_stage_active = true
 
-	var stage_script_resource: Script = data.script_for_difficulty(SaveData.selected_difficulty)
+	var stage_script_resource: Script = data.create_script
 	if stage_script_resource == null:
 		push_error("StageRuntime: 难度 %s 没有可用的关卡脚本" % Difficulty.display_name(SaveData.selected_difficulty))
 		return

@@ -63,29 +63,6 @@ func build_from(stage_reg: StageRegistry, boss_reg: BossRegistry) -> Dictionary:
 
 
 func _stage_entry(stage: StageData, stage_bosses: Array) -> Dictionary:
-	var variants: Array[Dictionary] = []
-	for variant in stage.variants:
-		if variant == null:
-			continue
-		variants.append({
-			"difficulty": variant.difficulty,
-			"path": variant.resource_path,
-			"create_script": _path_of(variant.create_script),
-			"background_scene": _path_of(variant.background_scene),
-			"bgm_key": variant.bgm_key,
-		})
-	var difficulties: Array[Dictionary] = []
-	for diff in Difficulty.COUNT:
-		var variant := stage.variant_for(diff)
-		difficulties.append({
-			"difficulty": diff,
-			"label": Difficulty.display_name(diff),
-			"source": "variant" if variant != null else "base",
-			"variant_path": variant.resource_path if variant != null else "",
-			"create_script": _path_of(stage.script_for_difficulty(diff)),
-			"background_scene": _path_of(stage.background_for_difficulty(diff)),
-			"bgm_key": stage.bgm_key_for_difficulty(diff),
-		})
 	return {
 		"stage_id": stage.stage_id,
 		"stage_no": stage.stage_no,
@@ -95,8 +72,6 @@ func _stage_entry(stage: StageData, stage_bosses: Array) -> Dictionary:
 		"bgm_key": stage.bgm_key,
 		"create_script": _path_of(stage.create_script),
 		"background_scene": _path_of(stage.background_scene),
-		"variants": variants,
-		"difficulties": difficulties,
 		"bosses": stage_bosses.duplicate(),
 	}
 
