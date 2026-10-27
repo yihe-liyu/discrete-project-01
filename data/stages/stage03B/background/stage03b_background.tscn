@@ -1,16 +1,17 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://ccjomrkb8rxlq"]
 
 [ext_resource type="PackedScene" path="res://scenes/background/background_base.tscn" id="1_base"]
-[ext_resource type="Resource" path="res://data/stages/stage03B/background/stage03b_env.tres" id="2_env"]
+[ext_resource type="Resource" uid="uid://0kw625xnlo0f" path="res://data/stages/stage03B/background/stage03b_env.tres" id="2_env"]
 [ext_resource type="Shader" uid="uid://dk0cc5a6lkcd0" path="res://gdshader/background_plane.gdshader" id="3_plane"]
-[ext_resource type="Texture2D" uid="uid://ca1r30cua01ig" path="res://assets/Textures/background/stage01/grass.jpeg" id="4_grass"]
+[ext_resource type="Texture2D" uid="uid://b7dn1x51o7hkr" path="res://assets/Textures/background/stage03b/stg3bbg1.png" id="4_q6bux"]
 [ext_resource type="Script" uid="uid://cys5ctkx6l5h8" path="res://scripts/background/background_plane.gd" id="5_plane_script"]
-[ext_resource type="Script" path="res://data/stages/stage03B/background/stage03b_decor.gd" id="6_decor"]
+[ext_resource type="Script" uid="uid://c3n72k6nx6kkl" path="res://data/stages/stage03B/background/stage03b_decor.gd" id="6_decor"]
 
 [sub_resource type="ShaderMaterial" id="Mat_Ground03B"]
 resource_local_to_scene = true
+render_priority = 0
 shader = ExtResource("3_plane")
-shader_parameter/base_texture = ExtResource("4_grass")
+shader_parameter/base_texture = ExtResource("4_q6bux")
 shader_parameter/tiling = Vector2(6, 12)
 shader_parameter/uv_offset = Vector2(0, 0)
 shader_parameter/modulate = Color(0.72, 0.62, 0.92, 1)
@@ -20,10 +21,10 @@ resource_local_to_scene = true
 material = SubResource("Mat_Ground03B")
 size = Vector2(256, 512)
 
-[node name="Stage03BBackground" instance=ExtResource("1_base")]
+[node name="Stage03BBackground" unique_id=1752782296 instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
 
-[node name="Ground" type="MeshInstance3D" parent="."]
+[node name="Ground" type="MeshInstance3D" parent="." index="2" unique_id=1577867843]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -62)
 mesh = SubResource("PlaneMesh03B")
 script = ExtResource("5_plane_script")
@@ -31,7 +32,7 @@ plane_size = Vector2(256, 512)
 tiling = Vector2(6, 12)
 scroll_speed = Vector2(0, -0.08)
 modulate = Color(0.72, 0.62, 0.92, 1)
-base_texture = ExtResource("4_grass")
+base_texture = ExtResource("4_q6bux")
 
-[node name="Decor" type="Node" parent="."]
+[node name="Decor" type="Node" parent="." index="3" unique_id=38297114]
 script = ExtResource("6_decor")
