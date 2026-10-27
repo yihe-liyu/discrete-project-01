@@ -46,6 +46,7 @@ func _ready() -> void:
 		var mat := _get_material()
 		if mat:
 			mat.set_shader_parameter("uv_offset", Vector2.ZERO)
+	_apply_modulate(modulate)
 
 
 func _get_material() -> ShaderMaterial:
@@ -55,6 +56,28 @@ func _get_material() -> ShaderMaterial:
 	if material_override is ShaderMaterial:
 		return material_override
 	return null
+
+
+## 立即写颜色（同时写属性 + ShaderMaterial 参数；Ground 变黑/恢复用）。
+func set_modulate(color: Color) -> void:
+	modulate = color
+	_apply_modulate(color)
+
+
+## 从当前颜色平滑过渡到 target；返回 Tween，便于外部取消。
+func tween_modulate(target: Color, duration: float,
+		ease_type: int = Tween.EASE_IN_OUT, trans_type: int = Tween.TRANS_SINE) -> Tween:
+	var tw := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	tw.tween_method(_apply_modulate, modulate, target, duration)
+	tw.set_ease(ease_type).set_trans(trans_type)
+	return tw
+
+
+func _apply_modulate(color: Color) -> void:
+	modulate = color
+	var mat := _get_material()
+	if mat:
+		mat.set_shader_parameter("modulate", color)
 
 
 func _process(delta: float) -> void:
