@@ -1,6 +1,8 @@
 [gd_resource type="Resource" script_class="StageData" format=3 uid="uid://b8h4hxxbr7w6m"]
 
 [ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://c4dquytse5hpv" path="res://data/stages/stage03B/stage_data/stage03b.gd" id="1_8kn1a"]
+[ext_resource type="PackedScene" path="res://data/stages/stage03B/background/stage03b_background.tscn" id="2_bg"]
 
 [resource]
 script = ExtResource("1")
@@ -8,3 +10,5 @@ stage_id = 4
 stage_no = 3
 display_name = "Stage３Ｂ"
 bgm_key = "stage3B"
+create_script = ExtResource("1_8kn1a")
+background_scene = ExtResource("2_bg")

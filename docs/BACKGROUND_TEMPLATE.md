@@ -32,3 +32,14 @@ Sun / Fog    只在需要时声明
 - 模板不提供相机：`StageBackground` 按类型解析外部相机，没有就自建。
 - `WorldEnvironment` 是环境动词的落点；没有它，`tween_env_fog` 会静默无效。
 - `DecorManager` 是 `ctx.decor` 的来源；没有它，装饰物 API 为 null。
+
+## 当前示例
+
+`data/stages/stage03B/background/stage03b_background.tscn` 继承本模板，只额外添加：
+
+```text
+Ground (BackgroundPlane)
+Decor  (CoroutineScript，当前为空)
+```
+
+并挂到 `StageData.background_scene`。
