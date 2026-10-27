@@ -55,12 +55,16 @@ func _ready() -> void:
 			if mat:
 				mat = mat.duplicate()
 				pm.material = mat
+				_apply_base_texture(base_texture)
+				_apply_tiling(tiling)
 				mat.set_shader_parameter("uv_offset", Vector2.ZERO)
 		else:
 			var mat_override := material_override as ShaderMaterial
 			if mat_override:
 				mat_override = mat_override.duplicate()
 				material_override = mat_override
+				_apply_base_texture(base_texture)
+				_apply_tiling(tiling)
 				mat_override.set_shader_parameter("uv_offset", Vector2.ZERO)
 	_apply_modulate(modulate)
 
@@ -72,6 +76,30 @@ func _get_material() -> ShaderMaterial:
 	if material_override is ShaderMaterial:
 		return material_override
 	return null
+
+
+## 立即换贴图（节点上的 base_texture 是权威值；同步到 ShaderMaterial）。
+func set_base_texture(texture: Texture2D) -> void:
+	base_texture = texture
+	_apply_base_texture(texture)
+
+
+## 立即改 UV 重复（节点上的 tiling 是权威值）。
+func set_tiling(value: Vector2) -> void:
+	tiling = value
+	_apply_tiling(value)
+
+
+func _apply_base_texture(texture: Texture2D) -> void:
+	var mat := _get_material()
+	if mat and texture:
+		mat.set_shader_parameter("base_texture", texture)
+
+
+func _apply_tiling(value: Vector2) -> void:
+	var mat := _get_material()
+	if mat:
+		mat.set_shader_parameter("tiling", value)
 
 
 ## 立即写颜色（同时写属性 + ShaderMaterial 参数；Ground 变黑/恢复用）。

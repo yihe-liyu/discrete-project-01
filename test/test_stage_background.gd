@@ -500,3 +500,29 @@ func test_background_layers_do_not_share_modulate_material() -> void:
 		"a 的 alpha 不应被 b 覆盖")
 	assert_almost_eq(float(b._get_material().get_shader_parameter("modulate").a), 1.0, 0.01,
 		"b 应保留自己的 alpha")
+
+
+func test_background_plane_node_texture_overrides_material() -> void:
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://gdshader/background_plane_alpha.gdshader") as Shader
+	var mesh := PlaneMesh.new()
+	mesh.material = mat
+
+	var tex_a := GradientTexture2D.new()
+	tex_a.width = 8
+	tex_a.height = 8
+	var tex_b := GradientTexture2D.new()
+	tex_b.width = 8
+	tex_b.height = 8
+
+	var plane := BackgroundPlane.new()
+	plane.mesh = mesh
+	plane.base_texture = tex_a
+	add_child_autofree(plane)
+	await get_tree().process_frame
+	assert_eq(plane._get_material().get_shader_parameter("base_texture"), tex_a,
+		"入树时节点 base_texture 应写进材质")
+
+	plane.set_base_texture(tex_b)
+	assert_eq(plane._get_material().get_shader_parameter("base_texture"), tex_b,
+		"set_base_texture 应立即换贴图")

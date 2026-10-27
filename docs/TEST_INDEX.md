@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：118 脚本 / **844 用例（843 通过 / 1 红）/ 7217 断言 / 52.7s** / 0 orphans / **0 pending**。
+**现状**：118 脚本 / **845 用例（844 通过 / 1 红）/ 7219 断言 / 52.7s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 53 | 437 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 53 | 438 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -106,9 +106,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（53 / 437）
+## C · 宿主 · 运行时系统（53 / 438）
 
-### C1 组合根 / 服务 / 时间线（20 / 97）
+### C1 组合根 / 服务 / 时间线（20 / 98）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -167,7 +167,7 @@
 |---|---|---|---|
 | [test_miss_circle_layer](../test/test_miss_circle_layer.gd) | Miss 圈特效：autoload → 场景节点 + 组合根注入 | 8 | 7 |
 | [test_decor_manager](../test/test_decor_manager.gd) | `DecorManager`：静态路径（SCISSOR 层）性能优化后行为不变 + **「树与地面同速」**（跟随速度取平面 `world_scroll_per_second()`，**含加速倍率** ——回归：2026-10-04 作者实测「树和地面的速度不一样了」，比值 1.0002 vs 期望 7） | 8 | 1 |
-| [test_stage_background](../test/test_stage_background.gd) | 背景环境接线：**父节点 `_ready` 之前应用预设也必须生效**（子节点 `_ready` 先于父节点 ⇒ 旧实现静默 no-op，练习模式改预设不变）+ `build_environment()` 每次全新实例（防「越重跑越暗」）+ **预设必须带真天球且不被 `fog_sky_affect` 洗掉** + **地平线联动真的生效** + **`Sky.radiance_size` 必须压低**（默认 256 ⇒ 每帧重算立方图，实测 8.9 → 44.8 ms）+ **雾色不许是亮灰**（`Color.DARK_GRAY` = CSS #A9A9A9 = 0.663 会把远处洗亮）+ **相机按类型找**（不按名字：改名不再静默改变行为）+ **背景视口必须 `own_world_3d = true`**（否则与根视口共享 World3D，环境被同 world 的另一个 `WorldEnvironment` 抢） + **B3：场景必须声明 `DecorManager` 子节点**（`get_decor_manager()` 按类型解析） + **相机复位回初始姿态（不只 fov）** + **`env_preset` 由场景声明、入树即应用**（环境不再依赖内容脚本的 `_ready`；练习模式同样覆盖） + **蒙眼雾：可见部分场景声明、参数唯一来源 = 材质**（旧实现三份默认 + 编辑器里看不见） + **`setup()` 不依赖父节点是 `StageBackground`**（旧实现 `get_parent()` ⇒ 挪层级就静默拿 null、雾不再跟相机） + **雾材质每实例独立**（`.tscn` sub_resource 默认跨实例共享 ⇒ 需 `resource_local_to_scene`） + **太阳 `SunSprite` 场景声明且纹理来自场景**（裸 `Image` 资源 ⇒ 编辑器里是空白，连位置都没法拖；实测圆心在画面顶边外 7 像素） + **宿主自动接线故事演出层**（`_resolve_showcase()` 按类型接相机+太阳 ⇒ **内容脚本零调用**；旧设计"记得调 setup() 才显示"已废止 —— 忘了就隐形且零报错，stage02 实况） + **太阳对准取"画出来的 sprite"而非 `Sun` 节点**（`SunSprite` 有局部位移 ⇒ 旧实现一改 y 就与黑雾错位） + **相机初始姿态可由背景声明**（`override_camera_home`，在抓 home **之前**应用 ⇒ `reset_camera()` 回**声明的**那套） + **相机动词绝对/相对分名 + 目标记忆**（相对动词从"上一条指令的**目标**"累加而非实时值，并先杀同属性旧 tween ⇒ 重叠不漂移；作者实测「Y 没回到 0」已成回归） + **BGA9：地面材质/网格每实例独立**（多实例同时跑不串 `uv_offset`） | 23 | 0 |
+| [test_stage_background](../test/test_stage_background.gd) | 背景环境接线：**父节点 `_ready` 之前应用预设也必须生效**（子节点 `_ready` 先于父节点 ⇒ 旧实现静默 no-op，练习模式改预设不变）+ `build_environment()` 每次全新实例（防「越重跑越暗」）+ **预设必须带真天球且不被 `fog_sky_affect` 洗掉** + **地平线联动真的生效** + **`Sky.radiance_size` 必须压低**（默认 256 ⇒ 每帧重算立方图，实测 8.9 → 44.8 ms）+ **雾色不许是亮灰**（`Color.DARK_GRAY` = CSS #A9A9A9 = 0.663 会把远处洗亮）+ **相机按类型找**（不按名字：改名不再静默改变行为）+ **背景视口必须 `own_world_3d = true`**（否则与根视口共享 World3D，环境被同 world 的另一个 `WorldEnvironment` 抢） + **B3：场景必须声明 `DecorManager` 子节点**（`get_decor_manager()` 按类型解析） + **相机复位回初始姿态（不只 fov）** + **`env_preset` 由场景声明、入树即应用**（环境不再依赖内容脚本的 `_ready`；练习模式同样覆盖） + **蒙眼雾：可见部分场景声明、参数唯一来源 = 材质**（旧实现三份默认 + 编辑器里看不见） + **`setup()` 不依赖父节点是 `StageBackground`**（旧实现 `get_parent()` ⇒ 挪层级就静默拿 null、雾不再跟相机） + **雾材质每实例独立**（`.tscn` sub_resource 默认跨实例共享 ⇒ 需 `resource_local_to_scene`） + **太阳 `SunSprite` 场景声明且纹理来自场景**（裸 `Image` 资源 ⇒ 编辑器里是空白，连位置都没法拖；实测圆心在画面顶边外 7 像素） + **宿主自动接线故事演出层**（`_resolve_showcase()` 按类型接相机+太阳 ⇒ **内容脚本零调用**；旧设计"记得调 setup() 才显示"已废止 —— 忘了就隐形且零报错，stage02 实况） + **太阳对准取"画出来的 sprite"而非 `Sun` 节点**（`SunSprite` 有局部位移 ⇒ 旧实现一改 y 就与黑雾错位） + **相机初始姿态可由背景声明**（`override_camera_home`，在抓 home **之前**应用 ⇒ `reset_camera()` 回**声明的**那套） + **相机动词绝对/相对分名 + 目标记忆**（相对动词从"上一条指令的**目标**"累加而非实时值，并先杀同属性旧 tween ⇒ 重叠不漂移；作者实测「Y 没回到 0」已成回归） + **BGA9：地面材质/网格每实例独立**（多实例同时跑不串 `uv_offset`） | 24 | 0 |
 | [test_screen_shake](../test/test_screen_shake.gd) | `ScreenShake`：trauma 按 DECAY 衰减、sustain 保持到清零、强度封顶 1 | 6 | 6 |
 | [test_hit_effect](../test/test_hit_effect.gd) | 通用击中特效：一个类驱动所有特效场景（数据驱动验证） | 6 | 0 |
 | [test_spawn_fx](../test/test_spawn_fx.gd) | 出生雾 / 消弹消散统一特效模型（`EffectType` + 行 `fx_type`） | 5 | 2 |
