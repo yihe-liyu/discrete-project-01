@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" uid="uid://voqjqe6tw5cm" path="res://scripts/background/stage_background.gd" id="1"]
+[ext_resource type="Script" uid="uid://b459a24bf582" path="res://scripts/background/decor_manager.gd" id="2"]
+
+[node name="BackgroundBase" type="Node3D"]
+script = ExtResource("1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="DecorManager" type="Node3D" parent="."]
+script = ExtResource("2")

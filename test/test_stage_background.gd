@@ -464,3 +464,13 @@ func test_relative_yaw_deltas_summing_to_zero_return_to_zero():
 
 	assert_almost_eq(rad_to_deg(cam.rotation.y), 0.0, 0.5,
 		"增量序列和为 0 ⇒ 必须转回正前方（这正是作者要的「最后回到 0」）")
+
+
+func test_background_base_template_is_minimal_and_wired() -> void:
+	var bg: StageBackground = preload("res://scenes/background/background_base.tscn").instantiate()
+	add_child_autofree(bg)
+	await get_tree().process_frame
+	assert_not_null(bg.camera, "模板应能自建相机")
+	assert_not_null(bg.world_environment, "模板应声明 WorldEnvironment")
+	assert_not_null(bg.get_decor_manager(), "模板应声明 DecorManager")
+	assert_eq(bg.get_child_count(), 3, "模板节点 = WorldEnvironment + DecorManager + 自建 Camera3D")
