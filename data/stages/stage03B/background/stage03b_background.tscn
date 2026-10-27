@@ -6,6 +6,8 @@
 [ext_resource type="Texture2D" uid="uid://b7dn1x51o7hkr" path="res://assets/Textures/background/stage03b/stg3bbg1.png" id="4_q6bux"]
 [ext_resource type="Script" uid="uid://cys5ctkx6l5h8" path="res://scripts/background/background_plane.gd" id="5_plane_script"]
 [ext_resource type="Script" uid="uid://c3n72k6nx6kkl" path="res://data/stages/stage03B/background/stage03b_decor.gd" id="6_decor"]
+[ext_resource type="Shader" path="res://gdshader/background_plane_alpha.gdshader" id="7_alpha_shader"]
+[ext_resource type="Texture2D" path="res://assets/Textures/background/stage03b/stg3bg2.png" id="8_layer2"]
 
 [sub_resource type="ShaderMaterial" id="Mat_Ground03B"]
 resource_local_to_scene = true
@@ -19,6 +21,20 @@ shader_parameter/modulate = Color(0.72, 0.62, 0.92, 1)
 [sub_resource type="PlaneMesh" id="PlaneMesh03B"]
 resource_local_to_scene = true
 material = SubResource("Mat_Ground03B")
+size = Vector2(256, 512)
+
+[sub_resource type="ShaderMaterial" id="Mat_Layer203B"]
+resource_local_to_scene = true
+render_priority = 1
+shader = ExtResource("7_alpha_shader")
+shader_parameter/base_texture = ExtResource("8_layer2")
+shader_parameter/tiling = Vector2(6, 12)
+shader_parameter/uv_offset = Vector2(0, 0)
+shader_parameter/modulate = Color(1, 1, 1, 0.85)
+
+[sub_resource type="PlaneMesh" id="PlaneMeshLayer203B"]
+resource_local_to_scene = true
+material = SubResource("Mat_Layer203B")
 size = Vector2(256, 512)
 
 [node name="Stage03BBackground" unique_id=1752782296 instance=ExtResource("1_base")]
@@ -39,5 +55,15 @@ scroll_speed = Vector2(0, -0.08)
 modulate = Color(0.72, 0.62, 0.92, 1)
 base_texture = ExtResource("4_q6bux")
 
-[node name="Decor" type="Node" parent="." index="3" unique_id=38297114]
+[node name="Layer2" type="MeshInstance3D" parent="." index="3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -62)
+mesh = SubResource("PlaneMeshLayer203B")
+script = ExtResource("5_plane_script")
+plane_size = Vector2(256, 512)
+tiling = Vector2(6, 12)
+scroll_speed = Vector2(0, -0.12)
+modulate = Color(1, 1, 1, 0.85)
+base_texture = ExtResource("8_layer2")
+
+[node name="Decor" type="Node" parent="." index="4" unique_id=38297114]
 script = ExtResource("6_decor")
