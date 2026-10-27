@@ -24,7 +24,8 @@ size = Vector2(256, 512)
 [node name="Stage03BBackground" unique_id=1752782296 instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
 override_camera_home = true
-camera_home_position = Vector3(0, 80, 0)
+camera_home_position = Vector3(0, 20, 0)
+
 camera_home_rotation_degrees = Vector3(-90, 0, 0)
 camera_home_fov = 90.0
 
