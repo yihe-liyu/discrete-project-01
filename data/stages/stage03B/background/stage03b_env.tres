@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="BackgroundEnvPreset" format=3]
+[gd_resource type="Resource" script_class="BackgroundEnvPreset" format=3 uid="uid://0kw625xnlo0f"]
 
 [ext_resource type="Script" uid="uid://d8soul1cjjam" path="res://scripts/background/background_env_preset.gd" id="1"]
 
@@ -18,7 +18,7 @@ background_mode = 2
 sky = SubResource("Sky_stage03b")
 fog_enabled = true
 fog_light_color = Color(0.55, 0.48, 0.72, 1)
-fog_density = 0.12
+fog_density = 0.035
 
 [resource]
 script = ExtResource("1")
