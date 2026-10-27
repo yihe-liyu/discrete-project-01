@@ -59,6 +59,12 @@ func bind(p_camera: Camera3D, p_sun: Node3D = null) -> void:
 	_is_bound = true
 	if _mat:
 		_mat.set_shader_parameter("time", _time)
+		# 没有太阳的背景不能保留“太阳处更浓 / 日食亮环”的默认值；
+		# 否则雾会在屏幕上方凭空出现一个太阳形状的洞。
+		if not is_instance_valid(p_sun):
+			_mat.set_shader_parameter("sun_fog_radius", 0.0)
+			_mat.set_shader_parameter("sun_fog_extra", 0.0)
+			_mat.set_shader_parameter("ring_strength", 0.0)
 	_update_sun_pos()  # 立即同步太阳位置（不等 _process 首帧，消除覆盖延迟）
 
 

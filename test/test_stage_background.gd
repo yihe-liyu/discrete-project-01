@@ -526,3 +526,17 @@ func test_background_plane_node_texture_overrides_material() -> void:
 	plane.set_base_texture(tex_b)
 	assert_eq(plane._get_material().get_shader_parameter("base_texture"), tex_b,
 		"set_base_texture 应立即换贴图")
+
+
+## 没有太阳的关（Stage03B）不应该保留 screen_fog 的太阳洞/日食亮环参数。
+func test_fog_without_sun_disables_sun_specific_effects() -> void:
+	var bg: StageBackground = preload("res://data/stages/stage03B/background/stage03b_background.tscn").instantiate()
+	add_child_autofree(bg)
+	await wait_frames(1)
+	var mat := (bg.get_node("FogFX/FogLayer/FogRect") as ColorRect).material as ShaderMaterial
+	assert_almost_eq(float(mat.get_shader_parameter("sun_fog_extra")), 0.0, 0.001,
+		"无太阳时不应有太阳处额外浓雾")
+	assert_almost_eq(float(mat.get_shader_parameter("ring_strength")), 0.0, 0.001,
+		"无太阳时不应有日食亮环")
+	assert_almost_eq(float(mat.get_shader_parameter("sun_fog_radius")), 0.0, 0.001,
+		"无太阳时应关闭太阳雾团半径")
