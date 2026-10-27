@@ -16,8 +16,10 @@ radiance_size = 0
 [sub_resource type="Environment" id="Environment_stage03b"]
 background_mode = 2
 sky = SubResource("Sky_stage03b")
+glow_enabled = true
 fog_enabled = true
 fog_light_color = Color(0.55, 0.48, 0.72, 1)
+fog_density = 0.0
 
 [resource]
 script = ExtResource("1")

@@ -6,64 +6,82 @@
 [ext_resource type="Texture2D" uid="uid://b7dn1x51o7hkr" path="res://assets/Textures/background/stage03b/stg3bbg1.png" id="4_q6bux"]
 [ext_resource type="Script" uid="uid://cys5ctkx6l5h8" path="res://scripts/background/background_plane.gd" id="5_plane_script"]
 [ext_resource type="Script" uid="uid://c3n72k6nx6kkl" path="res://data/stages/stage03B/background/stage03b_decor.gd" id="6_decor"]
-[ext_resource type="Shader" path="res://gdshader/background_plane_alpha.gdshader" id="7_alpha_shader"]
-[ext_resource type="Texture2D" path="res://assets/Textures/background/stage03b/stg3bg2.png" id="8_layer2"]
+[ext_resource type="Shader" uid="uid://dc3bu5y3i4b3y" path="res://gdshader/background_plane_alpha.gdshader" id="7_alpha_shader"]
+[ext_resource type="Texture2D" uid="uid://bd61td3fcfvia" path="res://assets/Textures/background/stage03b/stg3bg2.png" id="8_layer2"]
 
 [sub_resource type="ShaderMaterial" id="Mat_Ground03B"]
 resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("3_plane")
 shader_parameter/base_texture = ExtResource("4_q6bux")
-shader_parameter/tiling = Vector2(6, 12)
+shader_parameter/tiling = Vector2(6, 6)
 shader_parameter/uv_offset = Vector2(0, 0)
-shader_parameter/modulate = Color(0.72, 0.62, 0.92, 1)
+shader_parameter/modulate = Color(1, 1, 1, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh03B"]
 resource_local_to_scene = true
 material = SubResource("Mat_Ground03B")
-size = Vector2(256, 512)
+size = Vector2(512, 512)
 
 [sub_resource type="ShaderMaterial" id="Mat_Layer203B"]
 resource_local_to_scene = true
 render_priority = 1
 shader = ExtResource("7_alpha_shader")
 shader_parameter/base_texture = ExtResource("8_layer2")
-shader_parameter/tiling = Vector2(6, 12)
+shader_parameter/tiling = Vector2(12, 12)
 shader_parameter/uv_offset = Vector2(0, 0)
-shader_parameter/modulate = Color(1, 1, 1, 0.85)
+shader_parameter/modulate = Color(1.8247963, 1.8247963, 1.8247963, 0.1)
+shader_parameter/glow_strength = 2.5
 
 [sub_resource type="PlaneMesh" id="PlaneMeshLayer203B"]
 resource_local_to_scene = true
 material = SubResource("Mat_Layer203B")
-size = Vector2(256, 512)
+size = Vector2(512, 512)
 
 [node name="Stage03BBackground" unique_id=1752782296 instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
 override_camera_home = true
-camera_home_position = Vector3(0, 20, 0)
-
+camera_home_position = Vector3(0, 15, 0)
 camera_home_rotation_degrees = Vector3(-90, 0, 0)
-camera_home_fov = 90.0
 
 [node name="Ground" type="MeshInstance3D" parent="." index="2" unique_id=1577867843]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -62)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -200)
 mesh = SubResource("PlaneMesh03B")
 script = ExtResource("5_plane_script")
-plane_size = Vector2(256, 512)
-tiling = Vector2(6, 12)
-scroll_speed = Vector2(0, -0.08)
-modulate = Color(0.72, 0.62, 0.92, 1)
+plane_size = Vector2(640, 640)
+tiling = Vector2(12, 12)
+scroll_speed = Vector2(0, -0.05)
 base_texture = ExtResource("4_q6bux")
 
-[node name="Layer2" type="MeshInstance3D" parent="." index="3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -62)
+[node name="Layer2" type="MeshInstance3D" parent="." index="3" unique_id=1327566551]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, -200)
 mesh = SubResource("PlaneMeshLayer203B")
 script = ExtResource("5_plane_script")
-plane_size = Vector2(256, 512)
-tiling = Vector2(6, 12)
-scroll_speed = Vector2(0, -0.12)
-modulate = Color(1, 1, 1, 0.85)
+plane_size = Vector2(640, 640)
+tiling = Vector2(12, 12)
+scroll_speed = Vector2(-0.01, -0.4)
+modulate = Color(3.2944162, 3.2944162, 3.2944162, 0.0050000004)
 base_texture = ExtResource("8_layer2")
 
-[node name="Decor" type="Node" parent="." index="4" unique_id=38297114]
+[node name="Layer3" type="MeshInstance3D" parent="." index="4" unique_id=2129610424]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 32, -200)
+mesh = SubResource("PlaneMeshLayer203B")
+script = ExtResource("5_plane_script")
+plane_size = Vector2(640, 640)
+tiling = Vector2(12, 12)
+scroll_speed = Vector2(-0.01, -0.4)
+modulate = Color(3.2944162, 3.2944162, 3.2944162, 0.010000001)
+base_texture = ExtResource("8_layer2")
+
+[node name="Layer4" type="MeshInstance3D" parent="." index="5" unique_id=987368197]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 55, -200)
+mesh = SubResource("PlaneMeshLayer203B")
+script = ExtResource("5_plane_script")
+plane_size = Vector2(640, 640)
+tiling = Vector2(12, 12)
+scroll_speed = Vector2(-0.01, -0.4)
+modulate = Color(3.2944162, 3.2944162, 3.2944162, 0.020000001)
+base_texture = ExtResource("8_layer2")
+
+[node name="Decor" type="Node" parent="." index="6" unique_id=38297114]
 script = ExtResource("6_decor")
