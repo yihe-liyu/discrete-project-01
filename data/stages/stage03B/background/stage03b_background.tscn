@@ -8,6 +8,9 @@
 [ext_resource type="Script" uid="uid://c3n72k6nx6kkl" path="res://data/stages/stage03B/background/stage03b_decor.gd" id="6_decor"]
 [ext_resource type="Shader" uid="uid://dc3bu5y3i4b3y" path="res://gdshader/background_plane_alpha.gdshader" id="7_alpha_shader"]
 [ext_resource type="Texture2D" uid="uid://bd61td3fcfvia" path="res://assets/Textures/background/stage03b/stg3bg2.png" id="8_layer2"]
+[ext_resource type="Script" uid="uid://cesyonb11jo8h" path="res://scripts/background/screen_fog_fx.gd" id="9_fogfx"]
+[ext_resource type="Shader" uid="uid://y1jcpktwc4ja" path="res://gdshader/screen_fog.gdshader" id="10_fog_shader"]
+[ext_resource type="Texture2D" path="res://assets/Textures/background/stage01/cloud_noise.tres" id="11_cloud"]
 
 [sub_resource type="ShaderMaterial" id="Mat_Ground03B"]
 resource_local_to_scene = true
@@ -37,6 +40,25 @@ shader_parameter/glow_strength = 2.5
 resource_local_to_scene = true
 material = SubResource("Mat_Layer203B")
 size = Vector2(512, 512)
+
+[sub_resource type="ShaderMaterial" id="Mat_Fog03B"]
+resource_local_to_scene = true
+shader = ExtResource("10_fog_shader")
+shader_parameter/noise_tex = ExtResource("11_cloud")
+shader_parameter/fog_dark = 0.8
+shader_parameter/sun_pos = Vector2(0.5, 0.18)
+shader_parameter/sun_fog_radius = 0.1
+shader_parameter/sun_fog_extra = 1.0
+shader_parameter/flow_speed = 0.050000002375
+shader_parameter/noise_scale = 1.5
+shader_parameter/fog_color = Color(0.02, 0.02, 0.03, 1)
+shader_parameter/detail_scale = 3.0
+shader_parameter/detail_strength = 0.35
+shader_parameter/vignette_strength = 0.15
+shader_parameter/breath_amplitude = 0.1
+shader_parameter/ring_strength = 0.8
+shader_parameter/ring_radius = 0.03
+shader_parameter/ring_width = 0.02
 
 [node name="Stage03BBackground" unique_id=1752782296 instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
@@ -85,3 +107,17 @@ base_texture = ExtResource("8_layer2")
 
 [node name="Decor" type="Node" parent="." index="6" unique_id=38297114]
 script = ExtResource("6_decor")
+
+[node name="FogFX" type="Node" parent="."]
+script = ExtResource("9_fogfx")
+
+[node name="FogLayer" type="CanvasLayer" parent="FogFX"]
+layer = 5
+
+[node name="FogRect" type="ColorRect" parent="FogFX/FogLayer"]
+material = SubResource("Mat_Fog03B")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
