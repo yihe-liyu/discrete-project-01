@@ -474,3 +474,29 @@ func test_background_base_template_is_minimal_and_wired() -> void:
 	assert_not_null(bg.world_environment, "模板应声明 WorldEnvironment")
 	assert_not_null(bg.get_decor_manager(), "模板应声明 DecorManager")
 	assert_eq(bg.get_child_count(), 3, "模板节点 = WorldEnvironment + DecorManager + 自建 Camera3D")
+
+
+func test_background_layers_do_not_share_modulate_material() -> void:
+	var shader := load("res://gdshader/background_plane_alpha.gdshader") as Shader
+	var shared_mat := ShaderMaterial.new()
+	shared_mat.shader = shader
+	shared_mat.set_shader_parameter("modulate", Color.WHITE)
+	var shared_mesh := PlaneMesh.new()
+	shared_mesh.material = shared_mat
+
+	var a := BackgroundPlane.new()
+	a.mesh = shared_mesh
+	a.modulate = Color(1, 1, 1, 0.2)
+	var b := BackgroundPlane.new()
+	b.mesh = shared_mesh
+	b.modulate = Color.WHITE
+	add_child_autofree(a)
+	add_child_autofree(b)
+	await get_tree().process_frame
+
+	assert_ne(a.mesh, b.mesh, "共享 PlaneMesh 必须复制成每实例一份")
+	assert_ne(a._get_material(), b._get_material(), "材质也必须是每实例一份")
+	assert_almost_eq(float(a._get_material().get_shader_parameter("modulate").a), 0.2, 0.01,
+		"a 的 alpha 不应被 b 覆盖")
+	assert_almost_eq(float(b._get_material().get_shader_parameter("modulate").a), 1.0, 0.01,
+		"b 应保留自己的 alpha")

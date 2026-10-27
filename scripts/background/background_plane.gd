@@ -12,7 +12,9 @@ extends MeshInstance3D
 ## 滚动速度（像素/秒，最终乘 delta）
 @export var scroll_speed: Vector2 = Vector2(0, 1.0)
 
-## 颜色叠加（白色 = 原图，变暗/变色用）
+## 颜色叠加（白色 = 原图，变暗/变色用）。
+## 这是权威值：每个 BackgroundPlane 实例会复制材质，节点上的 Modulate 不会被别的层覆盖。
+## 改材质里的 shader_parameter/modulate 会被本值覆盖。
 @export var modulate: Color = Color.WHITE
 
 ## 贴图（在 Inspector 拖入）
@@ -41,11 +43,25 @@ func _ready() -> void:
 	else:
 		# tscn 预制网格 → 只同步尺寸，不重写材质（材质已在 tscn 里配好）
 		var pm := mesh as PlaneMesh
-		if pm and pm.size != plane_size:
-			pm.size = plane_size
-		var mat := _get_material()
-		if mat:
-			mat.set_shader_parameter("uv_offset", Vector2.ZERO)
+		if pm:
+			# Layers 2/3/4 在 tscn 里引用同一个 PlaneMesh；resource_local_to_scene
+			# 只保证“每场景一份”，不保证“每节点一份”。不复制网格 + 材质，
+			# 最后一层的 modulate 会覆盖所有层。
+			pm = pm.duplicate()
+			self.mesh = pm
+			if pm.size != plane_size:
+				pm.size = plane_size
+			var mat := _get_material()
+			if mat:
+				mat = mat.duplicate()
+				pm.material = mat
+				mat.set_shader_parameter("uv_offset", Vector2.ZERO)
+		else:
+			var mat_override := material_override as ShaderMaterial
+			if mat_override:
+				mat_override = mat_override.duplicate()
+				material_override = mat_override
+				mat_override.set_shader_parameter("uv_offset", Vector2.ZERO)
 	_apply_modulate(modulate)
 
 
