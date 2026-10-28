@@ -495,10 +495,10 @@ func test_background_layers_do_not_share_modulate_material() -> void:
 	await get_tree().process_frame
 
 	assert_ne(a.mesh, b.mesh, "共享 PlaneMesh 必须复制成每实例一份")
-	assert_ne(a._get_material(), b._get_material(), "材质也必须是每实例一份")
-	assert_almost_eq(float(a._get_material().get_shader_parameter("modulate").a), 0.2, 0.01,
+	assert_ne(a.shader_material(), b.shader_material(), "材质也必须是每实例一份")
+	assert_almost_eq(float(a.shader_material().get_shader_parameter("modulate").a), 0.2, 0.01,
 		"a 的 alpha 不应被 b 覆盖")
-	assert_almost_eq(float(b._get_material().get_shader_parameter("modulate").a), 1.0, 0.01,
+	assert_almost_eq(float(b.shader_material().get_shader_parameter("modulate").a), 1.0, 0.01,
 		"b 应保留自己的 alpha")
 
 
@@ -520,11 +520,11 @@ func test_background_plane_node_texture_overrides_material() -> void:
 	plane.base_texture = tex_a
 	add_child_autofree(plane)
 	await get_tree().process_frame
-	assert_eq(plane._get_material().get_shader_parameter("base_texture"), tex_a,
+	assert_eq(plane.shader_material().get_shader_parameter("base_texture"), tex_a,
 		"入树时节点 base_texture 应写进材质")
 
 	plane.set_base_texture(tex_b)
-	assert_eq(plane._get_material().get_shader_parameter("base_texture"), tex_b,
+	assert_eq(plane.shader_material().get_shader_parameter("base_texture"), tex_b,
 		"set_base_texture 应立即换贴图")
 
 

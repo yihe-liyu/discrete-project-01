@@ -69,6 +69,11 @@ func _ready() -> void:
 	_apply_modulate(modulate)
 
 
+## 公开接缝：当前实例的 ShaderMaterial（测试 / 调试读参数用）。
+func shader_material() -> ShaderMaterial:
+	return _get_material()
+
+
 func _get_material() -> ShaderMaterial:
 	var plane_mesh := mesh as PlaneMesh
 	if plane_mesh and plane_mesh.material is ShaderMaterial:
