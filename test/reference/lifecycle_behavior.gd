@@ -98,6 +98,8 @@ func _apply_move(system: BulletSystem, id: int, st: Dictionary, mv: Dictionary, 
 			# V12：mode=2（只转朝向）参考侧无朝向可转 → 速度不动；0/1 都转速度。
 			if int(mv[&"mode"]) != BulletLifecycle.ROT_HEADING:
 				system.set_velocity(id, system.get_velocity(id).rotated(step))
+		BulletLifecycle.M_RENDER_SPIN:
+			pass  # 参考侧不模拟渲染朝向；原生 render_rot 单独校验
 		BulletLifecycle.M_STEER:
 			var from := system.get_position(id)
 			var vel := system.get_velocity(id)

@@ -41,6 +41,7 @@ const M_SET_SPEED := COMPILER.M_SET_SPEED
 const M_POSITION := COMPILER.M_POSITION
 const M_SET_POSITION := COMPILER.M_SET_POSITION
 const M_OFFSET_POSITION := COMPILER.M_OFFSET_POSITION
+const M_RENDER_SPIN := COMPILER.M_RENDER_SPIN
 const POS_PHASE_START := COMPILER.POS_PHASE_START
 const POS_ANCHOR := COMPILER.POS_ANCHOR
 
@@ -248,6 +249,13 @@ func _add_rotate(w: float, limit: float, mode: int) -> BulletLifecycle:
 	_last_turn_limit = limit
 	_moves.append({&"op": M_ROTATE, &"w": w, &"limit": limit, &"slot": s, &"mode": mode})
 	return self
+
+## 只旋转贴图（render_rot 通道），不改 velocity / heading / 弹道。
+## 每帧累加 render_rot += w * dt；可跨相位持续，直到 lifecycle 结束。
+func spin_render(w: float) -> BulletLifecycle:
+	_moves.append({&"op": M_RENDER_SPIN, &"w": w})
+	return self
+
 
 ## 朝 target 转向（只转向、不改速度）。ramp 秒内爬满转向权；dist_weight > 0 时近距离转得更快；
 ## steer_until > 0 时只在前 N 秒转。变速是独立轴：需要时另加 speed_lerp / set_speed。

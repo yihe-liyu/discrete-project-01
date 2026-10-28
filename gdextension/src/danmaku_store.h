@@ -43,6 +43,8 @@ class DanmakuStore : public RefCounted {
 	std::vector<unsigned char> _hb_follow, _grazed;
 	// 逐弹渲染朝向覆盖（NAN = 未设，渲染按 velocity 推）。位置 op 只写它，不再借道 velocity。
 	std::vector<float> _render_rot;
+	// 逐弹贴图自转累计角（velocity / heading 不变）；每帧叠加到 render_rot。
+	std::vector<float> _spin_rot;
 	// 反射/边界判定用的场地范围（左/右/上）。
 	float _field_left = 0.0f, _field_right = 0.0f, _field_top = 0.0f;
 
@@ -59,6 +61,7 @@ class DanmakuStore : public RefCounted {
 	static constexpr int OP_M_POSITION = 9;
 	static constexpr int OP_M_SET_POSITION = 10;
 	static constexpr int OP_M_OFFSET_POSITION = 11;
+	static constexpr int OP_M_RENDER_SPIN = 12;
 	static constexpr int OP_C_NEVER = 20;
 	static constexpr int OP_C_SPEED = 25;
 	static constexpr int OP_C_X = 26;

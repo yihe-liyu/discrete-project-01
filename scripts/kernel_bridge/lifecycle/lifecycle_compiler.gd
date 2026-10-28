@@ -22,6 +22,7 @@ const M_SET_SPEED := &"set_speed"
 const M_POSITION := &"position"
 const M_SET_POSITION := &"set_position"
 const M_OFFSET_POSITION := &"offset_position"
+const M_RENDER_SPIN := &"render_spin"
 const POS_PHASE_START := 0
 const POS_ANCHOR := 1
 
@@ -76,6 +77,7 @@ const OP_M_SET_SPEED := 8
 const OP_M_POSITION := 9
 const OP_M_SET_POSITION := 10
 const OP_M_OFFSET_POSITION := 11
+const OP_M_RENDER_SPIN := 12
 const OP_C_NEVER := 20
 const OP_C_ELAPSED := 21
 const OP_C_NEAR := 22
@@ -204,6 +206,7 @@ static func _op_move(op: StringName, state: Array) -> int:
 		M_POSITION: return OP_M_POSITION
 		M_SET_POSITION: return OP_M_SET_POSITION
 		M_OFFSET_POSITION: return OP_M_OFFSET_POSITION
+		M_RENDER_SPIN: return OP_M_RENDER_SPIN
 	push_error("BulletLifecycle.compile(): 未知 Move op '%s'" % str(op))
 	state[0] = true
 	return 0
@@ -287,6 +290,7 @@ static func _args_move(m: Dictionary, state: Array) -> Array:
 		M_SPEED_MUL: return [float(m[&"f"])]
 		M_SET_HEADING: return _dir_args(m[&"dir"], state)
 		M_SET_SPEED: return [float(m[&"speed"])]
+		M_RENDER_SPIN: return [float(m[&"w"])]
 		M_SET_POSITION, M_OFFSET_POSITION:
 			var p: Vector2 = m[&"p"]
 			return [p.x, p.y]

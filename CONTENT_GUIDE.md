@@ -451,7 +451,7 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 
 | 类 | 成员 |
 |---|---|
-| Move | `accel_world` `accel_heading` `rotate` / `rotate_velocity` / `rotate_heading` `steer` `speed_lerp` `speed_mul` `set_heading` `set_speed` `drift` `anchor_drift` |
+| Move | `accel_world` `accel_heading` `rotate` / `rotate_velocity` / `rotate_heading` / `spin_render` `steer` `speed_lerp` `speed_mul` `set_heading` `set_speed` `drift` `anchor_drift` |
 | Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_speed` `until_turned`；`then()` 开新相位 |
 | Action | `sfx` `emit` `emit_variant` `despawn` `clear_fx` `despawn_clear` `on_end_heading` `on_end_call` |
 | 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` / **`reflect(angle)`** |

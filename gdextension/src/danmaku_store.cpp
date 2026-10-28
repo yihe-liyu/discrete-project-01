@@ -117,6 +117,7 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_out_grace.assign(p_capacity, 0.0f);
 	_out_time.assign(p_capacity, 0.0f);
 	_render_rot.assign(p_capacity, (float)NAN);
+	_spin_rot.assign(p_capacity, 0.0f);
 	_count = 0;
 }
 
@@ -156,6 +157,7 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 	_grazed[i] = 0;
 	_render_rot[i] = (float)NAN;
+	_spin_rot[i] = 0.0f;
 	return _count++;
 }
 
@@ -199,6 +201,7 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 		_grazed[i] = 0;
 		_render_rot[i] = (float)NAN;
+		_spin_rot[i] = 0.0f;
 		++_count;
 		++added;
 	}
@@ -244,6 +247,7 @@ int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_c
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 	_grazed[i] = 0;
 	_render_rot[i] = (float)NAN;
+	_spin_rot[i] = 0.0f;
 	return _count++;
 }
 
@@ -265,7 +269,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_pslot_fresh.resize(p_n); _phasend.resize(p_n);
 	_hb_radius.resize(p_n); _hb_offx.resize(p_n); _hb_offy.resize(p_n);
 	_hb_sizex.resize(p_n); _hb_sizey.resize(p_n); _hb_diroff.resize(p_n);
-	_hb_follow.resize(p_n); _grazed.resize(p_n); _render_rot.resize(p_n);
+	_hb_follow.resize(p_n); _grazed.resize(p_n); _render_rot.resize(p_n); _spin_rot.resize(p_n);
 	_out_grace.resize(p_n); _out_time.resize(p_n);
 }
 
@@ -314,6 +318,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_out_grace[p_id] = _out_grace[last];
 	_out_time[p_id] = _out_time[last];
 	_render_rot[p_id] = _render_rot[last];
+	_spin_rot[p_id] = _spin_rot[last];
 }
 
 // 完整积分循环：寿命 / 出生相位 / 位移 / 计时 / 剔除 —— 与 scripts/kernel/bullet_system.gd 1:1。
@@ -612,7 +617,7 @@ int DanmakuStore::register_program(const PackedInt32Array &p_ops, const PackedFl
 		if (as < 0 || ac < 0 || as + ac > op_count) { return -1; }
 		for (int k = ms; k < ms + mc; ++k) {
 			const int op = p_ops[k];
-			if (op < OP_M_ACCEL_WORLD || op > OP_M_OFFSET_POSITION) { return -1; }
+			if (op < OP_M_ACCEL_WORLD || op > OP_M_RENDER_SPIN) { return -1; }
 			if (op == OP_M_ROTATE) {
 				const int slot = (int)arg(k, 2);
 				if (slot < 0 || slot >= SLOT_STRIDE) { return -1; }
@@ -674,6 +679,7 @@ void DanmakuStore::set_program(int p_id, int p_program) {
 	_pnext[p_id] = 0.0f;
 	_pslot_fresh[p_id] = 0xFFFFFFFFu;
 	_phasend[p_id] = 0;
+	_spin_rot[p_id] = 0.0f;
 	for (int s = 0; s < SLOT_STRIDE; ++s) {
 		_pslots[p_id * SLOT_STRIDE + s] = 0.0f;
 	}
@@ -869,6 +875,9 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 		case 10: // set_position（绝对坐标）
 			_x[i] = a[0];
 			_y[i] = a[1];
+			break;
+		case 12: // render_spin：只累计贴图自转，不动速度 / 朝向
+			_spin_rot[i] += a[0] * dt;
 			break;
 		case 11: // offset_position（相对偏移）
 			_x[i] += a[0];
@@ -1112,6 +1121,11 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 		const int mc = _p_move_count[base + ph];
 		for (int k = 0; k < mc; ++k) {
 			_exec_move(i, prog, slots, ms + k, dt, p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
+		}
+		// 贴图自转只进 render_rot 通道；velocity / heading 保持不动。
+		if (_spin_rot[i] != 0.0f) {
+			const float spin_base = std::isnan(_render_rot[i]) ? std::atan2(_vy[i], _vx[i]) : _render_rot[i];
+			_render_rot[i] = spin_base + _spin_rot[i];
 		}
 		if (_check_until(i, slots, _p_until[base + ph], p_player, p_boss, p_has_boss, p_enemies)) {
 			const int as = _p_act_start[base + ph];

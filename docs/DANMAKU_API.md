@@ -121,6 +121,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | accel_heading | `accel_heading(a: float)` | 沿**自身朝向**加速：`velocity += heading * a * dt`（v=0 也有效 → 可减速/反向） |
 | rotate | `rotate(w, limit=0)` | **同时**转速度与朝向；limit>0 时累计转角钳到 limit（`until_turned()` 用） |
 | rotate_velocity / rotate_heading | `rotate_velocity(w, limit=0)` / `rotate_heading(...)` | 只转速度 / 只转朝向 |
+| spin_render | `spin_render(w)` | **只转贴图**（render_rot）；速度 / 朝向 / 弹道不变，可跨相位累计 |
 | steer | `steer(target, max_turn, ramp=0, dist_weight=0, steer_until=0)` | 朝目标**只转向、不改速度**；变速另配 `speed_lerp` |
 | speed_lerp | `speed_lerp(from, to, ramp)` | 方向不变，速度按 elapsed/ramp 插值 |
 | speed_mul | `speed_mul(f)` | 每帧 `velocity *= f`（**复利/指数**，不是瞬时设定） |

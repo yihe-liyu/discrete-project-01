@@ -936,3 +936,28 @@ func test_emit_speed_rel_host_spec() -> void:
 	var c: Dictionary = lc.compile_program()
 	assert_true(c.has(&"ops"), "纯 program 仍应可编译")
 	assert_false(c.has(&"speed_specs"), "速度 spec 不能进纯 program")
+
+
+## 贴图自转：只写 render_rot，velocity / heading / 弹道完全不动。
+func test_primitive_move_render_spin_only_visual() -> void:
+	if not _available(): pending("未构建原生扩展"); return
+	var lc := BulletLifecycle.new()
+	lc.spin_render(PI * 0.5)
+	lc.until_never()
+	var store = _combo_store()
+	var c: Dictionary = lc.compile()
+	var pid: int = store.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
+	var id: int = store.spawn(Vector2(100, 100), Vector2(0, -100), 0, 0, Color.WHITE)
+	store.set_program(id, pid)
+	store.behavior_tick(DT, Vector2.ZERO, Vector2.ZERO, false, PackedVector2Array())
+
+	assert_true(store.get_velocity(id).is_equal_approx(Vector2(0, -100)), "spin_render 不应改速度")
+	assert_true(store.get_forward(id).is_equal_approx(Vector2(0, -1)), "spin_render 不应改朝向")
+	var first_rot: float = store.get_render_rots()[id]
+	assert_almost_eq(first_rot, -PI * 0.5 + PI * 0.5 * DT, 1e-4,
+		"render_rot = velocity 角 + 累计自转")
+
+	store.behavior_tick(DT, Vector2.ZERO, Vector2.ZERO, false, PackedVector2Array())
+	var second_rot: float = store.get_render_rots()[id]
+	assert_almost_eq(second_rot, -PI * 0.5 + PI * 0.5 * DT * 2.0, 1e-4,
+		"自转应逐帧累计")
