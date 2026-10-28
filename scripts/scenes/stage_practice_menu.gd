@@ -321,5 +321,5 @@ func _launch() -> void:
 	if not commit_selection():
 		return
 	_is_input_ready = false
-	AudioManager.stop_bgm()
+	AudioManager.stop_bgm(0.0)
 	GameManager.change_scene("res://scenes/game_scene.tscn")

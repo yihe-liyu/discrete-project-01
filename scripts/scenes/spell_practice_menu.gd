@@ -338,7 +338,7 @@ func _start_practice() -> void:
 	# BGM 也随载荷带 key：按**选中的这张卡属于哪只 Boss**解析（道中曲 / Boss 曲由 Boss 各自定）
 	PracticeSession.start(phase, boss_scene, boss_label, rec.stage, rec.phase_index, boss.spell_background,
 		BossCatalog.practice_bgm_key(boss, rec.stage))
-	AudioManager.stop_bgm()
+	AudioManager.stop_bgm(0.0)
 	on_leave()
 	GameManager.change_scene("res://scenes/game_scene.tscn")
 

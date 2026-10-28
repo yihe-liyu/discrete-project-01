@@ -129,6 +129,9 @@ func _resume_world() -> void:
 
 func reload_current_scene():
 	if current_scene_path != "":
+		# 重开走硬切：默认 stop_bgm() 的 0.6s 淡出会让旧曲在新场景里继续响，
+		# 听感像"先放一会再重新播放"。集中放在这里，覆盖暂停 / Game Over / 关卡内重开。
+		AudioManager.stop_bgm(0.0)
 		change_scene(current_scene_path)
 
 
