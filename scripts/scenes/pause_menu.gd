@@ -33,7 +33,8 @@ func _on_item_selected(index: int) -> void:
 			if not is_game_over_mode:
 				GameManager.resume_game()
 		1:
-			AudioManager.stop_bgm()
+			# 重开是硬切：淡出会让旧曲继续响 0.6s，新场景再起同一首时听感就是"先放一会再重播"。
+			AudioManager.stop_bgm(0.0)
 			SaveData.is_restarting = true
 			GameManager.reload_current_scene()
 		2:
