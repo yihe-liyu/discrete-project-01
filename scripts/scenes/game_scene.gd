@@ -101,6 +101,8 @@ func _start_practice_game() -> void:
 	# 这里是**场景级**压低 —— 正常流程的混音一个数都不动。
 	AudioManager.sfx_trim_db = PRACTICE_SFX_TRIM_DB
 	_load_background(PracticeSession.background)
+	# 符卡练习不走 load_stage()，但背景的入场协程仍要启动（Stage03B 的黑场恢复等）。
+	_stage_runtime.start_background_scripts()
 	# 练习模式没有关卡脚本 → 没人起 BGM（只剩 SE，没有衬托会显得特别响）。
 	# 曲目由菜单按「选中的卡属于哪只 Boss」解析后随载荷带来（道中 Boss 出道中曲、关底出 Boss 曲）；
 	# 载荷没带（旧路径 / 合成场景）→ 回落该面的 `StageData.bgm_key`。

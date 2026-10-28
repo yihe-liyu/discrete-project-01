@@ -71,7 +71,6 @@ func current_stage_script() -> CoroutineScript:
 ## 加载关卡：校验 → 重置资源（+ 关卡练习火力）→ 启动关卡脚本与背景协程 → stage_started。
 ## 背景实例由 current_background 注入；非法数据 push_error 并拒绝启动。
 func load_stage(data: StageData) -> void:
-	var background := current_background
 	if _is_stage_active:
 		stop_stage()
 
@@ -105,15 +104,21 @@ func load_stage(data: StageData) -> void:
 	stage_script.start(ctx)
 	_inject_player_ctx(ctx)
 
-	# 自动启动背景场景里挂的所有协程脚本
-	if is_instance_valid(background):
-		for child in background.get_children():
-			if child is CoroutineScript:
-				var bctx := StageContext.new(child)
-				bctx.stage = self
-				child.start(bctx)
-
+	start_background_scripts()
 	stage_started.emit()
+
+
+## 启动背景场景里挂的所有 CoroutineScript。
+## 普通关卡由 load_stage() 调用；符卡练习没有关卡脚本，也必须显式调用，
+## 否则背景的入场演出（Stage03B 的 Ground 黑场恢复等）不会开始。
+func start_background_scripts() -> void:
+	if not is_instance_valid(current_background):
+		return
+	for child in current_background.get_children():
+		if child is CoroutineScript:
+			var bctx := StageContext.new(child)
+			bctx.stage = self
+			child.start(bctx)
 
 
 ## 拆场景 / 中止：停脚本、清实体注册表、清弹幕（激光自行淡出）；不发 stage_cleared。

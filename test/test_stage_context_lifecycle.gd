@@ -136,3 +136,17 @@ func test_ctx_decor_reads_declared_manager_not_name_lookup():
 	assert_eq(ctx.decor, mgr, "便捷属性与 get_decor() 同源")
 	assert_eq(_decor_child_count(bg), 1, "不得运行时 add_child 另建（旧实现会多出一个 DecorManager）")
 
+
+
+## 回归：符卡练习不走 load_stage()；背景协程必须由 GameScene 显式启动，
+## 否则 Stage03B 的 Ground 黑场恢复永远不会开始。
+func test_start_background_scripts_runs_stage03b_decor() -> void:
+	var rt := StageRuntime.new()
+	add_child_autofree(rt)
+	var bg: StageBackground = preload("res://data/stages/stage03B/background/stage03b_background.tscn").instantiate()
+	rt.add_child(bg)
+	rt.current_background = bg
+	await get_tree().process_frame
+	rt.start_background_scripts()
+	var ground := bg.get_node("Ground") as BackgroundPlane
+	assert_eq(ground.modulate, Color.BLACK, "背景协程启动后，Stage03B 的 Ground 应先变黑")

@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：118 脚本 / **846 用例（845 通过 / 1 红）/ 7222 断言 / 52.7s** / 0 orphans / **0 pending**。
+**现状**：118 脚本 / **847 用例（846 通过 / 1 红）/ 7223 断言 / 52.7s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 194 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 53 | 439 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 53 | 440 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -106,9 +106,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（53 / 439）
+## C · 宿主 · 运行时系统（53 / 440）
 
-### C1 组合根 / 服务 / 时间线（20 / 99）
+### C1 组合根 / 服务 / 时间线（20 / 100）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -130,7 +130,7 @@
 | [test_content_manifest](../test/test_content_manifest.gd) | `ContentManifest`：Stage / Boss / Phase / Variant 去重索引、难度变体来源、Boss 槽引用一致性 | 3 | 0 |
 | [test_difficulty](../test/test_difficulty.gd) | 难度维度契约：0..4 / 展示名；`diff_pick` / `diff_get` 的非法难度、空数组、Extra 用 4 项数组会响亮报错并回落最后一项 | 6 | 0 |
 | [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：12 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
-| [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环（Dialogue / Item / Player / Boss / Enemy 五个服务都有回归） + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 7 | 0 |
+| [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环（Dialogue / Item / Player / Boss / Enemy 五个服务都有回归） + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 8 | 0 |
 | [test_pattern_ring](../test/test_pattern_ring.gd) | Pattern spike：`BulletPattern` 基类 / `PatternParams` 默认值 / **Ring 的方向计算（整圈、扇形、单发）** / **`.tres` 预设加载** / **真实 `BulletManager` 发射 6 发** | 6 | 0 |
 | [test_timeline_phase_unfreeze](../test/test_timeline_phase_unfreeze.gd) | B 方案回归：Boss 阶段战斗不再冻结时间轴 | 1 | 0 |
 
