@@ -254,6 +254,16 @@ func _play_bgm_at(stream: AudioStream, from: float) -> void:
 
 ## 停 BGM（默认淡出，不是硬切）；[code]fade[/code] = 0 立即停
 func stop_bgm(fade: float = BGM_FADE) -> void:
+	if fade <= 0.0:
+		# 重开用的硬复位：不只 stop 正在响的那一路，而是两路全部清空，
+		# 把进行中的淡出 tween 也一起杀掉，避免旧曲残留到新场景。
+		for player in _bgm_players:
+			_stop_fade(player)
+			player.stop()
+			player.stream = null
+		_bgm_current = null
+		_bgm_stopping = true
+		return
 	for player in _bgm_players:
 		if player.playing:
 			_fade_bgm(player, SILENT_DB, maxf(fade, 0.0), true)
