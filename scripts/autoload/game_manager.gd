@@ -76,6 +76,10 @@ func is_paused() -> bool:
 func change_scene(path: String, target_state: AppState = AppState.PLAYING):
 	if current_state == AppState.TRANSITIONING:
 		return
+	# 进游戏场景前硬停旧 BGM：关卡练习重新开始时，旧曲不能跟着过场继续响。
+	# 放在场景切换的最前面，覆盖暂停重开 / 练习菜单重进 / 任何直接 change_scene 的路径。
+	if path == "res://scenes/game_scene.tscn":
+		AudioManager.stop_bgm(0.0)
 
 	set_state(AppState.TRANSITIONING)
 
