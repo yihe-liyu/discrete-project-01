@@ -14,13 +14,6 @@ camera_home_rotation_degrees = Vector3(-10, 0, 0)
 camera_home_fov = 70.0
 
 [node name="RaymarchDemo" parent="." instance=ExtResource("3_ray")]
-TerrainColor = Color(0.11, 0.3, 0.14, 1)
-ShadowColor = Color(0.025, 0.07, 0.035, 1)
-UVScale = 0.11
-TerrainScale = 60.0
-FogStart = 900.0
-FogEnd = 2200.0
-mesh_size = 3000.0
 
 [node name="Decor" type="Node" parent="."]
 script = ExtResource("5_motion")
