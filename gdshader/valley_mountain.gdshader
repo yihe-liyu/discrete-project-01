@@ -31,16 +31,15 @@ void vertex() {
 
 void fragment() {
 	vec3 n = normalize(v_normal_world);
-	// 明确的侧上光：左侧受暖光，背光面偏冷，拉开山的体积
-	vec3 light_dir = normalize(vec3(-0.85, 0.4, 0.25));
-	float ndl = clamp(dot(n, light_dir), 0.0, 1.0);
-	ndl = smoothstep(0.05, 0.95, ndl);
-	vec3 light = mix(shade_color, sun_color, ndl);
-	vec3 c = v_color * light;
+	// 用真实 DirectionalLight3D 照明；这里只按坡度把陡壁推向岩色。
+	float slope = 1.0 - clamp(n.y, 0.0, 1.0);
+	vec3 c = mix(v_color, rock_color, smoothstep(0.42, 0.85, slope) * 0.7);
 	// 谷底细碎纹理：用世界坐标做很轻的明暗，不让它是一整块纯色平面
 	float floor_mask = smoothstep(0.7, 0.98, n.y);
 	float grain = 0.5 + 0.5 * sin(v_world_pos.x * 0.11 + v_world_pos.z * 0.07);
 	c = mix(c, c * (0.7 + 0.3 * grain), floor_mask);
 	float haze = smoothstep(haze_start, haze_end, -v_world_pos.z);
 	ALBEDO = mix(c, haze_color, haze * 0.12);
+	ROUGHNESS = 0.9;
+	SPECULAR = 0.08;
 }

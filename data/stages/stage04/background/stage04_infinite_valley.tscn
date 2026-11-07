@@ -51,5 +51,11 @@ noise_frequency = 0.0025
 bottom_color = Color(0.3, 0.4, 0.48, 1)
 top_color = Color(0.56, 0.65, 0.7, 1)
 
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-28, -38, 0)
+light_color = Color(1, 0.9, 0.76, 1)
+light_energy = 1.35
+shadow_enabled = false
+
 [node name="Decor" type="Node" parent="."]
 script = ExtResource("4_decor")
