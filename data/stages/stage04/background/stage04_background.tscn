@@ -1,0 +1,81 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/background/background_base.tscn" id="1_base"]
+[ext_resource type="Resource" path="res://data/stages/stage04/background/stage04_env.tres" id="2_env"]
+[ext_resource type="Script" path="res://data/stages/stage04/background/stage04_decor.gd" id="3_decor"]
+[ext_resource type="Script" path="res://scripts/background/background_mountain.gd" id="4_mountain"]
+[ext_resource type="Script" uid="uid://cys5ctkx6l5h8" path="res://scripts/background/background_plane.gd" id="5_ground"]
+[ext_resource type="Shader" uid="uid://dk0cc5a6lkcd0" path="res://gdshader/background_plane.gdshader" id="6_plane_shader"]
+[ext_resource type="Texture2D" uid="uid://ca1r30cua01ig" path="res://assets/Textures/background/stage01/grass.jpeg" id="7_grass"]
+
+[sub_resource type="ShaderMaterial" id="Mat_Ground04"]
+resource_local_to_scene = true
+shader = ExtResource("6_plane_shader")
+shader_parameter/base_texture = ExtResource("7_grass")
+shader_parameter/tiling = Vector2(8, 8)
+shader_parameter/uv_offset = Vector2(0, 0)
+shader_parameter/modulate = Color(0.25, 0.3, 0.24, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh04"]
+resource_local_to_scene = true
+material = SubResource("Mat_Ground04")
+size = Vector2(640, 640)
+
+[node name="Stage04Background" instance=ExtResource("1_base")]
+env_preset = ExtResource("2_env")
+override_camera_home = true
+camera_home_position = Vector3(0, 18, 40)
+camera_home_rotation_degrees = Vector3(-4, 0, 0)
+camera_home_fov = 72.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -62)
+mesh = SubResource("PlaneMesh04")
+script = ExtResource("5_ground")
+plane_size = Vector2(640, 640)
+tiling = Vector2(8, 8)
+scroll_speed = Vector2(0, -0.05)
+modulate = Color(0.25, 0.3, 0.24, 1)
+base_texture = ExtResource("7_grass")
+
+[node name="MountainFar" type="MeshInstance3D" parent="."]
+script = ExtResource("4_mountain")
+width = 1800.0
+depth = 300.0
+segments_x = 80
+segments_z = 12
+height = 150.0
+noise_seed = 7
+noise_frequency = 0.0045
+base_color = Color(0.32, 0.4, 0.48, 1)
+peak_color = Color(0.66, 0.72, 0.78, 1)
+z_center = -700.0
+
+[node name="MountainMid" type="MeshInstance3D" parent="."]
+script = ExtResource("4_mountain")
+width = 1600.0
+depth = 260.0
+segments_x = 72
+segments_z = 10
+height = 110.0
+noise_seed = 19
+noise_frequency = 0.006
+base_color = Color(0.2, 0.28, 0.3, 1)
+peak_color = Color(0.46, 0.54, 0.54, 1)
+z_center = -460.0
+
+[node name="MountainNear" type="MeshInstance3D" parent="."]
+script = ExtResource("4_mountain")
+width = 1500.0
+depth = 220.0
+segments_x = 64
+segments_z = 8
+height = 75.0
+noise_seed = 31
+noise_frequency = 0.008
+base_color = Color(0.08, 0.15, 0.13, 1)
+peak_color = Color(0.26, 0.38, 0.3, 1)
+z_center = -260.0
+
+[node name="Decor" type="Node" parent="."]
+script = ExtResource("3_decor")

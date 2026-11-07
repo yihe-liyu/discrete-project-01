@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="StageData" format=3 uid="uid://bxgqnbm70274g"]
+
+[ext_resource type="Script" uid="uid://b0kah034h3w03" path="res://data/stages/stage04/stage_data/stage04.gd" id="1_5vxg8"]
+[ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="2_367i1"]
+
+[ext_resource type="PackedScene" path="res://data/stages/stage04/background/stage04_background.tscn" id="2_bg"]
+
+[resource]
+script = ExtResource("2_367i1")
+stage_id = 5
+stage_no = 4
+display_name = "Stage４"
+bgm_key = "stage4"
+create_script = ExtResource("1_5vxg8")
+metadata/_custom_type_script = "uid://bvlmm7m3gtwc0"
+background_scene = ExtResource("2_bg")
