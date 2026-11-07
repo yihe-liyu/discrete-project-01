@@ -4,6 +4,7 @@
 [ext_resource type="Resource" path="res://data/stages/stage04/background/stage04_env.tres" id="2_env"]
 [ext_resource type="PackedScene" path="res://data/stages/stage04/background/stage04_raymarch.tscn" id="3_ray"]
 [ext_resource type="Script" path="res://data/stages/stage04/background/stage04_decor.gd" id="4_decor"]
+[ext_resource type="Script" path="res://data/stages/stage04/background/stage04_raymarch_motion.gd" id="5_motion"]
 
 [node name="Stage04RaymarchBackground" instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
@@ -22,4 +23,4 @@ FogEnd = 2200.0
 mesh_size = 3000.0
 
 [node name="Decor" type="Node" parent="."]
-script = ExtResource("4_decor")
+script = ExtResource("5_motion")
