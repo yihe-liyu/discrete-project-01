@@ -6,9 +6,9 @@ extends Node3D
 
 @export var chunk_length: float = 1200.0
 @export var chunk_count: int = 4
-@export var width: float = 900.0
-@export var valley_half_width: float = 100.0
-@export var wall_height: float = 260.0
+@export var width: float = 1200.0
+@export var valley_half_width: float = 120.0
+@export var wall_height: float = 340.0
 @export var z_segments: int = 96
 @export var noise_seed: int = 41
 @export var noise_frequency: float = 0.008
@@ -31,7 +31,7 @@ func _ready() -> void:
 	_z_step = chunk_length / z_segments
 
 	_material = ShaderMaterial.new()
-	_material.shader = preload("res://gdshader/background_vertex_color.gdshader")
+	_material.shader = preload("res://gdshader/valley_mountain.gdshader")
 
 	for i in chunk_count:
 		var chunk := MeshInstance3D.new()
@@ -61,43 +61,55 @@ func _process(delta: float) -> void:
 
 
 func _rebuild_chunk(chunk: MeshInstance3D) -> void:
+	# 横截面：谷底 → 山肩 → 次峰 → 主峰；每侧 5 个采样点。
+	const PROFILE_X := [-0.5, -0.38, -0.26, -0.14, -0.05, 0.0, 0.05, 0.14, 0.26, 0.38, 0.5]
+	const PROFILE_H := [1.0, 0.92, 0.58, 0.24, 0.04, 0.0, 0.04, 0.24, 0.58, 0.92, 1.0]
 	var verts := PackedVector3Array()
-	var colors := PackedColorArray()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
 	var indices := PackedInt32Array()
 	var base_z := chunk.position.z
+	var cols := PROFILE_X.size()
 
 	for i in z_segments + 1:
 		var local_z := -i * _z_step
 		var z_world := base_z + local_z
-		var h_left := _wall_height(-width * 0.5, z_world)
-		var h_right := _wall_height(width * 0.5, z_world)
-		verts.append_array([
-			Vector3(-width * 0.5, h_left, local_z),
-			Vector3(-valley_half_width, 0, local_z),
-			Vector3(valley_half_width, 0, local_z),
-			Vector3(width * 0.5, h_right, local_z),
-		])
-		colors.append_array([peak_color, base_color, base_color, peak_color])
+		for p in cols:
+			var x := width * float(PROFILE_X[p])
+			var ridge := _terrain_height(x, z_world)
+			var h := ridge * float(PROFILE_H[p]) * wall_height
+			verts.append(Vector3(x, h, local_z))
+			uvs.append(Vector2(clampf(h / wall_height, 0.0, 1.0), float(p) / float(cols - 1)))
+			normals.append(_terrain_normal(x, z_world, float(PROFILE_H[p])))
 
 	for i in z_segments:
-		var a := i * 4
-		var b := (i + 1) * 4
-		# 谷底
-		indices.append_array([a + 1, b + 1, a + 2, a + 2, b + 1, b + 2])
-		# 左 / 右山壁
-		indices.append_array([a, b, a + 1, a + 1, b, b + 1])
-		indices.append_array([a + 2, b + 2, a + 3, a + 3, b + 2, b + 3])
+		var a := i * cols
+		var b := (i + 1) * cols
+		for p in cols - 1:
+			indices.append_array([a + p, b + p, a + p + 1, a + p + 1, b + p, b + p + 1])
 
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
-	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
 	arrays[Mesh.ARRAY_INDEX] = indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	chunk.mesh = mesh
 
 
-func _wall_height(x: float, z: float) -> float:
-	var n := (_noise.get_noise_2d(x, z) + 1.0) * 0.5
-	return wall_height * (0.45 + 0.55 * pow(clampf(n, 0.0, 1.0), 1.4))
+func _terrain_height(x: float, z: float) -> float:
+	var large := (_noise.get_noise_2d(x * 0.35, z) + 1.0) * 0.5
+	var detail := (_noise.get_noise_2d(x * 1.7, z * 1.8) + 1.0) * 0.5
+	return 0.48 + 0.38 * large + 0.24 * detail
+
+
+func _terrain_normal(x: float, z: float, profile_h: float) -> Vector3:
+	# 用剖面上的有限差分估法线；边界处仍由纯世界坐标高度决定。
+	const D := 2.0
+	var h_l := _terrain_height(x - D, z) * profile_h
+	var h_r := _terrain_height(x + D, z) * profile_h
+	var h_b := _terrain_height(x, z - D) * profile_h
+	var h_f := _terrain_height(x, z + D) * profile_h
+	return Vector3(h_l - h_r, 2.0 * D, h_b - h_f).normalized()
