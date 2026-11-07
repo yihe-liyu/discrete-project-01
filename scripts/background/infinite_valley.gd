@@ -15,8 +15,8 @@ extends Node3D
 @export var forward_speed: float = 80.0
 @export var camera_z: float = 30.0
 ## 中心线摆动；会自动夹在谷宽内，保证镜头始终在山谷里
-@export var meander: float = 28.0
-@export var width_variation: float = 0.15
+@export var meander: float = 40.0
+@export var width_variation: float = 0.28
 
 const SIDE_T := [0.0, 0.18, 0.38, 0.62, 0.82, 1.0]
 const LEFT_H := [0.0, 0.14, 0.34, 0.6, 0.84, 1.0]
@@ -169,8 +169,9 @@ func _half_width_at(z: float) -> float:
 
 func _terrain_height(x: float, z: float) -> float:
 	var large := (_noise.get_noise_2d(x * 0.35, z) + 1.0) * 0.5
-	var detail := (_noise.get_noise_2d(x * 1.7, z * 1.8) + 1.0) * 0.5
-	return 0.48 + 0.38 * large + 0.24 * detail
+	# 降低高频细节，避免山嘴变成一排尖锐三角
+	var detail := (_noise.get_noise_2d(x * 1.4, z * 1.4) + 1.0) * 0.5
+	return 0.52 + 0.34 * large + 0.1 * detail
 
 
 func _normal_at(x: float, z: float, profile_h: float) -> Vector3:
