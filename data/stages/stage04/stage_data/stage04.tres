@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://b0kah034h3w03" path="res://data/stages/stage04/stage_data/stage04.gd" id="1_5vxg8"]
 [ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="2_367i1"]
 
-[ext_resource type="PackedScene" path="res://data/stages/stage04/background/stage04_infinite_valley.tscn" id="2_bg"]
+[ext_resource type="PackedScene" path="res://data/stages/stage04/background/stage04_background.tscn" id="2_bg"]
 
 [resource]
 script = ExtResource("2_367i1")
