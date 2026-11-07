@@ -2,15 +2,10 @@
 
 [ext_resource type="Script" uid="uid://d8soul1cjjam" path="res://scripts/background/background_env_preset.gd" id="1"]
 
-[sub_resource type="ProceduralSkyMaterial" id="SkyMat_stage04"]
-sky_top_color = Color(0.16, 0.28, 0.42, 1)
-sky_horizon_color = Color(0.62, 0.7, 0.78, 1)
-sky_curve = 0.28
-ground_bottom_color = Color(0.22, 0.24, 0.22, 1)
-ground_horizon_color = Color(0.48, 0.54, 0.54, 1)
+[ext_resource type="ShaderMaterial" path="res://data/stages/stage04/background/stage04_sky.tres" id="2_sky"]
 
 [sub_resource type="Sky" id="Sky_stage04"]
-sky_material = SubResource("SkyMat_stage04")
+sky_material = ExtResource("2_sky")
 radiance_size = 0
 
 [sub_resource type="Environment" id="Environment_stage04"]

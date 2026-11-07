@@ -27,3 +27,11 @@
   - 来源：<https://godotshaders.com/shader/medieval-water%e4%b8%ad%e4%b8%96%e7%ba%aa%e6%b0%b4/>
   - 许可证：**CC0 1.0**（<https://creativecommons.org/publicdomain/zero/1.0/>）
   - 用途：`gdshader/water_flow.gdshader` 的记忆值水面背景；已针对本项目的 `memory` 参数与配色做了修改。
+
+
+## 第三方插件署名
+
+- **Raymarching Mountains** — 作者 **EmberNoGlow**
+  - 来源：<https://godotengine.org/asset-library/asset/4620>
+  - 许可证：**CC0 1.0**
+  - 用途：Stage04 的远景 / 地表背景；项目对其场景参数和配色做了调整。
