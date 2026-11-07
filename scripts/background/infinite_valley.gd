@@ -6,9 +6,9 @@ extends Node3D
 
 @export var chunk_length: float = 1200.0
 @export var chunk_count: int = 4
-@export var width: float = 1200.0
-@export var valley_half_width: float = 120.0
-@export var wall_height: float = 340.0
+@export var width: float = 850.0
+@export var valley_half_width: float = 65.0
+@export var wall_height: float = 560.0
 @export var z_segments: int = 96
 @export var noise_seed: int = 41
 @export var noise_frequency: float = 0.008
@@ -111,6 +111,8 @@ func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
 
 
 func _add_floor(chunk: Node3D) -> void:
+	# 谷底不是一块平面：横向 5 列 + 轻微起伏；边缘回到 0 与山壁接上。
+	const COLS := 5
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -122,23 +124,31 @@ func _add_floor(chunk: Node3D) -> void:
 		var z_world := base_z + local_z
 		var center := _center_at(z_world)
 		var half := _half_width_at(z_world)
-		verts.append(Vector3(center - half, 0.0, local_z))
-		verts.append(Vector3(center + half, 0.0, local_z))
-		normals.append(Vector3.UP)
-		normals.append(Vector3.UP)
-		uvs.append(Vector2(0.0, 0.0))
-		uvs.append(Vector2(0.0, 0.0))
+		for p in COLS:
+			var t := float(p) / float(COLS - 1)
+			var x := center - half + 2.0 * half * t
+			var edge := absf(t - 0.5) * 2.0
+			var y := (1.0 - edge) * _floor_height(x, z_world)
+			verts.append(Vector3(x, y, local_z))
+			normals.append(Vector3.UP)
+			uvs.append(Vector2(0.0, 0.5))
 
 	for i in z_segments:
-		var a := i * 2
-		var b := (i + 1) * 2
-		indices.append_array([a, b, a + 1, a + 1, b, b + 1])
+		var a := i * COLS
+		var b := (i + 1) * COLS
+		for p in COLS - 1:
+			indices.append_array([a + p, b + p, a + p + 1, a + p + 1, b + p, b + p + 1])
 
 	var instance := MeshInstance3D.new()
 	instance.name = "Floor"
 	instance.mesh = _make_mesh(verts, normals, uvs, indices)
 	instance.material_override = _material
 	chunk.add_child(instance)
+
+
+func _floor_height(x: float, z: float) -> float:
+	var n := _noise.get_noise_2d(x * 0.7 + 13.0, z * 0.9)
+	return 2.2 + 2.0 * n
 
 
 func _make_mesh(verts: PackedVector3Array, normals: PackedVector3Array,

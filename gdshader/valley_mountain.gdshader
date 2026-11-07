@@ -32,6 +32,10 @@ void fragment() {
 	vec3 light_dir = normalize(vec3(-0.45, 0.8, 0.35));
 	float ndl = max(dot(n, light_dir), 0.0);
 	vec3 c = v_color * (0.32 + 0.82 * ndl);
+	// 谷底细碎纹理：用世界坐标做很轻的明暗，不让它是一整块纯色平面
+	float floor_mask = smoothstep(0.7, 0.98, n.y);
+	float grain = 0.5 + 0.5 * sin(v_world_pos.x * 0.11 + v_world_pos.z * 0.07);
+	c = mix(c, c * (0.7 + 0.3 * grain), floor_mask);
 	float haze = smoothstep(haze_start, haze_end, -v_world_pos.z);
 	ALBEDO = mix(c, haze_color, haze * 0.55);
 }
