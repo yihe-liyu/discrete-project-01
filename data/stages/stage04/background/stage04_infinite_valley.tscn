@@ -6,7 +6,6 @@
 [ext_resource type="Script" path="res://data/stages/stage04/background/stage04_decor.gd" id="4_decor"]
 [ext_resource type="Script" path="res://scripts/background/far_ridge.gd" id="5_far"]
 [ext_resource type="Script" path="res://scripts/background/far_ridge.gd" id="6_near"]
-[ext_resource type="Script" path="res://scripts/background/cloud_band.gd" id="7_cloud"]
 
 [node name="Stage04InfiniteValley" instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
@@ -51,24 +50,6 @@ noise_seed = 99
 noise_frequency = 0.0025
 bottom_color = Color(0.3, 0.4, 0.48, 1)
 top_color = Color(0.56, 0.65, 0.7, 1)
-
-[node name="CloudHigh" type="Node3D" parent="."]
-script = ExtResource("7_cloud")
-size = Vector2(4600, 1300)
-position_offset = Vector3(0, 620, -2800)
-cloud_color = Color(0.78, 0.85, 0.9, 1)
-opacity = 0.45
-noise_scale = 1.4
-speed = 0.006
-
-[node name="CloudLow" type="Node3D" parent="."]
-script = ExtResource("7_cloud")
-size = Vector2(4200, 1000)
-position_offset = Vector3(0, 420, -2300)
-cloud_color = Color(0.9, 0.93, 0.95, 1)
-opacity = 0.32
-noise_scale = 1.8
-speed = 0.01
 
 [node name="Decor" type="Node" parent="."]
 script = ExtResource("4_decor")

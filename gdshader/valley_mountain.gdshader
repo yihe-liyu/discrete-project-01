@@ -6,8 +6,8 @@ uniform vec3 rock_color : source_color = vec3(0.18, 0.27, 0.18);
 uniform vec3 high_color : source_color = vec3(0.38, 0.46, 0.42);
 uniform vec3 snow_color : source_color = vec3(0.92, 0.96, 1.0);
 uniform vec3 haze_color : source_color = vec3(0.62, 0.7, 0.78);
-uniform float haze_start = 500.0;
-uniform float haze_end = 3000.0;
+uniform float haze_start = 900.0;
+uniform float haze_end = 3500.0;
 
 varying vec3 v_color;
 varying vec3 v_normal_world;
@@ -37,5 +37,5 @@ void fragment() {
 	float grain = 0.5 + 0.5 * sin(v_world_pos.x * 0.11 + v_world_pos.z * 0.07);
 	c = mix(c, c * (0.7 + 0.3 * grain), floor_mask);
 	float haze = smoothstep(haze_start, haze_end, -v_world_pos.z);
-	ALBEDO = mix(c, haze_color, haze * 0.55);
+	ALBEDO = mix(c, haze_color, haze * 0.32);
 }
