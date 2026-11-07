@@ -1,7 +1,7 @@
 shader_type spatial;
 render_mode cull_disabled;
 
-uniform vec3 low_color : source_color = vec3(0.08, 0.16, 0.13);
+uniform vec3 low_color : source_color = vec3(0.14, 0.19, 0.16);
 uniform vec3 rock_color : source_color = vec3(0.28, 0.28, 0.26);
 uniform vec3 high_color : source_color = vec3(0.58, 0.6, 0.6);
 uniform vec3 snow_color : source_color = vec3(0.92, 0.96, 1.0);
