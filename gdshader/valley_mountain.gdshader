@@ -1,9 +1,9 @@
 shader_type spatial;
 render_mode cull_disabled;
 
-uniform vec3 low_color : source_color = vec3(0.14, 0.19, 0.16);
-uniform vec3 rock_color : source_color = vec3(0.28, 0.28, 0.26);
-uniform vec3 high_color : source_color = vec3(0.58, 0.6, 0.6);
+uniform vec3 low_color : source_color = vec3(0.08, 0.23, 0.11);
+uniform vec3 rock_color : source_color = vec3(0.18, 0.27, 0.18);
+uniform vec3 high_color : source_color = vec3(0.38, 0.46, 0.42);
 uniform vec3 snow_color : source_color = vec3(0.92, 0.96, 1.0);
 uniform vec3 haze_color : source_color = vec3(0.62, 0.7, 0.78);
 uniform float haze_start = 500.0;
@@ -29,7 +29,7 @@ void vertex() {
 
 void fragment() {
 	vec3 n = normalize(v_normal_world);
-	vec3 light_dir = normalize(vec3(-0.45, 0.8, 0.35));
+	vec3 light_dir = normalize(vec3(-0.75, 0.55, 0.25));
 	float ndl = max(dot(n, light_dir), 0.0);
 	vec3 c = v_color * (0.32 + 0.82 * ndl);
 	// 谷底细碎纹理：用世界坐标做很轻的明暗，不让它是一整块纯色平面
