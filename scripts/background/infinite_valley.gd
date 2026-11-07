@@ -17,6 +17,8 @@ extends Node3D
 ## 中心线摆动；会自动夹在谷宽内，保证镜头始终在山谷里
 @export var meander: float = 40.0
 @export var width_variation: float = 0.28
+## 近景树线高度（世界单位）
+@export var tree_height: float = 90.0
 
 const SIDE_T := [0.0, 0.18, 0.38, 0.62, 0.82, 1.0]
 const LEFT_H := [0.0, 0.14, 0.34, 0.6, 0.84, 1.0]
@@ -70,6 +72,8 @@ func _build_chunk(chunk: Node3D) -> void:
 	_add_wall(chunk, -1.0, LEFT_H)
 	_add_wall(chunk, 1.0, RIGHT_H)
 	_add_floor(chunk)
+	_add_forest_line(chunk, -1.0)
+	_add_forest_line(chunk, 1.0)
 
 
 func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
@@ -107,6 +111,44 @@ func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
 	instance.name = "LeftWall" if side < 0.0 else "RightWall"
 	instance.mesh = mesh
 	instance.material_override = _material
+	chunk.add_child(instance)
+
+
+func _add_forest_line(chunk: Node3D, side: float) -> void:
+	# 山壁脚部的针叶林剪影：一条不透明、顶边锯齿状的绿色带。
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var indices := PackedInt32Array()
+	var base_z := chunk.position.z
+
+	for i in z_segments + 1:
+		var local_z := -i * _z_step
+		var z_world := base_z + local_z
+		var center := _center_at(z_world)
+		var half := _half_width_at(z_world)
+		var x := center + side * (half - 1.0)
+		var n1 := (_noise.get_noise_2d(x * 2.2, z_world * 0.9) + 1.0) * 0.5
+		var n2 := (_noise.get_noise_2d(x * 5.1, z_world * 2.1) + 1.0) * 0.5
+		var h := tree_height * (0.35 + 0.45 * n1 + 0.2 * n2)
+		verts.append(Vector3(x, 0.0, local_z))
+		verts.append(Vector3(x, h, local_z))
+		normals.append(Vector3.UP)
+		normals.append(Vector3.UP)
+		uvs.append(Vector2(0.0, 0.0))
+		uvs.append(Vector2(0.0, 1.0))
+
+	for i in z_segments:
+		var a := i * 2
+		var b := (i + 1) * 2
+		indices.append_array([a, b, a + 1, a + 1, b, b + 1])
+
+	var instance := MeshInstance3D.new()
+	instance.name = "ForestL" if side < 0.0 else "ForestR"
+	instance.mesh = _make_mesh(verts, normals, uvs, indices)
+	var mat := ShaderMaterial.new()
+	mat.shader = preload("res://gdshader/forest_line.gdshader")
+	instance.material_override = mat
 	chunk.add_child(instance)
 
 
