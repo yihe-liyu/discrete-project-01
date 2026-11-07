@@ -19,3 +19,11 @@
 - 项目作者：**YiHe（翊纥）**
 - 系列：**Discrete Project（离散系列）第一作**
 - 开发辅助：AI 辅助设计、编码与文档整理，由作者最终验收与维护。
+
+
+## 第三方 Shader 署名
+
+- **Medieval Water（中世纪水）** — 作者 **GuoXiaoYao**
+  - 来源：<https://godotshaders.com/shader/medieval-water%e4%b8%ad%e4%b8%96%e7%ba%aa%e6%b0%b4/>
+  - 许可证：**CC0 1.0**（<https://creativecommons.org/publicdomain/zero/1.0/>）
+  - 用途：`gdshader/water_flow.gdshader` 的记忆值水面背景；已针对本项目的 `memory` 参数与配色做了修改。

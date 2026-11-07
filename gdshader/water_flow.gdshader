@@ -1,3 +1,8 @@
+// 记忆值水面背景，改自 Medieval Water（中世纪水）
+// 作者：GuoXiaoYao
+// 来源：https://godotshaders.com/shader/medieval-water%e4%b8%ad%e4%b8%96%e7%ba%aa%e6%b0%b4/
+// 许可证：CC0 1.0
+// 本项目修改：接入 memory 参数、配色与 UI 矩形适配。
 shader_type canvas_item;
 
 uniform float alpha_mult : hint_range(0, 1) = 1.0;

@@ -199,6 +199,7 @@ UI / 菜单 ◀── 信号 GameEvents    ◀── 存档 SaveData（纯 stati
 - 仓库内代码采用 **MIT License** 授权（见 [LICENSE](LICENSE)）。
 - 美术、音乐、立绘等**素材资源不包含在 MIT 授权范围内**，其版权归原作者或作者本人所有；请勿用于商业用途。
 - 详细说明见 [NOTICE.md](NOTICE.md)。
+  - 第三方 Shader（记忆值水面）署名见 [`NOTICE.md`](NOTICE.md#第三方-shader-署名)。
 
 ---
 
