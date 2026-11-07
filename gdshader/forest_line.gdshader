@@ -18,5 +18,5 @@ void vertex() {
 void fragment() {
 	vec3 c = mix(near_color, far_color, v_h);
 	float haze = smoothstep(haze_start, haze_end, -v_world.z);
-	ALBEDO = mix(c, haze_color, haze * 0.25);
+	ALBEDO = mix(c, haze_color, haze * 0.12);
 }
