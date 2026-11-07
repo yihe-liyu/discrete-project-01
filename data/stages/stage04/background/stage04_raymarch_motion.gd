@@ -2,8 +2,8 @@ extends CoroutineScript
 ## Stage04 raymarch 背景的前进演出：只移动相机，不碰地形 / 弹幕。
 ## raymarch 地形本身是无限高度场，相机持续前进就会产生飞行视差。
 
-@export var forward_speed: float = 7.0
-@export var bob_amplitude: float = 0.35
+@export var forward_speed: float = 5.0
+@export var bob_amplitude: float = 0.0
 @export var bob_speed: float = 0.7
 
 var _base_y: float = 0.0

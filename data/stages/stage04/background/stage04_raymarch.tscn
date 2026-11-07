@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://gd8i305tm6bb"]
+[gd_scene format=3 uid="uid://oppk1rakg26l"]
 
 [ext_resource type="Shader" uid="uid://ch50fpjpjmrn7" path="res://addons/raymarched_mountains/src/shaders/RaymarchingMountains.gdshader" id="1_dk4lm"]
 [ext_resource type="Script" uid="uid://b8cxilfxmn366" path="res://addons/raymarched_mountains/src/MountainsBox.gd" id="2_av2ef"]
@@ -41,8 +41,8 @@ shader = ExtResource("1_dk4lm")
 shader_parameter/noise = SubResource("NoiseTexture2D_d0dfd")
 shader_parameter/uv_scale = 0.11
 shader_parameter/terrain_scale = 160.0
-shader_parameter/MAX_STEPS = 32
-shader_parameter/MAX_DIST = 4000.0
+shader_parameter/MAX_STEPS = 96
+shader_parameter/MAX_DIST = 3000.0
 shader_parameter/terrain_color = Color(0.11, 0.3, 0.14, 1)
 shader_parameter/shadow_color = Color(0.025, 0.07, 0.035, 1)
 shader_parameter/fogGradient = SubResource("GradientTexture1D_av2ef")
