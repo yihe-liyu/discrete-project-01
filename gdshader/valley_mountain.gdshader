@@ -3,7 +3,7 @@ render_mode cull_disabled;
 
 uniform vec3 low_color : source_color = vec3(0.035, 0.14, 0.06);
 uniform vec3 rock_color : source_color = vec3(0.11, 0.26, 0.14);
-uniform vec3 high_color : source_color = vec3(0.24, 0.36, 0.27);
+uniform vec3 high_color : source_color = vec3(0.16, 0.34, 0.16);
 uniform vec3 snow_color : source_color = vec3(0.92, 0.96, 1.0);
 uniform vec3 haze_color : source_color = vec3(0.62, 0.7, 0.78);
 uniform float haze_start = 900.0;
@@ -23,7 +23,7 @@ void vertex() {
 	float h = UV.x;
 	vec3 c = mix(low_color, rock_color, smoothstep(0.08, 0.45, h));
 	c = mix(c, high_color, smoothstep(0.42, 0.68, h));
-	c = mix(c, snow_color, smoothstep(0.88, 0.98, h));
+	c = mix(c, snow_color, smoothstep(0.955, 0.995, h));
 	// 岩层横纹：轻微明暗，不喧宾夺主
 	c *= 0.92 + 0.08 * sin(h * 90.0 + UV.y * 18.0);
 	v_color = c;
