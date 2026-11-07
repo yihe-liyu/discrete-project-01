@@ -9,9 +9,9 @@
 [node name="Stage04RaymarchBackground" instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
 override_camera_home = true
-camera_home_position = Vector3(0, 90, 30)
+camera_home_position = Vector3(0, 80, 30)
 camera_home_rotation_degrees = Vector3(-10, 0, 0)
-camera_home_fov = 70.0
+camera_home_fov = 68.0
 
 [node name="RaymarchDemo" parent="." instance=ExtResource("3_ray")]
 
