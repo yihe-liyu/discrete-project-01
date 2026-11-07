@@ -10,9 +10,9 @@
 [node name="Stage04InfiniteValley" instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
 override_camera_home = true
-camera_home_position = Vector3(0, 16, 25)
-camera_home_rotation_degrees = Vector3(-1, 0, 0)
-camera_home_fov = 62.0
+camera_home_position = Vector3(0, 300, 25)
+camera_home_rotation_degrees = Vector3(-16, 0, 0)
+camera_home_fov = 58.0
 
 [node name="Valley" type="Node3D" parent="."]
 script = ExtResource("3_valley")
