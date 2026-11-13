@@ -38,7 +38,7 @@ var 回弹模板: EmitTemplate
 
 func _on_start() -> void:
 	开花弹 = BulletData.new().tex("棱弹").color(Color.AQUA).blend(true).enemy()
-	反弹弹 = BulletData.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
+	反弹弹 = BulletData.new().tex("米弹").color(Color.GOLD).blend(true).enemy().no_spawn_fog()
 	环弹模式 = 环弹模式脚本.new()
 	环弹参数 = 环弹参数脚本.new()
 	回弹模板 = EmitTemplate.new(&"卡摩瑞一非_rebound", 反弹弹)
