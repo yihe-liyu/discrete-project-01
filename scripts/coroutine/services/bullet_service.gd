@@ -9,6 +9,15 @@ var is_active: bool = true
 var bullet_manager: BulletManager
 
 
+## 注册子弹出模板；失败时返回 false（通常是 id 重复 / 字段非法）。
+func register_emit_template(template: EmitTemplate) -> bool:
+	return bullet_manager.register_emit_template(template) if bullet_manager != null else false
+
+
+func has_emit_template(id: StringName) -> bool:
+	return bullet_manager.has_emit_template(id) if bullet_manager != null else false
+
+
 ## 扇形散弹。count == 1 打一发（忽略 spread_angle）；不发弹（active=false / count ≤ 0）时静默返回。
 func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void:
 	shoot_spread_ids(bullet_data, count, spread_angle, base_dir, at, sfx)

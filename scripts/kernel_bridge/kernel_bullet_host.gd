@@ -166,7 +166,8 @@ func _spawn_emit_template(template: EmitTemplate, pos: Vector2, vel: Vector2, co
 		return
 	var data: BulletData = template.bullet.duplicate()
 	data.velocity = vel
-	data.color(color)
+	if color != Color.WHITE:
+		data.color(color)
 	if template.behavior != null:
 		data.behavior_spec = template.behavior
 	var dir := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN

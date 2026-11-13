@@ -64,6 +64,15 @@ var _coroutine_runner: CoroutineRunner
 var _stage_context: StageContext
 
 
+## 注册内容层 EmitTemplate；返回 false 时见 system.emit_templates.last_errors()。
+func register_emit_template(template: EmitTemplate) -> bool:
+	return _kernel_bullet_host.system.register_emit_template(template) if _kernel_bullet_host != null and _kernel_bullet_host.system != null else false
+
+
+func has_emit_template(id: StringName) -> bool:
+	return _kernel_bullet_host.system.emit_templates.has(id) if _kernel_bullet_host != null and _kernel_bullet_host.system != null else false
+
+
 ## 内核活跃行数（含纯特效行，不等于弹数；统计/断言用）。
 func active_count() -> int:
 	return _kernel_bullet_host.system.get_active_count() if _kernel_bullet_host != null else 0

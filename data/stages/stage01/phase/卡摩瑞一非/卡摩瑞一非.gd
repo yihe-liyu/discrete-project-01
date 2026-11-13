@@ -32,6 +32,8 @@ var 开花弹: BulletData
 var 反弹弹: BulletData
 var 环弹模式: BulletPattern
 var 环弹参数: PatternParams
+## 撞墙后回弹的子弹出模板；run_async 注册到 ctx.bullets。
+var 回弹模板: EmitTemplate
 
 
 func _on_start() -> void:
@@ -39,9 +41,14 @@ func _on_start() -> void:
 	反弹弹 = BulletData.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
 	环弹模式 = 环弹模式脚本.new()
 	环弹参数 = 环弹参数脚本.new()
+	回弹模板 = EmitTemplate.new(&"卡摩瑞一非_rebound", 反弹弹)
 
 
 func run_async(p_ctx: StageContext) -> void:
+	if not p_ctx.bullets.has_emit_template(&"卡摩瑞一非_rebound"):
+		if not p_ctx.bullets.register_emit_template(回弹模板):
+			push_error("[卡摩瑞一非] 回弹模板注册失败：%s" % p_ctx.bullets.bullet_manager.system.emit_templates.last_errors())
+			return
 	while p_ctx.active():
 		if not await p_ctx.clock.delay(波间隔):
 			return
@@ -70,16 +77,10 @@ func 发射一圈(p_ctx: StageContext) -> void:
 		* (本波已发圈数 - diff_pick(开花弹次数) / 2.0) * 波次正负交替
 	本波已发圈数 += 1
 
-	var lifecycle := BulletLifecycle.new()
-	# 每多开一圈，棱弹的加速度略减，让后面的圈更“散”。
-	lifecycle.accel_heading(100.0 - 本波已发圈数 * 4.0)
-	lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
-	lifecycle.sfx(&"kira")
-	lifecycle.emit(反弹弹, BulletLifecycle.toward(BulletLifecycle.T_BOSS, 单圈反弹附加角), 0.0, BulletLifecycle.AT_PHASE_END)
-	lifecycle.despawn()
-
+	var 本圈加速度: float = 100.0 - 本波已发圈数 * 4.0
 	开花弹.speed(速度)
-	开花弹.trajectory(lifecycle)
+	开花弹.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([
+		回弹模板.numeric_id, 0.0, 本圈加速度, 单圈反弹附加角])))
 
 	# 环弹模式复用同一份 BulletData：颜色 / 阵营 / lifecycle都不变，只换本次数量与速度。
 	环弹参数.template = 开花弹
