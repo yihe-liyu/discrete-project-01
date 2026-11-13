@@ -1,6 +1,6 @@
 # NativeBehavior Pack 设计
 
-> **状态**：linear 原型已落地（registry + `set_behavior` + 低层测试）；内容侧接入与 homing 尚未实现。
+> **状态**：linear 原型已落地（registry + `set_behavior` + 低层测试）；已补 position / color / render_rot / hitbox API；内容侧接入与 homing 尚未实现。
 > **目标**：把“每颗弹生命周期内的运动控制”从内核里的固定 opcode / DSL，迁到可独立增删的 C++ behavior pack；内核只保留存储、碰撞、积分、渲染同步和注册表。
 > **非目标**：运行期加载不可信 `.so`、每颗弹一个对象、GDScript 每帧回调。
 

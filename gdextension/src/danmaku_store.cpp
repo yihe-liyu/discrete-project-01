@@ -30,6 +30,10 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_type_index", "id"), &DanmakuStore::get_type_index);
 	ClassDB::bind_method(D_METHOD("get_faction", "id"), &DanmakuStore::get_faction);
 	ClassDB::bind_method(D_METHOD("get_color", "id"), &DanmakuStore::get_color);
+	ClassDB::bind_method(D_METHOD("set_color", "id", "color"), &DanmakuStore::set_color);
+	ClassDB::bind_method(D_METHOD("get_render_rot", "id"), &DanmakuStore::get_render_rot);
+	ClassDB::bind_method(D_METHOD("set_render_rot", "id", "rot"), &DanmakuStore::set_render_rot);
+	ClassDB::bind_method(D_METHOD("get_hitbox", "id"), &DanmakuStore::get_hitbox);
 	ClassDB::bind_method(D_METHOD("fill_multimesh", "mm"), &DanmakuStore::fill_multimesh);
 	ClassDB::bind_method(D_METHOD("reserve", "n"), &DanmakuStore::reserve);
 	ClassDB::bind_method(D_METHOD("set_cull", "cull"), &DanmakuStore::set_cull);
@@ -577,6 +581,29 @@ int DanmakuStore::get_type(int p_id) const { return _valid(p_id) ? _type[p_id] :
 int DanmakuStore::get_type_index(int p_id) const { return _valid(p_id) ? _type[p_id] : -1; }
 int DanmakuStore::get_faction(int p_id) const { return _valid(p_id) ? _faction[p_id] : -1; }
 Color DanmakuStore::get_color(int p_id) const { return _valid(p_id) ? _color[p_id] : Color(1, 1, 1, 1); }
+
+void DanmakuStore::set_color(int p_id, const Color &p_color) {
+	if (_valid(p_id)) { _color[p_id] = p_color; }
+}
+
+float DanmakuStore::get_render_rot(int p_id) const {
+	return _valid(p_id) ? _render_rot[p_id] : (float)NAN;
+}
+
+void DanmakuStore::set_render_rot(int p_id, float p_rot) {
+	if (_valid(p_id)) { _render_rot[p_id] = p_rot; }
+}
+
+Dictionary DanmakuStore::get_hitbox(int p_id) const {
+	Dictionary out;
+	if (!_valid(p_id)) { return out; }
+	out["radius"] = _hb_radius[p_id];
+	out["offset"] = Vector2(_hb_offx[p_id], _hb_offy[p_id]);
+	out["size"] = Vector2(_hb_sizex[p_id], _hb_sizey[p_id]);
+	out["follow_dir"] = _hb_follow[p_id] != 0;
+	out["dir_offset"] = _hb_diroff[p_id];
+	return out;
+}
 
 void DanmakuStore::fill_multimesh(const Ref<MultiMesh> &p_mm) const {
 	if (p_mm.is_null()) {
@@ -1213,6 +1240,9 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 				bctx.boss = p_boss;
 				bctx.has_boss = p_has_boss;
 				bctx.enemies = &p_enemies;
+				bctx.position = Vector2(_x[i], _y[i]);
+				Vector2 pos_out = bctx.position;
+				bctx.position_out = &pos_out;
 				bctx.heading_x = &_hx[i];
 				bctx.heading_y = &_hy[i];
 				bctx.render_rot = &_render_rot[i];
@@ -1220,9 +1250,12 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 				// NativeBehaviorContext 的 velocity 指向临时 Vector2，tick 后可写回。
 				Vector2 vel(_vx[i], _vy[i]);
 				bctx.velocity = &vel;
+				bctx.color = &_color[i];
 				bdef->tick(&_bstate[i * B_STATE_STRIDE], &_bparams[i * B_PARAM_STRIDE], bctx, dt);
 				_vx[i] = vel.x;
 				_vy[i] = vel.y;
+				_x[i] = pos_out.x;
+				_y[i] = pos_out.y;
 			}
 			if (_spin_rot[i] != 0.0f) {
 				const float spin_base = std::isnan(_render_rot[i]) ? std::atan2(_vy[i], _vx[i]) : _render_rot[i];

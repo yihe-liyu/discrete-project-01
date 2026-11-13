@@ -223,3 +223,23 @@ func test_native_linear_behavior_matches_program() -> void:
 	var p1: Vector2 = _kernel_bullet_host.system.get_position(native)
 	var delta: Vector2 = p1 - p0
 	assert_almost_eq(delta, Vector2(200, 0), Vector2(0.01, 0.01), "linear 行为不应改变运动")
+
+
+## 内核逐弹表现属性：颜色 / 渲染朝向 / 判定盒的 get-set 对齐。
+func test_native_bullet_visual_attributes() -> void:
+	var d := BulletData.new().enemy().tex("小玉")
+	d.hitbox_radius = 7.0
+	d.hitbox_offset = Vector2(2, 3)
+	d.follow_dir = false
+	var id := _kernel_bullet_host.shoot(d, Vector2(300, 300), Vector2.DOWN)
+
+	_kernel_bullet_host.system.set_color(id, Color.RED)
+	assert_eq(_kernel_bullet_host.system.get_color(id), Color.RED, "set_color 应写回")
+
+	_kernel_bullet_host.system.set_render_rot(id, 1.25)
+	assert_almost_eq(_kernel_bullet_host.system.get_render_rot(id), 1.25, 0.0001, "set_render_rot 应写回")
+
+	var hb: Dictionary = _kernel_bullet_host.system.get_hitbox(id)
+	assert_almost_eq(float(hb.get("radius", 0.0)), 7.0, 0.0001, "get_hitbox.radius")
+	assert_eq(hb.get("offset"), Vector2(2, 3), "get_hitbox.offset")
+	assert_eq(hb.get("follow_dir"), false, "get_hitbox.follow_dir")

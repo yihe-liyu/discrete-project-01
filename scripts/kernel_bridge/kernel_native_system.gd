@@ -388,6 +388,30 @@ func get_behavior(id: int) -> int:
 	return _accel.get_behavior(id) if _accel != null else -1
 
 
+## 逐弹颜色（下一帧渲染快照生效）。
+func set_color(id: int, color: Color) -> void:
+	if _accel != null:
+		_accel.set_color(id, color)
+	if id >= 0 and id < _color.size():
+		_color[id] = color
+
+
+## 单行渲染朝向；NAN = 按 velocity。
+func get_render_rot(id: int) -> float:
+	return _accel.get_render_rot(id) if _accel != null else NAN
+
+
+## 当前帧渲染朝向覆盖。
+func set_render_rot(id: int, rot: float) -> void:
+	if _accel != null:
+		_accel.set_render_rot(id, rot)
+
+
+## {radius, offset, size, follow_dir, dir_offset}；无效 → 空字典。
+func get_hitbox(id: int) -> Dictionary:
+	return _accel.get_hitbox(id) if _accel != null else {}
+
+
 # ═══ 读访问器（快照）═══
 
 ## 当前活跃行数；快照数组按容量分配，只有前 count 行有效。

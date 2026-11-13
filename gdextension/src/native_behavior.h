@@ -16,10 +16,14 @@ struct NativeBehaviorContext {
 	Vector2 boss;
 	bool has_boss = false;
 	const PackedVector2Array *enemies = nullptr;
+	// 当前位置（只读副本）与可选直写通道；行为需要“自己在哪”时用。
+	Vector2 position;
+	Vector2 *position_out = nullptr;
 	Vector2 *velocity = nullptr;
 	float *heading_x = nullptr;
 	float *heading_y = nullptr;
 	float *render_rot = nullptr;
+	Color *color = nullptr;
 	float *life = nullptr;
 };
 

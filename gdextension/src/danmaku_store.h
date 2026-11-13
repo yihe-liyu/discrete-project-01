@@ -158,6 +158,10 @@ public:
 	int get_type_index(int p_id) const; // 同上（兼容名）。
 	int get_faction(int p_id) const; // 阵营；无效 → -1。
 	Color get_color(int p_id) const; // 无效 → 白。
+	void set_color(int p_id, const Color &p_color); // 逐弹改色（渲染快照下一帧生效）。
+	float get_render_rot(int p_id) const; // 单行渲染朝向；NAN = 按 velocity。
+	void set_render_rot(int p_id, float p_rot); // 当前帧渲染朝向覆盖（下一帧可能被行为重置）。
+	Dictionary get_hitbox(int p_id) const; // {radius, offset, size, follow_dir, dir_offset}。
 	// 容量 / 剔除区 / 出界宽限。
 	void reserve(int p_n);
 	void set_cull(const Rect2 &p_cull); // 设剔除矩形。
