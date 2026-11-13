@@ -1,6 +1,6 @@
 # NativeBehavior Pack 设计
 
-> **状态**：linear + homing + accel 已落地，enemy01/02/03 的重力弹已迁到 accel；EmitTemplate / Registry 已落地；bounce_emit Outcome（emit/despawn/sfx）已接入；卡摩瑞一非已从 lifecycle 迁到 bounce_emit；`BulletData.with_behavior()` 已接入内容桥；测试覆盖自动绑定、转向与属性 API。
+> **状态**：linear + homing + accel 已落地，enemy01/02/03 的重力弹已迁到 accel；EmitTemplate / Registry 已落地；bounce_emit Outcome（emit/despawn/sfx）已接入；卡摩瑞一非 / 二非已从 lifecycle 迁到 bounce_emit；`BulletData.with_behavior()` 已接入内容桥；测试覆盖自动绑定、转向与属性 API。
 > **目标**：把“每颗弹生命周期内的运动控制”从内核里的固定 opcode / DSL，迁到可独立增删的 C++ behavior pack；内核只保留存储、碰撞、积分、渲染同步和注册表。
 > **非目标**：运行期加载不可信 `.so`、每颗弹一个对象、GDScript 每帧回调。
 

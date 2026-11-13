@@ -83,7 +83,7 @@ func 发射一圈(p_ctx: StageContext) -> void:
 	var 本圈加速度: float = 100.0 - 本波已发圈数 * 4.0
 	开花弹.speed(速度)
 	开花弹.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([
-		回弹模板.numeric_id, 0.0, 本圈加速度, 单圈反弹附加角, 撞墙音效id])))
+		回弹模板.numeric_id, 0.0, 本圈加速度, 单圈反弹附加角, 撞墙音效id, 1.0])))
 
 	# 环弹模式复用同一份 BulletData：颜色 / 阵营 / lifecycle都不变，只换本次数量与速度。
 	环弹参数.template = 开花弹

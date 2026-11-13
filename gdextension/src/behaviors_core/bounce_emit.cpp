@@ -8,9 +8,11 @@ namespace godot {
 // params[2] = 沿自身朝向的加速度（px/s²）
 // params[3] = 子弹出方向相对“朝向 Boss”的附加角（弧度）
 // params[4] = 撞墙音效下标（-1 = 无）
+// params[5] = >0.5 时回收自己；否则撞墙后继续飞行（只触发一次）
 static void bounce_emit_init(float *p_state, const float *p_params) {
 	(void)p_params;
 	p_state[0] = 0.0f;
+	p_state[1] = 0.0f;
 }
 
 static void bounce_emit_tick(float *p_state, const float *p_params,
@@ -22,9 +24,10 @@ static void bounce_emit_tick(float *p_state, const float *p_params,
 	const bool hit_wall = p_ctx.position.x <= p_ctx.field_left
 		|| p_ctx.position.x >= p_ctx.field_right
 		|| p_ctx.position.y <= p_ctx.field_top;
-	if (!hit_wall) {
+	if (!hit_wall || p_state[1] > 0.0f) {
 		return;
 	}
+	p_state[1] = 1.0f;
 	if (p_out.emit_count < 4) {
 		NativeBehaviorEmit &e = p_out.emits[p_out.emit_count++];
 		e.template_id = (int32_t)p_params[0];
@@ -40,12 +43,12 @@ static void bounce_emit_tick(float *p_state, const float *p_params,
 		e.color = Color(1, 1, 1, 1);
 	}
 	p_out.sfx_id = (int32_t)p_params[4];
-	p_out.despawn = true;
+	p_out.despawn = p_params[5] > 0.5f;
 }
 
 void register_bounce_emit() {
 	static const NativeBehaviorDef def = {
-		"bounce_emit", 1, 5, &bounce_emit_init, &bounce_emit_tick
+		"bounce_emit", 2, 6, &bounce_emit_init, &bounce_emit_tick
 	};
 	NativeBehaviorRegistry::register_def(def);
 }
