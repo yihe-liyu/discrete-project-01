@@ -51,6 +51,10 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_seed", "seed"), &DanmakuStore::set_seed);
 	ClassDB::bind_method(D_METHOD("register_program", "ops", "args", "move_start", "move_count", "until", "act_start", "act_count", "phase_count", "slots"), &DanmakuStore::register_program);
 	ClassDB::bind_method(D_METHOD("set_program", "id", "program"), &DanmakuStore::set_program);
+	ClassDB::bind_method(D_METHOD("set_behavior", "id", "behavior", "params"), &DanmakuStore::set_behavior, DEFVAL(PackedFloat32Array()));
+	ClassDB::bind_method(D_METHOD("get_behavior", "id"), &DanmakuStore::get_behavior);
+	ClassDB::bind_method(D_METHOD("get_behavior_id", "name"), &DanmakuStore::get_behavior_id);
+	ClassDB::bind_method(D_METHOD("get_behavior_name", "id"), &DanmakuStore::get_behavior_name);
 	ClassDB::bind_method(D_METHOD("get_program", "id"), &DanmakuStore::get_program);
 	ClassDB::bind_method(D_METHOD("behavior_tick", "delta", "player", "boss", "has_boss", "enemies", "anchor_base"), &DanmakuStore::behavior_tick, DEFVAL(PackedVector2Array()));
 	ClassDB::bind_method(D_METHOD("clear"), &DanmakuStore::clear);
@@ -119,6 +123,9 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_hb_diroff.assign(p_capacity, 0.0f);
 	_hb_follow.assign(p_capacity, 0);
 	_graze_tick.assign(p_capacity, -1);
+	_behavior_id.assign(p_capacity, -1);
+	_bstate.assign(p_capacity * B_STATE_STRIDE, 0.0f);
+	_bparams.assign(p_capacity * B_PARAM_STRIDE, 0.0f);
 	_frame_tick = 0;
 	_out_grace.assign(p_capacity, 0.0f);
 	_out_time.assign(p_capacity, 0.0f);
@@ -164,6 +171,9 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 	_graze_tick[i] = -1;
+	_behavior_id[i] = -1;
+	for (int bs = 0; bs < B_STATE_STRIDE; ++bs) { _bstate[i * B_STATE_STRIDE + bs] = 0.0f; }
+	for (int bp = 0; bp < B_PARAM_STRIDE; ++bp) { _bparams[i * B_PARAM_STRIDE + bp] = 0.0f; }
 	_render_rot[i] = (float)NAN;
 	_spin_rot[i] = 0.0f;
 	return _count++;
@@ -210,6 +220,9 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
 		_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 		_graze_tick[i] = -1;
+		_behavior_id[i] = -1;
+		for (int bs = 0; bs < B_STATE_STRIDE; ++bs) { _bstate[i * B_STATE_STRIDE + bs] = 0.0f; }
+		for (int bp = 0; bp < B_PARAM_STRIDE; ++bp) { _bparams[i * B_PARAM_STRIDE + bp] = 0.0f; }
 		_render_rot[i] = (float)NAN;
 		_spin_rot[i] = 0.0f;
 		++_count;
@@ -258,6 +271,9 @@ int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_c
 	_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 	_graze_tick[i] = -1;
+	_behavior_id[i] = -1;
+	for (int bs = 0; bs < B_STATE_STRIDE; ++bs) { _bstate[i * B_STATE_STRIDE + bs] = 0.0f; }
+	for (int bp = 0; bp < B_PARAM_STRIDE; ++bp) { _bparams[i * B_PARAM_STRIDE + bp] = 0.0f; }
 	_render_rot[i] = (float)NAN;
 	_spin_rot[i] = 0.0f;
 	return _count++;
@@ -283,6 +299,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_hb_radius.resize(p_n); _hb_offx.resize(p_n); _hb_offy.resize(p_n);
 	_hb_sizex.resize(p_n); _hb_sizey.resize(p_n); _hb_diroff.resize(p_n);
 	_hb_follow.resize(p_n); _graze_tick.resize(p_n); _render_rot.resize(p_n); _spin_rot.resize(p_n);
+	_behavior_id.resize(p_n); _bstate.resize(p_n * B_STATE_STRIDE); _bparams.resize(p_n * B_PARAM_STRIDE);
 	_out_grace.resize(p_n); _out_time.resize(p_n);
 }
 
@@ -330,6 +347,9 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_hb_diroff[p_id] = _hb_diroff[last];
 	_hb_follow[p_id] = _hb_follow[last];
 	_graze_tick[p_id] = _graze_tick[last];
+	_behavior_id[p_id] = _behavior_id[last];
+	for (int bs = 0; bs < B_STATE_STRIDE; ++bs) { _bstate[p_id * B_STATE_STRIDE + bs] = _bstate[last * B_STATE_STRIDE + bs]; }
+	for (int bp = 0; bp < B_PARAM_STRIDE; ++bp) { _bparams[p_id * B_PARAM_STRIDE + bp] = _bparams[last * B_PARAM_STRIDE + bp]; }
 	_out_grace[p_id] = _out_grace[last];
 	_out_time[p_id] = _out_time[last];
 	_render_rot[p_id] = _render_rot[last];
@@ -718,9 +738,39 @@ void DanmakuStore::set_program(int p_id, int p_program) {
 	_phasend[p_id] = 0;
 	_spin_rot[p_id] = 0.0f;
 	_graze_tick[p_id] = -1;
+	_behavior_id[p_id] = -1;
 	for (int s = 0; s < SLOT_STRIDE; ++s) {
 		_pslots[p_id * SLOT_STRIDE + s] = 0.0f;
 	}
+}
+
+bool DanmakuStore::set_behavior(int p_id, int p_behavior, const PackedFloat32Array &p_params) {
+	if (!_valid(p_id)) { return false; }
+	const NativeBehaviorDef *def = NativeBehaviorRegistry::get(p_behavior);
+	if (def == nullptr) { return false; }
+	_behavior_id[p_id] = p_behavior;
+	for (int s = 0; s < B_STATE_STRIDE; ++s) { _bstate[p_id * B_STATE_STRIDE + s] = 0.0f; }
+	for (int s = 0; s < B_PARAM_STRIDE; ++s) { _bparams[p_id * B_PARAM_STRIDE + s] = 0.0f; }
+	const int n = MIN(def->param_count, B_PARAM_STRIDE);
+	for (int s = 0; s < n && s < p_params.size(); ++s) {
+		_bparams[p_id * B_PARAM_STRIDE + s] = p_params[s];
+	}
+	if (def->init != nullptr) {
+		def->init(&_bstate[p_id * B_STATE_STRIDE], &_bparams[p_id * B_PARAM_STRIDE]);
+	}
+	return true;
+}
+
+int DanmakuStore::get_behavior(int p_id) const {
+	return _valid(p_id) ? _behavior_id[p_id] : -1;
+}
+
+int DanmakuStore::get_behavior_id(const String &p_name) const {
+	return NativeBehaviorRegistry::find_id(p_name);
+}
+
+String DanmakuStore::get_behavior_name(int p_id) const {
+	return NativeBehaviorRegistry::get_name(p_id);
 }
 
 Vector2 DanmakuStore::_target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok) {
@@ -1155,6 +1205,31 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 	for (int i = 0; i < _count; ++i) {
 		_render_rot[i] = (float)NAN;   // 每帧重置；只有 position(render_heading) 会设它
 		if (_fx[i] > 0.0f) { continue; }   // 出生相位：只画特效，不跑行为（与参照 behavior_processor 一致）
+		if (_behavior_id[i] >= 0) {
+			const NativeBehaviorDef *bdef = NativeBehaviorRegistry::get(_behavior_id[i]);
+			if (bdef != nullptr && bdef->tick != nullptr) {
+				NativeBehaviorContext bctx;
+				bctx.player = p_player;
+				bctx.boss = p_boss;
+				bctx.has_boss = p_has_boss;
+				bctx.enemies = &p_enemies;
+				bctx.heading_x = &_hx[i];
+				bctx.heading_y = &_hy[i];
+				bctx.render_rot = &_render_rot[i];
+				bctx.life = &_life[i];
+				// NativeBehaviorContext 的 velocity 指向临时 Vector2，tick 后可写回。
+				Vector2 vel(_vx[i], _vy[i]);
+				bctx.velocity = &vel;
+				bdef->tick(&_bstate[i * B_STATE_STRIDE], &_bparams[i * B_PARAM_STRIDE], bctx, dt);
+				_vx[i] = vel.x;
+				_vy[i] = vel.y;
+			}
+			if (_spin_rot[i] != 0.0f) {
+				const float spin_base = std::isnan(_render_rot[i]) ? std::atan2(_vy[i], _vx[i]) : _render_rot[i];
+				_render_rot[i] = spin_base + _spin_rot[i];
+			}
+			continue;
+		}
 		const int prog = _program[i];
 		if (prog < 0) { continue; }
 		const int base = _p_phase_base[prog];

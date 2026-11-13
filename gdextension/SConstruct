@@ -10,10 +10,15 @@ import os
 # tools/check_native_api.gd 会用同一算法重算源码指纹并比对运行时值：
 #   "二进制 = 当前源码" 从巧合变成机械保证（改了 C++ 忘重编 → verify 直接红）。
 _src_dir = os.path.join(Dir("#").srcnode().abspath, "src")
-_names = sorted(
-    n for n in os.listdir(_src_dir)
-    if (n.endswith(".h") or n.endswith(".cpp")) and n != "build_stamp.h"
-)
+_names = []
+for _root, _dirs, _files in os.walk(_src_dir):
+    for _file in _files:
+        if not (_file.endswith(".h") or _file.endswith(".cpp")) or _file == "build_stamp.h":
+            continue
+        _full = os.path.join(_root, _file)
+        _rel = os.path.relpath(_full, _src_dir).replace(os.sep, "/")
+        _names.append(_rel)
+_names.sort()
 _hasher = hashlib.sha256()
 for _name in _names:
     _hasher.update(_name.encode("utf-8"))
@@ -35,8 +40,8 @@ if _old_stamp != _stamp_content:
 
 env = SConscript("godot-cpp/SConstruct", {"api_version": "4.7"})
 
-env.Append(CPPPATH=["src/"])
-sources = Glob("src/*.cpp")
+env.Append(CPPPATH=["src/", "src/behaviors_core/"])
+sources = Glob("src/*.cpp") + Glob("src/behaviors_core/*.cpp")
 
 # GDExtension XML 文档只在 editor / template_debug 编进去：
 # 运行时模板不带 Help 数据，减小发布包；C++ 的 // 注释不会自动进 Godot Help。

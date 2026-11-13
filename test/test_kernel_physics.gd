@@ -205,3 +205,21 @@ func test_graze_respects_interval() -> void:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 		_kernel_bullet_physics.process()
 	assert_eq(_player.resources.graze_count, 2, "满 6 tick 后应再次计擦弹")
+
+
+## NativeBehavior 最小 pack：linear 必须与普通直线弹逐帧位置一致。
+func test_native_linear_behavior_matches_program() -> void:
+	var bid := _kernel_bullet_host.system.get_behavior_id("linear")
+	assert_gt(bid, -1, "linear behavior 应已注册")
+	var d := BulletData.new().enemy().tex("小玉")
+	d.velocity = Vector2.DOWN * 120.0
+	var plain := _kernel_bullet_host.shoot(d, Vector2(400, 300), Vector2.DOWN)
+	var native := _kernel_bullet_host.shoot(d, Vector2(600, 300), Vector2.DOWN)
+	assert_true(_kernel_bullet_host.system.set_behavior(native, bid), "应能绑定 linear")
+	assert_eq(_kernel_bullet_host.system.get_behavior(native), bid, "行应记录 behavior id")
+	for _i in 60:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+	var p0: Vector2 = _kernel_bullet_host.system.get_position(plain)
+	var p1: Vector2 = _kernel_bullet_host.system.get_position(native)
+	var delta: Vector2 = p1 - p0
+	assert_almost_eq(delta, Vector2(200, 0), Vector2(0.01, 0.01), "linear 行为不应改变运动")

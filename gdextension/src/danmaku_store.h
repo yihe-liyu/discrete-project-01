@@ -14,6 +14,7 @@
 #include <godot_cpp/variant/string.hpp>
 #include <vector>
 #include <cstdint>
+#include "native_behavior.h"
 
 namespace godot {
 
@@ -89,6 +90,13 @@ class DanmakuStore : public RefCounted {
 	int64_t _next_uid = 1;
 	std::vector<float> _pelapsed, _pnext, _pendx, _pendy, _pslots;
 	std::vector<unsigned char> _phasend;
+	// ── NativeBehavior（与 program 互斥；-1 = 不使用）──
+	// 每行只存 behavior_id + 固定 state/params；不存对象、不存函数指针。
+	static const int B_STATE_STRIDE = 8;
+	static const int B_PARAM_STRIDE = 8;
+	std::vector<int32_t> _behavior_id;
+	std::vector<float> _bstate;
+	std::vector<float> _bparams;
 	// 相位首帧标志从「每弹一个 bool」改为「每槽一个 bit」——否则同相位的两个有状态
 	// 初始化 unit（anchor_drift / drift）会互相消费掉 fresh，后者用未初始化的槽（实测瞬移到原点）。
 	// bit s = 槽 s 在本相位尚未初始化。
@@ -235,6 +243,11 @@ public:
 			const PackedInt32Array &p_until, const PackedInt32Array &p_act_start,
 			const PackedInt32Array &p_act_count, int p_phase_count, int p_slots);
 	void set_program(int p_id, int p_program); // 绑定 program；-1 = 直线/未映射。
+	// 绑定 native behavior；behavior 为 registry id，params 不超过 behavior 声明数。
+	bool set_behavior(int p_id, int p_behavior, const PackedFloat32Array &p_params = PackedFloat32Array());
+	int get_behavior(int p_id) const; // 当前 behavior id；-1 = 无/无效。
+	int get_behavior_id(const String &p_name) const; // 名字 → registry id；未知 → -1。
+	String get_behavior_name(int p_id) const; // registry id → 名字；未知 → 空。
 	// 跑一帧 program；返回事件字典（emit/sfx/call）；本帧 dead 行走倒序 swap 回收。
 	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array());
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);

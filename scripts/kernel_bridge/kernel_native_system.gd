@@ -368,6 +368,26 @@ func set_graze_interval_ticks(ticks: int) -> void:
 		_accel.set_graze_interval_ticks(ticks)
 
 
+## native behavior 名字 → registry id；未知 → -1。
+func get_behavior_id(behavior_name: String) -> int:
+	return _accel.get_behavior_id(behavior_name) if _accel != null else -1
+
+
+## registry id → 名字；未知 → 空。
+func get_behavior_name(behavior: int) -> String:
+	return _accel.get_behavior_name(behavior) if _accel != null else ""
+
+
+## 给一行绑定 native behavior（低层 API；内容接入前先由测试/工具使用）。
+func set_behavior(id: int, behavior: int, params := PackedFloat32Array()) -> bool:
+	return _accel.set_behavior(id, behavior, params) if _accel != null else false
+
+
+## 当前行绑定的 behavior id；无 → -1。
+func get_behavior(id: int) -> int:
+	return _accel.get_behavior(id) if _accel != null else -1
+
+
 # ═══ 读访问器（快照）═══
 
 ## 当前活跃行数；快照数组按容量分配，只有前 count 行有效。

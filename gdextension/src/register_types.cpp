@@ -1,6 +1,7 @@
 #include "register_types.h"
 #include "danmaku_store.h"
 #include "danmaku_render_bridge.h"
+#include "native_behavior.h"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>
@@ -12,6 +13,7 @@ void initialize_danmaku_kernel_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
+	register_behaviors_core();
 	ClassDB::register_class<DanmakuStore>();
 	ClassDB::register_class<DanmakuRenderBridge>();
 }
