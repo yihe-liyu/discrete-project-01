@@ -7,6 +7,7 @@ namespace godot {
 // params[1] = 子弹出速度（<=0 = 沿用父弹当前速度）
 // params[2] = 沿自身朝向的加速度（px/s²）
 // params[3] = 子弹出方向相对“朝向 Boss”的附加角（弧度）
+// params[4] = 撞墙音效下标（-1 = 无）
 static void bounce_emit_init(float *p_state, const float *p_params) {
 	(void)p_params;
 	p_state[0] = 0.0f;
@@ -38,12 +39,13 @@ static void bounce_emit_tick(float *p_state, const float *p_params,
 		e.velocity = dir * child_speed;
 		e.color = Color(1, 1, 1, 1);
 	}
+	p_out.sfx_id = (int32_t)p_params[4];
 	p_out.despawn = true;
 }
 
 void register_bounce_emit() {
 	static const NativeBehaviorDef def = {
-		"bounce_emit", 1, 4, &bounce_emit_init, &bounce_emit_tick
+		"bounce_emit", 1, 5, &bounce_emit_init, &bounce_emit_tick
 	};
 	NativeBehaviorRegistry::register_def(def);
 }

@@ -65,6 +65,8 @@ var _fx_registry: Array[EffectType] = []   # 特效表（发弹/消弹共用；�
 var emit_templates := EmitTemplateRegistry.new()
 ## 由 KernelBulletHost 注入：模板 → 真正 spawn。
 var emit_spawner: Callable
+## behavior 撞墙音效表：内容注册 stream，C++ outcome 只带下标。
+var behavior_sfx: Array[AudioStream] = []
 
 ## 确定性 RNG（宿主 seed；行为已原生，仅保留宿主接口）。
 var _random := RandomNumberGenerator.new()
@@ -396,6 +398,17 @@ func get_behavior(id: int) -> int:
 ## 注册内容层子弹出模板；返回 false 时看 last_errors。
 func register_emit_template(template: EmitTemplate) -> bool:
 	return emit_templates.register(template)
+
+
+## 注册 / 复用 behavior 音效；返回绑定给 C++ 的下标。
+func register_behavior_sfx(stream: AudioStream) -> int:
+	if stream == null:
+		return -1
+	var idx := behavior_sfx.find(stream)
+	if idx >= 0:
+		return idx
+	behavior_sfx.append(stream)
+	return behavior_sfx.size() - 1
 
 
 ## 逐弹颜色（下一帧渲染快照生效）。
@@ -736,6 +749,13 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	# 事件携带自己的 program（eprog）；不能用 per-bullet program 去反查（历史 bug）。
 	var eprog: PackedInt32Array = res.eprog
 	for k in kinds.size():
+		if kinds[k] == 6:
+			var sfx_id := local[k]
+			if sfx_id >= 0 and sfx_id < behavior_sfx.size():
+				AudioManager.play_sfx(behavior_sfx[sfx_id], 1.0, AudioManager.BULLET_SFX_MIN_INTERVAL)
+			else:
+				push_error("[KernelNativeSystem] 未注册 behavior sfx id=%d" % sfx_id)
+			continue
 		if kinds[k] == 5:
 			# native behavior 的 emit 请求：模板由内容层注册，host 负责真正 spawn。
 			var tpl: EmitTemplate = emit_templates.get_by_numeric(local[k])
