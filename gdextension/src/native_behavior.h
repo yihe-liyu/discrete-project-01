@@ -5,6 +5,7 @@
 #include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/string.hpp>
+#include <godot_cpp/variant/color.hpp>
 #include <cstdint>
 #include <vector>
 
@@ -19,6 +20,9 @@ struct NativeBehaviorContext {
 	// 当前位置（只读副本）与可选直写通道；行为需要“自己在哪”时用。
 	Vector2 position;
 	Vector2 *position_out = nullptr;
+	float field_left = 0.0f;
+	float field_right = 0.0f;
+	float field_top = 0.0f;
 	Vector2 *velocity = nullptr;
 	float *heading_x = nullptr;
 	float *heading_y = nullptr;
@@ -28,12 +32,27 @@ struct NativeBehaviorContext {
 	float *life = nullptr;
 };
 
+struct NativeBehaviorEmit {
+	int32_t template_id = 0;
+	Vector2 position;
+	Vector2 velocity;
+	Color color = Color(1, 1, 1, 1);
+};
+
+// behavior 每 tick 的延迟动作请求；内核在遍历结束后统一应用。
+struct NativeBehaviorOutcome {
+	bool despawn = false;
+	int emit_count = 0;
+	NativeBehaviorEmit emits[4];
+};
+
 struct NativeBehaviorDef {
 	const char *name = "";
 	int state_size = 0;      // 固定 float 槽数，<= 8
 	int param_count = 0;     // 固定 float 参数数，<= 8
 	void (*init)(float *state, const float *params) = nullptr;
-	void (*tick)(float *state, const float *params, NativeBehaviorContext &ctx, float dt) = nullptr;
+	void (*tick)(float *state, const float *params, NativeBehaviorContext &ctx,
+		NativeBehaviorOutcome &out, float dt) = nullptr;
 };
 
 // 编译期注册表：pack 初始化时注册，运行期只读。

@@ -19,14 +19,14 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：119 脚本 / **862 用例（861 通过 / 1 红）/ 7274 断言 / 52.9s** / 0 orphans / **0 pending**。
+**现状**：119 脚本 / **863 用例（862 通过 / 1 红）/ 7279 断言 / 52.9s** / 0 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 30 | 205 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **B 内核 · 原生 C++ + 桥接** | 30 | 206 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 54 | 444 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
@@ -53,7 +53,7 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：类型不匹配 / **严格模式未知键** / **多脚本并集未知键**要响亮报错 | 10 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（30 / 205）
+## B · 内核 · 原生 C++ + 桥接（30 / 206）
 
 ### B1 parity 套件（13 文件 / 100 用例）—— 依赖 `test/reference/` 冻结 oracle
 
@@ -80,7 +80,7 @@
 |---|---|---|---|
 | [test_kernel_swap](../test/test_kernel_swap.gd) | 内核路由（唯一后端）：内核池 + 渲染数据源 + 行为装配 + bomb 宿主节点 | 9 | 3 |
 | [test_kernel_host](../test/test_kernel_host.gd) | `KernelBulletHost`：`BulletData→BulletType` 映射 / 内容签名复用 / 纹理旁表 | 8 | 2 |
-| [test_kernel_physics](../test/test_kernel_physics.gd) | `KernelBulletPhysics`：敌弹↔自机（命中+擦弹），与旧规则 1:1 | 17 | 0 |
+| [test_kernel_physics](../test/test_kernel_physics.gd) | `KernelBulletPhysics`：敌弹↔自机（命中+擦弹），与旧规则 1:1 | 18 | 0 |
 | [test_kernel_render](../test/test_kernel_render.gd) | `BulletMultiMesh` 的**内核快照**渲染路径 + 分组键 | 5 | 12 |
 | [test_spell_backdrop](../test/test_spell_backdrop.gd) | **符卡背景 = 每 Boss 一个场景**：宿主层显隐/淡入淡出/层级/同场景不重建不重播 + 换场景换实例 + 淡出中途折返复用 + 滚动层（速度可调/取模无缝）+ plain 模板可用 | 10 | 0 |
 | [test_spell_portrait](../test/test_spell_portrait.gd) | **符卡宣言立绘**：右上角→左下角快慢快→淡出；层级在弹幕之下 | 5 | 0 |

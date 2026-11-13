@@ -302,3 +302,21 @@ func test_native_accel_matches_lifecycle() -> void:
 	var lc_delta: Vector2 = _kernel_bullet_host.system.get_position(lc_id) - Vector2(400, 300)
 	var bh_delta: Vector2 = _kernel_bullet_host.system.get_position(bh_id) - Vector2(600, 300)
 	assert_almost_eq(bh_delta, lc_delta, Vector2(0.01, 0.01), "accel pack 应与 lifecycle 轨迹一致")
+
+
+## bounce_emit Outcome：撞墙请求 emit，host 按模板真正 spawn 子弹出，父弹回收。
+func test_native_bounce_emit_spawns_template() -> void:
+	_kernel_bullet_host.setup_behaviors(_player, Callable())
+	var child_data := BulletData.new().enemy().tex("米弹").no_spawn_fog()
+	child_data.velocity = Vector2(0, 120)
+	var tpl := EmitTemplate.new(&"rebound_test", child_data)
+	assert_true(_kernel_bullet_host.system.register_emit_template(tpl), "模板应注册")
+
+	var parent_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	parent_data.velocity = Vector2.ZERO
+	parent_data.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([tpl.numeric_id, 120.0])))
+	var id := _kernel_bullet_host.shoot(parent_data, Vector2(GameConfig.FIELD_LEFT, 300), Vector2.ZERO)
+	assert_eq(_kernel_bullet_host.system.get_behavior(id), _kernel_bullet_host.system.get_behavior_id("bounce_emit"))
+
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "父弹应回收，子弹出应存在")

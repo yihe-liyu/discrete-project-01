@@ -143,6 +143,7 @@ func _ensure_system() -> void:
 	if not system.is_native_ready():
 		push_error("[KernelBulletHost] 原生扩展未加载：本项目已要求 GDExtension（见 docs/archive/N2_NATIVE_INTEGRATION_PLAN.md §63）")
 	add_child(system)
+	system.emit_spawner = Callable(self, "_spawn_emit_template")
 
 
 ## 行为循环结束后统一执行延后的 re_fire / 分裂（内核契约：循环中途禁止增删行）。
@@ -156,6 +157,20 @@ func _physics_process(delta: float) -> void:
 func flush_behavior_host() -> void:
 	if _behavior_host != null:
 		_behavior_host.flush()
+
+
+## KernelNativeSystem 的 behavior emit 回调：模板 → 实际 spawn。
+func _spawn_emit_template(template: EmitTemplate, pos: Vector2, vel: Vector2, color: Color) -> void:
+	if template == null or template.bullet == null:
+		push_error("[KernelBulletHost] emit template 无效")
+		return
+	var data: BulletData = template.bullet.duplicate()
+	data.velocity = vel
+	data.color(color)
+	if template.behavior != null:
+		data.behavior_spec = template.behavior
+	var dir := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
+	spawn_prepared(prepare_shot(data, pos, dir))
 
 
 ## 解析一次发射所需的 per-shot 状态（类型 / 速度 / 行为 / 染色），不写内核池。

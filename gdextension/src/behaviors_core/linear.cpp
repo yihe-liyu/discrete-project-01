@@ -9,10 +9,12 @@ static void linear_init(float *p_state, const float *p_params) {
 	(void)p_params;
 }
 
-static void linear_tick(float *p_state, const float *p_params, NativeBehaviorContext &p_ctx, float p_dt) {
+static void linear_tick(float *p_state, const float *p_params,
+		NativeBehaviorContext &p_ctx, NativeBehaviorOutcome &p_out, float p_dt) {
 	(void)p_state;
 	(void)p_params;
 	(void)p_ctx;
+	(void)p_out;
 	(void)p_dt;
 }
 

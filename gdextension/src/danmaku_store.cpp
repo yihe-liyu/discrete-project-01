@@ -1280,6 +1280,9 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 				bctx.has_boss = p_has_boss;
 				bctx.enemies = &p_enemies;
 				bctx.position = Vector2(_x[i], _y[i]);
+				bctx.field_left = _field_left;
+				bctx.field_right = _field_right;
+				bctx.field_top = _field_top;
 				Vector2 pos_out = bctx.position;
 				bctx.position_out = &pos_out;
 				bctx.heading_x = &_hx[i];
@@ -1291,11 +1294,27 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 				Vector2 vel(_vx[i], _vy[i]);
 				bctx.velocity = &vel;
 				bctx.color = &_color[i];
-				bdef->tick(&_bstate[i * B_STATE_STRIDE], &_bparams[i * B_PARAM_STRIDE], bctx, dt);
+				NativeBehaviorOutcome bout;
+				bdef->tick(&_bstate[i * B_STATE_STRIDE], &_bparams[i * B_PARAM_STRIDE], bctx, bout, dt);
 				_vx[i] = vel.x;
 				_vy[i] = vel.y;
 				_x[i] = pos_out.x;
 				_y[i] = pos_out.y;
+				if (bout.despawn) {
+					_tick_dead.push_back(i);
+				}
+				for (int e = 0; e < bout.emit_count; ++e) {
+					const NativeBehaviorEmit &req = bout.emits[e];
+					_ev_kind.push_back(5);
+					_ev_prog.push_back(-1);
+					_ev_local.push_back(req.template_id);
+					_ev_bullet.push_back(i);
+					_ev_x.push_back(req.position.x); _ev_y.push_back(req.position.y);
+					_ev_dx.push_back(req.velocity.x); _ev_dy.push_back(req.velocity.y);
+					_ev_val.push_back(0.0f);
+					_ev_color.push_back(req.color);
+					_ev_variant.push_back(0);
+				}
 			}
 			if (_spin_rot[i] != 0.0f) {
 				const float spin_base = std::isnan(_render_rot[i]) ? std::atan2(_vy[i], _vx[i]) : _render_rot[i];

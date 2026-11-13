@@ -10,7 +10,8 @@ static void homing_init(float *p_state, const float *p_params) {
 }
 
 static void homing_tick(float *p_state, const float *p_params,
-		NativeBehaviorContext &p_ctx, float p_dt) {
+		NativeBehaviorContext &p_ctx, NativeBehaviorOutcome &p_out, float p_dt) {
+	(void)p_out;
 	p_state[0] += p_dt;
 	const Vector2 target = p_ctx.player;
 	Vector2 to_target = target - p_ctx.position;

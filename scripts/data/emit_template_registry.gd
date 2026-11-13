@@ -4,6 +4,8 @@ class_name EmitTemplateRegistry
 extends RefCounted
 
 var _by_id: Dictionary = {}
+var _by_numeric: Dictionary = {}
+var _next_id: int = 1
 var _last_errors: Array[String] = []
 
 
@@ -19,12 +21,20 @@ func register(template: EmitTemplate) -> bool:
 	if _by_id.has(template.id):
 		_last_errors.append("EmitTemplate id 重复：%s" % template.id)
 		return false
+	if template.numeric_id < 0:
+		template.numeric_id = _next_id
+		_next_id += 1
 	_by_id[template.id] = template
+	_by_numeric[template.numeric_id] = template
 	return true
 
 
 func get_template(id: StringName) -> EmitTemplate:
 	return _by_id.get(id)
+
+
+func get_by_numeric(numeric_id: int) -> EmitTemplate:
+	return _by_numeric.get(numeric_id)
 
 
 func has(id: StringName) -> bool:
@@ -37,6 +47,8 @@ func size() -> int:
 
 func clear() -> void:
 	_by_id.clear()
+	_by_numeric.clear()
+	_next_id = 1
 	_last_errors.clear()
 
 

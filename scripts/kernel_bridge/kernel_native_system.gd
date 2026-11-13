@@ -61,6 +61,10 @@ var _type_registry: Array[BulletType] = []
 var _render_fade: Dictionary = {}          # Kind → 整批淡出 0..1
 var _spawn_fx: Dictionary = {}             # Faction → 出生特效 EffectType
 var _fx_registry: Array[EffectType] = []   # 特效表（发弹/消弹共用；行按下标引用）
+## 内容层子弹出模板；C++ Outcome 只带 numeric_id，本层负责解析。
+var emit_templates := EmitTemplateRegistry.new()
+## 由 KernelBulletHost 注入：模板 → 真正 spawn。
+var emit_spawner: Callable
 
 ## 确定性 RNG（宿主 seed；行为已原生，仅保留宿主接口）。
 var _random := RandomNumberGenerator.new()
@@ -386,6 +390,11 @@ func set_behavior(id: int, behavior: int, params := PackedFloat32Array()) -> boo
 ## 当前行绑定的 behavior id；无 → -1。
 func get_behavior(id: int) -> int:
 	return _accel.get_behavior(id) if _accel != null else -1
+
+
+## 注册内容层子弹出模板；返回 false 时看 last_errors。
+func register_emit_template(template: EmitTemplate) -> bool:
+	return emit_templates.register(template)
 
 
 ## 逐弹颜色（下一帧渲染快照生效）。
@@ -722,9 +731,20 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	var dys: PackedFloat32Array = res.dy
 	var vals: PackedFloat32Array = res.val
 	var variants: PackedInt32Array = res.get("variant", PackedInt32Array())
+	var event_colors: PackedColorArray = res.get("color", PackedColorArray())
 	# 事件携带自己的 program（eprog）；不能用 per-bullet program 去反查（历史 bug）。
 	var eprog: PackedInt32Array = res.eprog
 	for k in kinds.size():
+		if kinds[k] == 5:
+			# native behavior 的 emit 请求：模板由内容层注册，host 负责真正 spawn。
+			var tpl: EmitTemplate = emit_templates.get_by_numeric(local[k])
+			if tpl == null:
+				push_error("[KernelNativeSystem] 未注册 EmitTemplate numeric_id=%d" % local[k])
+			elif emit_spawner.is_valid():
+				emit_spawner.call(tpl, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]), event_colors[k] if k < event_colors.size() else Color.WHITE)
+			else:
+				push_error("[KernelNativeSystem] emit_spawner 未注入")
+			continue
 		var prog: int = eprog[k]
 		if prog < 0 or prog >= _program_data.size():
 			continue

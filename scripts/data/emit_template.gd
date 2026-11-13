@@ -5,6 +5,8 @@ extends RefCounted
 
 ## 稳定模板 id（由内容层命名；Registry 查重）。
 var id: StringName
+## Registry 分配的数字 id；C++ Outcome 只引用它。
+var numeric_id: int = -1
 ## 复用的子弹构造器；模板只读，不要在发射后改它。
 var bullet: BulletData
 ## 子弹出运动；null = 默认直线。

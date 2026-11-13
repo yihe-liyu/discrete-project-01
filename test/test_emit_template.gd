@@ -12,6 +12,9 @@ func test_register_valid_template() -> void:
 	assert_true(reg.register(_valid()), "有效模板应注册")
 	assert_true(reg.has(&"rebound"), "应能按 id 查到")
 	assert_eq(reg.get_template(&"rebound").bullet.texture != null, true, "模板保留弹型")
+	var t := reg.get_template(&"rebound")
+	assert_gt(t.numeric_id, 0, "注册应分配数字 id")
+	assert_eq(reg.get_by_numeric(t.numeric_id), t, "数字 id 应能反查")
 	assert_eq(reg.last_errors().size(), 0, "成功时无错误")
 
 
