@@ -52,7 +52,7 @@ func _on_start() -> void:
 		if ctx.diff.at_least(Difficulty.HARD) and heavy_wave:
 			if _heavy_bullet_data == null:
 				_heavy_bullet_data = BulletData.new().enemy().blend(true).tex("棱弹").color(Color.GOLD).grace(3)
-				_heavy_bullet_data.with_behavior(BehaviorSpec.new(&"accel", PackedFloat32Array([0, 200])))
+				_heavy_bullet_data.with_behavior(BulletBehaviors.accel(Vector2(0, 200)))
 			for i in diff_pick([0, 0, 1, 2]):
 				_heavy_bullet_data.velocity = Vector2(0, 200 + i * 25)
 				ctx.bullets.shoot_spread(
