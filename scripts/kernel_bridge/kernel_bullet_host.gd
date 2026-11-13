@@ -164,7 +164,9 @@ func _spawn_emit_template(template: EmitTemplate, pos: Vector2, vel: Vector2, co
 	if template == null or template.bullet == null:
 		push_error("[KernelBulletHost] emit template 无效")
 		return
-	var data: BulletData = template.bullet.duplicate()
+	# 模板必须直接复用：BulletData 的 texture / is_spawn_fog 等是脚本字段，
+	# Resource.duplicate() 不保证完整复制，曾导致回弹子弹出不可见。
+	var data: BulletData = template.bullet
 	data.velocity = vel
 	if color != Color.WHITE:
 		data.color(color)
