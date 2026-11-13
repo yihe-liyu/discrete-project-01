@@ -7,6 +7,7 @@
 - 2026-11-12：D1（扫掠碰撞）已修复：内核新增上一帧位置、`hit_test_swept`、宽相按最大帧位移外扩；宿主命中/擦弹/自机弹改走扫掠；新增回归测试（851 用例）。
 - 2026-11-13：**修正状态**：D1 已完成；D2 当时只完成「扫掠检测」，`_grazed` 仍是**终生一次**。原文的「D1/D2 均已修复」是误记。
 - 2026-11-13：D2 已实现：`_graze_tick` 按 tick 记录，`is_grazed` 只在当前 tick 为真；新增跨 tick 擦弹回归（853 用例）；同一颗弹的擦弹默认间隔 6 tick，可 `set_graze_interval_ticks()` 调整。
+- 2026-11-13：I1 压测主路径已修：`bench_danmaku` 移除已不存在的 `backend.behavior`，行为随 `system._physics_process` 计时；量程 8000 / 20000 / 50000，50k 合计 12.38 ms（CPU-only）。
 - 2026-11-12 起：本审计作为 `TODO_TEMP.md` Z 段「下一阶段大方向」的依据；执行项只提炼到 TODO，不在此处维护清单。
 
 **被审计项目**：`/home/cirno/Projects/DiscreteProject/1-st-touhou-star-~-broadest-and-narrowest`（Godot 4.7 + GDScript + GDExtension `DanmakuStore`）
@@ -76,7 +77,7 @@
 | G3 | 时间轴 scrub / 单步 | 无；无整数 tick（C1），暂停菜单只有音效（`scripts/scenes/pause_menu.gd:21`） | 缺失 | 拖到任意 tick、单步、回退 300 tick（C:211） | 参数只能靠反复重开卡对比 | 5–10 | 依赖 C1 + 可快照状态；`CoroutineScript` 的 GDScript 栈不可快照 | P2 |
 | G4 | 参数面板 | 无（创作台退役，`docs/CONTENT_PIPELINE_AUDIT.md:424`）；现在靠 `.tres` inspector + `diff_pick`（`DANMAKU_API.md:438-445`） | 缺失 | 从 IR 类型自动生成 slider（C:210） | 改一个数要回编辑器/重开场景 | 3–5 | 与「内容 code-first」冲突：参数在 GDScript 变量里，无 schema 可生成 UI | P2 |
 | H1 | rank/资源/周目改写弹幕 | 内容直接读 `SaveData.selected_difficulty`（`data/stages/stage03B/phase/哆来咪三符/哆来咪三符.gd:52`）；全局 memory 值直接决定随机清弹（`kernel_bullet_physics.gd:65-71`）；无 rank/周目状态（`grep -rn "rank"` 只命中音频驱逐与难度图片） | 部分 | TERRA/STELLA 式系统直接改弹量/弹速/分支（B:26-27,200-202）；rank 改 Boss 图案分支（B:27） | 全局状态能影响弹幕，但只能靠内容脚本里手写 `if`，不是引擎提供的输入通道 | 1–2（引擎侧只读输入） + 3–5（内容侧分支） | 引擎侧输入很便宜，但内容侧多套 pattern 是内容成本，不是引擎成本 | P2 |
-| I1 | 可复现压力测试 | 有 `tools/bench_*.gd`，上限 8000（`tools/bench_danmaku.gd:15`、`tools/bench_native.gd:6`）；`bench_danmaku.gd:57` 引用已删除的 `backend.behavior`，本机实跑 7 次 `SCRIPT ERROR`，行为路径完全没测到；`test/perf_stress/stress.gd:1-15` 只生成 1500 弹、不度量；headless 无 GPU（`bench_danmaku.gd:11`） | 部分 | 每 tick CPU / GPU 帧时间 / 峰值内存基准（C:214） | 压测脚本存在但与实现漂移，覆盖不到主路径（behavior）与 GPU | 1–2 | 修 bench 会立刻暴露 8000 以上的真实数字，可能推翻现有密度假设 | **P0** |
+| I1 | 可复现压力测试 | `bench_danmaku` 已移除不存在的 `backend.behavior`，行为随 `system._physics_process` 计时；CPU 量程 8000 / 20000 / 50000，50k 合计 12.38 ms（本机 headless，2026-11-13）；GPU 仍不计（`tools/bench_danmaku.gd:11`） | **部分（CPU 已有，GPU 无）** | 每 tick CPU / GPU 帧时间 / 峰值内存基准（C:214） | CPU 主路径可测；GPU 与跨机器稳定性仍缺 | 1–2（GPU/CI） | 50k 的 CPU 合计已到 74% 预算；真实 GPU 数字仍需实机 | P1 |
 | I2 | 帧预算声明 | 全仓无「帧预算」表（在 `docs/*.md` 搜「帧预算 / 16.67 / 预算」只命中白盒与孤儿节点预算）；S9 标 🚧「满载 60fps 待实机确认」（`BEST_PRACTICES_BASELINE.md:30`、`docs/archive/BASELINE_EVIDENCE.md:116`） | 缺失 | 设计期声明每段 CPU/GPU/overdraw 预算（C:118-120,224） | 没有预算就没有「超了」判据；优化没有靶 | 1–2 | 预算数字若来自不可复现的机器，会变成新的「跑起来不卡」 | **P0** |
 
 ### 1.1 逐维度展开（补充证据）

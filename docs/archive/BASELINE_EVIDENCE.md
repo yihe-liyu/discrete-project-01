@@ -114,6 +114,7 @@
 - [~] 无每帧临时分配（贪心 alloc）；热路径避免 get_node("...") —— MultiMesh 同步每帧做分组/拼 key（旧代码自注有分配）；字符串 `get_node`/`get_node_or_null` 调用点 **29 处**（生产 14 / 测试 15；A3 更正）
 - [x] 碰撞/移动每帧 walk 用数组索引（内核 SoA），不频繁排序
 - [~] 大量对象时帧率稳定（目标：满载 60fps 有冗余）—— `test/perf_stress/*` 有压测场景，需实机确认
+      **2026-11-13 实测（headless CPU-only，`tools/bench_danmaku.tscn`）**：8k 1.79 ms / 20k 4.40 ms / 50k 11.0 ms（直线）；50k 带 lifecycle 行为 12.38 ms，占 16.67 ms 的 74%。GPU 绘制不计，仍需实机确认；瓶颈在渲染同步（50k 约 9.8 ms），不是内核积分（约 1.1 ms）。
 
 ## S10. 可复现与回放（determinism / replay）
 状态：🚧 ｜ 适用红线：R10, R13, R17

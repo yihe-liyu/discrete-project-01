@@ -5,13 +5,13 @@ extends Node
 ##
 ## 测的是**脚本侧热路径**（GDExtension 要替换的正是这部分）：
 ##   ① 内核积分 system._physics_process（SoA 积分 + 计时 + 剔除）
-##   ② 行为 behavior.process（world_accel 路径）
+##   ② 行为 world_accel（原生 behavior_tick，包含在 system.step 内）
 ##   ③ 原生宽相 system.query_circle（uniform grid；原 CollisionResolver.overlap_ids 已内联进内核）
 ##   ④ 渲染 CPU 同步 BulletMultiMesh._sync_kernel（分组 + 填 MultiMesh）
 ## **GPU 绘制不计**（headless 无 GPU）。
 ## 参照：60fps 预算 16.67ms/帧。
 
-const COUNTS: Array[int] = [500, 1000, 2000, 3000, 4000, 6000, 8000]
+const COUNTS: Array[int] = [8000, 20000, 50000]
 const WARMUP := 20
 const FRAMES := 120
 const DT := 1.0 / 60.0
@@ -53,8 +53,6 @@ func _run(n: int, with_behavior: bool) -> void:
 
 	for f in WARMUP:
 		backend.system._physics_process(DT)
-		if with_behavior:
-			backend.behavior.process()
 
 	var t_int := 0
 	var t_beh := 0
@@ -62,19 +60,16 @@ func _run(n: int, with_behavior: bool) -> void:
 	var t_ren := 0
 	for f in FRAMES:
 		var a := Time.get_ticks_usec()
+		# 行为在内核 behavior_tick 内，和积分一起计时；不再存在 backend.behavior。
 		backend.system._physics_process(DT)
 		var b := Time.get_ticks_usec()
-		if with_behavior:
-			backend.behavior.process()
-		var c := Time.get_ticks_usec()
 		backend.system.query_circle(CENTER, 120.0)
-		var d := Time.get_ticks_usec()
+		var c := Time.get_ticks_usec()
 		mm._sync_kernel()
-		var e := Time.get_ticks_usec()
+		var d := Time.get_ticks_usec()
 		t_int += b - a
-		t_beh += c - b
-		t_brd += d - c
-		t_ren += e - d
+		t_brd += c - b
+		t_ren += d - c
 
 	var ms_int := float(t_int) / FRAMES / 1000.0
 	var ms_beh := float(t_beh) / FRAMES / 1000.0
@@ -82,6 +77,6 @@ func _run(n: int, with_behavior: bool) -> void:
 	var ms_ren := float(t_ren) / FRAMES / 1000.0
 	var ms_tot := ms_int + ms_beh + ms_brd + ms_ren
 	print("%d\t%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.0f%%" % [
-		n, "行为" if with_behavior else "直线", ms_int, ms_beh, ms_brd, ms_ren, ms_tot, ms_tot / BUDGET_60 * 100.0])
+		n, "积分+行为" if with_behavior else "直线", ms_int, 0.0, ms_brd, ms_ren, ms_tot, ms_tot / BUDGET_60 * 100.0])
 	backend.free()   # 同步 _ready 里 queue_free 从不执行 → 会累积后端（曾经的数据噪音源）
 	mm.free()
