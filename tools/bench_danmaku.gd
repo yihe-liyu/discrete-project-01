@@ -17,8 +17,11 @@ const FRAMES := 120
 const DT := 1.0 / 60.0
 const CENTER := Vector2(448.0, 384.0)
 const BUDGET_60 := 16.67
+## 每档 CPU（积分+行为+宽相+渲染同步）上限；见 docs/PERFORMANCE_BUDGET.md。
+const CPU_BUDGET_MS := {8000: 3.0, 20000: 6.0, 50000: 13.0}
 
 var _data: BulletData
+var _failed := false
 
 
 func _ready() -> void:
@@ -27,6 +30,12 @@ func _ready() -> void:
 	for n in COUNTS:
 		_run(n, false)
 		_run(n, true)
+	if "--assert" in OS.get_cmdline_user_args() and _failed:
+		print("BUDGET FAIL")
+		get_tree().quit(1)
+		return
+	if "--assert" in OS.get_cmdline_user_args():
+		print("BUDGET OK")
 	get_tree().quit()
 
 
@@ -76,7 +85,12 @@ func _run(n: int, with_behavior: bool) -> void:
 	var ms_brd := float(t_brd) / FRAMES / 1000.0
 	var ms_ren := float(t_ren) / FRAMES / 1000.0
 	var ms_tot := ms_int + ms_beh + ms_brd + ms_ren
-	print("%d\t%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.0f%%" % [
-		n, "积分+行为" if with_behavior else "直线", ms_int, 0.0, ms_brd, ms_ren, ms_tot, ms_tot / BUDGET_60 * 100.0])
+	var tier_cap: float = float(CPU_BUDGET_MS.get(n, INF))
+	var verdict := "OK"
+	if with_behavior and ms_tot > tier_cap:
+		_failed = true
+		verdict = "OVER(%0.2fms)" % tier_cap
+	print("%d\t%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.0f%%\t%s" % [
+		n, "积分+行为" if with_behavior else "直线", ms_int, 0.0, ms_brd, ms_ren, ms_tot, ms_tot / BUDGET_60 * 100.0, verdict])
 	backend.free()   # 同步 _ready 里 queue_free 从不执行 → 会累积后端（曾经的数据噪音源）
 	mm.free()

@@ -78,7 +78,7 @@
 | G4 | 参数面板 | 无（创作台退役，`docs/CONTENT_PIPELINE_AUDIT.md:424`）；现在靠 `.tres` inspector + `diff_pick`（`DANMAKU_API.md:438-445`） | 缺失 | 从 IR 类型自动生成 slider（C:210） | 改一个数要回编辑器/重开场景 | 3–5 | 与「内容 code-first」冲突：参数在 GDScript 变量里，无 schema 可生成 UI | P2 |
 | H1 | rank/资源/周目改写弹幕 | 内容直接读 `SaveData.selected_difficulty`（`data/stages/stage03B/phase/哆来咪三符/哆来咪三符.gd:52`）；全局 memory 值直接决定随机清弹（`kernel_bullet_physics.gd:65-71`）；无 rank/周目状态（`grep -rn "rank"` 只命中音频驱逐与难度图片） | 部分 | TERRA/STELLA 式系统直接改弹量/弹速/分支（B:26-27,200-202）；rank 改 Boss 图案分支（B:27） | 全局状态能影响弹幕，但只能靠内容脚本里手写 `if`，不是引擎提供的输入通道 | 1–2（引擎侧只读输入） + 3–5（内容侧分支） | 引擎侧输入很便宜，但内容侧多套 pattern 是内容成本，不是引擎成本 | P2 |
 | I1 | 可复现压力测试 | `bench_danmaku` 已移除不存在的 `backend.behavior`，行为随 `system._physics_process` 计时；CPU 量程 8000 / 20000 / 50000，50k 合计 12.38 ms（本机 headless，2026-11-13）；GPU 仍不计（`tools/bench_danmaku.gd:11`） | **部分（CPU 已有，GPU 无）** | 每 tick CPU / GPU 帧时间 / 峰值内存基准（C:214） | CPU 主路径可测；GPU 与跨机器稳定性仍缺 | 1–2（GPU/CI） | 50k 的 CPU 合计已到 74% 预算；真实 GPU 数字仍需实机 | P1 |
-| I2 | 帧预算声明 | 全仓无「帧预算」表（在 `docs/*.md` 搜「帧预算 / 16.67 / 预算」只命中白盒与孤儿节点预算）；S9 标 🚧「满载 60fps 待实机确认」（`BEST_PRACTICES_BASELINE.md:30`、`docs/archive/BASELINE_EVIDENCE.md:116`） | 缺失 | 设计期声明每段 CPU/GPU/overdraw 预算（C:118-120,224） | 没有预算就没有「超了」判据；优化没有靶 | 1–2 | 预算数字若来自不可复现的机器，会变成新的「跑起来不卡」 | **P0** |
+| I2 | 帧预算声明 | 已有 [`PERFORMANCE_BUDGET.md`](../PERFORMANCE_BUDGET.md)：CPU 8k/20k/50k 上限 + `bench --assert`；GPU / overdraw 明标未验证 | **部分（CPU 已有）** | 设计期声明每段 CPU/GPU/overdraw 预算（C:118-120,224） | CPU 有判据；GPU / overdraw 仍缺测量 | 1–2（GPU/overdraw） | 预算数字绑机器/日期；未验证项不能算达标 | P1 |
 
 ### 1.1 逐维度展开（补充证据）
 
