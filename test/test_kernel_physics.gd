@@ -268,8 +268,8 @@ func test_native_bullet_remaining_attributes() -> void:
 ## 内容桥接 + homing pack：BulletData.behavior 应自动绑定并真正转向自机。
 func test_native_homing_behavior_content_bridge() -> void:
 	_kernel_bullet_host.setup_behaviors(_player, Callable())
-	var spec := NativeBehaviorSpec.new(&"homing", PackedFloat32Array([120.0, 600.0]))
-	var d := BulletData.new().enemy().tex("小玉").no_spawn_fog().with_native_behavior(spec)
+	var spec := BehaviorSpec.new(&"homing", PackedFloat32Array([120.0, 600.0]))
+	var d := BulletData.new().enemy().tex("小玉").no_spawn_fog().with_behavior(spec)
 	d.velocity = Vector2.ZERO
 	var id := _kernel_bullet_host.shoot(d, Vector2(448, 300), Vector2.RIGHT)
 	assert_gt(id, -1, "应能发射")

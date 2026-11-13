@@ -55,7 +55,7 @@ var params: Dictionary = {}
 var lifecycle: BulletLifecycle
 ## native behavior 描述；设定后优先于 lifecycle / coroutine_script。
 ## 只允许 behaviors_core 中已注册的名字；逻辑在 C++ pack。
-var native_behavior: NativeBehaviorSpec
+var behavior_spec: BehaviorSpec
 ## per-shot 锚点 spec（{id, offset, use_global}）；仅锚定型弹道（激光）需要。
 var lifecycle_anchor: Variant = null
 ## 命中音效注册器 key；空 = normal_damage。
@@ -111,8 +111,8 @@ func trajectory(lc: BulletLifecycle, anchor: Variant = null) -> BulletData:
 
 
 ## 挂 native behavior；params 顺序由对应 C++ pack 定义。
-func with_native_behavior(spec: NativeBehaviorSpec) -> BulletData:
-	native_behavior = spec
+func with_behavior(spec: BehaviorSpec) -> BulletData:
+	behavior_spec = spec
 	return self
 
 ## 设贴图染色。

@@ -1,6 +1,6 @@
 ## 内容侧 native behavior 描述：只保存名字 + 固定 float 参数，不承载逻辑。
 ## 真正的 tick 在 behaviors_core 的 C++ pack 里。
-class_name NativeBehaviorSpec
+class_name BehaviorSpec
 extends RefCounted
 
 var id: StringName
