@@ -172,6 +172,7 @@ func test_graze_can_repeat_across_ticks() -> void:
 	d.velocity = Vector2.ZERO
 	var pos: Vector2 = _player.global_position + Vector2(20, 0)
 	var id := _kernel_bullet_host.shoot(d, pos, Vector2.ZERO)
+	_kernel_bullet_host.system.set_graze_interval_ticks(1)
 
 	_kernel_bullet_host.system.step(1.0 / 60.0)
 	_kernel_bullet_physics.process()
@@ -182,3 +183,25 @@ func test_graze_can_repeat_across_ticks() -> void:
 	_kernel_bullet_physics.process()
 	assert_eq(_player.resources.graze_count, 2, "跨 tick 仍贴近应再次计擦弹")
 	assert_true(_kernel_bullet_host.system.is_grazed(id), "新 tick 应重新标记已擦")
+
+
+## 擦弹间隔：默认 6 tick；同一颗弹在冷却内不应重复计数。
+func test_graze_respects_interval() -> void:
+	var d := BulletData.new().enemy().tex("小玉")
+	d.velocity = Vector2.ZERO
+	var pos: Vector2 = _player.global_position + Vector2(20, 0)
+	_kernel_bullet_host.shoot(d, pos, Vector2.ZERO)
+	_kernel_bullet_host.system.set_graze_interval_ticks(6)
+
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	_kernel_bullet_physics.process()
+	assert_eq(_player.resources.graze_count, 1, "第一 tick 计一次")
+
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	_kernel_bullet_physics.process()
+	assert_eq(_player.resources.graze_count, 1, "间隔内不应重复计擦弹")
+
+	for _i in 5:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+		_kernel_bullet_physics.process()
+	assert_eq(_player.resources.graze_count, 2, "满 6 tick 后应再次计擦弹")

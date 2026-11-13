@@ -46,6 +46,8 @@ class DanmakuStore : public RefCounted {
 	// 每行最近一次擦弹的 tick；is_grazed 只在“当前 tick”为真。
 	std::vector<int32_t> _graze_tick;
 	int32_t _frame_tick = 0;
+	// 同一颗弹两次擦弹之间至少间隔的 tick 数；1 = 每 tick 都可计。
+	int32_t _graze_interval_ticks = 6;
 	// 逐弹渲染朝向覆盖（NAN = 未设，渲染按 velocity 推）。位置 op 只写它，不再借道 velocity。
 	std::vector<float> _render_rot;
 	// 逐弹贴图自转累计角（velocity / heading 不变）；每帧叠加到 render_rot。
@@ -185,8 +187,9 @@ public:
 			const PackedFloat32Array &p_elapsed, const PackedFloat32Array &p_slots,
 			double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies,
 			const PackedVector2Array &p_anchor_base = PackedVector2Array());
-	bool is_grazed(int p_id) const; // 该行当前 tick 是否已擦弹。
+	bool is_grazed(int p_id) const; // 该行当前 tick 是否处于擦弹冷却。
 	void mark_grazed(int p_id); // 标记该行当前 tick 已擦弹。
+	void set_graze_interval_ticks(int p_ticks); // 同一颗弹的擦弹最小间隔（tick）
 	void clear(); // 清空所有行，保留容量/注册表。
 	// 回收一行；返回被 swap 进来的行 id（尾部回收返回 -1）。
 	int despawn(int p_id);

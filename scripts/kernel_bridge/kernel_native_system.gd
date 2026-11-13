@@ -341,15 +341,31 @@ func hit_test(id: int, center: Vector2, radius: float) -> bool:
 	return _accel.hit_test(id, center, radius) if _accel != null else false
 
 
+## 单行扫掠判定：用上一帧位置到当前位置的线段代替点，防止高速弹在两次采样之间穿过。
+func hit_test_swept(id: int, center: Vector2, radius: float) -> bool:
+	return _accel.hit_test_swept(id, center, radius) if _accel != null else false
+
+
+## 最近一次积分帧的最大位移（像素）。宽相查询半径需加上它，否则高速弹的端点可能落在查询圆外。
+func get_max_step() -> float:
+	return _accel.get_max_step() if _accel != null else 0.0
+
+
 ## 该行本帧是否已擦弹过。
 func is_grazed(id: int) -> bool:
 	return _accel.is_grazed(id) if _accel != null else false
 
 
-## 标记该行已擦弹（每行只计一次）。
+## 标记该行当前 tick 已擦弹。
 func mark_grazed(id: int) -> void:
 	if _accel != null:
 		_accel.mark_grazed(id)
+
+
+## 同一颗弹两次擦弹之间至少间隔的 tick 数（1 = 每 tick 都可计）。
+func set_graze_interval_ticks(ticks: int) -> void:
+	if _accel != null:
+		_accel.set_graze_interval_ticks(ticks)
 
 
 # ═══ 读访问器（快照）═══

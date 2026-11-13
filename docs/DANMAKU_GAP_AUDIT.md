@@ -6,7 +6,7 @@
 **更新记录**
 - 2026-11-12：D1（扫掠碰撞）已修复：内核新增上一帧位置、`hit_test_swept`、宽相按最大帧位移外扩；宿主命中/擦弹/自机弹改走扫掠；新增回归测试（851 用例）。
 - 2026-11-13：**修正状态**：D1 已完成；D2 当时只完成「扫掠检测」，`_grazed` 仍是**终生一次**。原文的「D1/D2 均已修复」是误记。
-- 2026-11-13：D2 已实现：`_graze_tick` 按 tick 记录，`is_grazed` 只在当前 tick 为真；新增跨 tick 擦弹回归（852 用例）。
+- 2026-11-13：D2 已实现：`_graze_tick` 按 tick 记录，`is_grazed` 只在当前 tick 为真；新增跨 tick 擦弹回归（853 用例）；同一颗弹的擦弹默认间隔 6 tick，可 `set_graze_interval_ticks()` 调整。
 - 2026-11-12 起：本审计作为 `TODO_TEMP.md` Z 段「下一阶段大方向」的依据；执行项只提炼到 TODO，不在此处维护清单。
 
 **被审计项目**：`/home/cirno/Projects/DiscreteProject/1-st-touhou-star-~-broadest-and-narrowest`（Godot 4.7 + GDScript + GDExtension `DanmakuStore`）
@@ -59,7 +59,7 @@
 | C2 | 阶段转移是否纯函数 | 转移 = `boss.phase_cleared.emit(...)`（`scripts/enemy/boss.gd:451`）+ `get_tree().create_timer(...)`（`:473`）+ 回调里改 `_cursor`/`next_at`（`timeline.gd:87-101,113-129`） | 部分 | 转移条件 `(hp, tick, events) -> next`，禁副作用（C:104） | 转移是副作用集合，回放无法「只凭初始状态重算阶段序列」 | 3–5 | 依赖 C1；改完与现有 `BossData.phases_*`（`docs/CONTENT_AUTHORING_CONTRACT.md:25`）语义要对齐 | P2 |
 | C3 | 编译期事件表 | 只有 per-bullet packed program（`lifecycle_compiler.gd:1-8`；`danmaku_store.h:75-77` 的 `_p_ops/_p_args` 偏移表）；无 `tick → SpawnRecord[]`，无 32B 布局，句柄是 int64 uid（`danmaku_store.h:80`）而非 (index20,gen12) | 缺失 | 事件表编译期展开 + 游标摊销 O(1)（C:108-110）；32B SpawnRecord（C:110） | 批量生成是「每帧 GDScript 调 spawn」，不是「编译期展开 + 游标扫过」 | 10–20 | 需要先有 C1 的整数 tick 与内容 IR；否则表无从生成 | P2 |
 | D1 | 碰撞是否扫掠（防高速穿透） | 已有 `hit_test_swept`（`gdextension/src/danmaku_store.cpp:1345`）与上一帧位置；宿主命中 / 自机弹已改走 swept（`scripts/kernel_bridge/kernel_bullet_physics.gd:61,94`）；回归见 `test/test_kernel_physics.gd:82-93` | **已有（2026-11-12）** | 线段 A→B 到点 P 的最近距离，退化点-点（C:134） | 机制已补；剩余风险是高速/大判定的内容平衡，不是实现缺失 | 0 | 有效判定变大 → 玩家体感变严，需实机调参 | 已完成 |
-| D2 | 擦弹是否按 tick 扫过的路径 | 检测走 swept（`kernel_bullet_physics.gd:64`）；内核 `_graze_tick` 记录当前 tick，`is_grazed` 只判当前 tick（`danmaku_store.cpp:1513`）；跨 tick 回归见 `test/test_kernel_physics.gd` | **已有（2026-11-13）** | 同扫掠公式换 `r_graze`，每颗每 tick 只记一次 `lastGrazeTick`（C:135） | 已实现；剩余是内容侧擦弹经济重调 | 0 | 擦弹数变化会影响计分/记忆经济 | 已完成 |
+| D2 | 擦弹是否按 tick 扫过的路径 | 检测走 swept（`kernel_bullet_physics.gd:64`）；`_graze_tick` + `_graze_interval_ticks`（默认 6 tick）控制重复擦弹；跨 tick / 间隔回归见 `test/test_kernel_physics.gd` | **已有（2026-11-13）** | 同扫掠公式换 `r_graze`，每颗每 tick 只记一次，按间隔重复（C:135） | 已实现；默认 6 tick 间隔，可用 `set_graze_interval_ticks()` 调 | 0 | 擦弹数变化会影响计分/记忆经济 | 已完成 |
 | D3 | 判定/视觉解耦 | `hitbox_radius/size/offset` 独立于贴图（`DANMAKU_API.md:57-60`），数值在 `data/bullets/*.tres`（`:489-516`），`follow_dir` 时判定随速度旋转（`danmaku_store.cpp:1303-1307`）；调试只有 `scripts/debug/hitbox_visualizer.gd` 单一层 | 部分 | 强制解耦 + 调试层同时画 hit/graze/swept 三色（C:137） | 判定半径可独立设，但视觉→判定的推导链仍是「图集坐标手抄到 tres」，无自动校验 | 1–2 | 主要是加可视层；改数据要重跑 26 张卡 | P1 |
 | D4 | 激光处理 | 激光不进弹池，是 `LaserBeam` 节点；`distance_to(pos, count=24)` 固定 24 点折线求点到段距离（`scripts/laser/laser_beam.gd:136-147,282-284`）；判定/擦弹在 `scripts/laser/laser_engine.gd:97-104`，擦弹有全局 3 帧冷却（`:7,100-101`）；死亡清弹圈单独持有 laser_engine（`bullet_manager.gd:95`） | 部分 | 胶囊（线段+半径），弯曲按 曲率×长度/0.5 自适应 12–24 段（C:136） | 段数固定，长弯激光判定误差随曲率增长；激光与弹池两套判定路径 | 2–3 | 自适应分段会改命中判定，已有激光卡需复核 | P1 |
 | E1 | 批处理方式 | MultiMesh 按 `tex × faction × tint_mode` 分组（`danmaku_render_bridge.cpp:47-90`），分组/旋转/fill 在原生（`:189-203`）；但每帧从内核拉 8 个快照数组（`bullet_multi_mesh.gd:83-100`），NK6 记「稳态每帧分配」未关（`TODO_TEMP.md` NK6） | 部分 | CPU 写 instance buffer + 1 次 instanced draw（C:167） | 批次维度是「贴图×阵营×tint」，但「每帧全量拷贝 + 每帧分配」使批次只省了 draw call，省不掉拷贝 | 5–8 | 改成持久 buffer/双缓冲要动快照契约（`danmaku_store.h:132-139` 的只读快照），波及渲染/物理/调试三个消费者 | P1 |
@@ -163,7 +163,7 @@
 
 ### 2.1 tick 级擦弹（D2，已完成）
 
-2026-11-13 已落地：`_graze_tick` 按 tick 记录，`is_grazed` 只在当前 tick 为真；新增「同一颗弹连续两个 tick 贴近 → 计两次」回归。剩余风险只有内容侧：擦弹数会变化，26 张卡的计分/记忆经济需要复核（见 S13）。
+2026-11-13 已落地：`_graze_tick` 按 tick 记录，`is_grazed` 只在当前 tick 为真；新增「同一颗弹连续两个 tick 贴近 → 间隔内不重复、满 6 tick 再计」回归；间隔可配置。剩余风险只有内容侧：擦弹数会变化，26 张卡的计分/记忆经济需要复核（见 S13）。
 
 ### 2.2 修好压测 + 写死帧预算（I1 + I2）
 

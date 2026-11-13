@@ -46,6 +46,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_broadphase_active"), &DanmakuStore::is_broadphase_active);
 	ClassDB::bind_method(D_METHOD("is_grazed", "id"), &DanmakuStore::is_grazed);
 	ClassDB::bind_method(D_METHOD("mark_grazed", "id"), &DanmakuStore::mark_grazed);
+	ClassDB::bind_method(D_METHOD("set_graze_interval_ticks", "ticks"), &DanmakuStore::set_graze_interval_ticks);
 	ClassDB::bind_method(D_METHOD("set_field", "left", "right", "top"), &DanmakuStore::set_field);
 	ClassDB::bind_method(D_METHOD("set_seed", "seed"), &DanmakuStore::set_seed);
 	ClassDB::bind_method(D_METHOD("register_program", "ops", "args", "move_start", "move_count", "until", "act_start", "act_count", "phase_count", "slots"), &DanmakuStore::register_program);
@@ -1510,8 +1511,12 @@ PackedInt32Array DanmakuStore::query_circle(const Vector2 &p_center, float p_sea
 	return out;
 }
 
-bool DanmakuStore::is_grazed(int p_id) const { return _valid(p_id) && _graze_tick[p_id] == _frame_tick; }
+bool DanmakuStore::is_grazed(int p_id) const {
+	return _valid(p_id) && _graze_tick[p_id] >= 0
+		&& (_frame_tick - _graze_tick[p_id]) < _graze_interval_ticks;
+}
 void DanmakuStore::mark_grazed(int p_id) { if (_valid(p_id)) { _graze_tick[p_id] = _frame_tick; } }
+void DanmakuStore::set_graze_interval_ticks(int p_ticks) { _graze_interval_ticks = p_ticks < 1 ? 1 : p_ticks; }
 
 DanmakuStore::DanmakuStore() {}
 DanmakuStore::~DanmakuStore() {}
