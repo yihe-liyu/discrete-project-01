@@ -280,3 +280,25 @@ func test_native_homing_behavior_content_bridge() -> void:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_gt(_kernel_bullet_host.system.get_position(id).y, 300.0, "homing 应开始向自机（下方）移动")
 	assert_gt(_kernel_bullet_host.system.get_velocity(id).length(), 0.0, "homing 应产生速度")
+
+
+## 第一张内容迁移：enemy 的 accel_world 与 native accel 逐帧一致。
+func test_native_accel_matches_lifecycle() -> void:
+	_kernel_bullet_host.setup_behaviors(null, Callable())
+	var lc_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	lc_data.lifecycle = BulletLifecycle.new().accel_world(Vector2(0, 200))
+	lc_data.velocity = Vector2(0, 175)
+	var bh_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	bh_data.with_behavior(BehaviorSpec.new(&"accel", PackedFloat32Array([0, 200])))
+	bh_data.velocity = Vector2(0, 175)
+
+	var lc_id := _kernel_bullet_host.shoot(lc_data, Vector2(400, 300), Vector2.DOWN)
+	var bh_id := _kernel_bullet_host.shoot(bh_data, Vector2(600, 300), Vector2.DOWN)
+	assert_eq(_kernel_bullet_host.system.get_behavior(bh_id), _kernel_bullet_host.system.get_behavior_id("accel"))
+
+	for _i in 60:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+
+	var lc_delta: Vector2 = _kernel_bullet_host.system.get_position(lc_id) - Vector2(400, 300)
+	var bh_delta: Vector2 = _kernel_bullet_host.system.get_position(bh_id) - Vector2(600, 300)
+	assert_almost_eq(bh_delta, lc_delta, Vector2(0.01, 0.01), "accel pack 应与 lifecycle 轨迹一致")
