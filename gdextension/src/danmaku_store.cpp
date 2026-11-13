@@ -40,6 +40,8 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_default_life", "life"), &DanmakuStore::set_default_life);
 	ClassDB::bind_method(D_METHOD("set_hitbox", "id", "radius", "offset", "size", "follow_dir", "dir_offset"), &DanmakuStore::set_hitbox);
 	ClassDB::bind_method(D_METHOD("hit_test", "id", "center", "radius"), &DanmakuStore::hit_test);
+	ClassDB::bind_method(D_METHOD("hit_test_swept", "id", "center", "radius"), &DanmakuStore::hit_test_swept);
+	ClassDB::bind_method(D_METHOD("get_max_step"), &DanmakuStore::get_max_step);
 	ClassDB::bind_method(D_METHOD("query_circle", "center", "radius"), &DanmakuStore::query_circle);
 	ClassDB::bind_method(D_METHOD("is_broadphase_active"), &DanmakuStore::is_broadphase_active);
 	ClassDB::bind_method(D_METHOD("is_grazed", "id"), &DanmakuStore::is_grazed);
@@ -82,6 +84,8 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_cull = p_cull;
 	_x.assign(p_capacity, 0.0f);
 	_y.assign(p_capacity, 0.0f);
+	_px.assign(p_capacity, 0.0f);
+	_py.assign(p_capacity, 0.0f);
 	_vx.assign(p_capacity, 0.0f);
 	_vy.assign(p_capacity, 0.0f);
 	_hx.assign(p_capacity, 0.0f);
@@ -113,7 +117,8 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_hb_sizey.assign(p_capacity, 0.0f);
 	_hb_diroff.assign(p_capacity, 0.0f);
 	_hb_follow.assign(p_capacity, 0);
-	_grazed.assign(p_capacity, 0);
+	_graze_tick.assign(p_capacity, -1);
+	_frame_tick = 0;
 	_out_grace.assign(p_capacity, 0.0f);
 	_out_time.assign(p_capacity, 0.0f);
 	_render_rot.assign(p_capacity, (float)NAN);
@@ -129,6 +134,8 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	const int i = _count;
 	_x[i] = p_pos.x;
 	_y[i] = p_pos.y;
+	_px[i] = p_pos.x;
+	_py[i] = p_pos.y;
 	_vx[i] = p_vel.x;
 	_vy[i] = p_vel.y;
 	{ const Vector2 h = p_vel == Vector2() ? Vector2(0, 1) : p_vel.normalized(); _hx[i] = h.x; _hy[i] = h.y; }
@@ -155,7 +162,7 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	for (int s = 0; s < SLOT_STRIDE; ++s) { _pslots[i * SLOT_STRIDE + s] = 0.0f; }
 	_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
-	_grazed[i] = 0;
+	_graze_tick[i] = -1;
 	_render_rot[i] = (float)NAN;
 	_spin_rot[i] = 0.0f;
 	return _count++;
@@ -174,6 +181,8 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		const Vector2 vel = k < p_vel.size() ? p_vel[k] : Vector2();
 		_x[i] = pos.x;
 		_y[i] = pos.y;
+		_px[i] = pos.x;
+		_py[i] = pos.y;
 		_vx[i] = vel.x;
 		_vy[i] = vel.y;
 		{ const Vector2 h = vel == Vector2() ? Vector2(0, 1) : vel.normalized(); _hx[i] = h.x; _hy[i] = h.y; }
@@ -199,7 +208,7 @@ int DanmakuStore::spawn_batch(const PackedVector2Array &p_pos, const PackedVecto
 		for (int s = 0; s < SLOT_STRIDE; ++s) { _pslots[i * SLOT_STRIDE + s] = 0.0f; }
 		_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
 		_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
-		_grazed[i] = 0;
+		_graze_tick[i] = -1;
 		_render_rot[i] = (float)NAN;
 		_spin_rot[i] = 0.0f;
 		++_count;
@@ -218,6 +227,8 @@ int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_c
 	const int i = _count;
 	_x[i] = p_pos.x;
 	_y[i] = p_pos.y;
+	_px[i] = p_pos.x;
+	_py[i] = p_pos.y;
 	_vx[i] = 0.0f;
 	_vy[i] = 0.0f;
 	_hx[i] = 0.0f;
@@ -245,7 +256,7 @@ int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_c
 	for (int s = 0; s < SLOT_STRIDE; ++s) { _pslots[i * SLOT_STRIDE + s] = 0.0f; }
 	_hb_radius[i] = 0.0f; _hb_offx[i] = 0.0f; _hb_offy[i] = 0.0f;
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
-	_grazed[i] = 0;
+	_graze_tick[i] = -1;
 	_render_rot[i] = (float)NAN;
 	_spin_rot[i] = 0.0f;
 	return _count++;
@@ -258,6 +269,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	}
 	_capacity = p_n;
 	_x.resize(p_n); _y.resize(p_n); _vx.resize(p_n); _vy.resize(p_n);
+	_px.resize(p_n); _py.resize(p_n);
 	_hx.resize(p_n); _hy.resize(p_n);
 	_type.resize(p_n); _faction.resize(p_n); _fx_type.resize(p_n); _color.resize(p_n);
 	_life.resize(p_n); _fx.resize(p_n); _timer.resize(p_n);
@@ -269,7 +281,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_pslot_fresh.resize(p_n); _phasend.resize(p_n);
 	_hb_radius.resize(p_n); _hb_offx.resize(p_n); _hb_offy.resize(p_n);
 	_hb_sizex.resize(p_n); _hb_sizey.resize(p_n); _hb_diroff.resize(p_n);
-	_hb_follow.resize(p_n); _grazed.resize(p_n); _render_rot.resize(p_n); _spin_rot.resize(p_n);
+	_hb_follow.resize(p_n); _graze_tick.resize(p_n); _render_rot.resize(p_n); _spin_rot.resize(p_n);
 	_out_grace.resize(p_n); _out_time.resize(p_n);
 }
 
@@ -282,6 +294,8 @@ void DanmakuStore::_swap_remove(int p_id) {
 	}
 	_x[p_id] = _x[last];
 	_y[p_id] = _y[last];
+	_px[p_id] = _px[last];
+	_py[p_id] = _py[last];
 	_vx[p_id] = _vx[last];
 	_vy[p_id] = _vy[last];
 	_hx[p_id] = _hx[last];
@@ -314,7 +328,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_hb_sizey[p_id] = _hb_sizey[last];
 	_hb_diroff[p_id] = _hb_diroff[last];
 	_hb_follow[p_id] = _hb_follow[last];
-	_grazed[p_id] = _grazed[last];
+	_graze_tick[p_id] = _graze_tick[last];
 	_out_grace[p_id] = _out_grace[last];
 	_out_time[p_id] = _out_time[last];
 	_render_rot[p_id] = _render_rot[last];
@@ -324,6 +338,8 @@ void DanmakuStore::_swap_remove(int p_id) {
 // 完整积分循环：寿命 / 出生相位 / 位移 / 计时 / 剔除 —— 与 scripts/kernel/bullet_system.gd 1:1。
 void DanmakuStore::integrate(double p_delta) {
 	_grid_dirty = true;
+	++_frame_tick;
+	_max_step = 0.0f;
 	const float dt = CLAMP((float)p_delta, 0.0f, MAX_DT);
 	const bool cull = _cull.has_area();
 	const Rect2 grown = _cull.grow(_margin);
@@ -342,6 +358,8 @@ void DanmakuStore::integrate(double p_delta) {
 			}
 			_fx[i] = 0.0f;
 		}
+		_px[i] = _x[i];
+		_py[i] = _y[i];
 		_x[i] += _vx[i] * dt;
 		_y[i] += _vy[i] * dt;
 		if (_wrap[i] != 0 && _cull.size.x > 0.0f && _cull.size.y > 0.0f) {
@@ -355,6 +373,22 @@ void DanmakuStore::integrate(double p_delta) {
 		}
 		if (_timer[i] > 0.0f) {
 			_timer[i] -= dt;
+		}
+		// 扫掠判定用：记录本帧最大位移；环绕等不连续位移（跨过半屏）不参与扫掠。
+		{
+			const float dx = _x[i] - _px[i];
+			const float dy = _y[i] - _py[i];
+			const bool discontinuous = (_cull.size.x > 0.0f && Math::abs(dx) > _cull.size.x * 0.5f)
+					|| (_cull.size.y > 0.0f && Math::abs(dy) > _cull.size.y * 0.5f);
+			if (discontinuous) {
+				_px[i] = _x[i];
+				_py[i] = _y[i];
+			} else {
+				const float step2 = dx * dx + dy * dy;
+				if (step2 > _max_step * _max_step) {
+					_max_step = Math::sqrt(step2);
+				}
+			}
 		}
 		if (cull && !grown.has_point(Vector2(_x[i], _y[i]))) {
 			// 出界：grace <= 0 → 立即剔除（原行为，保持不变）；否则累计「连续出界时长」，超时才剔除。
@@ -427,6 +461,8 @@ void DanmakuStore::set_velocity(int p_id, const Vector2 &p_vel) { if (_valid(p_i
 void DanmakuStore::set_position(int p_id, const Vector2 &p_pos) {
 	if (!_valid(p_id)) { return; }
 	_x[p_id] = p_pos.x; _y[p_id] = p_pos.y;
+	// 瞬移：同步上一帧位置，避免扫掠判定在整段位移上产生假命中。
+	_px[p_id] = p_pos.x; _py[p_id] = p_pos.y;
 	_grid_dirty = true;
 }
 float DanmakuStore::get_life_left(int p_id) const { return _valid(p_id) ? _life[p_id] : 0.0f; }
@@ -680,6 +716,7 @@ void DanmakuStore::set_program(int p_id, int p_program) {
 	_pslot_fresh[p_id] = 0xFFFFFFFFu;
 	_phasend[p_id] = 0;
 	_spin_rot[p_id] = 0.0f;
+	_graze_tick[p_id] = -1;
 	for (int s = 0; s < SLOT_STRIDE; ++s) {
 		_pslots[p_id * SLOT_STRIDE + s] = 0.0f;
 	}
@@ -875,6 +912,9 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 		case 10: // set_position（绝对坐标）
 			_x[i] = a[0];
 			_y[i] = a[1];
+			// 瞬移：同步上一帧位置，避免扫掠判定跨整段位移假命中。
+			_px[i] = _x[i];
+			_py[i] = _y[i];
 			break;
 		case 12: // render_spin：只累计贴图自转，不动速度 / 朝向
 			_spin_rot[i] += a[0] * dt;
@@ -915,8 +955,15 @@ void DanmakuStore::_exec_move(int i, int prog, float *slots, int ins, float dt, 
 			}
 			const float adir_x = sin(angle);
 			const float adir_y = -cos(angle);
+			const float old_x = _x[i];
+			const float old_y = _y[i];
 			_x[i] = base.x + adir_x * slots[slot];
 			_y[i] = base.y + adir_y * slots[slot];
+			// 相位起点/锚点切换可能瞬移：位移过大视为不连续，重置上一帧位置（不参与扫掠）。
+			if (Math::abs(_x[i] - old_x) > 64.0f || Math::abs(_y[i] - old_y) > 64.0f) {
+				_px[i] = _x[i];
+				_py[i] = _y[i];
+			}
 			// 位置 op 只写位置；render_heading 走独立渲染朝向通道，不再借道 velocity。
 			if (mode == 1 && (((int)a[6] & 2) != 0)) {
 				_render_rot[i] = std::atan2(adir_y, adir_x);
@@ -1279,6 +1326,46 @@ static float _hit_rot(const Vector2 &vel, unsigned char follow, float diroff) {
 	return 0.0f;
 }
 
+// 点到线段的最短距离平方（线段退化时为点-点）。
+static float _point_seg_dist2(const Vector2 &p, const Vector2 &a, const Vector2 &b) {
+	const Vector2 ab = b - a;
+	const float len2 = ab.length_squared();
+	float t = 0.0f;
+	if (len2 > 0.0f) {
+		t = CLAMP((p - a).dot(ab) / len2, 0.0f, 1.0f);
+	}
+	const Vector2 q = a + ab * t;
+	return (p - q).length_squared();
+}
+
+float DanmakuStore::get_max_step() const {
+	return _max_step;
+}
+
+// 扫掠判定：玩家是点、弹是运动体。先用当前帧末的精确判定（覆盖矩形/偏移/旋转），
+// 不中再用「上一帧位置 → 当前位置」的线段补一次，防高速弹在两次采样之间穿过。
+// 矩形判定盒在扫掠分支用外接圆近似（仅在端点都没中时生效，避免为罕见的矩形高速弹写 OBB 扫掠）。
+bool DanmakuStore::hit_test_swept(int p_id, const Vector2 &p_center, float p_radius) const {
+	if (hit_test(p_id, p_center, p_radius)) {
+		return true;
+	}
+	if (!_valid(p_id)) { return false; }
+	if (_fx[p_id] > 0.0f) { return false; }
+	if (_type[p_id] < 0) { return false; }
+	const float rot = _hit_rot(Vector2(_vx[p_id], _vy[p_id]), _hb_follow[p_id], _hb_diroff[p_id]);
+	const Vector2 off = Vector2(_hb_offx[p_id], _hb_offy[p_id]).rotated(rot);
+	const Vector2 a = Vector2(_px[p_id], _py[p_id]) + off;
+	const Vector2 b = Vector2(_x[p_id], _y[p_id]) + off;
+	const float sx = _hb_sizex[p_id];
+	const float sy = _hb_sizey[p_id];
+	float reach = _hb_radius[p_id];
+	if (sx != 0.0f || sy != 0.0f) {
+		reach = 0.5f * Vector2(sx, sy).length();
+	}
+	const float rr = p_radius + reach;
+	return _point_seg_dist2(p_center, a, b) <= rr * rr;
+}
+
 void DanmakuStore::set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset) {
 	if (!_valid(p_id)) { return; }
 	_grid_dirty = true;
@@ -1423,8 +1510,8 @@ PackedInt32Array DanmakuStore::query_circle(const Vector2 &p_center, float p_sea
 	return out;
 }
 
-bool DanmakuStore::is_grazed(int p_id) const { return _valid(p_id) && _grazed[p_id] != 0; }
-void DanmakuStore::mark_grazed(int p_id) { if (_valid(p_id)) { _grazed[p_id] = 1; } }
+bool DanmakuStore::is_grazed(int p_id) const { return _valid(p_id) && _graze_tick[p_id] == _frame_tick; }
+void DanmakuStore::mark_grazed(int p_id) { if (_valid(p_id)) { _graze_tick[p_id] = _frame_tick; } }
 
 DanmakuStore::DanmakuStore() {}
 DanmakuStore::~DanmakuStore() {}

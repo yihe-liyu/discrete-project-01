@@ -28,6 +28,8 @@ class DanmakuStore : public RefCounted {
 	GDCLASS(DanmakuStore, RefCounted)
 
 	std::vector<float> _x, _y, _vx, _vy;
+	// 上一帧位置（本轮积分前）。扫掠判定用；spawn / set_position / 环绕时与当前位置对齐。
+	std::vector<float> _px, _py;
 	// 自身朝向（出生取自初速；rotate / set_heading 改；accel_heading 读）—— 与速度解耦，v=0 仍有效
 	std::vector<float> _hx, _hy;
 	std::vector<int> _type, _faction;
@@ -40,7 +42,10 @@ class DanmakuStore : public RefCounted {
 	// 新行默认寿命；spawn 时写入 _life。
 	float _default_life = 20.0f;
 	std::vector<float> _hb_radius, _hb_offx, _hb_offy, _hb_sizex, _hb_sizey, _hb_diroff;
-	std::vector<unsigned char> _hb_follow, _grazed;
+	std::vector<unsigned char> _hb_follow;
+	// 每行最近一次擦弹的 tick；is_grazed 只在“当前 tick”为真。
+	std::vector<int32_t> _graze_tick;
+	int32_t _frame_tick = 0;
 	// 逐弹渲染朝向覆盖（NAN = 未设，渲染按 velocity 推）。位置 op 只写它，不再借道 velocity。
 	std::vector<float> _render_rot;
 	// 逐弹贴图自转累计角（velocity / heading 不变）；每帧叠加到 render_rot。
@@ -101,6 +106,8 @@ class DanmakuStore : public RefCounted {
 	// 剔除矩形与余量。
 	Rect2 _cull;
 	float _margin = 0.0f;
+	// 最近一次 integrate 的最大单帧位移（像素）。宽相查询需按它外扩，否则高速弹端点出网格会漏检。
+	float _max_step = 0.0f;
 
 	// 宽相 uniform grid（参数与 GDScript BulletSystem 一致；查询前按需重建）。
 	// mutable：query_circle 是 const，但需要惰性重建网格。
@@ -155,6 +162,11 @@ public:
 	// 判定（与 GDScript 内核 1:1）
 	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
 	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const; // 单行精确判定。
+	// 单行扫掠判定：用「上一帧位置 → 当前位置」的线段代替点，防高速弹穿透。
+	// 无位移时与 hit_test 等价；矩形判定盒按线段到 OBB 的距离计算。
+	bool hit_test_swept(int p_id, const Vector2 &p_center, float p_radius) const;
+	// 最近一次 integrate 的最大单帧位移（像素）。宽相查询半径建议加上它。
+	float get_max_step() const;
 	// 宽相查询：首次调用惰性建网格；返回候选行 id，仍需精确判定。
 	PackedInt32Array query_circle(const Vector2 &p_center, float p_search_radius) const;
 	// 宽相是否已启用（诊断 / 测试；调用过 query_circle 后才反映最近一次重建结果）。
@@ -173,8 +185,8 @@ public:
 			const PackedFloat32Array &p_elapsed, const PackedFloat32Array &p_slots,
 			double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies,
 			const PackedVector2Array &p_anchor_base = PackedVector2Array());
-	bool is_grazed(int p_id) const; // 该行本帧是否已擦弹。
-	void mark_grazed(int p_id); // 标记已擦弹。
+	bool is_grazed(int p_id) const; // 该行当前 tick 是否已擦弹。
+	void mark_grazed(int p_id); // 标记该行当前 tick 已擦弹。
 	void clear(); // 清空所有行，保留容量/注册表。
 	// 回收一行；返回被 swap 进来的行 id（尾部回收返回 -1）。
 	int despawn(int p_id);

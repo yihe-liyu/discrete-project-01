@@ -78,6 +78,39 @@ func test_graze_not_counted_twice() -> void:
 	assert_eq(_player.resources.graze_count, 1, "同一弹不应重复计擦弹")
 
 
+## 高速弹在两次采样之间穿过自机：帧末位置在判定圈外，扫掠判定必须命中。
+func test_fast_bullet_is_swept_hit() -> void:
+	var d := BulletData.new().enemy().tex("小玉")
+	d.velocity = Vector2.DOWN * 12000.0
+	_kernel_bullet_host.shoot(d, Vector2(448, 500), Vector2.DOWN)
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	_kernel_bullet_physics.process()
+	assert_true(_player.is_invincible, "高速弹扫过自机应判定命中")
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 0, "命中后应回收该弹")
+
+
+## 高速弹从擦弹环外穿过：扫掠应计擦弹（仍保持每弹一次）。
+func test_fast_bullet_is_swept_graze() -> void:
+	var d := BulletData.new().enemy().tex("小玉")
+	d.velocity = Vector2.DOWN * 12000.0
+	var id := _kernel_bullet_host.shoot(d, Vector2(478, 500), Vector2.DOWN)
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	_kernel_bullet_physics.process()
+	assert_eq(_player.resources.graze_count, 1, "高速弹擦过应计 1 次擦弹")
+	assert_true(_kernel_bullet_host.system.is_grazed(id), "扫掠擦弹也应标记已擦")
+
+
+## 扫掠不应把远离的弹误判为命中/擦弹。
+func test_fast_bullet_far_away_is_ignored() -> void:
+	var d := BulletData.new().enemy().tex("小玉")
+	d.velocity = Vector2.DOWN * 12000.0
+	_kernel_bullet_host.shoot(d, Vector2(748, 500), Vector2.DOWN)
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	_kernel_bullet_physics.process()
+	assert_false(_player.is_invincible, "远离的弹不应命中")
+	assert_eq(_player.resources.graze_count, 0, "远离的弹不应擦弹")
+
+
 func test_invincible_player_ignores_bullets() -> void:
 	_player.is_invincible = true
 	_enemy_bullet_at(_player.global_position)
@@ -131,3 +164,21 @@ func test_sweep_enemy_bullets_spares_player_bullets() -> void:
 	_kernel_bullet_physics.sweep_enemy_bullets(Vector2(200, 200), 100.0)
 	assert_eq(_live_bullets(), 1, "死亡清弹不应清自机弹")
 	assert_eq(_kernel_bullet_host.system.get_type(0).faction, BulletType.Faction.PLAYER, "留下的应是自机弹")
+
+
+## D2：擦弹应按 tick 重新可计；同一颗弹跨 tick 仍贴近时，下一 tick 应再次计数。
+func test_graze_can_repeat_across_ticks() -> void:
+	var d := BulletData.new().enemy().tex("小玉")
+	d.velocity = Vector2.ZERO
+	var pos: Vector2 = _player.global_position + Vector2(20, 0)
+	var id := _kernel_bullet_host.shoot(d, pos, Vector2.ZERO)
+
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	_kernel_bullet_physics.process()
+	assert_eq(_player.resources.graze_count, 1, "第一 tick 应计一次擦弹")
+	assert_true(_kernel_bullet_host.system.is_grazed(id), "当前 tick 应标记已擦")
+
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	_kernel_bullet_physics.process()
+	assert_eq(_player.resources.graze_count, 2, "跨 tick 仍贴近应再次计擦弹")
+	assert_true(_kernel_bullet_host.system.is_grazed(id), "新 tick 应重新标记已擦")
