@@ -209,6 +209,7 @@ func test_graze_respects_interval() -> void:
 
 ## NativeBehavior 最小 pack：linear 必须与普通直线弹逐帧位置一致。
 func test_native_linear_behavior_matches_program() -> void:
+	_kernel_bullet_host.setup_behaviors(null, Callable())
 	var bid := _kernel_bullet_host.system.get_behavior_id("linear")
 	assert_gt(bid, -1, "linear behavior 应已注册")
 	var d := BulletData.new().enemy().tex("小玉")
@@ -243,3 +244,22 @@ func test_native_bullet_visual_attributes() -> void:
 	assert_almost_eq(float(hb.get("radius", 0.0)), 7.0, 0.0001, "get_hitbox.radius")
 	assert_eq(hb.get("offset"), Vector2(2, 3), "get_hitbox.offset")
 	assert_eq(hb.get("follow_dir"), false, "get_hitbox.follow_dir")
+
+
+## 其余逐弹属性：wrap / spin / elapsed / behavior state+params。
+func test_native_bullet_remaining_attributes() -> void:
+	_kernel_bullet_host.setup_behaviors(null, Callable())
+	var d := BulletData.new().enemy().tex("小玉").no_spawn_fog()
+	var id := _kernel_bullet_host.shoot(d, Vector2(300, 300), Vector2.DOWN)
+	_kernel_bullet_host.system.set_wrap(id, 5)
+	assert_eq(_kernel_bullet_host.system.get_wrap(id), 5, "wrap 应写回")
+	_kernel_bullet_host.system.set_spin_rot(id, 0.75)
+	assert_almost_eq(_kernel_bullet_host.system.get_spin_rot(id), 0.75, 0.0001, "spin_rot 应写回")
+
+	var bid := _kernel_bullet_host.system.get_behavior_id("linear")
+	assert_true(_kernel_bullet_host.system.set_behavior(id, bid), "应能绑定 linear")
+	assert_eq(_kernel_bullet_host.system.get_behavior_state(id).size(), 8, "state 固定 8 槽")
+	assert_eq(_kernel_bullet_host.system.get_behavior_params(id).size(), 8, "params 固定 8 槽")
+
+	_kernel_bullet_host.system.step(1.0 / 60.0)
+	assert_gt(_kernel_bullet_host.system.get_elapsed(id), 0.0, "behavior 也应累计 elapsed")

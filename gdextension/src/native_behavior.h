@@ -23,6 +23,7 @@ struct NativeBehaviorContext {
 	float *heading_x = nullptr;
 	float *heading_y = nullptr;
 	float *render_rot = nullptr;
+	float *spin_rot = nullptr;
 	Color *color = nullptr;
 	float *life = nullptr;
 };

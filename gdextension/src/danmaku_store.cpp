@@ -34,6 +34,12 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_render_rot", "id"), &DanmakuStore::get_render_rot);
 	ClassDB::bind_method(D_METHOD("set_render_rot", "id", "rot"), &DanmakuStore::set_render_rot);
 	ClassDB::bind_method(D_METHOD("get_hitbox", "id"), &DanmakuStore::get_hitbox);
+	ClassDB::bind_method(D_METHOD("get_wrap", "id"), &DanmakuStore::get_wrap);
+	ClassDB::bind_method(D_METHOD("get_spin_rot", "id"), &DanmakuStore::get_spin_rot);
+	ClassDB::bind_method(D_METHOD("set_spin_rot", "id", "rot"), &DanmakuStore::set_spin_rot);
+	ClassDB::bind_method(D_METHOD("get_elapsed", "id"), &DanmakuStore::get_elapsed);
+	ClassDB::bind_method(D_METHOD("get_behavior_state", "id"), &DanmakuStore::get_behavior_state);
+	ClassDB::bind_method(D_METHOD("get_behavior_params", "id"), &DanmakuStore::get_behavior_params);
 	ClassDB::bind_method(D_METHOD("fill_multimesh", "mm"), &DanmakuStore::fill_multimesh);
 	ClassDB::bind_method(D_METHOD("reserve", "n"), &DanmakuStore::reserve);
 	ClassDB::bind_method(D_METHOD("set_cull", "cull"), &DanmakuStore::set_cull);
@@ -602,6 +608,38 @@ Dictionary DanmakuStore::get_hitbox(int p_id) const {
 	out["size"] = Vector2(_hb_sizex[p_id], _hb_sizey[p_id]);
 	out["follow_dir"] = _hb_follow[p_id] != 0;
 	out["dir_offset"] = _hb_diroff[p_id];
+	return out;
+}
+
+int DanmakuStore::get_wrap(int p_id) const {
+	return _valid(p_id) ? (int)_wrap[p_id] : 0;
+}
+
+float DanmakuStore::get_spin_rot(int p_id) const {
+	return _valid(p_id) ? _spin_rot[p_id] : 0.0f;
+}
+
+void DanmakuStore::set_spin_rot(int p_id, float p_rot) {
+	if (_valid(p_id)) { _spin_rot[p_id] = p_rot; }
+}
+
+float DanmakuStore::get_elapsed(int p_id) const {
+	return _valid(p_id) ? _pelapsed[p_id] : 0.0f;
+}
+
+PackedFloat32Array DanmakuStore::get_behavior_state(int p_id) const {
+	PackedFloat32Array out;
+	out.resize(B_STATE_STRIDE);
+	if (!_valid(p_id)) { return out; }
+	for (int s = 0; s < B_STATE_STRIDE; ++s) { out[s] = _bstate[p_id * B_STATE_STRIDE + s]; }
+	return out;
+}
+
+PackedFloat32Array DanmakuStore::get_behavior_params(int p_id) const {
+	PackedFloat32Array out;
+	out.resize(B_PARAM_STRIDE);
+	if (!_valid(p_id)) { return out; }
+	for (int s = 0; s < B_PARAM_STRIDE; ++s) { out[s] = _bparams[p_id * B_PARAM_STRIDE + s]; }
 	return out;
 }
 
@@ -1233,6 +1271,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 		_render_rot[i] = (float)NAN;   // 每帧重置；只有 position(render_heading) 会设它
 		if (_fx[i] > 0.0f) { continue; }   // 出生相位：只画特效，不跑行为（与参照 behavior_processor 一致）
 		if (_behavior_id[i] >= 0) {
+			_pelapsed[i] += dt;
 			const NativeBehaviorDef *bdef = NativeBehaviorRegistry::get(_behavior_id[i]);
 			if (bdef != nullptr && bdef->tick != nullptr) {
 				NativeBehaviorContext bctx;
@@ -1246,6 +1285,7 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 				bctx.heading_x = &_hx[i];
 				bctx.heading_y = &_hy[i];
 				bctx.render_rot = &_render_rot[i];
+				bctx.spin_rot = &_spin_rot[i];
 				bctx.life = &_life[i];
 				// NativeBehaviorContext 的 velocity 指向临时 Vector2，tick 后可写回。
 				Vector2 vel(_vx[i], _vy[i]);

@@ -169,6 +169,7 @@ public:
 	// 逐弹出界宽限（秒）：出界后仍存活这么久再回收；0 = 出界立即回收（默认）。
 	void set_out_grace(int p_id, float p_grace);
 	void set_wrap(int p_id, int p_mask); // 边掩码：1 左 / 2 右 / 4 上 / 8 下。
+	int get_wrap(int p_id) const; // 无效 → 0。
 	float get_out_grace(int p_id) const; // 无效 → 0。
 	void set_default_life(float p_life); // 新行默认寿命。
 	void set_field(float p_left, float p_right, float p_top); // 反射/边界场地范围。
@@ -180,6 +181,9 @@ public:
 	// 无位移时与 hit_test 等价；矩形判定盒按线段到 OBB 的距离计算。
 	bool hit_test_swept(int p_id, const Vector2 &p_center, float p_radius) const;
 	// 最近一次 integrate 的最大单帧位移（像素）。宽相查询半径建议加上它。
+	float get_spin_rot(int p_id) const; // 累计贴图自转；无效 → 0。
+	void set_spin_rot(int p_id, float p_rot);
+	float get_elapsed(int p_id) const; // 当前 phase / behavior 的累计秒数；无效 → 0。
 	float get_max_step() const;
 	// 宽相查询：首次调用惰性建网格；返回候选行 id，仍需精确判定。
 	PackedInt32Array query_circle(const Vector2 &p_center, float p_search_radius) const;
@@ -252,6 +256,8 @@ public:
 	int get_behavior(int p_id) const; // 当前 behavior id；-1 = 无/无效。
 	int get_behavior_id(const String &p_name) const; // 名字 → registry id；未知 → -1。
 	String get_behavior_name(int p_id) const; // registry id → 名字；未知 → 空。
+	PackedFloat32Array get_behavior_state(int p_id) const; // 固定 8 槽（debug / 预览）。
+	PackedFloat32Array get_behavior_params(int p_id) const; // 固定 8 槽（debug / 预览）。
 	// 跑一帧 program；返回事件字典（emit/sfx/call）；本帧 dead 行走倒序 swap 回收。
 	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array());
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);

@@ -412,6 +412,41 @@ func get_hitbox(id: int) -> Dictionary:
 	return _accel.get_hitbox(id) if _accel != null else {}
 
 
+## 边环绕掩码：1 左 / 2 右 / 4 上 / 8 下。
+func get_wrap(id: int) -> int:
+	return _accel.get_wrap(id) if _accel != null else 0
+
+
+func set_wrap(id: int, mask: int) -> void:
+	if _accel != null:
+		_accel.set_wrap(id, mask)
+
+
+## 累计贴图自转。
+func get_spin_rot(id: int) -> float:
+	return _accel.get_spin_rot(id) if _accel != null else 0.0
+
+
+func set_spin_rot(id: int, rot: float) -> void:
+	if _accel != null:
+		_accel.set_spin_rot(id, rot)
+
+
+## 当前 phase / behavior 累计秒数。
+func get_elapsed(id: int) -> float:
+	return _accel.get_elapsed(id) if _accel != null else 0.0
+
+
+## behavior 固定 8 槽 state（debug / 预览）。
+func get_behavior_state(id: int) -> PackedFloat32Array:
+	return _accel.get_behavior_state(id) if _accel != null else PackedFloat32Array()
+
+
+## behavior 固定 8 槽 params（debug / 预览）。
+func get_behavior_params(id: int) -> PackedFloat32Array:
+	return _accel.get_behavior_params(id) if _accel != null else PackedFloat32Array()
+
+
 # ═══ 读访问器（快照）═══
 
 ## 当前活跃行数；快照数组按容量分配，只有前 count 行有效。
