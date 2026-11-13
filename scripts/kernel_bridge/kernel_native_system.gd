@@ -175,8 +175,9 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 	if bullet_data.is_spawn_fog:
 		effect = bullet_data.spawn_fx if bullet_data.spawn_fx != null else _spawn_fx.get(bullet_data.faction)
 	_set_row_fx(id, effect)
+	var nid := id
 	if _accel != null:
-		var nid: int = _accel.spawn(position, velocity, ti, int(bullet_data.faction), color)
+		nid = _accel.spawn(position, velocity, ti, int(bullet_data.faction), color)
 		if nid < 0:
 			push_error("[KernelNativeSystem] 原生 store 溢出（capacity=%d）" % _accel.get_capacity())
 			return id
@@ -191,7 +192,7 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 		var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
 		var prog: int = _program_for(move, params)
 		_accel.set_program(nid, prog)
-	return id
+	return nid
 
 
 ## 播一条纯特效行（消弹/爆发）：无弹型、无碰撞，寿命 = effect.duration（原生 integrate 到期回收）。

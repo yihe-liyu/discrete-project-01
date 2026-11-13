@@ -320,6 +320,8 @@ func test_native_bounce_emit_spawns_template() -> void:
 
 	_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "父弹应回收，子弹出应存在")
+	var child_type := _kernel_bullet_host.system.get_type_index(0)
+	assert_not_null(_kernel_bullet_host.texture_for_index(child_type), "同帧增删后子弹出仍必须有纹理")
 
 
 ## 从场内自然飞到上墙：bounce_emit 必须自己触发，而不是测试直接放在墙边。
