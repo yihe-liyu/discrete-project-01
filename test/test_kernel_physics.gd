@@ -320,3 +320,20 @@ func test_native_bounce_emit_spawns_template() -> void:
 
 	_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "父弹应回收，子弹出应存在")
+
+
+## 从场内自然飞到上墙：bounce_emit 必须自己触发，而不是测试直接放在墙边。
+func test_native_bounce_emit_hits_wall_naturally() -> void:
+	_kernel_bullet_host.setup_behaviors(_player, Callable())
+	var child_data := BulletData.new().enemy().tex("米弹").no_spawn_fog()
+	child_data.velocity = Vector2(0, 120)
+	var tpl := EmitTemplate.new(&"rebound_natural", child_data)
+	assert_true(_kernel_bullet_host.system.register_emit_template(tpl), "模板应注册")
+
+	var parent_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	parent_data.velocity = Vector2(0, -300)
+	parent_data.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([tpl.numeric_id, 0.0, 0.0, 0.0])))
+	var _id := _kernel_bullet_host.shoot(parent_data, Vector2(448, 500), Vector2.UP)
+	for _i in 120:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "飞抵上墙后父弹应回收、子弹出应存在")
