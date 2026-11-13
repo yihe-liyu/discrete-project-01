@@ -197,7 +197,8 @@ func prepare_shot(data: BulletData, pos: Vector2, direction: Vector2) -> Diction
 		var res := _player_res()
 		if res != null and res.memory_value < 50.0:
 			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
-	return {type = type, pos = pos, vel = vel, tint = tint, move = move, params = params, texture = data.texture}
+	return {type = type, pos = pos, vel = vel, tint = tint, move = move, params = params,
+		texture = data.texture, behavior = data.native_behavior}
 
 
 ## 把 prepare_shot 的快照写入内核池（延后队列 flush 用；也可直接调）。
@@ -205,6 +206,14 @@ func spawn_prepared(spec: Dictionary) -> int:
 	if spec.is_empty():
 		return -1
 	var id: int = system.spawn(spec.type, spec.pos, spec.vel, spec.tint, spec.move, spec.params)
+	if id >= 0:
+		var behavior: NativeBehaviorSpec = spec.get("behavior")
+		if behavior != null:
+			var bid: int = system.get_behavior_id(String(behavior.id))
+			if bid < 0:
+				push_error("[KernelBulletHost] 未注册的 native behavior：%s" % behavior.id)
+			elif not system.set_behavior(id, bid, behavior.params):
+				push_error("[KernelBulletHost] set_behavior 失败：%s" % behavior.id)
 	_sync_host_tables(id, spec.texture)
 	return id
 

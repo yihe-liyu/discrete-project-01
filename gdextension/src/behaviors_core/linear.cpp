@@ -16,7 +16,7 @@ static void linear_tick(float *p_state, const float *p_params, NativeBehaviorCon
 	(void)p_dt;
 }
 
-void register_behaviors_core() {
+void register_linear() {
 	static const NativeBehaviorDef def = {
 		"linear", 0, 0, &linear_init, &linear_tick
 	};

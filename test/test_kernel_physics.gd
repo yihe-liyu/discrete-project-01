@@ -263,3 +263,20 @@ func test_native_bullet_remaining_attributes() -> void:
 
 	_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_gt(_kernel_bullet_host.system.get_elapsed(id), 0.0, "behavior 也应累计 elapsed")
+
+
+## 内容桥接 + homing pack：BulletData.behavior 应自动绑定并真正转向自机。
+func test_native_homing_behavior_content_bridge() -> void:
+	_kernel_bullet_host.setup_behaviors(_player, Callable())
+	var spec := NativeBehaviorSpec.new(&"homing", PackedFloat32Array([120.0, 600.0]))
+	var d := BulletData.new().enemy().tex("小玉").no_spawn_fog().with_native_behavior(spec)
+	d.velocity = Vector2.ZERO
+	var id := _kernel_bullet_host.shoot(d, Vector2(448, 300), Vector2.RIGHT)
+	assert_gt(id, -1, "应能发射")
+	var bid := _kernel_bullet_host.system.get_behavior_id("homing")
+	assert_eq(_kernel_bullet_host.system.get_behavior(id), bid, "BulletData.behavior 应自动绑定")
+
+	for _i in 30:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+	assert_gt(_kernel_bullet_host.system.get_position(id).y, 300.0, "homing 应开始向自机（下方）移动")
+	assert_gt(_kernel_bullet_host.system.get_velocity(id).length(), 0.0, "homing 应产生速度")
