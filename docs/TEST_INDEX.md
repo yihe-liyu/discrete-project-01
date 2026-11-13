@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：118 脚本 / **858 用例（857 通过 / 1 红）/ 7264 断言 / 52.9s** / 0 orphans / **0 pending**。
+**现状**：119 脚本 / **862 用例（861 通过 / 1 红）/ 7274 断言 / 52.9s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 205 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 53 | 440 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 54 | 444 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -106,12 +106,13 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（53 / 440）
+## C · 宿主 · 运行时系统（54 / 444）
 
 ### C1 组合根 / 服务 / 时间线（20 / 100）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
+| [test_emit_template](../test/test_emit_template.gd) | `EmitTemplate` / `EmitTemplateRegistry`：id 唯一、必填字段、behavior 参数上限 | 4 | 0 |
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |
 | [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 真游戏真的在用它 —— 注册表里有自机 / **运行时显式认领 `player`（B2）** / 内核后端拿到同一张注册表 / fx 挂舞台 / 异常路径只交注册表 | 9 | 0 |
 | [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop | 9 | 0 |
