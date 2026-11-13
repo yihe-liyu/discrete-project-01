@@ -1,4 +1,5 @@
 #include "native_behavior.h"
+#include "behavior_common.h"
 
 namespace godot {
 
@@ -19,16 +20,8 @@ static void homing_tick(float *p_state, const float *p_params,
 		return;
 	}
 	const Vector2 desired = to_target.normalized() * p_params[0];
-	Vector2 vel = *p_ctx.velocity;
-	const Vector2 delta = desired - vel;
-	const float step = p_params[1] * p_dt;
-	if (step <= 0.0f || delta.length() <= step) {
-		vel = desired;
-	} else {
-		vel += delta.normalized() * step;
-	}
-	*p_ctx.velocity = vel;
-	const Vector2 dir = vel.normalized();
+	behavior::steer_toward(p_ctx, desired, p_params[1] * p_dt);
+	const Vector2 dir = p_ctx.velocity->normalized();
 	if (dir.length_squared() > 1e-6f) {
 		*p_ctx.heading_x = dir.x;
 		*p_ctx.heading_y = dir.y;

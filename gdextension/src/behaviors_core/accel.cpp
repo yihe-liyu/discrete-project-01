@@ -1,4 +1,5 @@
 #include "native_behavior.h"
+#include "behavior_common.h"
 
 namespace godot {
 
@@ -13,7 +14,7 @@ static void accel_tick(float *p_state, const float *p_params,
 		NativeBehaviorContext &p_ctx, NativeBehaviorOutcome &p_out, float p_dt) {
 	(void)p_out;
 	p_state[0] += p_dt;
-	*p_ctx.velocity += Vector2(p_params[0], p_params[1]) * p_dt;
+	behavior::accelerate(p_ctx, Vector2(p_params[0], p_params[1]), p_dt);
 }
 
 void register_accel() {
