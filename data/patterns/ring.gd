@@ -56,10 +56,14 @@ func fire(p_ctx: StageContext, p: PatternParams, origin: Vector2, direction: Vec
 
 	# template 路径按引用使用：与旧 content 共享同一个 BulletData，保留 faction/tint/lifecycle 与类型缓存。
 	# 只改 velocity（旧 content 也是每波 set speed），不重建实例。
-	var 弹型: BulletData
 	if p.template is SpawnSpec:
-		弹型 = p.template.to_bullet_data()
-	elif p.template is BulletData:
+		var spec := p.template as SpawnSpec
+		if p.speed > 0.0:
+			spec.velocity = Vector2(p.speed, 0.0)
+		p_ctx.bullets.shoot_directions_spec(spec, 方向列表, origin)
+		return
+	var 弹型: BulletData
+	if p.template is BulletData:
 		弹型 = p.template
 	else:
 		弹型 = BulletData.new().def(p.bullet_def).color(p.color).blend(p.blend)

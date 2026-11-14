@@ -161,19 +161,30 @@ func flush_behavior_host() -> void:
 
 ## KernelNativeSystem 的 behavior emit 回调：模板 → 实际 spawn。
 func _spawn_emit_template(template: EmitTemplate, pos: Vector2, vel: Vector2, color: Color) -> void:
-	if template == null or template.bullet == null:
+	if template == null:
 		push_error("[KernelBulletHost] emit template 无效")
 		return
-	# 模板必须直接复用：BulletData 的 texture / is_spawn_fog 等是脚本字段，
-	# Resource.duplicate() 不保证完整复制，曾导致回弹子弹出不可见。
+	if template.spawn_spec != null:
+		var spec := template.spawn_spec
+		spec.velocity = vel
+		if color != Color.WHITE:
+			spec.color(color)
+		if template.behavior != null:
+			spec.behavior_spec = template.behavior
+		var dir := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
+		spawn_prepared(prepare_spec(spec, pos, dir))
+		return
+	if template.bullet == null:
+		push_error("[KernelBulletHost] emit template 两条路径都为空")
+		return
 	var data: BulletData = template.bullet
 	data.velocity = vel
 	if color != Color.WHITE:
 		data.color(color)
 	if template.behavior != null:
 		data.behavior_spec = template.behavior
-	var dir := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
-	spawn_prepared(prepare_shot(data, pos, dir))
+	var dir2 := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
+	spawn_prepared(prepare_shot(data, pos, dir2))
 
 
 ## SpawnSpec 直通：不再经过 BulletData。

@@ -85,6 +85,16 @@ func shoot_directions(bullet_data: BulletData, directions: Array[Vector2], at: V
 		bullet_manager.shoot_bullet(bullet_data, at, direction)
 
 
+func shoot_directions_spec(spec: SpawnSpec, directions: Array[Vector2], at: Vector2,
+		sfx: AudioStream = null) -> void:
+	if not is_active or spec == null or directions.is_empty() or bullet_manager == null:
+		return
+	if sfx:
+		AudioManager.play_sfx(sfx)
+	for direction in directions:
+		bullet_manager.shoot_spec(spec, at, direction)
+
+
 # ── 激光 ──
 
 ## 骨架级生成（配合 LaserPresets 预设）：最灵活入口

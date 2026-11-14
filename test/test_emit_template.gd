@@ -41,5 +41,5 @@ func test_behavior_params_limit() -> void:
 func test_emit_template_accepts_spawn_spec() -> void:
 	var spec := SpawnSpec.new().tex("米弹").enemy()
 	var tpl := EmitTemplate.new(&"from_spec", spec)
-	assert_not_null(tpl.bullet, "EmitTemplate 应内部转换 SpawnSpec")
-	assert_eq(tpl.bullet.texture, BulletShapes.atlas_texture(&"米弹"), "外观应保留")
+	assert_not_null(tpl.spawn_spec, "EmitTemplate 应保留 SpawnSpec 路径")
+	assert_eq(tpl.spawn_spec.texture, BulletShapes.atlas_texture(&"米弹"), "外观应保留")
