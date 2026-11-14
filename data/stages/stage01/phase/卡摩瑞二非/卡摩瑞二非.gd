@@ -35,7 +35,7 @@ var 撞墙音效id: int = -1
 func _on_start() -> void:
 	开花弹 = SpawnSpec.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
 	反弹弹 = SpawnSpec.new().tex("棱弹").color(Color.AQUA).blend(true).enemy()
-	回弹模板 = EmitTemplate.new(&"卡摩瑞二非_rebound", 反弹弹)
+	回弹模板 = EmitTemplate.new(&"卡摩瑞二非_rebound", 反弹弹.to_bullet_data())
 
 
 func _tick(p_ctx: StageContext) -> Variant:

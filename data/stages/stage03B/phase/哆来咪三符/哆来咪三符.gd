@@ -98,8 +98,8 @@ func _on_start() -> void:
 	往返弹 = SpawnSpec.new().tex("环玉").speed(往返弹初速度) \
 		.color(Color.BLUE_VIOLET).blend(true).enemy() \
 		.grace(4)
-	夹角模板 = EmitTemplate.new(&"哆来咪三符_aqua", 夹角弹)
-	夹角狙模板 = EmitTemplate.new(&"哆来咪三符_red", 夹角狙)
+	夹角模板 = EmitTemplate.new(&"哆来咪三符_aqua", 夹角弹.to_bullet_data())
+	夹角狙模板 = EmitTemplate.new(&"哆来咪三符_red", 夹角狙.to_bullet_data())
 	# 往返弹的行为在 _tick 里注册模板后再绑定。
 
 

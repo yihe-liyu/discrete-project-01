@@ -112,7 +112,7 @@
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_spawn_spec](../test/test_spawn_spec.gd) | SpawnSpec 过渡入口：兼容 BulletData + 一层 child + service | 2 | 0 |
+| [test_spawn_spec](../test/test_spawn_spec.gd) | SpawnSpec → BulletData 转换 + child + service | 2 | 0 |
 | [test_bullet_behaviors](../test/test_bullet_behaviors.gd) | 内容侧 behavior 构造器：id / 参数顺序 / bounce template 校验 | 3 | 0 |
 | [test_emit_template](../test/test_emit_template.gd) | `EmitTemplate` / `EmitTemplateRegistry`：id 唯一、必填字段、behavior 参数上限 | 4 | 0 |
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |
