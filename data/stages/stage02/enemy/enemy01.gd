@@ -16,8 +16,8 @@ var bullet_l_or_r: int
 ## 链弹初速度。
 var bullet_speed: int = 250
 
-## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
-var 链弹: BulletData
+## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
+var 链弹: SpawnSpec
 
 
 ## 一次性初始化：ctx / target 已就绪，且 Enemy 已入树。
@@ -30,7 +30,7 @@ func _on_start() -> void:
 
 	var timeline := start_timeline()
 
-	链弹 = BulletData.new().enemy().blend(true).tex(bullet_name) \
+	链弹 = SpawnSpec.new().enemy().blend(true).tex(bullet_name) \
 		.color(bullet_color)
 	链弹.velocity = Vector2(0, bullet_speed)
 
@@ -45,7 +45,7 @@ func _on_start() -> void:
 	for i in diff_pick([36, 72, 72, 144]):
 		# 0.365i - 0.005i²：先快后慢，链弹在前段拉开、后段收密。
 		timeline.at(0.365 * i - 0.005 * i * i).do(func():
-			ctx.bullets.shoot_spread(
+			ctx.bullets.shoot_spread_spec(
 				链弹, 1, 0,
 				发射方向.rotated(PI / 角度分段数 * i * bullet_l_or_r),
 				target.global_position, AssetRegistry.sounds["shoot"])

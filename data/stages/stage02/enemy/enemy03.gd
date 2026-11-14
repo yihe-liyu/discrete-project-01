@@ -7,7 +7,7 @@ var target_pos2: Vector2
 var 旋转方向: int = 1
 var 时间: float = 5
 
-var 开花弹: BulletData
+var 开花弹: SpawnSpec
 
 ## 当前发射方向；每次发射后旋转 22.5°，形成缓慢转动的弹幕。
 var 发射方向 := Vector2.DOWN
@@ -26,7 +26,7 @@ func _on_start() -> void:
 	var timeline := start_timeline()
 
 	# 米弹：红色、带拖尾；先转 2 秒，再反向转并向后加速，最后清弹。
-	开花弹 = BulletData.new().enemy().blend(true).tex("鳞弹") \
+	开花弹 = SpawnSpec.new().enemy().blend(true).tex("鳞弹") \
 		.color(Color.CRIMSON).grace(2).speed(200.0)
 
 	var 个数: int = diff_pick([4, 8, 12, 16])
@@ -35,7 +35,7 @@ func _on_start() -> void:
 	# 0 秒起持续发射；每次把发射方向转 22.5°，让整圈慢慢扫过。
 	timeline.at(0.0).every(间隔).do(func():
 		ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
-		ctx.bullets.shoot_spread(
+		ctx.bullets.shoot_spread_spec(
 			开花弹, 个数, TAU, 发射方向,
 			target.global_position)
 		发射方向 = 发射方向.rotated(PI / 23.0 * 旋转方向)

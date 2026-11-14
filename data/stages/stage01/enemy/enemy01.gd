@@ -11,9 +11,9 @@ var heavy_wave: bool = true
 ## 普通弹数量倍率；关卡脚本用 rate=4 把连射压成稀疏弹幕。
 var rate: int = 1
 
-## 复用弹型实例（M2：内核弹型缓存在 BulletData 实例上，禁止每发 new）。
-var _plain_bullet_data: BulletData
-var _heavy_bullet_data: BulletData
+## 复用弹型实例（内核弹型缓存在 SpawnSpec 上，禁止每发 new）。
+var _plain_bullet_data: SpawnSpec
+var _heavy_bullet_data: SpawnSpec
 
 
 ## 一次性初始化：ctx / target 已就绪，且 Enemy 已入树。
@@ -29,7 +29,7 @@ func _on_start() -> void:
 
 	timeline.at(0.0).every(2.5).times(3).do(func():
 		if _plain_bullet_data == null:
-			_plain_bullet_data = BulletData.new().enemy().blend(true).tex("小玉").color(Color.RED).grace(0)
+			_plain_bullet_data = SpawnSpec.new().enemy().blend(true).tex("小玉").color(Color.RED).grace(0)
 
 		# 自机方向：自机不在场时退化为向下。
 		var 自机 := ctx.player.get_player()
@@ -41,18 +41,18 @@ func _on_start() -> void:
 		# 同一方向连成一条线；每颗比上一颗快 50，形成纵向拉开。
 		for i in diff_pick([1, 3, 5, 8]) / rate:
 			_plain_bullet_data.velocity = Vector2(0, 普通弹速度 + i * 50)
-			ctx.bullets.shoot_spread(
+			ctx.bullets.shoot_spread_spec(
 				_plain_bullet_data, 1, 0, 发射方向,
 				target.global_position, AssetRegistry.sounds["shoot"])
 
 		# 强化波：金色重力弹，向下加速，并向两侧各偏一点。
 		if ctx.diff.at_least(Difficulty.HARD) and heavy_wave:
 			if _heavy_bullet_data == null:
-				_heavy_bullet_data = BulletData.new().enemy().blend(true).tex("棱弹").color(Color.GOLD).grace(3)
+				_heavy_bullet_data = SpawnSpec.new().enemy().blend(true).tex("棱弹").color(Color.GOLD).grace(3)
 				_heavy_bullet_data.with_behavior(BulletBehaviors.accel(Vector2(0, 200)))
 			for i in diff_pick([0, 0, 1, 2]):
 				_heavy_bullet_data.velocity = Vector2(0, 175 + i * 25)
-				ctx.bullets.shoot_spread(
+				ctx.bullets.shoot_spread_spec(
 					_heavy_bullet_data, diff_pick([0, 0, 3, 6]),
 					PI / (3 - i), -发射方向,
 					target.global_position)

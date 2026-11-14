@@ -9,8 +9,8 @@ const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 var target_pos: Vector2
 
 ## 复用弹型实例（M2）。
-var _plain_bullet_data: BulletData
-var _heavy_bullet_data: BulletData
+var _plain_bullet_data: SpawnSpec
+var _heavy_bullet_data: SpawnSpec
 
 
 ## 一次性初始化：ctx / target 已就绪，且 Enemy 已入树。
@@ -27,11 +27,11 @@ func _on_start() -> void:
 	# 三波环玉，每波整体随机旋转；同一波内再按难度叠 1~3 层速度。
 	timeline.at(1.0).every(2.4).times(3).do(func():
 		if _plain_bullet_data == null:
-			_plain_bullet_data = BulletData.new().enemy().blend(true).tex("环玉").color(Color.DARK_ORANGE)
+			_plain_bullet_data = SpawnSpec.new().enemy().blend(true).tex("环玉").color(Color.DARK_ORANGE)
 		var 发射方向 := Vector2.ONE.rotated(RNG.randf_range(-PI, PI))
 		for i in diff_pick([1, 2, 2, 3]):
 			_plain_bullet_data.velocity = Vector2(0, 100 + i * 100)
-			ctx.bullets.shoot_spread(
+			ctx.bullets.shoot_spread_spec(
 				_plain_bullet_data, diff_pick([10, 14, 20, 20]),
 				TAU, 发射方向,
 				target.global_position, AssetRegistry.sounds["shoot"])
@@ -42,12 +42,12 @@ func _on_start() -> void:
 		for i in 3:
 			timeline.at(1.0 + i * 2.4).every(0.1).times(diff_pick([0, 0, 4, 8])).do(func():
 				if _heavy_bullet_data == null:
-					_heavy_bullet_data = BulletData.new().enemy().blend(true).tex("米弹").color(Color.GOLD)
+					_heavy_bullet_data = SpawnSpec.new().enemy().blend(true).tex("米弹").color(Color.GOLD)
 					_heavy_bullet_data.with_behavior(BulletBehaviors.accel(Vector2(0, 200)))
 				_heavy_bullet_data.velocity = Vector2(0, 175)
 				# 点射方向在正上方左右各偏 60°，形成窄扇。
 				var 发射方向 := Vector2.UP.rotated(RNG.randf_range(-PI / 3, PI / 3))
-				ctx.bullets.shoot_spread(
+				ctx.bullets.shoot_spread_spec(
 					_heavy_bullet_data, 1, 0, 发射方向,
 					target.global_position, AssetRegistry.sounds["kira"])
 			)
