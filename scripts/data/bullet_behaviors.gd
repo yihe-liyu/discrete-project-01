@@ -16,6 +16,18 @@ static func accel(acceleration: Vector2) -> BehaviorSpec:
 	return BehaviorSpec.new(&"accel", PackedFloat32Array([acceleration.x, acceleration.y]))
 
 
+## 声呐弹：靠近自机折返，回到 Boss 附近后炸开。
+static func sonar(flower: EmitTemplate, string_bullet: EmitTemplate,
+		return_radius: float, flower_count: int, string_mode: int,
+		string_speed_base: float = 400.0) -> BehaviorSpec:
+	var fid := flower.numeric_id if flower != null else -1
+	var sid := string_bullet.numeric_id if string_bullet != null else -1
+	return BehaviorSpec.new(&"stage01.mid01.sonar", PackedFloat32Array([
+		return_radius, float(fid), float(sid), float(flower_count),
+		float(string_mode), string_speed_base,
+	]))
+
+
 ## 种子弹：线性减速到 0，结束时向四周 emit 一圈。
 static func seed_burst(template: EmitTemplate, duration: float, initial_speed: float,
 		count: int, child_speed: float, spread: float = TAU) -> BehaviorSpec:

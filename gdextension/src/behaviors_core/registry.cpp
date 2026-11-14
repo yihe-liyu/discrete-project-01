@@ -12,6 +12,7 @@ void register_seed_burst();
 void register_top_emit();
 void register_spin_then_slow();
 void register_rain_stage();
+void register_sonar();
 
 void register_behaviors_core() {
 	register_linear();
@@ -24,6 +25,7 @@ void register_behaviors_core() {
 	register_top_emit();
 	register_spin_then_slow();
 	register_rain_stage();
+	register_sonar();
 }
 
 } // namespace godot
