@@ -20,7 +20,7 @@ static func accel(acceleration: Vector2) -> BehaviorSpec:
 static func rain_stage(template: EmitTemplate, gravity: float, threshold_y: float,
 		offset_y: float = 0.0, clear_fx: bool = true, despawn: bool = true) -> BehaviorSpec:
 	var tid := template.numeric_id if template != null else -1
-	return BehaviorSpec.new(&"rain_stage", PackedFloat32Array([
+	return BehaviorSpec.new(&"stage03B.mid01.rain_stage", PackedFloat32Array([
 		gravity, threshold_y, float(tid), offset_y,
 		1.0 if clear_fx else 0.0, 1.0 if despawn else 0.0,
 	]))
@@ -30,7 +30,7 @@ static func rain_stage(template: EmitTemplate, gravity: float, threshold_y: floa
 static func spin_then_slow(spin: float, duration: float, reverse_factor: float,
 		accel_px: float, speed_threshold: float, clear_fx: bool = true,
 		despawn: bool = true) -> BehaviorSpec:
-	return BehaviorSpec.new(&"spin_then_slow", PackedFloat32Array([
+	return BehaviorSpec.new(&"stage02.enemy02.spin_then_slow", PackedFloat32Array([
 		spin, duration, reverse_factor, accel_px, speed_threshold,
 		1.0 if clear_fx else 0.0, 1.0 if despawn else 0.0,
 	]))
@@ -42,7 +42,7 @@ static func top_emit(template: EmitTemplate, accel_px: float,
 	if template == null or template.numeric_id < 0:
 		push_error("BulletBehaviors.top_emit(): template 未注册")
 		return null
-	return BehaviorSpec.new(&"top_emit", PackedFloat32Array([
+	return BehaviorSpec.new(&"stage01.enemy04.top_emit", PackedFloat32Array([
 		accel_px, template.numeric_id, child_speed, float(sfx_id), angle,
 	]))
 

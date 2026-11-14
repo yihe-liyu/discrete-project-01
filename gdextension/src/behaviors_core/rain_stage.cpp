@@ -47,7 +47,7 @@ static void rain_stage_tick(float *p_state, const float *p_params,
 }
 
 void register_rain_stage() {
-	REGISTER_BEHAVIOR("rain_stage", RainState, RainParams, &rain_stage_init, &rain_stage_tick);
+	REGISTER_BEHAVIOR("stage03B.mid01.rain_stage", RainState, RainParams, &rain_stage_init, &rain_stage_tick);
 }
 
 } // namespace godot

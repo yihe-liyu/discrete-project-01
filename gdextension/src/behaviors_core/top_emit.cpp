@@ -38,7 +38,7 @@ static void top_emit_tick(float *p_state, const float *p_params,
 }
 
 void register_top_emit() {
-	REGISTER_BEHAVIOR("top_emit", TopState, TopParams, &top_emit_init, &top_emit_tick);
+	REGISTER_BEHAVIOR("stage01.enemy04.top_emit", TopState, TopParams, &top_emit_init, &top_emit_tick);
 }
 
 } // namespace godot

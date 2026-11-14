@@ -51,7 +51,7 @@ static void spin_then_slow_tick(float *p_state, const float *p_params,
 }
 
 void register_spin_then_slow() {
-	REGISTER_BEHAVIOR("spin_then_slow", SpinState, SpinParams, &spin_then_slow_init, &spin_then_slow_tick);
+	REGISTER_BEHAVIOR("stage02.enemy02.spin_then_slow", SpinState, SpinParams, &spin_then_slow_init, &spin_then_slow_tick);
 }
 
 } // namespace godot
