@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：121 脚本 / **873 用例（872 通过 / 1 红）/ 7318 断言 / 52.9s** / 0 orphans / **0 pending**。
+**现状**：121 脚本 / **874 用例（873 通过 / 1 红）/ 7321 断言 / 52.9s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 30 | 209 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 56 | 451 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 56 | 452 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -106,13 +106,13 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（56 / 451）
+## C · 宿主 · 运行时系统（56 / 452）
 
 ### C1 组合根 / 服务 / 时间线（20 / 100）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_spawn_spec](../test/test_spawn_spec.gd) | SpawnSpec → BulletData 转换 + child + service + 核心覆盖 | 3 | 0 |
+| [test_spawn_spec](../test/test_spawn_spec.gd) | SpawnSpec → BulletType 直发 + 转换/child/覆盖 | 4 | 0 |
 | [test_bullet_behaviors](../test/test_bullet_behaviors.gd) | 内容侧 behavior 构造器：id / 参数顺序 / bounce template 校验 | 3 | 0 |
 | [test_emit_template](../test/test_emit_template.gd) | `EmitTemplate` / `EmitTemplateRegistry`：id、字段、参数上限、SpawnSpec 入口 | 5 | 0 |
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |

@@ -137,6 +137,10 @@ func _physics_process(_delta: float) -> void:
 func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
 	return _kernel_bullet_host.shoot(data, pos, direction)
 
+
+func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
+	return _kernel_bullet_host.shoot_spec(spec, pos, direction)
+
 func _on_behavior_bullet_spawned(uid: int, lifecycle: BulletLifecycle) -> void:
 	bullet_spawned.emit(uid, lifecycle)
 

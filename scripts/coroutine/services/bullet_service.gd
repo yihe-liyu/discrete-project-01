@@ -24,13 +24,26 @@ func register_behavior_sfx(stream: AudioStream) -> int:
 
 ## SpawnSpec 单发入口（过渡：SpawnSpec 当前兼容 BulletData）。
 func shoot_spec(spec: SpawnSpec, at: Vector2, direction: Vector2, sfx: AudioStream = null) -> void:
-	shoot_spread(spec.to_bullet_data(), 1, 0.0, direction, at, sfx)
+	if not is_active or spec == null or bullet_manager == null:
+		return
+	if sfx:
+		AudioManager.play_sfx(sfx)
+	bullet_manager.shoot_spec(spec, at, direction)
 
 
 ## SpawnSpec 扇形入口。
 func shoot_spread_spec(spec: SpawnSpec, count: int, spread_angle: float,
 		base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void:
-	shoot_spread(spec.to_bullet_data(), count, spread_angle, base_dir, at, sfx)
+	if not is_active or spec == null or count <= 0 or bullet_manager == null:
+		return
+	if sfx:
+		AudioManager.play_sfx(sfx)
+	if count == 1:
+		bullet_manager.shoot_spec(spec, at, base_dir)
+		return
+	var step := spread_angle / (count - 1) if spread_angle < TAU - 0.001 else spread_angle / count
+	for i in count:
+		bullet_manager.shoot_spec(spec, at, base_dir.rotated(-spread_angle / 2.0 + step * i))
 
 
 ## 扇形散弹。count == 1 打一发（忽略 spread_angle）；不发弹（active=false / count ≤ 0）时静默返回。

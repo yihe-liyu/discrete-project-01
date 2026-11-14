@@ -4,6 +4,7 @@ class_name SpawnSpec
 extends RefCounted
 
 var bullet_def: BulletDef
+var texture: Texture2D
 var tint: Color = Color.WHITE
 var use_blend: bool = true
 var faction: int = BulletData.Faction.PLAYER
@@ -26,59 +27,70 @@ var spawn_fog: int = -1
 
 var child: SpawnSpec
 var _cached_data: BulletData
+var _cached_type: BulletType
 
 
 func tex(key: String) -> SpawnSpec:
 	bullet_def = BulletCatalog.find(key)
+	texture = BulletShapes.atlas_texture(StringName(key)) if bullet_def != null else null
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func color(c: Color) -> SpawnSpec:
 	tint = c
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func blend(on: bool = true) -> SpawnSpec:
 	use_blend = on
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func enemy() -> SpawnSpec:
 	faction = BulletData.Faction.ENEMY
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func player() -> SpawnSpec:
 	faction = BulletData.Faction.PLAYER
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func speed(v: float) -> SpawnSpec:
 	velocity.y = v
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func direction(x: float, y: float) -> SpawnSpec:
 	velocity = Vector2(x, y)
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func grace(v: float) -> SpawnSpec:
 	out_grace = v
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func wrap(mask: int) -> SpawnSpec:
 	wrap_mask = mask
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
@@ -88,6 +100,7 @@ func hitbox_circle(radius: float, offset: Vector2 = Vector2.ZERO) -> SpawnSpec:
 	hitbox_offset = offset
 	hitbox_size = Vector2.ZERO
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
@@ -96,6 +109,7 @@ func hitbox_rect(size: Vector2, offset: Vector2 = Vector2.ZERO) -> SpawnSpec:
 	hitbox_size = size
 	hitbox_offset = offset
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
@@ -103,31 +117,67 @@ func facing(follow: bool = true, offset: float = 0.0) -> SpawnSpec:
 	follow_dir_override = 1 if follow else 0
 	dir_offset_override = offset
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func no_spawn_fog() -> SpawnSpec:
 	spawn_fog = 0
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func with_spawn_fog() -> SpawnSpec:
 	spawn_fog = 1
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func trajectory(lc: BulletLifecycle) -> SpawnSpec:
 	lifecycle = lc
 	_cached_data = null
+	_cached_type = null
 	return self
 
 
 func with_behavior(spec: BehaviorSpec) -> SpawnSpec:
 	behavior_spec = spec
 	_cached_data = null
+	_cached_type = null
 	return self
+
+
+## 直接构造成内核类型；新路径不再经过 BulletData。
+func to_bullet_type() -> BulletType:
+	if _cached_type != null:
+		return _cached_type
+	var bt := BulletType.new()
+	bt.kind = BulletType.Kind.POINT
+	bt.faction = BulletType.Faction.ENEMY if faction == BulletData.Faction.ENEMY else BulletType.Faction.PLAYER
+	bt.tint_mode = BulletType.TintMode.BLEND if use_blend else BulletType.TintMode.MULTIPLY
+	bt.out_grace = out_grace
+	bt.wrap_mask = wrap_mask
+	bt.is_spawn_fog = spawn_fog != 0
+	if bullet_def != null:
+		bt.hitbox_radius = bullet_def.hitbox_radius
+		bt.hitbox_offset = bullet_def.hitbox_offset
+		bt.hitbox_size = bullet_def.hitbox_size
+		bt.follow_dir = bullet_def.follow_dir
+		bt.dir_offset = bullet_def.dir_offset
+	if hitbox_radius >= 0.0:
+		bt.hitbox_radius = hitbox_radius
+	if hitbox_offset != Vector2.ZERO:
+		bt.hitbox_offset = hitbox_offset
+	if hitbox_size != Vector2.ZERO:
+		bt.hitbox_size = hitbox_size
+	if follow_dir_override >= 0:
+		bt.follow_dir = follow_dir_override != 0
+	if not is_nan(dir_offset_override):
+		bt.dir_offset = dir_offset_override
+	_cached_type = bt
+	return bt
 
 
 ## 转成旧内核适配器；过渡期唯一需要消费 BulletData 的边界。

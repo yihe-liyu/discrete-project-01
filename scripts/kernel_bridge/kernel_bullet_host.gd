@@ -176,6 +176,32 @@ func _spawn_emit_template(template: EmitTemplate, pos: Vector2, vel: Vector2, co
 	spawn_prepared(prepare_shot(data, pos, dir))
 
 
+## SpawnSpec 直通：不再经过 BulletData。
+func prepare_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictionary:
+	if spec == null:
+		return {}
+	_ensure_system()
+	var type := spec.to_bullet_type()
+	var speed: float = spec.velocity.length()
+	var vel: Vector2 = direction.normalized() * speed if direction != Vector2.ZERO else spec.velocity
+	var move: StringName = &""
+	var params: Variant = null
+	if spec.lifecycle != null:
+		move = LifecycleCatalog.MOVE_LIFECYCLE
+		params = {&"lifecycle": spec.lifecycle, &"anchor": null}
+	var tint: Color = spec.tint
+	if spec.faction == BulletData.Faction.PLAYER:
+		var res := _player_res()
+		if res != null and res.memory_value < 50.0:
+			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
+	return {type = type, pos = pos, vel = vel, tint = tint, move = move, params = params,
+		texture = spec.texture, behavior = spec.behavior_spec}
+
+
+func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
+	return spawn_prepared(prepare_spec(spec, pos, direction))
+
+
 ## 解析一次发射所需的 per-shot 状态（类型 / 速度 / 行为 / 染色），不写内核池。
 ## 延后队列在入队瞬间调它做快照：内容复用同一 BulletData 模板改速度再入队，
 ## 若拖到 flush 才读实例，所有入队项会被最后一次写入覆盖（non_mid01 红弹速度梯度消失即此因）。

@@ -37,3 +37,13 @@ func test_spawn_spec_carries_core_overrides() -> void:
 	assert_eq(d.follow_dir, false, "朝向覆盖")
 	assert_almost_eq(d.dir_offset, 0.5, 0.0001, "方向补偿")
 	assert_false(d.is_spawn_fog, "出生雾覆盖")
+
+
+func test_spawn_spec_spawns_without_bullet_data() -> void:
+	var host := KernelBulletHost.new()
+	add_child_autofree(host)
+	var spec := SpawnSpec.new().tex("小玉").enemy().speed(120.0)
+	var id := host.shoot_spec(spec, Vector2(300, 300), Vector2.DOWN)
+	assert_true(id >= 0, "应能直接发射 SpawnSpec")
+	assert_eq(host.system.get_behavior(id), -1, "无 behavior 的普通弹")
+	assert_gt(host.system.get_active_count(), 0, "内核应有行")
