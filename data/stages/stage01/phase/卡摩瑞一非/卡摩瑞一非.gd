@@ -28,8 +28,8 @@ var 波次正负交替: int = 1
 var 随机角度: Vector2
 
 ## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
-var 开花弹: BulletData
-var 反弹弹: BulletData
+var 开花弹: SpawnSpec
+var 反弹弹: SpawnSpec
 var 环弹模式: BulletPattern
 var 环弹参数: PatternParams
 ## 撞墙后回弹的子弹出模板；run_async 注册到 ctx.bullets。
@@ -39,8 +39,8 @@ var 撞墙音效id: int = -1
 
 
 func _on_start() -> void:
-	开花弹 = BulletData.new().tex("棱弹").color(Color.AQUA).blend(true).enemy()
-	反弹弹 = BulletData.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
+	开花弹 = SpawnSpec.new().tex("棱弹").color(Color.AQUA).blend(true).enemy()
+	反弹弹 = SpawnSpec.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
 	环弹模式 = 环弹模式脚本.new()
 	环弹参数 = 环弹参数脚本.new()
 	回弹模板 = EmitTemplate.new(&"卡摩瑞一非_rebound", 反弹弹)
