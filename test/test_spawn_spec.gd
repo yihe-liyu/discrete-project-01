@@ -10,3 +10,9 @@ func test_spawn_spec_is_bullet_data_with_child() -> void:
 	assert_eq(parent.texture, BulletShapes.atlas_texture(&"棱弹"), "外观沿用 BulletData")
 	assert_eq(parent.child.texture, BulletShapes.atlas_texture(&"米弹"), "child 保留自己的外观")
 	assert_null(child.child, "默认没有更深一层")
+
+
+func test_spawn_spec_service_accepts_spec() -> void:
+	var svc := BulletService.new()
+	assert_true(svc.has_method("shoot_spec"), "应提供 SpawnSpec 单发入口")
+	assert_true(svc.has_method("shoot_spread_spec"), "应提供 SpawnSpec 扇形入口")

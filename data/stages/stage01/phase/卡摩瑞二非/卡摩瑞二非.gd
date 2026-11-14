@@ -84,4 +84,4 @@ func 发射一圈(p_ctx: StageContext) -> void:
 	开花弹.with_behavior(BulletBehaviors.bounce_emit(
 		回弹模板, 150.0, 100.0 - 本波已发圈数 * 4.0, 单圈附加角, 撞墙音效id, false))
 
-	p_ctx.bullets.shoot_spread(开花弹, 个数, TAU, 随机角度, target.global_position)
+	p_ctx.bullets.shoot_spread_spec(开花弹, 个数, TAU, 随机角度, target.global_position)
