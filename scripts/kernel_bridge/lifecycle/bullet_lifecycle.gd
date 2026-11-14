@@ -401,10 +401,10 @@ func sfx(key: StringName, db: float = AudioManager.SFX_LEVEL_DB) -> BulletLifecy
 	return self
 
 ## 相位结束时生成替换弹。
-## - spawn：BulletData（推荐：可序列化、跨实例共用 program）／Callable()->BulletData（旧写法 / oracle）／Array（见 emit_variant）。
+## - spawn：SpawnSpec（推荐：可序列化、跨实例共用 program）／Callable()->SpawnSpec（旧写法 / oracle）／Array（见 emit_variant）。
 ## - speed <= 0 → 继承当前速度大小；> 0 → 用该速度。
 ## - at = AT_PHASE_END → 用 until_rect 输出的相位结束夹边落点；AT_CURRENT（默认）→ 当前弹位置。
-## - 事件回传 (program, local) 给宿主，由宿主实例化模板 —— Callable / BulletData 永不进原生。
+## - 事件回传 (program, local) 给宿主，由宿主实例化模板 —— Callable / SpawnSpec 永不进原生。
 func emit(spawn: Variant, dir: Variant, speed: float = 0.0, at: int = AT_CURRENT) -> BulletLifecycle:
 	return _append_emit(spawn, DIR_SPEC.from_variant(dir), speed, at, null)
 

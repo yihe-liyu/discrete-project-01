@@ -1,7 +1,7 @@
 ## BulletLifecycle 的纯编译器：只读 phases/slots，输出原生 packed program。
 ##
 ## 边界（DSL10）：
-##   · 不持有 BulletData / Callable / sfx 等宿主对象 → [code]compile_program()[/code] 可脱离宿主单测；
+##   · 不持有 SpawnSpec / Callable / sfx 等宿主对象 → [code]compile_program()[/code] 可脱离宿主单测；
 ##   · action 的 local id 按「EMIT / EMIT_VARIANT / CALL 共用 actions 序号，SFX 单独 sfx 序号」
 ##     纯结构分配；[code]LifecycleHostTable.build()[/code] 按同一遍历顺序填模板表，两边天然对齐。
 ##   · op / target / dirk 的整数编码必须与 C++ DanmakuStore.behavior_tick 一致。

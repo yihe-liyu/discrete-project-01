@@ -50,9 +50,9 @@ func after_each() -> void:
 
 
 func _enemy_bullet_at(pos: Vector2) -> int:
-	var d := BulletData.new().enemy().tex("小玉")
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.velocity = Vector2.UP * 100.0
-	return _kernel_bullet_host.shoot(d, pos, Vector2.RIGHT)
+	return _kernel_bullet_host.shoot_spec(d, pos, Vector2.RIGHT)
 
 
 func test_bullet_on_player_is_hit() -> void:
@@ -80,9 +80,9 @@ func test_graze_not_counted_twice() -> void:
 
 ## 高速弹在两次采样之间穿过自机：帧末位置在判定圈外，扫掠判定必须命中。
 func test_fast_bullet_is_swept_hit() -> void:
-	var d := BulletData.new().enemy().tex("小玉")
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.velocity = Vector2.DOWN * 12000.0
-	_kernel_bullet_host.shoot(d, Vector2(448, 500), Vector2.DOWN)
+	_kernel_bullet_host.shoot_spec(d, Vector2(448, 500), Vector2.DOWN)
 	_kernel_bullet_host.system.step(1.0 / 60.0)
 	_kernel_bullet_physics.process()
 	assert_true(_player.is_invincible, "高速弹扫过自机应判定命中")
@@ -91,9 +91,9 @@ func test_fast_bullet_is_swept_hit() -> void:
 
 ## 高速弹从擦弹环外穿过：扫掠应计擦弹（仍保持每弹一次）。
 func test_fast_bullet_is_swept_graze() -> void:
-	var d := BulletData.new().enemy().tex("小玉")
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.velocity = Vector2.DOWN * 12000.0
-	var id := _kernel_bullet_host.shoot(d, Vector2(478, 500), Vector2.DOWN)
+	var id := _kernel_bullet_host.shoot_spec(d, Vector2(478, 500), Vector2.DOWN)
 	_kernel_bullet_host.system.step(1.0 / 60.0)
 	_kernel_bullet_physics.process()
 	assert_eq(_player.resources.graze_count, 1, "高速弹擦过应计 1 次擦弹")
@@ -102,9 +102,9 @@ func test_fast_bullet_is_swept_graze() -> void:
 
 ## 扫掠不应把远离的弹误判为命中/擦弹。
 func test_fast_bullet_far_away_is_ignored() -> void:
-	var d := BulletData.new().enemy().tex("小玉")
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.velocity = Vector2.DOWN * 12000.0
-	_kernel_bullet_host.shoot(d, Vector2(748, 500), Vector2.DOWN)
+	_kernel_bullet_host.shoot_spec(d, Vector2(748, 500), Vector2.DOWN)
 	_kernel_bullet_host.system.step(1.0 / 60.0)
 	_kernel_bullet_physics.process()
 	assert_false(_player.is_invincible, "远离的弹不应命中")
@@ -124,10 +124,10 @@ func test_player_bullet_damages_enemy_via_bullet_type() -> void:
 	add_child_autofree(fake)
 	_entity_registry.register_enemy(fake)
 	_player.resources.memory_value = 100.0   # 关掉记忆加成（<50 才生效）
-	var d := BulletData.new().player().tex("reimu_main")
+	var d := SpawnSpec.new().player().tex("reimu_main")
 	d.velocity = Vector2.UP * 100.0
 	d.damage = 10.0
-	_kernel_bullet_host.shoot(d, Vector2(200, 200), Vector2.UP)
+	_kernel_bullet_host.shoot_spec(d, Vector2(200, 200), Vector2.UP)
 	_kernel_bullet_physics.process()
 	assert_almost_eq(fake.damage_taken, 10.0, 0.01, "伤害应来自 BulletType.damage（内核自带）")
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 0, "命中后应回收该弹")
@@ -157,9 +157,9 @@ func test_sweep_enemy_bullets_clears_only_in_radius() -> void:
 
 ## 死亡清弹不应误伤自机弹。
 func test_sweep_enemy_bullets_spares_player_bullets() -> void:
-	var d := BulletData.new().player().tex("reimu_main")
+	var d := SpawnSpec.new().player().tex("reimu_main")
 	d.velocity = Vector2.UP * 100.0
-	_kernel_bullet_host.shoot(d, Vector2(200, 200), Vector2.UP)
+	_kernel_bullet_host.shoot_spec(d, Vector2(200, 200), Vector2.UP)
 	_enemy_bullet_at(Vector2(200, 200))
 	_kernel_bullet_physics.sweep_enemy_bullets(Vector2(200, 200), 100.0)
 	assert_eq(_live_bullets(), 1, "死亡清弹不应清自机弹")
@@ -168,10 +168,10 @@ func test_sweep_enemy_bullets_spares_player_bullets() -> void:
 
 ## D2：擦弹应按 tick 重新可计；同一颗弹跨 tick 仍贴近时，下一 tick 应再次计数。
 func test_graze_can_repeat_across_ticks() -> void:
-	var d := BulletData.new().enemy().tex("小玉")
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.velocity = Vector2.ZERO
 	var pos: Vector2 = _player.global_position + Vector2(20, 0)
-	var id := _kernel_bullet_host.shoot(d, pos, Vector2.ZERO)
+	var id := _kernel_bullet_host.shoot_spec(d, pos, Vector2.ZERO)
 	_kernel_bullet_host.system.set_graze_interval_ticks(1)
 
 	_kernel_bullet_host.system.step(1.0 / 60.0)
@@ -187,10 +187,10 @@ func test_graze_can_repeat_across_ticks() -> void:
 
 ## 擦弹间隔：默认 6 tick；同一颗弹在冷却内不应重复计数。
 func test_graze_respects_interval() -> void:
-	var d := BulletData.new().enemy().tex("小玉")
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.velocity = Vector2.ZERO
 	var pos: Vector2 = _player.global_position + Vector2(20, 0)
-	_kernel_bullet_host.shoot(d, pos, Vector2.ZERO)
+	_kernel_bullet_host.shoot_spec(d, pos, Vector2.ZERO)
 	_kernel_bullet_host.system.set_graze_interval_ticks(6)
 
 	_kernel_bullet_host.system.step(1.0 / 60.0)
@@ -212,10 +212,10 @@ func test_native_linear_behavior_matches_program() -> void:
 	_kernel_bullet_host.setup_behaviors(null, Callable())
 	var bid := _kernel_bullet_host.system.get_behavior_id("linear")
 	assert_gt(bid, -1, "linear behavior 应已注册")
-	var d := BulletData.new().enemy().tex("小玉")
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.velocity = Vector2.DOWN * 120.0
-	var plain := _kernel_bullet_host.shoot(d, Vector2(400, 300), Vector2.DOWN)
-	var native := _kernel_bullet_host.shoot(d, Vector2(600, 300), Vector2.DOWN)
+	var plain := _kernel_bullet_host.shoot_spec(d, Vector2(400, 300), Vector2.DOWN)
+	var native := _kernel_bullet_host.shoot_spec(d, Vector2(600, 300), Vector2.DOWN)
 	assert_true(_kernel_bullet_host.system.set_behavior(native, bid), "应能绑定 linear")
 	assert_eq(_kernel_bullet_host.system.get_behavior(native), bid, "行应记录 behavior id")
 	for _i in 60:
@@ -228,11 +228,11 @@ func test_native_linear_behavior_matches_program() -> void:
 
 ## 内核逐弹表现属性：颜色 / 渲染朝向 / 判定盒的 get-set 对齐。
 func test_native_bullet_visual_attributes() -> void:
-	var d := BulletData.new().enemy().tex("小玉")
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.hitbox_radius = 7.0
 	d.hitbox_offset = Vector2(2, 3)
-	d.follow_dir = false
-	var id := _kernel_bullet_host.shoot(d, Vector2(300, 300), Vector2.DOWN)
+	d.facing(false)
+	var id := _kernel_bullet_host.shoot_spec(d, Vector2(300, 300), Vector2.DOWN)
 
 	_kernel_bullet_host.system.set_color(id, Color.RED)
 	assert_eq(_kernel_bullet_host.system.get_color(id), Color.RED, "set_color 应写回")
@@ -249,8 +249,8 @@ func test_native_bullet_visual_attributes() -> void:
 ## 其余逐弹属性：wrap / spin / elapsed / behavior state+params。
 func test_native_bullet_remaining_attributes() -> void:
 	_kernel_bullet_host.setup_behaviors(null, Callable())
-	var d := BulletData.new().enemy().tex("小玉").no_spawn_fog()
-	var id := _kernel_bullet_host.shoot(d, Vector2(300, 300), Vector2.DOWN)
+	var d := SpawnSpec.new().enemy().tex("小玉").no_spawn_fog()
+	var id := _kernel_bullet_host.shoot_spec(d, Vector2(300, 300), Vector2.DOWN)
 	_kernel_bullet_host.system.set_wrap(id, 5)
 	assert_eq(_kernel_bullet_host.system.get_wrap(id), 5, "wrap 应写回")
 	_kernel_bullet_host.system.set_spin_rot(id, 0.75)
@@ -265,16 +265,16 @@ func test_native_bullet_remaining_attributes() -> void:
 	assert_gt(_kernel_bullet_host.system.get_elapsed(id), 0.0, "behavior 也应累计 elapsed")
 
 
-## 内容桥接 + homing pack：BulletData.behavior 应自动绑定并真正转向自机。
+## 内容桥接 + homing pack：SpawnSpec.behavior 应自动绑定并真正转向自机。
 func test_native_homing_behavior_content_bridge() -> void:
 	_kernel_bullet_host.setup_behaviors(_player, Callable())
 	var spec := BehaviorSpec.new(&"homing", PackedFloat32Array([120.0, 600.0]))
-	var d := BulletData.new().enemy().tex("小玉").no_spawn_fog().with_behavior(spec)
+	var d := SpawnSpec.new().enemy().tex("小玉").no_spawn_fog().with_behavior(spec)
 	d.velocity = Vector2.ZERO
-	var id := _kernel_bullet_host.shoot(d, Vector2(448, 300), Vector2.RIGHT)
+	var id := _kernel_bullet_host.shoot_spec(d, Vector2(448, 300), Vector2.RIGHT)
 	assert_gt(id, -1, "应能发射")
 	var bid := _kernel_bullet_host.system.get_behavior_id("homing")
-	assert_eq(_kernel_bullet_host.system.get_behavior(id), bid, "BulletData.behavior 应自动绑定")
+	assert_eq(_kernel_bullet_host.system.get_behavior(id), bid, "SpawnSpec.behavior 应自动绑定")
 
 	for _i in 30:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
@@ -285,15 +285,15 @@ func test_native_homing_behavior_content_bridge() -> void:
 ## 第一张内容迁移：enemy 的 accel_world 与 native accel 逐帧一致。
 func test_native_accel_matches_lifecycle() -> void:
 	_kernel_bullet_host.setup_behaviors(null, Callable())
-	var lc_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	var lc_data := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
 	lc_data.lifecycle = BulletLifecycle.new().accel_world(Vector2(0, 200))
 	lc_data.velocity = Vector2(0, 175)
-	var bh_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	var bh_data := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
 	bh_data.with_behavior(BehaviorSpec.new(&"accel", PackedFloat32Array([0, 200])))
 	bh_data.velocity = Vector2(0, 175)
 
-	var lc_id := _kernel_bullet_host.shoot(lc_data, Vector2(400, 300), Vector2.DOWN)
-	var bh_id := _kernel_bullet_host.shoot(bh_data, Vector2(600, 300), Vector2.DOWN)
+	var lc_id := _kernel_bullet_host.shoot_spec(lc_data, Vector2(400, 300), Vector2.DOWN)
+	var bh_id := _kernel_bullet_host.shoot_spec(bh_data, Vector2(600, 300), Vector2.DOWN)
 	assert_eq(_kernel_bullet_host.system.get_behavior(bh_id), _kernel_bullet_host.system.get_behavior_id("accel"))
 
 	for _i in 60:
@@ -307,15 +307,15 @@ func test_native_accel_matches_lifecycle() -> void:
 ## bounce_emit Outcome：撞墙请求 emit，host 按模板真正 spawn 子弹出，父弹回收。
 func test_native_bounce_emit_spawns_template() -> void:
 	_kernel_bullet_host.setup_behaviors(_player, Callable())
-	var child_data := BulletData.new().enemy().tex("米弹").no_spawn_fog()
+	var child_data := SpawnSpec.new().enemy().tex("米弹").no_spawn_fog()
 	child_data.velocity = Vector2(0, 120)
 	var tpl := EmitTemplate.new(&"rebound_test", child_data)
 	assert_true(_kernel_bullet_host.system.register_emit_template(tpl), "模板应注册")
 
-	var parent_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	var parent_data := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
 	parent_data.velocity = Vector2.ZERO
 	parent_data.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([tpl.numeric_id, 120.0, 0.0, 0.0, 1.0])))
-	var id := _kernel_bullet_host.shoot(parent_data, Vector2(GameConfig.FIELD_LEFT, 300), Vector2.ZERO)
+	var id := _kernel_bullet_host.shoot_spec(parent_data, Vector2(GameConfig.FIELD_LEFT, 300), Vector2.ZERO)
 	assert_eq(_kernel_bullet_host.system.get_behavior(id), _kernel_bullet_host.system.get_behavior_id("bounce_emit"))
 
 	_kernel_bullet_host.system.step(1.0 / 60.0)
@@ -327,15 +327,15 @@ func test_native_bounce_emit_spawns_template() -> void:
 ## 从场内自然飞到上墙：bounce_emit 必须自己触发，而不是测试直接放在墙边。
 func test_native_bounce_emit_hits_wall_naturally() -> void:
 	_kernel_bullet_host.setup_behaviors(_player, Callable())
-	var child_data := BulletData.new().enemy().tex("米弹").no_spawn_fog()
+	var child_data := SpawnSpec.new().enemy().tex("米弹").no_spawn_fog()
 	child_data.velocity = Vector2(0, 120)
 	var tpl := EmitTemplate.new(&"rebound_natural", child_data)
 	assert_true(_kernel_bullet_host.system.register_emit_template(tpl), "模板应注册")
 
-	var parent_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	var parent_data := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
 	parent_data.velocity = Vector2(0, -300)
 	parent_data.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([tpl.numeric_id, 0.0, 0.0, 0.0, 1.0])))
-	var _id := _kernel_bullet_host.shoot(parent_data, Vector2(448, 500), Vector2.UP)
+	var _id := _kernel_bullet_host.shoot_spec(parent_data, Vector2(448, 500), Vector2.UP)
 	for _i in 120:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "飞抵上墙后父弹应回收、子弹出应存在")
@@ -344,14 +344,14 @@ func test_native_bounce_emit_hits_wall_naturally() -> void:
 ## accel_heading：沿朝向加速，与 lifecycle 逐帧一致。
 func test_native_accel_heading_matches_lifecycle() -> void:
 	_kernel_bullet_host.setup_behaviors(null, Callable())
-	var lc := BulletData.new().enemy().tex("环玉").no_spawn_fog()
+	var lc := SpawnSpec.new().enemy().tex("环玉").no_spawn_fog()
 	lc.lifecycle = BulletLifecycle.new().accel_heading(40.0)
 	lc.velocity = Vector2(120, 0)
-	var bh := BulletData.new().enemy().tex("环玉").no_spawn_fog()
+	var bh := SpawnSpec.new().enemy().tex("环玉").no_spawn_fog()
 	bh.with_behavior(BulletBehaviors.accel_heading(40.0))
 	bh.velocity = Vector2(120, 0)
-	var a := _kernel_bullet_host.shoot(lc, Vector2(300, 300), Vector2.RIGHT)
-	var b := _kernel_bullet_host.shoot(bh, Vector2(500, 300), Vector2.RIGHT)
+	var a := _kernel_bullet_host.shoot_spec(lc, Vector2(300, 300), Vector2.RIGHT)
+	var b := _kernel_bullet_host.shoot_spec(bh, Vector2(500, 300), Vector2.RIGHT)
 	for _i in 60:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	var da: Vector2 = _kernel_bullet_host.system.get_position(a) - Vector2(300, 300)
@@ -362,17 +362,17 @@ func test_native_accel_heading_matches_lifecycle() -> void:
 ## split_after：计时结束后按概率选模板，父弹回收。
 func test_native_split_after_emits_template() -> void:
 	_kernel_bullet_host.setup_behaviors(_player, Callable())
-	var a_data := BulletData.new().enemy().tex("环玉").color(Color.AQUA).no_spawn_fog()
-	var b_data := BulletData.new().enemy().tex("环玉").color(Color.RED).no_spawn_fog()
+	var a_data := SpawnSpec.new().enemy().tex("环玉").color(Color.AQUA).no_spawn_fog()
+	var b_data := SpawnSpec.new().enemy().tex("环玉").color(Color.RED).no_spawn_fog()
 	var ta := EmitTemplate.new(&"split_a", a_data)
 	var tb := EmitTemplate.new(&"split_b", b_data)
 	assert_true(_kernel_bullet_host.system.register_emit_template(ta))
 	assert_true(_kernel_bullet_host.system.register_emit_template(tb))
 
-	var parent := BulletData.new().enemy().tex("环玉").no_spawn_fog()
+	var parent := SpawnSpec.new().enemy().tex("环玉").no_spawn_fog()
 	parent.velocity = Vector2(0, 100)
 	parent.with_behavior(BulletBehaviors.split_after(ta, tb, 0.1, 0.0, 1.0, 60.0, 0.0))
-	var _id := _kernel_bullet_host.shoot(parent, Vector2(448, 400), Vector2.DOWN)
+	var _id := _kernel_bullet_host.shoot_spec(parent, Vector2(448, 400), Vector2.DOWN)
 	for _i in 10:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "父弹应回收，子弹出应存在")
@@ -382,13 +382,13 @@ func test_native_split_after_emits_template() -> void:
 ## top_emit：撞上墙后换模，父弹回收。
 func test_native_top_emit_replaces_bullet() -> void:
 	_kernel_bullet_host.setup_behaviors(null, Callable())
-	var child := BulletData.new().enemy().tex("米弹").no_spawn_fog()
+	var child := SpawnSpec.new().enemy().tex("米弹").no_spawn_fog()
 	var tpl := EmitTemplate.new(&"top_probe", child)
 	assert_true(_kernel_bullet_host.system.register_emit_template(tpl))
-	var parent := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	var parent := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
 	parent.velocity = Vector2(0, -300)
 	parent.with_behavior(BulletBehaviors.top_emit(tpl, 0.0, PI, 0.0))
-	var _id := _kernel_bullet_host.shoot(parent, Vector2(448, 40), Vector2.UP)
+	var _id := _kernel_bullet_host.shoot_spec(parent, Vector2(448, 40), Vector2.UP)
 	for _i in 10:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "应只剩子弹出")
@@ -411,13 +411,13 @@ func test_behavior_host_queue_spawn_accepts_spawn_spec() -> void:
 ## seed_burst：结束时应一次 emit 一整圈子弹出。
 func test_native_seed_burst_emits_ring() -> void:
 	_kernel_bullet_host.setup_behaviors(null, Callable())
-	var child := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	var child := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
 	var tpl := EmitTemplate.new(&"seed_probe", child)
 	assert_true(_kernel_bullet_host.system.register_emit_template(tpl))
-	var parent := BulletData.new().enemy().tex("中玉").no_spawn_fog()
+	var parent := SpawnSpec.new().enemy().tex("中玉").no_spawn_fog()
 	parent.velocity = Vector2(0, 260)
 	parent.with_behavior(BulletBehaviors.seed_burst(tpl, 0.2, 260.0, 8, 50.0, TAU))
-	var _id := _kernel_bullet_host.shoot(parent, Vector2(448, 300), Vector2.DOWN)
+	var _id := _kernel_bullet_host.shoot_spec(parent, Vector2(448, 300), Vector2.DOWN)
 	for _i in 20:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 8, "应生成 8 颗子弹出")

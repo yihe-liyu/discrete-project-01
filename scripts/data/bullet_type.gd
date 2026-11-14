@@ -1,8 +1,8 @@
 ## 弹型（运行时内核类型，纯数据）：形状 | 判定 | 阵营 | 可选特效。
 ## 运行时每颗弹是内核 SoA 里的一行，绝不实例化成节点；同型弹共享这里的参数。
-## 速度 / 颜色 / 弹道不在这里 —— 由 [code]BulletData[/code]（内容构造助手）逐发传入。
+## 速度 / 颜色 / 弹道不在这里 —— 由 [code]SpawnSpec[/code]（内容发射描述）逐发传入。
 ## 本类不落 .tres：内容资源是 [code]BulletDef[/code]（[code]data/bullets/*.tres[/code]，只外观+碰撞+朝向）；
-## [code]BulletData.to_bullet_type()[/code] 首次发射时把类型级字段快照成本类并缓存（同实例 → 同弹型）。
+## [code]SpawnSpec.to_bullet_type()[/code] 首次发射时把类型级字段快照成本类并缓存（同实例 → 同弹型）。
 ## @tool：编辑器里 @tool 工具脚本（弹型查看器）要调 rotation_for 等方法，
 ## 没有 @tool 的话加载出来是 placeholder，会报 "Attempt to call a method on a placeholder instance"。
 @tool

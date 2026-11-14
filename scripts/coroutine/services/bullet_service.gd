@@ -26,7 +26,7 @@ func register_behavior_sfx(stream: AudioStream) -> int:
 	return bullet_manager.register_behavior_sfx(stream) if bullet_manager != null else -1
 
 
-## SpawnSpec 单发入口（过渡：SpawnSpec 当前兼容 BulletData）。
+## SpawnSpec 单发入口。
 func shoot_spec(spec: SpawnSpec, at: Vector2, direction: Vector2, sfx: AudioStream = null) -> void:
 	if not is_active or spec == null or bullet_manager == null:
 		return
@@ -35,35 +35,22 @@ func shoot_spec(spec: SpawnSpec, at: Vector2, direction: Vector2, sfx: AudioStre
 	bullet_manager.shoot_spec(spec, at, direction)
 
 
-## SpawnSpec 扇形入口。
+## 扇形散弹。count == 1 打一发（忽略 spread_angle）；不发弹（active=false / count ≤ 0）时静默返回。
 func shoot_spread_spec(spec: SpawnSpec, count: int, spread_angle: float,
 		base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void:
-	if not is_active or spec == null or count <= 0 or bullet_manager == null:
-		return
-	if sfx:
-		AudioManager.play_sfx(sfx)
-	if count == 1:
-		bullet_manager.shoot_spec(spec, at, base_dir)
-		return
-	var step := spread_angle / (count - 1) if spread_angle < TAU - 0.001 else spread_angle / count
-	for i in count:
-		bullet_manager.shoot_spec(spec, at, base_dir.rotated(-spread_angle / 2.0 + step * i))
+	shoot_spread_ids_spec(spec, count, spread_angle, base_dir, at, sfx)
 
 
-## 扇形散弹。count == 1 打一发（忽略 spread_angle）；不发弹（active=false / count ≤ 0）时静默返回。
-func shoot_spread(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void:
-	shoot_spread_ids(bullet_data, count, spread_angle, base_dir, at, sfx)
-
-
-## 同 shoot_spread，但返回稳定句柄（uid，不是行号）；供逐弹预览 / 调试绑定。
-func shoot_spread_ids(bullet_data: BulletData, count: int, spread_angle: float, base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> Array[int]:
+## 同 shoot_spread_spec，但返回稳定句柄（uid，不是行号）；供逐弹预览 / 调试绑定。
+func shoot_spread_ids_spec(spec: SpawnSpec, count: int, spread_angle: float,
+		base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> Array[int]:
 	var ids: Array[int] = []
-	if not is_active or count <= 0 or bullet_manager == null:
+	if not is_active or spec == null or count <= 0 or bullet_manager == null:
 		return ids
 	if sfx:
 		AudioManager.play_sfx(sfx)
 	if count == 1:
-		var row := bullet_manager.shoot_bullet(bullet_data, at, base_dir)
+		var row := bullet_manager.shoot_spec(spec, at, base_dir)
 		var uid := bullet_manager.bullet_uid(row)
 		if uid > 0:
 			ids.append(uid)
@@ -71,7 +58,7 @@ func shoot_spread_ids(bullet_data: BulletData, count: int, spread_angle: float, 
 	var step := spread_angle / (count - 1) if spread_angle < TAU - 0.001 else spread_angle / count
 	for i in count:
 		var dir := base_dir.rotated(-spread_angle / 2.0 + step * i)
-		var row := bullet_manager.shoot_bullet(bullet_data, at, dir)
+		var row := bullet_manager.shoot_spec(spec, at, dir)
 		var uid := bullet_manager.bullet_uid(row)
 		if uid > 0:
 			ids.append(uid)
@@ -79,16 +66,6 @@ func shoot_spread_ids(bullet_data: BulletData, count: int, spread_angle: float, 
 
 
 ## 按方向数组逐发（pattern 用：方向已在 pattern 里算好，服务只负责发射）。
-func shoot_directions(bullet_data: BulletData, directions: Array[Vector2], at: Vector2,
-		sfx: AudioStream = null) -> void:
-	if not is_active or bullet_data == null or directions.is_empty() or bullet_manager == null:
-		return
-	if sfx:
-		AudioManager.play_sfx(sfx)
-	for direction in directions:
-		bullet_manager.shoot_bullet(bullet_data, at, direction)
-
-
 func shoot_directions_spec(spec: SpawnSpec, directions: Array[Vector2], at: Vector2,
 		sfx: AudioStream = null) -> void:
 	if not is_active or spec == null or directions.is_empty() or bullet_manager == null:
@@ -159,7 +136,7 @@ func death_clear(pos: Vector2, max_radius: float, duration: float,
 	if bullet_manager: bullet_manager.start_death_clear(pos, max_radius, duration, start_radius, on_clear)
 
 
-## 炸弹（宿主节点版，不进内核池）——玩家炸弹用；数据是 BombData（不是弹幕的 BulletData）
+## 炸弹（宿主节点版，不进内核池）——玩家炸弹用；数据是 BombData（炸弹走宿主节点，不是弹幕）
 func shoot_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0):
 	return bullet_manager.shoot_bomb_bullet(data, pos, direction, tint, spawn_delay) if bullet_manager else null
 

@@ -1,7 +1,7 @@
 ## EnemyService —— ctx.enemies（无 class_name：使用处 preload 引用，避免 headless 全局类缓存问题）
 extends RefCounted
 ## 敌人生成服务 —— ctx.enemies 下的"生成 / 回收敌人"动词。
-## 与 ctx.bullets.shoot_spread 对称：内容只说"生成这份配置"，机制（实例化/挂载协程/入场景）在 StageRuntime。
+## 与 ctx.bullets.shoot_spread_spec 对称：内容只说"生成这份配置"，机制（实例化/挂载协程/入场景）在 StageRuntime。
 
 ## 弱引用 ctx：避免 StageContext ↔ EnemyService 形成 RefCounted 环导致关卡退出后泄漏
 var _ctx_ref: WeakRef

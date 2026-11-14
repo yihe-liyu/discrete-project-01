@@ -15,10 +15,10 @@ func _mk_manager() -> BulletManager:
 	return bm
 
 
-func _mk_data() -> BulletData:
+func _mk_data() -> SpawnSpec:
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(5.0).despawn()   # 活得够久，不会自己消失
-	return BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
+	return SpawnSpec.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
 
 
 func _bind(bm: BulletManager):
@@ -50,8 +50,8 @@ func test_clear_enemy_bullets_wipes_field_and_spawns_clear_fx() -> void:
 		pending("无原生扩展")
 		return
 	var data := _mk_data()
-	bm.shoot_bullet(data, Vector2.ZERO, Vector2.DOWN)
-	bm.shoot_bullet(data, Vector2(300, 100), Vector2.DOWN)
+	bm.shoot_spec(data, Vector2.ZERO, Vector2.DOWN)
+	bm.shoot_spec(data, Vector2(300, 100), Vector2.DOWN)
 	assert_eq(_bullet_count(sys), 2, "应有 2 颗弹")
 	var fx_before := _fx_count(sys)
 
@@ -72,8 +72,8 @@ func test_clear_is_immediate_unlike_death_clear() -> void:
 		pending("无原生扩展")
 		return
 	var data := _mk_data()
-	bm.shoot_bullet(data, Vector2(300, 0), Vector2.DOWN)    # 离圈心很远 ⇒ 膨胀圈当帧清不到
-	bm.shoot_bullet(data, Vector2(400, 0), Vector2.DOWN)
+	bm.shoot_spec(data, Vector2(300, 0), Vector2.DOWN)    # 离圈心很远 ⇒ 膨胀圈当帧清不到
+	bm.shoot_spec(data, Vector2(400, 0), Vector2.DOWN)
 	assert_eq(_bullet_count(sys), 2, "应有 2 颗弹")
 
 	var svc = _bind(bm)
@@ -93,7 +93,7 @@ func test_shoot_spread_ids_returns_trackable_rows() -> void:
 		pending("无原生扩展")
 		return
 	var svc = _bind(bm)
-	var ids: Array[int] = svc.shoot_spread_ids(
+	var ids: Array[int] = svc.shoot_spread_ids_spec(
 		_mk_data(), 3, TAU, Vector2.DOWN, Vector2(448, 240))
 	assert_eq(ids.size(), 3, "三发应返回三个 uid")
 	for uid in ids:
@@ -112,7 +112,7 @@ func test_uid_survives_swap_remove() -> void:
 		pending("无原生扩展")
 		return
 	var svc = _bind(bm)
-	var uids: Array[int] = svc.shoot_spread_ids(
+	var uids: Array[int] = svc.shoot_spread_ids_spec(
 		_mk_data(), 3, TAU, Vector2.DOWN, Vector2(448, 240))
 	assert_eq(uids.size(), 3)
 	var row := bm.find_bullet_uid(uids[2])

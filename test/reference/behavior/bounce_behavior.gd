@@ -56,7 +56,7 @@ func _re_fire(system: BulletSystem, bullet_id: int, params: Dictionary, at: Vect
 			AudioManager.play_sfx(stream, params.get(&"sfx_db", 0.0))
 	var factory: Callable = params.get(&"spawn_factory", Callable())
 	if factory.is_valid() and host != null:
-		var b: BulletData = factory.call()
+		var b: SpawnSpec = factory.call()
 		if b != null:
 			b.velocity = Vector2(0, speed)
 			host.queue_spawn(b, at, dir)

@@ -76,7 +76,7 @@ func test_ring_fire_spawns_count_bullets():
 	p.count = 3
 	RING.new().fire(ctx, p, Vector2(100, 100), Vector2.UP)
 	assert_eq(bm.kernel_system().get_active_count(), 3, "template 路径也应发射")
-	assert_eq(template.faction, BulletData.Faction.ENEMY, "pattern 不得改模板阵营")
+	assert_eq(template.faction, SpawnSpec.Faction.ENEMY, "pattern 不得改模板阵营")
 	assert_eq(template.tint, Color.RED, "pattern 不得改模板染色")
 	bm.clear_bullets()
 

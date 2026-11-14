@@ -13,14 +13,14 @@ func _setup() -> Array:
 	return [backend, renderer]
 
 
-func _enemy_data(blend: bool = true) -> BulletData:
-	var d := BulletData.new().enemy().blend(blend).tex("小玉")
+func _enemy_data(blend: bool = true) -> SpawnSpec:
+	var d := SpawnSpec.new().enemy().blend(blend).tex("小玉")
 	d.velocity = Vector2.UP * 100.0
 	return d
 
 
-func _player_data() -> BulletData:
-	var d := BulletData.new().player().tex("小玉")
+func _player_data() -> SpawnSpec:
+	var d := SpawnSpec.new().player().tex("小玉")
 	d.velocity = Vector2.UP * 100.0
 	return d
 
@@ -30,7 +30,7 @@ func test_kernel_snapshot_renders_one_batch() -> void:
 	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
 	for i in 3:
-		backend.shoot(_enemy_data(), Vector2(10 + i * 20, 50), Vector2.RIGHT)
+		backend.shoot_spec(_enemy_data(), Vector2(10 + i * 20, 50), Vector2.RIGHT)
 	renderer._sync()
 	assert_eq(renderer._groups.size(), 1, "同纹理/阵营/tint_mode 应合成 1 批")
 	var g: Dictionary = renderer._groups.values()[0]
@@ -41,8 +41,8 @@ func test_tint_mode_splits_batches() -> void:
 	var s := _setup()
 	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
-	backend.shoot(_enemy_data(true), Vector2.ZERO, Vector2.RIGHT)
-	backend.shoot(_enemy_data(false), Vector2.ZERO, Vector2.RIGHT)
+	backend.shoot_spec(_enemy_data(true), Vector2.ZERO, Vector2.RIGHT)
+	backend.shoot_spec(_enemy_data(false), Vector2.ZERO, Vector2.RIGHT)
 	renderer._sync()
 	assert_eq(renderer._groups.size(), 2, "tint_mode 不同应分两批")
 
@@ -51,7 +51,7 @@ func test_despawn_clears_instances() -> void:
 	var s := _setup()
 	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
-	var id := backend.shoot(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
+	var id := backend.shoot_spec(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
 	renderer._sync()
 	backend.system.despawn(id)
 	renderer._sync()
@@ -64,8 +64,8 @@ func test_faction_maps_to_z() -> void:
 	var s := _setup()
 	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
-	backend.shoot(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
-	backend.shoot(_player_data(), Vector2.ZERO, Vector2.RIGHT)
+	backend.shoot_spec(_enemy_data(), Vector2.ZERO, Vector2.RIGHT)
+	backend.shoot_spec(_player_data(), Vector2.ZERO, Vector2.RIGHT)
 	renderer._sync()
 	var zs: Array = []
 	for g in renderer._groups.values():
@@ -78,7 +78,7 @@ func test_material_and_mesh_come_from_type() -> void:
 	var s := _setup()
 	var backend: KernelBulletHost = s[0]
 	var renderer: BulletMultiMesh = s[1]
-	backend.shoot(_enemy_data(true), Vector2.ZERO, Vector2.RIGHT)   # blend(true) → BLEND
+	backend.shoot_spec(_enemy_data(true), Vector2.ZERO, Vector2.RIGHT)   # blend(true) → BLEND
 	renderer._sync()
 	var g: Dictionary = renderer._groups.values()[0]
 	assert_eq(g.mmi.material.get_shader_parameter("tint_mode"), BulletType.TintMode.BLEND,

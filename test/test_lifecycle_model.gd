@@ -64,8 +64,8 @@ func test_bounce_lifecycle_parity() -> void:
 	host_b.boss = boss
 	beh_b.host = host_b
 
-	var factory := func() -> BulletData:
-		var d := BulletData.new()
+	var factory := func() -> SpawnSpec:
+		var d := SpawnSpec.new()
 		d.velocity = Vector2(1.0, 1.0)
 		return d
 

@@ -1,7 +1,7 @@
 ## 弹型内容定义（外观 + 碰撞 + 朝向）—— [code]data/bullets/*.tres[/code] 的唯一内容资源。
 ## 只放「共享、换发不换」的那点数据；阵营 / 染色 / 特效 / 伤害 / 出生雾等变化多的属性
-## 交给 [code]BulletData[/code] 构造链按需给 —— 构造链的存在就是为了「只改一点属性不必新建资源」。
-## 运行时类型是 [code]BulletType[/code]（由 [code]BulletData.to_bullet_type()[/code] 建，内核/渲染读它）；本资源不参与运行时。
+## 交给 [code]SpawnSpec[/code] 按需引用 —— 只覆盖外观/判定/朝向，速度与阵营仍由发射处决定。
+## 运行时类型是 [code]BulletType[/code]（由 [code]SpawnSpec.to_bullet_type()[/code] 建，内核/渲染读它）；本资源不参与运行时。
 class_name BulletDef
 extends Resource
 

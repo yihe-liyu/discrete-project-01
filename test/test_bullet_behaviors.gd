@@ -16,7 +16,7 @@ func test_accel_uses_vector_components() -> void:
 
 
 func test_bounce_emit_requires_registered_template() -> void:
-	var bullet := BulletData.new().enemy().tex("米弹").no_spawn_fog()
+	var bullet := SpawnSpec.new().enemy().tex("米弹").no_spawn_fog()
 	var tpl := EmitTemplate.new(&"builder_rebound", bullet)
 	assert_true(EmitTemplateRegistry.new().register(tpl))
 	var b := BulletBehaviors.bounce_emit(tpl, 150.0, 96.0, 0.25, true)

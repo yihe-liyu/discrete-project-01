@@ -52,8 +52,8 @@
 | # | 维度 | 现状（证据） | 状态 | 标杆做法（来源） | 差距本质 | 成本(人日) | 风险 | 优先级 |
 |---|---|---|---|---|---|---|---|---|
 | A1 | pattern 组合层（mirror/rotate/repeat/delay） | 单弹层有 11 Move / 8 Until / 10 Action 可拼（`docs/DANMAKU_API.md:116-176`）；波次层只有 1 个 pattern：`data/patterns/ring.gd`（`data/patterns/` 仅 `ring.gd` + `presets/ring_default.tres`），54 个内容 `.gd` 中仅 1 个引用 `BulletPattern`（`data/stages/stage01/phase/卡摩瑞一非/卡摩瑞一非.gd`）；`BulletPattern.fire()` 是一次性发射签名（`scripts/patterns/bullet_pattern.gd:14`），无修饰子 | 部分 | 8 种 Op 可 include、可被修饰子包裹（C:47）；`mirror×2 / rotate(k)×k / repeat(n)×n`（C:74） | 缺「组合层」这一整层；单弹可叠加、波次不可组合，作者只能用 `for` + `wait` 手写 | 6–10 | 组合子若落在 GDScript 每帧路径，会把逻辑从内核拉回脚本，密度下降；26 张手写卡与组合层并存会形成第二套写法 | **P0** |
-| A2 | 模板复用 / include | `BulletData` 实例复用有约束（`DANMAKU_API.md:95-99`、陷阱 1 `:584`）；`PatternParams.template` 按引用共享（`scripts/patterns/pattern_params.gd:10-14`）；无 include、无参数化模板库；一卡一脚本，54 个内容文件共 2475 行，靠复制 | 部分 | 文本模板 + 表格/节点图三视图同一 CST（C:76） | 复用粒度停在「对象实例」，没有「模板」这个可参数化单位 | 2–4（并入 A1） | 与 A1 同批；单独做会变成又一套 `preload` 约定 | P1 |
-| A3 | 组合阶（E3 增长阶） | 每波 = 一次 `shoot_spread`/`for` 循环（`data/stages/stage03B/phase/哆来咪三符/哆来咪三符.gd:150-156`），重复靠 `_tick` + `return p_ctx.clock.wait(...)`（同文件 `:161`）；无「一个模板展开出 N 个独立 spawn」的计数与量尺 | 缺失 | 6 行模板展开 ≥150 个独立 spawn 作为 E3 量尺（C:87） | 组合是线性的：内容行数 ∝ 波次数；乘性组合不存在 | 2–3（只加展开计数测试） | 无展开器时该指标只能当文档口径，不产生行为 | P1 |
+| A2 | 模板复用 / include | `SpawnSpec` 实例复用有约束（`DANMAKU_API.md:95-99`、陷阱 1 `:584`）；`PatternParams.template` 按引用共享（`scripts/patterns/pattern_params.gd:10-14`）；无 include、无参数化模板库；一卡一脚本，54 个内容文件共 2475 行，靠复制 | 部分 | 文本模板 + 表格/节点图三视图同一 CST（C:76） | 复用粒度停在「对象实例」，没有「模板」这个可参数化单位 | 2–4（并入 A1） | 与 A1 同批；单独做会变成又一套 `preload` 约定 | P1 |
+| A3 | 组合阶（E3 增长阶） | 每波 = 一次 `shoot_spread_spec`/`for` 循环（`data/stages/stage03B/phase/哆来咪三符/哆来咪三符.gd:150-156`），重复靠 `_tick` + `return p_ctx.clock.wait(...)`（同文件 `:161`）；无「一个模板展开出 N 个独立 spawn」的计数与量尺 | 缺失 | 6 行模板展开 ≥150 个独立 spawn 作为 E3 量尺（C:87） | 组合是线性的：内容行数 ∝ 波次数；乘性组合不存在 | 2–3（只加展开计数测试） | 无展开器时该指标只能当文档口径，不产生行为 | P1 |
 | B1 | 每弹状态机（飞行中改行为） | 相位链 + `until` + `on_end` 构成有限状态机（`DANMAKU_API.md:105-114`），Action 可 `emit`/`emit_variant`/`despawn`/改朝向（`:157-176`）；状态槽上限 8 且作者不可见（`:207-211`）；无逐帧回调、无分支（`chance_toward` 只有 0/1 两支，`:592`）；`on_end_call` 每相位一次、宿主侧、非热路径（`:170,598`） | 部分 | 每颗子弹挂逐帧 `yield` 的 task、运行时改写自身并再生成（B:23）；对象 frame 回调 + 协程（B:24,174-178） | 有「记忆」但无「判断」：行为是发射前写死的相位表，不是运行时按状态分支的程序 | 3–5（扩固定词汇） / 15–30（做任意每弹脚本） | 任意脚本会让解释开销压密度（C:257 估 3–5 万上限）；现有固定词汇已覆盖 26 张卡，扩词汇的边际收益需用内容缺口证明 | P1（扩词汇） |
 | B2 | 每弹任意逻辑（VM/字节码） | 不存在；`register_program` 只接受白名单 opcode（`gdextension/src/danmaku_store.h:59-74`），未知 op 由 `lifecycle_compiler.gd` 拒绝编码 | 缺失 | 子弹即程序、pc/stack/locals、每 tick ≤64 指令（C:252-258） | 架构选择而非疏漏：当前选了固定词汇，代价是「条件行为」只能靠相位表近似 | 15–30 | 见 §3：现阶段收益低 | P2 |
 | C1 | 时间模型（整数 tick / 可回溯） | `Timeline._elapsed: float`（`scripts/coroutine/timeline/timeline.gd:36`），事件是 `Callable` 闭包（`:33,69`），`tick(delta)` 浮点累加（`:162`）；内核 `integrate(double p_delta)` 直接吃浮点秒（`danmaku_store.cpp:325-327`） | 缺失 | `Clock(tick) → Timeline → Segment → Wave → Emitter → SpawnRecord`，全由整数 tick 驱动（C:96-101） | 没有 tick 这个一等公民：pause/scrub/回溯/确定性回放都缺锚点 | 5–8 | 重写编排层牵动 26 张卡 + 全部 stage 脚本；`Callable` 闭包无法序列化，回溯仍需整段快照 | P1 |
@@ -86,8 +86,8 @@
 
 - 单弹层词汇共 11 个 `Move` / 8 个 `Until` / 10 个 `Action`，且有 `then()` 串相位（`DANMAKU_API.md:109-176`）。`LifecycleCompiler` 把 builder 编译成 `ops/args` 偏移表（`scripts/kernel_bridge/lifecycle/lifecycle_compiler.gd:1-8`），这是「组合」的底座。
 - 波次层没有组合子：`data/patterns/` 只有 `ring.gd`；`BulletPattern` 只有一个 `fire(ctx, params, origin, direction)` 虚方法（`scripts/patterns/bullet_pattern.gd:14`），`PatternParams` 参数项是 count/speed/spread/interval/duration/aim（`scripts/patterns/pattern_params.gd:24-36`），没有「子 pattern 列表」这一项。
-- 代表性内容写法是**手写发射器**：`哆来咪三符.gd:120-156` 在 `_tick` 里逐帧算公转角度/半径/扩张，然后用 `for i in 个数: shoot_spread(...)` 铺一圈，`return p_ctx.clock.wait(发弹间隔)` 控制节奏。换言之「pattern」= for 循环 + 计时器，不在可复用的库里。
-- 26 个阶段脚本 / 54 个 `data/**/*.gd` / 15 个调用 `shoot_spread|shoot_directions` 的文件，全部是这种写法（唯一例外是 `卡摩瑞一非.gd` 引用了 `RING`）。
+- 代表性内容写法是**手写发射器**：`哆来咪三符.gd:120-156` 在 `_tick` 里逐帧算公转角度/半径/扩张，然后用 `for i in 个数: shoot_spread_spec(...)` 铺一圈，`return p_ctx.clock.wait(发弹间隔)` 控制节奏。换言之「pattern」= for 循环 + 计时器，不在可复用的库里。
+- 26 个阶段脚本 / 54 个 `data/**/*.gd` / 15 个调用 `shoot_spread_spec|shoot_directions_spec` 的文件，全部是这种写法（唯一例外是 `卡摩瑞一非.gd` 引用了 `RING`）。
 
 **B. 每弹可编程性**
 
@@ -177,7 +177,7 @@
 3. 新增 `tools/bench_budget.gd`（或给现有 bench 加 `--assert`）：读 `tools/bench_budget.json`（每档 CPU 积分/宽相/渲染同步/总计上限），超预算 `quit(1)`。
 4. GPU 侧：在场景里加 `RenderingServer` 的 frame time 采样或 viewport `get_frame_time`，输出「几何/填充/UI」近似分段；标注「非 timestamp query，仅参考」。
 5. `docs/BEST_PRACTICES_BASELINE.md`：新增「帧预算」小节（每档上限 + 测量命令 + 机器型号），并把 S9 的证据列改指向该小节；同步 `docs/archive/BASELINE_EVIDENCE.md`。
-6. `test/perf_stress/stress.gd:1-15`：加 `active_count` 峰值与每帧 ms 打印，或直接删掉（避免「有压测」的错觉）。
+6. `test/perf_stress/stress_plain.gd:1-15`：加 `active_count` 峰值与每帧 ms 打印，或直接删掉（避免「有压测」的错觉）。
 
 **验收指标（可测量）**
 

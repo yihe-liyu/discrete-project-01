@@ -1,6 +1,6 @@
 ## 自机 bomb 数据基类：所有 bomb 共有的外观 / 编队 / 无敌。
 ## 具体炸弹类型继承它，补自己的运动与判定字段（RingBombData / MistBombData）。
-## 与弹幕数据（BulletData）分开：bomb 是宿主实体（个位数、宿主动作），不是弹幕。
+## 与弹幕数据（SpawnSpec）分开：bomb 是宿主实体（个位数、宿主动作），不是弹幕。
 extends Resource
 class_name BombData
 

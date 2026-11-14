@@ -19,14 +19,14 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：121 脚本 / **877 用例（876 通过 / 1 红）/ 7325 断言 / 52.9s** / 0 orphans / **0 pending**。
+**现状**：120 脚本 / **874 用例（873 通过 / 1 红）/ 7313 断言 / 52.9s** / 0 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 30 | 212 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **B 内核 · 原生 C++ + 桥接** | 29 | 209 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 56 | 452 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
@@ -53,7 +53,7 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：类型不匹配 / **严格模式未知键** / **多脚本并集未知键**要响亮报错 | 10 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（30 / 212）
+## B · 内核 · 原生 C++ + 桥接（29 / 209）
 
 ### B1 parity 套件（13 文件 / 100 用例）—— 依赖 `test/reference/` 冻结 oracle
 
@@ -74,12 +74,12 @@
 | [test_bullet_orientation](../test/test_bullet_orientation.gd) | 弹型朝向契约（F7·B）：`rotation_for` 语义 + 到内核弹型的字段传递 | 3 | 0 |
 | [test_reference_oracle](../test/test_reference_oracle.gd) | 冻结参照（oracle）自足性：`test/reference/BulletSystem` 可独立 new / spawn / 查询（不依赖任何 autoload） | 2 | 0 |
 
-### B2 原生行为与桥接（12 文件 / 62 用例）
+### B2 原生行为与桥接（12 文件 / 61 用例）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_kernel_swap](../test/test_kernel_swap.gd) | 内核路由（唯一后端）：内核池 + 渲染数据源 + 行为装配 + bomb 宿主节点 | 9 | 3 |
-| [test_kernel_host](../test/test_kernel_host.gd) | `KernelBulletHost`：`BulletData→BulletType` 映射 / 内容签名复用 / 纹理旁表 | 8 | 2 |
+| [test_kernel_host](../test/test_kernel_host.gd) | `KernelBulletHost`：`SpawnSpec→BulletType` 映射 / 实例复用 / 纹理旁表 | 7 | 2 |
 | [test_kernel_physics](../test/test_kernel_physics.gd) | `KernelBulletPhysics`：敌弹↔自机（命中+擦弹），与旧规则 1:1 | 24 | 0 |
 | [test_kernel_render](../test/test_kernel_render.gd) | `BulletMultiMesh` 的**内核快照**渲染路径 + 分组键 | 5 | 12 |
 | [test_spell_backdrop](../test/test_spell_backdrop.gd) | **符卡背景 = 每 Boss 一个场景**：宿主层显隐/淡入淡出/层级/同场景不重建不重播 + 换场景换实例 + 淡出中途折返复用 + 滚动层（速度可调/取模无缝）+ plain 模板可用 | 10 | 0 |
@@ -91,7 +91,7 @@
 | [test_native_laser_anchor](../test/test_native_laser_anchor.gd) | 端到端桥接：魔理沙激光段必须贴**子机锚点**而非自机 + **只清 LASER kind、不动普通弹** | 2 | 0 |
 
 | [test_native_reflect](../test/test_native_reflect.gd) | `reflect()` 镜面方向（dk=6）：左右翻 x / 上墙翻 y / 角落原路返回 / `angle` 微散 / 未贴边退化 / 编译成 dk=6（**原生专属**：参照解释器是冻结 vendor，不实现新原语） | 6 | 0 |
-### B3 Lifecycle 描述符与发射原语（6 文件 / 27 用例）
+### B3 Lifecycle 描述符与发射原语（5 文件 / 25 用例）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -100,7 +100,6 @@
 | [test_emit_variant](../test/test_emit_variant.gd) | 变体发射：`chance_toward` 概率分支号随 emit 事件回传，宿主据此选模板 | 6 | 0 |
 | [test_heading_state](../test/test_heading_state.gd) | K2：弹道「朝向」状态化 —— `accel_heading` 与速度解耦 + `forward()` 糖 | 4 | 0 |
 | [test_lifecycle_hooks](../test/test_lifecycle_hooks.gd) | b2b：`LifecycleHooks` 名字注册表 + `on_end_call` 用名字 | 3 | 0 |
-| [test_lifecycle_port](../test/test_lifecycle_port.gd) | 预拼描述符入口（`{lifecycle}`）：内容自拼，不经命名 move、不涨 `build()` | 2 | 4 |
 
 > ⚠️ 带 `_available()` 守卫的文件（B 层为主，共 11 文件 / **81 用例**）在扩展缺失时会 **pending**。
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
@@ -121,7 +120,7 @@
 | [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 + **`ctx.bullets` 绑定 stage 后会刷新 BulletManager**（自机射击 ctx 早于组合根注入） | 11 | 0 |
 | [test_stage_route](../test/test_stage_route.gd) | StageRoute：同一 StageData 多路线引用；空链校验；route_index 推进 / 末尾 / reset；记录主键；练习列表 route 优先 | 6 | 0 |
 | [test_bullet_wrap](../test/test_bullet_wrap.gd) | 弹幕边环绕：下→上、左→右；上下/左右/四边掩码进入 BulletType | 4 | 0 |
-| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids` 返回稳定 uid，swap-remove 后仍能跟踪 phase / velocity；无管理器静默 | 4 | 0 |
+| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids_spec` 返回稳定 uid，swap-remove 后仍能跟踪 phase / velocity；无管理器静默 | 4 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData 基准取曲（跨难度共享）** | 12 | 0 |
 | [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪；`shoot_tracked`；`track_emitted` lifecycle 过滤；空列表防护 | 7 | 0 |
@@ -152,7 +151,7 @@
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_laser](../test/test_laser.gd) | Laser 2.0：骨架采样 + 生长/持续/收缩状态机 + 判定/擦弹 | 23 | 20 |
-| [test_marisa_laser](../test/test_marisa_laser.gd) | 魔理沙分段激光：切片 + 偏移无缝 + 编译加载 + **BulletData.kind → BulletType.kind** | 3 | 4 |
+| [test_marisa_laser](../test/test_marisa_laser.gd) | 魔理沙分段激光：切片 + 偏移无缝 + 编译加载 + **SpawnSpec.kind → BulletType.kind** | 3 | 4 |
 
 ### C4 Boss 战（4 / 34）
 
@@ -297,7 +296,7 @@
 
 | 类别 | 内容依赖 | 写法 | 谁 |
 |---|---|---|---|
-| **机制测试** | ❌ 零 | **自建夹具**：合成 `PhaseData` / `BulletData`，或用 `test/fixtures/**`；需要"目录"就注入夹具根 | `test_spell_practice_menu`（经 `info["boss"]` 注入）、`test_boss_phase` |
+| **机制测试** | ❌ 零 | **自建夹具**：合成 `PhaseData` / `SpawnSpec`，或用 `test/fixtures/**`；需要"目录"就注入夹具根 | `test_spell_practice_menu`（经 `info["boss"]` 注入）、`test_boss_phase` |
 | **内容校验** | ✅ 必须 | 读**真实内容**，但**不写死路径**：遍历目录扫到的全部，断言**不变量** | `test_data_validity`（遍历全部阶段） |
 | **内容形状/行为** | ✅ 故意 | 绑具体内容 —— 红了是**信号**（作者复核），不是噪音 | `test_probe_descriptor`、`test_enemy04_move`、`test_stage01_dialogue` |
 

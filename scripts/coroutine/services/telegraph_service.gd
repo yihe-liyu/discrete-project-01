@@ -80,17 +80,17 @@ func _on_emitted_bullet_spawned(uid: int, lifecycle: BulletLifecycle) -> void:
 
 ## 一行入口：发射并立即跟踪这一发的真实弹；返回是否成功进入跟踪。
 ## 无 bullet_service / lifecycle 时仍正常发射，只是不画路径。
-func shoot_tracked(bullet_data: BulletData, count: int, spread_angle: float,
+func shoot_tracked(spec: SpawnSpec, count: int, spread_angle: float,
 		base_dir: Vector2, at: Vector2, sfx: AudioStream = null,
 		color: Color = Color(1.0, 0.82, 0.35, 0.85), width: float = 1.5,
 		max_time: float = -1.0) -> bool:
-	if bullet_service == null or bullet_data == null:
+	if bullet_service == null or spec == null:
 		return false
-	var uids := bullet_service.shoot_spread_ids(
-		bullet_data, count, spread_angle, base_dir, at, sfx)
-	if bullet_data.lifecycle == null:
+	var uids := bullet_service.shoot_spread_ids_spec(
+		spec, count, spread_angle, base_dir, at, sfx)
+	if spec.lifecycle == null:
 		return false
-	return add_tracked_bullets(uids, bullet_data.lifecycle, color, width, max_time)
+	return add_tracked_bullets(uids, spec.lifecycle, color, width, max_time)
 
 
 ## 绑定一颗真实弹；单颗便捷入口。路径按当前 pos / phase 滚动刷新。

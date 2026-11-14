@@ -40,8 +40,8 @@ func test_bullet_manager_reset_world_drops_registries() -> void:
 		return
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(1.0).despawn()
-	var data := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
-	bm.shoot_bullet(data, Vector2.ZERO, Vector2.DOWN)
+	var data := SpawnSpec.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
+	bm.shoot_spec(data, Vector2.ZERO, Vector2.DOWN)
 	assert_gt(bm.active_count(), 0, "应有弹")
 	assert_gt(sys._program_data.size(), 0, "发弹后应注册 program")
 

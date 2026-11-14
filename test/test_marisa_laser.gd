@@ -32,7 +32,7 @@ func test_offset_sequence_is_seamless():
 		prev_y = offset.y
 
 
-func test_bullet_data_laser_kind_maps_to_bullet_type():
-	var d := BulletData.new().player()
+func test_spawn_spec_laser_kind_maps_to_bullet_type():
+	var d := SpawnSpec.new().player()
 	d.kind = BulletType.Kind.LASER
-	assert_eq(d.to_bullet_type().kind, BulletType.Kind.LASER, "BulletData.kind 应带到内核弹型")
+	assert_eq(d.to_bullet_type().kind, BulletType.Kind.LASER, "SpawnSpec.kind 应带到内核弹型")

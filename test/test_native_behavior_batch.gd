@@ -78,8 +78,8 @@ func test_batch_bounce_returns_dead() -> void:
 	if not _available(): pending("无扩展"); return
 	var boss: Node2D = add_child_autofree(Node2D.new())
 	boss.position = Vector2(448.0, 100.0)
-	var factory := func() -> BulletData:
-		var d := BulletData.new(); d.velocity = Vector2(1, 1); return d
+	var factory := func() -> SpawnSpec:
+		var d := SpawnSpec.new(); d.velocity = Vector2(1, 1); return d
 	var lc := FIX.bounce(100.0, 0.3, 0.0, factory, &"")
 	var st = _store()
 	var r: Array = _reg(st, lc)

@@ -21,8 +21,8 @@ func _native() -> bool:
 	return ClassDB.class_exists("DanmakuStore")
 
 
-func _enemy_data() -> BulletData:
-	return BulletData.new().enemy().tex("小玉")
+func _enemy_data() -> SpawnSpec:
+	return SpawnSpec.new().enemy().tex("小玉")
 
 
 func test_native_spawn_fx_is_frozen_and_expires() -> void:
@@ -52,16 +52,15 @@ func test_faction_default_and_per_type_switch() -> void:
 	var eid: int = sys.spawn(enemy.to_bullet_type(), Vector2.ZERO, Vector2.UP, Color.WHITE)
 	assert_almost_eq(sys.get_fx_phase(eid), fog.duration, 0.0001, "敌弹应取阵营默认出生雾")
 	assert_true(sys.get_fx_type_indices()[eid] >= 0, "行应指向特效表")
-	var player := BulletData.new().player().tex("小玉")
+	var player := SpawnSpec.new().player().tex("小玉")
 	var pid: int = sys.spawn(player.to_bullet_type(), Vector2.ZERO, Vector2.UP, Color.WHITE)
 	assert_eq(sys.get_fx_phase(pid), 0.0, "自机弹无阵营默认 → 无雾")
 	enemy.no_spawn_fog()
-	enemy.invalidate_bullet_type()
 	var oid: int = sys.spawn(enemy.to_bullet_type(), Vector2.ZERO, Vector2.UP, Color.WHITE)
 	assert_eq(sys.get_fx_phase(oid), 0.0, "逐弹开关关掉后无雾")
 	# 开关与 .enemy() 的调用顺序无关（历史 bug：.enemy() 覆写 no_spawn_fog）
-	var reversed := BulletData.new().no_spawn_fog().enemy().tex("小玉")
-	assert_false(reversed.is_spawn_fog, "先 no_spawn_fog 再 enemy 也应保持关闭")
+	var reversed := SpawnSpec.new().no_spawn_fog().enemy().tex("小玉")
+	assert_false(reversed.to_bullet_type().is_spawn_fog, "先 no_spawn_fog 再 enemy 也应保持关闭")
 	var rid: int = sys.spawn(reversed.to_bullet_type(), Vector2.ZERO, Vector2.UP, Color.WHITE)
 	assert_eq(sys.get_fx_phase(rid), 0.0, "顺序反转后仍无雾")
 
@@ -86,7 +85,7 @@ func test_sweep_turns_fog_into_clear_effect() -> void:
 		return
 	var backend: KernelBulletHost = add_child_autofree(KernelBulletHost.new())
 	backend.system.set_spawn_fx(BulletType.Faction.ENEMY, fog)
-	backend.shoot(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
+	backend.shoot_spec(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
 	assert_gt(backend.system.get_fx_phase(0), 0.0, "出生即处于雾相位")
 	var physics := KernelBulletPhysics.new()
 	physics.setup(backend)

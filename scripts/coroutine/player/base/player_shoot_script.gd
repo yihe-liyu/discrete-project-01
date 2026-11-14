@@ -139,9 +139,9 @@ func _sync_options(leader: Player, _ctx: StageContext) -> void:
 			visual.update_visual(ctx, leader)
 
 
-func _shoot_options(_ctx: StageContext, bullet_data: BulletData, count: int, spread: float, dir: Vector2, offset: Vector2) -> void:
+func _shoot_options(_ctx: StageContext, spec: SpawnSpec, count: int, spread: float, dir: Vector2, offset: Vector2) -> void:
 	for opt in _options:
-		ctx.bullets.shoot_spread(bullet_data, count, spread, dir, opt.global_position + offset)
+		ctx.bullets.shoot_spread_spec(spec, count, spread, dir, opt.global_position + offset)
 
 
 func _cleanup_options() -> void:

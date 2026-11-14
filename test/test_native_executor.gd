@@ -143,8 +143,8 @@ func test_native_world_accel() -> void:
 func test_native_bounce() -> void:
 	if not _available(): pending("无扩展"); return
 	var boss: Node2D = add_child_autofree(Node2D.new()); boss.position = Vector2(448.0, 200.0)
-	var factory := func() -> BulletData:
-		var d := BulletData.new(); d.velocity = Vector2(1, 1); return d
+	var factory := func() -> SpawnSpec:
+		var d := SpawnSpec.new(); d.velocity = Vector2(1, 1); return d
 	var ha := FakeHost.new(); ha.boss = boss
 	var beh = preload("res://test/reference/behavior/bounce_behavior.gd").new()
 	beh.host = ha
@@ -181,8 +181,8 @@ func test_native_homing() -> void:
 
 func test_native_radial_accel() -> void:
 	if not _available(): pending("无扩展"); return
-	var factory := func() -> BulletData:
-		var d := BulletData.new(); d.velocity = Vector2(1, 1); return d
+	var factory := func() -> SpawnSpec:
+		var d := SpawnSpec.new(); d.velocity = Vector2(1, 1); return d
 	var lc := FIX.radial_accel(120.0, factory, &"")
 	_run("radial_accel", lc, CurveBehavior.new(), {}, FakeHost.new(), BehaviorContext.new(), _spread_at(6, 400.0, -180.0), 200, Vector2.ZERO, null, false, [])
 

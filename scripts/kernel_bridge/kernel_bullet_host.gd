@@ -1,8 +1,7 @@
-## BulletData → BulletType 的宿主适配器。
+## SpawnSpec → BulletType 的宿主适配器。
 ##
-## 原生内核不认识 BulletData；弹型由 [code]BulletData.to_bullet_type()[/code] 在内容侧缓存。
-## lifecycle 优先；旧 [code]coroutine_script[/code] 走 [code]kernel_port()[/code]；
-## 未映射（无 lifecycle / 无端口）按直线发射并计入 [code]unmapped[/code]。
+## 原生内核不认识 SpawnSpec；弹型由 [code]SpawnSpec.to_bullet_type()[/code] 在内容侧缓存。
+## lifecycle 由 SpawnSpec 直接携带，按计划编译成原生 program。
 ## 渲染不在本类：纹理走 [code]texture_for_index()[/code]，由 BulletMultiMesh 消费。
 class_name KernelBulletHost
 extends Node
@@ -14,7 +13,6 @@ const MARISA_LASER_FADE_SCRIPT = preload("res://scripts/kernel_bridge/marisa_las
 const KERNEL_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_bomb.gd")
 const KERNEL_MIST_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_mist_bomb.gd")
 const KERNEL_BEHAVIOR_HOST_SCRIPT = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd")
-const _MOVE_LASER := &"marisa_laser"
 
 ## 内核弹池（原生权威，必需）。
 var system: KernelNativeSystem
@@ -22,17 +20,10 @@ var system: KernelNativeSystem
 var entity_registry: EntityRegistry
 ## 弹幕世界（BulletManager 注入）——bomb 宿主节点反查用
 var bullet_manager: BulletManager
-## 未映射行为（有 coroutine_script 但无端口的）的发射次数——前用来看覆盖面。
-var unmapped_behavior_count: int = 0
-
 var _texture_by_index: Array[Texture2D] = []   # 纹理句柄表（render socket）：弹型下标 → 贴图
 
 ## 内核行为上下文（由 BulletManager 装配）。
 var behavior_ctx: BehaviorContext
-## 内容签名 → 端口（{move, params} / 预留 {program}）；按 Script×params 缓存，不每发 instantiate。
-var _port_by_sig: Dictionary = {}
-## 端口探测实例：端口的 params 里可能带 Callable（工厂）→ 必须保活，否则回调失效。
-var _port_probes: Array[Node] = []
 ## 桥接行为的延后动作队列（re_fire / 分裂不能在内核行为循环中途做）。
 var _behavior_host
 ## 魔理沙激光整批渐隐控制器。
@@ -50,27 +41,15 @@ func _player_res() -> PlayerResources:
 	return entity_registry.get_player_resources() if entity_registry != null else null
 
 
-func _exit_tree() -> void:
-	for p in _port_probes:
-		if is_instance_valid(p):
-			p.free()
-	_port_probes.clear()
-
-
 ## 重置内核注册表（回收 program / 弹型 / 纹理句柄表 / 端口探测）。清场后调用（工作台重开演）。
 ## 纹理句柄表与弹型表按下标对齐 —— 弹型清空则句柄表必须一起清，否则索引错位。
 func reset_registries() -> void:
 	_texture_by_index.clear()
-	_port_by_sig.clear()
-	for p in _port_probes:
-		if is_instance_valid(p):
-			p.free()
-	_port_probes.clear()
 	if system != null:
 		system.reset_registries()
 
 
-## 生成宿主节点 bomb（返回节点，供调用方忽略/持有）。data 是 BombData（不是弹幕的 BulletData）。
+## 生成宿主节点 bomb（返回节点，供调用方忽略/持有）。data 是 BombData（炸弹走宿主节点，不进内核池）。
 ## 宿主实体由 data 的实际类型决定（MistBombData → KernelMistBomb；其余/基类 → KernelBomb）。
 func spawn_bomb(data: BombData, pos: Vector2, direction: Vector2, tint: Color = Color.WHITE, spawn_delay: float = 0.0) -> Node:
 	# 用 if/else 而非三元：两个分支是兄弟类（KernelMistBomb / KernelBomb），
@@ -176,30 +155,20 @@ func _spawn_emit_template(template: EmitTemplate, pos: Vector2, vel: Vector2, co
 	if template == null:
 		push_error("[KernelBulletHost] emit template 无效")
 		return
-	if template.spawn_spec != null:
-		var spec := template.spawn_spec
-		spec.velocity = vel
-		if color != Color.WHITE:
-			spec.color(color)
-		if template.behavior != null:
-			spec.behavior_spec = template.behavior
-		var dir := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
-		spawn_prepared(prepare_spec(spec, pos, dir))
+	var spec := template.spawn_spec
+	if spec == null:
+		push_error("[KernelBulletHost] emit template 没有 spawn_spec")
 		return
-	if template.bullet == null:
-		push_error("[KernelBulletHost] emit template 两条路径都为空")
-		return
-	var data: BulletData = template.bullet
-	data.velocity = vel
+	spec.velocity = vel
 	if color != Color.WHITE:
-		data.color(color)
+		spec.color(color)
 	if template.behavior != null:
-		data.behavior_spec = template.behavior
-	var dir2 := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
-	spawn_prepared(prepare_shot(data, pos, dir2))
+		spec.behavior_spec = template.behavior
+	var dir := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
+	spawn_prepared(prepare_spec(spec, pos, dir))
 
 
-## SpawnSpec 直通：不再经过 BulletData。
+## 解析一次 SpawnSpec 发射所需的 per-shot 状态（类型 / 速度 / 行为 / 染色），不写内核池。
 func prepare_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictionary:
 	if spec == null:
 		return {}
@@ -211,9 +180,11 @@ func prepare_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictiona
 	var params: Variant = null
 	if spec.lifecycle != null:
 		move = LifecycleCatalog.MOVE_LIFECYCLE
-		params = {&"lifecycle": spec.lifecycle, &"anchor": null}
+		params = {&"lifecycle": spec.lifecycle, &"anchor": spec.lifecycle_anchor}
+	if spec.kind == BulletType.Kind.LASER and _laser_fade != null:
+		_laser_fade.on_laser_spawned()
 	var tint: Color = spec.tint
-	if spec.faction == BulletData.Faction.PLAYER:
+	if spec.faction == SpawnSpec.Faction.PLAYER:
 		var res := _player_res()
 		if res != null and res.memory_value < 50.0:
 			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
@@ -225,50 +196,7 @@ func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
 	return spawn_prepared(prepare_spec(spec, pos, direction))
 
 
-## 解析一次发射所需的 per-shot 状态（类型 / 速度 / 行为 / 染色），不写内核池。
-## 延后队列在入队瞬间调它做快照：内容复用同一 BulletData 模板改速度再入队，
-## 若拖到 flush 才读实例，所有入队项会被最后一次写入覆盖（non_mid01 红弹速度梯度消失即此因）。
-func prepare_shot(data: BulletData, pos: Vector2, direction: Vector2) -> Dictionary:
-	if data == null:
-		return {}
-	_ensure_system()
-	var type := data.to_bullet_type()
-	var speed: float = data.velocity.length()
-	var vel: Vector2 = direction.normalized() * speed if direction != Vector2.ZERO else data.velocity
-	var move: StringName = &""
-	var params: Variant = null
-	if data.lifecycle != null:
-		# b0：内容直接挂描述符，优先于旧的 coroutine_script 端口。
-		move = LifecycleCatalog.MOVE_LIFECYCLE
-		params = {&"lifecycle": data.lifecycle, &"anchor": data.lifecycle_anchor}
-	elif data.coroutine_script != null:
-		var port: Dictionary = _port_for(data)
-		if port.has("lifecycle"):
-			# 预拼描述符入口：内容自己拼 BulletLifecycle（builder sugar），不经过命名 move。
-			move = LifecycleCatalog.MOVE_LIFECYCLE
-			params = {&"lifecycle": port.get("lifecycle"), &"anchor": port.get("anchor")}
-		elif port.has("program"):
-			unmapped_behavior_count += 1   # 预留：VM 未实现，先直线
-		elif port.has("move"):
-			move = port.get("move")
-			params = port.get("params", null)
-		else:
-			unmapped_behavior_count += 1   # 无端口：按直线发射
-	if move == _MOVE_LASER:
-		type.kind = BulletType.Kind.LASER   # 供渲染桥整批淡出
-		if _laser_fade != null:
-			_laser_fade.on_laser_spawned()
-	var tint: Color = data.tint
-	if data.faction == BulletData.Faction.PLAYER:
-		# 旧 Bullet.bind：自机弹在记忆 <50 时往红 lerp（spawn 时定一次）
-		var res := _player_res()
-		if res != null and res.memory_value < 50.0:
-			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
-	return {type = type, pos = pos, vel = vel, tint = tint, move = move, params = params,
-		texture = data.texture, behavior = data.behavior_spec}
-
-
-## 把 prepare_shot 的快照写入内核池（延后队列 flush 用；也可直接调）。
+## 把 prepare_spec 的快照写入内核池（延后队列 flush 用；也可直接调）。
 func spawn_prepared(spec: Dictionary) -> int:
 	if spec.is_empty():
 		return -1
@@ -297,11 +225,6 @@ func notify_behavior_spawned(id: int, spec: Dictionary) -> void:
 		var lifecycle: BulletLifecycle = params.get(&"lifecycle")
 		if lifecycle != null:
 			behavior_bullet_spawned.emit(uid, lifecycle)
-
-
-## 发射一颗弹（立即）。语义对齐原项目 [code]Bullet.bind[/code]：[code]direction[/code] 定方向，[code]data.velocity[/code] 只取速度大小。
-func shoot(data: BulletData, pos: Vector2, direction: Vector2) -> int:
-	return spawn_prepared(prepare_shot(data, pos, direction))
 
 
 ## 纹理句柄 → 贴图（渲染插座；未映射/越界 = null）。
@@ -341,31 +264,6 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	system.behavior_ctx = behavior_ctx
 	system.behavior_host = _behavior_host
 	system.boss_getter = func(): return _behavior_host.get_boss()
-
-
-## 取内容脚本的内核端口（duck-typed [code]kernel_port()[/code]），按内容签名缓存。
-## 脚本先用 [code]data.params[/code] 覆盖自身变量再问端口，故端口能反映发射参数。
-func _port_for(data: BulletData) -> Dictionary:
-	var sig: int = hash(data.coroutine_script)
-	sig = sig * 31 + hash(data.params)
-	if _port_by_sig.has(sig):
-		return _port_by_sig[sig]
-	var port: Dictionary = {}
-	var probe: Object = data.coroutine_script.new()
-	if probe != null:
-		for k in data.params:
-			probe.set(k, data.params[k])
-		if probe.has_method(&"kernel_port"):
-			var raw: Variant = probe.kernel_port()
-			if raw is Dictionary:
-				port = raw
-		if probe is Node:
-			if port.is_empty():
-				(probe as Node).free()   # 无端口：探测完即弃
-			else:
-				_port_probes.append(probe)   # 端口可能带 Callable 工厂：保活
-	_port_by_sig[sig] = port
-	return port
 
 
 func _sync_host_tables(id: int, texture: Texture2D) -> void:

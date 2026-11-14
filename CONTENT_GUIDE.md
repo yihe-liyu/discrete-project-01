@@ -1,6 +1,6 @@
 # 🛠️ 东方星 STG 引擎 — 内容制作流程
 
-> 版本：2026-10 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `BulletData.trajectory(lc)`，原生执行**；创作台 / 工作台 UI 已退役，反馈走游戏内练习 + 无头检查）
+> 版本：2026-10 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `SpawnSpec.trajectory(lc)`，原生执行**；创作台 / 工作台 UI 已退役，反馈走游戏内练习 + 无头检查）
 
 ---
 
@@ -11,7 +11,7 @@
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. 跑起来看手感：主菜单 → **Spell Practice**（单张符卡最快）或 **Start** 整关；没有单独的预览沙盒
 4. 改完先跑契约检查：`./tools/check_content.sh` + `./tools/content_preflight.sh`；测试用 `./tools/verify.sh`
-5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`BulletData.trajectory(lc)` 直接用 builder 拼原语）
+5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`SpawnSpec.trajectory(lc)` 直接用 builder 拼原语）
 
 > 创作台 / 工作台**已退役**（2026-10-24）：不再有 F6 内容编辑器，也不再有预览 UI。
 > 流程层面的自由度 / 触点 / 摩擦与下一步，见 [内容创作流程审查](docs/CONTENT_PIPELINE_AUDIT.md)。
@@ -148,7 +148,7 @@ timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))         
 `EnemyData` 提供构造链：`red_little_fairy() / blue_middle_fairy() / red_middle_fairy() / ...`
 （外观/血量/判定/掉落直接写死，`enemy_presets/*.tres` 已移除——数据即代码）。
 
-生成走 **`ctx.enemies.spawn(data)`**（与 `ctx.bullets.shoot_spread` 对称的服务动词；实例化/挂载协程/入场景在 `StageRuntime`）。
+生成走 **`ctx.enemies.spawn(data)`**（与 `ctx.bullets.shoot_spread_spec` 对称的服务动词；实例化/挂载协程/入场景在 `StageRuntime`）。
 
 ### 行为脚本
 
@@ -341,19 +341,19 @@ func run_async(ctx: StageContext) -> void:
 
 ### 弹型实例复用（M2 起）
 
-发射弹时**复用 `BulletData` 实例**，不要每发 `BulletData.new()`：内核弹型（`BulletType`）缓存在 `BulletData` **实例**上，每发 new 会让内核弹型表每发长一个。
+发射弹时**复用 `SpawnSpec` 实例**，不要每发 `SpawnSpec.new()`：内核弹型（`BulletType`）缓存在 `SpawnSpec` **实例**上，每发 new 会让内核弹型表每发长一个。
 
 ```gdscript
-var _bullet_data: BulletData   # 成员：建一次
+var _spec: SpawnSpec   # 成员：建一次
 
 func _fire(ctx):
-	if _bullet_data == null:
-		_bullet_data = BulletData.new().tex("小玉").speed(300).enemy()
-	_bullet_data.velocity = Vector2(0, 300 + i * 50)   # 速度 / params 每发写（不属弹型）
-	ctx.bullets.shoot_spread(_bullet_data, count, TAU, dir, pos)
+	if _spec == null:
+		_spec = SpawnSpec.new().tex("小玉").speed(300).enemy()
+	_spec.velocity = Vector2(0, 300 + i * 50)   # 速度 / params 每发写（不属弹型）
+	ctx.bullets.shoot_spread_spec(_spec, count, TAU, dir, pos)
 ```
 
-> 类型级字段（贴图 / 阵营 / 判定 / 伤害 / 命中特效）在**首次发射时快照**；运行期改型需 `invalidate_bullet_type()`。
+> 类型级字段（贴图 / 阵营 / 判定 / 伤害 / 命中特效）在**首次发射时快照**；建实例时定好，不要运行期改型。
 >
 > 内核**延后发射**（`emit` / `at_end` 落点等）在**入队瞬间**快照速度 / 染色，所以「复用实例 + 每发改速度」是安全的；但别在**入队之后、flush 之前**再改同一实例。
 
@@ -365,7 +365,7 @@ Boss 阶段  data/stages/<stage>/phase/*/   每阶段一个目录：*.tres + *_{
 关卡专属   data/stages/<stage>/           stage_script/ + phase/ + enemy/ + background/ + stage_data/
 ```
 
-> 弹丸行为**不再单列目录**：`data/**/*_bullet.gd` 已删，飞行规律直接挂在发射脚本的 `BulletData` 上（见「弹幕行为」）。
+> 弹丸行为**不再单列目录**：`data/**/*_bullet.gd` 已删，飞行规律直接挂在发射脚本的 `SpawnSpec` 上（见「弹幕行为」）。
 
 ### 行为脚本示例
 
@@ -382,7 +382,7 @@ func _on_start() -> void:
 	ctx.enemies.move_to(target, Vector2(target.global_position.x, target_y), 1.5)
 	var timeline := start_timeline()
 	timeline.at(0.0).every(2.5).do(func():
-		ctx.bullets.shoot_spread(...)
+		ctx.bullets.shoot_spread_spec(...)
 	)
 ```
 
@@ -393,26 +393,26 @@ func _on_start() -> void:
 
 ### 弹幕行为（由浅入深）
 
-一颗弹的飞行规律**只有一个入口**：`BulletData.trajectory(lc)`（`lc` = `BulletLifecycle`，fluent builder）。
+一颗弹的飞行规律**只有一个入口**：`SpawnSpec.trajectory(lc)`（`lc` = `BulletLifecycle`，fluent builder）。
 **不改 C++** 就能拼出绝大多数弹幕 —— 下面从"直接拼原语"讲到"自己排相位"。
 > 完整字典（每个函数的精确签名 / 原生语义 / 素材 key 表 / 陷阱清单）见 **[docs/DANMAKU_API.md](docs/DANMAKU_API.md)**；本节是教学路径。
 
 #### ① 最简：直接拼原语
 
 ```gdscript
-var _bullet: BulletData          # 成员：复用实例（见「弹型实例复用」）
+var _spec: SpawnSpec            # 成员：复用实例（见「弹型实例复用」）
 
 func _fire(p_ctx: StageContext) -> void:
-	if _bullet == null:
+	if _spec == null:
 		var lc := BulletLifecycle.new()
 		lc.steer(BulletLifecycle.T_NEAREST_ENEMY, deg_to_rad(720.0), 2.0, 150.0, 2.0)
 		lc.speed_lerp(500.0, 2000.0, 2.0)
 		lc.until_never()
-		_bullet = BulletData.new().tex("小玉").speed(300).enemy().trajectory(lc)
-	p_ctx.bullets.shoot_spread(_bullet, 8, TAU, Vector2.RIGHT, global_position)
+		_spec = SpawnSpec.new().tex("小玉").speed(300).enemy().trajectory(lc)
+	p_ctx.bullets.shoot_spread_spec(_spec, 8, TAU, Vector2.RIGHT, global_position)
 ```
 
-> 原语就是唯一写法：Move / Until / Action 直接链在 `BulletLifecycle` 上；`emit` / `emit_variant` 用 `BulletData` 模板。没有可视化拼装器了。
+> 原语就是唯一写法：Move / Until / Action 直接链在 `BulletLifecycle` 上；`emit` / `emit_variant` 用 `SpawnSpec` 模板。没有可视化拼装器了。
 
 #### ② 常见组合（preset 已删，照着拼）
 
@@ -444,7 +444,7 @@ func _sharp_turn() -> BulletLifecycle:
 	lc.despawn()
 	return lc
 
-_bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
+_spec.trajectory(_sharp_turn())    # 直接挂，不经端口
 ```
 
 #### ④ 全词汇（Move / Until / Action / 方向糖）
@@ -457,7 +457,7 @@ _bullet.trajectory(_sharp_turn())    # 直接挂，不经端口
 | 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` / **`reflect(angle)`** |
 
 > - `target` = `T_PLAYER` / `T_BOSS` / `T_NEAREST_ENEMY`。
-> - **`emit`**：相位结束时生成替换弹。第一参 = `BulletData`（推荐）／`Callable（）-> BulletData`（旧写法）／数组（变体发射）。
+> - **`emit`**：相位结束时生成替换弹。第一参 = `SpawnSpec`（推荐）／`Callable（）-> SpawnSpec`（旧写法）／数组（变体发射）。
 > - **`reflect(angle)` 做镜面反弹**：把**当前速度**按发射点所在的场边翻分量（左右翻 x、上墙翻 y、角落原路返回）。
 >   撞哪面墙**不用自己声明**（内核按落点判）→ 不会和 `until_at_wall` 的 mask 脱节：
 >   ```gdscript

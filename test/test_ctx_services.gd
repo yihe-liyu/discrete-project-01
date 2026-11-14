@@ -6,7 +6,7 @@ const BossService = preload("res://scripts/coroutine/services/boss_service.gd")
 const DifficultyService = preload("res://scripts/coroutine/services/difficulty_service.gd")
 const EnemyService = preload("res://scripts/coroutine/services/enemy_service.gd")
 ## 夹具替身脚本（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
-const ENEMY_SCRIPT = preload("res://test/fixtures/no_port_behavior.gd")
+const ENEMY_SCRIPT = preload("res://test/fixtures/enemy_script_stub.gd")
 
 
 ## 记录型特效池：不改 `FxPool` 私有状态，只记「谁被播了、播在哪」（沿用 FakeEnemy 那套子类替换）

@@ -382,9 +382,9 @@ func test_primitive_action_sfx() -> void:
 
 
 func test_primitive_action_emit() -> void:
-	## 相位结束时生成替换弹（工厂返回 BulletData，宿主侧执行）。
-	var factory := func() -> BulletData:
-		var d := BulletData.new()
+	## 相位结束时生成替换弹（工厂返回 SpawnSpec，宿主侧执行）。
+	var factory := func() -> SpawnSpec:
+		var d := SpawnSpec.new()
 		d.velocity = Vector2(1.0, 1.0)
 		return d
 	var lc := BulletLifecycle.new()
@@ -398,7 +398,7 @@ func test_action_emit_at_phase_end_uses_wall_point() -> void:
 	if not _available(): pending("未构建原生扩展"); return
 	var lc := BulletLifecycle.new()
 	lc.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_TOP)
-	lc.emit(func() -> BulletData: return BulletData.new(), BulletLifecycle.world_heading(PI), 100.0, BulletLifecycle.AT_PHASE_END)
+	lc.emit(func() -> SpawnSpec: return SpawnSpec.new(), BulletLifecycle.world_heading(PI), 100.0, BulletLifecycle.AT_PHASE_END)
 	var store = _combo_store()
 	var c: Dictionary = lc.compile()
 	var pid: int = store.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
@@ -779,7 +779,7 @@ func test_unknown_target_fails_closed() -> void:
 
 func test_radial_composition_sfx_db_default_is_sfx_level() -> void:
 	## DSL6：radial_accel 的 sfx_db 默认必须是总电平，不是 0 dB（满音量）。
-	var lc := FIX.radial_accel(100.0, func() -> BulletData: return BulletData.new(), &"kira")
+	var lc := FIX.radial_accel(100.0, func() -> SpawnSpec: return SpawnSpec.new(), &"kira")
 	var c := lc.compile()
 	var base: int = int(c[&"act_start"][0]) * COMPILER.ARGS
 	assert_almost_eq(c[&"args"][base + 1], AudioManager.SFX_LEVEL_DB, 1e-6, "默认 sfx_db 应为总电平")
@@ -823,7 +823,7 @@ func test_on_end_heading_runs_before_emit_forward() -> void:
 	if not _available():
 		pending("未构建原生扩展")
 		return
-	var factory := func() -> BulletData: return BulletData.new().enemy()
+	var factory := func() -> SpawnSpec: return SpawnSpec.new().enemy()
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(0.06)
 	lc.on_end_heading(BulletLifecycle.world_heading(1.0))
@@ -863,7 +863,7 @@ func test_on_end_heading_runs_before_emit_forward() -> void:
 
 ## DSL10：纯 program 不含宿主对象；宿主表单独建、local id 对齐。
 func test_compile_program_is_pure_host_table_separate() -> void:
-	var data := BulletData.new().enemy()
+	var data := SpawnSpec.new().enemy()
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(0.2)
 	lc.sfx(&"kira")
@@ -884,8 +884,8 @@ func test_compile_program_is_pure_host_table_separate() -> void:
 
 ## DSL10：同结构、不同替换弹实例 → 纯 program 相同；content_signature 仍因宿主身份不同。
 func test_same_program_different_host_table() -> void:
-	var d1 := BulletData.new().enemy()
-	var d2 := BulletData.new().enemy()
+	var d1 := SpawnSpec.new().enemy()
+	var d2 := SpawnSpec.new().enemy()
 	var a := BulletLifecycle.new()
 	a.until_elapsed(0.2).emit(d1, BulletLifecycle.world_heading(0.0), 100.0).despawn()
 	var b := BulletLifecycle.new()
@@ -908,7 +908,7 @@ func test_dir_spec_eval_phase_and_world_guard() -> void:
 
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(1.0)
-	lc.emit(BulletData.new(), world, 100.0)
+	lc.emit(SpawnSpec.new(), world, 100.0)
 	assert_push_error("world angle 请用 world_heading", "emit 里的裸 heading 应报错")
 
 	lc = BulletLifecycle.new()
@@ -919,7 +919,7 @@ func test_dir_spec_eval_phase_and_world_guard() -> void:
 	# 显式 world_heading 是合法用法，不再报错。
 	lc = BulletLifecycle.new()
 	lc.until_elapsed(1.0)
-	lc.emit(BulletData.new(), BulletLifecycle.world_heading(0.5), 100.0)
+	lc.emit(SpawnSpec.new(), BulletLifecycle.world_heading(0.5), 100.0)
 	lc.on_end_heading(BulletLifecycle.world_heading(0.5))
 
 
@@ -927,7 +927,7 @@ func test_dir_spec_eval_phase_and_world_guard() -> void:
 func test_emit_speed_rel_host_spec() -> void:
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(1.0)
-	lc.emit_speed_rel(BulletData.new(), BulletLifecycle.forward(), 120.0, 0.15)
+	lc.emit_speed_rel(SpawnSpec.new(), BulletLifecycle.forward(), 120.0, 0.15)
 	var host: Dictionary = lc.host_table()
 	assert_eq((host[&"speed_specs"] as Array).size(), 1, "宿主表应有 1 个速度 spec")
 	var spec: Dictionary = host[&"speed_specs"][0]

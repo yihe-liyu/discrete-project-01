@@ -152,7 +152,7 @@
 - 存档写盘走 `SaveManager` 的 tmp → `.bak` → 提交，不要直接 `ConfigFile.save` 正式档；`ConfigFile.load` 对垃圾文件也可能返回 OK（无任何段）⇒ 必须检查已知段，别把空档当好档。
 - 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（现 327）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
 - 内容层 `data/**` 不自己 `get_parent()` / `create_tween()`：移动走 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path`，Logo 走 `ctx.stage.show_logo`（`check_structure` ⑤ 会红）。
-- `BulletData.duplicate()` 会丢**未导出**的脚本 var（`faction/tint/tint_mode/lifecycle`）⇒ 复用请直接按引用，或用构造链重建；pattern 的 `template` 不要 `duplicate()`（否则阵营回默认 PLAYER）。
+- `SpawnSpec` 按引用共享：pattern 的 `template` 不要复制（否则弹型缓存分裂，且生命周期/阵营改动不可见）；要变体就复制字段后重建。
 - 测试用夹具，别拿真实内容当断言标准；内容只做“不数数量、不写死路径”的结构冒烟。
 
 > 其余跨子系统教训见 `BEST_PRACTICES_LOG.md`；内核/lifecycle 专项见 `DANMAKU_API.md` §3 / 附录 A（速查）。
@@ -166,7 +166,7 @@
 - **内容协程 async（实验）**：`extends AsyncCoroutineScript` + `run_async(ctx)`；只 `await ctx.clock.delay/next_tick`（跟 `CoroutineRunner` 时钟）；不要用 `Timer`/`SceneTreeTimer` 做内容时间。旧 `_tick` 返回秒数风格保留。
 - **API 文档**：核心 `class_name` 用 `##`（`[codeblock]` / `[code]` / `[method]`）写“描述 + 模型 + 用法 + 边界”；长教程留在 `docs/`，代码只放链接。试点：`BulletLifecycle`。
 - **文档注释风格**：不写内部版本号（V18/DSL7）和 `**` 强调；用平实中文、`[code]`/`[codeblock]`；长文留 `docs/`。
-- **Marisa 激光锚点**：激光段 anchor 到子机节点；子机重建 / cleanup 前必须 `ctx.bullets.clear_laser_bullets()`，否则旧段 anchor id 失效（退回自机 + `push_error`）。激光段用 `BulletData.kind = LASER` 标记，`MarisaLaserFade` 才能整批淡出。
+- **Marisa 激光锚点**：激光段 anchor 到子机节点；子机重建 / cleanup 前必须 `ctx.bullets.clear_laser_bullets()`，否则旧段 anchor id 失效（退回自机 + `push_error`）。激光段用 `SpawnSpec.kind = BulletType.Kind.LASER` 标记，`MarisaLaserFade` 才能整批淡出。
 
 ## 🔴 待改进（达标后清空）
 

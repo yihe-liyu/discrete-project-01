@@ -3,7 +3,7 @@ extends GutTest
 ## 不动内容编排（stage01 仍用构造链），只把"数据类可序列化"补齐。
 
 ## 夹具替身脚本（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
-const ENEMY_SCRIPT = preload("res://test/fixtures/no_port_behavior.gd")
+const ENEMY_SCRIPT = preload("res://test/fixtures/enemy_script_stub.gd")
 
 
 func test_script_and_params_exportable():

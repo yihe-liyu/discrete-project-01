@@ -5,18 +5,18 @@ extends GutTest
 # ═══════════ out_grace：出界宽限 ═══════════
 
 func test_grace_default_zero():
-	var bd := BulletData.new()
+	var bd := SpawnSpec.new()
 	assert_eq(bd.out_grace, 0.0, "默认 0 = 出界立即回收（行为不变）")
 
 
 func test_grace_chain_method():
-	var bd := BulletData.new().grace(2.5)
+	var bd := SpawnSpec.new().grace(2.5)
 	assert_eq(bd.out_grace, 2.5, ".grace(2.5) 链式设置")
 	assert_eq(bd.to_bullet_type().out_grace, 2.5, "且随类型级字段快照进 BulletType")
 
 
 func test_grace_flows_into_kernel_row():
-	## 真链路：BulletData.grace → BulletType.out_grace → KernelNativeSystem.spawn → 原生行。
+	## 真链路：SpawnSpec.grace → BulletType.out_grace → KernelNativeSystem.spawn → 原生行。
 	## （2026-09-23 之前的 4 条 out_grace「测试」要么只断言 setter、要么把判定逻辑在测试里重抄
 	##  一遍 —— 全都不碰真代码，所以功能是空的门禁却一直绿。真行为 parity 见
 	##  test_lifecycle_primitives 的 out_grace 四条。）
@@ -24,7 +24,7 @@ func test_grace_flows_into_kernel_row():
 		pending("未构建原生扩展")
 		return
 	var sys: KernelNativeSystem = autofree(KernelNativeSystem.new())
-	var bt: BulletType = BulletData.new().grace(1.5).to_bullet_type()
+	var bt: BulletType = SpawnSpec.new().grace(1.5).to_bullet_type()
 	var id: int = sys.spawn(bt, Vector2(448.0, 480.0), Vector2.ZERO)
 	assert_eq(sys.get_out_grace(id), 1.5, "原生行拿到了逐弹宽限")
 	var plain: int = sys.spawn(BulletType.new(), Vector2(448.0, 480.0), Vector2.ZERO)

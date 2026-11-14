@@ -15,7 +15,7 @@
 ## [br]
 ## [b]边界[/b][br]
 ## - 唯一后端是内核（[KernelBulletHost]），没有旧池回退。[br]
-## - 发射不区分自机 / 敌弹，阵营由 [code]BulletData.faction[/code] 决定。[br]
+## - 发射不区分自机 / 敌弹，阵营由 [code]SpawnSpec.faction[/code] 决定。[br]
 ## - 清场分裸清（[method clear_bullets]）与带消散特效（[method clear_enemy_bullets_with_fx]），不要混用。[br]
 ## - [method reset_world] 只给工具 / 工作台；正常游戏换 scene 重建 Manager 天然重置。
 class_name BulletManager
@@ -136,12 +136,8 @@ func _physics_process(_delta: float) -> void:
 
 # ═══ 子弹 API（内核后端）═══
 
-## 发射一颗弹，返回内核行 id（data 为空 = -1）。阵营由 [code]BulletData.faction[/code] 决定。
-## direction 只定方向（零向量 = 用 data.velocity 的方向）；速度大小取 data.velocity 的长度。
-func shoot_bullet(data: BulletData, pos: Vector2, direction: Vector2) -> int:
-	return _kernel_bullet_host.shoot(data, pos, direction)
-
-
+## 发射一颗弹，返回内核行 id（spec 为空 = -1）。阵营由 [code]SpawnSpec.faction[/code] 决定。
+## direction 只定方向（零向量 = 用 spec.velocity 的方向）；速度大小取 spec.velocity 的长度。
 func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
 	return _kernel_bullet_host.shoot_spec(spec, pos, direction)
 
@@ -312,7 +308,7 @@ func clear_enemy_bullets_with_fx() -> void:
 
 
 ## 清场 + 回收内核注册表（program / 弹型 / 纹理句柄）。只给工具 / 工作台：
-## 原生 program 表只增不减，反复重建内容脚本（新 BulletData）会积累；正常游戏换 scene 重建 Manager 天然重置。
+## 原生 program 表只增不减，反复重建内容脚本（新 SpawnSpec）会积累；正常游戏换 scene 重建 Manager 天然重置。
 func reset_world() -> void:
 	clear_all()
 	if _kernel_bullet_host != null:

@@ -35,7 +35,7 @@ static func build(lc) -> Dictionary:
 	return {&"actions": actions, &"sfx": sfx, &"speed_specs": speed_specs}
 
 
-## 宿主表结构签名：actions 按对象身份（Callable/BulletData 不可值比较），sfx 按名字。
+## 宿主表结构签名：actions 按对象身份（Callable/SpawnSpec 不可值比较），sfx 按名字。
 static func signature(table: Dictionary) -> int:
 	var h: int = hash(table.get(&"sfx", []))
 	for a in table.get(&"actions", []):
@@ -53,7 +53,7 @@ static func _hash_action(a: Variant) -> int:
 		return sub
 	if a is Callable:
 		return a.get_object_id() if a.is_valid() else 0
-	if a is BulletData:
+	if a is SpawnSpec:
 		return int(a.get_instance_id())
 	if a is StringName:
 		return hash(a)

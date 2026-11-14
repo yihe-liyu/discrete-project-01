@@ -291,7 +291,7 @@ func clear() -> void:
 
 ## 重置内核注册表：丢弃全部已注册 program / 弹型 / 特效，并重建原生 store。
 ## 只在清场后（无弹）调用 —— 原生 store 的 program 表只增不减，工作台/工具反复重来会积累
-## （每次重建内容脚本 → 新 BulletData 实例 → 新签名）；正常游戏靠换 scene 重建 BulletManager 天然重置。
+## （每次重建内容脚本 → 新 SpawnSpec 实例 → 新签名）；正常游戏靠换 scene 重建 BulletManager 天然重置。
 func reset_registries() -> void:
 	_active_count = 0
 	_accel = null            # 丢旧 store：program / SoA 一并释放，下次 _ensure_native 新建

@@ -10,11 +10,11 @@ extends Resource
 
 ## 发射的弹型定义（[code]data/bullets/*.tres[/code]，外观+碰撞+朝向）。
 @export var bullet_def: BulletDef
-## 运行时模板（代码注入；不进 .tres）：已有 BulletData（带 lifecycle/颜色）时优先用它，
-## 这样把旧内容迁到 pattern 时不必把 lifecycle 重写成参数。
+## 运行时模板（代码注入；不进 .tres）：已有 SpawnSpec（带 lifecycle/颜色）时优先用它，
+## 这样 pattern 调用方能把特殊弹道直接挂在模板上。
 ## 按引用使用：pattern 会改它的 velocity；不要跨并发 pattern 共享同一个模板。
-var template: Variant   # BulletData 或 SpawnSpec；pattern 内部归一化
-## 染色 / 阵营 / 混合（pattern 在构造 BulletData 时套用；template 路径不覆盖这些）。
+var template: SpawnSpec
+## 染色 / 阵营 / 混合（pattern 在按 bullet_def 现拼 SpawnSpec 时套用；template 路径不覆盖这些）。
 @export var color: Color = Color.WHITE
 ## 是否敌方阵营（enemy()）。
 @export var enemy: bool = true

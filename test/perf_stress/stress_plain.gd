@@ -6,9 +6,9 @@ func _ready():
 		var bullet_manager := BulletManager.new()
 		bullet_manager.name = "BulletManager"
 		add_child(bullet_manager)
-	var data: BulletData = BulletData.new().enemy().tex("小玉").speed(20.0).blend(true)
-	# 不设 coroutine_script → 直线弹路径
+	var data: SpawnSpec = SpawnSpec.new().enemy().tex("小玉").speed(20.0).blend(true)
+	# 不挂 lifecycle / native behavior → 直线弹路径
 	for i in 1500:
 		var dir := Vector2.RIGHT.rotated(float(i) * TAU / 1500.0)
-		BulletManager.current.shoot_bullet(data, Vector2(448, 480), dir)
+		BulletManager.current.shoot_spec(data, Vector2(448, 480), dir)
 	print("[stress] 已生成 1500 颗无协程直线弹")

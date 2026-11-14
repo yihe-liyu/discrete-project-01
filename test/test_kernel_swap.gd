@@ -19,15 +19,15 @@ func after_each() -> void:
 	BulletManager.current.inject_entity_registry(null)
 
 
-func _enemy_data() -> BulletData:
-	var d := BulletData.new().enemy().tex("小玉")
+func _enemy_data() -> SpawnSpec:
+	var d := SpawnSpec.new().enemy().tex("小玉")
 	d.velocity = Vector2.UP * 100.0
 	return d
 
 
 func test_spawn_writes_kernel_pool() -> void:
 	assert_not_null(BulletManager.current.kernel_system(), "内核弹池应已装配")
-	BulletManager.current.shoot_bullet(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
+	BulletManager.current.shoot_spec(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "应写进内核池")
 
 
@@ -80,9 +80,9 @@ func test_bomb_continuously_clears_nearby_enemy_bullets() -> void:
 	var entity_registry := EntityRegistry.new()
 	entity_registry.bind_player(player)
 	BulletManager.current.inject_entity_registry(entity_registry)
-	var ed := BulletData.new().enemy().tex("小玉")
+	var ed := SpawnSpec.new().enemy().tex("小玉")
 	ed.velocity = Vector2.UP * 10.0
-	BulletManager.current.shoot_bullet(ed, Vector2(448, 700), Vector2.UP)
+	BulletManager.current.shoot_spec(ed, Vector2(448, 700), Vector2.UP)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "先有 1 颗敌弹")
 	var bomb_data := RingBombData.new()
 	var bomb = BulletManager.current.shoot_bomb_bullet(bomb_data, Vector2(448, 700), Vector2.RIGHT)
@@ -100,10 +100,10 @@ func test_bomb_spawns_host_node() -> void:
 
 
 func test_radial_accel_via_manager() -> void:
-	var d := BulletData.new().enemy().blend(true).tex("棱弹")
+	var d := SpawnSpec.new().enemy().blend(true).tex("棱弹")
 	d.velocity = Vector2.UP * 300.0
-	d.lifecycle = FIX.radial_accel(150.0, BulletData.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA), &"kira", -6.0)
-	BulletManager.current.shoot_bullet(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
+	d.lifecycle = FIX.radial_accel(150.0, SpawnSpec.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA), &"kira", -6.0)
+	BulletManager.current.shoot_spec(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
 	for i in 30:
 		await get_tree().physics_frame
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "旧弹回收 + 新弹生成")
@@ -111,7 +111,7 @@ func test_radial_accel_via_manager() -> void:
 
 
 func test_death_clear_sweeps_kernel_bullets() -> void:
-	BulletManager.current.shoot_bullet(_enemy_data(), Vector2(200, 200), Vector2.RIGHT)
+	BulletManager.current.shoot_spec(_enemy_data(), Vector2(200, 200), Vector2.RIGHT)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "先有 1 颗内核敌弹")
 	BulletManager.current.start_death_clear(Vector2(200, 200), 100.0, 1.0, 30.0)
 	BulletManager.current._death_clear.process(0.5)

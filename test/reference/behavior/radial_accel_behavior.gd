@@ -1,7 +1,7 @@
 ## RadialAccelBehavior—— 沿初发射方向加速；碰顶边原地换成向下弹。
 ## 移植旧 data/stages/stage01/bullet/radial_accel_bullet.gd。
 ## 只 set_velocity；re_fire 走 KernelBehaviorHost 延后队列（内核循环中途禁止增删行）。
-## params（内容给的）：accel_rate | spawn_data(BulletData 模板) | sfx | sfx_db
+## params（内容给的）：accel_rate | spawn_data(SpawnSpec 模板) | sfx | sfx_db
 extends Behavior
 
 var host   # KernelBehaviorHost（桥接；untyped 以免依赖全局 class_name）
@@ -38,7 +38,7 @@ func _re_fire_down(system: BulletSystem, bullet_id: int, params: Dictionary) -> 
 			AudioManager.play_sfx(stream, params.get(&"sfx_db", 0.0))
 	var factory: Callable = params.get(&"spawn_factory", Callable())
 	if factory.is_valid() and host != null:
-		var b: BulletData = factory.call()
+		var b: SpawnSpec = factory.call()
 		if b != null:
 			b.velocity = Vector2(0, speed)   # 保留速度大小，竖直向下
 			host.queue_spawn(b, Vector2(system.get_position(bullet_id).x, GameConfig.FIELD_TOP), Vector2.DOWN)

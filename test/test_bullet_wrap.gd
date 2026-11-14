@@ -19,8 +19,8 @@ func test_wrap_bottom_to_top() -> void:
 		pending("无原生扩展")
 		return
 	var bm := BulletManager.current
-	var data := BulletData.new().tex("小玉").speed(200.0).enemy().no_spawn_fog().wrap_around()
-	var row := bm.shoot_bullet(data, Vector2(448, GameConfig.FIELD_BOTTOM + 10), Vector2.DOWN)
+	var data := SpawnSpec.new().tex("小玉").speed(200.0).enemy().no_spawn_fog().wrap_around()
+	var row := bm.shoot_spec(data, Vector2(448, GameConfig.FIELD_BOTTOM + 10), Vector2.DOWN)
 	sys.set_position(row, Vector2(448, GameConfig.FIELD_BOTTOM + 10))
 	sys.set_velocity(row, Vector2(0, 200))
 	sys.step(1.0 / 60.0)
@@ -35,8 +35,8 @@ func test_wrap_left_to_right() -> void:
 		pending("无原生扩展")
 		return
 	var bm := BulletManager.current
-	var data := BulletData.new().tex("小玉").speed(200.0).enemy().no_spawn_fog().wrap_around()
-	var row := bm.shoot_bullet(data, Vector2(GameConfig.FIELD_LEFT - 10, 300), Vector2.LEFT)
+	var data := SpawnSpec.new().tex("小玉").speed(200.0).enemy().no_spawn_fog().wrap_around()
+	var row := bm.shoot_spec(data, Vector2(GameConfig.FIELD_LEFT - 10, 300), Vector2.LEFT)
 	sys.set_position(row, Vector2(GameConfig.FIELD_LEFT - 10, 300))
 	sys.set_velocity(row, Vector2(-200, 0))
 	sys.step(1.0 / 60.0)
@@ -46,12 +46,12 @@ func test_wrap_left_to_right() -> void:
 
 
 func test_wrap_flag_reaches_bullet_type() -> void:
-	var data := BulletData.new().enemy().wrap_around()
+	var data := SpawnSpec.new().enemy().wrap_around()
 	assert_eq(data.to_bullet_type().wrap_mask, 15, "四边环绕掩码应进入 BulletType")
 
 
 func test_wrap_mask_selects_edges() -> void:
-	var horizontal := BulletData.new().enemy().wrap_horizontal()
+	var horizontal := SpawnSpec.new().enemy().wrap_horizontal()
 	assert_eq(horizontal.wrap_mask, 3, "左右环绕 = LEFT | RIGHT")
-	var vertical := BulletData.new().enemy().wrap_vertical()
+	var vertical := SpawnSpec.new().enemy().wrap_vertical()
 	assert_eq(vertical.wrap_mask, 12, "上下环绕 = TOP | BOTTOM")

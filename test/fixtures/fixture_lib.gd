@@ -6,9 +6,6 @@ extends RefCounted
 ##
 ## 无 `class_name`（新增全局类要 `--import` 重建缓存）—— 使用方 `preload` 本文件。
 
-## 通用替身脚本（都 `extends CoroutineScript`）：可当 enemy behavior / move / shoot 槽。
-const SCRIPT_A := preload("res://test/fixtures/no_port_behavior.gd")
-const SCRIPT_B := preload("res://test/fixtures/lifecycle_port_behavior.gd")
 ## 机体射击脚本夹具：**必须** `extends PlayerShootScript`（`Player` 里有 assert 卡这个类型）。
 const PLAYER_SHOOT := preload("res://test/fixtures/player_shoot_probe.gd")
 

@@ -1,5 +1,5 @@
 extends GutTest
-## SpawnSpec：独立作者描述，能转换成 BulletData，并允许一层 child。
+## SpawnSpec：独立作者描述，能直接转换成 BulletType，并允许一层 child。
 
 
 func test_spawn_spec_keeps_type_and_child() -> void:
@@ -25,7 +25,7 @@ func test_spawn_spec_carries_core_overrides() -> void:
 	s.facing(false, 0.5)
 	s.no_spawn_fog()
 	var bt := s.to_bullet_type()
-	assert_eq(s.faction, BulletData.Faction.ENEMY, "阵营")
+	assert_eq(s.faction, SpawnSpec.Faction.ENEMY, "阵营")
 	assert_eq(s.tint, Color.RED, "颜色")
 	assert_eq(s.use_blend, false, "混合模式")
 	assert_eq(s.wrap_mask, 5, "环绕")
@@ -36,7 +36,7 @@ func test_spawn_spec_carries_core_overrides() -> void:
 	assert_false(bt.is_spawn_fog, "出生雾覆盖")
 
 
-func test_spawn_spec_spawns_without_bullet_data() -> void:
+func test_spawn_spec_spawns_directly() -> void:
 	var host := KernelBulletHost.new()
 	add_child_autofree(host)
 	var spec := SpawnSpec.new().tex("小玉").enemy().speed(120.0)

@@ -141,8 +141,8 @@
 **现在怎么做**
 
 - 弹型外观 / 碰撞 / 朝向在 `data/bullets/*.tres`（`BulletDef`）；运行时类型是 `BulletType`。
-- 发射与飞行用 `BulletData` 构造链 + `BulletLifecycle` 描述符；工作台「拼装页」把描述符拼成代码。
-- 弹型缓存挂在 `BulletData` 实例上，同实例 → 同 `BulletType`。
+- 发射与飞行用 `SpawnSpec` 构造链 + `BulletLifecycle` 描述符；工作台「拼装页」把描述符拼成代码。
+- 弹型缓存挂在 `SpawnSpec` 实例上，同实例 → 同 `BulletType`。
 
 **自由度**
 
@@ -154,7 +154,7 @@
 
 1. 弹丸行为 `.gd`（若需要逐弹逻辑）
 2. `data/bullets/*.tres`（若需要新外观 / 判定）
-3. 发射脚本 / 阶段脚本里的 `BulletData` 构造
+3. 发射脚本 / 阶段脚本里的 `SpawnSpec` 构造
 4. 必要时 `BulletLifecycle` 描述符
 
 **摩擦**

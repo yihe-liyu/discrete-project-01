@@ -20,7 +20,7 @@ const BUDGET_60 := 16.67
 ## 每档 CPU（积分+行为+宽相+渲染同步）上限；见 docs/PERFORMANCE_BUDGET.md。
 const CPU_BUDGET_MS := {8000: 3.0, 20000: 6.0, 50000: 13.0}
 
-var _data: BulletData
+var _data: SpawnSpec
 var _failed := false
 
 
@@ -50,15 +50,14 @@ func _run(n: int, with_behavior: bool) -> void:
 	add_child(mm)
 	mm.set_backend(backend)
 
-	_data = BulletData.new().enemy().tex("小玉").speed(200.0).blend(true)
-	_data.is_spawn_fog = false
+	_data = SpawnSpec.new().enemy().tex("小玉").speed(200.0).blend(true).no_spawn_fog()
 	if with_behavior:
 		_data.lifecycle = BulletLifecycle.new().accel_world(Vector2(0.0, 60.0))   # world_accel 行为路径
 
 	for i in n:
 		var dir := Vector2.RIGHT.rotated(randf() * TAU)
 		var pos := CENTER + dir * sqrt(randf()) * 300.0
-		backend.shoot(_data, pos, dir)
+		backend.shoot_spec(_data, pos, dir)
 
 	for f in WARMUP:
 		backend.system._physics_process(DT)

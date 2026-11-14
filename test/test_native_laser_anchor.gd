@@ -22,11 +22,11 @@ func test_marisa_laser_segments_track_anchor() -> void:
 	var anchor: Node2D = add_child_autofree(Node2D.new())
 	anchor.global_position = Vector2(340.0, 560.0)
 	# no_spawn_fog：本用例只验锚点漂移，别被出生雾冻结 0.3s 干扰
-	var d := BulletData.new().enemy().no_spawn_fog().blend(true).tex("小玉")
+	var d := SpawnSpec.new().enemy().no_spawn_fog().blend(true).tex("小玉")
 	d.velocity = Vector2.UP * 100.0
 	d.trajectory(FIX.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 0.0),
 		{&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})
-	BulletManager.current.shoot_bullet(d, Vector2(200.0, 700.0), Vector2.UP)
+	BulletManager.current.shoot_spec(d, Vector2(200.0, 700.0), Vector2.UP)
 	assert_eq(ns.get_active_count(), 1, "激光段应进内核池")
 	for i in 3:
 		await get_tree().physics_frame
@@ -41,15 +41,15 @@ func test_clear_laser_bullets_only_clears_laser_kind() -> void:
 	var ns = BulletManager.current.kernel_system() as KernelNativeSystem
 	if ns == null:
 		pending("无内核系统"); return
-	var laser := BulletData.new().enemy().no_spawn_fog()
+	var laser := SpawnSpec.new().enemy().no_spawn_fog()
 	laser.kind = BulletType.Kind.LASER
 	laser.velocity = Vector2.UP * 100.0
 	laser.trajectory(FIX.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 0.0))
-	BulletManager.current.shoot_bullet(laser, Vector2(200.0, 700.0), Vector2.UP)
+	BulletManager.current.shoot_spec(laser, Vector2(200.0, 700.0), Vector2.UP)
 
-	var point := BulletData.new().enemy().no_spawn_fog()
+	var point := SpawnSpec.new().enemy().no_spawn_fog()
 	point.velocity = Vector2.UP * 100.0
-	BulletManager.current.shoot_bullet(point, Vector2(220.0, 700.0), Vector2.UP)
+	BulletManager.current.shoot_spec(point, Vector2(220.0, 700.0), Vector2.UP)
 
 	assert_eq(ns.get_active_count(), 2, "先有 1 LASER + 1 POINT")
 	BulletManager.current.clear_laser_bullets()

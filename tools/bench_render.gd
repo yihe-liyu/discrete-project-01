@@ -20,11 +20,10 @@ func _run(n: int) -> void:
 	backend.setup_behaviors(null, Callable())
 	backend.system.cull_rect = Rect2(-100000, -100000, 200000, 200000)
 
-	var data := BulletData.new().enemy().tex("小玉").speed(200.0).blend(true)
-	data.is_spawn_fog = false
+	var data := SpawnSpec.new().enemy().tex("小玉").speed(200.0).blend(true).no_spawn_fog()
 	for i in n:
 		var dir := Vector2.RIGHT.rotated(randf() * TAU)
-		backend.shoot(data, CENTER + dir * sqrt(randf()) * 300.0, dir)
+		backend.shoot_spec(data, CENTER + dir * sqrt(randf()) * 300.0, dir)
 
 	var mm := BulletMultiMesh.new()
 	mm.is_enabled = true

@@ -1,5 +1,5 @@
 extends GutTest
-## 弹型朝向契约（F7·B）：`rotation_for` 语义 + `BulletData` → 内核弹型 的朝向字段传递。
+## 弹型朝向契约（F7·B）：`rotation_for` 语义 + `SpawnSpec` → 内核弹型 的朝向字段传递。
 ## 原生 `_hit_rot` 与冻结参照 `BulletSystem` 的 1:1 由 test_native_collision.gd 锁定。
 
 
@@ -15,24 +15,22 @@ func test_rotation_for_semantics() -> void:
 	assert_almost_eq(bt.rotation_for(Vector2.ZERO), 0.0, 0.0001, "关跟随 + 零速度")
 
 
-func test_bullet_data_reads_orientation_from_config() -> void:
+func test_spawn_spec_reads_orientation_from_config() -> void:
 	# 小玉 / 点弹 → 内容表显式标了 follow_dir=false（表驱动，非硬编码）
-	var round_bullet := BulletData.new().tex("小玉")
-	assert_false(round_bullet.follow_dir, "小玉应读内容表的 follow_dir=false")
+	var round_bullet := SpawnSpec.new().tex("小玉")
+	assert_false(round_bullet.bullet_def.follow_dir, "小玉应读内容表的 follow_dir=false")
 	assert_false(round_bullet.to_bullet_type().follow_dir, "应传到内核弹型")
-	var dot_bullet := BulletData.new().tex("点弹")
-	assert_false(dot_bullet.follow_dir, "点弹应读内容表的 follow_dir=false")
+	var dot_bullet := SpawnSpec.new().tex("点弹")
+	assert_false(dot_bullet.bullet_def.follow_dir, "点弹应读内容表的 follow_dir=false")
 	# 星弹 → 内容表未标 → 默认跟随
-	var oriented := BulletData.new().tex("星弹")
-	assert_true(oriented.follow_dir, "星弹默认 follow_dir=true")
-	assert_almost_eq(oriented.dir_offset, 0.0, 0.0001, "默认 dir_offset=0")
+	var oriented := SpawnSpec.new().tex("星弹")
+	assert_true(oriented.bullet_def.follow_dir, "星弹默认 follow_dir=true")
+	assert_almost_eq(oriented.bullet_def.dir_offset, 0.0, 0.0001, "默认 dir_offset=0")
 	assert_true(oriented.to_bullet_type().follow_dir, "应传到内核弹型")
 
 
-func test_bullet_data_direct_orientation_override() -> void:
-	var d := BulletData.new()
-	d.follow_dir = false
-	d.dir_offset = 0.4
+func test_spawn_spec_direct_orientation_override() -> void:
+	var d := SpawnSpec.new().facing(false, 0.4)
 	var bt := d.to_bullet_type()
-	assert_false(bt.follow_dir, "实例直赋 follow_dir 有效")
-	assert_almost_eq(bt.dir_offset, 0.4, 0.0001, "实例直赋 dir_offset 有效")
+	assert_false(bt.follow_dir, "facing(false) 应覆盖朝向")
+	assert_almost_eq(bt.dir_offset, 0.4, 0.0001, "facing 的 dir_offset 应覆盖")

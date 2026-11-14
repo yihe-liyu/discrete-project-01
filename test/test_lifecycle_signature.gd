@@ -28,8 +28,8 @@ func test_factory_identity_differs() -> void:
 
 
 func test_spawn_data_identity_in_signature() -> void:
-	var d1 := BulletData.new().enemy()
-	var d2 := BulletData.new().enemy()
+	var d1 := SpawnSpec.new().enemy()
+	var d2 := SpawnSpec.new().enemy()
 	var a := FIX.bounce(100.0, 0.0, 0.0, d1)
 	var b := FIX.bounce(100.0, 0.0, 0.0, d1)
 	var c := FIX.bounce(100.0, 0.0, 0.0, d2)
@@ -56,12 +56,12 @@ func test_identical_lifecycles_share_one_program() -> void:
 	assert_eq(ns.program_count(), 1, "应只注册 1 个 program")
 
 
-## b0：BulletData.lifecycle 走 {lifecycle} 入口（优先于 coroutine_script）
-func test_bullet_data_lifecycle_preferred() -> void:
+## SpawnSpec.lifecycle 走 {lifecycle} 入口。
+func test_spawn_spec_lifecycle_preferred() -> void:
 	var backend: KernelBulletHost = autofree(KernelBulletHost.new())
-	var data := BulletData.new()
+	var data := SpawnSpec.new()
 	data.lifecycle = FIX.world_accel(Vector2(0, 200))
-	var spec: Dictionary = backend.prepare_shot(data, Vector2(300.0, 400.0), Vector2.UP)
+	var spec: Dictionary = backend.prepare_spec(data, Vector2(300.0, 400.0), Vector2.UP)
 	assert_eq(spec.get("move"), LifecycleCatalog.MOVE_LIFECYCLE, "应走 lifecycle 入口")
 	assert_eq(spec.get("params", {}).get(&"lifecycle"), data.lifecycle, "应带上该描述符")
 

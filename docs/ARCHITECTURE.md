@@ -44,7 +44,7 @@
 | 系统 | 责任 | 对外接口（intent） | 主要文件 |
 |---|---|---|---|
 | **Boss/敌人** | 演一段阶段 / 生成敌人 | `start_phase(phase)` / `hud`（`BossHud`：名字文字 + 名字/进度点显隐） / `current_phase` / `ctx.enemies.spawn(data)` | `scripts/enemy/boss.gd` / `boss_hud.gd` / `enemy.gd` |
-| **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread(...)` / `death_clear` | `scripts/bullet/*` / `laser/*` · **内核** `gdextension/src/danmaku_store.*` |
+| **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread_spec(...)` / `death_clear` | `scripts/bullet/*` / `laser/*` · **内核** `gdextension/src/danmaku_store.*` |
 | **玩家** | 移动/射击/僚机/道具 | `ctx.player` / `ctx.effects` | `scripts/player/player.gd` / `coroutine/player/*` |
 | **对话** | 纯逻辑步骤 + 渲染 | `ctx.play_dialogue_steps(steps)` / `d.event(...)` | `scripts/coroutine/services/dialogue/*` |
 | **记录** | 持久化符卡簿 | `RecordService.record_phase_*` | `scripts/data/spell_*.gd` |
@@ -57,9 +57,9 @@
 ### 2.1.5 弹幕链路（端到端 · 追一条弹）
 
 ```
-内容面 = data/bullets/<key>.tres（BulletDef：外观/碰撞/朝向）+ 发射脚本里的 BulletData.trajectory(lc)
+内容面 = data/bullets/<key>.tres（BulletDef：外观/碰撞/朝向）+ 发射脚本里的 SpawnSpec.trajectory(lc)
   └─ BulletLifecycle（Phase/Move/Until/Action 描述符，内容直接挂）
-       └─ KernelBulletHost.prepare_shot()        ← 描述符装配 / 缓存
+       └─ KernelBulletHost.prepare_spec()        ← 描述符装配 / 缓存
             └─ KernelNativeSystem.spawn()           ← 原生 DanmakuStore.spawn + set_hitbox + set_program
                  └─ [每物理帧] DanmakuStore.integrate() + behavior_tick()    ← 积分 + 行为，全原生
                       └─ KernelNativeSystem._pull_snapshot()                 ← 原生 → GDScript 只读快照
@@ -83,7 +83,7 @@
 
 | 类别 | 形态 | 例子 | 归属 |
 |---|---|---|---|
-| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.enemies.spawn(data)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
+| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread_spec(...)` `ctx.enemies.spawn(data)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
 | **场景动词**（宏观，跨子系统，一意图） | `dir.verb()` | `dir.boss("boss_mid", data, from, to)` `dir.on(event, handler)` `dir.dialogue(steps)` | `StageDirector` `BossHandle` |
 | **名词构建词** | `Data.builder()` | `ctx.enemies.spawn(EnemyData.new().with_script().pos().param())` | 各 `*Data` |
 | **时序粘合剂** | `timeline.at()/wait()/every()` | `timeline.at(35).do(func(): dir.boss(...))` | `Timeline` |
@@ -166,7 +166,7 @@
 - 加新 bomb = 一个 `XxxBombData extends BombData` + 一个 `KernelXxxBomb extends BombEntity` + `spawn_bomb` 一条分派；不需要动内核。
 
 ### 新增弹幕行为（`move`）
-- **组合现有原语**（推荐）：`LifecycleCatalog.build()` 加分支（`move+params` → `BulletLifecycle` preset）后，内容直接 `BulletData.trajectory(lc)`；**无需改 C++**，也不用写 `*_bullet.gd`。
+- **组合现有原语**（推荐）：`LifecycleCatalog.build()` 加分支（`move+params` → `BulletLifecycle` preset）后，内容直接 `SpawnSpec.trajectory(lc)`；**无需改 C++**，也不用写 `*_bullet.gd`。
 - **要新原语**（新 Move / Until / Action）才动 `gdextension/src/danmaku_store.cpp`（`_exec_move` / `_check_until` / `_exec_action`）+ `BulletLifecycle` 编译；改完重建扩展。
 - 权威参数表见 `CONTENT_GUIDE.md`「弹幕行为接口」。
 
@@ -185,6 +185,7 @@
 - **总纲（本文）**：分层/系统地图/所有权/边界/债/操作指南。
 - **内核迁移（历史，已完成）**：`docs/archive/NEW_KERNEL_REFACTOR_PLAN.md`（Strangler→融合 M1–M3）。
 - **弹幕内核（现状 ✅）**：原生 GDExtension `DanmakuStore` 为**唯一存储**（L3.5-4e/4f，`KernelNativeSystem` 桥接）；设计见 `docs/archive/GDEXTENSION_KERNEL_DESIGN.md`，接入/拆除见 `docs/archive/N2_NATIVE_INTEGRATION_PLAN.md`；冻结参照 `test/reference/`。
+- **弹幕表现力审计（2026-11，AI 生成待复核）**：`docs/DANMAKU_GAP_AUDIT.md`（碰撞扫掠 / 擦弹判定 / pattern 组合 / 确定性回放 / 工作流的差距与优先级；带 `文件:行号` 证据，代码变更后可能失效）。
 - **路线**：`docs/archive/STAGE_FLOW_PLAN.md`（(b) 规划：对象自治/身份归位/命令化 + 七步；Step 1 / 3 / 4 已完成）。
 - **对话**：`CONTENT_GUIDE.md`（根目录，附录 D：当前系统）+ `docs/archive/DIALOGUE.md`（剧本归档）。
 - **符卡**：`docs/archive/SPELL_SYSTEM_TARGET.md`（目标蓝图，核心已由 `boss_catalog.gd` 落地）。
@@ -200,7 +201,7 @@
 ### 8.1 命名约定
 | 类别 | 约定 | 例 |
 |---|---|---|
-| 类名 | PascalCase | `BulletData` |
+| 类名 | PascalCase | `SpawnSpec` |
 | 文件名 | snake_case | `bullet_data.gd` |
 | 私有成员 | `_` 前缀 | `_pool` |
 | 公共成员 | 无前缀 | `active_bullets` |

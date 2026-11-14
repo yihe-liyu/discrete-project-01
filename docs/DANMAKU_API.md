@@ -1,6 +1,6 @@
 # 弹幕内核接口（DANMAKU API）
 
-> **一句话**：给一颗弹写飞行规律 = `BulletData.trajectory(BulletLifecycle)`；发射 = `ctx.bullets.shoot_spread(...)`。
+> **一句话**：给一颗弹写飞行规律 = `SpawnSpec.trajectory(BulletLifecycle)`；发射 = `ctx.bullets.shoot_spread_spec(...)`。
 > 本文是弹幕创作的**唯一权威参考**；教学路径见 `CONTENT_GUIDE.md` §六；原生执行器在 `gdextension/src/danmaku_store.cpp`。
 > 读法：新建弹幕看 §1 + §3.8；查词汇看 §2/§3；发射看 §4；踩坑看 §9；设计动机看附录 A/B（全文在 archive）。
 
@@ -8,7 +8,7 @@
 
 ```
 内容脚本 (CoroutineScript, GDScript 低频)
-   │  构造 BulletData（贴图/判定/阵营）+ trajectory(BulletLifecycle)
+   │  构造 SpawnSpec（贴图/判定/阵营）+ trajectory(BulletLifecycle)
    ▼
 描述符 (BulletLifecycle, 固定 schema)
    │  compile() → packed program（ops/args/phases）
@@ -17,8 +17,8 @@
      位置积分 / 条件 / 动作 / 命中 / 渲染缓冲
 ```
 
-1. **内容不碰 opcode**：只写 `BulletData` / `BulletLifecycle` / `ctx.*`。
-2. **BulletData 实例必须复用**（弹型缓存在实例上）→ §2.3。
+1. **内容不碰 opcode**：只写 `SpawnSpec` / `BulletLifecycle` / `ctx.*`。
+2. **SpawnSpec 实例必须复用**（弹型缓存在实例上）→ §2.3。
 3. **GDScript 不进每帧每弹路径**：per-bullet 逻辑一律描述符；一次性/低频才用 `on_end_call`。
 
 ## 1. 最小可跑示例
@@ -27,76 +27,79 @@
 extends CoroutineScript
 ## 从上往下，每 0.4 秒放一扇 5 连小玉
 
-var _bullet: BulletData          # 成员：建一次、复用（铁律）
+var _spec: SpawnSpec            # 成员：建一次、复用（铁律）
 
 func _tick(p_ctx: StageContext) -> Variant:
-	if _bullet == null:
-		_bullet = BulletData.new().tex("小玉").speed(220).color(Color.AQUA).enemy()
-	_bullet.trajectory(BulletLifecycle.new().until_never())
-	p_ctx.bullets.shoot_spread(_bullet, 5, deg_to_rad(40.0), Vector2.DOWN, target.global_position)
+	if _spec == null:
+		_spec = SpawnSpec.new().tex("小玉").speed(220).color(Color.AQUA).enemy()
+	_spec.trajectory(BulletLifecycle.new().until_never())
+	p_ctx.bullets.shoot_spread_spec(_spec, 5, deg_to_rad(40.0), Vector2.DOWN, target.global_position)
 	return p_ctx.clock.wait(0.4)
 ```
 
 - `target` = 宿主注入的节点（敌人 / Boss 自己）。
-- 返回值语义见 §5.1；`shoot_spread` 的 `base_dir` 定方向、`data.velocity.length()` 定速度（§4.1）。
+- 返回值语义见 §5.1；`shoot_spread_spec` 的 `base_dir` 定方向、`spec.velocity.length()` 定速度（§4.1）。
 
-## 2. BulletData（弹型 + 构造链）
+## 2. SpawnSpec（发射描述 + 构造链）
 
-`scripts/data/bullet_data.gd` ｜ `extends Resource, class_name BulletData`
+`scripts/data/spawn_spec.gd` ｜ `extends RefCounted, class_name SpawnSpec`
 
 ### 2.1 字段
 
 | 字段 | 类型 | 默认 | 说明 |
 |---|---|---|---|
+| bullet_def | BulletDef | null | `tex(key)` 载入的外形/判定/朝向来源 |
 | texture | Texture2D | null | 贴图（用 `tex(key)` 设，别手写） |
-| tint_mode | TintMode | MULTIPLY | MULTIPLY=贴图×tint；BLEND=取贴图亮度混 tint（敌弹换色） |
 | tint | Color | WHITE | 染色 |
+| use_blend | bool | true | true=取贴图亮度混 tint（敌弹换色）；false=贴图×tint（自机弹保原色） |
 | damage | float | 10.0 | 基础伤害（支持小数，累积到整才扣血） |
 | velocity | Vector2 | (0,-1) | **只取长度当速度**；方向由发射时的 direction 决定 |
-| faction | Faction | PLAYER | PLAYER / ENEMY / BOMB |
-| hitbox_shape | HitboxShape | CIRCLE | CIRCLE / RECTANGLE |
-| hitbox_radius | float | 4.0 | 圆判定半径 |
-| hitbox_size | Vector2 | (8,8) | 矩形判定尺寸（shape=RECTANGLE 才用） |
+| faction | Faction | PLAYER | PLAYER / ENEMY |
+| kind | BulletType.Kind | POINT | POINT / LASER（激光段供整批淡出） |
+| hitbox_shape | HitboxShape | CIRCLE | CIRCLE / RECTANGLE（用 `hitbox_circle/rect` 设） |
+| hitbox_radius | float | -1.0 | 圆判定半径；-1 = 沿用 `bullet_def` |
+| hitbox_size | Vector2 | ZERO | 矩形判定尺寸；ZERO = 沿用 `bullet_def` |
 | hitbox_offset | Vector2 | ZERO | 判定偏移 |
-| follow_dir | bool | true | 贴图/判定随飞行方向旋转；圆弹设 false（省一次旋转，视觉不变） |
-| dir_offset | float | 0.0 | 朝向补偿（弧度，仅 follow_dir 时生效；素材朝右=0、朝上=+PI/2） |
+| follow_dir_override | int | -1 | -1 = 用 `bullet_def`；0/1 = 明确覆盖（用 `facing()` 设） |
+| dir_offset_override | float | NAN | 朝向补偿（弧度，仅 follow_dir 时生效；素材朝右=0、朝上=+PI/2） |
 | hit_effect | PackedScene | null | 命中特效场景 |
 | hit_sfx | String | "" | 命中音效 key（`AssetRegistry.sounds`；空=normal_damage） |
-| is_spawn_fog | bool | true | 是否跟随阵营出生雾；`.no_spawn_fog()` 逐型关（与 `.enemy()` 顺序无关） |
+| spawn_fog | int | -1 | -1 = 阵营默认；0 = 关闭；1 = 打开 |
 | spawn_fx | EffectType | null | 这型的出生特效（null=用阵营默认） |
 | out_grace | float | 0.0 | **逐弹出界宽限（秒）**：出界后仍活这么久；0 = 出界立即回收 |
 | wrap_mask | int | 0 | 环绕边掩码：1 左 / 2 右 / 4 上 / 8 下 |
-| lifecycle | BulletLifecycle | null | 弹道描述符（**推荐主路**） |
+| lifecycle | BulletLifecycle | null | 弹道描述符 |
 | lifecycle_anchor | Variant | null | per-shot 锚点 `{id, offset, use_global}`（激光用） |
-| coroutine_script / params | — | — | **已弃用**：旧端口载体 |
+| child | SpawnSpec | null | 一层替换弹（可选） |
 
-> `faction` 用 `enemy()` / `player()` / `bomb()` 设；`damage` / `hit_sfx` 直接赋值。
+> `faction` 用 `enemy()` / `player()` 设；`damage` / `hit_sfx` / `kind` 直接赋值。
 
 ### 2.2 构造链方法
 
 | 方法 | 作用 |
 |---|---|
-| `.def(d)` | 直接传 `BulletDef` 载入**外观 + 碰撞 + 朝向** |
-| `.tex(key)` | 按 key 查 `data/bullets/<key>.tres`（**当前内容主路**；key 来自 §7.1，拼错会告警但仍用默认判定） |
+| `.tex(key)` | 按 key 查 `data/bullets/<key>.tres`（**内容主路**；key 来自 §7.1，拼错会告警但仍用默认判定） |
 | `.speed(v)` | 速度大小（`velocity.y = v`，长度 = v） |
-| `.dir(x, y)` | 直接设 velocity（方向+速度，仅 `shoot_spread` 传 `ZERO` 方向时用） |
-| `.color(c)` / `.blend(true)` | 染色 / BLEND 换色（默认 MULTIPLY） |
-| `.enemy()` / `.player()` / `.bomb()` | 阵营：敌弹 / 自机弹 / 炸弹 |
+| `.direction(x, y)` | 直接设 velocity（方向+速度，仅发射时传 `ZERO` 方向时用） |
+| `.color(c)` / `.blend(bool)` | 染色 / 开关 BLEND 换色（默认开） |
+| `.enemy()` / `.player()` | 阵营：敌弹 / 自机弹 |
 | `.with_spawn_fog(effect)` / `.no_spawn_fog()` | 打开/换出生雾 / 关掉出生雾 |
-| `.trajectory(lc, anchor)` | **挂描述符**（主路） |
+| `.trajectory(lc, anchor)` | **挂描述符** |
 | `.grace(v)` | out_grace |
-| `.wrap_around()` | 四边环绕（会 invalidate 弹型缓存） |
-| `.wrap_horizontal()` / `.wrap_vertical()` | 只左右 / 只上下环绕 |
-| `.wrap_edges(mask)` | 自定义边，mask 用 `BulletData.WrapEdge` |
-| `.behavior(script)` | **已弃用** |
+| `.wrap_around()` / `.wrap_horizontal()` / `.wrap_vertical()` | 四边 / 左右 / 上下环绕 |
+| `.wrap_edges(mask)` | 自定义边，mask 用 `SpawnSpec.WrapEdge` |
+| `.hitbox_circle(radius, offset)` / `.hitbox_rect(size, offset)` | 覆盖判定 |
+| `.facing(follow, offset)` | 覆盖朝向（圆弹 `facing(false)`） |
+| `.with_behavior(spec)` | 挂 native behavior（C++ pack） |
 
 > **未知 tex key 会 `push_warning` + 保持默认**（不静默回退，但弹仍会发出去）——只从 §7.1 表取 key。
 
 ### 2.3 弹型缓存（实例复用铁律）
 
-- `to_bullet_type()` 在**首次发射**时把类型级字段（贴图/阵营/判定/伤害/命中特效/命中音效）快照到内核弹型，缓存挂在 **BulletData 实例**上。
-- **同一实例反复发射 = 共用同一弹型**；每发 `BulletData.new()` 会让内核弹型表膨胀。
-- 速度 / tint **不属弹型**，每发可改；运行期改类型级字段 → 必须 `invalidate_bullet_type()`。
+- `to_bullet_type()` 在**首次发射**时把类型级字段（贴图/阵营/判定/伤害/命中特效/命中音效）快照到内核弹型，缓存挂在 **SpawnSpec 实例**上。
+- **同一实例反复发射 = 共用同一弹型**；每发 `SpawnSpec.new()` 会让内核弹型表膨胀。
+- 速度 / tint **不属弹型**，每发可改；类型级字段请在构造时定好，不要运行期改型。
+- 构造链 setter 会主动失效缓存；直接改字段后要再走一次 setter，或重建实例。
 
 ## 3. BulletLifecycle（弹道描述符）
 
@@ -159,7 +162,7 @@ Phase = { moves: [Move...], until: Until, on_end: [Action...] }
 | Action | 签名 | 语义 |
 |---|---|---|
 | sfx | `sfx(key, db=AudioManager.SFX_LEVEL_DB)` | 播音效（key 见 §7.2；默认是总电平，不是 0 dB） |
-| emit | `emit(spawn, dir, speed=0, at=AT_CURRENT)` | 生成替换弹；`spawn` = BulletData / Callable / 数组；`at` = AT_CURRENT / AT_PHASE_END |
+| emit | `emit(spawn, dir, speed=0, at=AT_CURRENT)` | 生成替换弹；`spawn` = SpawnSpec / Callable / 数组；`at` = AT_CURRENT / AT_PHASE_END |
 | emit_variant | `emit_variant(spawns, dir, speed=0, at=AT_CURRENT)` | 内核抽一次 RNG 定分支（0=未中→spawns[0]，1=命中→spawns[1]）；`dir` 必须是 `chance_toward(...)` |
 | emit_laser | `emit_laser(skeleton, color, opts={}, offset=ZERO, at_current=false)` | 相位结束时发激光；骨架默认世界坐标；`at_current=true` 时按相位结束位置平移；不进内核弹池 |
 | emit_laser_dir | `emit_laser_dir(skeleton, color, dir, opts={}, offset=ZERO, at_current=true)` | 相位结束发激光，按 `dir`（常用 `forward()`）旋转骨架；首尾点方向作为基准 |
@@ -233,7 +236,7 @@ data.trajectory(lc)
 | 躲避自机 | `until_near(T_PLAYER, prox).every(jump)` + `on_end_heading(away(T_PLAYER))` + `then()` + `until_elapsed(flee)` + `despawn()` |
 | 锚定激光 | `anchor_drift(anchor, offset, angle, speed, use_global, initial, render_heading)` + `until_never()` |
 
-> 不再新增 preset：组合由内容直接写。`emit` / `emit_variant` 用 `BulletData` 模板。
+> 不再新增 preset：组合由内容直接写。`emit` / `emit_variant` 用 `SpawnSpec` 模板。
 > `LifecycleCatalog` 只保留 `{lifecycle: BulletLifecycle}` 的兼容入口；旧 `{move: ...}` preset 名一律返回 null。
 
 ### 3.9 编译与共享
@@ -263,13 +266,13 @@ b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_
 | `emit` / `on_end_heading` 的 `dir` | 相位结束、逐颗 | `at` 落点、目标、发射者当前 heading、当前 vel、场边 | `random_dir` 1 次/颗 |
 | `emit_variant` | 相位结束、逐颗 | 同上 | 分支 1 次；选中分支若含 `random_dir` 另计 |
 | `emit_speed_rel` | 宿主事件落地、逐颗 | base speed + `[min, max]` 倍率 | 1 次/颗 |
-| `emit` 的 spawn 模板 | 宿主事件落地 | `BulletData` / `Callable`；每发 velocity 由事件写 | 无 |
+| `emit` 的 spawn 模板 | 宿主事件落地 | `SpawnSpec` / `Callable`；每发 velocity 由事件写 | 无 |
 | `sfx` / `on_end_call` | 宿主事件落地（原生只回事件） | key / db / pos / boss 信息 | 无 |
 | `despawn` / `clear_fx` | 相位结束，按 append 顺序 | 当前 pos / color | 无 |
 | builder 参数、`DirSpec` 的 kind / target / angle / p、`emit_speed_rel` 的 min/max | 构建时（内容脚本里） | 无 | 无 |
 | `compile_program()` / `content_signature()` | 首次使用 / 内容变化后，按缓存 | 结构 + 宿主表身份 | 无 |
 
-> 内容脚本自己的 `_tick` / 波次循环不在 DSL 内：`shoot_spread(...)` 的参数在**调用那一刻**求值，
+> 内容脚本自己的 `_tick` / 波次循环不在 DSL 内：`shoot_spread_spec(...)` 的参数在**调用那一刻**求值，
 > 该次发射的弹型 / velocity 在入队时快照；这不是 lifecycle 的 phase-end 求值。
 
 **由此得到两条实用判断：**
@@ -330,18 +333,18 @@ ctx.telegraph.show_chain_many(
 
 ```gdscript
 ctx.telegraph.shoot_tracked(
-    弹型, 1, 0.0, 方向, 发射点)
+    spec, 1, 0.0, 方向, 发射点)
 ```
 
-[code]shoot_spread_ids[/code] 返回的是稳定 uid，不是行号：原生 swap-remove 搬行时 uid 跟着搬，外部引用不会指到另一颗弹。
-[code]shoot_tracked[/code] 是发射 + 跟踪的一行入口；也可以手写 [code]shoot_spread_ids[/code] + [code]track_bullet[/code]。
+[code]shoot_spread_spec_ids_spec[/code] 返回的是稳定 uid，不是行号：原生 swap-remove 搬行时 uid 跟着搬，外部引用不会指到另一颗弹。
+[code]shoot_tracked[/code] 是发射 + 跟踪的一行入口；也可以手写 [code]shoot_spread_spec_ids_spec[/code] + [code]track_bullet[/code]。
 [code]track_bullet[/code] 按真实弹当前 phase / pos / vel 滚动刷新：phase 起点缓存完整 chain，之后只按当前位置裁掉前缀；弹死亡自动清线。
 多颗用 [code]track_bullets(uids, lifecycle)[/code]：每颗各一条，死一颗掉一条。
 `emit` 子代用 [code]track_emitted(lifecycle)[/code] 注册，之后 native 行为里生成的同 lifecycle 子弹会自动进入跟踪：
 
 ```gdscript
 ctx.telegraph.track_emitted(反射弹.lifecycle)
-ctx.bullets.shoot_spread(开花弹, ...)
+ctx.bullets.shoot_spread_spec(开花弹, ...)
 ```
 同一波继续追加用 [code]add_tracked_bullets(uids, lifecycle)[/code]：不清掉上一波还没死的弹，旧路径继续跟着旧弹更新。
 这是滚动预测，不是短前瞻：路径始终从当前弹位置开始，但 chain 只在 phase 变化时重算。
@@ -369,18 +372,19 @@ path.clear_path()
 
 `scripts/coroutine/services/bullet_service.gd`
 
-### 4.1 shoot_spread（唯一弹幕发射入口）
+### 4.1 shoot_spread_spec（唯一弹幕发射入口）
 
 ```gdscript
-ctx.bullets.shoot_spread(bullet_data: BulletData, count: int, spread_angle: float,
+ctx.bullets.shoot_spread_spec(spec: SpawnSpec, count: int, spread_angle: float,
 	base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void
 ```
 
 - `count == 1`：一发，方向 = base_dir，忽略 spread_angle。
 - `count > 1`：`spread_angle >= TAU` → 铺满一圈，step = spread/count；否则以 base_dir 为中心左右展开，step = spread/(count-1)。
-- 每发速度 = `bullet_data.velocity.length()`；方向来自这里，不是 data.velocity 的方向。
+- 每发速度 = `spec.velocity.length()`；方向来自这里，不是 spec.velocity 的方向。
 - 想逐发不同速度/颜色：复用实例、每发改 `velocity` / `tint` 后再发射（入队瞬间快照，安全）。
-- 需要逐弹稳定句柄（预览 / 调试）时用 [code]shoot_spread_ids[/code]；普通发射仍用 [code]shoot_spread[/code]。
+- 需要逐弹稳定句柄（预览 / 调试）时用 [code]shoot_spread_spec_ids_spec[/code]。
+- 其他入口：`shoot_spec`（单发）、`shoot_directions_spec`（方向数组）。
 
 ### 4.2 激光
 
@@ -461,7 +465,7 @@ tl.loop()
 | 服务 | 关键方法 |
 |---|---|
 | `ctx.clock` | `wait(sec)` / `wait_frames(n)` |
-| `ctx.bullets` | `shoot_spread` / `fire_*_laser` / `death_clear` / `shoot_bomb` / `clear_enemy_bullets` |
+| `ctx.bullets` | `shoot_spread_spec` / `fire_*_laser` / `death_clear` / `shoot_bomb` / `clear_enemy_bullets` |
 | `ctx.player` | `get_player()` / `get_position()` |
 | `ctx.boss` | `current()` / `exists()` |
 | `ctx.enemies` | `spawn(data)` / `despawn(enemy)` / `despawn_all()` / `despawn_clear(enemy)` |
@@ -481,7 +485,7 @@ tl.loop()
 
 ## 7. 素材与常量表
 
-### 7.1 子弹贴图 key（`BulletData.tex(key)` 唯一来源）
+### 7.1 子弹贴图 key（`SpawnSpec.tex(key)` 唯一来源）
 
 **数据源 = `data/bullets/<key>.tres`**（`BulletDef`：外观 + 碰撞 + 朝向；`BulletCatalog` 扫目录建索引）。
 贴图本体 = 1024² 图集 `assets/Textures/bullet/bullet.png`（`laser` 除外）；运行时类型是 `BulletType`（不是内容资源）。
@@ -539,9 +543,9 @@ tl.loop()
 ### 7.3 阵营 / 混合
 
 ```gdscript
-BulletData.Faction.PLAYER / ENEMY / BOMB
-BulletData.TintMode.MULTIPLY   # rgb = 贴图 × tint（tint=白 = 原色）
-BulletData.TintMode.BLEND      # rgb = mix(tint, 白, 贴图亮度)（敌弹换色）
+SpawnSpec.Faction.PLAYER / ENEMY
+spec.blend(true)    # 取贴图亮度混 tint（敌弹换色）
+spec.blend(false)   # rgb = 贴图 × tint（自机弹保原色）
 ```
 
 ## 8. 文件与接线
@@ -581,17 +585,17 @@ data/stages/<stage>/
 
 ## 9. 陷阱清单（必读）
 
-1. **BulletData 必须复用实例**（弹型缓存在实例上）；每发 `new()` → 弹型表膨胀。
+1. **SpawnSpec 必须复用实例**（弹型缓存在实例上）；每发 `new()` → 弹型表膨胀。
 2. **tex key 拼错会告警，但仍用默认判定**（4px）→ 只从 §7.1 表取 key。
-3. **速度来自 `data.velocity.length()`，方向来自发射参数**；别指望 `data.velocity` 的方向。
+3. **速度来自 `spec.velocity.length()`，方向来自发射参数**；别指望 `spec.velocity` 的方向。
 4. **`then()` 的新相位 `until=never`**，挂 `on_end` 永不触发。
 5. **`speed_mul` 是每帧乘**（复利/指数）；线性用 `speed_lerp`、瞬时用 `set_speed`。
 6. **`until_rect` 的 `edges` 只在 outside 模式生效**；`emit(..., at=AT_PHASE_END)` 用它输出的夹边落点。
 7. **`toward` / `away` 目标不可用时退化为向下**；`chance_toward` 命中时 angle 被忽略。
 8. **`on_end_call` 的 hook 名要先注册**；否则静默不调。
 9. **变体发射的模板要与分支数对齐**：`chance_toward` 只有 0/1 两支。
-10. **自机弹 tint 会被记忆值往红 lerp**（`prepare_shot`）；内容设的 tint 只是基底。
-11. **改类型级字段后要 `invalidate_bullet_type()`**。
+10. **自机弹 tint 会被记忆值往红 lerp**（`prepare_spec`）；内容设的 tint 只是基底。
+11. **类型级字段在首次发射时快照**；请在构造时定好，不要在运行期改型。
 12. **位置来源是模式、不是可叠加项**：多个 `position` op = 模式切换、后写者胜；要分段用 `then()`。
 13. **同相位状态槽 ≤ 8**；超出会被内核拒绝注册，该弹按直线飞。
 14. **RNG 单通道、按「op 顺序 + 弹行遍历顺序」消耗**：加/删/重排 `random_dir` / `emit_variant` 会平移后续随机序列（回放仍可复现，但结果会变）。
@@ -605,16 +609,16 @@ data/stages/<stage>/
 ```gdscript
 extends CoroutineScript
 
-var _b: BulletData
+var _spec: SpawnSpec
 
 func _tick(p_ctx: StageContext) -> Variant:
-	if _b == null:
-		_b = BulletData.new().tex("小玉").speed(160).color(Color.AQUA).blend(true).enemy()
+	if _spec == null:
+		_spec = SpawnSpec.new().tex("小玉").speed(160).color(Color.AQUA).blend(true).enemy()
 	var lc := BulletLifecycle.new()
 	lc.accel_world(Vector2(0, 60))
 	lc.until_never()
-	_b.trajectory(lc)
-	p_ctx.bullets.shoot_spread(_b, 12, TAU, Vector2.RIGHT, target.global_position)
+	_spec.trajectory(lc)
+	p_ctx.bullets.shoot_spread_spec(_spec, 12, TAU, Vector2.RIGHT, target.global_position)
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"], -10.0)
 	return p_ctx.clock.wait(1.2)
 ```
@@ -653,9 +657,9 @@ lc.despawn()
 ## 附录 B · 一颗弹的完整路径（速查）
 
 ```
-BulletData（贴图/判定/阵营 + trajectory）
-  → ctx.bullets.shoot_spread
-  → KernelBulletHost.prepare_shot / KernelNativeSystem.spawn
+SpawnSpec（贴图/判定/阵营 + trajectory）
+  → ctx.bullets.shoot_spread_spec
+  → KernelBulletHost.prepare_spec / KernelNativeSystem.spawn
   → DanmakuStore.integrate + behavior_tick（原生）
   → 只读快照 → BulletMultiMesh → MultiMesh
   → 判定 KernelBulletPhysics（原生宽相网格）

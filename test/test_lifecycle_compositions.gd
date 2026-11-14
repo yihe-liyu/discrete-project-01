@@ -98,8 +98,8 @@ func test_world_accel_composition_parity() -> void:
 func test_radial_accel_composition_parity() -> void:
 	var boss: Node2D = add_child_autofree(Node2D.new())
 	boss.position = Vector2(448.0, 100.0)
-	var factory := func() -> BulletData:
-		var d := BulletData.new(); d.velocity = Vector2(1.0, 1.0); return d
+	var factory := func() -> SpawnSpec:
+		var d := SpawnSpec.new(); d.velocity = Vector2(1.0, 1.0); return d
 	var ha := FakeHost.new(); ha.boss = boss
 	var hb := FakeHost.new(); hb.boss = boss
 	var beh = preload("res://test/reference/behavior/radial_accel_behavior.gd").new()

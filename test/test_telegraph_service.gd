@@ -58,8 +58,8 @@ func test_track_bullets_prunes_dead_uids() -> void:
 	bs.bullet_manager = bm
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(5.0).despawn()
-	var data := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
-	var uids: Array[int] = bs.shoot_spread_ids(
+	var data := SpawnSpec.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
+	var uids: Array[int] = bs.shoot_spread_ids_spec(
 		data, 3, TAU, Vector2.DOWN, Vector2(448, 240))
 	assert_eq(uids.size(), 3)
 
@@ -74,8 +74,8 @@ func test_track_bullets_prunes_dead_uids() -> void:
 
 	var lc2 := BulletLifecycle.new()
 	lc2.until_elapsed(5.0).despawn()
-	var data2 := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc2)
-	var more: Array[int] = bs.shoot_spread_ids(
+	var data2 := SpawnSpec.new().tex("小玉").speed(100.0).enemy().trajectory(lc2)
+	var more: Array[int] = bs.shoot_spread_ids_spec(
 		data2, 2, TAU, Vector2.DOWN, Vector2(448, 240))
 	assert_true(service.add_tracked_bullets(more, lc2), "不同敌人实例的 lifecycle 也应追加")
 	path.call("_process", 0.2)
@@ -108,7 +108,7 @@ func test_shoot_tracked_is_one_call() -> void:
 	bs.bullet_manager = bm
 	var lc := BulletLifecycle.new()
 	lc.until_elapsed(5.0).despawn()
-	var data := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
+	var data := SpawnSpec.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
 	var path = PATH.new()
 	add_child_autofree(path)
 	var service = SERVICE.new()
@@ -134,10 +134,10 @@ func test_track_emitted_filters_lifecycle() -> void:
 	lc1.until_elapsed(5.0).despawn()
 	var lc2 := BulletLifecycle.new()
 	lc2.until_elapsed(5.0).despawn()
-	var d1 := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc1)
-	var d2 := BulletData.new().tex("小玉").speed(100.0).enemy().trajectory(lc2)
-	var uid1: int = bs.shoot_spread_ids(d1, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
-	var uid2: int = bs.shoot_spread_ids(d2, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
+	var d1 := SpawnSpec.new().tex("小玉").speed(100.0).enemy().trajectory(lc1)
+	var d2 := SpawnSpec.new().tex("小玉").speed(100.0).enemy().trajectory(lc2)
+	var uid1: int = bs.shoot_spread_ids_spec(d1, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
+	var uid2: int = bs.shoot_spread_ids_spec(d2, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
 
 	var path = PATH.new()
 	add_child_autofree(path)
