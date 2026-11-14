@@ -20,8 +20,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	)
 
 	timeline.at(6.0).do(func():
-		ctx.background.tween_env_fog(Color(0.549, 0.479, 0.721, 1.0), 0.0, 10.0)
-		ctx.background.tween_camera_rotation(Vector3(deg_to_rad(-60), 0, 0), 8.0, Tween.EASE_IN_OUT, Tween.TRANS_CUBIC)
+		ctx.background.tween_camera_rotation(Vector3(deg_to_rad(-60), 0, 0), 9.0, Tween.EASE_IN_OUT, Tween.TRANS_QUAD)
 	)
 
 	timeline.at(14.0).do(func():

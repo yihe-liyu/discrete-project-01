@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StageData" format=3 uid="uid://g5m0g6nu0xk"]
+
+[ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="1_gckcd"]
+[ext_resource type="Script" uid="uid://b7rwbnxux5r4b" path="res://data/stages/stage03A/stage_data/stage03a.gd" id="1_sxpkl"]
+
+[resource]
+script = ExtResource("1_gckcd")
+stage_id = 3
+stage_no = 3
+display_name = "Stage３Ａ"
+bgm_key = "stage3A"
+create_script = ExtResource("1_sxpkl")
+metadata/_custom_type_script = "uid://bvlmm7m3gtwc0"

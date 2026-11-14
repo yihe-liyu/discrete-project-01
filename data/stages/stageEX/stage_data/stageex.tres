@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="StageData" format=3 uid="uid://byfuiidg0nehp"]
 
+[ext_resource type="Script" uid="uid://dl787d8u0qkec" path="res://data/stages/stageEX/stage_data/stageex.gd" id="1_mpy8h"]
 [ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="1_v7ntl"]
 
 [resource]
@@ -8,4 +9,5 @@ stage_id = 9
 stage_no = 7
 display_name = "StageＥＸ"
 bgm_key = "stageEX"
+create_script = ExtResource("1_mpy8h")
 metadata/_custom_type_script = "uid://bvlmm7m3gtwc0"

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="StageRoute" format=3 uid="uid://c4hc4m2sgkptu"]
+
+[ext_resource type="Script" uid="uid://d13d8g6ecjumn" path="res://scripts/data/stage_route.gd" id="1"]
+[ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="2"]
+[ext_resource type="Resource" uid="uid://byfuiidg0nehp" path="res://data/stages/stageEX/stage_data/stageex.tres" id="5"]
+
+[resource]
+script = ExtResource("1")
+route_id = &"extra"
+difficulty = 4
+stages = Array[ExtResource("2")]([ExtResource("5")])

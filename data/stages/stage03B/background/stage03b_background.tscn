@@ -45,6 +45,7 @@ size = Vector2(512, 512)
 resource_local_to_scene = true
 shader = ExtResource("10_fog_shader")
 shader_parameter/noise_tex = ExtResource("11_cloud")
+shader_parameter/time = 0.0
 shader_parameter/fog_dark = 0.8
 shader_parameter/sun_pos = Vector2(0.5, 0.18)
 shader_parameter/sun_fog_radius = 0.1
@@ -82,7 +83,7 @@ script = ExtResource("5_plane_script")
 plane_size = Vector2(640, 640)
 tiling = Vector2(12, 12)
 scroll_speed = Vector2(-0.01, -0.4)
-modulate = Color(3.2944162, 3.2944162, 3.2944162, 0.0050000004)
+modulate = Color(4.415934, 4.415934, 4.415934, 0.0050000004)
 base_texture = ExtResource("8_layer2")
 
 [node name="Layer3" type="MeshInstance3D" parent="." index="4" unique_id=2129610424]
@@ -92,7 +93,7 @@ script = ExtResource("5_plane_script")
 plane_size = Vector2(640, 640)
 tiling = Vector2(12, 12)
 scroll_speed = Vector2(-0.01, -0.4)
-modulate = Color(3.2944162, 3.2944162, 3.2944162, 0.010000001)
+modulate = Color(4.415934, 4.415934, 4.415934, 0.010000001)
 base_texture = ExtResource("8_layer2")
 
 [node name="Layer4" type="MeshInstance3D" parent="." index="5" unique_id=987368197]
@@ -102,19 +103,19 @@ script = ExtResource("5_plane_script")
 plane_size = Vector2(640, 640)
 tiling = Vector2(12, 12)
 scroll_speed = Vector2(-0.01, -0.4)
-modulate = Color(3.2944162, 3.2944162, 3.2944162, 0.020000001)
+modulate = Color(4.415934, 4.415934, 4.415934, 0.020000001)
 base_texture = ExtResource("8_layer2")
 
 [node name="Decor" type="Node" parent="." index="6" unique_id=38297114]
 script = ExtResource("6_decor")
 
-[node name="FogFX" type="Node" parent="."]
+[node name="FogFX" type="Node" parent="." index="7" unique_id=1860250831]
 script = ExtResource("9_fogfx")
 
-[node name="FogLayer" type="CanvasLayer" parent="FogFX"]
+[node name="FogLayer" type="CanvasLayer" parent="FogFX" index="0" unique_id=373074430]
 layer = 5
 
-[node name="FogRect" type="ColorRect" parent="FogFX/FogLayer"]
+[node name="FogRect" type="ColorRect" parent="FogFX/FogLayer" index="0" unique_id=21228030]
 material = SubResource("Mat_Fog03B")
 anchors_preset = 15
 anchor_right = 1.0

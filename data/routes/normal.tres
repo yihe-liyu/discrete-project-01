@@ -1,13 +1,11 @@
-[gd_resource type="Resource" script_class="StageRoute" format=3]
+[gd_resource type="Resource" script_class="StageRoute" format=3 uid="uid://dhffmmdjmnxcl"]
 
-[ext_resource type="Script" path="res://scripts/data/stage_route.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/data/stage_data.gd" id="2"]
-[ext_resource type="Resource" path="res://data/stages/stage01/stage_data/stage01.tres" id="3"]
-[ext_resource type="Resource" path="res://data/stages/stage02/stage_data/stage02.tres" id="4"]
-[ext_resource type="Resource" path="res://data/stages/stageEX/stage_data/stageex.tres" id="5"]
+[ext_resource type="Script" uid="uid://d13d8g6ecjumn" path="res://scripts/data/stage_route.gd" id="1"]
+[ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="2"]
+[ext_resource type="Resource" uid="uid://crjdq5vsmukn7" path="res://data/stages/stage01/stage_data/stage01.tres" id="3"]
+[ext_resource type="Resource" uid="uid://gkf06dncu6tf" path="res://data/stages/stage02/stage_data/stage02.tres" id="4"]
 
 [resource]
 script = ExtResource("1")
 route_id = &"normal"
-difficulty = 1
 stages = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4")])

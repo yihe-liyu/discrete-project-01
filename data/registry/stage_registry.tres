@@ -4,7 +4,14 @@
 [ext_resource type="Script" uid="uid://bvlmm7m3gtwc0" path="res://scripts/data/stage_data.gd" id="2"]
 [ext_resource type="Resource" uid="uid://crjdq5vsmukn7" path="res://data/stages/stage01/stage_data/stage01.tres" id="3_63qft"]
 [ext_resource type="Resource" uid="uid://gkf06dncu6tf" path="res://data/stages/stage02/stage_data/stage02.tres" id="4_eeeae"]
+[ext_resource type="Resource" uid="uid://g5m0g6nu0xk" path="res://data/stages/stage03A/stage_data/stage03a.tres" id="5_f0i5q"]
+[ext_resource type="Resource" uid="uid://b8h4hxxbr7w6m" path="res://data/stages/stage03B/stage_data/stage03b.tres" id="5_pomo8"]
+[ext_resource type="Resource" uid="uid://byfuiidg0nehp" path="res://data/stages/stageEX/stage_data/stageex.tres" id="6_eeeae"]
+[ext_resource type="Resource" uid="uid://bxgqnbm70274g" path="res://data/stages/stage04/stage_data/stage04.tres" id="7_yvc2d"]
+[ext_resource type="Resource" uid="uid://cnmwwitady60w" path="res://data/stages/stage05/stage05.tres" id="8_n8p27"]
+[ext_resource type="Resource" uid="uid://clqwiq7ixqyqo" path="res://data/stages/stage06A/stage06a.tres" id="9_xbern"]
+[ext_resource type="Resource" uid="uid://b7ussg0p2bns8" path="res://data/stages/stage06B/stage06b.tres" id="10_i4fui"]
 
 [resource]
 script = ExtResource("1")
-stages = Array[ExtResource("2")]([ExtResource("3_63qft"), ExtResource("4_eeeae")])
+stages = Array[ExtResource("2")]([ExtResource("3_63qft"), ExtResource("4_eeeae"), ExtResource("5_f0i5q"), ExtResource("5_pomo8"), ExtResource("7_yvc2d"), ExtResource("8_n8p27"), ExtResource("9_xbern"), ExtResource("10_i4fui"), ExtResource("6_eeeae")])

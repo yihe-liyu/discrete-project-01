@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BossData" format=3 uid="uid://b5npmxyno8rv"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_dxtcj"]
+[ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="2_4u4an"]
+
+[resource]
+script = ExtResource("2_4u4an")
+boss_name = "慧音"
+section_label = "道中"
+stage_id = 3
+metadata/_custom_type_script = "uid://be7pe6gf4etpl"

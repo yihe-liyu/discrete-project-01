@@ -4,6 +4,9 @@
 [ext_resource type="Resource" path="res://data/stages/stage04/background/stage04_env.tres" id="2_env"]
 [ext_resource type="Script" path="res://scripts/background/infinite_valley.gd" id="3_valley"]
 [ext_resource type="Script" path="res://data/stages/stage04/background/stage04_decor.gd" id="4_decor"]
+[ext_resource type="PackedScene" path="res://addons/raymarched_mountains/demo/demo.tscn" id="8_ray"]
+[ext_resource type="Texture2D" path="res://addons/raymarched_mountains/src/Textures/Heightmap.tres" id="9_height"]
+[ext_resource type="Texture2D" path="res://addons/raymarched_mountains/src/Textures/Gradient.tres" id="10_fog"]
 [ext_resource type="Script" path="res://scripts/background/far_ridge.gd" id="5_far"]
 [ext_resource type="Script" path="res://scripts/background/far_ridge.gd" id="6_near"]
 
@@ -29,33 +32,7 @@ camera_z = 30.0
 base_color = Color(0.05, 0.1, 0.09, 1)
 peak_color = Color(0.28, 0.4, 0.38, 1)
 
-[node name="FarRidge" type="MeshInstance3D" parent="."]
-script = ExtResource("5_far")
-width = 6000.0
-height = 1100.0
-z_center = -3000.0
-segments = 160
-noise_seed = 71
-noise_frequency = 0.0018
-bottom_color = Color(0.42, 0.52, 0.62, 1)
-top_color = Color(0.72, 0.8, 0.86, 1)
-
-[node name="NearFarRidge" type="MeshInstance3D" parent="."]
-script = ExtResource("6_near")
-width = 5000.0
-height = 700.0
-z_center = -2300.0
-segments = 140
-noise_seed = 99
-noise_frequency = 0.0025
-bottom_color = Color(0.3, 0.4, 0.48, 1)
-top_color = Color(0.56, 0.65, 0.7, 1)
-
-[node name="Sun" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-16, -72, 0)
-light_color = Color(1, 0.9, 0.76, 1)
-light_energy = 3.0
-shadow_enabled = true
+[node name="RaymarchDemo" parent="." instance=ExtResource("8_ray")]
 
 [node name="Decor" type="Node" parent="."]
 script = ExtResource("4_decor")
