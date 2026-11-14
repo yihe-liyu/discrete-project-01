@@ -46,12 +46,21 @@ func _on_start() -> void:
 	回弹模板 = EmitTemplate.new(&"卡摩瑞一非_rebound", 反弹弹)
 
 
+## 模板 / 音效是卡级资源；与每波发弹解耦，失败时响亮返回。
+func _ensure_rebound_resources(p_ctx: StageContext) -> bool:
+	if 撞墙音效id < 0:
+		撞墙音效id = p_ctx.bullets.register_behavior_sfx(AssetRegistry.sounds.get("kira"))
+	if p_ctx.bullets.has_emit_template(&"卡摩瑞一非_rebound"):
+		return true
+	if not p_ctx.bullets.register_emit_template(回弹模板):
+		push_error("[卡摩瑞一非] 回弹模板注册失败：%s" % p_ctx.bullets.bullet_manager.system.emit_templates.last_errors())
+		return false
+	return true
+
+
 func run_async(p_ctx: StageContext) -> void:
-	if not p_ctx.bullets.has_emit_template(&"卡摩瑞一非_rebound"):
-		if not p_ctx.bullets.register_emit_template(回弹模板):
-			push_error("[卡摩瑞一非] 回弹模板注册失败：%s" % p_ctx.bullets.bullet_manager.system.emit_templates.last_errors())
-			return
-	撞墙音效id = p_ctx.bullets.register_behavior_sfx(AssetRegistry.sounds.get("kira"))
+	if not _ensure_rebound_resources(p_ctx):
+		return
 	while p_ctx.active():
 		if not await p_ctx.clock.delay(波间隔):
 			return
@@ -65,19 +74,19 @@ func run_async(p_ctx: StageContext) -> void:
 
 		var 本波开花次数: int = diff_pick(开花弹次数)
 		for _i in 本波开花次数:
-			发射一圈(p_ctx)
+			发射一圈(p_ctx, 本波开花次数)
 			if not await p_ctx.clock.delay(波内两次开花间隔):
 				return
 
 
 ## 发射当前波的一圈：棱弹向外扩，撞墙后生成回弹米弹。
-func 发射一圈(p_ctx: StageContext) -> void:
+func 发射一圈(p_ctx: StageContext, 本波开花次数: int) -> void:
 	var 个数: int = diff_pick([15, 20, 25, 30])
 	# 每多开一圈，初速度提高；Hard 以上增得更快。
 	var 速度: float = 5.0 + 本波已发圈数 * diff_pick([55.0, 50.0, 45.0, 40.0])
 	# 相对本波中点偏移：前半圈为负、后半圈为正，再乘波次方向。
 	var 单圈反弹附加角: float = diff_pick(反弹附加角递增) \
-		* (本波已发圈数 - diff_pick(开花弹次数) / 2.0) * 波次正负交替
+		* (本波已发圈数 - 本波开花次数 / 2.0) * 波次正负交替
 	本波已发圈数 += 1
 
 	var 本圈加速度: float = 100.0 - 本波已发圈数 * 4.0
@@ -85,7 +94,7 @@ func 发射一圈(p_ctx: StageContext) -> void:
 	开花弹.with_behavior(BulletBehaviors.bounce_emit(
 		回弹模板, 0.0, 本圈加速度, 单圈反弹附加角, 撞墙音效id, true))
 
-	# 环弹模式复用同一份 BulletData：颜色 / 阵营 / lifecycle都不变，只换本次数量与速度。
+	# 环弹模式复用同一份 BulletData：颜色 / 阵营 / 运动都不变，只换本次数量与速度。
 	环弹参数.template = 开花弹
 	环弹参数.count = 个数
 	环弹参数.speed = 速度
