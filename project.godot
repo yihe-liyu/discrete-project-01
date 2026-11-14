@@ -16,6 +16,10 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/show_image=false
 config/icon="res://1st Touhou Star ~ Broadest and Narrowest.png"
 
+[audio]
+
+buses/default_bus_layout="uid://bs70o52h3qhwu"
+
 [autoload]
 
 GameEvents="*res://scripts/autoload/game_events.gd"
