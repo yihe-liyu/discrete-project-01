@@ -52,9 +52,12 @@ var 剩余保持时间: float = 0.0
 var 难度为Hard以上: bool = SaveData.selected_difficulty >= Difficulty.HARD
 
 ## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
-var 往返弹: BulletData
-var 夹角弹: BulletData
-var 夹角狙: BulletData
+var 往返弹: SpawnSpec
+var 夹角弹: SpawnSpec
+var 夹角狙: SpawnSpec
+var 夹角模板: EmitTemplate
+var 夹角狙模板: EmitTemplate
+var 分裂音效id: int = -1
 
 
 func _on_start() -> void:
@@ -70,7 +73,7 @@ func _on_start() -> void:
 	var lifecycle: BulletLifecycle
 
 	# 水色夹角弹：沿朝向外扩；Hard 以上加一个短寿命，到点自动清弹。
-	夹角弹 = BulletData.new().tex("环玉").blend(true).enemy() \
+	夹角弹 = SpawnSpec.new().tex("环玉").blend(true).enemy() \
 		.grace(4) \
 		.color(Color.AQUA)
 	lifecycle = BulletLifecycle.new()
@@ -81,7 +84,7 @@ func _on_start() -> void:
 	夹角弹.trajectory(lifecycle)
 
 	# 红色夹角狙：同样外扩；Hard 以上寿命更长，并带清弹收尾。
-	夹角狙 = BulletData.new().tex("环玉").blend(true).enemy() \
+	夹角狙 = SpawnSpec.new().tex("环玉").blend(true).enemy() \
 		.grace(4) \
 		.color(Color.RED)
 	lifecycle = BulletLifecycle.new()
@@ -92,25 +95,44 @@ func _on_start() -> void:
 	夹角狙.trajectory(lifecycle)
 
 	# 往返弹：向外减速到 0，在终点按概率分裂成上面两种夹弹。
-	往返弹 = BulletData.new().tex("环玉").speed(往返弹初速度) \
+	往返弹 = SpawnSpec.new().tex("环玉").speed(往返弹初速度) \
 		.color(Color.BLUE_VIOLET).blend(true).enemy() \
 		.grace(4)
-	lifecycle = BulletLifecycle.new()
-	lifecycle.accel_heading(-往返弹加速度)
-	lifecycle.until_elapsed(2.0 * 往返弹初速度 / 往返弹加速度)
-	lifecycle.sfx(&"kira")
-	lifecycle.emit_variant(
-		[夹角弹, 夹角狙],
-		BulletLifecycle.chance_toward(
-			BulletLifecycle.T_PLAYER,
-			变自机狙概率 if 难度为Hard以上 else 0.0,
-			TAU / 个数 / 2.0),
-		夹角弹初速度)
-	lifecycle.despawn()
-	往返弹.trajectory(lifecycle)
+	夹角模板 = EmitTemplate.new(&"哆来咪三符_aqua", 夹角弹)
+	夹角狙模板 = EmitTemplate.new(&"哆来咪三符_red", 夹角狙)
+	# 往返弹的行为在 _tick 里注册模板后再绑定。
+
+
+func _ensure_split_resources(p_ctx: StageContext) -> bool:
+	if 分裂音效id < 0:
+		分裂音效id = p_ctx.bullets.register_behavior_sfx(AssetRegistry.sounds.get("kira"))
+	if not p_ctx.bullets.has_emit_template(&"哆来咪三符_aqua"):
+		if not p_ctx.bullets.register_emit_template(夹角模板):
+			push_error("[哆来咪三符] aqua 模板注册失败")
+			return false
+	if not p_ctx.bullets.has_emit_template(&"哆来咪三符_red"):
+		if not p_ctx.bullets.register_emit_template(夹角狙模板):
+			push_error("[哆来咪三符] red 模板注册失败")
+			return false
+	_bind_parent_behavior()
+	return true
+
+
+## 模板注册后绑定父弹行为；拆出来让内容形状测试可以单独验证。
+func _bind_parent_behavior() -> void:
+	if 往返弹.behavior_spec != null:
+		return
+	往返弹.with_behavior(BulletBehaviors.split_after(
+		夹角模板, 夹角狙模板,
+		2.0 * 往返弹初速度 / 往返弹加速度,
+		-往返弹加速度,
+		变自机狙概率 if 难度为Hard以上 else 0.0,
+		夹角弹初速度, 分裂音效id, TAU / 个数 / 2.0))
 
 
 func _tick(p_ctx: StageContext) -> Variant:
+	if not _ensure_split_resources(p_ctx):
+		return false
 	if not target:
 		return p_ctx.clock.wait(发弹间隔)
 
@@ -155,7 +177,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
 	var 夹角弹角度间隔 := TAU / 个数
 	for i in 个数:
-		p_ctx.bullets.shoot_spread(
+		p_ctx.bullets.shoot_spread_spec(
 			往返弹, 1, 0.0,
 			往返弹方向.rotated(夹角弹角度间隔 * i),
 			发弹点坐标)

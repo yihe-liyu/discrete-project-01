@@ -21,6 +21,22 @@ static func accel_heading(acceleration: float) -> BehaviorSpec:
 	return BehaviorSpec.new(&"accel_heading", PackedFloat32Array([acceleration]))
 
 
+## 减速到时间点后，按概率在 template_a / template_b 间选一个子弹出。
+static func split_after(template_a: EmitTemplate, template_b: EmitTemplate,
+		duration: float, accel_px: float, chance: float, child_speed: float = 0.0,
+		sfx_id: int = -1, spread: float = 0.0) -> BehaviorSpec:
+	if template_a == null or template_b == null:
+		push_error("BulletBehaviors.split_after(): template 不能为空")
+		return null
+	if template_a.numeric_id < 0 or template_b.numeric_id < 0:
+		push_error("BulletBehaviors.split_after(): template 尚未注册")
+		return null
+	return BehaviorSpec.new(&"split_after", PackedFloat32Array([
+		accel_px, duration, template_a.numeric_id, template_b.numeric_id,
+		chance, child_speed, float(sfx_id), spread,
+	]))
+
+
 ## 撞墙 emit + 可选回收。
 ## child_speed <= 0 = 沿用父弹当前速度；despawn = 撞墙后是否回收父弹。
 static func bounce_emit(template: EmitTemplate, child_speed: float = 0.0,

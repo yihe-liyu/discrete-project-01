@@ -10,6 +10,13 @@ const SPELL053 := preload("res://data/stages/stage03B/phase/哆来咪三符/哆�
 
 ## 按难度建一份内容脚本：`难度为Hard以上` 在 .new() 时就读取难度，所以必须先设；
 ## `_on_start()` 是建弹型钩子（不依赖 ctx / target），可独立调用。
+func _bind(shot) -> void:
+	var reg := EmitTemplateRegistry.new()
+	assert_true(reg.register(shot.夹角模板))
+	assert_true(reg.register(shot.夹角狙模板))
+	shot._bind_parent_behavior()
+
+
 func _build(difficulty: int):
 	var saved := int(SaveData.selected_difficulty)
 	SaveData.selected_difficulty = difficulty
@@ -20,24 +27,20 @@ func _build(difficulty: int):
 	return shot
 
 
-func test_probe_bullet_has_single_phase_lifecycle() -> void:
+func test_probe_bullet_uses_split_behavior() -> void:
 	var shot = _build(0)
-	var lc: BulletLifecycle = shot.往返弹.lifecycle
-	assert_not_null(lc, "往返弹应挂描述符")
-	var c: Dictionary = lc.compile()
-	assert_eq(int(c["phase_count"]), 1, "单相位")
-	assert_eq(int(c["act_count"][0]), 3, "on_end = sfx + emit_variant + despawn")
+	_bind(shot)
+	var b = shot.往返弹.behavior_spec
+	assert_not_null(b, "往返弹应挂 behavior")
+	assert_eq(b.id, &"split_after", "应使用 split_after")
 
 
 func test_variant_emits_the_two_split_templates() -> void:
 	var shot = _build(0)
-	var acts: Array = shot.往返弹.lifecycle.compile()["actions"]
-	assert_eq(acts.size(), 1, "1 次变体发射 → actions 1 项")
-	assert_true(acts[0] is Array, "每项应是 [普通, 自机狙] 两模板")
-	var templates: Array = acts[0]
-	assert_eq(templates.size(), 2, "变体发射两模板")
-	assert_same(templates[0], shot.夹角弹, "模板 0 = 夹角弹（未命中）")
-	assert_same(templates[1], shot.夹角狙, "模板 1 = 夹角狙（命中自机）")
+	_bind(shot)
+	var b = shot.往返弹.behavior_spec
+	assert_eq(int(b.params[2]), shot.夹角模板.numeric_id, "params[2] = 普通模板")
+	assert_eq(int(b.params[3]), shot.夹角狙模板.numeric_id, "params[3] = 自机狙模板")
 
 
 func test_split_templates_carry_own_lifecycle_and_color() -> void:
@@ -66,6 +69,8 @@ func test_split_lifecycle_differs_by_difficulty() -> void:
 func test_aim_chance_differs_by_difficulty() -> void:
 	var easy = _build(0)
 	var hard = _build(2)
-	assert_ne(easy.往返弹.lifecycle.content_signature(),
-		hard.往返弹.lifecycle.content_signature(),
-		"变自机狙概率 0 vs 0.1 → program 应不同")
+	_bind(easy)
+	_bind(hard)
+	assert_ne(easy.往返弹.behavior_spec.params[4],
+		hard.往返弹.behavior_spec.params[4],
+		"变自机狙概率 0 vs >0 → behavior 参数不同")

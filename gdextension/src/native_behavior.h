@@ -23,6 +23,9 @@ struct NativeBehaviorContext {
 	float field_left = 0.0f;
 	float field_right = 0.0f;
 	float field_top = 0.0f;
+	// 确定性 RNG 通道：store 注入；behavior 只通过它抽随机，不碰全局 RNG。
+	float (*rng_float)(void *user) = nullptr;
+	void *rng_user = nullptr;
 	Vector2 *velocity = nullptr;
 	float *heading_x = nullptr;
 	float *heading_y = nullptr;

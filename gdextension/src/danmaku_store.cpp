@@ -863,6 +863,8 @@ void DanmakuStore::set_seed(int p_seed) {
 	if (_rng_state == 0) { _rng_state = 0x9E3779B9u; }
 }
 
+float DanmakuStore::rng_next() { return _rng_float(); }
+
 float DanmakuStore::_rng_float() {
 	uint32_t x = _rng_state;
 	x ^= x << 13; x ^= x >> 17; x ^= x << 5;
@@ -1283,6 +1285,10 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 				bctx.field_left = _field_left;
 				bctx.field_right = _field_right;
 				bctx.field_top = _field_top;
+				bctx.rng_user = this;
+				bctx.rng_float = [](void *p_user) -> float {
+					return static_cast<DanmakuStore *>(p_user)->rng_next();
+				};
 				Vector2 pos_out = bctx.position;
 				bctx.position_out = &pos_out;
 				bctx.heading_x = &_hx[i];

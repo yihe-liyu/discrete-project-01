@@ -49,6 +49,10 @@ inline void kill(NativeBehaviorOutcome &p_out) {
 	p_out.despawn = true;
 }
 
+inline float random(NativeBehaviorContext &p_ctx) {
+	return p_ctx.rng_float ? p_ctx.rng_float(p_ctx.rng_user) : 0.0f;
+}
+
 inline void play_sfx(NativeBehaviorOutcome &p_out, int p_sfx_id) {
 	p_out.sfx_id = p_sfx_id;
 }

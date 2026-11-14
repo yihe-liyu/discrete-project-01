@@ -357,3 +357,23 @@ func test_native_accel_heading_matches_lifecycle() -> void:
 	var da: Vector2 = _kernel_bullet_host.system.get_position(a) - Vector2(300, 300)
 	var db: Vector2 = _kernel_bullet_host.system.get_position(b) - Vector2(500, 300)
 	assert_almost_eq(db, da, Vector2(0.01, 0.01), "accel_heading 轨迹应一致")
+
+
+## split_after：计时结束后按概率选模板，父弹回收。
+func test_native_split_after_emits_template() -> void:
+	_kernel_bullet_host.setup_behaviors(_player, Callable())
+	var a_data := BulletData.new().enemy().tex("环玉").color(Color.AQUA).no_spawn_fog()
+	var b_data := BulletData.new().enemy().tex("环玉").color(Color.RED).no_spawn_fog()
+	var ta := EmitTemplate.new(&"split_a", a_data)
+	var tb := EmitTemplate.new(&"split_b", b_data)
+	assert_true(_kernel_bullet_host.system.register_emit_template(ta))
+	assert_true(_kernel_bullet_host.system.register_emit_template(tb))
+
+	var parent := BulletData.new().enemy().tex("环玉").no_spawn_fog()
+	parent.velocity = Vector2(0, 100)
+	parent.with_behavior(BulletBehaviors.split_after(ta, tb, 0.1, 0.0, 1.0, 60.0, -1, 0.0))
+	var _id := _kernel_bullet_host.shoot(parent, Vector2(448, 400), Vector2.DOWN)
+	for _i in 10:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "父弹应回收，子弹出应存在")
+	assert_eq(_kernel_bullet_host.system.get_behavior(0), -1, "子弹出不应继承 split_after")
