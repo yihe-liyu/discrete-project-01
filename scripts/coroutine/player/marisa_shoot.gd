@@ -208,7 +208,7 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	# 弹道 = 原生 anchor_drift；锚点是 per-shot（位置由宿主每帧解析）
 	spec.with_behavior(BulletBehaviors.anchor_drift(
 		angle_rad, LASER_DRIFT_SPEED, LASER_FIRST_STEP, true))
-	spec.lifecycle_anchor = _laser_anchor(player, source)
+	spec.anchor = _laser_anchor(player, source)
 
 	# 出生方向必须就是激光的漂移方向：首帧 behavior 还没跑，
 	# follow_dir 先用 velocity 定贴图朝向；若这里传 UP，首帧会竖一下再转。

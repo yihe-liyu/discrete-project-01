@@ -155,7 +155,7 @@
 - `SpawnSpec` 按引用共享：pattern 的 `template` 不要复制（否则弹型缓存分裂，且生命周期/阵营改动不可见）；要变体就复制字段后重建。
 - 测试用夹具，别拿真实内容当断言标准；内容只做“不数数量、不写死路径”的结构冒烟。
 
-> 其余跨子系统教训见 `BEST_PRACTICES_LOG.md`；内核/lifecycle 专项见 `DANMAKU_API.md` §3 / 附录 A（速查）。
+> 其余跨子系统教训见 `BEST_PRACTICES_LOG.md`；内核/behavior 专项见 `DANMAKU_API.md` §3 / 附录 A（速查）。
 
 ## 其他契约（只指出处）
 
@@ -164,7 +164,7 @@
 - **纹理插座**（`_texture_by_index` / `texture_for_index()` 是设计 seam，不是债）→ `docs/archive/M3_TEXTURE_OWNERSHIP_DECISION.md`。
 - **Pattern（实验）**：`BulletPattern` 基类 + `PatternParams`（手感 `.tres`）+ `data/patterns/ring.gd`；具体 pattern **不写 `class_name`**，由内容 preload；只给基类/参数类进全局类表。
 - **内容协程 async（实验）**：`extends AsyncCoroutineScript` + `run_async(ctx)`；只 `await ctx.clock.delay/next_tick`（跟 `CoroutineRunner` 时钟）；不要用 `Timer`/`SceneTreeTimer` 做内容时间。旧 `_tick` 返回秒数风格保留。
-- **API 文档**：核心 `class_name` 用 `##`（`[codeblock]` / `[code]` / `[method]`）写“描述 + 模型 + 用法 + 边界”；长教程留在 `docs/`，代码只放链接。试点：`BulletLifecycle`。
+- **API 文档**：核心 `class_name` 用 `##`（`[codeblock]` / `[code]` / `[method]`）写“描述 + 模型 + 用法 + 边界”；长教程留在 `docs/`，代码只放链接。试点：`SpawnSpec` / `NativeBehaviorContext`。
 - **文档注释风格**：不写内部版本号（V18/DSL7）和 `**` 强调；用平实中文、`[code]`/`[codeblock]`；长文留 `docs/`。
 - **Marisa 激光锚点**：激光段 anchor 到子机节点；子机重建 / cleanup 前必须 `ctx.bullets.clear_laser_bullets()`，否则旧段 anchor id 失效（退回自机 + `push_error`）。激光段用 `SpawnSpec.kind = BulletType.Kind.LASER` 标记，`MarisaLaserFade` 才能整批淡出。
 

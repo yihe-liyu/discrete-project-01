@@ -159,12 +159,6 @@ func find_bullet_uid(uid: int) -> int:
 	return _kernel_bullet_host.system.find_uid(uid)
 
 
-## 稳定句柄 → 当前 phase；已回收 → -1。
-func bullet_phase_uid(uid: int) -> int:
-	var row := find_bullet_uid(uid)
-	return bullet_phase(row) if row >= 0 else -1
-
-
 ## 稳定句柄 → 当前速度；已回收 → ZERO。
 func bullet_velocity_uid(uid: int) -> Vector2:
 	var row := find_bullet_uid(uid)
@@ -181,13 +175,6 @@ func bullet_global_position_uid(uid: int) -> Vector2:
 func despawn_bullet(id: int) -> void:
 	if _kernel_bullet_host != null and _kernel_bullet_host.system != null:
 		_kernel_bullet_host.system.despawn(id)
-
-
-## 按内核行 id 取当前 lifecycle phase（无效 / 后端未初始化 → -1）。
-func bullet_phase(id: int) -> int:
-	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
-		return -1
-	return _kernel_bullet_host.system.get_phase(id)
 
 
 ## 按内核行 id 取速度（无效 / 后端未初始化 → ZERO）。

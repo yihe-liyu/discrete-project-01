@@ -2,7 +2,7 @@ extends CoroutineScript
 ## 大妖精（Stage 2）：先飞到第一站位，边自转边发米弹；3 秒后转场，7 秒退场。
 ##
 ## 两个站位由关卡脚本通过 `target_pos1` / `target_pos2` 注入，脚本本身不认识关卡。
-## 米弹的lifecycle分两段：先按固定角速度旋转 2 秒，再反向减速并向后加速，最后自动清弹。
+## 米弹的 spin_then_slow 分两段：先按固定角速度旋转 2 秒，再反向减速并向后加速，最后自动清弹。
 
 ## 第一站位 / 第二站位（由关卡脚本注入）。
 var target_pos1: Vector2
@@ -18,7 +18,7 @@ var 开花弹2: SpawnSpec
 
 ## 当前发射方向；每次发射后旋转 22.5°，形成缓慢转动的弹幕。
 var 发射方向 := Vector2.DOWN
-## 每段lifecycle的自转角速度（弧度/秒）。
+## 每段 behavior 的自转角速度（弧度/秒）。
 var 角速度: float = diff_pick([6.0, 5.0, 4.0, 3.0])
 
 var 发射次数: int = 0

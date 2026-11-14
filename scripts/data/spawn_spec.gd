@@ -16,9 +16,8 @@ var tint: Color = Color.WHITE
 var use_blend: bool = true
 var faction: int = Faction.PLAYER
 var velocity: Vector2 = Vector2.UP
-var lifecycle: BulletLifecycle
 ## per-shot 锚点 spec（{id, offset, use_global}）；仅锚定型弹道（激光）需要。
-var lifecycle_anchor: Variant = null
+var anchor: Variant = null
 var behavior_spec: BehaviorSpec
 var out_grace: float = 0.0
 var wrap_mask: int = 0
@@ -149,13 +148,6 @@ func no_spawn_fog() -> SpawnSpec:
 func with_spawn_fog(effect: EffectType = null) -> SpawnSpec:
 	spawn_fog = 1
 	spawn_fx = effect
-	_cached_type = null
-	return self
-
-
-func trajectory(lc: BulletLifecycle, anchor: Variant = null) -> SpawnSpec:
-	lifecycle = lc
-	lifecycle_anchor = anchor
 	_cached_type = null
 	return self
 

@@ -7,11 +7,8 @@
 ## 没有 GDScript BulletSystem 回退；扩展缺失时 [code]is_native_ready()[/code] 为 false。
 class_name KernelNativeSystem
 extends Node
-const LIFECYCLE_HOOKS_SCRIPT = preload("res://scripts/kernel_bridge/lifecycle/lifecycle_hooks.gd")
-## 未注册的 on_end_call hook 名只告警一次（每帧/每弹重复会刷屏）
-static var _warned_hooks: Dictionary = {}
 ## 消弹消散特效（与出生雾同一套 EffectType 模型）——「消弹消散」的唯一来源：
-## 死亡清弹圈扫掠（KernelBulletPhysics）与生命周期 [code]clear_fx()[/code] / [code]despawn_clear()[/code] 都走 play_clear_fx。
+## 死亡清弹圈扫掠（KernelBulletPhysics）与 behavior 的 clear_fx / despawn_clear 都走 play_clear_fx。
 const CLEAR_FX: EffectType = preload("res://data/fx/enemy_clear_fx.tres")
 
 @export_group("Pool")
@@ -78,14 +75,6 @@ var behavior_sfx: Array[AudioStream] = []
 ## 确定性 RNG（宿主 seed；行为已原生，仅保留宿主接口）。
 var _random := RandomNumberGenerator.new()
 
-# ── 原生 program（move+params → packed）──
-var _catalog := LifecycleCatalog.new()
-## 纯 program（ops/args/phase 索引）—— 不含宿主对象。
-var _program_data: Array = []
-## 与 _program_data 同下标：spawn / Callable / sfx 宿主表
-var _program_host_tables: Array = []
-var _program_anchors: Array = []
-var _program_key_to_pid: Dictionary = {}
 
 
 func _init() -> void:
@@ -169,7 +158,7 @@ func _set_row_fx(id: int, effect: EffectType) -> void:
 
 
 ## 发射（写快照行 + 原生权威行）。
-func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color: Color = Color.WHITE, move: StringName = &"", behavior_params: Variant = null) -> int:
+func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color: Color = Color.WHITE) -> int:
 	var ti := _type_registry_index_of(bullet_data)
 	var id := _active_count
 	_ensure_capacity(id + 1)
@@ -200,10 +189,6 @@ func spawn(bullet_data: BulletType, position: Vector2, velocity: Vector2, color:
 		_accel.set_timer(nid, _timer[id])
 		_accel.set_out_grace(nid, _out_grace[id])
 		_accel.set_wrap(nid, bullet_data.wrap_mask)
-		# program 在发射时就绑定（与 enable_native_behaviors 是否执行无关）；未映射 move → -1。
-		var params: Dictionary = behavior_params if behavior_params is Dictionary else {}
-		var prog: int = _program_for(move, params)
-		_accel.set_program(nid, prog)
 	return nid
 
 
@@ -291,19 +276,12 @@ func clear() -> void:
 		_accel.clear()
 
 
-## 重置内核注册表：丢弃全部已注册 program / 弹型 / 特效，并重建原生 store。
-## 只在清场后（无弹）调用 —— 原生 store 的 program 表只增不减，工作台/工具反复重来会积累
-## （每次重建内容脚本 → 新 SpawnSpec 实例 → 新签名）；正常游戏靠换 scene 重建 BulletManager 天然重置。
+## 重置内核注册表：丢弃全部已注册弹型 / 特效，并重建原生 store（只在清场后调用）。
 func reset_registries() -> void:
 	_active_count = 0
-	_accel = null            # 丢旧 store：program / SoA 一并释放，下次 _ensure_native 新建
-	_program_data.clear()
-	_program_host_tables.clear()
-	_program_anchors.clear()
-	_program_key_to_pid.clear()
+	_accel = null            # 丢旧 store：SoA 一并释放，下次 _ensure_native 新建
 	_type_registry.clear()
 	_fx_registry.clear()
-	_catalog = LifecycleCatalog.new()
 	_ensure_native()
 
 
@@ -565,12 +543,6 @@ func get_life_left(id: int) -> float:
 func get_fx_phase(id: int) -> float:
 	return _fx_phase[id]
 
-## 单行当前 lifecycle phase；无效 / 无原生 = -1。
-func get_phase(id: int) -> int:
-	if _accel == null:
-		return -1
-	return int(_accel.get_phase(id))
-
 ## 行 → 稳定句柄；纯特效 / 无效 / 无原生 = 0。
 func get_uid(id: int) -> int:
 	if _accel == null:
@@ -642,64 +614,6 @@ func randi_range(from: int, to: int) -> int:
 	return _random.randi_range(from, to)
 
 
-# ═══ 行为 program ═══
-
-## 公开接缝：按 move+params 取/注册 program id（工具/测试不直接摸 [code]_program_for[/code]）。
-func program_id_for(move: StringName, params: Dictionary) -> int:
-	return _program_for(move, params)
-
-
-## 已注册 program 数（公开接缝；用于测试/工具核对缓存）。
-func program_count() -> int:
-	return _program_data.size()
-
-
-## move+params → 原生 program（编译 + 注册，按签名缓存）。
-func _program_for(move: StringName, params: Dictionary) -> int:
-	if _accel == null:
-		return -1
-	var key: int = LifecycleCatalog.cache_key(move, params)
-	var lc: BulletLifecycle = _catalog.get_lifecycle(move, params)
-	if _program_key_to_pid.has(key):
-		var cached_pid: int = _program_key_to_pid[key]
-		if _program_matches(cached_pid, lc):
-			return cached_pid
-		# 键碰撞（hash 相同但 shape 不同）：丢弃映射，下面重新注册。
-		_program_key_to_pid.erase(key)
-	var pid: int = -1
-	if lc != null:
-		var c: Dictionary = lc.compile_program()
-		var expected: int = _program_data.size()
-		pid = _accel.register_program(c["ops"], c["args"], c["move_start"], c["move_count"], c["until_idx"], c["act_start"], c["act_count"], c["phase_count"], c["slots"])
-		if pid < 0:
-			# 槽数超上限被原生拒绝 —— 不 append，保持 _program_data 与原生 pid 对齐。
-			push_error("[KernelNativeSystem] program 注册被拒（入参校验失败：数组/opcode/slot）")
-		else:
-			if pid != expected:
-				push_error("[KernelNativeSystem] program 对齐失败：native pid=%d, 期望 %d" % [pid, expected])
-			_program_data.append(c)
-			_program_host_tables.append(lc.host_table())
-			_program_anchors.append(_anchor_spec_for(move, params))
-	_program_key_to_pid[key] = pid
-	return pid
-
-
-## 命中校验：缓存 pid 对应的 program 必须和本次 lifecycle 的 phase/slots 一致。
-func _program_matches(pid: int, lc: BulletLifecycle) -> bool:
-	if lc == null:
-		return pid < 0
-	if pid < 0 or pid >= _program_data.size():
-		return false
-	var c: Dictionary = _program_data[pid]
-	return int(c[&"phase_count"]) == lc.phases.size() and int(c[&"slots"]) == lc.slots
-
-
-func _anchor_spec_for(move: StringName, params: Dictionary) -> Variant:
-	if move == LifecycleCatalog.MOVE_LIFECYCLE:
-		return params.get(&"anchor")
-	return null
-
-
 # ═══ 每帧 ═══
 
 ## 手动推进一帧（无树 / 测试 / 预览工具用；与 _physics_process 同一条路径）。
@@ -736,19 +650,13 @@ func _run_native_behaviors(delta: float) -> void:
 	var boss = boss_getter.call() if boss_getter.is_valid() else null
 	var has_boss: bool = is_instance_valid(boss)
 	var boss_pos: Vector2 = boss.global_position if has_boss else Vector2.ZERO
-	# 锚点每帧解析成 program 级 base（原生不认 instance id）。无锚点的 program 填 player 占位。
-	var anchor_base := PackedVector2Array()
-	anchor_base.resize(_program_data.size())
-	for apid in _program_data.size():
-		var spec: Variant = _program_anchors[apid] if apid < _program_anchors.size() else null
-		anchor_base[apid] = player if spec == null else BulletLifecycle.anchor_base(spec[&"id"], spec[&"offset"], spec[&"use_global"], player)
 	var anchors := PackedVector2Array()
 	if anchor_provider.is_valid():
 		var raw: Variant = anchor_provider.call()
 		if raw is PackedVector2Array:
 			anchors = raw
-	var res: Dictionary = _accel.behavior_tick(delta, player, boss_pos, has_boss, enemies, anchor_base, anchors)
-	_drain_events(res, has_boss, boss_pos)
+	var res: Dictionary = _accel.behavior_tick(delta, player, boss_pos, has_boss, enemies, anchors)
+	_drain_events(res)
 
 
 ## 把原生权威 SoA pull 成 GDScript 只读快照。
@@ -766,17 +674,7 @@ func _pull_snapshot() -> void:
 	_render_rot = _accel.get_render_rots()
 
 
-## 变体发射：[code]src[/code] 是模板数组时按分支号取模板（越界钳到末项）；非数组原样返回。
-static func pick_variant(src: Variant, branch: int) -> Variant:
-	if src is Array:
-		var arr: Array = src
-		if arr.is_empty():
-			return null
-		return arr[clampi(branch, 0, arr.size() - 1)]
-	return src
-
-
-func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
+func _drain_events(res: Dictionary) -> void:
 	var kinds: PackedInt32Array = res.kind
 	if kinds.is_empty():
 		return
@@ -785,84 +683,31 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	var ys: PackedFloat32Array = res.y
 	var dxs: PackedFloat32Array = res.dx
 	var dys: PackedFloat32Array = res.dy
-	var vals: PackedFloat32Array = res.val
-	var variants: PackedInt32Array = res.get("variant", PackedInt32Array())
 	var event_colors: PackedColorArray = res.get("color", PackedColorArray())
-	# 事件携带自己的 program（eprog）；不能用 per-bullet program 去反查（历史 bug）。
-	var eprog: PackedInt32Array = res.eprog
 	for k in kinds.size():
-		if kinds[k] == 7:
-			var lt: LaserTemplate = laser_templates.get(local[k])
-			if lt == null:
-				push_error("[KernelNativeSystem] 未注册 LaserTemplate id=%d" % local[k])
-			elif laser_spawner.is_valid():
-				laser_spawner.call(lt, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]))
-			else:
-				push_error("[KernelNativeSystem] laser_spawner 未注入")
-			continue
-		if kinds[k] == 6:
-			var sfx_id := local[k]
-			if sfx_id >= 0 and sfx_id < behavior_sfx.size():
-				AudioManager.play_sfx(behavior_sfx[sfx_id], 1.0, AudioManager.BULLET_SFX_MIN_INTERVAL)
-			else:
-				push_error("[KernelNativeSystem] 未注册 behavior sfx id=%d" % sfx_id)
-			continue
-		if kinds[k] == 5:
-			# native behavior 的 emit 请求：模板由内容层注册，host 负责真正 spawn。
-			var tpl: EmitTemplate = emit_templates.get_by_numeric(local[k])
-			if tpl == null:
-				push_error("[KernelNativeSystem] 未注册 EmitTemplate numeric_id=%d" % local[k])
-			elif emit_spawner.is_valid():
-				emit_spawner.call(tpl, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]), event_colors[k] if k < event_colors.size() else Color.WHITE)
-			else:
-				push_error("[KernelNativeSystem] emit_spawner 未注入")
-			continue
-		var prog: int = eprog[k]
-		if prog < 0 or prog >= _program_data.size():
-			continue
-		var host_table: Dictionary = _program_host_tables[prog] if prog < _program_host_tables.size() else {}
-		var actions: Array = host_table.get(&"actions", [])
-		var sfx_keys: Array = host_table.get(&"sfx", [])
-		var speed_specs: Array = host_table.get(&"speed_specs", [])
 		match kinds[k]:
-			0:
-				var branch: int = variants[k] if k < variants.size() else 0
-				var spawn_src: Variant = pick_variant(actions[local[k]], branch)
-				var b = spawn_src.call() if spawn_src is Callable else spawn_src
-				if b != null and behavior_host != null:
-					var speed_val: float = vals[k]
-					if local[k] < speed_specs.size() and speed_specs[local[k]] is Dictionary:
-						var sp: Dictionary = speed_specs[local[k]]
-						speed_val *= RNG.randf_range(float(sp.get(&"min", 1.0)), float(sp.get(&"max", 1.0)))
-					b.velocity = Vector2(0.0, speed_val)
-					behavior_host.queue_spawn(b, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]))
-			1:
-				var key: StringName = sfx_keys[local[k]]
-				var stream = AssetRegistry.sounds.get(String(key), null)
-				if stream != null:
-					# 节流：弹幕音效"每颗子弹一次"，不节流会变成同音机关枪（见 BULLET_SFX_MIN_INTERVAL）
-					AudioManager.play_sfx(stream, vals[k], AudioManager.BULLET_SFX_MIN_INTERVAL)
-			2:
-				var hook: Variant = actions[local[k]]
-				var fn: Callable = hook if hook is Callable else LIFECYCLE_HOOKS_SCRIPT.resolve(hook)
-				if fn.is_valid():
-					fn.call(Vector2(xs[k], ys[k]), boss_pos, has_boss, behavior_host)
-				else:
-					var hook_key := str(hook)
-					if not _warned_hooks.has(hook_key):
-						_warned_hooks[hook_key] = true
-						push_warning("[KernelNativeSystem] on_end_call 未注册 hook '%s'（静默不调）" % hook_key)
-			4:
-				# op 48（emit_laser_dir）：宿主表存骨架；原生只回传位置 + 解析后的方向。
-				var payload: Variant = actions[local[k]]
-				if payload is Dictionary and behavior_host != null:
-					behavior_host.queue_laser_dir(
-						payload,
-						Vector2(xs[k], ys[k]),
-						Vector2(dxs[k], dys[k]))
 			3:
-				# op 47（clear_fx / despawn_clear）：原地播消散，颜色用该弹自己的色（原生随事件回传）。
-				# 行此刻可能已被 swap-remove，所以颜色只能来自事件载荷 —— 不能用 res.bullet[k] 回查。
-				var colors: PackedColorArray = res.get("color", PackedColorArray())
-				var tint: Color = colors[k] if k < colors.size() else Color.WHITE
+				var tint: Color = event_colors[k] if k < event_colors.size() else Color.WHITE
 				play_clear_fx(Vector2(xs[k], ys[k]), tint)
+			5:
+				var tpl: EmitTemplate = emit_templates.get_by_numeric(local[k])
+				if tpl == null:
+					push_error("[KernelNativeSystem] 未注册 EmitTemplate numeric_id=%d" % local[k])
+				elif emit_spawner.is_valid():
+					emit_spawner.call(tpl, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]), event_colors[k] if k < event_colors.size() else Color.WHITE)
+				else:
+					push_error("[KernelNativeSystem] emit_spawner 未注入")
+			6:
+				var sfx_id := local[k]
+				if sfx_id >= 0 and sfx_id < behavior_sfx.size():
+					AudioManager.play_sfx(behavior_sfx[sfx_id], 1.0, AudioManager.BULLET_SFX_MIN_INTERVAL)
+				else:
+					push_error("[KernelNativeSystem] 未注册 behavior sfx id=%d" % sfx_id)
+			7:
+				var lt: LaserTemplate = laser_templates.get(local[k])
+				if lt == null:
+					push_error("[KernelNativeSystem] 未注册 LaserTemplate id=%d" % local[k])
+				elif laser_spawner.is_valid():
+					laser_spawner.call(lt, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]))
+				else:
+					push_error("[KernelNativeSystem] laser_spawner 未注入")

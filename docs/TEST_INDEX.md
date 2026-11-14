@@ -19,15 +19,15 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：120 脚本 / **874 用例（873 通过 / 1 红）/ 7313 断言 / 52.9s** / 0 orphans / **0 pending**。
+**现状**：106 脚本 / **737 用例（736 通过 / 1 红）/ 5885 断言 / 52.1s** / 0 orphans / **0 pending**。
 
 ## 分层
 
 | 层 | 文件 | 用例 | 含义 |
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
-| **B 内核 · 原生 C++ + 桥接** | 29 | 209 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 56 | 452 | `scripts/**` 的实体/系统/服务 |
+| **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
+| **C 宿主 · 运行时系统** | 54 | 430 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -53,61 +53,49 @@
 | [test_param_validator](../test/test_param_validator.gd) | 参数注入校验：类型不匹配 / **严格模式未知键** / **多脚本并集未知键**要响亮报错 | 10 | 0 |
 | [test_atlas_layout](../test/test_atlas_layout.gd) | F7 图集哨兵：每格与 1024² 贴图一致、落在图内、内容表 shape 引用能命中 + **格间余量（外来重叠 0 对 / 互不相干最窄缝 ≥1px，「同一张画」两类豁免）** | 5 | 0 |
 
-## B · 内核 · 原生 C++ + 桥接（29 / 209）
+## B · 内核 · 原生 C++ + 桥接（17 / 94）
 
-### B1 parity 套件（13 文件 / 100 用例）—— 依赖 `test/reference/` 冻结 oracle
+### B1 parity 套件（7 文件 / 20 用例）—— 依赖 `test/reference/` 冻结 oracle
 
-> 这一组是整个套件**最值钱**的部分：原生 C++ 逐帧/逐位对照它取代的那份 GDScript 实现。
+> 原生 C++ 逐帧/逐位对照它取代的那份 GDScript 实现。
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_lifecycle_primitives](../test/test_lifecycle_primitives.gd) | 最小原语覆盖（9 Move / 6 Until / **8 Action** / 出界宽限）+ **编译守卫（DSL3/4/6/8/13）**，每条原语一条最小 lifecycle 逐帧对比；**on_end_heading 先于 emit(forward) 的承重契约（DSL2）**；**纯 program / 宿主表分离（DSL10）；DirSpec eval_phase / 世界角守卫（DSL1）；emit_speed_rel（DSL7）** | 59 | 1 |
-| [test_lifecycle_compositions](../test/test_lifecycle_compositions.gd) | **手写原语组合**逐帧 parity（accel / world / radial / bounce / curve / homing / avoid / laser） | 7 | 1 |
-| [test_lifecycle_model](../test/test_lifecycle_model.gd) | `BulletLifecycle` 描述符 ↔ 参考解释器 parity | 3 | 1 |
-| [test_native_executor](../test/test_native_executor.gd) | 原生 `behavior_tick`（packed program）↔ 参考解释器**逐位** parity | 9 | 1 |
 | [test_native_integrate](../test/test_native_integrate.gd) | 原生积分器 `integrate_batch` ↔ vendored 参照 | 2 | 8 |
 | [test_native_storage](../test/test_native_storage.gd) | 原生 `DanmakuStore` 存储/积分/回收语义 ↔ GDScript 1:1 | 2 | 4 |
 | [test_native_collision](../test/test_native_collision.gd) | `set_hitbox` / `hit_test` / `query_circle` / `grazed` ↔ 1:1 | 5 | 0 |
 | [test_native_broadphase](../test/test_native_broadphase.gd) | 原生 uniform grid 宽相 ↔ `BulletSystem` 1:1 | 3 | 0 |
-| [test_native_guards](../test/test_native_guards.gd) | NK1/NK3：逐弹原生 getter/setter 越界守卫 + 重复 dead id 去重；NK4：register_program 对数组/opcode/slot 入参 fail-closed；NK7：逐弹 type_index 不拷整表；NK8：dt clamp / cull 边界统一 | 5 | 0 |
-| [test_kernel_despawn_drain](../test/test_kernel_despawn_drain.gd) | 多弹**同帧** `request_despawn` 必须**全部**回收 | 2 | 0 |
+| [test_native_guards](../test/test_native_guards.gd) | NK1/NK3：逐弹原生 getter/setter 越界守卫；NK7：逐弹 type_index 不拷整表；NK8：dt clamp / cull 边界统一 | 3 | 0 |
 | [test_bullet_orientation](../test/test_bullet_orientation.gd) | 弹型朝向契约（F7·B）：`rotation_for` 语义 + 到内核弹型的字段传递 | 3 | 0 |
 | [test_reference_oracle](../test/test_reference_oracle.gd) | 冻结参照（oracle）自足性：`test/reference/BulletSystem` 可独立 new / spawn / 查询（不依赖任何 autoload） | 2 | 0 |
 
-### B2 原生行为与桥接（12 文件 / 61 用例）
+### B2 原生行为与桥接（9 文件 / 68 用例）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_kernel_swap](../test/test_kernel_swap.gd) | 内核路由（唯一后端）：内核池 + 渲染数据源 + 行为装配 + bomb 宿主节点 | 9 | 3 |
-| [test_kernel_host](../test/test_kernel_host.gd) | `KernelBulletHost`：`SpawnSpec→BulletType` 映射 / 实例复用 / 纹理旁表 | 7 | 2 |
+| [test_kernel_swap](../test/test_kernel_swap.gd) | 内核路由（唯一后端）：内核池 + 渲染数据源 + 行为装配 + bomb 宿主节点 | 8 | 3 |
+| [test_kernel_host](../test/test_kernel_host.gd) | `KernelBulletHost`：`SpawnSpec→BulletType` 映射 / 实例复用 / 纹理旁表 | 6 | 2 |
 | [test_kernel_physics](../test/test_kernel_physics.gd) | `KernelBulletPhysics`：敌弹↔自机（命中+擦弹），与旧规则 1:1 | 24 | 0 |
 | [test_kernel_render](../test/test_kernel_render.gd) | `BulletMultiMesh` 的**内核快照**渲染路径 + 分组键 | 5 | 12 |
 | [test_spell_backdrop](../test/test_spell_backdrop.gd) | **符卡背景 = 每 Boss 一个场景**：宿主层显隐/淡入淡出/层级/同场景不重建不重播 + 换场景换实例 + 淡出中途折返复用 + 滚动层（速度可调/取模无缝）+ plain 模板可用 | 10 | 0 |
 | [test_spell_portrait](../test/test_spell_portrait.gd) | **符卡宣言立绘**：右上角→左下角快慢快→淡出；层级在弹幕之下 | 5 | 0 |
-| [test_kernel_random](../test/test_kernel_random.gd) | K1：内核 PRNG 确定性（同种子同结果）+ `random_dir` / `chance_toward` | 5 | 0 |
-| [test_kernel_reset](../test/test_kernel_reset.gd) | 内核注册表重置（重开/清场：回收 program / 弹型） | 2 | 5 |
-| [test_native_behavior_batch](../test/test_native_behavior_batch.gd) | 无状态 `behavior_batch` ↔ 有状态 `behavior_tick` 1:1 + dead 返回 | 3 | 0 |
-| [test_native_event_dispatch](../test/test_native_event_dispatch.gd) | 行为事件必须按**事件自己的 program**（`eprog`）派发 | 1 | 0 |
+| [test_kernel_reset](../test/test_kernel_reset.gd) | 内核注册表重置（重开/清场：回收弹型 + 原生 store 重建） | 2 | 2 |
 | [test_native_laser_anchor](../test/test_native_laser_anchor.gd) | 端到端桥接：魔理沙激光段必须贴**子机锚点**而非自机 + **只清 LASER kind、不动普通弹** | 2 | 0 |
+| [test_native_behaviors](../test/test_native_behaviors.gd) | native behavior packs：`accel_heading` lifetime/clear、`bounce_emit` 镜面反射、`homing` 最近敌人/变速、`anchor_drift` 跟随移动锚点 | 6 | 0 |
 
-| [test_native_reflect](../test/test_native_reflect.gd) | `reflect()` 镜面方向（dk=6）：左右翻 x / 上墙翻 y / 角落原路返回 / `angle` 微散 / 未贴边退化 / 编译成 dk=6（**原生专属**：参照解释器是冻结 vendor，不实现新原语） | 6 | 0 |
-### B3 Lifecycle 描述符与发射原语（5 文件 / 25 用例）
+### B3 行为预览（1 文件 / 6 用例）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_lifecycle_signature](../test/test_lifecycle_signature.gd) | b0：结构签名 —— 同结构共用一个原生 program（防 per-instance 爆炸）；program 缓存命中抽验 shape（DSL9） | 8 | 3 |
-| [test_lifecycle_catalog](../test/test_lifecycle_catalog.gd) | F10c：`LifecycleCatalog` 只剩 `{lifecycle}` 兼容入口；旧 move preset 已删 / 未知 move 返回 null / 缓存按内容签名 + phase/slots 抽验（DSL9） | 7 | 0 |
-| [test_emit_variant](../test/test_emit_variant.gd) | 变体发射：`chance_toward` 概率分支号随 emit 事件回传，宿主据此选模板 | 6 | 0 |
-| [test_heading_state](../test/test_heading_state.gd) | K2：弹道「朝向」状态化 —— `accel_heading` 与速度解耦 + `forward()` 糖 | 4 | 0 |
-| [test_lifecycle_hooks](../test/test_lifecycle_hooks.gd) | b2b：`LifecycleHooks` 名字注册表 + `on_end_call` 用名字 | 3 | 0 |
+| [test_behavior_preview](../test/test_behavior_preview.gd) | BehaviorPreview：无 behavior 直线兜底、accel 曲线、anchor_drift、bounce 停墙、RDP 简化、null 守卫 | 6 | 0 |
 
 > ⚠️ 带 `_available()` 守卫的文件（B 层为主，共 11 文件 / **81 用例**）在扩展缺失时会 **pending**。
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（56 / 452）
+## C · 宿主 · 运行时系统（54 / 430）
 
-### C1 组合根 / 服务 / 时间线（20 / 100）
+### C1 组合根 / 服务 / 时间线（18 / 78）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -125,8 +113,6 @@
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData 基准取曲（跨难度共享）** | 12 | 0 |
 | [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪；`shoot_tracked`；`track_emitted` lifecycle 过滤；空列表防护 | 7 | 0 |
 | [test_telegraph_path](../test/test_telegraph_path.gd) | 路径展示层：单线 / 多线显示与清空；单点不成线；lifetime 到点自动清空；路径在敌弹之下；MultiMesh 合批 | 6 | 0 |
-| [test_lifecycle_emit_laser](../test/test_lifecycle_emit_laser.gd) | lifecycle.emit_laser / emit_laser_dir；宿主队列、方向透传、原生 action | 5 | 0 |
-| [test_lifecycle_preview](../test/test_lifecycle_preview.gd) | 路径预览：单 phase / chain；坐标 until；位置写入；`end_state`；RDP 折线简化；`steer` / 目标方向标近似 | 17 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** + **敌人行为先入树、再 `_on_start()`**（不再需要 `_ready` + `call_deferred`） | 7 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
 | [test_content_manifest](../test/test_content_manifest.gd) | `ContentManifest`：Stage / Boss / Phase / Variant 去重索引、难度变体来源、Boss 槽引用一致性 | 3 | 0 |

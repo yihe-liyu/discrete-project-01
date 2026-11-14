@@ -1,6 +1,6 @@
 extends GutTest
 ## L3.5-3b 回归（端到端桥接）：魔理沙激光段必须贴在**子机锚点**上，而不是自机。
-## 现在走原生 anchor_drift + 宿主 anchor slot，不再经过 lifecycle program。
+## 现在走原生 anchor_drift + 宿主 anchor slot，不再经过旧的弹道描述符。
 
 
 
@@ -24,7 +24,7 @@ func test_marisa_laser_segments_track_anchor() -> void:
 	var d := SpawnSpec.new().enemy().no_spawn_fog().blend(true).tex("小玉")
 	d.velocity = Vector2.UP * 100.0
 	d.with_behavior(BulletBehaviors.anchor_drift(0.0, 800.0, 0.0, true))
-	d.lifecycle_anchor = {&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
+	d.anchor = {&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
 	BulletManager.current.shoot_spec(d, Vector2(200.0, 700.0), Vector2.UP)
 	assert_eq(ns.get_active_count(), 1, "激光段应进内核池")
 	for i in 3:

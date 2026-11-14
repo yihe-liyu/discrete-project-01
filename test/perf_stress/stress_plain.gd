@@ -7,7 +7,7 @@ func _ready():
 		bullet_manager.name = "BulletManager"
 		add_child(bullet_manager)
 	var data: SpawnSpec = SpawnSpec.new().enemy().tex("小玉").speed(20.0).blend(true)
-	# 不挂 lifecycle / native behavior → 直线弹路径
+	# 不挂 native behavior → 直线弹路径
 	for i in 1500:
 		var dir := Vector2.RIGHT.rotated(float(i) * TAU / 1500.0)
 		BulletManager.current.shoot_spec(data, Vector2(448, 480), dir)

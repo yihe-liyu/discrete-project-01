@@ -1,7 +1,7 @@
 ## SpawnSpec → BulletType 的宿主适配器。
 ##
 ## 原生内核不认识 SpawnSpec；弹型由 [code]SpawnSpec.to_bullet_type()[/code] 在内容侧缓存。
-## lifecycle 由 SpawnSpec 直接携带，按计划编译成原生 program。
+## 弹道由 SpawnSpec.behavior_spec 携带，逐帧在 C++ behavior pack 里执行。
 ## 渲染不在本类：纹理走 [code]texture_for_index()[/code]，由 BulletMultiMesh 消费。
 class_name KernelBulletHost
 extends Node
@@ -186,22 +186,17 @@ func prepare_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictiona
 	var type := spec.to_bullet_type()
 	var speed: float = spec.velocity.length()
 	var vel: Vector2 = direction.normalized() * speed if direction != Vector2.ZERO else spec.velocity
-	var move: StringName = &""
-	var params: Variant = null
-	if spec.lifecycle != null:
-		move = LifecycleCatalog.MOVE_LIFECYCLE
-		params = {&"lifecycle": spec.lifecycle, &"anchor": spec.lifecycle_anchor}
 	if spec.kind == BulletType.Kind.LASER and _laser_fade != null:
 		_laser_fade.on_laser_spawned()
 	var anchor_slot := -1
-	if spec.lifecycle_anchor != null:
-		anchor_slot = _anchor_slot_for(spec.lifecycle_anchor)
+	if spec.anchor != null:
+		anchor_slot = _anchor_slot_for(spec.anchor)
 	var tint: Color = spec.tint
 	if spec.faction == SpawnSpec.Faction.PLAYER:
 		var res := _player_res()
 		if res != null and res.memory_value < 50.0:
 			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
-	return {type = type, pos = pos, vel = vel, tint = tint, move = move, params = params,
+	return {type = type, pos = pos, vel = vel, tint = tint,
 		texture = spec.texture, behavior = spec.behavior_spec, anchor_slot = anchor_slot,
 		spawn_spec = spec}
 
@@ -214,7 +209,7 @@ func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
 func spawn_prepared(spec: Dictionary) -> int:
 	if spec.is_empty():
 		return -1
-	var id: int = system.spawn(spec.type, spec.pos, spec.vel, spec.tint, spec.move, spec.params)
+	var id: int = system.spawn(spec.type, spec.pos, spec.vel, spec.tint)
 	if id >= 0:
 		system.set_anchor_slot(id, int(spec.get("anchor_slot", -1)))
 		var behavior: BehaviorSpec = spec.get("behavior")
@@ -228,7 +223,7 @@ func spawn_prepared(spec: Dictionary) -> int:
 	return id
 
 
-## 行为队列 flush 后通知：把 emit 子代接到 uid / lifecycle（路径跟踪用）。
+## 行为队列 flush 后通知：把 emit 子代接到 uid / SpawnSpec（路径跟踪用）。
 func notify_behavior_spawned(id: int, spec: Dictionary) -> void:
 	if id < 0 or system == null:
 		return
@@ -303,7 +298,7 @@ func _anchor_slot_for(spec: Variant) -> int:
 	return slot
 
 
-## 每帧把锚点解析成世界坐标；无效 id 退回自机（与 lifecycle anchor_base 一致）。
+## 每帧把锚点解析成世界坐标；无效 id 退回自机。
 func _anchor_positions() -> PackedVector2Array:
 	var out := PackedVector2Array()
 	var n := _anchor_nodes.size()

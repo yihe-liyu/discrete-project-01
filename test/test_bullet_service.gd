@@ -16,9 +16,7 @@ func _mk_manager() -> BulletManager:
 
 
 func _mk_data() -> SpawnSpec:
-	var lc := BulletLifecycle.new()
-	lc.until_elapsed(5.0).despawn()   # 活得够久，不会自己消失
-	return SpawnSpec.new().tex("小玉").speed(100.0).enemy().trajectory(lc)
+	return SpawnSpec.new().tex("小玉").speed(100.0).enemy()
 
 
 func _bind(bm: BulletManager):
@@ -84,7 +82,7 @@ func test_clear_is_immediate_unlike_death_clear() -> void:
 	assert_eq(_bullet_count(sys), 0, "即时清弹不分距离、当帧清空")
 
 
-## 逐弹预览原型：发射返回内核行 id，且能读到该行的 phase / velocity。
+## 逐弹预览原型：发射返回稳定 uid，且能读到该行的 velocity。
 func test_shoot_spread_ids_returns_trackable_rows() -> void:
 	var bm := _mk_manager()
 	await get_tree().process_frame
@@ -99,7 +97,6 @@ func test_shoot_spread_ids_returns_trackable_rows() -> void:
 	for uid in ids:
 		assert_gt(uid, 0, "uid 应为有效稳定句柄")
 		assert_true(bm.find_bullet_uid(uid) >= 0, "uid 应能查到当前行")
-		assert_eq(bm.bullet_phase_uid(uid), 0, "新弹应处于 phase 0")
 		assert_gt(bm.bullet_velocity_uid(uid).length(), 0.0, "应能读到真实速度")
 
 
@@ -120,4 +117,3 @@ func test_uid_survives_swap_remove() -> void:
 	bm.despawn_bullet(0)   # 删第一颗 → 尾行搬进 0
 	assert_eq(bm.find_bullet_uid(uids[0]), -1, "被删的 uid 应失效")
 	assert_eq(bm.find_bullet_uid(uids[2]), 0, "被搬走的弹仍应能找到新行")
-	assert_eq(bm.bullet_phase_uid(uids[2]), 0, "搬走后 phase 仍可读")

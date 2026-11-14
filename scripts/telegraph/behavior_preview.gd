@@ -51,8 +51,8 @@ static func evaluate(spec: SpawnSpec, origin: Vector2, velocity: Vector2,
 	if anchor_position != null:
 		anchor = Vector2(anchor_position)
 		has_anchor = true
-	elif spec.lifecycle_anchor != null:
-		anchor = _resolve_anchor(spec.lifecycle_anchor, player)
+	elif spec.anchor != null:
+		anchor = _resolve_anchor(spec.anchor, player)
 		has_anchor = true
 	elif behavior.id == &"anchor_drift":
 		has_anchor = true   # 无锚点时退回自机（与宿主一致）

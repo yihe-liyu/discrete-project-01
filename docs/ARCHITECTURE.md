@@ -57,23 +57,20 @@
 ### 2.1.5 弹幕链路（端到端 · 追一条弹）
 
 ```
-内容面 = data/bullets/<key>.tres（BulletDef：外观/碰撞/朝向）+ 发射脚本里的 SpawnSpec.trajectory(lc)
-  └─ BulletLifecycle（Phase/Move/Until/Action 描述符，内容直接挂）
-       └─ KernelBulletHost.prepare_spec()        ← 描述符装配 / 缓存
-            └─ KernelNativeSystem.spawn()           ← 原生 DanmakuStore.spawn + set_hitbox + set_program
+内容面 = data/bullets/<key>.tres（BulletDef：外观/碰撞/朝向）+ 发射脚本里的 SpawnSpec.with_behavior(...)
+  └─ BehaviorSpec（C++ pack id + float 参数；内容直接挂）
+       └─ KernelBulletHost.prepare_spec()        ← 弹型 / 锚点 / 行为装配
+            └─ KernelNativeSystem.spawn()           ← 原生 DanmakuStore.spawn + set_hitbox + set_behavior
                  └─ [每物理帧] DanmakuStore.integrate() + behavior_tick()    ← 积分 + 行为，全原生
                       └─ KernelNativeSystem._pull_snapshot()                 ← 原生 → GDScript 只读快照
                            ├─ 渲染：BulletMultiMesh._sync_native() → DanmakuRenderBridge → MultiMesh
                            └─ 判定：KernelBulletPhysics → system.query_circle / hit_test（原生宽相网格）
 ```
 
-> 旧的 `*_bullet.gd` 载体（`kernel_port()` 端口）**已弃用**：`data/**` 里 0 个文件，只剩 `kernel_bridge` 里的测试夹具通路
-> （CONTENT_GUIDE §六 ⑥ 有历史说明）。
-
 - **权威存储** = 原生 `DanmakuStore`（`gdextension/src/danmaku_store.{h,cpp}`）；GDScript 只是每帧只读快照。
-- **行为** = `LifecycleCatalog` 把 `move+params` 映射成 `BulletLifecycle` → `compile()` 成 packed program → 原生 `behavior_tick`。
-- **事件**（发射 / 音效 / 回调）→ `KernelNativeSystem._drain_events` → `KernelBehaviorHost` / `AudioManager` / 内容回调。
-- 改哪看哪：行为词汇 → `docs/DANMAKU_API.md` §3（Move/Until/Action）；参数表 → `CONTENT_GUIDE.md`「弹幕行为接口」；执行/判定 → `gdextension/src/`。
+- **行为** = `BehaviorSpec`（`behaviors_core` 注册的 C++ pack）→ 原生 `behavior_tick`；不再有 lifecycle DSL / packed program。
+- **事件**（发射 / 音效 / 激光 / 消散）→ `KernelNativeSystem._drain_events` → `KernelBulletHost` / `AudioManager`。
+- 改哪看哪：behavior 列表 → `docs/DANMAKU_API.md` §3；参数表 → `CONTENT_GUIDE.md`「弹幕行为」；执行/判定 → `gdextension/src/`。
 
 ### 2.2 使用层（接口）—— 动词，不是协程/Timeline
 
@@ -165,10 +162,10 @@
 - **宿主实体按数据实际类型分派**（`KernelBulletHost.spawn_bomb`）：`MistBombData` → `KernelMistBomb`；其余/基类 → `KernelBomb`。**调参别写回引擎代码**。
 - 加新 bomb = 一个 `XxxBombData extends BombData` + 一个 `KernelXxxBomb extends BombEntity` + `spawn_bomb` 一条分派；不需要动内核。
 
-### 新增弹幕行为（`move`）
-- **组合现有原语**（推荐）：`LifecycleCatalog.build()` 加分支（`move+params` → `BulletLifecycle` preset）后，内容直接 `SpawnSpec.trajectory(lc)`；**无需改 C++**，也不用写 `*_bullet.gd`。
-- **要新原语**（新 Move / Until / Action）才动 `gdextension/src/danmaku_store.cpp`（`_exec_move` / `_check_until` / `_exec_action`）+ `BulletLifecycle` 编译；改完重建扩展。
-- 权威参数表见 `CONTENT_GUIDE.md`「弹幕行为接口」。
+### 新增弹幕行为（native behavior pack）
+- **先用现成 behavior**：`SpawnSpec.with_behavior(BulletBehaviors.xxx)`，不要为新组合造原语。
+- **要新运动数学**才加 C++ pack：`gdextension/src/behaviors_core/` 新建 `xxx.cpp`（`REGISTER_BEHAVIOR`）→ `registry.cpp` 注册 → `BulletBehaviors` 加具名构造器 → 重建扩展。
+- 权威参数表见 `docs/DANMAKU_API.md` §3 与 `CONTENT_GUIDE.md`「弹幕行为」。
 
 ### 新增关卡
 - `StageData` + 关卡脚本（`CoroutineScript`）；内容=数据；boss 用槽位；记录走服务；编排声明式。

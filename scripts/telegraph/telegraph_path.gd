@@ -1,5 +1,5 @@
 extends Node2D
-## 只读路径展示层：把 LifecyclePreview 算出的折线画出来，不挂任何判定。
+## 只读路径展示层：把 BehaviorPreview 算出的折线画出来，不挂任何判定。
 ##
 ## 用 MultiMeshInstance2D 合批：每个线段 = 一个 quad，亮核/外发光由同一个 shader 画；
 ## 整批路径一次提交；只做视觉，不生成弹、不参与碰撞。

@@ -1,5 +1,4 @@
 extends GutTest
-const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## KernelBulletHost —— SpawnSpec→BulletType 映射 / 实例复用 / 纹理旁表 / 速度语义。
 
 
@@ -63,12 +62,3 @@ func test_rect_hitbox() -> void:
 	assert_eq(circle.to_bullet_type().hitbox_size, Vector2.ZERO, "圆判定时内核 hitbox_size 必须归零")
 	var rect := SpawnSpec.new().enemy().hitbox_rect(Vector2(48, 24))
 	assert_eq(rect.to_bullet_type().hitbox_size, Vector2(48, 24), "矩形判定时保留尺寸")
-
-
-## SpawnSpec.lifecycle 走 `{lifecycle}` 入口。
-func test_lifecycle_mapped() -> void:
-	var b := _make_backend()
-	var d := _enemy_spec()
-	d.lifecycle = FIX.world_accel(Vector2(0, -100))
-	b.shoot_spec(d, Vector2.ZERO, Vector2.RIGHT)
-	assert_eq(b.system._program_data.size(), 1, "应注册 world_accel program")

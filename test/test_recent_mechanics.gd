@@ -19,7 +19,7 @@ func test_grace_flows_into_kernel_row():
 	## 真链路：SpawnSpec.grace → BulletType.out_grace → KernelNativeSystem.spawn → 原生行。
 	## （2026-09-23 之前的 4 条 out_grace「测试」要么只断言 setter、要么把判定逻辑在测试里重抄
 	##  一遍 —— 全都不碰真代码，所以功能是空的门禁却一直绿。真行为 parity 见
-	##  test_lifecycle_primitives 的 out_grace 四条。）
+	##  test_native_storage / test_kernel_physics 的 out_grace 覆盖。）
 	if not ClassDB.class_exists("DanmakuStore"):
 		pending("未构建原生扩展")
 		return

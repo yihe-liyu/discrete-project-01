@@ -14,7 +14,7 @@ const HOMING_NEAREST_ENEMY := 1
 
 ## 追踪。只给前两个参数 = 旧语义（追自机、固定速度）。
 ## target_mode = 1 时追最近敌人；speed_end + speed_ramp 做线性变速；
-## turn_ramp / dist_weight / steer_until 对应 lifecycle steer 的 ramp / 距离权重 / 转向时长。
+## turn_ramp / dist_weight / steer_until 对应转向 ramp / 距离权重 / 转向时长。
 static func homing(speed: float, turn: float, target_mode: int = HOMING_PLAYER,
 		speed_end: float = 0.0, speed_ramp: float = 0.0, turn_ramp: float = 0.0,
 		dist_weight: float = 0.0, steer_until: float = 0.0) -> BehaviorSpec:

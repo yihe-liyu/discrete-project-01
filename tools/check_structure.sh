@@ -89,12 +89,7 @@ for dp, dn, fn in os.walk("scripts"):
 def _const(path: str, pattern: str):
 	m = re.search(pattern, open(path, encoding="utf-8").read())
 	return int(m.group(1)) if m else None
-CROSS_CONST = [
-	("OPS_ARGS", "gdextension/src/danmaku_store.h", r"static const int OPS_ARGS\s*=\s*(\d+)",
-	 "ARGS", "scripts/kernel_bridge/lifecycle/lifecycle_compiler.gd", r"const ARGS\s*:=\s*(\d+)"),
-	("SLOT_STRIDE", "gdextension/src/danmaku_store.h", r"static const int SLOT_STRIDE\s*=\s*(\d+)",
-	 "MAX_SLOTS", "scripts/kernel_bridge/lifecycle/lifecycle_compiler.gd", r"const MAX_SLOTS\s*:=\s*(\d+)"),
-]
+CROSS_CONST = []
 for cpp_name, cpp_path, cpp_pat, gd_name, gd_path, gd_pat in CROSS_CONST:
 	cpp_v = _const(cpp_path, cpp_pat)
 	gd_v = _const(gd_path, gd_pat)

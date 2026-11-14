@@ -4,7 +4,6 @@ extends GutTest
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
 ## 夹具自建（机制测试不绑内容 —— 见 docs/TEST_INDEX.md「内容绑定契约」）
 const FIXTURES = preload("res://test/fixtures/fixture_lib.gd")
-const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 
 
 func before_each() -> void:
@@ -97,17 +96,6 @@ func test_bomb_spawns_host_node() -> void:
 	assert_true(node is Node2D, "应是 Node2D")
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 0, "bomb 不应进内核池")
 	assert_almost_eq(node.spawn_delay, 0.1, 0.001, "应读 spawn_delay 参数")
-
-
-func test_radial_accel_via_manager() -> void:
-	var d := SpawnSpec.new().enemy().blend(true).tex("棱弹")
-	d.velocity = Vector2.UP * 300.0
-	d.lifecycle = FIX.radial_accel(150.0, SpawnSpec.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA), &"kira", -6.0)
-	BulletManager.current.shoot_spec(d, Vector2(300, GameConfig.FIELD_TOP + 20.0), Vector2.UP)
-	for i in 30:
-		await get_tree().physics_frame
-	assert_eq(BulletManager.current.kernel_system().get_active_count(), 1, "旧弹回收 + 新弹生成")
-	assert_gt(BulletManager.current.kernel_system().get_velocity(0).y, 0.0, "换成了向下弹")
 
 
 func test_death_clear_sweeps_kernel_bullets() -> void:

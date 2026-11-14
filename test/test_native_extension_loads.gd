@@ -19,5 +19,5 @@ func test_extension_api_surface() -> void:
 		pending("未构建扩展")
 		return
 	var store = ClassDB.instantiate("DanmakuStore")
-	for m in ["spawn", "despawn", "integrate", "query_circle", "hit_test", "behavior_tick", "behavior_batch", "register_program", "set_program"]:
+	for m in ["spawn", "despawn", "integrate", "query_circle", "hit_test", "behavior_tick", "preview_behavior", "set_behavior", "set_anchor_slot"]:
 		assert_true(store.has_method(m), "原生 API 缺方法：%s" % m)

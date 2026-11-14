@@ -10,7 +10,7 @@ extends Resource
 
 ## 发射的弹型定义（[code]data/bullets/*.tres[/code]，外观+碰撞+朝向）。
 @export var bullet_def: BulletDef
-## 运行时模板（代码注入；不进 .tres）：已有 SpawnSpec（带 lifecycle/颜色）时优先用它，
+## 运行时模板（代码注入；不进 .tres）：已有 SpawnSpec（带 behavior/颜色）时优先用它，
 ## 这样 pattern 调用方能把特殊弹道直接挂在模板上。
 ## 按引用使用：pattern 会改它的 velocity；不要跨并发 pattern 共享同一个模板。
 var template: SpawnSpec

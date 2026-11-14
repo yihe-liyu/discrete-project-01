@@ -282,26 +282,17 @@ func test_native_homing_behavior_content_bridge() -> void:
 	assert_gt(_kernel_bullet_host.system.get_velocity(id).length(), 0.0, "homing 应产生速度")
 
 
-## 第一张内容迁移：enemy 的 accel_world 与 native accel 逐帧一致。
-func test_native_accel_matches_lifecycle() -> void:
+## native accel：世界方向匀加速（魔理沙 focus 的路径）。
+func test_native_accel_behavior() -> void:
 	_kernel_bullet_host.setup_behaviors(null, Callable())
-	var lc_data := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
-	lc_data.lifecycle = BulletLifecycle.new().accel_world(Vector2(0, 200))
-	lc_data.velocity = Vector2(0, 175)
-	var bh_data := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
-	bh_data.with_behavior(BehaviorSpec.new(&"accel", PackedFloat32Array([0, 200])))
-	bh_data.velocity = Vector2(0, 175)
-
-	var lc_id := _kernel_bullet_host.shoot_spec(lc_data, Vector2(400, 300), Vector2.DOWN)
-	var bh_id := _kernel_bullet_host.shoot_spec(bh_data, Vector2(600, 300), Vector2.DOWN)
-	assert_eq(_kernel_bullet_host.system.get_behavior(bh_id), _kernel_bullet_host.system.get_behavior_id("accel"))
-
+	var data := SpawnSpec.new().enemy().tex("棱弹").no_spawn_fog()
+	data.with_behavior(BulletBehaviors.accel(Vector2(0, 200)))
+	data.velocity = Vector2(0, 175)
+	var id := _kernel_bullet_host.shoot_spec(data, Vector2(400, 300), Vector2.DOWN)
+	assert_eq(_kernel_bullet_host.system.get_behavior(id), _kernel_bullet_host.system.get_behavior_id("accel"))
 	for _i in 60:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
-
-	var lc_delta: Vector2 = _kernel_bullet_host.system.get_position(lc_id) - Vector2(400, 300)
-	var bh_delta: Vector2 = _kernel_bullet_host.system.get_position(bh_id) - Vector2(600, 300)
-	assert_almost_eq(bh_delta, lc_delta, Vector2(0.01, 0.01), "accel pack 应与 lifecycle 轨迹一致")
+	assert_almost_eq(_kernel_bullet_host.system.get_velocity(id), Vector2(0, 375), Vector2(0.01, 0.01), "1 秒后速度 = 初速 + accel")
 
 
 ## bounce_emit Outcome：撞墙请求 emit，host 按模板真正 spawn 子弹出，父弹回收。
@@ -341,22 +332,16 @@ func test_native_bounce_emit_hits_wall_naturally() -> void:
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "飞抵上墙后父弹应回收、子弹出应存在")
 
 
-## accel_heading：沿朝向加速，与 lifecycle 逐帧一致。
-func test_native_accel_heading_matches_lifecycle() -> void:
+## accel_heading：沿朝向加速（哆来咪三符夹角弹的路径）。
+func test_native_accel_heading_behavior() -> void:
 	_kernel_bullet_host.setup_behaviors(null, Callable())
-	var lc := SpawnSpec.new().enemy().tex("环玉").no_spawn_fog()
-	lc.lifecycle = BulletLifecycle.new().accel_heading(40.0)
-	lc.velocity = Vector2(120, 0)
-	var bh := SpawnSpec.new().enemy().tex("环玉").no_spawn_fog()
-	bh.with_behavior(BulletBehaviors.accel_heading(40.0))
-	bh.velocity = Vector2(120, 0)
-	var a := _kernel_bullet_host.shoot_spec(lc, Vector2(300, 300), Vector2.RIGHT)
-	var b := _kernel_bullet_host.shoot_spec(bh, Vector2(500, 300), Vector2.RIGHT)
+	var data := SpawnSpec.new().enemy().tex("环玉").no_spawn_fog()
+	data.with_behavior(BulletBehaviors.accel_heading(40.0))
+	data.velocity = Vector2(120, 0)
+	var id := _kernel_bullet_host.shoot_spec(data, Vector2(300, 300), Vector2.RIGHT)
 	for _i in 60:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
-	var da: Vector2 = _kernel_bullet_host.system.get_position(a) - Vector2(300, 300)
-	var db: Vector2 = _kernel_bullet_host.system.get_position(b) - Vector2(500, 300)
-	assert_almost_eq(db, da, Vector2(0.01, 0.01), "accel_heading 轨迹应一致")
+	assert_almost_eq(_kernel_bullet_host.system.get_velocity(id).length(), 160.0, 0.01, "1 秒后速度 = 120 + 40")
 
 
 ## split_after：计时结束后按概率选模板，父弹回收。
@@ -395,7 +380,7 @@ func test_native_top_emit_replaces_bullet() -> void:
 	assert_eq(_kernel_bullet_host.system.get_behavior(0), -1, "子弹出无 behavior")
 
 
-## lifecycle emit 的旧队列也必须能接收 SpawnSpec。
+## behavior host 的延后队列必须能接收 SpawnSpec。
 func test_behavior_host_queue_spawn_accepts_spawn_spec() -> void:
 	var host := KernelBulletHost.new()
 	add_child_autofree(host)
@@ -405,7 +390,7 @@ func test_behavior_host_queue_spawn_accepts_spawn_spec() -> void:
 	var spec := SpawnSpec.new().tex("米弹").enemy().speed(120.0)
 	bh.queue_spawn(spec, Vector2(300, 300), Vector2.DOWN)
 	bh.flush()
-	assert_gt(host.system.get_active_count(), 0, "SpawnSpec 应被 lifecycle 队列接收")
+	assert_gt(host.system.get_active_count(), 0, "SpawnSpec 应被 behavior 队列接收")
 
 
 ## seed_burst：结束时应一次 emit 一整圈子弹出。

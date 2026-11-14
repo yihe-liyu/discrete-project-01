@@ -1,6 +1,6 @@
 # 🛠️ 东方星 STG 引擎 — 内容制作流程
 
-> 版本：2026-10 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `SpawnSpec.trajectory(lc)`，原生执行**；创作台 / 工作台 UI 已退役，反馈走游戏内练习 + 无头检查）
+> 版本：2026-10 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `SpawnSpec.with_behavior(...)`，原生执行**；创作台 / 工作台 UI 已退役，反馈走游戏内练习 + 无头检查）
 
 ---
 
@@ -11,7 +11,7 @@
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. 跑起来看手感：主菜单 → **Spell Practice**（单张符卡最快）或 **Start** 整关；没有单独的预览沙盒
 4. 改完先跑契约检查：`./tools/check_content.sh` + `./tools/content_preflight.sh`；测试用 `./tools/verify.sh`
-5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`SpawnSpec.trajectory(lc)` 直接用 builder 拼原语）
+5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`SpawnSpec.with_behavior(BulletBehaviors.xxx)`）
 
 > 创作台 / 工作台**已退役**（2026-10-24）：不再有 F6 内容编辑器，也不再有预览 UI。
 > 流程层面的自由度 / 触点 / 摩擦与下一步，见 [内容创作流程审查](docs/CONTENT_PIPELINE_AUDIT.md)。
@@ -252,7 +252,7 @@ params = {
 **隐性约束（违反时大多不报错，只是"没生效"）**：
 
 1. **只认 `var`，不认 `const`**：`const` 键的 `"X" in target` 为 **true**、但 `set()` **静默无效**
-   —— 可调项必须是 `var`（实测：`BulletLifecycle.MAX_SLOTS` 应用后值不变、无任何报错）。
+   —— 可调项必须是 `var`（实测：`const` 值被内容误改后不会报错，排查时很难发现）。
 2. **move / shoot 共用同一个字典**（`boss.gd` 对两者都传 `data.params`）→ **两边不能有同名 var**，否则一个键同时改两边。
 3. **注入发生在 `start()` 之前**（`boss.gd`：`new()` → `apply` → `start()`）；
    若脚本在 `_on_start()` 里建弹型（如 `spell053_shoot.gd`），把注入挪到 `start()` 之后会让
@@ -391,100 +391,71 @@ func _on_start() -> void:
 文件头注释仍建议写清「这张卡/这个行为做什么」；`@name` / `@desc` / `@role` 注解随创作台退役，**不再被任何工具消费**。
 命名约定（`*_move.gd` / `*_shoot.gd` / `enemy/` / `stage_script/`）仍用于人类阅读与按路径查文件，但不再驱动目录 UI。
 
-### 弹幕行为（由浅入深）
+### 弹幕行为（native behavior）
 
-一颗弹的飞行规律**只有一个入口**：`SpawnSpec.trajectory(lc)`（`lc` = `BulletLifecycle`，fluent builder）。
-**不改 C++** 就能拼出绝大多数弹幕 —— 下面从"直接拼原语"讲到"自己排相位"。
-> 完整字典（每个函数的精确签名 / 原生语义 / 素材 key 表 / 陷阱清单）见 **[docs/DANMAKU_API.md](docs/DANMAKU_API.md)**；本节是教学路径。
+一颗弹的飞行规律**只有一个入口**：`SpawnSpec.with_behavior(BulletBehaviors.xxx)`。
+behavior 是 C++ pack，逐帧在内核里执行；内容侧只给 id + 固定 float 参数，不再有 GDScript 描述符 / 编译器。
 
-#### ① 最简：直接拼原语
+> 完整字典（每个 builder 的精确签名 / 原生语义 / 素材 key 表 / 陷阱清单）见 **[docs/DANMAKU_API.md](docs/DANMAKU_API.md)**；本节是教学路径。
+
+#### ① 最简：挂一个现成 behavior
 
 ```gdscript
 var _spec: SpawnSpec            # 成员：复用实例（见「弹型实例复用」）
 
 func _fire(p_ctx: StageContext) -> void:
 	if _spec == null:
-		var lc := BulletLifecycle.new()
-		lc.steer(BulletLifecycle.T_NEAREST_ENEMY, deg_to_rad(720.0), 2.0, 150.0, 2.0)
-		lc.speed_lerp(500.0, 2000.0, 2.0)
-		lc.until_never()
-		_spec = SpawnSpec.new().tex("小玉").speed(300).enemy().trajectory(lc)
+		_spec = SpawnSpec.new().tex("小玉").speed(300).enemy() \
+			.with_behavior(BulletBehaviors.homing(
+				500.0, deg_to_rad(720.0),
+				BulletBehaviors.HOMING_NEAREST_ENEMY,
+				2000.0, 2.0, 2.0, 150.0, 2.0))
 	p_ctx.bullets.shoot_spread_spec(_spec, 8, TAU, Vector2.RIGHT, global_position)
 ```
 
-> 原语就是唯一写法：Move / Until / Action 直接链在 `BulletLifecycle` 上；`emit` / `emit_variant` 用 `SpawnSpec` 模板。没有可视化拼装器了。
+> 一颗弹**只有一个** behavior；要组合就在 C++ pack 里写普通 `if` / `for`，不在内容侧叠多个。
 
-#### ② 常见组合（preset 已删，照着拼）
+#### ② 常见行为
 
-| 想要 | 原语组合 |
+| 想要 | behavior |
 |---|---|
-| 世界加速 | `accel_world(v)` + `until_never()` |
-| 沿朝向加速 | `accel_heading(a)` + `until_never()` |
-| 弧线 | `rotate(w, limit)` + `until_turned()` + `then()` |
-| 追踪 | `steer(T_NEAREST_ENEMY, angle, accel, prox, duration)` + `speed_lerp(min, max, accel)` + `until_never()` |
-| 碰框换弹 | `accel_heading(accel)` + `until_at_wall(L\|R\|T)` + `sfx` + `emit(spawn, toward(T_BOSS, angle), speed, AT_PHASE_END)` + `despawn()` |
-| 碰顶分裂 | `accel_heading(rate)` + `until_at_wall(TOP)` + `sfx` + `emit(spawn, heading(PI), 0, AT_PHASE_END)` + `despawn()` |
-| 躲避自机 | `until_near(T_PLAYER, prox).every(jump)` + `on_end_heading(away(T_PLAYER))` + `then()` + `until_elapsed(flee)` + `despawn()` |
-| 锚定激光 | `anchor_drift(anchor, offset, angle, speed, use_global, initial, render_heading)` + `until_never()` |
+| 世界加速 | `BulletBehaviors.accel(Vector2(0, 200))` |
+| 沿朝向加速 | `BulletBehaviors.accel_heading(40.0)` |
+| 追最近敌人 + 变速 | `BulletBehaviors.homing(500, 720°, 1, 2000, 2.0, 2.0, 150, 2.0)` |
+| 碰框换弹（朝 Boss） | `BulletBehaviors.bounce_emit(模板, 速度, 加速度)` |
+| 碰框镜面反射 | `BulletBehaviors.bounce_emit(模板, 0.01, 0, 0, true, true)` |
+| 到点分裂两选一 | `BulletBehaviors.split_after(模板A, 模板B, 0.6, 加速度, 概率)` |
+| 到点炸一圈 | `BulletBehaviors.seed_burst(模板, 时长, 速度, 个数, 子速度, 张角)` |
+| 自转 + 沿朝向加速 | `BulletBehaviors.spin_accel(自转速度, 加速度)` |
+| 锚定激光段 | `BulletBehaviors.anchor_drift(角度, 速度, 首帧位移, true)` |
 
-> `BulletLifecycle` 不再有 9 个 preset；`LifecycleCatalog` 只保留 `{lifecycle}` 兼容入口。
-> 组合的**唯一真相**是内容里的这段 builder 代码，拼装器只是帮你生成它。
+卡片专属 behavior（`top_emit` / `spin_then_slow` / `rain_stage` / `sonar`）按卡名直接调用，不跨卡复用。
 
-#### ③ 不够用：自己拼相位
+#### ③ 锚定激光
 
 ```gdscript
-# 边转 0.5 弧度 → 转满后沿当前方向加速 1 秒 → 消失
-func _sharp_turn() -> BulletLifecycle:
-	var lc := BulletLifecycle.new()
-	lc.rotate(2.0, 0.5)      # 相位1：边飞边转（limit=0.5 弧度）
-	lc.until_turned()        # 转满 → 进下一相位
-	lc.then()                # ← 流程控制：开新相位
-	lc.accel_heading(300.0)  # 相位2：沿当前方向加速
-	lc.until_elapsed(1.0)
-	lc.despawn()
-	return lc
-
-_spec.trajectory(_sharp_turn())    # 直接挂，不经端口
+spec.with_behavior(BulletBehaviors.anchor_drift(angle, 2000.0, 13.333, true))
+spec.anchor = {&"id": marker.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
 ```
 
-#### ④ 全词汇（Move / Until / Action / 方向糖）
+`anchor` 的节点失效时宿主退回自机 + offset；`use_global=false` 时用 `player + node.position`。
 
-| 类 | 成员 |
-|---|---|
-| Move | `accel_world` `accel_heading` `rotate` / `rotate_velocity` / `rotate_heading` / `spin_render` `steer` `speed_lerp` `speed_mul` `set_heading` `set_speed` `drift` `anchor_drift` |
-| Until | `until_never` `until_elapsed` `until_near` `until_at_wall` `until_speed` `until_turned`；`then()` 开新相位 |
-| Action | `sfx` `emit` `emit_variant` `despawn` `clear_fx` `despawn_clear` `on_end_heading` `on_end_call` |
-| 方向糖 | `heading(angle)` / `toward(target, angle)` / `away(target, angle)` / `forward(angle)` / `random_dir(spread)` / `chance_toward(target, p, spread)` / **`reflect(angle)`** |
+#### ④ 不够用：自己写 C++ pack
 
-> - `target` = `T_PLAYER` / `T_BOSS` / `T_NEAREST_ENEMY`。
-> - **`emit`**：相位结束时生成替换弹。第一参 = `SpawnSpec`（推荐）／`Callable（）-> SpawnSpec`（旧写法）／数组（变体发射）。
-> - **`reflect(angle)` 做镜面反弹**：把**当前速度**按发射点所在的场边翻分量（左右翻 x、上墙翻 y、角落原路返回）。
->   撞哪面墙**不用自己声明**（内核按落点判）→ 不会和 `until_at_wall` 的 mask 脱节：
->   ```gdscript
->   lc.until_at_wall(BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
->   lc.emit(反射弹, BulletLifecycle.reflect(), 150.0, BulletLifecycle.AT_PHASE_END)   # ⚠️ 必须 AT_PHASE_END
->   lc.despawn()
->   ```
->   「镜面 + 微散」= `reflect(deg_to_rad(8.0))`；不贴边（如 `AT_CURRENT` 且在场内）→ 不翻，退化为自身朝向。
-> - **`emit_variant([未命中, 命中], chance_toward(T_PLAYER, p, spread), speed)`**：内核按概率分支抽签，0 = 未中取第 1 个、1 = 命中取第 2 个。
->   自机狙转红的例子：`lc.emit_variant([_青玉, _红玉], BulletLifecycle.chance_toward(T_PLAYER, 0.1, a), 60.0)`。
->   **模板永远留在宿主**（内核只回传一个分支号），所以换色 / 换贴图 / 换大小都行。
-> - **`on_end_call(hook)`**：低频内容回调。`hook` 传**已注册的 hook 名**（`StringName`，先 `LIFECYCLE_HOOKS_SCRIPT.register()`）或 `Callable`（旧写法）。
-> - **锚定型弹道**（激光）用第二参数传 per-shot 锚点：`b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})`。
+只有要**新的运动数学**时才动 `gdextension/src/behaviors_core/`：
 
-#### ⑤ 什么时候才动 C++
+```text
+shared/xxx.cpp                 实现 init/tick，REGISTER_BEHAVIOR("xxx", ...)
+registry.cpp                   加 register_xxx()
+scripts/data/bullet_behaviors.gd  加一个具名构造器
+test/test_native_behaviors.gd  加逐帧语义测试
+```
 
-只有要**新的数学原语**（现 Move 9 / Until 6 / Action 8 之外）时才动 `gdextension/src/danmaku_store.cpp`：
-新增一个 op 要同时改**原生执行分支**与**编译端编码**（若回传事件，还要加事件数组项），并补 parity 测试。
-其余一切 —— 新组合、新颜色分支 —— 都在宿主侧完成（组合不再进 `LifecycleCatalog`）。
+pack 里直接写 `if` / `for`，用 `behavior::accelerate` / `heading` / `emit` / `kill` 等小 helper；不要为每种条件造新原语。
 
-#### ⑥ 旧通路：`kernel_port` / `*_bullet.gd`（已弃用）
+#### ⑤ 预览
 
-`data/**` 里**已经没有** `*_bullet.gd` 载体了：飞行规律一律直接 `trajectory(lc)`。
-桥接层仍保留 `kernel_port` 通路（现在只认 `{"lifecycle": ...}`；旧 `{"move": ...}` preset 名已删），但它**只服务测试夹具**
-（`test/fixtures/lifecycle_port_behavior.gd` + `test/test_lifecycle_port.gd`），新内容不要再用；待清（TODO b2c）。
-
----
+`ctx.telegraph` 的路径预览调用 `DanmakuStore.preview_behavior()`，与实战共用同一份 C++ tick；无 behavior 的弹走直线兜底。预览不生成真弹、不消耗游戏 RNG。
 
 ## 七、调试（无头工具）
 

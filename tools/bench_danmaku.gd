@@ -52,7 +52,7 @@ func _run(n: int, with_behavior: bool) -> void:
 
 	_data = SpawnSpec.new().enemy().tex("小玉").speed(200.0).blend(true).no_spawn_fog()
 	if with_behavior:
-		_data.lifecycle = BulletLifecycle.new().accel_world(Vector2(0.0, 60.0))   # world_accel 行为路径
+		_data.with_behavior(BulletBehaviors.accel(Vector2(0.0, 60.0)))
 
 	for i in n:
 		var dir := Vector2.RIGHT.rotated(randf() * TAU)

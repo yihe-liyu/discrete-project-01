@@ -122,13 +122,13 @@ func test_anchor_drift_tracks_moving_anchor() -> void:
 	_spawn(store, Vector2.ZERO, Vector2.UP, "anchor_drift", [0.0, speed, initial, 1.0], 0)
 	var anchor := Vector2(340, 560)
 	store.behavior_tick(DT, Vector2.ZERO, Vector2.ZERO, false, PackedVector2Array(),
-		PackedVector2Array(), PackedVector2Array([anchor]))
+		PackedVector2Array([anchor]))
 	assert_almost_eq(store.get_position(0).x, anchor.x, 0.01, "x 应贴锚点")
 	assert_almost_eq(store.get_position(0).y, anchor.y - initial, 0.01, "首帧用 initial")
 	for i in 3:
 		anchor += Vector2(5, 0)
 		store.behavior_tick(DT, Vector2.ZERO, Vector2.ZERO, false, PackedVector2Array(),
-			PackedVector2Array(), PackedVector2Array([anchor]))
+			PackedVector2Array([anchor]))
 	assert_almost_eq(store.get_position(0).x, anchor.x, 0.01, "锚点移动后应跟随")
 	assert_almost_eq(store.get_position(0).y, anchor.y - initial - speed * DT * 3.0, 0.05,
 		"漂移应逐帧累计")

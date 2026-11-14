@@ -1,25 +1,25 @@
 # 弹幕内核接口（DANMAKU API）
 
-> **一句话**：给一颗弹写飞行规律 = `SpawnSpec.trajectory(BulletLifecycle)`；发射 = `ctx.bullets.shoot_spread_spec(...)`。
+> **一句话**：给一颗弹写飞行规律 = `SpawnSpec.with_behavior(BulletBehaviors.xxx)`；发射 = `ctx.bullets.shoot_spread_spec(...)`。
 > 本文是弹幕创作的**唯一权威参考**；教学路径见 `CONTENT_GUIDE.md` §六；原生执行器在 `gdextension/src/danmaku_store.cpp`。
-> 读法：新建弹幕看 §1 + §3.8；查词汇看 §2/§3；发射看 §4；踩坑看 §9；设计动机看附录 A/B（全文在 archive）。
+> 读法：新建弹幕看 §1 + §3；查 behavior 看 §3；发射看 §4；踩坑看 §9。
 
 ## 0. 心智模型（三层）
 
 ```
 内容脚本 (CoroutineScript, GDScript 低频)
-   │  构造 SpawnSpec（贴图/判定/阵营）+ trajectory(BulletLifecycle)
+   │  构造 SpawnSpec（贴图/判定/阵营）+ with_behavior(...)
    ▼
-描述符 (BulletLifecycle, 固定 schema)
-   │  compile() → packed program（ops/args/phases）
+native behavior (C++ pack，固定 float state/params)
+   │  逐帧 tick（与积分同一条 native 管线）
    ▼
 原生执行 (DanmakuStore, C++ 每帧每弹)
-     位置积分 / 条件 / 动作 / 命中 / 渲染缓冲
+     位置积分 / 行为 / 命中 / 渲染缓冲
 ```
 
-1. **内容不碰 opcode**：只写 `SpawnSpec` / `BulletLifecycle` / `ctx.*`。
+1. **内容不碰内核状态**：只写 `SpawnSpec` / `BulletBehaviors` / `ctx.*`。
 2. **SpawnSpec 实例必须复用**（弹型缓存在实例上）→ §2.3。
-3. **GDScript 不进每帧每弹路径**：per-bullet 逻辑一律描述符；一次性/低频才用 `on_end_call`。
+3. **GDScript 不进每帧每弹路径**：per-bullet 逻辑一律在 C++ behavior pack。
 
 ## 1. 最小可跑示例
 
@@ -32,7 +32,6 @@ var _spec: SpawnSpec            # 成员：建一次、复用（铁律）
 func _tick(p_ctx: StageContext) -> Variant:
 	if _spec == null:
 		_spec = SpawnSpec.new().tex("小玉").speed(220).color(Color.AQUA).enemy()
-	_spec.trajectory(BulletLifecycle.new().until_never())
 	p_ctx.bullets.shoot_spread_spec(_spec, 5, deg_to_rad(40.0), Vector2.DOWN, target.global_position)
 	return p_ctx.clock.wait(0.4)
 ```
@@ -68,8 +67,8 @@ func _tick(p_ctx: StageContext) -> Variant:
 | spawn_fx | EffectType | null | 这型的出生特效（null=用阵营默认） |
 | out_grace | float | 0.0 | **逐弹出界宽限（秒）**：出界后仍活这么久；0 = 出界立即回收 |
 | wrap_mask | int | 0 | 环绕边掩码：1 左 / 2 右 / 4 上 / 8 下 |
-| lifecycle | BulletLifecycle | null | 弹道描述符 |
-| lifecycle_anchor | Variant | null | per-shot 锚点 `{id, offset, use_global}`（激光用） |
+| behavior_spec | BehaviorSpec | null | 弹道 behavior（C++ pack） |
+| anchor | Variant | null | per-shot 锚点 `{id, offset, use_global}`（激光用） |
 | child | SpawnSpec | null | 一层替换弹（可选） |
 
 > `faction` 用 `enemy()` / `player()` 设；`damage` / `hit_sfx` / `kind` 直接赋值。
@@ -84,7 +83,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 | `.color(c)` / `.blend(bool)` | 染色 / 开关 BLEND 换色（默认开） |
 | `.enemy()` / `.player()` | 阵营：敌弹 / 自机弹 |
 | `.with_spawn_fog(effect)` / `.no_spawn_fog()` | 打开/换出生雾 / 关掉出生雾 |
-| `.trajectory(lc, anchor)` | **挂描述符** |
+| `.with_behavior(spec)` | **挂 native behavior**（§3） |
 | `.grace(v)` | out_grace |
 | `.wrap_around()` / `.wrap_horizontal()` / `.wrap_vertical()` | 四边 / 左右 / 上下环绕 |
 | `.wrap_edges(mask)` | 自定义边，mask 用 `SpawnSpec.WrapEdge` |
@@ -99,274 +98,57 @@ func _tick(p_ctx: StageContext) -> Variant:
 - `to_bullet_type()` 在**首次发射**时把类型级字段（贴图/阵营/判定/伤害/命中特效/命中音效）快照到内核弹型，缓存挂在 **SpawnSpec 实例**上。
 - **同一实例反复发射 = 共用同一弹型**；每发 `SpawnSpec.new()` 会让内核弹型表膨胀。
 - 速度 / tint **不属弹型**，每发可改；类型级字段请在构造时定好，不要运行期改型。
-- 构造链 setter 会主动失效缓存；直接改字段后要再走一次 setter，或重建实例。
+- 构造链 setter 会主动失效缓存；类型级字段请在构造时定好。
 
-## 3. BulletLifecycle（弹道描述符）
+## 3. 弹道 behavior（原生 C++ pack）
 
-`scripts/kernel_bridge/lifecycle/bullet_lifecycle.gd` ｜ `extends RefCounted, class_name BulletLifecycle`
+一颗弹的飞行规律通过 `SpawnSpec.with_behavior()` 挂一个 **native behavior**。
+behavior 在 C++ 里逐帧执行，内容侧只提供 id + 固定参数；没有 per-bullet GDScript VM。
 
-### 3.1 相位（Phase）模型
-
-```
-BulletLifecycle = [ Phase, Phase, ... ]     # 有序，不可跳转
-Phase = { moves: [Move...], until: Until, on_end: [Action...] }
+```gdscript
+_spec.with_behavior(BulletBehaviors.accel(Vector2(0, 200)))
 ```
 
-- 每帧按顺序跑 moves，直到 `until` 成立 → 执行 `on_end` → 进下一相位；`then()` 开新相位（线性）。
-- 相位切换**清零所有状态槽**；最后一个相位结束后，弹按当前速度自由积分（出界 cull）。
-- **陷阱**：`then()` 生成的新相位 `until = never`；在它上面挂 `on_end` 永不触发。
+### 3.1 约束
 
-### 3.2 Move（每帧施加，11 个 op；`anchor_drift` / `drift` 是 `position` 的糖）
+- 一颗弹**只有一个** behavior；需要组合时在 C++ pack 里写清楚，不要在内容侧叠多个。
+- 参数上限 8 个 float；多余参数会被原生截断，构造器应自己校验。
+- behavior 是确定性的：随机只走内核单通道 RNG，回放可复现。
+- 行为里可以 `emit` / `play_sfx` / `emit_laser` / `clear_fx` / `despawn`；这些请求由内核在遍历结束后统一落地。
 
-| Move | 签名 | 语义 |
+### 3.2 通用 behavior
+
+| builder | 参数 | 语义 |
 |---|---|---|
-| accel_world | `accel_world(v: Vector2)` | `velocity += v * dt`（世界坐标恒定加速度） |
-| accel_heading | `accel_heading(a: float)` | 沿**自身朝向**加速：`velocity += heading * a * dt`（v=0 也有效 → 可减速/反向） |
-| rotate | `rotate(w, limit=0)` | **同时**转速度与朝向；limit>0 时累计转角钳到 limit（`until_turned()` 用） |
-| rotate_velocity / rotate_heading | `rotate_velocity(w, limit=0)` / `rotate_heading(...)` | 只转速度 / 只转朝向 |
-| spin_render | `spin_render(w)` | **只转贴图**（render_rot）；速度 / 朝向 / 弹道不变，可跨相位累计 |
-| steer | `steer(target, max_turn, ramp=0, dist_weight=0, steer_until=0)` | 朝目标**只转向、不改速度**；变速另配 `speed_lerp` |
-| speed_lerp | `speed_lerp(from, to, ramp)` | 方向不变，速度按 elapsed/ramp 插值 |
-| speed_mul | `speed_mul(f)` | 每帧 `velocity *= f`（**复利/指数**，不是瞬时设定） |
-| set_heading | `set_heading(dir)` | 设速度方向（保速度大小）**并同步朝向** |
-| set_speed | `set_speed(speed)` | 设速度大小；方向不变，**v=0 时用「朝向」定方向** |
-| anchor_drift | `anchor_drift(anchor_id, offset, angle, speed, use_global=true, initial=0, render_heading=false)` | `position`(ANCHOR) 的糖：`pos = anchor_base + dir(angle)·drift`；需 `trajectory(lc, anchor)` |
-| drift | `drift(angle, speed, initial=0)` | `position`(PHASE_START) 的糖：从**本弹相位起点**平移，不改速度/朝向 |
-| set_position | `set_position(Vector2)` | 直接把位置写成绝对坐标；behavior move 阶段生效 |
-| offset_position | `offset_position(Vector2)` | 每帧在当前积分位置上追加偏移（会累计；一次性位移用空相位 + `then()`） |
+| `linear()` | — | 匀速直线（默认行为） |
+| `accel(Vector2)` | ax, ay | 世界方向匀加速 |
+| `accel_heading(accel, lifetime=0, clear=false)` | accel, lifetime, clear | 沿当前朝向加速；lifetime>0 到点回收，clear 播消散 |
+| `homing(speed, turn, target_mode=0, speed_end=0, speed_ramp=0, turn_ramp=0, dist_weight=0, steer_until=0)` | 8 | 追踪；target_mode=1 追最近敌人；可做速度插值 |
+| `bounce_emit(template, child_speed=0, accel=0, angle=0, despawn=true, reflect=false)` | 6 | 撞左/右/上墙时生成子弹出；reflect=true 按镜面反射 |
+| `split_after(template_a, template_b, duration, accel, chance, child_speed=0, spread=0)` | 7 | 到时按概率分裂成两个模板之一 |
+| `seed_burst(template, duration, speed, count, child_speed, spread)` | 6 | 到时向四周炸开一圈 |
+| `spin_accel(spin, accel)` | 2 | 贴图自转 + 沿朝向加速 |
+| `anchor_drift(angle, speed, initial=0, render_heading=true)` | 4 | 锚定宿主节点做线性漂移（激光段） |
 
-> 位置来源（V18「模式派」）：位置由**一个** `position` op 的**来源模式**决定 —— `ANCHOR`（外部节点，激光）/ `PHASE_START`（本弹相位起点）/ 缺省 `FREE`（自由积分）。
-> `set_position` / `offset_position` 在 behavior 的 move 阶段执行；本帧 integrate 的 cull / wrap 已经过去，下一帧才处理新位置。
-> 模式只写 `pos`：`v` / `h` 不受影响；`render_heading=true` 走独立渲染朝向通道。
-> 离开模式（相位结束、下一相位无 position op）：`pos` 留在最后结果，积分从该点接力 → 弹按速度轴自由飞。
-> 同相位多个 position op = **模式切换（last-wins）**，不是叠加；位置模式与速度 op 混用会让速度变化在位置上看不见。
+卡片专属 behavior（`stage01.enemy04.top_emit` / `stage02.enemy02.spin_then_slow` /
+`stage03B.mid01.rain_stage` / `stage01.mid01.sonar`）由对应内容直接调用，不要跨卡复用。
 
-### 3.3 Until（相位结束条件）
+### 3.3 激光锚点
 
-| Until | 签名 | 语义 |
-|---|---|---|
-| never | `until_never()` | 永不结束（靠 emit/despawn 手动结束） |
-| elapsed | `until_elapsed(t)` | 相位经过 t 秒 |
-| near | `until_near(target, r)` | 距 target < r |
-| speed | `until_speed(cmp, value)` | `|v|` 与 value 比较（`CMP_GE` / `CMP_LE`） |
-| x | `until_x(cmp, value)` | 当前 x 与 value 比较 |
-| y | `until_y(cmp, value)` | 当前 y 与 value 比较 |
-| rect | `until_rect(rect, inside=false, edges=15)` | 进入 / 离开矩形；`inside=true` = 进入时结束；`edges` 控制离开时看哪几条边 |
-| turned（糖） | `until_turned()` | 当前相位 `rotate` 累计转角 ≥ limit；**必须跟在同相位 rotate 之后** |
-
-> 通用节流：任何 Until 都可链式 `.every(sec)` / `.every_ticks(n)`。
-> 状态槽对创作者不可见；读取状态只经 `until_turned()`。
-
-### 3.4 Action（相位结束时一次性）
-
-| Action | 签名 | 语义 |
-|---|---|---|
-| sfx | `sfx(key, db=AudioManager.SFX_LEVEL_DB)` | 播音效（key 见 §7.2；默认是总电平，不是 0 dB） |
-| emit | `emit(spawn, dir, speed=0, at=AT_CURRENT)` | 生成替换弹；`spawn` = SpawnSpec / Callable / 数组；`at` = AT_CURRENT / AT_PHASE_END |
-| emit_variant | `emit_variant(spawns, dir, speed=0, at=AT_CURRENT)` | 内核抽一次 RNG 定分支（0=未中→spawns[0]，1=命中→spawns[1]）；`dir` 必须是 `chance_toward(...)` |
-| emit_laser | `emit_laser(skeleton, color, opts={}, offset=ZERO, at_current=false)` | 相位结束时发激光；骨架默认世界坐标；`at_current=true` 时按相位结束位置平移；不进内核弹池 |
-| emit_laser_dir | `emit_laser_dir(skeleton, color, dir, opts={}, offset=ZERO, at_current=true)` | 相位结束发激光，按 `dir`（常用 `forward()`）旋转骨架；首尾点方向作为基准 |
-| despawn | `despawn()` | 回收自己（静默，不播特效） |
-| clear_fx | `clear_fx()` | 在弹**此刻位置**播一次消弹特效（颜色提亮 1.5×），不改状态，弹继续飞 |
-| despawn_clear | `despawn_clear()` | `clear_fx().despawn()` —— 消散 + 回收 |
-| on_end_heading | `on_end_heading(dir)` | 转向（保速度大小） |
-| on_end_call | `on_end_call(hook)` | **逃逸口**：每相位结束最多一次、宿主侧、非热路径；`host` 暴露 `queue_spawn` / `queue_laser` |
-
-> **`despawn` vs `despawn_clear`**：默认 `despawn()`；只有**确实想让人看见消散**时才用 `despawn_clear()`。
-> 撞墙/屏外回收别用（屏外闪光 + 特效风暴）；消散特效与死亡清弹圈共用同一实现。
-> **`on_end` 按 append 顺序执行**；`on_end_heading` 即时改写朝向，`despawn` 后同一相位后续 action 不再有意义。
-> `emit` 细则：`speed<=0` 继承当前速度；`at=AT_PHASE_END` 用 until 落点；模板永不进原生。
-> `emit_speed_rel(spawn, dir, speed=0, spread=0.15, at=AT_CURRENT)`：每次 emit 在 base speed 上做 ±spread 逐发求值（宿主表执行，纯 program 只存 base speed）。
-
-### 3.5 方向表达式（静态构造；供 steer / emit / set_heading / on_end_heading 用）
-
-| 表达式 | 签名 | 语义 |
-|---|---|---|
-| heading | `heading(angle)` | 世界角（构造期常量）；`set_heading` 可用；**emit / on_end_heading 必须用 world_heading** |
-| toward | `toward(target, angle=0)` | 朝 target 再转 angle；**target 不可用时退化为向下** |
-| away | `away(target, angle=0)` | 背对 target 再转 angle |
-| world_heading | `world_heading(angle)` | 显式世界角；emit / on_end_heading 专用（不随发射者变） |
-| forward | `forward(angle=0)` | 沿**自身朝向**再转 angle |
-| velocity | `velocity(angle=0)` | 沿**当前速度**再转 angle；零速度回落到朝向 |
-| random_dir | `random_dir(spread)` | 沿自身朝向 ±spread 随机（确定性 RNG，每次求值抽 1 次） |
-| chance_toward | `chance_toward(target, p, spread=0)` | p 概率精确朝 target；否则沿自身朝向转 spread；**仅作 `emit_variant` 的 dir** |
-| reflect | `reflect(angle=0)` | 把**当前速度**按发射点所在场边翻分量，再转 angle；需配 `at=AT_PHASE_END` |
-
-> 镜面反射示例：`lc.until_rect(GameConfig.FIELD_RECT, false, WALL_LEFT|WALL_RIGHT|WALL_TOP)` → `lc.emit(反射弹, reflect(), 150, AT_PHASE_END)` → `lc.despawn()`。
-> 撞哪面墙不用声明（内核按落点判）；「镜面 + 微散」用 `reflect(deg_to_rad(8.0))`。原生用例：`test/test_native_reflect.gd`。
-
-### 3.6 常量
+激光段需要宿主每帧跟随子机/节点时，用 `anchor_drift`，并在发射前设置 per-shot 锚点：
 
 ```gdscript
-BulletLifecycle.T_PLAYER / T_NEAREST_ENEMY / T_BOSS   # 0 / 1 / 2
-BulletLifecycle.WALL_LEFT / WALL_RIGHT / WALL_TOP / WALL_BOTTOM  # 1 / 2 / 4 / 8
-BulletLifecycle.AT_CURRENT / AT_PHASE_END             # 0 / 1
-BulletLifecycle.ROT_BOTH / ROT_VELOCITY / ROT_HEADING # 0 / 1 / 2
-BulletLifecycle.CMP_GE / CMP_LE                       # 0 / 1
+spec.with_behavior(BulletBehaviors.anchor_drift(angle, 2000.0, 13.333, true))
+spec.anchor = {&"id": marker.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
 ```
 
-> `T_NEAREST_ENEMY` 只在宿主候选集里取最近；targetability（未开战 Boss 排除）在 `EntityRegistry.get_targetable_enemies` / `Enemy.is_targetable`。
+`anchor` 的 `id` 失效时宿主退回自机 + offset；`use_global=false` 时用 `player + node.position`。
 
-### 3.7 状态槽（slots）
+### 3.4 行为预览
 
-- 有状态 unit 自动分配：`rotate`→turned、`position`(ANCHOR)→drift（1 槽）、`position`(PHASE_START)→起点+位移（3 槽）；`steer` 读相位 elapsed（不占槽）。
-- 相位切换清零；创作者看不到槽。
-- **同相位上限 8**：超出会被内核拒绝注册，该弹退化为直线。
-
-### 3.8 弹道组合（preset 已删除，直接拼原语）
-
-F10c 删掉了 9 个 typed preset；`BulletLifecycle` 只保留原语，内容直接写 builder。
-
-```gdscript
-var lc := BulletLifecycle.new()
-lc.steer(BulletLifecycle.T_NEAREST_ENEMY, deg_to_rad(720.0), 2.0, 150.0, 2.0)
-lc.speed_lerp(500.0, 2000.0, 2.0)
-lc.until_never()
-data.trajectory(lc)
-```
-
-| 想要 | 原语组合 |
-|---|---|
-| 世界加速 | `accel_world(v)` + `until_never()` |
-| 沿朝向加速 | `accel_heading(a)` + `until_never()` |
-| 弧线 | `rotate(w, limit)` + `until_turned()` + `then()` |
-| 追踪 | `steer(T_NEAREST_ENEMY, angle, accel, prox, duration)` + `speed_lerp(min, max, accel)` + `until_never()` |
-| 碰框换弹 | `accel_heading(accel)` + `until_rect(FIELD_RECT, false, L\|R\|T)` + `sfx` + `emit(spawn, toward(T_BOSS, angle), speed, AT_PHASE_END)` + `despawn()` |
-| 碰顶分裂 | `accel_heading(rate)` + `until_rect(FIELD_RECT, false, TOP)` + `sfx` + `emit(spawn, heading(PI), 0, AT_PHASE_END)` + `despawn()` |
-| 躲避自机 | `until_near(T_PLAYER, prox).every(jump)` + `on_end_heading(away(T_PLAYER))` + `then()` + `until_elapsed(flee)` + `despawn()` |
-| 锚定激光 | `anchor_drift(anchor, offset, angle, speed, use_global, initial, render_heading)` + `until_never()` |
-
-> 不再新增 preset：组合由内容直接写。`emit` / `emit_variant` 用 `SpawnSpec` 模板。
-> `LifecycleCatalog` 只保留 `{lifecycle: BulletLifecycle}` 的兼容入口；旧 `{move: ...}` preset 名一律返回 null。
-
-### 3.9 编译与共享
-
-- `compile()` → `{ops, args, move_start, move_count, until_idx, act_start, act_count, phase_count, slots, actions, sfx}`。
-- `content_signature()` = 结构哈希 + 宿主表身份（内容相同 → 共用同一原生 program）；同结构才共享。
-  缓存键额外混入 phase_count / slots，命中后还会抽验 program 形状；hash 碰撞不会静默复用错误弹道。
-- 内部编译拆成 **纯 program** 与 **宿主表**：`compile_program()` 只产出 ops/args/phase 索引，`host_table()` 只产出 spawn / Callable / sfx；`compile()` 仍合并两者供旧调用点使用。
-
-### 3.10 锚点（激光）
-
-```gdscript
-b.trajectory(lc, {&"id": node.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})
-```
-
-- `id=0` → 自机 + offset；`use_global=true` → 锚点 global_position + offset；`use_global=false` → 锚点局部 position（focus 子机）。
-
-### 3.11 求值时机（最容易踩的知识税）
-
-> 先记一句：**builder 是建造期，move 是每帧，until 是检查点，on_end 是相位结束，宿主事件是落地时。**
-> 同一个方向表达式放在不同位置，求值频率和 RNG 消耗完全不同。
-
-| 对象 | 何时求值 | 每次读什么 | RNG |
-|---|---|---|---|
-| `lc.accel_*` / `rotate` / `steer` / `speed_*` / `set_*` / `position` | 每帧、每个 active 弹 | 当前 pos / vel / heading、相位 elapsed、目标位置 | 无 |
-| `until_*` | 每帧；`.every(sec)` / `.every_ticks(n)` 只控制检查频率 | elapsed、目标、pos、speed、状态槽 | 无 |
-| `emit` / `on_end_heading` 的 `dir` | 相位结束、逐颗 | `at` 落点、目标、发射者当前 heading、当前 vel、场边 | `random_dir` 1 次/颗 |
-| `emit_variant` | 相位结束、逐颗 | 同上 | 分支 1 次；选中分支若含 `random_dir` 另计 |
-| `emit_speed_rel` | 宿主事件落地、逐颗 | base speed + `[min, max]` 倍率 | 1 次/颗 |
-| `emit` 的 spawn 模板 | 宿主事件落地 | `SpawnSpec` / `Callable`；每发 velocity 由事件写 | 无 |
-| `sfx` / `on_end_call` | 宿主事件落地（原生只回事件） | key / db / pos / boss 信息 | 无 |
-| `despawn` / `clear_fx` | 相位结束，按 append 顺序 | 当前 pos / color | 无 |
-| builder 参数、`DirSpec` 的 kind / target / angle / p、`emit_speed_rel` 的 min/max | 构建时（内容脚本里） | 无 | 无 |
-| `compile_program()` / `content_signature()` | 首次使用 / 内容变化后，按缓存 | 结构 + 宿主表身份 | 无 |
-
-> 内容脚本自己的 `_tick` / 波次循环不在 DSL 内：`shoot_spread_spec(...)` 的参数在**调用那一刻**求值，
-> 该次发射的弹型 / velocity 在入队时快照；这不是 lifecycle 的 phase-end 求值。
-
-**由此得到两条实用判断：**
-
-- `random_dir` 放在 `set_heading` / `set_speed` 这类 Move 里 = **每帧抽一次**；放在 `emit` / `on_end_heading` 里 = **每个相位结束抽一次**。放错位置通常不报错，只会悄悄改变随机序列。
-- `toward` / `away` / `forward` / `velocity` 的“目标 / 朝向 / 速度”是**求值那一刻**再读，不是构造时烘死；`heading` 才是绝对常量。
-
-### 3.12 单 phase + 顺序 chain 路径预览（实验）
-
-给 Boss 演出 / 调试用的“这颗弹接下来会走哪”：一次只算**一个 phase**，再用结束状态续下一段；不生成真弹。
-
-```gdscript
-LifecyclePreview.evaluate_phase(
-    lifecycle, phase_index,
-    position, velocity, heading,
-    dt = 1.0 / 60.0, max_time = 1.2,
-    field_rect = <场地>
-) -> { ok, approximate, points, reason, phase_index, end_state }
-
-LifecyclePreview.evaluate_chain(
-    lifecycle, start_phase_index,
-    position, velocity, heading,
-    dt = 1.0 / 60.0, max_time = 1.2,
-    field_rect = <场地>, max_phases = 8
-) -> { ok, approximate, segments, points, reason, end_state }
-```
-
-- 只支持确定性 move：`accel_world` / `accel_heading` / `rotate` / `speed_lerp` / `speed_mul` / `set_speed` / 静态 `set_heading`。
-- 支持确定性 until：`elapsed` / `speed` / `state` / `x` / `y` / `rect`（`until_turned`）。
-- `steer` / 目标方向：忽略瞄准，保持当前朝向继续走，并标记 `approximate=true`。
-- `position`（需要外部锚点）直接返回 `ok=false`、`reason="unsupported"`，不画假线。
-- `until_near` 无法在“忽略目标”的前提下知道终点：画到 `max_time`，`approximate=true`、`reason="target_until"`。
-- `evaluate_phase` 返回 `end_state`（position / velocity / heading / elapsed），chain 用它续算下一段。
-- `evaluate_chain` 只处理 `on_end` 的静态 `set_heading` / `set_speed` / `despawn`；`emit` 子代不模拟。
-- 目标相关导致近似时，chain 停止，不把近似状态继续带到下一段。
-
-> 这是演出/调试的近似，不是第二套物理；不要在游戏逻辑里用它替代真实弹道。
-
-内容层推荐直接用 [code]ctx.telegraph[/code]（场景里已有 [code]TelegraphPath[/code]，由组合根注入）：
-
-```gdscript
-ctx.telegraph.show_chain(
-    lifecycle, origin, direction, speed,
-    4.0, 0)
-ctx.telegraph.clear()
-```
-
-多方向同时预览（试验；不要一次画满 50 条）：
-
-```gdscript
-ctx.telegraph.show_chain_many(
-    lifecycle, origin, [方向1, 方向2, 方向3], speed, 4.0)
-```
-
-服务会把 chain 的 [code]end_state.elapsed[/code] 作为显示寿命；到点自动清空，不会一直挂在屏幕上。
-
-逐弹原型（只支持单颗；50 颗需要稳定身份 + 多线合批）：
-
-```gdscript
-ctx.telegraph.shoot_tracked(
-    spec, 1, 0.0, 方向, 发射点)
-```
-
-[code]shoot_spread_spec_ids_spec[/code] 返回的是稳定 uid，不是行号：原生 swap-remove 搬行时 uid 跟着搬，外部引用不会指到另一颗弹。
-[code]shoot_tracked[/code] 是发射 + 跟踪的一行入口；也可以手写 [code]shoot_spread_spec_ids_spec[/code] + [code]track_bullet[/code]。
-[code]track_bullet[/code] 按真实弹当前 phase / pos / vel 滚动刷新：phase 起点缓存完整 chain，之后只按当前位置裁掉前缀；弹死亡自动清线。
-多颗用 [code]track_bullets(uids, lifecycle)[/code]：每颗各一条，死一颗掉一条。
-`emit` 子代用 [code]track_emitted(lifecycle)[/code] 注册，之后 native 行为里生成的同 lifecycle 子弹会自动进入跟踪：
-
-```gdscript
-ctx.telegraph.track_emitted(反射弹.lifecycle)
-ctx.bullets.shoot_spread_spec(开花弹, ...)
-```
-同一波继续追加用 [code]add_tracked_bullets(uids, lifecycle)[/code]：不清掉上一波还没死的弹，旧路径继续跟着旧弹更新。
-这是滚动预测，不是短前瞻：路径始终从当前弹位置开始，但 chain 只在 phase 变化时重算。
-路径在 phase 起点一次生成到 lifecycle 终点（默认上限 12 秒）；之后每 tick 按当前位置裁掉已消费前缀再交给 MultiMesh，不续算 chain。
-
-长度可按调用设：
-
-```gdscript
-ctx.telegraph.path_max_time = 4.0          # 当前默认
-ctx.telegraph.shoot_tracked(..., max_time = 4.0)
-ctx.telegraph.track_emitted(反射弹.lifecycle, 4.0)
-```
-缓存保留完整采样点，绘制前再用 RDP 简化（默认 1.25px）；否则直线被压成 2 点后无法裁前缀。
-
-只做视觉时也可以直接用 [code]TelegraphPath[/code]：
-
-```gdscript
-var path := TelegraphPath.new()
-add_child(path)
-path.show_path(preview.points, Color.WHITE, 3.0, 0.5)
-path.clear_path()
-```
+`ctx.telegraph` 的路径预览不再解释描述符，而是调用 `DanmakuStore.preview_behavior()`：
+用同一份 C++ tick 在临时状态上跑 N 帧，所以预览与实战同源。
+没有 behavior 的弹走直线兜底；预览不生成真弹、不消耗游戏 RNG。
 
 ## 4. 发射 API（`ctx.bullets`）
 
@@ -588,19 +370,18 @@ data/stages/<stage>/
 1. **SpawnSpec 必须复用实例**（弹型缓存在实例上）；每发 `new()` → 弹型表膨胀。
 2. **tex key 拼错会告警，但仍用默认判定**（4px）→ 只从 §7.1 表取 key。
 3. **速度来自 `spec.velocity.length()`，方向来自发射参数**；别指望 `spec.velocity` 的方向。
-4. **`then()` 的新相位 `until=never`**，挂 `on_end` 永不触发。
-5. **`speed_mul` 是每帧乘**（复利/指数）；线性用 `speed_lerp`、瞬时用 `set_speed`。
-6. **`until_rect` 的 `edges` 只在 outside 模式生效**；`emit(..., at=AT_PHASE_END)` 用它输出的夹边落点。
-7. **`toward` / `away` 目标不可用时退化为向下**；`chance_toward` 命中时 angle 被忽略。
-8. **`on_end_call` 的 hook 名要先注册**；否则静默不调。
-9. **变体发射的模板要与分支数对齐**：`chance_toward` 只有 0/1 两支。
+4. **一颗弹只有一个 behavior**；要组合就在 C++ pack 里写，不在内容侧叠多个。
+5. **behavior 参数上限 8 个 float**；构造器自己校验，原生会截断多余项。
+6. **`emit` 的模板必须先注册**（`numeric_id >= 0`）；否则原生只回事件、宿主无处落地。
+7. **`bounce_emit` / `split_after` 的 emit 发生在行为遍历结束后**；不要在行为 tick 里等子弹出。
+8. **`homing(target_mode=1)` 没有敌人时只做速度插值、不转向**；不要把它当“必定追踪”。
+9. **`anchor_drift` 必须给 `spec.anchor`**；id 失效时宿主退回自机 + offset（静默降级）。
 10. **自机弹 tint 会被记忆值往红 lerp**（`prepare_spec`）；内容设的 tint 只是基底。
 11. **类型级字段在首次发射时快照**；请在构造时定好，不要在运行期改型。
-12. **位置来源是模式、不是可叠加项**：多个 `position` op = 模式切换、后写者胜；要分段用 `then()`。
-13. **同相位状态槽 ≤ 8**；超出会被内核拒绝注册，该弹按直线飞。
-14. **RNG 单通道、按「op 顺序 + 弹行遍历顺序」消耗**：加/删/重排 `random_dir` / `emit_variant` 会平移后续随机序列（回放仍可复现，但结果会变）。
-15. **`on_end_call` 是逃逸口**：每相位最多一次、宿主侧、非热路径；别当 per-frame 逻辑或状态存储。
-16. **`T_NEAREST_ENEMY` 只在宿主候选集里取**；targetability 在 `EntityRegistry` / `Enemy.is_targetable`，不在内核。
+12. **behavior 的 state/params 是固定 float 槽**；不能在行为里 new 对象 / 存引用。
+13. **RNG 单通道、按「弹行遍历顺序」消耗**：增删随机 behavior 会平移后续随机序列（回放仍可复现，但结果会变）。
+14. **预览与实战同源，但不模拟 emit 子代**：`BehaviorPreview` 只画父弹路径；子代由 `track_emitted` 单独跟踪。
+15. **`homing` 的最近敌人只在宿主候选集里取**；targetability 在 `EntityRegistry` / `Enemy.is_targetable`，不在内核。
 
 ## 10. 完整例子
 
@@ -613,26 +394,25 @@ var _spec: SpawnSpec
 
 func _tick(p_ctx: StageContext) -> Variant:
 	if _spec == null:
-		_spec = SpawnSpec.new().tex("小玉").speed(160).color(Color.AQUA).blend(true).enemy()
-	var lc := BulletLifecycle.new()
-	lc.accel_world(Vector2(0, 60))
-	lc.until_never()
-	_spec.trajectory(lc)
+		_spec = SpawnSpec.new().tex("小玉").speed(160).color(Color.AQUA).blend(true).enemy() \
+			.with_behavior(BulletBehaviors.accel(Vector2(0, 60)))
 	p_ctx.bullets.shoot_spread_spec(_spec, 12, TAU, Vector2.RIGHT, target.global_position)
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"], -10.0)
 	return p_ctx.clock.wait(1.2)
 ```
 
-### 10.2 减速往返 → 回点分裂（节选）
+### 10.2 减速往返 → 到点分裂
 
 ```gdscript
-var lc := BulletLifecycle.new()
-lc.accel_heading(-150.0)                         # 匀减速 → 停 → 反向飞回
-lc.until_elapsed(2.0 * bullet_speed / 150.0)     # 位移过零 ≈ 回到出发点
-lc.sfx(&"kira", -8.0)
-lc.emit_variant([_青玉, _红玉],
-	BulletLifecycle.chance_toward(BulletLifecycle.T_PLAYER, 0.1, TAU / 12.0), 60.0)
-lc.despawn()
+# 两个子弹出模板先注册（EmitTemplate 的 numeric_id 必须 >= 0）
+var a := SpawnSpec.new().tex("环玉").color(Color.AQUA).enemy()
+var b := SpawnSpec.new().tex("环玉").color(Color.RED).enemy()
+var ta := EmitTemplate.new(&"split_aqua", a)
+var tb := EmitTemplate.new(&"split_red", b)
+ctx.bullets.register_emit_template(ta)
+ctx.bullets.register_emit_template(tb)
+
+_spec.with_behavior(BulletBehaviors.split_after(ta, tb, 0.6, -150.0, 0.1, 60.0))
 ```
 
 ## 11. 到这里之后
@@ -641,23 +421,23 @@ lc.despawn()
 |---|---|
 | 教学 / 由浅入深 | `CONTENT_GUIDE.md` §六 |
 | 关卡 / 敌人 / Boss 编排 | `CONTENT_GUIDE.md` 二~四 |
-| 描述符设计动机 / 边界 | 附录 A（速查；全文在 `archive/merged/LIFECYCLE_MODEL.md`） |
+| behavior 设计 / 边界 | 附录 A |
 | 原生执行细节（op / 事件 / 同步点） | `docs/archive/GDEXTENSION_KERNEL_DESIGN.md` + `gdextension/src/danmaku_store.cpp` |
 | 架构 / 命名契约 | `docs/ARCHITECTURE.md` + `docs/BEST_PRACTICES_BASELINE.md` |
 
 ---
 
-## 附录 A · 弹幕生命周期模型（速查）
+## 附录 A · 弹道 behavior 模型（速查）
 
-- 核心：**一套词汇**（Move / Until / Action）+ **三种 runtime**（低频 GDScript / 高频 per-bullet 描述符 / 原生执行）。
-- 相位模型就是 §3.1；Move / Until / Action 见 §3.2–§3.4；组合配方见 §3.8。
-- 设计动机：为什么放弃通用 opcode VM、固定 schema 的边界 —— 全文见 [`archive/merged/LIFECYCLE_MODEL.md`](archive/merged/LIFECYCLE_MODEL.md)（原 `LIFECYCLE_MODEL.md`）。
-- 当前模型 = 原文 §0–§6 + §11 的 unit 表；决策理由 = §7–§8。
+- 核心：**一个 SpawnSpec 一颗弹 + 一个 C++ behavior pack**；内容只给 id + float 参数。
+- behavior 与积分在同一条原生管线里：`integrate` 先动位置，`behavior_tick` 再改速度/位置/动作。
+- 需要组合时在 C++ pack 内用普通 `if` / `for` 写，不再维护通用 opcode VM。
+- 预览走 `DanmakuStore.preview_behavior()`，与实战共用 tick。
 
 ## 附录 B · 一颗弹的完整路径（速查）
 
 ```
-SpawnSpec（贴图/判定/阵营 + trajectory）
+SpawnSpec（贴图/判定/阵营 + with_behavior）
   → ctx.bullets.shoot_spread_spec
   → KernelBulletHost.prepare_spec / KernelNativeSystem.spawn
   → DanmakuStore.integrate + behavior_tick（原生）
@@ -665,6 +445,3 @@ SpawnSpec（贴图/判定/阵营 + trajectory）
   → 判定 KernelBulletPhysics（原生宽相网格）
   → 出界/寿命/despawn 回收
 ```
-
-- 边界：内容给配置 + 规律；宿主把配置翻成内核弹型并结算规则；内核只认列式数据和 program。
-- 全文见 [`archive/merged/BULLET_PIPELINE.md`](archive/merged/BULLET_PIPELINE.md)（原 `BULLET_PIPELINE.md`）。
