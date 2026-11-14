@@ -16,6 +16,11 @@ static func accel(acceleration: Vector2) -> BehaviorSpec:
 	return BehaviorSpec.new(&"accel", PackedFloat32Array([acceleration.x, acceleration.y]))
 
 
+## 沿自身 heading 加速。
+static func accel_heading(acceleration: float) -> BehaviorSpec:
+	return BehaviorSpec.new(&"accel_heading", PackedFloat32Array([acceleration]))
+
+
 ## 撞墙 emit + 可选回收。
 ## child_speed <= 0 = 沿用父弹当前速度；despawn = 撞墙后是否回收父弹。
 static func bounce_emit(template: EmitTemplate, child_speed: float = 0.0,

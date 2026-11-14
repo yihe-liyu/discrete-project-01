@@ -339,3 +339,21 @@ func test_native_bounce_emit_hits_wall_naturally() -> void:
 	for _i in 120:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "飞抵上墙后父弹应回收、子弹出应存在")
+
+
+## accel_heading：沿朝向加速，与 lifecycle 逐帧一致。
+func test_native_accel_heading_matches_lifecycle() -> void:
+	_kernel_bullet_host.setup_behaviors(null, Callable())
+	var lc := BulletData.new().enemy().tex("环玉").no_spawn_fog()
+	lc.lifecycle = BulletLifecycle.new().accel_heading(40.0)
+	lc.velocity = Vector2(120, 0)
+	var bh := BulletData.new().enemy().tex("环玉").no_spawn_fog()
+	bh.with_behavior(BulletBehaviors.accel_heading(40.0))
+	bh.velocity = Vector2(120, 0)
+	var a := _kernel_bullet_host.shoot(lc, Vector2(300, 300), Vector2.RIGHT)
+	var b := _kernel_bullet_host.shoot(bh, Vector2(500, 300), Vector2.RIGHT)
+	for _i in 60:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+	var da: Vector2 = _kernel_bullet_host.system.get_position(a) - Vector2(300, 300)
+	var db: Vector2 = _kernel_bullet_host.system.get_position(b) - Vector2(500, 300)
+	assert_almost_eq(db, da, Vector2(0.01, 0.01), "accel_heading 轨迹应一致")
