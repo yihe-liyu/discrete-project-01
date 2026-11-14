@@ -393,3 +393,16 @@ func test_native_top_emit_replaces_bullet() -> void:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "应只剩子弹出")
 	assert_eq(_kernel_bullet_host.system.get_behavior(0), -1, "子弹出无 behavior")
+
+
+## lifecycle emit 的旧队列也必须能接收 SpawnSpec。
+func test_behavior_host_queue_spawn_accepts_spawn_spec() -> void:
+	var host := KernelBulletHost.new()
+	add_child_autofree(host)
+	host.setup_behaviors(null, Callable())
+	var bh = preload("res://scripts/kernel_bridge/kernel_behavior_host.gd").new()
+	bh.setup(host)
+	var spec := SpawnSpec.new().tex("米弹").enemy().speed(120.0)
+	bh.queue_spawn(spec, Vector2(300, 300), Vector2.DOWN)
+	bh.flush()
+	assert_gt(host.system.get_active_count(), 0, "SpawnSpec 应被 lifecycle 队列接收")

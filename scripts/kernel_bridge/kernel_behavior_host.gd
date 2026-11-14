@@ -23,10 +23,15 @@ func get_boss():
 ## 入队一次发射。入队瞬间快照 per-shot 状态（backend.prepare_shot）：
 ## 内容复用同一 BulletData 模板改速度 / 染色再入队是 M2 的正常写法；
 ## 若拖到 flush 时才读实例，同一帧所有入队项会被最后一次写入覆盖（non_mid01 红弹速度梯度消失即此因）。
-func queue_spawn(data: BulletData, pos: Vector2, dir: Vector2) -> void:
+func queue_spawn(data: Variant, pos: Vector2, dir: Vector2) -> void:
 	if _backend == null or data == null:
 		return
-	_spawns.append(_backend.prepare_shot(data, pos, dir))
+	if data is SpawnSpec:
+		_spawns.append(_backend.prepare_spec(data, pos, dir))
+	elif data is BulletData:
+		_spawns.append(_backend.prepare_shot(data, pos, dir))
+	else:
+		push_error("[KernelBehaviorHost] queue_spawn 不支持的类型：%s" % data.get_class())
 
 
 ## 入队一条激光（骨架 / 颜色 / opts / 平移量）；flush 时交宿主 LaserEngine。
