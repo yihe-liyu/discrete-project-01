@@ -111,7 +111,7 @@
 | [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids_spec` 返回稳定 uid，swap-remove 后仍能跟踪 phase / velocity；无管理器静默 | 4 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData 基准取曲（跨难度共享）** | 12 | 0 |
-| [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪；`shoot_tracked`；`track_emitted` lifecycle 过滤；空列表防护 | 7 | 0 |
+| [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪；`shoot_tracked`；`track_emitted` SpawnSpec 过滤；空列表防护 | 7 | 0 |
 | [test_telegraph_path](../test/test_telegraph_path.gd) | 路径展示层：单线 / 多线显示与清空；单点不成线；lifetime 到点自动清空；路径在敌弹之下；MultiMesh 合批 | 6 | 0 |
 | [test_stage_runtime](../test/test_stage_runtime.gd) | 关卡收尾语义：`finish_stage()` 发 `stage_cleared`、`stop_stage()` **不**发（拆场景 ≠ 通关） + **B1：入场景走显式类型化 setter（不按属性名探针）** + **B2：自机由组合根注入（不按 World/Player 名找）** + **敌人行为先入树、再 `_on_start()`**（不再需要 `_ready` + `call_deferred`） | 7 | 0 |
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
@@ -290,7 +290,7 @@
 
 - `test/fixtures/fixture_lib.gd` —— 夹具工厂：`player_data()`（含 SpriteFrames + `PlayerShootScript`）、`effect()`
 - `test/fixtures/player_shoot_probe.gd` —— 机体射击脚本夹具（`Player` 有 `is PlayerShootScript` 断言，必须继承它）
-- `test/fixtures/{no,lifecycle}_port_behavior.gd` / `param_probe.gd` —— 通用 `extends CoroutineScript` 替身
+- `test/fixtures/param_probe.gd` / `enemy_script_stub.gd` —— 通用 `extends CoroutineScript` 替身
 - `BossCatalog.set_catalog_override({stage: [BossData]})` + `clear_catalog_override()` —— 直接投名册
   （⚠️ static 缓存全局可见，**测完必须 clear**，否则污染后续测试）
 

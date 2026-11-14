@@ -14,15 +14,15 @@
 
 - 每颗真实弹按稳定 uid 跟踪
 - 从当前弹位置裁出剩余路径
-- `emit` 子代按 lifecycle 过滤后跟踪
+- `emit` 子代按 SpawnSpec 身份过滤后跟踪
 - 路径在敌弹图层之下
 - MultiMesh 合批 + shader 外发光
 - 路径时长可配置
 
 ## 明确不做的
 
-- 不模拟 `steer` / 目标相关转向
-- 不模拟 `emit` 的子代子代（除非再次注册 lifecycle）
+- 预览本身只模拟父弹，不展开 `emit` 子代（子代用 `track_emitted` 单独跟踪）
+- 不模拟子代的子代（除非再次注册 SpawnSpec）
 - 不保证真实弹提前死亡时路径立刻消失
 - 不做玩家通用能力
 
@@ -30,7 +30,7 @@
 
 | 项目 | 当前行为 |
 |---|---|
-| 路径生成 | phase 起点一次生成 |
+| 路径生成 | 每个 uid 生成一次，之后只裁前缀 |
 | 默认上限 | 12 秒，可配置 |
 | 更新 | 每 tick 裁前缀，不重算 chain |
 | 身份 | 稳定 uid，不随 swap-remove 跳 |
@@ -49,5 +49,5 @@
 
 ## 相关文档
 
-- API 与用法：`docs/DANMAKU_API.md` §3.12
-- 测试：`test/test_lifecycle_preview.gd`、`test/test_telegraph_path.gd`、`test/test_telegraph_service.gd`
+- API 与用法：`docs/DANMAKU_API.md` §3.4
+- 测试：`test/test_behavior_preview.gd`、`test/test_telegraph_path.gd`、`test/test_telegraph_service.gd`

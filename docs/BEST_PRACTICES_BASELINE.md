@@ -152,7 +152,7 @@
 - 存档写盘走 `SaveManager` 的 tmp → `.bak` → 提交，不要直接 `ConfigFile.save` 正式档；`ConfigFile.load` 对垃圾文件也可能返回 OK（无任何段）⇒ 必须检查已知段，别把空档当好档。
 - 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（现 327）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
 - 内容层 `data/**` 不自己 `get_parent()` / `create_tween()`：移动走 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path`，Logo 走 `ctx.stage.show_logo`（`check_structure` ⑤ 会红）。
-- `SpawnSpec` 按引用共享：pattern 的 `template` 不要复制（否则弹型缓存分裂，且生命周期/阵营改动不可见）；要变体就复制字段后重建。
+- `SpawnSpec` 按引用共享：pattern 的 `template` 不要复制（否则弹型缓存分裂，且 behavior/阵营改动不可见）；要变体就复制字段后重建。
 - 测试用夹具，别拿真实内容当断言标准；内容只做“不数数量、不写死路径”的结构冒烟。
 
 > 其余跨子系统教训见 `BEST_PRACTICES_LOG.md`；内核/behavior 专项见 `DANMAKU_API.md` §3 / 附录 A（速查）。
