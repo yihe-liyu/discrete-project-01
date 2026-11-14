@@ -52,15 +52,16 @@ func _enemy_bullets_vs_player() -> void:
 		return
 	var system := backend.system
 	# 查询半径 = 擦弹半径（覆盖命中 + 擦弹两阈值；query 内部已按弹半径外扩）
+	# 再加本帧最大位移：高速弹的端点可能在查询圆外，但线段会穿过自机。
 	var ids: PackedInt32Array = _overlap_ids(
-		system, player.global_position, player.graze_radius, BulletType.Faction.ENEMY)
+		system, player.global_position, player.graze_radius + system.get_max_step(), BulletType.Faction.ENEMY)
 	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收
 	for k in range(ids.size() - 1, -1, -1):
 		var id: int = ids[k]
-		if system.hit_test(id, player.global_position, player.hitbox_radius):
+		if system.hit_test_swept(id, player.global_position, player.hitbox_radius):
 			player.miss()
 			system.despawn(id)
-		elif not system.is_grazed(id) and system.hit_test(id, player.global_position, player.graze_radius):
+		elif not system.is_grazed(id) and system.hit_test_swept(id, player.global_position, player.graze_radius):
 			system.mark_grazed(id)
 			on_graze()
 			var res := _player_res()
@@ -90,7 +91,7 @@ func _player_bullets_vs_enemies() -> void:
 				var phase: PhaseData = (enemy as Boss).current_phase()
 				if not phase or phase.is_timeout_only:
 					continue   # 时符 / 未开战：弹穿过
-			if not system.hit_test(i, enemy.global_position, enemy.hitbox_radius):
+			if not system.hit_test_swept(i, enemy.global_position, enemy.hitbox_radius):
 				continue
 			enemy.take_damage(bt.damage * bonus)
 			var res := _player_res()
