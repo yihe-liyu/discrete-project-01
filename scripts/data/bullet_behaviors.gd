@@ -16,6 +16,16 @@ static func accel(acceleration: Vector2) -> BehaviorSpec:
 	return BehaviorSpec.new(&"accel", PackedFloat32Array([acceleration.x, acceleration.y]))
 
 
+## 旋转一段时间后反向旋转、沿 heading 减速；到速度阈值时可选清弹/回收。
+static func spin_then_slow(spin: float, duration: float, reverse_factor: float,
+		accel_px: float, speed_threshold: float, clear_fx: bool = true,
+		despawn: bool = true) -> BehaviorSpec:
+	return BehaviorSpec.new(&"spin_then_slow", PackedFloat32Array([
+		spin, duration, reverse_factor, accel_px, speed_threshold,
+		1.0 if clear_fx else 0.0, 1.0 if despawn else 0.0,
+	]))
+
+
 ## 撞上墙后 emit 一个模板并回收自己。
 static func top_emit(template: EmitTemplate, accel_px: float,
 		angle: float = PI, child_speed: float = 0.0, sfx_id: int = -1) -> BehaviorSpec:

@@ -13,8 +13,8 @@ var 开花弹颜色: Color = Color.RED
 var 时间: float = 4
 
 ## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
-var 开花弹1: BulletData
-var 开花弹2: BulletData
+var 开花弹1: SpawnSpec
+var 开花弹2: SpawnSpec
 
 ## 当前发射方向；每次发射后旋转 22.5°，形成缓慢转动的弹幕。
 var 发射方向 := Vector2.DOWN
@@ -32,31 +32,18 @@ func _on_start() -> void:
 	# 移动：先减速到第一站位；tween 机制在 EnemyService，内容只给意图。
 	ctx.enemies.move_to(target, target_pos1, 2.0)
 
-	var lifecycle: BulletLifecycle
 	var timeline := start_timeline()
 
-	# 米弹：红色、带拖尾；先转 2 秒，再反向转并向后加速，最后清弹。
-	开花弹1 = BulletData.new().enemy().blend(true).tex(开花弹贴图) \
-		.color(开花弹颜色).grace(2).speed(350.0)
-	lifecycle = BulletLifecycle.new()
-	lifecycle.rotate(角速度 * 旋转方向)
-	lifecycle.until_elapsed(2.0)
-	lifecycle.then()
-	lifecycle.rotate(-角速度 / 2.0 * 旋转方向)
-	lifecycle.accel_heading(-500.0)
-	lifecycle.until_speed(BulletLifecycle.CMP_LE, 200)
-	lifecycle.despawn_clear()
-	开花弹1.trajectory(lifecycle)
+	# 米弹：红色、带拖尾；先转 2 秒，再反向转并沿 heading 减速。
+	开花弹1 = SpawnSpec.new().enemy().blend(true).tex(开花弹贴图) \
+	.color(开花弹颜色).grace(2).speed(350.0)
+	开花弹1.with_behavior(BulletBehaviors.spin_then_slow(
+	角速度 * 旋转方向, 2.0, -0.5, -500.0, 200.0, true, true))
 
-	开花弹2 = BulletData.new().enemy().blend(true).tex(开花弹贴图) \
-		.color(Color.CRIMSON).grace(2).speed(350.0)
-	lifecycle = BulletLifecycle.new()
-	lifecycle.rotate(角速度 * 旋转方向)
-	lifecycle.until_elapsed(2.0)
-	lifecycle.then()
-	lifecycle.accel_heading(-500.0)
-	lifecycle.until_speed(BulletLifecycle.CMP_LE, 200)
-	开花弹2.trajectory(lifecycle)
+	开花弹2 = SpawnSpec.new().enemy().blend(true).tex(开花弹贴图) \
+	.color(Color.CRIMSON).grace(2).speed(350.0)
+	开花弹2.with_behavior(BulletBehaviors.spin_then_slow(
+	角速度 * 旋转方向, 2.0, 0.0, -500.0, 200.0, false, false))
 
 	var 个数: int = diff_pick([3, 6, 9, 12])
 	var 间隔: float = diff_pick([0.2, 0.15, 0.15, 0.1])
@@ -66,11 +53,11 @@ func _on_start() -> void:
 	timeline.at(0.0).every(间隔).do(func():
 		ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
 		if(发射次数 % 频率 == 0):
-			ctx.bullets.shoot_spread(
+			ctx.bullets.shoot_spread_spec(
 				开花弹2, 个数, TAU, 发射方向,
 				target.global_position)
 		else:
-			ctx.bullets.shoot_spread(
+			ctx.bullets.shoot_spread_spec(
 				开花弹1, 个数, TAU, 发射方向,
 				target.global_position)
 		发射方向 = 发射方向.rotated(PI / 8.0 * 旋转方向)

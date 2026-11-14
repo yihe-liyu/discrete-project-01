@@ -49,6 +49,21 @@ inline void kill(NativeBehaviorOutcome &p_out) {
 	p_out.despawn = true;
 }
 
+inline void clear_fx(NativeBehaviorOutcome &p_out) {
+	p_out.clear_fx = true;
+}
+
+inline void rotate(NativeBehaviorContext &p_ctx, float p_radians) {
+	if (p_ctx.velocity) {
+		*p_ctx.velocity = p_ctx.velocity->rotated(p_radians);
+	}
+	if (p_ctx.heading_x && p_ctx.heading_y) {
+		const Vector2 h = Vector2(*p_ctx.heading_x, *p_ctx.heading_y).rotated(p_radians);
+		*p_ctx.heading_x = h.x;
+		*p_ctx.heading_y = h.y;
+	}
+}
+
 inline float random(NativeBehaviorContext &p_ctx) {
 	return p_ctx.rng_float ? p_ctx.rng_float(p_ctx.rng_user) : 0.0f;
 }

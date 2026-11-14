@@ -1332,6 +1332,17 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 					_ev_color.push_back(_color[i]);
 					_ev_variant.push_back(0);
 				}
+				if (bout.clear_fx) {
+					_ev_kind.push_back(3);
+					_ev_prog.push_back(-1);
+					_ev_local.push_back(0);
+					_ev_bullet.push_back(i);
+					_ev_x.push_back(_x[i]); _ev_y.push_back(_y[i]);
+					_ev_dx.push_back(0); _ev_dy.push_back(0);
+					_ev_val.push_back(0);
+					_ev_color.push_back(_color[i]);
+					_ev_variant.push_back(0);
+				}
 			}
 			if (_spin_rot[i] != 0.0f) {
 				const float spin_base = std::isnan(_render_rot[i]) ? std::atan2(_vy[i], _vx[i]) : _render_rot[i];

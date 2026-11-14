@@ -9,6 +9,7 @@ void register_bounce_emit();
 void register_accel_heading();
 void register_split_after();
 void register_top_emit();
+void register_spin_then_slow();
 
 void register_behaviors_core() {
 	register_linear();
@@ -18,6 +19,7 @@ void register_behaviors_core() {
 	register_accel_heading();
 	register_split_after();
 	register_top_emit();
+	register_spin_then_slow();
 }
 
 } // namespace godot
