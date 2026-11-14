@@ -11,6 +11,7 @@ var 雨弹二阶段: SpawnSpec
 var 雨弹三阶段: SpawnSpec
 var 二阶段模板: EmitTemplate
 var 三阶段模板: EmitTemplate
+var 激光模板: LaserTemplate
 
 func _on_start() -> void:
 	# 先把三阶段模板都建好：一阶段的 emit 在 phase 结束才真正 flush，
@@ -28,33 +29,17 @@ func _on_start() -> void:
 	二阶段模板 = EmitTemplate.new(&"哆来咪道中一符_stage2", 雨弹二阶段)
 	三阶段模板 = EmitTemplate.new(&"哆来咪道中一符_stage3", 雨弹三阶段)
 
-	# 二阶段：第一次 tick 从底部平移到顶部，然后受重力；Normal+ 到 y 阈值转三阶段。
-	# 三阶段仍保留 lifecycle：Hard 的激光收尾还没进 outcome。
-	var lifecycle := BulletLifecycle.new()
-	lifecycle.offset_position(Vector2(0, -1000))
-	lifecycle.until_elapsed(0.0)
-	lifecycle.then()
-	lifecycle.accel_world(Vector2(0, 重力加速度))
+	# 三阶段：Hard 的激光收尾走 LaserTemplate + rain_stage outcome。
 	if SaveData.selected_difficulty >= Difficulty.HARD:
-		# 三阶段在 y≈1000 结束；at_current=true 时骨架要朝上，才在场地内。
 		var 激光 := LaserPresets.straight(Vector2.ZERO, Vector2(0, 1500))
-
-		lifecycle.sfx(&"lazer", -14)
-		lifecycle.until_y(BulletLifecycle.CMP_GE, 1000)
-		lifecycle.emit_laser_dir(激光, Color.GOLD,
-							BulletLifecycle.velocity(),
-							{
-								"grow": true,
-								"grow_speed": 重力加速度 * 3,
-								"tail": 激光长度,
-
-								"additive": true,
-								"core_color": Color(1.0, 1.0, 0.9),
-								"glow_color": Color(1.0, 0.75, 0.1)
-							},
-							Vector2(0, -1000), true)
-		lifecycle.despawn_clear()
-	雨弹三阶段.trajectory(lifecycle)
+		激光模板 = LaserTemplate.new(&"哆来咪道中一符_laser", 激光, Color.GOLD, {
+			"grow": true,
+			"grow_speed": 重力加速度 * 3,
+			"tail": 激光长度,
+			"additive": true,
+			"core_color": Color(1.0, 1.0, 0.9),
+			"glow_color": Color(1.0, 0.75, 0.1),
+		}, Vector2(0, -1000), true)
 
 func _ensure_rain_behaviors(p_ctx: StageContext) -> bool:
 	if 二阶段模板 == null or 三阶段模板 == null:
@@ -76,6 +61,17 @@ func _ensure_rain_behaviors(p_ctx: StageContext) -> bool:
 				三阶段模板, 重力加速度, 1000.0, -1000.0, true, true))
 		else:
 			雨弹二阶段.with_behavior(BulletBehaviors.rain_stage(
+				null, 重力加速度, 1000.0, -1000.0, false, false))
+	if 雨弹三阶段.behavior_spec == null:
+		if SaveData.selected_difficulty >= Difficulty.HARD:
+			if 激光模板 != null and 激光模板.numeric_id < 0:
+				if not p_ctx.bullets.register_laser_template(激光模板):
+					push_error("[哆来咪道中一符] 激光模板注册失败")
+					return false
+			雨弹三阶段.with_behavior(BulletBehaviors.rain_stage(
+				null, 重力加速度, 1000.0, -1000.0, true, true, 激光模板))
+		else:
+			雨弹三阶段.with_behavior(BulletBehaviors.rain_stage(
 				null, 重力加速度, 1000.0, -1000.0, false, false))
 	return true
 

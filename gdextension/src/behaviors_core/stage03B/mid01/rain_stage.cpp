@@ -10,6 +10,7 @@ struct RainParams {
 	float offset_y = 0.0f;
 	float clear = 1.0f;
 	float despawn = 1.0f;
+	float laser_template_id = -1.0f;
 };
 struct RainState { float initialized = 0.0f; float age = 0.0f; };
 
@@ -37,6 +38,9 @@ static void rain_stage_tick(float *p_state, const float *p_params,
 	}
 	if (p.template_id >= 0.0f) {
 		behavior::emit(p_out, (int32_t)p.template_id, p_ctx.position, *p_ctx.velocity);
+	}
+	if (p.laser_template_id >= 0.0f) {
+		behavior::emit_laser(p_out, (int32_t)p.laser_template_id, p_ctx.position, *p_ctx.velocity);
 	}
 	if (p.clear > 0.5f) {
 		behavior::clear_fx(p_out);

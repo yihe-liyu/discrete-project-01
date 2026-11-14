@@ -49,12 +49,21 @@ struct NativeBehaviorEmit {
 };
 
 // behavior 每 tick 的延迟动作请求；内核在遍历结束后统一应用。
+struct NativeBehaviorLaser {
+	int32_t template_id = -1;
+	Vector2 position;
+	Vector2 direction;
+};
+
 struct NativeBehaviorOutcome {
 	bool despawn = false;
 	int emit_count = 0;
 	NativeBehaviorEmit emits[4];
 	int32_t sfx_id = -1;   // 由内容层注册的音效下标；-1 = 无
 	bool clear_fx = false;  // 回收前播一次消弹消散
+	int32_t laser_template_id = -1;
+	Vector2 laser_position;
+	Vector2 laser_direction = Vector2(0, 1);
 };
 
 struct NativeBehaviorDef {

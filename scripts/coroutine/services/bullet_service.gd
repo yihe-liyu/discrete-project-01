@@ -14,6 +14,10 @@ func register_emit_template(template: EmitTemplate) -> bool:
 	return bullet_manager.register_emit_template(template) if bullet_manager != null else false
 
 
+func register_laser_template(template: LaserTemplate) -> bool:
+	return bullet_manager.register_laser_template(template) if bullet_manager != null else false
+
+
 func has_emit_template(id: StringName) -> bool:
 	return bullet_manager.has_emit_template(id) if bullet_manager != null else false
 

@@ -144,6 +144,7 @@ func _ensure_system() -> void:
 		push_error("[KernelBulletHost] 原生扩展未加载：本项目已要求 GDExtension（见 docs/archive/N2_NATIVE_INTEGRATION_PLAN.md §63）")
 	add_child(system)
 	system.emit_spawner = Callable(self, "_spawn_emit_template")
+	system.laser_spawner = Callable(self, "_spawn_laser_template")
 
 
 ## 行为循环结束后统一执行延后的 re_fire / 分裂（内核契约：循环中途禁止增删行）。
@@ -157,6 +158,17 @@ func _physics_process(delta: float) -> void:
 func flush_behavior_host() -> void:
 	if _behavior_host != null:
 		_behavior_host.flush()
+
+
+## KernelNativeSystem 的 behavior 激光回调。
+func _spawn_laser_template(template: LaserTemplate, pos: Vector2, direction: Vector2) -> void:
+	if template == null or template.skeleton == null:
+		push_error("[KernelBulletHost] LaserTemplate 无效")
+		return
+	var offset := template.offset
+	if template.at_current:
+		offset += pos
+	spawn_behavior_laser(template.skeleton, template.color, template.opts, offset, direction)
 
 
 ## KernelNativeSystem 的 behavior emit 回调：模板 → 实际 spawn。

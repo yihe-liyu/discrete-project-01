@@ -18,11 +18,13 @@ static func accel(acceleration: Vector2) -> BehaviorSpec:
 
 ## 雨弹阶段：首次上移 offset，受重力；到 y 阈值 emit 下一阶段。
 static func rain_stage(template: EmitTemplate, gravity: float, threshold_y: float,
-		offset_y: float = 0.0, clear_fx: bool = true, despawn: bool = true) -> BehaviorSpec:
+		offset_y: float = 0.0, clear_fx: bool = true, despawn: bool = true,
+		laser_template: LaserTemplate = null) -> BehaviorSpec:
 	var tid := template.numeric_id if template != null else -1
+	var lid := laser_template.numeric_id if laser_template != null else -1
 	return BehaviorSpec.new(&"stage03B.mid01.rain_stage", PackedFloat32Array([
 		gravity, threshold_y, float(tid), offset_y,
-		1.0 if clear_fx else 0.0, 1.0 if despawn else 0.0,
+		1.0 if clear_fx else 0.0, 1.0 if despawn else 0.0, float(lid),
 	]))
 
 

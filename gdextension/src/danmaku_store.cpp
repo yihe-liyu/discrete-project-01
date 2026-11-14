@@ -1332,6 +1332,17 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 					_ev_color.push_back(_color[i]);
 					_ev_variant.push_back(0);
 				}
+				if (bout.laser_template_id >= 0) {
+					_ev_kind.push_back(7);
+					_ev_prog.push_back(-1);
+					_ev_local.push_back(bout.laser_template_id);
+					_ev_bullet.push_back(i);
+					_ev_x.push_back(bout.laser_position.x); _ev_y.push_back(bout.laser_position.y);
+					_ev_dx.push_back(bout.laser_direction.x); _ev_dy.push_back(bout.laser_direction.y);
+					_ev_val.push_back(0);
+					_ev_color.push_back(_color[i]);
+					_ev_variant.push_back(0);
+				}
 				if (bout.clear_fx) {
 					_ev_kind.push_back(3);
 					_ev_prog.push_back(-1);

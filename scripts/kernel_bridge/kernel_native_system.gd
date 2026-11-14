@@ -65,6 +65,11 @@ var _fx_registry: Array[EffectType] = []   # 特效表（发弹/消弹共用；�
 var emit_templates := EmitTemplateRegistry.new()
 ## 由 KernelBulletHost 注入：模板 → 真正 spawn。
 var emit_spawner: Callable
+## 内容层激光模板；C++ Outcome 只带 numeric_id。
+var laser_templates: Dictionary = {}
+var _next_laser_template_id: int = 1
+## behavior 激光生成回调（KernelBulletHost 注入）。
+var laser_spawner: Callable
 ## behavior 撞墙音效表：内容注册 stream，C++ outcome 只带下标。
 var behavior_sfx: Array[AudioStream] = []
 
@@ -402,6 +407,24 @@ func get_behavior(id: int) -> int:
 ## 注册内容层子弹出模板；返回 false 时看 last_errors。
 func register_emit_template(template: EmitTemplate) -> bool:
 	return emit_templates.register(template)
+
+
+func register_laser_template(template: LaserTemplate) -> bool:
+	if template == null:
+		return false
+	var errors: Array[String] = template.validate()
+	if not errors.is_empty():
+		push_error("[KernelNativeSystem] LaserTemplate 校验失败：%s" % [errors])
+		return false
+	if template.numeric_id < 0:
+		template.numeric_id = _next_laser_template_id
+		_next_laser_template_id += 1
+	laser_templates[template.numeric_id] = template
+	return true
+
+
+func get_laser_template(numeric_id: int) -> LaserTemplate:
+	return laser_templates.get(numeric_id)
 
 
 ## 注册 / 复用 behavior 音效；返回绑定给 C++ 的下标。
@@ -753,6 +776,15 @@ func _drain_events(res: Dictionary, has_boss: bool, boss_pos: Vector2) -> void:
 	# 事件携带自己的 program（eprog）；不能用 per-bullet program 去反查（历史 bug）。
 	var eprog: PackedInt32Array = res.eprog
 	for k in kinds.size():
+		if kinds[k] == 7:
+			var lt: LaserTemplate = laser_templates.get(local[k])
+			if lt == null:
+				push_error("[KernelNativeSystem] 未注册 LaserTemplate id=%d" % local[k])
+			elif laser_spawner.is_valid():
+				laser_spawner.call(lt, Vector2(xs[k], ys[k]), Vector2(dxs[k], dys[k]))
+			else:
+				push_error("[KernelNativeSystem] laser_spawner 未注入")
+			continue
 		if kinds[k] == 6:
 			var sfx_id := local[k]
 			if sfx_id >= 0 and sfx_id < behavior_sfx.size():

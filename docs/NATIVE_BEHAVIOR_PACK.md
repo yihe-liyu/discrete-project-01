@@ -247,6 +247,10 @@ swap_remove / batch / reset 新字段没漏
 
 `top_emit` / `split_after` / `bounce_emit` 不再接收 sfx 参数；C++ 写死 `SFX_KIRA`，Host 把语义 ID 映射到 `AssetRegistry.sounds["kira"]`。
 
+## 8.3 激光 outcome
+
+`LaserTemplate` + `LaserTemplateRegistry` 已接入 `rain_stage`：behavior 只输出 laser_template_id / position / direction，Host 调 `spawn_behavior_laser`。
+
 ## 9. 成本与风险
 
 | 项 | 成本 | 风险 |

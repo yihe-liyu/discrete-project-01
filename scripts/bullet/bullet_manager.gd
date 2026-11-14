@@ -69,6 +69,10 @@ func register_emit_template(template: EmitTemplate) -> bool:
 	return _kernel_bullet_host.system.register_emit_template(template) if _kernel_bullet_host != null and _kernel_bullet_host.system != null else false
 
 
+func register_laser_template(template: LaserTemplate) -> bool:
+	return _kernel_bullet_host.system.register_laser_template(template) if _kernel_bullet_host != null and _kernel_bullet_host.system != null else false
+
+
 func has_emit_template(id: StringName) -> bool:
 	return _kernel_bullet_host.system.emit_templates.has(id) if _kernel_bullet_host != null and _kernel_bullet_host.system != null else false
 
