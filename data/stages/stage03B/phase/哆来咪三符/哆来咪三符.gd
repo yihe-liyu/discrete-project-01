@@ -69,29 +69,21 @@ func _on_start() -> void:
 		剩余保持时间 = INF
 		发弹点当前角度 = RNG.randf() * TAU
 
-	var lifecycle: BulletLifecycle
-
 	# 水色夹角弹：沿朝向外扩；Hard 以上加一个短寿命，到点自动清弹。
+	var 夹角寿命: float = diff_pick([0.0, 0.0, 3.0, 3.0]) if 难度为Hard以上 else 0.0
 	夹角弹 = SpawnSpec.new().tex("环玉").blend(true).enemy() \
 		.grace(4) \
 		.color(Color.AQUA)
-	lifecycle = BulletLifecycle.new()
-	lifecycle.accel_heading(夹角弹加速度)
-	if 难度为Hard以上:
-		lifecycle.until_elapsed(diff_pick([0.0, 0.0, 3.0, 3.0]))
-		lifecycle.despawn_clear()
-	夹角弹.trajectory(lifecycle)
+	夹角弹.with_behavior(BulletBehaviors.accel_heading(
+		夹角弹加速度, 夹角寿命, 难度为Hard以上))
 
 	# 红色夹角狙：同样外扩；Hard 以上寿命更长，并带清弹收尾。
+	var 夹角狙寿命: float = diff_pick([0.0, 0.0, 5.0, 6.0]) if 难度为Hard以上 else 0.0
 	夹角狙 = SpawnSpec.new().tex("环玉").blend(true).enemy() \
 		.grace(4) \
 		.color(Color.RED)
-	lifecycle = BulletLifecycle.new()
-	lifecycle.accel_heading(夹角弹加速度)
-	if 难度为Hard以上:
-		lifecycle.until_elapsed(diff_pick([0.0, 0.0, 5.0, 6.0]))
-		lifecycle.despawn_clear()
-	夹角狙.trajectory(lifecycle)
+	夹角狙.with_behavior(BulletBehaviors.accel_heading(
+		夹角弹加速度, 夹角狙寿命, 难度为Hard以上))
 
 	# 往返弹：向外减速到 0，在终点按概率分裂成上面两种夹弹。
 	往返弹 = SpawnSpec.new().tex("环玉").speed(往返弹初速度) \

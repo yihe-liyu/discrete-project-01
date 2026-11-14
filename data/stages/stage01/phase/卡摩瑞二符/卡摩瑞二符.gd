@@ -32,46 +32,55 @@ var 反射弹: SpawnSpec
 ## Hard 以上的金色版本；Easy / Normal 保持为 null。
 var 金开花弹: SpawnSpec
 var 金反射弹: SpawnSpec
+var 反射模板: EmitTemplate
+var 金反射模板: EmitTemplate
 
 
 func _on_start() -> void:
-	var lifecycle: BulletLifecycle
-
 	# 红反射弹：撞墙后按镜面方向反弹，速度极低，主要用来“封路”。
 	反射弹 = SpawnSpec.new().tex("鳞弹").color(Color.RED).blend(true).enemy()
-	lifecycle = BulletLifecycle.new()
-	lifecycle.accel_heading(100.0)
-	反射弹.trajectory(lifecycle)
+	反射弹.with_behavior(BulletBehaviors.accel_heading(100.0))
 
 	if SaveData.selected_difficulty >= Difficulty.HARD:
 		金反射弹 = SpawnSpec.new().tex("鳞弹").color(Color.GOLD).blend(true).enemy()
-		lifecycle = BulletLifecycle.new()
-		lifecycle.accel_heading(100.0)
-		金反射弹.trajectory(lifecycle)
+		金反射弹.with_behavior(BulletBehaviors.accel_heading(100.0))
 
 	# 蓝色环：撞到左/右/上墙后生成红反射弹，然后自己消失。
 	开花弹 = SpawnSpec.new().tex("鳞弹").blend(true).enemy().speed(开花弹速度) \
 		.color(Color.CORNFLOWER_BLUE)
-	lifecycle = BulletLifecycle.new()
-	lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
-	lifecycle.sfx(&"kira")
-	lifecycle.emit(反射弹, BulletLifecycle.reflect(), 0.01, BulletLifecycle.AT_PHASE_END)
-	lifecycle.despawn()
-	开花弹.trajectory(lifecycle)
 
 	if SaveData.selected_difficulty >= Difficulty.HARD:
 		# 金色环：和蓝色环同样的撞墙逻辑，只是换颜色与反射弹。
 		金开花弹 = SpawnSpec.new().tex("鳞弹").blend(true).enemy().speed(开花弹速度) \
 			.color(Color.GOLDENROD)
-		lifecycle = BulletLifecycle.new()
-		lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_LEFT | BulletLifecycle.WALL_RIGHT | BulletLifecycle.WALL_TOP)
-		lifecycle.sfx(&"kira")
-		lifecycle.emit(金反射弹, BulletLifecycle.reflect(), 0.01, BulletLifecycle.AT_PHASE_END)
-		lifecycle.despawn()
-		金开花弹.trajectory(lifecycle)
+
+	# 撞墙反射用原生 bounce_emit（reflect 模式）；子弹出模板在 _tick 里按需注册。
+	反射模板 = EmitTemplate.new(&"卡摩瑞二符_reflect", 反射弹)
+	if 金反射弹 != null:
+		金反射模板 = EmitTemplate.new(&"卡摩瑞二符_reflect_gold", 金反射弹)
+
+
+func _ensure_card_behaviors(p_ctx: StageContext) -> bool:
+	if not p_ctx.bullets.has_emit_template(反射模板.id):
+		if not p_ctx.bullets.register_emit_template(反射模板):
+			push_error("[卡摩瑞二符] 反射模板注册失败")
+			return false
+	if 金反射模板 != null and not p_ctx.bullets.has_emit_template(金反射模板.id):
+		if not p_ctx.bullets.register_emit_template(金反射模板):
+			push_error("[卡摩瑞二符] 金色反射模板注册失败")
+			return false
+	if 开花弹.behavior_spec == null:
+		开花弹.with_behavior(BulletBehaviors.bounce_emit(
+			反射模板, 0.01, 0.0, 0.0, true, true))
+	if 金开花弹 != null and 金开花弹.behavior_spec == null:
+		金开花弹.with_behavior(BulletBehaviors.bounce_emit(
+			金反射模板, 0.01, 0.0, 0.0, true, true))
+	return true
 
 
 func _tick(p_ctx: StageContext) -> Variant:
+	if not _ensure_card_behaviors(p_ctx):
+		return false
 	if not target:
 		return p_ctx.clock.wait(波间隔)
 

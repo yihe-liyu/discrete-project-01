@@ -14,6 +14,7 @@ void register_top_emit();
 void register_spin_then_slow();
 void register_rain_stage();
 void register_sonar();
+void register_anchor_drift();
 
 void register_behaviors_core() {
 	register_linear();
@@ -28,6 +29,7 @@ void register_behaviors_core() {
 	register_spin_then_slow();
 	register_rain_stage();
 	register_sonar();
+	register_anchor_drift();
 }
 
 } // namespace godot

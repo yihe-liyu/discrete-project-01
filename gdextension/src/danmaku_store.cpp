@@ -19,7 +19,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_type_indices"), &DanmakuStore::get_type_indices);
 	ClassDB::bind_method(D_METHOD("get_factions"), &DanmakuStore::get_factions);
 	ClassDB::bind_method(D_METHOD("get_factions_bytes"), &DanmakuStore::get_factions_bytes);
-	ClassDB::bind_method(D_METHOD("behavior_batch", "count", "positions", "velocities", "life", "fx", "program", "phase", "tick", "elapsed", "slots", "delta", "player", "boss", "has_boss", "enemies", "anchor_base"), &DanmakuStore::behavior_batch, DEFVAL(PackedVector2Array()));
+	ClassDB::bind_method(D_METHOD("behavior_batch", "count", "positions", "velocities", "life", "fx", "program", "phase", "tick", "elapsed", "slots", "delta", "player", "boss", "has_boss", "enemies", "anchor_base", "anchors"), &DanmakuStore::behavior_batch, DEFVAL(PackedVector2Array()), DEFVAL(PackedVector2Array()));
 	ClassDB::bind_method(D_METHOD("get_position", "id"), &DanmakuStore::get_position);
 	ClassDB::bind_method(D_METHOD("get_velocity", "id"), &DanmakuStore::get_velocity);
 	ClassDB::bind_method(D_METHOD("get_forward", "id"), &DanmakuStore::get_forward);
@@ -66,7 +66,9 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_behavior_id", "name"), &DanmakuStore::get_behavior_id);
 	ClassDB::bind_method(D_METHOD("get_behavior_name", "id"), &DanmakuStore::get_behavior_name);
 	ClassDB::bind_method(D_METHOD("get_program", "id"), &DanmakuStore::get_program);
-	ClassDB::bind_method(D_METHOD("behavior_tick", "delta", "player", "boss", "has_boss", "enemies", "anchor_base"), &DanmakuStore::behavior_tick, DEFVAL(PackedVector2Array()));
+	ClassDB::bind_method(D_METHOD("behavior_tick", "delta", "player", "boss", "has_boss", "enemies", "anchor_base", "anchors"), &DanmakuStore::behavior_tick, DEFVAL(PackedVector2Array()), DEFVAL(PackedVector2Array()));
+	ClassDB::bind_method(D_METHOD("set_anchor_slot", "id", "slot"), &DanmakuStore::set_anchor_slot);
+	ClassDB::bind_method(D_METHOD("get_anchor_slot", "id"), &DanmakuStore::get_anchor_slot);
 	ClassDB::bind_method(D_METHOD("clear"), &DanmakuStore::clear);
 	ClassDB::bind_method(D_METHOD("despawn", "id"), &DanmakuStore::despawn);
 	ClassDB::bind_method(D_METHOD("set_life", "id", "life"), &DanmakuStore::set_life);
@@ -134,6 +136,7 @@ void DanmakuStore::setup(int p_capacity, const Rect2 &p_cull) {
 	_hb_follow.assign(p_capacity, 0);
 	_graze_tick.assign(p_capacity, -1);
 	_behavior_id.assign(p_capacity, -1);
+	_anchor_slot.assign(p_capacity, -1);
 	_bstate.assign(p_capacity * B_STATE_STRIDE, 0.0f);
 	_bparams.assign(p_capacity * B_PARAM_STRIDE, 0.0f);
 	_frame_tick = 0;
@@ -182,6 +185,7 @@ int DanmakuStore::spawn(const Vector2 &p_pos, const Vector2 &p_vel, int p_type, 
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 	_graze_tick[i] = -1;
 	_behavior_id[i] = -1;
+	_anchor_slot[i] = -1;
 	for (int bs = 0; bs < B_STATE_STRIDE; ++bs) { _bstate[i * B_STATE_STRIDE + bs] = 0.0f; }
 	for (int bp = 0; bp < B_PARAM_STRIDE; ++bp) { _bparams[i * B_PARAM_STRIDE + bp] = 0.0f; }
 	_render_rot[i] = (float)NAN;
@@ -282,6 +286,7 @@ int DanmakuStore::spawn_fx(int p_fx_type, const Vector2 &p_pos, const Color &p_c
 	_hb_sizex[i] = 0.0f; _hb_sizey[i] = 0.0f; _hb_diroff[i] = 0.0f; _hb_follow[i] = 0;
 	_graze_tick[i] = -1;
 	_behavior_id[i] = -1;
+	_anchor_slot[i] = -1;
 	for (int bs = 0; bs < B_STATE_STRIDE; ++bs) { _bstate[i * B_STATE_STRIDE + bs] = 0.0f; }
 	for (int bp = 0; bp < B_PARAM_STRIDE; ++bp) { _bparams[i * B_PARAM_STRIDE + bp] = 0.0f; }
 	_render_rot[i] = (float)NAN;
@@ -309,7 +314,7 @@ void DanmakuStore::_ensure_capacity(int p_n) {
 	_hb_radius.resize(p_n); _hb_offx.resize(p_n); _hb_offy.resize(p_n);
 	_hb_sizex.resize(p_n); _hb_sizey.resize(p_n); _hb_diroff.resize(p_n);
 	_hb_follow.resize(p_n); _graze_tick.resize(p_n); _render_rot.resize(p_n); _spin_rot.resize(p_n);
-	_behavior_id.resize(p_n); _bstate.resize(p_n * B_STATE_STRIDE); _bparams.resize(p_n * B_PARAM_STRIDE);
+	_behavior_id.resize(p_n); _anchor_slot.resize(p_n); _bstate.resize(p_n * B_STATE_STRIDE); _bparams.resize(p_n * B_PARAM_STRIDE);
 	_out_grace.resize(p_n); _out_time.resize(p_n);
 }
 
@@ -358,6 +363,7 @@ void DanmakuStore::_swap_remove(int p_id) {
 	_hb_follow[p_id] = _hb_follow[last];
 	_graze_tick[p_id] = _graze_tick[last];
 	_behavior_id[p_id] = _behavior_id[last];
+	_anchor_slot[p_id] = _anchor_slot[last];
 	for (int bs = 0; bs < B_STATE_STRIDE; ++bs) { _bstate[p_id * B_STATE_STRIDE + bs] = _bstate[last * B_STATE_STRIDE + bs]; }
 	for (int bp = 0; bp < B_PARAM_STRIDE; ++bp) { _bparams[p_id * B_PARAM_STRIDE + bp] = _bparams[last * B_PARAM_STRIDE + bp]; }
 	_out_grace[p_id] = _out_grace[last];
@@ -830,6 +836,14 @@ int DanmakuStore::get_behavior(int p_id) const {
 	return _valid(p_id) ? _behavior_id[p_id] : -1;
 }
 
+void DanmakuStore::set_anchor_slot(int p_id, int p_slot) {
+	if (_valid(p_id)) { _anchor_slot[p_id] = p_slot; }
+}
+
+int DanmakuStore::get_anchor_slot(int p_id) const {
+	return _valid(p_id) ? _anchor_slot[p_id] : -1;
+}
+
 int DanmakuStore::get_behavior_id(const String &p_name) const {
 	return NativeBehaviorRegistry::find_id(p_name);
 }
@@ -1262,7 +1276,7 @@ void DanmakuStore::_exec_action(int i, int prog, float *slots, int ins, const Ve
 	}
 }
 
-void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base) {
+void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base, const PackedVector2Array &p_anchors) {
 	_grid_dirty = true;
 	_tick_dead.clear();
 	_ev_kind.clear(); _ev_prog.clear(); _ev_local.clear(); _ev_bullet.clear();
@@ -1282,6 +1296,11 @@ void DanmakuStore::_run_behavior_pass(float dt, const Vector2 &p_player, const V
 				bctx.has_boss = p_has_boss;
 				bctx.enemies = &p_enemies;
 				bctx.position = Vector2(_x[i], _y[i]);
+				const int as = _anchor_slot[i];
+				if (as >= 0 && as < p_anchors.size()) {
+					bctx.anchor = p_anchors[as];
+					bctx.has_anchor = true;
+				}
 				bctx.field_left = _field_left;
 				bctx.field_right = _field_right;
 				bctx.field_top = _field_top;
@@ -1418,8 +1437,8 @@ Dictionary DanmakuStore::_events_dict() const {
 	return out;
 }
 
-Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base) {
-	_run_behavior_pass(CLAMP((float)p_delta, 0.0f, MAX_DT), p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
+Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base, const PackedVector2Array &p_anchors) {
+	_run_behavior_pass(CLAMP((float)p_delta, 0.0f, MAX_DT), p_player, p_boss, p_has_boss, p_enemies, p_anchor_base, p_anchors);
 	std::sort(_tick_dead.begin(), _tick_dead.end(), std::greater<int>());
 	for (int id : _tick_dead) {
 		if (id >= 0 && id < _count) { _swap_remove(id); }
@@ -1432,7 +1451,7 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 		const PackedInt32Array &p_program, const PackedInt32Array &p_phase, const PackedInt32Array &p_tick,
 		const PackedFloat32Array &p_elapsed, const PackedFloat32Array &p_slots,
 		double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies,
-		const PackedVector2Array &p_anchor_base) {
+		const PackedVector2Array &p_anchor_base, const PackedVector2Array &p_anchors) {
 	const int n = MIN(p_count, MIN(p_pos.size(), p_vel.size()));
 	_ensure_capacity(n);
 	_count = n;
@@ -1458,7 +1477,7 @@ Dictionary DanmakuStore::behavior_batch(int p_count, const PackedVector2Array &p
 			_pslots[k] = k < p_slots.size() ? p_slots[k] : 0.0f;
 		}
 	}
-	_run_behavior_pass(CLAMP((float)p_delta, 0.0f, MAX_DT), p_player, p_boss, p_has_boss, p_enemies, p_anchor_base);
+	_run_behavior_pass(CLAMP((float)p_delta, 0.0f, MAX_DT), p_player, p_boss, p_has_boss, p_enemies, p_anchor_base, p_anchors);
 	PackedVector2Array opos, ovel;
 	PackedFloat32Array olife, ofx, oelapsed, oslots, orender;
 	PackedInt32Array oprog, ophase, otick, odead;

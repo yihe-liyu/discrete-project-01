@@ -9,6 +9,7 @@ struct BounceParams {
 	float accel = 0.0f;
 	float angle = 0.0f;
 	float despawn = 1.0f;
+	float reflect = 0.0f;
 };
 struct BounceState { float age = 0.0f; float fired = 0.0f; };
 
@@ -31,11 +32,26 @@ static void bounce_emit_tick(float *p_state, const float *p_params,
 		return;
 	}
 	state->fired = 1.0f;
-	Vector2 dir = (p_ctx.boss - p_ctx.position);
-	if (dir.length_squared() < 1e-6f) {
-		dir = Vector2(0, 1);
+	Vector2 dir;
+	if (p.reflect > 0.5f) {
+		dir = p_ctx.velocity->normalized();
+		if (p_ctx.position.x <= p_ctx.field_left || p_ctx.position.x >= p_ctx.field_right) {
+			dir.x = -dir.x;
+		}
+		if (p_ctx.position.y <= p_ctx.field_top) {
+			dir.y = -dir.y;
+		}
+		if (dir.length_squared() < 1e-6f) {
+			dir = Vector2(0, 1);
+		}
+	} else {
+		dir = (p_ctx.boss - p_ctx.position);
+		if (dir.length_squared() < 1e-6f) {
+			dir = Vector2(0, 1);
+		}
+		dir = dir.normalized();
 	}
-	dir = dir.normalized().rotated(p.angle);
+	dir = dir.rotated(p.angle);
 	const float child_speed = p.child_speed > 0.0f
 		? p.child_speed : p_ctx.velocity->length();
 	behavior::emit(p_out, (int32_t)p.template_id, p_ctx.position, dir * child_speed);

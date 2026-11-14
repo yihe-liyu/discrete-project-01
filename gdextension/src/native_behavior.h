@@ -27,6 +27,9 @@ struct NativeBehaviorContext {
 	// 当前位置（只读副本）与可选直写通道；行为需要“自己在哪”时用。
 	Vector2 position;
 	Vector2 *position_out = nullptr;
+	// 锚点世界坐标（宿主每帧解析；仅 anchor_drift 等锚定型行为使用）。
+	Vector2 anchor;
+	bool has_anchor = false;
 	float field_left = 0.0f;
 	float field_right = 0.0f;
 	float field_top = 0.0f;

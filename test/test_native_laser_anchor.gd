@@ -1,7 +1,6 @@
 extends GutTest
-const FIX := preload("res://test/fixtures/lifecycle_fixtures.gd")
 ## L3.5-3b 回归（端到端桥接）：魔理沙激光段必须贴在**子机锚点**上，而不是自机。
-## 历史 bug：原生 anchor_drift 完全忽略 anchor_id / use_global，段全粘在 player 上。
+## 现在走原生 anchor_drift + 宿主 anchor slot，不再经过 lifecycle program。
 
 
 
@@ -24,8 +23,8 @@ func test_marisa_laser_segments_track_anchor() -> void:
 	# no_spawn_fog：本用例只验锚点漂移，别被出生雾冻结 0.3s 干扰
 	var d := SpawnSpec.new().enemy().no_spawn_fog().blend(true).tex("小玉")
 	d.velocity = Vector2.UP * 100.0
-	d.trajectory(FIX.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 0.0),
-		{&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true})
+	d.with_behavior(BulletBehaviors.anchor_drift(0.0, 800.0, 0.0, true))
+	d.lifecycle_anchor = {&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
 	BulletManager.current.shoot_spec(d, Vector2(200.0, 700.0), Vector2.UP)
 	assert_eq(ns.get_active_count(), 1, "激光段应进内核池")
 	for i in 3:
@@ -44,7 +43,7 @@ func test_clear_laser_bullets_only_clears_laser_kind() -> void:
 	var laser := SpawnSpec.new().enemy().no_spawn_fog()
 	laser.kind = BulletType.Kind.LASER
 	laser.velocity = Vector2.UP * 100.0
-	laser.trajectory(FIX.marisa_laser(0, Vector2.ZERO, 0.0, 800.0, 0.0))
+	laser.with_behavior(BulletBehaviors.anchor_drift(0.0, 800.0, 0.0, true))
 	BulletManager.current.shoot_spec(laser, Vector2(200.0, 700.0), Vector2.UP)
 
 	var point := SpawnSpec.new().enemy().no_spawn_fog()

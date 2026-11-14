@@ -21,6 +21,13 @@ var entity_registry: EntityRegistry
 ## 弹幕世界（BulletManager 注入）——bomb 宿主节点反查用
 var bullet_manager: BulletManager
 var _texture_by_index: Array[Texture2D] = []   # 纹理句柄表（render socket）：弹型下标 → 贴图
+## 锚点表（激光用）：slot → Node2D / offset / use_global；每帧解析成世界坐标交给内核。
+var _anchor_slots: Dictionary = {}
+var _anchor_nodes: Array[Node2D] = []
+var _anchor_offsets: Array[Vector2] = []
+var _anchor_globals: Array[bool] = []
+var _anchor_ids: Array[int] = []
+var _anchor_warned: Dictionary = {}
 
 ## 内核行为上下文（由 BulletManager 装配）。
 var behavior_ctx: BehaviorContext
@@ -124,6 +131,7 @@ func _ensure_system() -> void:
 	add_child(system)
 	system.emit_spawner = Callable(self, "_spawn_emit_template")
 	system.laser_spawner = Callable(self, "_spawn_laser_template")
+	system.anchor_provider = Callable(self, "_anchor_positions")
 
 
 ## 行为循环结束后统一执行延后的 re_fire / 分裂（内核契约：循环中途禁止增删行）。
@@ -183,13 +191,16 @@ func prepare_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictiona
 		params = {&"lifecycle": spec.lifecycle, &"anchor": spec.lifecycle_anchor}
 	if spec.kind == BulletType.Kind.LASER and _laser_fade != null:
 		_laser_fade.on_laser_spawned()
+	var anchor_slot := -1
+	if spec.lifecycle_anchor != null:
+		anchor_slot = _anchor_slot_for(spec.lifecycle_anchor)
 	var tint: Color = spec.tint
 	if spec.faction == SpawnSpec.Faction.PLAYER:
 		var res := _player_res()
 		if res != null and res.memory_value < 50.0:
 			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
 	return {type = type, pos = pos, vel = vel, tint = tint, move = move, params = params,
-		texture = spec.texture, behavior = spec.behavior_spec}
+		texture = spec.texture, behavior = spec.behavior_spec, anchor_slot = anchor_slot}
 
 
 func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
@@ -202,6 +213,7 @@ func spawn_prepared(spec: Dictionary) -> int:
 		return -1
 	var id: int = system.spawn(spec.type, spec.pos, spec.vel, spec.tint, spec.move, spec.params)
 	if id >= 0:
+		system.set_anchor_slot(id, int(spec.get("anchor_slot", -1)))
 		var behavior: BehaviorSpec = spec.get("behavior")
 		if behavior != null:
 			var bid: int = system.get_behavior_id(String(behavior.id))
@@ -264,6 +276,52 @@ func setup_behaviors(player: Node2D, enemy_provider: Callable) -> void:
 	system.behavior_ctx = behavior_ctx
 	system.behavior_host = _behavior_host
 	system.boss_getter = func(): return _behavior_host.get_boss()
+
+
+## 锚点 spec → 稳定 slot（同一 id/offset/use_global 复用）。
+func _anchor_slot_for(spec: Variant) -> int:
+	if not (spec is Dictionary):
+		return -1
+	var id := int(spec.get(&"id", 0))
+	var offset: Vector2 = spec.get(&"offset", Vector2.ZERO)
+	var use_global := bool(spec.get(&"use_global", true))
+	var key := "%d|%.4f|%.4f|%d" % [id, offset.x, offset.y, 1 if use_global else 0]
+	if _anchor_slots.has(key):
+		return int(_anchor_slots[key])
+	var node: Node2D = null
+	if id != 0:
+		var obj: Object = instance_from_id(id)
+		if obj is Node2D:
+			node = obj
+	var slot := _anchor_nodes.size()
+	_anchor_nodes.append(node)
+	_anchor_offsets.append(offset)
+	_anchor_globals.append(use_global)
+	_anchor_ids.append(id)
+	_anchor_slots[key] = slot
+	return slot
+
+
+## 每帧把锚点解析成世界坐标；无效 id 退回自机（与 lifecycle anchor_base 一致）。
+func _anchor_positions() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var n := _anchor_nodes.size()
+	out.resize(n)
+	var player := behavior_ctx.get_player_position() if behavior_ctx != null else Vector2.ZERO
+	for i in n:
+		var node: Node2D = _anchor_nodes[i]
+		if node != null and is_instance_valid(node):
+			if _anchor_globals[i]:
+				out[i] = node.global_position + _anchor_offsets[i]
+			else:
+				out[i] = player + node.position
+		else:
+			out[i] = player + _anchor_offsets[i]
+			var id := _anchor_ids[i]
+			if id != 0 and not _anchor_warned.has(id):
+				_anchor_warned[id] = true
+				push_error("[KernelBulletHost] 锚点 id=%d 已失效/不是 Node2D，退回自机" % id)
+	return out
 
 
 func _sync_host_tables(id: int, texture: Texture2D) -> void:

@@ -43,26 +43,26 @@ func test_variant_emits_the_two_split_templates() -> void:
 	assert_eq(int(b.params[3]), shot.夹角狙模板.numeric_id, "params[3] = 自机狙模板")
 
 
-func test_split_templates_carry_own_lifecycle_and_color() -> void:
+func test_split_templates_carry_own_behavior_and_color() -> void:
 	var shot = _build(0)
-	assert_not_null(shot.夹角弹.lifecycle, "普通分裂弹应挂描述符（沿朝向加速）")
-	assert_not_null(shot.夹角狙.lifecycle, "自机狙分裂弹应挂描述符")
+	assert_eq(shot.夹角弹.behavior_spec.id, &"accel_heading", "普通分裂弹应挂沿朝向加速")
+	assert_eq(shot.夹角狙.behavior_spec.id, &"accel_heading", "自机狙分裂弹应挂沿朝向加速")
 	assert_eq(shot.夹角弹.tint, Color.AQUA, "普通分裂弹 AQUA")
 	assert_eq(shot.夹角狙.tint, Color.RED, "自机狙分裂弹 RED")
 
 
 ## 难度改变分裂弹的**收尾方式**：E/N 的 `夹角弹` 不自我回收（靠出界宽限 `.grace(4)` 清理），
-## H/L 加了 `until_elapsed(4)` + `despawn_clear()`。
-## ⚠️ 这里**不数 action 个数** —— 那是「内容形状」，作者当天就把 `despawn` 换成了 `despawn_clear`
-## （1 → 2 个 action）。锁形状的测试会跟着内容迭代天天红；只锁「有没有收尾 / 难度是否分派」。
-func test_split_lifecycle_differs_by_difficulty() -> void:
+## H/L 的 behavior 参数带 lifetime + clear_fx。
+## ⚠️ 只锁「有没有收尾 / 难度是否分派」，不锁具体秒数。
+func test_split_behavior_differs_by_difficulty() -> void:
 	var easy = _build(0)
 	var hard = _build(2)
-	assert_ne(easy.夹角弹.lifecycle.content_signature(),
-		hard.夹角弹.lifecycle.content_signature(),
-		"难度不同 → 夹角弹 program 应不同")
-	assert_eq(int(easy.夹角弹.lifecycle.compile()["act_count"][0]), 0, "E/N 夹角弹不自我回收")
-	assert_gt(int(hard.夹角弹.lifecycle.compile()["act_count"][0]), 0, "H/L 夹角弹应有 on_end（收尾）")
+	assert_ne(easy.夹角弹.behavior_spec.params,
+		hard.夹角弹.behavior_spec.params,
+		"难度不同 → 夹角弹 behavior 参数应不同")
+	assert_eq(easy.夹角弹.behavior_spec.params[1], 0.0, "E/N 夹角弹不自我回收")
+	assert_gt(hard.夹角弹.behavior_spec.params[1], 0.0, "H/L 夹角弹应有 lifetime")
+	assert_eq(hard.夹角弹.behavior_spec.params[2], 1.0, "H/L 夹角弹应带 clear_fx")
 
 
 ## 变自机狙概率 0（E/N）vs 0.1（H/L）会进 program 参数 → 两份 program 必须不同。

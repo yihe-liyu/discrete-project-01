@@ -70,6 +70,8 @@ var laser_templates: Dictionary = {}
 var _next_laser_template_id: int = 1
 ## behavior 激光生成回调（KernelBulletHost 注入）。
 var laser_spawner: Callable
+## 每帧返回 PackedVector2Array 的锚点位置（下标 = set_anchor_slot 的 slot）；空 = 无锚点。
+var anchor_provider: Callable
 ## behavior 撞墙音效表：内容注册 stream，C++ outcome 只带下标。
 var behavior_sfx: Array[AudioStream] = []
 
@@ -399,6 +401,15 @@ func set_behavior(id: int, behavior: int, params := PackedFloat32Array()) -> boo
 
 
 ## 当前行绑定的 behavior id；无 → -1。
+func set_anchor_slot(id: int, slot: int) -> void:
+	if _accel != null:
+		_accel.set_anchor_slot(id, slot)
+
+
+func get_anchor_slot(id: int) -> int:
+	return _accel.get_anchor_slot(id) if _accel != null else -1
+
+
 func get_behavior(id: int) -> int:
 	return _accel.get_behavior(id) if _accel != null else -1
 
@@ -731,7 +742,12 @@ func _run_native_behaviors(delta: float) -> void:
 	for apid in _program_data.size():
 		var spec: Variant = _program_anchors[apid] if apid < _program_anchors.size() else null
 		anchor_base[apid] = player if spec == null else BulletLifecycle.anchor_base(spec[&"id"], spec[&"offset"], spec[&"use_global"], player)
-	var res: Dictionary = _accel.behavior_tick(delta, player, boss_pos, has_boss, enemies, anchor_base)
+	var anchors := PackedVector2Array()
+	if anchor_provider.is_valid():
+		var raw: Variant = anchor_provider.call()
+		if raw is PackedVector2Array:
+			anchors = raw
+	var res: Dictionary = _accel.behavior_tick(delta, player, boss_pos, has_boss, enemies, anchor_base, anchors)
 	_drain_events(res, has_boss, boss_pos)
 
 

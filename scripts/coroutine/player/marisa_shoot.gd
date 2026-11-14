@@ -37,8 +37,6 @@ var _segment_textures: Array[AtlasTexture] = []  # 切片缓存（省每段 new�
 var _main_spec: SpawnSpec
 var _focus_spec: SpawnSpec
 var _laser_specs: Array[SpawnSpec] = []
-## 激光段描述符缓存（按角度）—— 同角度共用 1 个 program；锚点走 per-shot lifecycle_anchor
-var _laser_trajectories: Dictionary = {}
 ## 子机的稳定锚点：不直接引用会被重建/释放的 Option 节点。
 ## 每帧把锚点移到对应子机的 global_position；激光锚点 id 永远有效。
 var _laser_anchors: Array[Node2D] = []
@@ -107,7 +105,8 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 	if Input.is_action_pressed("focus"):
 		# focus：竖直向上匀加速星弹（初速 + 加速度，每秒加速 —— 数值可调）
 		if _focus_spec == null:
-			_focus_spec = SpawnSpec.new().tex("marisa_opt2").speed(1500).trajectory(BulletLifecycle.new().accel_world(Vector2(0, -5000))).player()
+			_focus_spec = SpawnSpec.new().tex("marisa_opt2").speed(1500).with_behavior(
+				BulletBehaviors.accel(Vector2(0, -5000))).player()
 			_focus_spec.color(Color(1, 1, 1, 0.5))
 			_focus_spec.damage = 4
 			_focus_spec.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
@@ -146,17 +145,6 @@ func _make_laser_segment(i: int) -> AtlasTexture:
 			at.region = Rect2(BulletShapes.pixel_rect(LASER_SHAPE).position + Vector2(segment * SEG_W, 0.0), Vector2(SEG_W, SEG_H))
 			_segment_textures.append(at)
 	return _segment_textures[i % _seg_count()]
-
-
-## 激光段描述符：按角度缓存（同角度共用 1 个 program）
-func _laser_trajectory(angle_rad: float) -> BulletLifecycle:
-	var lc: BulletLifecycle = _laser_trajectories.get(angle_rad)
-	if lc == null:
-		lc = BulletLifecycle.new()
-		lc.anchor_drift(0, Vector2.ZERO, angle_rad, LASER_DRIFT_SPEED, true, LASER_FIRST_STEP, true)
-		lc.until_never()
-		_laser_trajectories[angle_rad] = lc
-	return lc
 
 
 ## 子机锚点：每个子机槽一个持久 Marker2D，每帧跟随子机位置。
@@ -217,8 +205,10 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	var angles: Array = LASER_ANGLES[lv]
 	var angle_rad: float = deg_to_rad(angles[opt_idx] if opt_idx < angles.size() else 0.0)
 
-	# 弹道 = 每角度一个描述符（缓存）；锚点是 per-shot（同角度、不同子机各一份 program）
-	spec.trajectory(_laser_trajectory(angle_rad), _laser_anchor(player, source))
+	# 弹道 = 原生 anchor_drift；锚点是 per-shot（位置由宿主每帧解析）
+	spec.with_behavior(BulletBehaviors.anchor_drift(
+		angle_rad, LASER_DRIFT_SPEED, LASER_FIRST_STEP, true))
+	spec.lifecycle_anchor = _laser_anchor(player, source)
 
 	# 出生方向必须就是激光的漂移方向：首帧 behavior 还没跑，
 	# follow_dir 先用 velocity 定贴图朝向；若这里传 UP，首帧会竖一下再转。

@@ -8,8 +8,20 @@ static func linear() -> BehaviorSpec:
 	return BehaviorSpec.new(&"linear")
 
 
-static func homing(speed: float, turn: float) -> BehaviorSpec:
-	return BehaviorSpec.new(&"homing", PackedFloat32Array([speed, turn]))
+const HOMING_PLAYER := 0
+const HOMING_NEAREST_ENEMY := 1
+
+
+## 追踪。只给前两个参数 = 旧语义（追自机、固定速度）。
+## target_mode = 1 时追最近敌人；speed_end + speed_ramp 做线性变速；
+## turn_ramp / dist_weight / steer_until 对应 lifecycle steer 的 ramp / 距离权重 / 转向时长。
+static func homing(speed: float, turn: float, target_mode: int = HOMING_PLAYER,
+		speed_end: float = 0.0, speed_ramp: float = 0.0, turn_ramp: float = 0.0,
+		dist_weight: float = 0.0, steer_until: float = 0.0) -> BehaviorSpec:
+	return BehaviorSpec.new(&"homing", PackedFloat32Array([
+		speed, turn, float(target_mode), speed_end, speed_ramp,
+		turn_ramp, dist_weight, steer_until,
+	]))
 
 
 static func accel(acceleration: Vector2) -> BehaviorSpec:
@@ -25,6 +37,14 @@ static func sonar(flower: EmitTemplate, string_bullet: EmitTemplate,
 	return BehaviorSpec.new(&"stage01.mid01.sonar", PackedFloat32Array([
 		return_radius, float(fid), float(sid), float(flower_count),
 		float(string_mode), string_speed_base,
+	]))
+
+
+## 锚定宿主节点做线性漂移（激光段）。anchor 由 SpawnSpec.anchor 提供。
+static func anchor_drift(angle: float, speed: float, initial: float = 0.0,
+		render_heading: bool = true) -> BehaviorSpec:
+	return BehaviorSpec.new(&"anchor_drift", PackedFloat32Array([
+		angle, speed, initial, 1.0 if render_heading else 0.0,
 	]))
 
 
@@ -76,8 +96,11 @@ static func top_emit(template: EmitTemplate, accel_px: float,
 
 
 ## 沿自身 heading 加速。
-static func accel_heading(acceleration: float) -> BehaviorSpec:
-	return BehaviorSpec.new(&"accel_heading", PackedFloat32Array([acceleration]))
+static func accel_heading(acceleration: float, lifetime: float = 0.0,
+		clear: bool = false) -> BehaviorSpec:
+	return BehaviorSpec.new(&"accel_heading", PackedFloat32Array([
+		acceleration, lifetime, 1.0 if clear else 0.0,
+	]))
 
 
 ## 减速到时间点后，按概率在 template_a / template_b 间选一个子弹出。
@@ -99,7 +122,8 @@ static func split_after(template_a: EmitTemplate, template_b: EmitTemplate,
 ## 撞墙 emit + 可选回收。
 ## child_speed <= 0 = 沿用父弹当前速度；despawn = 撞墙后是否回收父弹。
 static func bounce_emit(template: EmitTemplate, child_speed: float = 0.0,
-		accel_px: float = 0.0, angle: float = 0.0, despawn: bool = true) -> BehaviorSpec:
+		accel_px: float = 0.0, angle: float = 0.0, despawn: bool = true,
+		reflect: bool = false) -> BehaviorSpec:
 	if template == null:
 		push_error("BulletBehaviors.bounce_emit(): template 不能为空")
 		return null
@@ -112,4 +136,5 @@ static func bounce_emit(template: EmitTemplate, child_speed: float = 0.0,
 		accel_px,
 		angle,
 		1.0 if despawn else 0.0,
+		1.0 if reflect else 0.0,
 	]))

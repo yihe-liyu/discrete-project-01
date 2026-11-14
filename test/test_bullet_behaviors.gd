@@ -6,7 +6,7 @@ func test_linear_and_homing() -> void:
 	assert_eq(BulletBehaviors.linear().id, &"linear")
 	var h := BulletBehaviors.homing(220.0, 600.0)
 	assert_eq(h.id, &"homing")
-	assert_eq(h.params, PackedFloat32Array([220.0, 600.0]))
+	assert_eq(h.params, PackedFloat32Array([220.0, 600.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
 
 
 func test_accel_uses_vector_components() -> void:
@@ -21,6 +21,6 @@ func test_bounce_emit_requires_registered_template() -> void:
 	assert_true(EmitTemplateRegistry.new().register(tpl))
 	var b := BulletBehaviors.bounce_emit(tpl, 150.0, 96.0, 0.25, true)
 	assert_eq(b.id, &"bounce_emit")
-	assert_eq(b.params, PackedFloat32Array([tpl.numeric_id, 150.0, 96.0, 0.25, 1.0]))
+	assert_eq(b.params, PackedFloat32Array([tpl.numeric_id, 150.0, 96.0, 0.25, 1.0, 0.0]))
 	var keep := BulletBehaviors.bounce_emit(tpl, 150.0, 96.0, 0.25, false)
 	assert_eq(keep.params[4], 0.0)

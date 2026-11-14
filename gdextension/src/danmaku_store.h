@@ -97,6 +97,8 @@ class DanmakuStore : public RefCounted {
 	std::vector<int32_t> _behavior_id;
 	std::vector<float> _bstate;
 	std::vector<float> _bparams;
+	// 每行一个宿主锚点槽（-1 = 无）；由 behavior_tick 的 p_anchors 解析成世界坐标。
+	std::vector<int32_t> _anchor_slot;
 	// 相位首帧标志从「每弹一个 bool」改为「每槽一个 bit」——否则同相位的两个有状态
 	// 初始化 unit（anchor_drift / drift）会互相消费掉 fresh，后者用未初始化的槽（实测瞬移到原点）。
 	// bit s = 槽 s 在本相位尚未初始化。
@@ -194,7 +196,7 @@ public:
 	PackedInt32Array get_type_indices() const; // 行 → 弹型下标。
 	PackedInt32Array get_factions() const; // int32 版。
 	PackedByteArray get_factions_bytes() const; // byte 版（宿主快照用）。
-	void _run_behavior_pass(float p_dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base);
+	void _run_behavior_pass(float p_dt, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base, const PackedVector2Array &p_anchors = PackedVector2Array());
 	Dictionary _events_dict() const;
 	// 无状态行为批（数组进/出，不做 swap；回收由调用方按 dead 重放）—— 与 integrate_batch 同款模式。
 	Dictionary behavior_batch(int p_count, const PackedVector2Array &p_pos, const PackedVector2Array &p_vel,
@@ -202,7 +204,8 @@ public:
 			const PackedInt32Array &p_program, const PackedInt32Array &p_phase, const PackedInt32Array &p_tick,
 			const PackedFloat32Array &p_elapsed, const PackedFloat32Array &p_slots,
 			double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies,
-			const PackedVector2Array &p_anchor_base = PackedVector2Array());
+			const PackedVector2Array &p_anchor_base = PackedVector2Array(),
+			const PackedVector2Array &p_anchors = PackedVector2Array());
 	bool is_grazed(int p_id) const; // 该行当前 tick 是否处于擦弹冷却。
 	void mark_grazed(int p_id); // 标记该行当前 tick 已擦弹。
 	void set_graze_interval_ticks(int p_ticks); // 同一颗弹的擦弹最小间隔（tick）
@@ -254,12 +257,14 @@ public:
 	// 绑定 native behavior；behavior 为 registry id，params 不超过 behavior 声明数。
 	bool set_behavior(int p_id, int p_behavior, const PackedFloat32Array &p_params = PackedFloat32Array());
 	int get_behavior(int p_id) const; // 当前 behavior id；-1 = 无/无效。
+	void set_anchor_slot(int p_id, int p_slot); // 绑定宿主锚点槽；-1 = 无。
+	int get_anchor_slot(int p_id) const; // 当前锚点槽；-1 = 无/无效。
 	int get_behavior_id(const String &p_name) const; // 名字 → registry id；未知 → -1。
 	String get_behavior_name(int p_id) const; // registry id → 名字；未知 → 空。
 	PackedFloat32Array get_behavior_state(int p_id) const; // 固定 8 槽（debug / 预览）。
 	PackedFloat32Array get_behavior_params(int p_id) const; // 固定 8 槽（debug / 预览）。
 	// 跑一帧 program；返回事件字典（emit/sfx/call）；本帧 dead 行走倒序 swap 回收。
-	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array());
+	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array(), const PackedVector2Array &p_anchors = PackedVector2Array());
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);
 	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, const Vector2 &vel, float p_prob, float rnd);
 	float _rng_float();
