@@ -7,7 +7,7 @@ class_name KernelBulletHost
 extends Node
 
 ## 行为内 emit 出来的弹（含子代）落库后广播稳定 uid；正常 shoot 不发这个信号。
-signal behavior_bullet_spawned(uid: int, lifecycle: BulletLifecycle)
+signal behavior_bullet_spawned(uid: int, spec: SpawnSpec)
 
 const MARISA_LASER_FADE_SCRIPT = preload("res://scripts/kernel_bridge/marisa_laser_fade.gd")
 const KERNEL_BOMB_SCRIPT = preload("res://scripts/kernel_bridge/kernel_bomb.gd")
@@ -173,7 +173,9 @@ func _spawn_emit_template(template: EmitTemplate, pos: Vector2, vel: Vector2, co
 	if template.behavior != null:
 		spec.behavior_spec = template.behavior
 	var dir := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
-	spawn_prepared(prepare_spec(spec, pos, dir))
+	var snapshot := prepare_spec(spec, pos, dir)
+	var id := spawn_prepared(snapshot)
+	notify_behavior_spawned(id, snapshot)
 
 
 ## 解析一次 SpawnSpec 发射所需的 per-shot 状态（类型 / 速度 / 行为 / 染色），不写内核池。
@@ -200,7 +202,8 @@ func prepare_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictiona
 		if res != null and res.memory_value < 50.0:
 			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
 	return {type = type, pos = pos, vel = vel, tint = tint, move = move, params = params,
-		texture = spec.texture, behavior = spec.behavior_spec, anchor_slot = anchor_slot}
+		texture = spec.texture, behavior = spec.behavior_spec, anchor_slot = anchor_slot,
+		spawn_spec = spec}
 
 
 func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
@@ -232,11 +235,9 @@ func notify_behavior_spawned(id: int, spec: Dictionary) -> void:
 	var uid: int = system.get_uid(id)
 	if uid <= 0:
 		return
-	var params: Variant = spec.get("params")
-	if params is Dictionary:
-		var lifecycle: BulletLifecycle = params.get(&"lifecycle")
-		if lifecycle != null:
-			behavior_bullet_spawned.emit(uid, lifecycle)
+	var source: SpawnSpec = spec.get("spawn_spec")
+	if source != null:
+		behavior_bullet_spawned.emit(uid, source)
 
 
 ## 纹理句柄 → 贴图（渲染插座；未映射/越界 = null）。

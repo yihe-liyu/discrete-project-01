@@ -265,6 +265,11 @@ public:
 	PackedFloat32Array get_behavior_params(int p_id) const; // 固定 8 槽（debug / 预览）。
 	// 跑一帧 program；返回事件字典（emit/sfx/call）；本帧 dead 行走倒序 swap 回收。
 	Dictionary behavior_tick(double p_delta, const Vector2 &p_player, const Vector2 &p_boss, bool p_has_boss, const PackedVector2Array &p_enemies, const PackedVector2Array &p_anchor_base = PackedVector2Array(), const PackedVector2Array &p_anchors = PackedVector2Array());
+	// 预览：用同一份 native behavior tick 在临时状态上跑 N 帧，返回位置折线；不生成真弹。
+	PackedVector2Array preview_behavior(int p_behavior, const PackedFloat32Array &p_params,
+			const Vector2 &p_pos, const Vector2 &p_vel, int p_frames, double p_delta,
+			const Vector2 &p_player, const PackedVector2Array &p_enemies,
+			const Vector2 &p_anchor, bool p_has_anchor);
 	Vector2 _target_pos(int p_tg, const Vector2 &from, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, bool &r_ok);
 	Vector2 _resolve_dir(int p_dk, int p_tg, float angle, const Vector2 &pos, const Vector2 &player, const Vector2 &boss, bool has_boss, const PackedVector2Array &enemies, const Vector2 &forward, const Vector2 &vel, float p_prob, float rnd);
 	float _rng_float();

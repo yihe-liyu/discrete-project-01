@@ -67,6 +67,7 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_behavior_name", "id"), &DanmakuStore::get_behavior_name);
 	ClassDB::bind_method(D_METHOD("get_program", "id"), &DanmakuStore::get_program);
 	ClassDB::bind_method(D_METHOD("behavior_tick", "delta", "player", "boss", "has_boss", "enemies", "anchor_base", "anchors"), &DanmakuStore::behavior_tick, DEFVAL(PackedVector2Array()), DEFVAL(PackedVector2Array()));
+	ClassDB::bind_method(D_METHOD("preview_behavior", "behavior", "params", "pos", "vel", "frames", "delta", "player", "enemies", "anchor", "has_anchor"), &DanmakuStore::preview_behavior);
 	ClassDB::bind_method(D_METHOD("set_anchor_slot", "id", "slot"), &DanmakuStore::set_anchor_slot);
 	ClassDB::bind_method(D_METHOD("get_anchor_slot", "id"), &DanmakuStore::get_anchor_slot);
 	ClassDB::bind_method(D_METHOD("clear"), &DanmakuStore::clear);
@@ -1434,6 +1435,71 @@ Dictionary DanmakuStore::_events_dict() const {
 	out["kind"] = kind; out["eprog"] = eprog; out["local"] = local; out["bullet"] = bullet;
 	out["x"] = ex; out["y"] = ey; out["dx"] = edx; out["dy"] = edy; out["val"] = eval;
 	out["variant"] = variant; out["color"] = ecolor;
+	return out;
+}
+
+PackedVector2Array DanmakuStore::preview_behavior(int p_behavior, const PackedFloat32Array &p_params,
+		const Vector2 &p_pos, const Vector2 &p_vel, int p_frames, double p_delta,
+		const Vector2 &p_player, const PackedVector2Array &p_enemies,
+		const Vector2 &p_anchor, bool p_has_anchor) {
+	PackedVector2Array out;
+	const NativeBehaviorDef *def = NativeBehaviorRegistry::get(p_behavior);
+	if (def == nullptr || def->tick == nullptr || p_frames <= 0 || p_delta <= 0.0) {
+		return out;
+	}
+	const float dt = CLAMP((float)p_delta, 0.0f, MAX_DT);
+	float state[B_STATE_STRIDE] = {0.0f};
+	float params[B_PARAM_STRIDE] = {0.0f};
+	const int pc = MIN(def->param_count, B_PARAM_STRIDE);
+	for (int i = 0; i < pc && i < p_params.size(); ++i) {
+		params[i] = p_params[i];
+	}
+	if (def->init != nullptr) {
+		def->init(state, params);
+	}
+	Vector2 pos = p_pos;
+	Vector2 vel = p_vel;
+	const Vector2 h0 = vel == Vector2() ? Vector2(0, 1) : vel.normalized();
+	float hx = h0.x, hy = h0.y;
+	float render_rot = (float)NAN, spin_rot = 0.0f, life = 0.0f;
+	Color color(1, 1, 1, 1);
+	uint32_t rng = 0x9E3779B9u;
+	out.push_back(pos);
+	const int frames = MIN(p_frames, 10000);
+	for (int f = 0; f < frames; ++f) {
+		pos += vel * dt;
+		NativeBehaviorContext ctx;
+		ctx.player = p_player;
+		ctx.boss = p_player;
+		ctx.has_boss = false;
+		ctx.enemies = &p_enemies;
+		ctx.position = pos;
+		ctx.position_out = &pos;
+		ctx.anchor = p_anchor;
+		ctx.has_anchor = p_has_anchor;
+		ctx.field_left = _field_left;
+		ctx.field_right = _field_right;
+		ctx.field_top = _field_top;
+		ctx.rng_user = &rng;
+		ctx.rng_float = [](void *p_user) -> float {
+			uint32_t &s = *static_cast<uint32_t *>(p_user);
+			s = s * 1664525u + 1013904223u;
+			return (float)(s >> 8) * (1.0f / 16777216.0f);
+		};
+		ctx.heading_x = &hx;
+		ctx.heading_y = &hy;
+		ctx.render_rot = &render_rot;
+		ctx.spin_rot = &spin_rot;
+		ctx.life = &life;
+		ctx.velocity = &vel;
+		ctx.color = &color;
+		NativeBehaviorOutcome bout;
+		def->tick(state, params, ctx, bout, dt);
+		if (bout.despawn) {
+			break;
+		}
+		out.push_back(pos);
+	}
 	return out;
 }
 

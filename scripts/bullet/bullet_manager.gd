@@ -22,7 +22,7 @@ class_name BulletManager
 extends Node2D
 
 ## 行为内 emit 子代落库后的转发信号（供路径预览过滤）。
-signal bullet_spawned(uid: int, lifecycle: BulletLifecycle)
+signal bullet_spawned(uid: int, spec: SpawnSpec)
 
 ## 当前弹幕世界（组合根 _ready 登记）。
 ## 只给测试 / 调试 / 工作台；游戏运行时走组合根注入，不读本静态。
@@ -141,8 +141,8 @@ func _physics_process(_delta: float) -> void:
 func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
 	return _kernel_bullet_host.shoot_spec(spec, pos, direction)
 
-func _on_behavior_bullet_spawned(uid: int, lifecycle: BulletLifecycle) -> void:
-	bullet_spawned.emit(uid, lifecycle)
+func _on_behavior_bullet_spawned(uid: int, spec: SpawnSpec) -> void:
+	bullet_spawned.emit(uid, spec)
 
 
 ## 行 → 稳定句柄；纯特效 / 无效 → 0。
