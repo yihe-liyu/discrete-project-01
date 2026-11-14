@@ -92,7 +92,7 @@ func _cleanup_options() -> void:
 
 func _main_shoot(_ctx: StageContext, player: Player) -> float:
 	if _main_spec == null:
-		_main_spec = SpawnSpec.new().tex("marisa_main").speed(4000).player()
+		_main_spec = SpawnSpec.new().tex("marisa_main").blend(false).speed(4000).player()
 		_main_spec.color(Color(1, 1, 1, 0.5))
 		_main_spec.damage = 6
 		_main_spec.hit_effect = preload("res://scenes/effect/hit_effect_marisa.tscn")
@@ -105,7 +105,7 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 	if Input.is_action_pressed("focus"):
 		# focus：竖直向上匀加速星弹（初速 + 加速度，每秒加速 —— 数值可调）
 		if _focus_spec == null:
-			_focus_spec = SpawnSpec.new().tex("marisa_opt2").speed(1500).with_behavior(
+			_focus_spec = SpawnSpec.new().tex("marisa_opt2").blend(false).speed(1500).with_behavior(
 				BulletBehaviors.accel(Vector2(0, -5000))).player()
 			_focus_spec.color(Color(1, 1, 1, 0.5))
 			_focus_spec.damage = 4
@@ -176,7 +176,7 @@ func _get_laser_spec(frame: int) -> SpawnSpec:
 	var i: int = frame % _seg_count()
 	while _laser_specs.size() < _seg_count():
 		var k: int = _laser_specs.size()
-		var spec := SpawnSpec.new().player()
+		var spec := SpawnSpec.new().player().blend(false)
 		spec.kind = BulletType.Kind.LASER
 		spec.texture = _make_laser_segment(k)
 		spec.color(Color(1, 1, 1, 0.5))

@@ -35,6 +35,7 @@ func test_spawn_spec_carries_core_overrides() -> void:
 	assert_eq(s.faction, SpawnSpec.Faction.ENEMY, "阵营")
 	assert_eq(s.tint, Color.RED, "颜色")
 	assert_eq(s.use_blend, false, "混合模式")
+	assert_eq(bt.tint_mode, BulletType.TintMode.MULTIPLY, "blend(false) → MULTIPLY")
 	assert_eq(s.wrap_mask, 5, "环绕")
 	assert_eq(bt.out_grace, 4.0, "出界宽限")
 	assert_eq(bt.hitbox_size, Vector2(12, 8), "判定尺寸")

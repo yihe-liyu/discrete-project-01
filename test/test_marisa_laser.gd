@@ -36,3 +36,13 @@ func test_spawn_spec_laser_kind_maps_to_bullet_type():
 	var d := SpawnSpec.new().player()
 	d.kind = BulletType.Kind.LASER
 	assert_eq(d.to_bullet_type().kind, BulletType.Kind.LASER, "SpawnSpec.kind 应带到内核弹型")
+
+
+func test_player_laser_uses_multiply_tint():
+	var cs = load("res://scripts/coroutine/player/marisa_shoot.gd")
+	var inst = cs.new()
+	autofree(inst)
+	var spec: SpawnSpec = inst._get_laser_spec(0)
+	assert_false(spec.use_blend, "自机激光应使用 MULTIPLY（保留贴图颜色）")
+	assert_eq(spec.to_bullet_type().tint_mode, BulletType.TintMode.MULTIPLY,
+		"自机激光不应吃 BLEND 的白色混合")

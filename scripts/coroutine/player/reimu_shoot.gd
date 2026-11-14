@@ -34,7 +34,7 @@ func _option_setup() -> Dictionary:
 
 func _main_shoot(_ctx: StageContext, player: Player) -> float:
 	if _main_spec == null:
-		_main_spec = SpawnSpec.new().tex("reimu_main").speed(4000).player()
+		_main_spec = SpawnSpec.new().tex("reimu_main").blend(false).speed(4000).player()
 		_main_spec.color(Color(1, 1, 1, 0.5))
 		_main_spec.damage = 6
 		_main_spec.hit_effect = preload("res://scenes/effect/hit_effect_reimu.tscn")
@@ -46,7 +46,7 @@ func _main_shoot(_ctx: StageContext, player: Player) -> float:
 func _option_shoot(_ctx: StageContext, _count: int) -> float:
 	if Input.is_action_pressed("focus"):
 		if _focus_spec == null:
-			_focus_spec = SpawnSpec.new().tex("reimu_opt2").speed(5000).player()
+			_focus_spec = SpawnSpec.new().tex("reimu_opt2").blend(false).speed(5000).player()
 			_focus_spec.color(Color(1, 1, 1, 0.5))
 			_focus_spec.damage = 1.4
 			_focus_spec.hit_effect = preload("res://scenes/effect/hit_effect_reimu_option02.tscn")
@@ -55,7 +55,7 @@ func _option_shoot(_ctx: StageContext, _count: int) -> float:
 		return ctx.clock.wait_frames(4)
 	else:
 		if _spread_spec == null:
-			_spread_spec = SpawnSpec.new().tex("reimu_opt1").speed(1000).player()
+			_spread_spec = SpawnSpec.new().tex("reimu_opt1").blend(false).speed(1000).player()
 			_spread_spec.color(Color(1, 1, 1, 0.5))
 			_spread_spec.damage = 3.5
 			_spread_spec.hit_effect = preload("res://scenes/effect/hit_effect_reimu_option01.tscn")

@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：106 脚本 / **738 用例（737 通过 / 1 红）/ 5887 断言 / 52.1s** / 0 orphans / **0 pending**。
+**现状**：106 脚本 / **739 用例（738 通过 / 1 红）/ 5890 断言 / 52.1s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 54 | 431 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 54 | 432 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,7 +93,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（54 / 431）
+## C · 宿主 · 运行时系统（54 / 432）
 
 ### C1 组合根 / 服务 / 时间线（18 / 79）
 
@@ -132,12 +132,12 @@
 | [test_practice_mode](../test/test_practice_mode.gd) | 练习模式：残机/bomb 归零、火力拉满（须在自机绑定后生效） + **关卡练习起始火力：第 1 面例外、第 2 面起拉满**（纯判定 + 真场景端到端两条；回归：落点必须在 `load_stage` 的 `reset_all` **之后**，否则被它冲掉） | 7 | 0 |
 | [test_float_damage](../test/test_float_damage.gd) | 小数伤害累积器 | 2 | 4 |
 
-### C3 激光（2 / 25）
+### C3 激光（2 / 26）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_laser](../test/test_laser.gd) | Laser 2.0：骨架采样 + 生长/持续/收缩状态机 + 判定/擦弹 | 23 | 20 |
-| [test_marisa_laser](../test/test_marisa_laser.gd) | 魔理沙分段激光：切片 + 偏移无缝 + 编译加载 + **SpawnSpec.kind → BulletType.kind** | 3 | 4 |
+| [test_marisa_laser](../test/test_marisa_laser.gd) | 魔理沙分段激光：切片 + 偏移无缝 + 编译加载 + **SpawnSpec.kind → BulletType.kind** + 自机 MULTIPLY 染色 | 4 | 4 |
 
 ### C4 Boss 战（4 / 34）
 
