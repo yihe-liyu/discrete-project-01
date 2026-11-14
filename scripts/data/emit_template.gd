@@ -13,9 +13,12 @@ var bullet: BulletData
 var behavior: BehaviorSpec
 
 
-func _init(p_id: StringName = &"", p_bullet: BulletData = null, p_behavior: BehaviorSpec = null) -> void:
+func _init(p_id: StringName = &"", p_bullet: Variant = null, p_behavior: BehaviorSpec = null) -> void:
 	id = p_id
-	bullet = p_bullet
+	if p_bullet is SpawnSpec:
+		bullet = p_bullet.to_bullet_data()
+	else:
+		bullet = p_bullet as BulletData
 	behavior = p_behavior
 
 

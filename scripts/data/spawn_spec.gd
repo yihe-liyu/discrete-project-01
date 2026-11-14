@@ -1,5 +1,5 @@
 ## 内容侧发射描述：一颗弹“出生时需要知道的基础属性”。
-## 只描述，不执行；进入内核前由 to_bullet_data() 适配旧 BulletData。
+## 只描述，不执行；内容侧不再调用 to_bullet_data()，只在内部边界适配旧 BulletData。
 class_name SpawnSpec
 extends RefCounted
 

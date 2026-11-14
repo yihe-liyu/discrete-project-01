@@ -36,3 +36,10 @@ func test_behavior_params_limit() -> void:
 	var t := _valid()
 	t.behavior = BehaviorSpec.new(&"homing", PackedFloat32Array([0, 0, 0, 0, 0, 0, 0, 0, 1]))
 	assert_false(EmitTemplateRegistry.new().register(t), "超过 8 参数应拒绝")
+
+
+func test_emit_template_accepts_spawn_spec() -> void:
+	var spec := SpawnSpec.new().tex("米弹").enemy()
+	var tpl := EmitTemplate.new(&"from_spec", spec)
+	assert_not_null(tpl.bullet, "EmitTemplate 应内部转换 SpawnSpec")
+	assert_eq(tpl.bullet.texture, BulletShapes.atlas_texture(&"米弹"), "外观应保留")

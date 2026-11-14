@@ -43,7 +43,7 @@ func _on_start() -> void:
 	反弹弹 = SpawnSpec.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
 	环弹模式 = 环弹模式脚本.new()
 	环弹参数 = 环弹参数脚本.new()
-	回弹模板 = EmitTemplate.new(&"卡摩瑞一非_rebound", 反弹弹.to_bullet_data())
+	回弹模板 = EmitTemplate.new(&"卡摩瑞一非_rebound", 反弹弹)
 
 
 ## 模板 / 音效是卡级资源；与每波发弹解耦，失败时响亮返回。
@@ -95,7 +95,7 @@ func 发射一圈(p_ctx: StageContext, 本波开花次数: int) -> void:
 		回弹模板, 0.0, 本圈加速度, 单圈反弹附加角, 撞墙音效id, true))
 
 	# 环弹模式复用同一份 BulletData：颜色 / 阵营 / 运动都不变，只换本次数量与速度。
-	环弹参数.template = 开花弹.to_bullet_data()
+	环弹参数.template = 开花弹
 	环弹参数.count = 个数
 	环弹参数.speed = 速度
 	环弹模式.fire(p_ctx, 环弹参数, target.global_position, 随机角度)
