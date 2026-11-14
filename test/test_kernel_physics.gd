@@ -377,3 +377,19 @@ func test_native_split_after_emits_template() -> void:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
 	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "父弹应回收，子弹出应存在")
 	assert_eq(_kernel_bullet_host.system.get_behavior(0), -1, "子弹出不应继承 split_after")
+
+
+## top_emit：撞上墙后换模，父弹回收。
+func test_native_top_emit_replaces_bullet() -> void:
+	_kernel_bullet_host.setup_behaviors(null, Callable())
+	var child := BulletData.new().enemy().tex("米弹").no_spawn_fog()
+	var tpl := EmitTemplate.new(&"top_probe", child)
+	assert_true(_kernel_bullet_host.system.register_emit_template(tpl))
+	var parent := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	parent.velocity = Vector2(0, -300)
+	parent.with_behavior(BulletBehaviors.top_emit(tpl, 0.0, PI, 0.0, -1))
+	var _id := _kernel_bullet_host.shoot(parent, Vector2(448, 40), Vector2.UP)
+	for _i in 10:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 1, "应只剩子弹出")
+	assert_eq(_kernel_bullet_host.system.get_behavior(0), -1, "子弹出无 behavior")

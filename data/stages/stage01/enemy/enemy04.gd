@@ -7,9 +7,11 @@ extends CoroutineScript
 var move_speed: float = 120.0
 
 ## 复用弹型实例（M2）。
-var _radial_bullet_data: BulletData
+var _radial_bullet_data: SpawnSpec
 ## 换向替换弹（米弹/FUCHSIA）：共享实例（static）。
-static var _radial_spawn_bullet_data: BulletData
+static var _radial_spawn_bullet_data: SpawnSpec
+var _top_template: EmitTemplate
+var _top_sfx_id: int = -1
 
 
 ## 一次性初始化：ctx / target 已就绪，且 Enemy 已入树。
@@ -20,26 +22,21 @@ func _on_start() -> void:
 	# 弹幕：复用弹型实例。
 	if _radial_bullet_data == null:
 		if _radial_spawn_bullet_data == null:
-			_radial_spawn_bullet_data = BulletData.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA)
-		_radial_bullet_data = BulletData.new().enemy().blend(true).tex("棱弹").color(Color.FUCHSIA)
-		# 棱弹沿各自发射角加速扩散；到顶墙后换成米弹并竖直向上飘走。
-		var lifecycle := BulletLifecycle.new()
-		lifecycle.accel_heading(150.0)
-		lifecycle.until_rect(GameConfig.FIELD_RECT, false, BulletLifecycle.WALL_TOP)
-		lifecycle.sfx(&"kira", -18.0)
-		lifecycle.emit(_radial_spawn_bullet_data, BulletLifecycle.world_heading(PI), 0.0, BulletLifecycle.AT_PHASE_END)
-		lifecycle.despawn()
-		_radial_bullet_data.trajectory(lifecycle)
+			_radial_spawn_bullet_data = SpawnSpec.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA)
+		_radial_bullet_data = SpawnSpec.new().enemy().blend(true).tex("棱弹").color(Color.FUCHSIA)
+		_top_template = EmitTemplate.new(&"stage01_enemy04_top", _radial_spawn_bullet_data)
 
 	var timeline := start_timeline()
 
 	# 两轮径向弹：每轮随机起始方向，按难度叠 1~2 层速度、15~30 颗一圈。
 	timeline.at(1.5).every(2.0).times(2).do(func():
+		if not _ensure_top_behavior(ctx):
+			return
 		var 发射方向 := Vector2.ONE.rotated(RNG.randf_range(-PI, PI))
 		var 每圈弹数: int = diff_pick([15, 20, 20, 30])
 		for i in diff_pick([1, 1, 2, 2]):
 			_radial_bullet_data.velocity = Vector2(0, 50 + i * 50)
-			ctx.bullets.shoot_spread(
+			ctx.bullets.shoot_spread_spec(
 				_radial_bullet_data, 每圈弹数,
 				TAU, 发射方向,
 				target.global_position, AssetRegistry.sounds["shoot"])
@@ -52,6 +49,24 @@ func _on_start() -> void:
 
 
 ## 移动：匀速下移直到离开屏幕（弹幕 timeline 并行推进，发完后移动不中断）。
+func _ensure_top_behavior(p_ctx: StageContext) -> bool:
+	if _radial_bullet_data == null or _top_template == null:
+		return false
+	# 无 stage / 无弹幕管理器 = 彩排或移动测试：发射整体静默 no-op。
+	if p_ctx.bullets.bullet_manager == null:
+		return true
+	if _top_sfx_id < 0:
+		_top_sfx_id = p_ctx.bullets.register_behavior_sfx(AssetRegistry.sounds.get("kira"))
+	if not p_ctx.bullets.has_emit_template(&"stage01_enemy04_top"):
+		if not p_ctx.bullets.register_emit_template(_top_template):
+			push_error("[enemy04] top 模板注册失败")
+			return false
+	if _radial_bullet_data.behavior_spec == null:
+		_radial_bullet_data.with_behavior(
+			BulletBehaviors.top_emit(_top_template, 150.0, PI, 0.0, _top_sfx_id))
+	return true
+
+
 func _tick(_ctx: StageContext) -> Variant:
 	if target and is_instance_valid(target):
 		target.global_position.y += move_speed * get_dt()

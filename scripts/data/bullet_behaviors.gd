@@ -16,6 +16,17 @@ static func accel(acceleration: Vector2) -> BehaviorSpec:
 	return BehaviorSpec.new(&"accel", PackedFloat32Array([acceleration.x, acceleration.y]))
 
 
+## 撞上墙后 emit 一个模板并回收自己。
+static func top_emit(template: EmitTemplate, accel_px: float,
+		angle: float = PI, child_speed: float = 0.0, sfx_id: int = -1) -> BehaviorSpec:
+	if template == null or template.numeric_id < 0:
+		push_error("BulletBehaviors.top_emit(): template 未注册")
+		return null
+	return BehaviorSpec.new(&"top_emit", PackedFloat32Array([
+		accel_px, template.numeric_id, child_speed, float(sfx_id), angle,
+	]))
+
+
 ## 沿自身 heading 加速。
 static func accel_heading(acceleration: float) -> BehaviorSpec:
 	return BehaviorSpec.new(&"accel_heading", PackedFloat32Array([acceleration]))
