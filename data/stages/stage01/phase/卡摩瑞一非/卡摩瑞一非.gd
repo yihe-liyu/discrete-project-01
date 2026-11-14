@@ -35,7 +35,6 @@ var 环弹参数: PatternParams
 ## 撞墙后回弹的子弹出模板；run_async 注册到 ctx.bullets。
 var 回弹模板: EmitTemplate
 ## 撞墙音效的 behavior sfx id。
-var 撞墙音效id: int = -1
 
 
 func _on_start() -> void:
@@ -48,8 +47,6 @@ func _on_start() -> void:
 
 ## 模板 / 音效是卡级资源；与每波发弹解耦，失败时响亮返回。
 func _ensure_rebound_resources(p_ctx: StageContext) -> bool:
-	if 撞墙音效id < 0:
-		撞墙音效id = p_ctx.bullets.register_behavior_sfx(AssetRegistry.sounds.get("kira"))
 	if p_ctx.bullets.has_emit_template(&"卡摩瑞一非_rebound"):
 		return true
 	if not p_ctx.bullets.register_emit_template(回弹模板):
@@ -92,7 +89,7 @@ func 发射一圈(p_ctx: StageContext, 本波开花次数: int) -> void:
 	var 本圈加速度: float = 100.0 - 本波已发圈数 * 4.0
 	开花弹.speed(速度)
 	开花弹.with_behavior(BulletBehaviors.bounce_emit(
-		回弹模板, 0.0, 本圈加速度, 单圈反弹附加角, 撞墙音效id, true))
+		回弹模板, 0.0, 本圈加速度, 单圈反弹附加角, true))
 
 	# 环弹模式复用同一份 BulletData：颜色 / 阵营 / 运动都不变，只换本次数量与速度。
 	环弹参数.template = 开花弹

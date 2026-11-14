@@ -10,7 +10,6 @@ struct SplitParams {
 	float template_b = 0.0f;
 	float chance = 0.0f;
 	float child_speed = 0.0f;
-	float sfx_id = -1.0f;
 	float spread = 0.0f;
 };
 struct SplitState { float age = 0.0f; float fired = 0.0f; };
@@ -42,7 +41,7 @@ static void split_after_tick(float *p_state, const float *p_params,
 	}
 	const float speed = p.child_speed > 0.0f ? p.child_speed : p_ctx.velocity->length();
 	behavior::emit(p_out, template_id, p_ctx.position, dir * speed);
-	behavior::play_sfx(p_out, (int32_t)p.sfx_id);
+	behavior::play_sfx(p_out, SFX_KIRA);
 	behavior::kill(p_out);
 }
 

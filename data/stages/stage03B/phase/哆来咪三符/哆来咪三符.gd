@@ -57,7 +57,6 @@ var 夹角弹: SpawnSpec
 var 夹角狙: SpawnSpec
 var 夹角模板: EmitTemplate
 var 夹角狙模板: EmitTemplate
-var 分裂音效id: int = -1
 
 
 func _on_start() -> void:
@@ -104,8 +103,6 @@ func _on_start() -> void:
 
 
 func _ensure_split_resources(p_ctx: StageContext) -> bool:
-	if 分裂音效id < 0:
-		分裂音效id = p_ctx.bullets.register_behavior_sfx(AssetRegistry.sounds.get("kira"))
 	if not p_ctx.bullets.has_emit_template(&"哆来咪三符_aqua"):
 		if not p_ctx.bullets.register_emit_template(夹角模板):
 			push_error("[哆来咪三符] aqua 模板注册失败")
@@ -127,7 +124,7 @@ func _bind_parent_behavior() -> void:
 		2.0 * 往返弹初速度 / 往返弹加速度,
 		-往返弹加速度,
 		变自机狙概率 if 难度为Hard以上 else 0.0,
-		夹角弹初速度, 分裂音效id, TAU / 个数 / 2.0))
+		夹角弹初速度, TAU / 个数 / 2.0))
 
 
 func _tick(p_ctx: StageContext) -> Variant:

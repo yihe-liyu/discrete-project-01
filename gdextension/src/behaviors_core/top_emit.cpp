@@ -7,7 +7,6 @@ struct TopParams {
 	float accel = 0.0f;
 	float template_id = 0.0f;
 	float child_speed = 0.0f;
-	float sfx_id = -1.0f;
 	float angle = 3.14159265f;
 };
 struct TopState { float fired = 0.0f; };
@@ -33,7 +32,7 @@ static void top_emit_tick(float *p_state, const float *p_params,
 	const Vector2 dir(sin(p.angle), -cos(p.angle));
 	const float speed = p.child_speed > 0.0f ? p.child_speed : p_ctx.velocity->length();
 	behavior::emit(p_out, (int32_t)p.template_id, p_ctx.position, dir * speed);
-	behavior::play_sfx(p_out, (int32_t)p.sfx_id);
+	behavior::play_sfx(p_out, SFX_KIRA);
 	behavior::kill(p_out);
 }
 

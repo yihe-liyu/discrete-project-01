@@ -11,6 +11,12 @@
 
 namespace godot {
 
+// 固定语义音效；Host 负责映射到 AssetRegistry。
+enum BehaviorSfx : int32_t {
+	SFX_NONE = -1,
+	SFX_KIRA = 0,
+};
+
 // Behavior 每 tick 能看到的受控通道。不暴露 DanmakuStore 的整块 SoA。
 struct NativeBehaviorContext {
 	Vector2 player;

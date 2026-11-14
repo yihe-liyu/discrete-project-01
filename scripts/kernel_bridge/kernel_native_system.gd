@@ -93,6 +93,10 @@ func _ensure_native() -> void:
 		_accel.set_margin(cull_margin)
 		_accel.set_default_life(default_lifetime)
 		_accel.set_seed(_seed)
+		if behavior_sfx.is_empty():
+			var kira: AudioStream = AssetRegistry.sounds.get("kira")
+			if kira != null:
+				behavior_sfx.append(kira)
 
 
 ## 原生扩展是否已加载；首次调用会尝试实例化 DanmakuStore。

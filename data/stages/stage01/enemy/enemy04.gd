@@ -11,7 +11,6 @@ var _radial_bullet_data: SpawnSpec
 ## 换向替换弹（米弹/FUCHSIA）：共享实例（static）。
 static var _radial_spawn_bullet_data: SpawnSpec
 var _top_template: EmitTemplate
-var _top_sfx_id: int = -1
 
 
 ## 一次性初始化：ctx / target 已就绪，且 Enemy 已入树。
@@ -55,15 +54,13 @@ func _ensure_top_behavior(p_ctx: StageContext) -> bool:
 	# 无 stage / 无弹幕管理器 = 彩排或移动测试：发射整体静默 no-op。
 	if p_ctx.bullets.bullet_manager == null:
 		return true
-	if _top_sfx_id < 0:
-		_top_sfx_id = p_ctx.bullets.register_behavior_sfx(AssetRegistry.sounds.get("kira"))
 	if not p_ctx.bullets.has_emit_template(&"stage01_enemy04_top"):
 		if not p_ctx.bullets.register_emit_template(_top_template):
 			push_error("[enemy04] top 模板注册失败")
 			return false
 	if _radial_bullet_data.behavior_spec == null:
 		_radial_bullet_data.with_behavior(
-			BulletBehaviors.top_emit(_top_template, 150.0, PI, 0.0, _top_sfx_id))
+			BulletBehaviors.top_emit(_top_template, 150.0, PI, 0.0))
 	return true
 
 

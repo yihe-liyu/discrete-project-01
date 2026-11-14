@@ -29,7 +29,6 @@ var 开花弹: SpawnSpec
 var 反弹弹: SpawnSpec
 ## 撞墙后回弹的子弹出模板；首次 _tick 注册。
 var 回弹模板: EmitTemplate
-var 撞墙音效id: int = -1
 
 
 func _on_start() -> void:
@@ -43,8 +42,6 @@ func _tick(p_ctx: StageContext) -> Variant:
 		if not p_ctx.bullets.register_emit_template(回弹模板):
 			push_error("[卡摩瑞二非] 回弹模板注册失败")
 			return false
-	if 撞墙音效id < 0:
-		撞墙音效id = p_ctx.bullets.register_behavior_sfx(AssetRegistry.sounds.get("kira"))
 	if not target:
 		return p_ctx.clock.wait(波间隔)
 
@@ -82,6 +79,6 @@ func 发射一圈(p_ctx: StageContext) -> void:
 	var 单圈附加角: float = 波次正负交替 * 本波已发圈数 * (TAU / 开花弹次数)
 	开花弹.speed(速度)
 	开花弹.with_behavior(BulletBehaviors.bounce_emit(
-		回弹模板, 150.0, 100.0 - 本波已发圈数 * 4.0, 单圈附加角, 撞墙音效id, false))
+		回弹模板, 150.0, 100.0 - 本波已发圈数 * 4.0, 单圈附加角, false))
 
 	p_ctx.bullets.shoot_spread_spec(开花弹, 个数, TAU, 随机角度, target.global_position)

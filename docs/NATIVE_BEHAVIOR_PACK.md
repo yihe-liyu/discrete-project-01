@@ -238,6 +238,10 @@ swap_remove / batch / reset 新字段没漏
 
 `gdextension/src/behaviors_core/behavior_common.h` 提供 `heading` / `accelerate` / `steer_toward` / `emit` / `kill` / `play_sfx`，以及 typed Params/State 和 `REGISTER_BEHAVIOR` 宏；只收机械操作，不隐藏 behavior 逻辑。
 
+## 8.2 固定语义音效
+
+`top_emit` / `split_after` / `bounce_emit` 不再接收 sfx 参数；C++ 写死 `SFX_KIRA`，Host 把语义 ID 映射到 `AssetRegistry.sounds["kira"]`。
+
 ## 9. 成本与风险
 
 | 项 | 成本 | 风险 |

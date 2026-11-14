@@ -314,7 +314,7 @@ func test_native_bounce_emit_spawns_template() -> void:
 
 	var parent_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
 	parent_data.velocity = Vector2.ZERO
-	parent_data.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([tpl.numeric_id, 120.0, 0.0, 0.0, -1.0, 1.0])))
+	parent_data.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([tpl.numeric_id, 120.0, 0.0, 0.0, 1.0])))
 	var id := _kernel_bullet_host.shoot(parent_data, Vector2(GameConfig.FIELD_LEFT, 300), Vector2.ZERO)
 	assert_eq(_kernel_bullet_host.system.get_behavior(id), _kernel_bullet_host.system.get_behavior_id("bounce_emit"))
 
@@ -334,7 +334,7 @@ func test_native_bounce_emit_hits_wall_naturally() -> void:
 
 	var parent_data := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
 	parent_data.velocity = Vector2(0, -300)
-	parent_data.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([tpl.numeric_id, 0.0, 0.0, 0.0, -1.0, 1.0])))
+	parent_data.with_behavior(BehaviorSpec.new(&"bounce_emit", PackedFloat32Array([tpl.numeric_id, 0.0, 0.0, 0.0, 1.0])))
 	var _id := _kernel_bullet_host.shoot(parent_data, Vector2(448, 500), Vector2.UP)
 	for _i in 120:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
@@ -371,7 +371,7 @@ func test_native_split_after_emits_template() -> void:
 
 	var parent := BulletData.new().enemy().tex("环玉").no_spawn_fog()
 	parent.velocity = Vector2(0, 100)
-	parent.with_behavior(BulletBehaviors.split_after(ta, tb, 0.1, 0.0, 1.0, 60.0, -1, 0.0))
+	parent.with_behavior(BulletBehaviors.split_after(ta, tb, 0.1, 0.0, 1.0, 60.0, 0.0))
 	var _id := _kernel_bullet_host.shoot(parent, Vector2(448, 400), Vector2.DOWN)
 	for _i in 10:
 		_kernel_bullet_host.system.step(1.0 / 60.0)
@@ -387,7 +387,7 @@ func test_native_top_emit_replaces_bullet() -> void:
 	assert_true(_kernel_bullet_host.system.register_emit_template(tpl))
 	var parent := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
 	parent.velocity = Vector2(0, -300)
-	parent.with_behavior(BulletBehaviors.top_emit(tpl, 0.0, PI, 0.0, -1))
+	parent.with_behavior(BulletBehaviors.top_emit(tpl, 0.0, PI, 0.0))
 	var _id := _kernel_bullet_host.shoot(parent, Vector2(448, 40), Vector2.UP)
 	for _i in 10:
 		_kernel_bullet_host.system.step(1.0 / 60.0)

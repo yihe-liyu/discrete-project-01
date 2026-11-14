@@ -8,7 +8,6 @@ struct BounceParams {
 	float child_speed = 0.0f;
 	float accel = 0.0f;
 	float angle = 0.0f;
-	float sfx_id = -1.0f;
 	float despawn = 1.0f;
 };
 struct BounceState { float age = 0.0f; float fired = 0.0f; };
@@ -40,7 +39,7 @@ static void bounce_emit_tick(float *p_state, const float *p_params,
 	const float child_speed = p.child_speed > 0.0f
 		? p.child_speed : p_ctx.velocity->length();
 	behavior::emit(p_out, (int32_t)p.template_id, p_ctx.position, dir * child_speed);
-	behavior::play_sfx(p_out, (int32_t)p.sfx_id);
+	behavior::play_sfx(p_out, SFX_KIRA);
 	if (p.despawn > 0.5f) {
 		behavior::kill(p_out);
 	}
