@@ -1,6 +1,6 @@
 # NativeBehavior Pack 设计
 
-> **状态**：linear + homing + accel 已落地，enemy01/02/03 的重力弹已迁到 accel；EmitTemplate / Registry + `BulletBehaviors` 具名构造器已落地；bounce_emit Outcome（emit/despawn/sfx）已接入；卡摩瑞一非 / 二非已从 lifecycle 迁到 bounce_emit；哆来咪三符的往返弹已迁到 split_after；卡摩瑞二非 / 一非 / 二符 / 哆来咪三符已改用独立 SpawnSpec；简单敌人批次也已迁移；enemy04 已迁到 stage01.enemy04.top_emit；stage02 enemy02 已迁到 stage02.enemy02.spin_then_slow；哆来咪道中一符 stage1/2 已迁到 stage03B.mid01.rain_stage；内容与 SpawnSpec 均不再调用 to_bullet_data()；`BulletData.with_behavior()` 已接入内容桥；测试覆盖自动绑定、转向与属性 API。
+> **状态**：linear + homing + accel 已落地，enemy01/02/03 的重力弹已迁到 accel；EmitTemplate / Registry + `BulletBehaviors` 具名构造器已落地；bounce_emit Outcome（emit/despawn/sfx）已接入；卡摩瑞一非 / 二非 / 一符已从 lifecycle 迁到 bounce_emit/seed_burst；哆来咪三符的往返弹已迁到 split_after；卡摩瑞二非 / 一非 / 二符 / 哆来咪三符已改用独立 SpawnSpec；简单敌人批次也已迁移；enemy04 已迁到 stage01.enemy04.top_emit；stage02 enemy02 已迁到 stage02.enemy02.spin_then_slow；哆来咪道中一符 stage1/2 已迁到 stage03B.mid01.rain_stage；内容与 SpawnSpec 均不再调用 to_bullet_data()；`BulletData.with_behavior()` 已接入内容桥；测试覆盖自动绑定、转向与属性 API。
 > **目标**：把“每颗弹生命周期内的运动控制”从内核里的固定 opcode / DSL，迁到可独立增删的 C++ behavior pack；内核只保留存储、碰撞、积分、渲染同步和注册表。
 > **非目标**：运行期加载不可信 `.so`、每颗弹一个对象、GDScript 每帧回调。
 

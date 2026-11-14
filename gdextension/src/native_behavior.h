@@ -15,6 +15,7 @@ namespace godot {
 enum BehaviorSfx : int32_t {
 	SFX_NONE = -1,
 	SFX_KIRA = 0,
+	SFX_SHOOT = 1,
 };
 
 // Behavior 每 tick 能看到的受控通道。不暴露 DanmakuStore 的整块 SoA。
@@ -58,7 +59,7 @@ struct NativeBehaviorLaser {
 struct NativeBehaviorOutcome {
 	bool despawn = false;
 	int emit_count = 0;
-	NativeBehaviorEmit emits[4];
+	NativeBehaviorEmit emits[64];
 	int32_t sfx_id = -1;   // 由内容层注册的音效下标；-1 = 无
 	bool clear_fx = false;  // 回收前播一次消弹消散
 	int32_t laser_template_id = -1;

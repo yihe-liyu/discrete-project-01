@@ -36,7 +36,7 @@ inline void steer_toward(NativeBehaviorContext &p_ctx, const Vector2 &p_desired,
 
 inline bool emit(NativeBehaviorOutcome &p_out, int p_template_id, const Vector2 &p_pos,
 		const Vector2 &p_vel, const Color &p_color = Color(1, 1, 1, 1)) {
-	if (p_out.emit_count >= 4) {
+	if (p_out.emit_count >= 64) {
 		return false;
 	}
 	NativeBehaviorEmit &e = p_out.emits[p_out.emit_count++];
@@ -72,6 +72,13 @@ inline float random(NativeBehaviorContext &p_ctx) {
 
 inline void play_sfx(NativeBehaviorOutcome &p_out, int p_sfx_id) {
 	p_out.sfx_id = p_sfx_id;
+}
+
+inline void emit_laser(NativeBehaviorOutcome &p_out, int p_template_id,
+		const Vector2 &p_pos, const Vector2 &p_dir) {
+	p_out.laser_template_id = p_template_id;
+	p_out.laser_position = p_pos;
+	p_out.laser_direction = p_dir.length_squared() > 1e-6f ? p_dir.normalized() : Vector2(0, 1);
 }
 
 // ── typed params / state ─────────────────────────────────────────

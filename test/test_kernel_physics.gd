@@ -406,3 +406,18 @@ func test_behavior_host_queue_spawn_accepts_spawn_spec() -> void:
 	bh.queue_spawn(spec, Vector2(300, 300), Vector2.DOWN)
 	bh.flush()
 	assert_gt(host.system.get_active_count(), 0, "SpawnSpec 应被 lifecycle 队列接收")
+
+
+## seed_burst：结束时应一次 emit 一整圈子弹出。
+func test_native_seed_burst_emits_ring() -> void:
+	_kernel_bullet_host.setup_behaviors(null, Callable())
+	var child := BulletData.new().enemy().tex("棱弹").no_spawn_fog()
+	var tpl := EmitTemplate.new(&"seed_probe", child)
+	assert_true(_kernel_bullet_host.system.register_emit_template(tpl))
+	var parent := BulletData.new().enemy().tex("中玉").no_spawn_fog()
+	parent.velocity = Vector2(0, 260)
+	parent.with_behavior(BulletBehaviors.seed_burst(tpl, 0.2, 260.0, 8, 50.0, TAU))
+	var _id := _kernel_bullet_host.shoot(parent, Vector2(448, 300), Vector2.DOWN)
+	for _i in 20:
+		_kernel_bullet_host.system.step(1.0 / 60.0)
+	assert_eq(_kernel_bullet_host.system.get_active_count(), 8, "应生成 8 颗子弹出")

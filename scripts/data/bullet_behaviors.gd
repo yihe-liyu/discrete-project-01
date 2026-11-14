@@ -16,6 +16,15 @@ static func accel(acceleration: Vector2) -> BehaviorSpec:
 	return BehaviorSpec.new(&"accel", PackedFloat32Array([acceleration.x, acceleration.y]))
 
 
+## 种子弹：线性减速到 0，结束时向四周 emit 一圈。
+static func seed_burst(template: EmitTemplate, duration: float, initial_speed: float,
+		count: int, child_speed: float, spread: float = TAU) -> BehaviorSpec:
+	var tid := template.numeric_id if template != null else -1
+	return BehaviorSpec.new(&"seed_burst", PackedFloat32Array([
+		duration, initial_speed, float(tid), float(count), child_speed, spread,
+	]))
+
+
 ## 雨弹阶段：首次上移 offset，受重力；到 y 阈值 emit 下一阶段。
 static func rain_stage(template: EmitTemplate, gravity: float, threshold_y: float,
 		offset_y: float = 0.0, clear_fx: bool = true, despawn: bool = true,
