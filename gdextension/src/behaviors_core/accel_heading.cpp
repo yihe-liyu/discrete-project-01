@@ -3,24 +3,26 @@
 
 namespace godot {
 
-// 沿自身 heading 加速；params[0] = 加速度（px/s²）。
+struct AccelHeadingState { float age = 0.0f; };
+struct AccelHeadingParams { float accel = 0.0f; };
+
 static void accel_heading_init(float *p_state, const float *p_params) {
 	(void)p_params;
-	p_state[0] = 0.0f;
+	behavior::State<AccelHeadingState> state(p_state);
+	*state = AccelHeadingState{};
 }
 
 static void accel_heading_tick(float *p_state, const float *p_params,
 		NativeBehaviorContext &p_ctx, NativeBehaviorOutcome &p_out, float p_dt) {
 	(void)p_out;
-	p_state[0] += p_dt;
-	behavior::accelerate(p_ctx, behavior::heading(p_ctx), p_params[0] * p_dt);
+	behavior::State<AccelHeadingState> state(p_state);
+	const auto p = behavior::params_as<AccelHeadingParams>(p_params);
+	state->age += p_dt;
+	behavior::accelerate(p_ctx, behavior::heading(p_ctx), p.accel * p_dt);
 }
 
 void register_accel_heading() {
-	static const NativeBehaviorDef def = {
-		"accel_heading", 1, 1, &accel_heading_init, &accel_heading_tick
-	};
-	NativeBehaviorRegistry::register_def(def);
+	REGISTER_BEHAVIOR("accel_heading", AccelHeadingState, AccelHeadingParams, &accel_heading_init, &accel_heading_tick);
 }
 
 } // namespace godot

@@ -236,7 +236,7 @@ swap_remove / batch / reset 新字段没漏
 
 ## 8.1 C++ 作者 helper
 
-`gdextension/src/behaviors_core/behavior_common.h` 提供 `heading` / `accelerate` / `steer_toward` / `emit` / `kill` / `play_sfx`，只收机械操作，不隐藏 behavior 逻辑。
+`gdextension/src/behaviors_core/behavior_common.h` 提供 `heading` / `accelerate` / `steer_toward` / `emit` / `kill` / `play_sfx`，以及 typed Params/State 和 `REGISTER_BEHAVIOR` 宏；只收机械操作，不隐藏 behavior 逻辑。
 
 ## 9. 成本与风险
 

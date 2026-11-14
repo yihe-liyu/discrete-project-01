@@ -3,56 +3,51 @@
 
 namespace godot {
 
-// 沿 heading 减速；到 duration 时按概率选两个子弹出模板之一，然后回收自己。
-// params:
-//   0 accel（px/s²，通常为负）
-//   1 duration（秒）
-//   2 template_a（未命中）
-//   3 template_b（命中）
-//   4 chance（0..1）
-//   5 child_speed（<=0 = 沿用父弹当前速度）
-//   6 sfx_id（-1 = 无）
-//   7 spread（未命中时相对 heading 的附加角）
+struct SplitParams {
+	float accel = 0.0f;
+	float duration = 0.0f;
+	float template_a = 0.0f;
+	float template_b = 0.0f;
+	float chance = 0.0f;
+	float child_speed = 0.0f;
+	float sfx_id = -1.0f;
+	float spread = 0.0f;
+};
+struct SplitState { float age = 0.0f; float fired = 0.0f; };
+
 static void split_after_init(float *p_state, const float *p_params) {
 	(void)p_params;
-	p_state[0] = 0.0f;
-	p_state[1] = 0.0f;
+	behavior::State<SplitState> state(p_state);
+	*state = SplitState{};
 }
 
 static void split_after_tick(float *p_state, const float *p_params,
 		NativeBehaviorContext &p_ctx, NativeBehaviorOutcome &p_out, float p_dt) {
-	behavior::accelerate(p_ctx, behavior::heading(p_ctx), p_params[0] * p_dt);
-	p_state[0] += p_dt;
-	if (p_state[1] > 0.0f || p_state[0] < p_params[1]) {
+	behavior::State<SplitState> state(p_state);
+	const auto p = behavior::params_as<SplitParams>(p_params);
+	behavior::accelerate(p_ctx, behavior::heading(p_ctx), p.accel * p_dt);
+	state->age += p_dt;
+	if (state->fired > 0.0f || state->age < p.duration) {
 		return;
 	}
-	p_state[1] = 1.0f;
-
-	const bool hit = behavior::random(p_ctx) < p_params[4];
-	const int template_id = (int32_t)(hit ? p_params[3] : p_params[2]);
+	state->fired = 1.0f;
+	const bool hit = behavior::random(p_ctx) < p.chance;
+	const int template_id = (int32_t)(hit ? p.template_b : p.template_a);
 	Vector2 dir;
 	if (hit) {
 		dir = p_ctx.player - p_ctx.position;
-		if (dir.length_squared() < 1e-6f) {
-			dir = behavior::heading(p_ctx);
-		} else {
-			dir = dir.normalized();
-		}
+		dir = dir.length_squared() < 1e-6f ? behavior::heading(p_ctx) : dir.normalized();
 	} else {
-		dir = behavior::heading(p_ctx).rotated(p_params[7]);
+		dir = behavior::heading(p_ctx).rotated(p.spread);
 	}
-	const float speed = p_params[5] > 0.0f
-		? p_params[5] : p_ctx.velocity->length();
+	const float speed = p.child_speed > 0.0f ? p.child_speed : p_ctx.velocity->length();
 	behavior::emit(p_out, template_id, p_ctx.position, dir * speed);
-	behavior::play_sfx(p_out, (int32_t)p_params[6]);
+	behavior::play_sfx(p_out, (int32_t)p.sfx_id);
 	behavior::kill(p_out);
 }
 
 void register_split_after() {
-	static const NativeBehaviorDef def = {
-		"split_after", 2, 8, &split_after_init, &split_after_tick
-	};
-	NativeBehaviorRegistry::register_def(def);
+	REGISTER_BEHAVIOR("split_after", SplitState, SplitParams, &split_after_init, &split_after_tick);
 }
 
 } // namespace godot

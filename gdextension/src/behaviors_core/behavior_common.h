@@ -2,6 +2,8 @@
 #define BEHAVIOR_COMMON_H
 
 #include "native_behavior.h"
+#include <cstring>
+#include <type_traits>
 
 namespace godot {
 namespace behavior {
@@ -72,7 +74,47 @@ inline void play_sfx(NativeBehaviorOutcome &p_out, int p_sfx_id) {
 	p_out.sfx_id = p_sfx_id;
 }
 
+// ── typed params / state ─────────────────────────────────────────
+// behavior 仍然只有 float 数组；这里只做编译期布局检查 + memcpy 访问。
+template <typename T>
+T params_as(const float *p_raw) {
+	static_assert(std::is_trivially_copyable<T>::value, "behavior params 必须 trivially copyable");
+	static_assert(sizeof(T) % sizeof(float) == 0, "behavior params 大小必须是 float 的整数倍");
+	T value{};
+	std::memcpy(&value, p_raw, sizeof(T));
+	return value;
+}
+
+template <typename T>
+class State {
+public:
+	explicit State(float *p_raw) : _raw(p_raw) {
+		static_assert(std::is_trivially_copyable<T>::value, "behavior state 必须 trivially copyable");
+		static_assert(sizeof(T) % sizeof(float) == 0, "behavior state 大小必须是 float 的整数倍");
+		std::memcpy(&_value, _raw, sizeof(T));
+	}
+	~State() { std::memcpy(_raw, &_value, sizeof(T)); }
+
+	T &operator*() { return _value; }
+	T *operator->() { return &_value; }
+
+private:
+	float *_raw;
+	T _value{};
+};
+
 } // namespace behavior
 } // namespace godot
+
+// 注册一个 behavior：由 struct 大小推导 state/param 槽数。
+#define REGISTER_BEHAVIOR(NAME, STATE_T, PARAM_T, INIT, TICK) \
+	static_assert(sizeof(STATE_T) % sizeof(float) == 0, "STATE_T 必须是 float 的整数倍"); \
+	static_assert(sizeof(PARAM_T) % sizeof(float) == 0, "PARAM_T 必须是 float 的整数倍"); \
+	static_assert(sizeof(STATE_T) <= 8 * sizeof(float), "STATE_T 超过 8 个 float"); \
+	static_assert(sizeof(PARAM_T) <= 8 * sizeof(float), "PARAM_T 超过 8 个 float"); \
+	static const NativeBehaviorDef _behavior_def_##__LINE__ = { \
+		NAME, (int)(sizeof(STATE_T) / sizeof(float)), (int)(sizeof(PARAM_T) / sizeof(float)), INIT, TICK \
+	}; \
+	NativeBehaviorRegistry::register_def(_behavior_def_##__LINE__)
 
 #endif
