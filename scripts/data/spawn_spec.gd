@@ -50,7 +50,8 @@ var _cached_type: BulletType
 
 func tex(key: String) -> SpawnSpec:
 	bullet_def = BulletCatalog.find(key)
-	texture = BulletShapes.atlas_texture(StringName(key)) if bullet_def != null else null
+	# 弹型 id 与图集 shape key 不保证同名（自机弹尤其如此）；必须走 BulletDef.texture_key。
+	texture = BulletShapes.atlas_texture(bullet_def.texture_key) if bullet_def != null else null
 	_cached_type = null
 	return self
 

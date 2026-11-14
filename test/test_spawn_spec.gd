@@ -2,6 +2,13 @@ extends GutTest
 ## SpawnSpec：独立作者描述，能直接转换成 BulletType，并允许一层 child。
 
 
+func test_tex_uses_bullet_def_texture_key() -> void:
+	# 自机弹的 id（reimu_main）≠ 图集 shape key（灵梦自机主弹）；不能拿 id 直接查图集。
+	var s := SpawnSpec.new().tex("reimu_main").player()
+	assert_not_null(s.texture, "reimu_main 应有贴图")
+	assert_eq(s.texture, BulletShapes.atlas_texture(&"灵梦自机主弹"), "应使用 BulletDef.texture_key")
+
+
 func test_spawn_spec_keeps_type_and_child() -> void:
 	var parent := SpawnSpec.new().tex("棱弹").enemy().color(Color.AQUA)
 	var child := SpawnSpec.new().tex("米弹").enemy().color(Color.GOLD)
