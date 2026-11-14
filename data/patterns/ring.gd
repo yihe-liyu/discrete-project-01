@@ -54,26 +54,22 @@ func fire(p_ctx: StageContext, p: PatternParams, origin: Vector2, direction: Vec
 	if 方向列表.is_empty():
 		return
 
-	# template 路径按引用使用：SpawnSpec 或旧 BulletData，保留 faction/tint/lifecycle 与类型缓存。
-	# 只改 velocity（旧 content 也是每波 set speed），不重建实例。
+	# 模板路径：直接复用 SpawnSpec；无模板时按 params 构造 SpawnSpec。
+	var spec: SpawnSpec
 	if p.template is SpawnSpec:
-		var spec := p.template as SpawnSpec
-		if p.speed > 0.0:
-			spec.velocity = Vector2(p.speed, 0.0)
-		p_ctx.bullets.shoot_directions_spec(spec, 方向列表, origin)
+		spec = p.template
+	elif p.template != null:
+		push_warning("RingPattern.fire(): template 必须是 SpawnSpec，跳过")
 		return
-	var 弹型: BulletData
-	if p.template is BulletData:
-		弹型 = p.template
 	else:
-		弹型 = BulletData.new().def(p.bullet_def).color(p.color).blend(p.blend)
+		spec = SpawnSpec.new()
+		spec.bullet_def = p.bullet_def
+		spec.texture = BulletShapes.atlas_texture(p.bullet_def.texture_key)
+		spec.color(p.color).blend(p.blend)
 		if p.enemy:
-			弹型.enemy()
+			spec.enemy()
 		else:
-			弹型.player()
-	if 弹型 == null:
-		push_warning("RingPattern.fire(): BulletData 构造失败，跳过")
-		return
+			spec.player()
 	if p.speed > 0.0:
-		弹型.velocity = Vector2(p.speed, 0.0)
-	p_ctx.bullets.shoot_directions(弹型, 方向列表, origin)
+		spec.velocity = Vector2(p.speed, 0.0)
+	p_ctx.bullets.shoot_directions_spec(spec, 方向列表, origin)
