@@ -20,7 +20,7 @@ func test_spawn_spec_service_accepts_spec() -> void:
 
 func test_spawn_spec_carries_core_overrides() -> void:
 	var s := SpawnSpec.new().tex("棱弹").enemy()
-	s.color(Color.RED).blend(false).wrap(5).grace(4.0)
+	s.color(Color.RED).blend(false).wrap_edges(5).grace(4.0)
 	s.hitbox_rect(Vector2(12, 8), Vector2(2, 3))
 	s.facing(false, 0.5)
 	s.no_spawn_fog()

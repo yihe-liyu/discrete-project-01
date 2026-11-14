@@ -78,10 +78,18 @@ func grace(v: float) -> SpawnSpec:
 	return self
 
 
-func wrap(mask: int) -> SpawnSpec:
+func wrap_edges(mask: int) -> SpawnSpec:
 	wrap_mask = mask
 	_cached_type = null
 	return self
+
+
+func wrap_horizontal() -> SpawnSpec:
+	return wrap_edges(BulletData.WrapEdge.LEFT | BulletData.WrapEdge.RIGHT)
+
+
+func wrap_vertical() -> SpawnSpec:
+	return wrap_edges(BulletData.WrapEdge.TOP | BulletData.WrapEdge.BOTTOM)
 
 
 func hitbox_circle(radius: float, offset: Vector2 = Vector2.ZERO) -> SpawnSpec:

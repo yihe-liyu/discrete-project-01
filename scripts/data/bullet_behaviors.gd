@@ -16,6 +16,16 @@ static func accel(acceleration: Vector2) -> BehaviorSpec:
 	return BehaviorSpec.new(&"accel", PackedFloat32Array([acceleration.x, acceleration.y]))
 
 
+## 雨弹阶段：首次上移 offset，受重力；到 y 阈值 emit 下一阶段。
+static func rain_stage(template: EmitTemplate, gravity: float, threshold_y: float,
+		offset_y: float = 0.0, clear_fx: bool = true, despawn: bool = true) -> BehaviorSpec:
+	var tid := template.numeric_id if template != null else -1
+	return BehaviorSpec.new(&"rain_stage", PackedFloat32Array([
+		gravity, threshold_y, float(tid), offset_y,
+		1.0 if clear_fx else 0.0, 1.0 if despawn else 0.0,
+	]))
+
+
 ## 旋转一段时间后反向旋转、沿 heading 减速；到速度阈值时可选清弹/回收。
 static func spin_then_slow(spin: float, duration: float, reverse_factor: float,
 		accel_px: float, speed_threshold: float, clear_fx: bool = true,
