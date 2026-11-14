@@ -41,6 +41,11 @@ GDScript：只负责选择和传参
 ```text
 gdextension/
   src/
+    behaviors_core/
+      shared/            # 复用机制
+      stage01/enemy04/   # 单卡专用
+      stage02/enemy02/
+      stage03B/mid01/
     danmaku_store.*        # SoA + 积分 + 碰撞 + 渲染快照
     native_behavior.*      # registry + 调度
   behaviors/
