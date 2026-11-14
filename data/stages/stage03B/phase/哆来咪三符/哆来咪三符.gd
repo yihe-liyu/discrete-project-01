@@ -51,7 +51,7 @@ var 剩余保持时间: float = 0.0
 ## `难度为Hard以上` 在脚本实例化时读取一次；中途改难度不会重新分派。
 var 难度为Hard以上: bool = SaveData.selected_difficulty >= Difficulty.HARD
 
-## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
+## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
 var 往返弹: SpawnSpec
 var 夹角弹: SpawnSpec
 var 夹角狙: SpawnSpec

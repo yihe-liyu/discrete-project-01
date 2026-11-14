@@ -24,7 +24,7 @@ var 波次正负交替: int = 1
 ## 每一圈的整体旋转角。
 var 随机角度: Vector2
 
-## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
+## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
 var 开花弹: SpawnSpec
 var 反弹弹: SpawnSpec
 ## 撞墙后回弹的子弹出模板；首次 _tick 注册。

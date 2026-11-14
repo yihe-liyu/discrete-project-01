@@ -27,7 +27,7 @@ var 波次正负交替: int = 1
 ## 每一圈的整体旋转角。
 var 随机角度: Vector2
 
-## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
+## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
 var 开花弹: SpawnSpec
 var 反弹弹: SpawnSpec
 var 环弹模式: BulletPattern
@@ -91,7 +91,7 @@ func 发射一圈(p_ctx: StageContext, 本波开花次数: int) -> void:
 	开花弹.with_behavior(BulletBehaviors.bounce_emit(
 		回弹模板, 0.0, 本圈加速度, 单圈反弹附加角, true))
 
-	# 环弹模式复用同一份 BulletData：颜色 / 阵营 / 运动都不变，只换本次数量与速度。
+	# 环弹模式复用同一份 SpawnSpec：颜色 / 阵营 / 运动都不变，只换本次数量与速度。
 	环弹参数.template = 开花弹
 	环弹参数.count = 个数
 	环弹参数.speed = 速度

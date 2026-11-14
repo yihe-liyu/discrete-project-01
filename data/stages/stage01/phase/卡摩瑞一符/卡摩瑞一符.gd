@@ -21,7 +21,7 @@ const 反射弹速度: float = 150.0
 const 种子弹速度: float = 260.0
 const 种子弹飞行距离: float = 160.0
 
-## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
+## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
 var 种子弹: SpawnSpec
 var 开花弹: SpawnSpec
 var 反射弹: SpawnSpec

@@ -28,6 +28,11 @@ static func sonar(flower: EmitTemplate, string_bullet: EmitTemplate,
 	]))
 
 
+## 持续旋转渲染朝向 + 沿 heading 加速。
+static func spin_accel(spin: float, accel_px: float) -> BehaviorSpec:
+	return BehaviorSpec.new(&"spin_accel", PackedFloat32Array([spin, accel_px]))
+
+
 ## 种子弹：线性减速到 0，结束时向四周 emit 一圈。
 static func seed_burst(template: EmitTemplate, duration: float, initial_speed: float,
 		count: int, child_speed: float, spread: float = TAU) -> BehaviorSpec:

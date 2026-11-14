@@ -7,7 +7,7 @@ const ENEMY03 = preload("res://data/stages/stage02/enemy/enemy03.gd")
 
 var _stage_director: StageDirector
 
-var 无主弹幕: BulletData
+var 无主弹幕: SpawnSpec
 var 无主弹幕速度: float
 var 星弹次数: int = diff_pick([462, 617, 925, 1850])
 var 颜色计数: int = 1
@@ -135,32 +135,28 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		ctx.enemies.despawn_all()
 		ctx.bullets.clear_enemy_bullets()
 
-		无主弹幕速度 = diff_pick([40, 35, 30, 25])
-		无主弹幕 = BulletData.new().enemy().tex("星弹").blend(false) \
+		无主弹幕速度 = 100
+		无主弹幕 = SpawnSpec.new().enemy().tex("星弹").blend(false) \
 							.color(Color.WHITE).speed(无主弹幕速度)
-		var lifecycle := BulletLifecycle.new()
-		lifecycle.spin_render(PI)
-		lifecycle.until_elapsed(4)
-		lifecycle.accel_heading(50)
-		无主弹幕.trajectory(lifecycle)
+		无主弹幕.with_behavior(BulletBehaviors.spin_accel(PI, 1.0))
 	)
 
 	timeline.at(38.5).every(diff_pick([0.08, 0.06, 0.04, 0.02]))\
 					 .times(星弹次数).do(func():
 		var 随机位置 := Vector2(RNG.randf_range(GameConfig.FIELD_LEFT, GameConfig.FIELD_RIGHT),
 							RNG.randf_range(GameConfig.FIELD_TOP, GameConfig.FIELD_BOTTOM))
-		if (随机位置.distance_squared_to(p_ctx.player.get_position()) > 60000):
+		if (随机位置.distance_squared_to(p_ctx.player.get_position()) > 10000):
 			var 随机角度 := Vector2.ONE.rotated(RNG.randf() * TAU)
 			p_ctx.audio.play_sfx(AssetRegistry.sounds["kira"])
-			p_ctx.bullets.shoot_spread(无主弹幕, 1, 0, 随机角度, 随机位置)
+			p_ctx.bullets.shoot_spec(无主弹幕, 随机位置, 随机角度)
 		var 颜色: float = 1.0 - 1.0 / 星弹次数 * 颜色计数
 		无主弹幕.color(Color(颜色, 颜色, 颜色, 1))
 		颜色计数 += 1
-		无主弹幕速度 += 0.2
-		无主弹幕.speed(无主弹幕速度)
+		无主弹幕.speed(无主弹幕速度 * 颜色)
 	)
 
 	timeline.at(76.0).do(func():
+		ctx.bullets.clear_enemy_bullets()
 		ctx.enemies.spawn(EnemyData.new().with_script(ENEMY02)
 			.pos(Vector2(GameConfig.FIELD_CENTER_X, 0))
 			.white_huge_fairy()

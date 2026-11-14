@@ -26,7 +26,7 @@ var 波内剩余开花弹次数: int = 0
 ## 每一圈的整体旋转角，避免每圈从同一方向开始。
 var 随机角度: Vector2
 
-## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
+## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
 var 开花弹: SpawnSpec
 var 反射弹: SpawnSpec
 ## Hard 以上的金色版本；Easy / Normal 保持为 null。

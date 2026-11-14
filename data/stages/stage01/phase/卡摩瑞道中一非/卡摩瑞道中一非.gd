@@ -13,7 +13,7 @@ var 声呐弹个数: int = diff_pick([32, 48, 64, 72])
 ## 声呐弹回到 Boss 附近时炸开的小玉数量。
 var 开花弹个数: int = diff_pick([2, 4, 6, 8])
 
-## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
+## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
 var 声呐弹: SpawnSpec
 var 开花弹: SpawnSpec
 var 串型弹: SpawnSpec

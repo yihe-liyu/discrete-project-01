@@ -12,7 +12,7 @@ var 开花弹贴图: String = "米弹"
 var 开花弹颜色: Color = Color.RED
 var 时间: float = 4
 
-## 复用弹型实例：弹型缓存在 BulletData 上，禁止每发 new。
+## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
 var 开花弹1: SpawnSpec
 var 开花弹2: SpawnSpec
 
