@@ -54,10 +54,9 @@ func _ensure_top_behavior(p_ctx: StageContext) -> bool:
 	# 无 stage / 无弹幕管理器 = 彩排或移动测试：发射整体静默 no-op。
 	if p_ctx.bullets.bullet_manager == null:
 		return true
-	if not p_ctx.bullets.has_emit_template(&"stage01_enemy04_top"):
-		if not p_ctx.bullets.register_emit_template(_top_template):
-			push_error("[enemy04] top 模板注册失败")
-			return false
+	if not p_ctx.bullets.register_emit_template(_top_template):
+		push_error("[enemy04] top 模板注册失败")
+		return false
 	if _radial_bullet_data.behavior_spec == null:
 		_radial_bullet_data.with_behavior(
 			BulletBehaviors.top_emit(_top_template, 150.0, PI, 0.0))

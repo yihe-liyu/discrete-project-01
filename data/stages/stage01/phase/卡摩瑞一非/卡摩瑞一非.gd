@@ -47,8 +47,6 @@ func _on_start() -> void:
 
 ## 模板 / 音效是卡级资源；与每波发弹解耦，失败时响亮返回。
 func _ensure_rebound_resources(p_ctx: StageContext) -> bool:
-	if p_ctx.bullets.has_emit_template(&"卡摩瑞一非_rebound"):
-		return true
 	if not p_ctx.bullets.register_emit_template(回弹模板):
 		push_error("[卡摩瑞一非] 回弹模板注册失败：%s" % p_ctx.bullets.bullet_manager.system.emit_templates.last_errors())
 		return false

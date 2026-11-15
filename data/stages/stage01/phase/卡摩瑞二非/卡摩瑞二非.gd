@@ -38,10 +38,9 @@ func _on_start() -> void:
 
 
 func _tick(p_ctx: StageContext) -> Variant:
-	if not p_ctx.bullets.has_emit_template(&"卡摩瑞二非_rebound"):
-		if not p_ctx.bullets.register_emit_template(回弹模板):
-			push_error("[卡摩瑞二非] 回弹模板注册失败")
-			return false
+	if not p_ctx.bullets.register_emit_template(回弹模板):
+		push_error("[卡摩瑞二非] 回弹模板注册失败")
+		return false
 	if not target:
 		return p_ctx.clock.wait(波间隔)
 

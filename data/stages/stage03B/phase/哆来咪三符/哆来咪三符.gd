@@ -95,14 +95,12 @@ func _on_start() -> void:
 
 
 func _ensure_split_resources(p_ctx: StageContext) -> bool:
-	if not p_ctx.bullets.has_emit_template(&"哆来咪三符_aqua"):
-		if not p_ctx.bullets.register_emit_template(夹角模板):
-			push_error("[哆来咪三符] aqua 模板注册失败")
-			return false
-	if not p_ctx.bullets.has_emit_template(&"哆来咪三符_red"):
-		if not p_ctx.bullets.register_emit_template(夹角狙模板):
-			push_error("[哆来咪三符] red 模板注册失败")
-			return false
+	if not p_ctx.bullets.register_emit_template(夹角模板):
+		push_error("[哆来咪三符] aqua 模板注册失败")
+		return false
+	if not p_ctx.bullets.register_emit_template(夹角狙模板):
+		push_error("[哆来咪三符] red 模板注册失败")
+		return false
 	_bind_parent_behavior()
 	return true
 

@@ -22,6 +22,7 @@ func has_emit_template(id: StringName) -> bool:
 	return bullet_manager.has_emit_template(id) if bullet_manager != null else false
 
 
+
 func register_behavior_sfx(stream: AudioStream) -> int:
 	return bullet_manager.register_behavior_sfx(stream) if bullet_manager != null else -1
 

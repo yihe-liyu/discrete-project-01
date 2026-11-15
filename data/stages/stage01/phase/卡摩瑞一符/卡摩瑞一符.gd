@@ -60,10 +60,9 @@ func _ensure_card_behaviors(p_ctx: StageContext) -> bool:
 	if 反射模板 == null or 开花模板 == null or 种子模板 == null:
 		return false
 	for tpl in [反射模板, 开花模板, 种子模板]:
-		if not p_ctx.bullets.has_emit_template(tpl.id):
-			if not p_ctx.bullets.register_emit_template(tpl):
-				push_error("[卡摩瑞一符] 模板注册失败：%s" % tpl.id)
-				return false
+		if not p_ctx.bullets.register_emit_template(tpl):
+			push_error("[卡摩瑞一符] 模板注册失败：%s" % tpl.id)
+			return false
 	if 开花弹.behavior_spec == null:
 		开花弹.with_behavior(BulletBehaviors.bounce_emit(反射模板, 反射弹速度, 开花弹加速度, 0.0, true))
 	if 种子弹.behavior_spec == null:

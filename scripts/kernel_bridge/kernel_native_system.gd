@@ -394,6 +394,14 @@ func get_behavior(id: int) -> int:
 
 ## 注册内容层子弹出模板；返回 false 时看 last_errors。
 func register_emit_template(template: EmitTemplate) -> bool:
+	if template == null:
+		return false
+	if emit_templates.has(template.id):
+		# 同 id 的模板会在卡重试 / 多只同类敌人时重新 new；
+		# 复用已注册模板的 numeric_id，让 behavior 拿到的 id 与真实模板表一致。
+		var existing: EmitTemplate = emit_templates.get_template(template.id)
+		template.numeric_id = existing.numeric_id
+		return true
 	return emit_templates.register(template)
 
 

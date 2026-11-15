@@ -43,3 +43,17 @@ func test_emit_template_accepts_spawn_spec() -> void:
 	var tpl := EmitTemplate.new(&"from_spec", spec)
 	assert_not_null(tpl.spawn_spec, "EmitTemplate 应保留 SpawnSpec 路径")
 	assert_eq(tpl.spawn_spec.texture, BulletShapes.atlas_texture(&"米弹"), "外观应保留")
+
+
+func test_re_register_same_id_reuses_numeric_id() -> void:
+	var sys := KernelNativeSystem.new()
+	add_child_autofree(sys)
+	if not sys.is_native_ready():
+		pending("无原生扩展")
+		return
+	var a := _valid()
+	var b := _valid()
+	assert_true(sys.register_emit_template(a), "首次注册应成功")
+	assert_true(sys.register_emit_template(b), "同 id 再注册应幂等成功")
+	assert_eq(b.numeric_id, a.numeric_id, "应复用已注册模板的 numeric_id")
+	assert_eq(sys.emit_templates.size(), 1, "模板表仍只有一份")

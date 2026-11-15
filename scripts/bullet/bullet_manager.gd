@@ -77,6 +77,7 @@ func has_emit_template(id: StringName) -> bool:
 	return _kernel_bullet_host.system.emit_templates.has(id) if _kernel_bullet_host != null and _kernel_bullet_host.system != null else false
 
 
+
 ## 注册 behavior 音效；返回 id。
 func register_behavior_sfx(stream: AudioStream) -> int:
 	return _kernel_bullet_host.system.register_behavior_sfx(stream) if _kernel_bullet_host != null and _kernel_bullet_host.system != null else -1

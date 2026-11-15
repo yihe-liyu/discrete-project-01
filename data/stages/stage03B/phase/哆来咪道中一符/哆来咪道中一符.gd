@@ -44,14 +44,12 @@ func _on_start() -> void:
 func _ensure_rain_behaviors(p_ctx: StageContext) -> bool:
 	if 二阶段模板 == null or 三阶段模板 == null:
 		return false
-	if not p_ctx.bullets.has_emit_template(&"哆来咪道中一符_stage2"):
-		if not p_ctx.bullets.register_emit_template(二阶段模板):
-			push_error("[哆来咪道中一符] stage2 模板注册失败")
-			return false
-	if not p_ctx.bullets.has_emit_template(&"哆来咪道中一符_stage3"):
-		if not p_ctx.bullets.register_emit_template(三阶段模板):
-			push_error("[哆来咪道中一符] stage3 模板注册失败")
-			return false
+	if not p_ctx.bullets.register_emit_template(二阶段模板):
+		push_error("[哆来咪道中一符] stage2 模板注册失败")
+		return false
+	if not p_ctx.bullets.register_emit_template(三阶段模板):
+		push_error("[哆来咪道中一符] stage3 模板注册失败")
+		return false
 	if 雨弹一阶段.behavior_spec == null:
 		雨弹一阶段.with_behavior(BulletBehaviors.rain_stage(
 			二阶段模板, 重力加速度, 1000.0, 0.0, true, true))

@@ -40,10 +40,9 @@ func _ensure_sonar(p_ctx: StageContext) -> bool:
 	if 开花模板 == null or 串型模板 == null:
 		return false
 	for tpl in [开花模板, 串型模板]:
-		if not p_ctx.bullets.has_emit_template(tpl.id):
-			if not p_ctx.bullets.register_emit_template(tpl):
-				push_error("[卡摩瑞道中一非] 模板注册失败：%s" % tpl.id)
-				return false
+		if not p_ctx.bullets.register_emit_template(tpl):
+			push_error("[卡摩瑞道中一非] 模板注册失败：%s" % tpl.id)
+			return false
 	if 声呐弹.behavior_spec == null:
 		var mode := 0
 		if SaveData.selected_difficulty == Difficulty.HARD:

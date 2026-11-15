@@ -61,14 +61,12 @@ func _on_start() -> void:
 
 
 func _ensure_card_behaviors(p_ctx: StageContext) -> bool:
-	if not p_ctx.bullets.has_emit_template(反射模板.id):
-		if not p_ctx.bullets.register_emit_template(反射模板):
-			push_error("[卡摩瑞二符] 反射模板注册失败")
-			return false
-	if 金反射模板 != null and not p_ctx.bullets.has_emit_template(金反射模板.id):
-		if not p_ctx.bullets.register_emit_template(金反射模板):
-			push_error("[卡摩瑞二符] 金色反射模板注册失败")
-			return false
+	if not p_ctx.bullets.register_emit_template(反射模板):
+		push_error("[卡摩瑞二符] 反射模板注册失败")
+		return false
+	if 金反射模板 != null and not p_ctx.bullets.register_emit_template(金反射模板):
+		push_error("[卡摩瑞二符] 金色反射模板注册失败")
+		return false
 	if 开花弹.behavior_spec == null:
 		开花弹.with_behavior(BulletBehaviors.bounce_emit(
 			反射模板, 0.01, 0.0, 0.0, true, true))

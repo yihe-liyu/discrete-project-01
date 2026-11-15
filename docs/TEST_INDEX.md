@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：106 脚本 / **739 用例（738 通过 / 1 红）/ 5890 断言 / 52.1s** / 0 orphans / **0 pending**。
+**现状**：106 脚本 / **741 用例（740 通过 / 1 红）/ 6079 断言 / 52.1s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,9 +27,9 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 54 | 432 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 54 | 433 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
-| **E 内容** | 4 | 25 | `data/**` 的形状与合法性 |
+| **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
 
@@ -93,15 +93,15 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（54 / 432）
+## C · 宿主 · 运行时系统（54 / 433）
 
-### C1 组合根 / 服务 / 时间线（18 / 79）
+### C1 组合根 / 服务 / 时间线（18 / 80）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_spawn_spec](../test/test_spawn_spec.gd) | SpawnSpec → BulletType 直发 + texture_key / child / 覆盖 | 5 | 0 |
 | [test_bullet_behaviors](../test/test_bullet_behaviors.gd) | 内容侧 behavior 构造器：id / 参数顺序 / bounce template 校验 | 3 | 0 |
-| [test_emit_template](../test/test_emit_template.gd) | `EmitTemplate` / `EmitTemplateRegistry`：id、字段、参数上限、SpawnSpec 入口 | 5 | 0 |
+| [test_emit_template](../test/test_emit_template.gd) | `EmitTemplate` / `EmitTemplateRegistry`：id、字段、参数上限、SpawnSpec 入口、同 id 幂等复用 | 6 | 0 |
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |
 | [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 真游戏真的在用它 —— 注册表里有自机 / **运行时显式认领 `player`（B2）** / 内核后端拿到同一张注册表 / fx 挂舞台 / 异常路径只交注册表 | 9 | 0 |
 | [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop | 9 | 0 |
@@ -210,7 +210,7 @@
 | [test_menu_nav](../test/test_menu_nav.gd) | `MenuNav` 子页面容器注入契约（R2：不再字符串搜 `PageHost`） + **B4：覆盖层暂停/恢复走显式信号（不再 `set_state.call_deferred` 动态方法名）** + **B5：暂停菜单路径唯一来源常量** | 5 | 0 |
 | [test_game_over_menu](../test/test_game_over_menu.gd) | **GameOverMenu 标题不再静默 no-op**：本引擎不解析节点类型 `@export`（`.tscn` 的 `title_label = NodePath(...)` 被丢弃）⇒ 入树一帧后按路径/类型兜底解析出 `title_label` + `set_title()` 真把文字写进那个 `Label` | 2 | 0 |
 
-## E · 内容（4 / 25）
+## E · 内容（4 / 26）
 
 > 只测**形状与合法性**，不测数值。数值该在 Godot 里调，不该在测试里锁。
 
@@ -219,7 +219,7 @@
 | [test_data_validity](../test/test_data_validity.gd) | **内容校验**：遍历全部阶段数据（hp/时限/双脚本槽/uid 全局唯一）+ 舞台显示名（只锁"配了名"，不锁叫什么）+ Boss 符卡背景可加载 + **舞台注册表 = 可玩清单**（每项都要有 `create_script`，把"不可玩的关混进注册表"挡在数据层）+ **每关背景树形状 + 入树实例化不报错**（根必须是 `StageBackground`、须声明 `DecorManager`）+ **敌弹素材 ↔ 弹型数据的脱节哨兵**（`assets/Textures/bullet/*.png` 每张弹贴图都要有同名 `data/bullets/<名>.tres`，白名单 = 图集本体/激光/出生雾/消弹特效）—— 不写死路径，改名不红、数据违规才红 | 10 | 0 |
 | [test_probe_descriptor](../test/test_probe_descriptor.gd) | spell053「哆来咪三符」→ 原生描述符的形状（单相位 / 变体两模板 / 难度分派） | 5 | 1 |
 | [test_stage01_dialogue](../test/test_stage01_dialogue.gd) | 第一面战前对话构建：台词/说话者/表情/事件顺序 | 9 | 0 |
-| [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断） | 1 | 0 |
+| [test_enemy04_move](../test/test_enemy04_move.gd) | enemy04 移动：匀速下移直到离开屏幕（弹幕结束后不中断）+ 多只实例复用 top 模板 | 2 | 0 |
 
 ## F · 工具 · 无头工具（2 / 9）
 
