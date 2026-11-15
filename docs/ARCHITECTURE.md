@@ -44,7 +44,7 @@
 | 系统 | 责任 | 对外接口（intent） | 主要文件 |
 |---|---|---|---|
 | **Boss/敌人** | 演一段阶段 / 生成敌人 | `start_phase(phase)` / `hud`（`BossHud`：名字文字 + 名字/进度点显隐） / `current_phase` / `ctx.enemies.spawn(data)` | `scripts/enemy/boss.gd` / `boss_hud.gd` / `enemy.gd` |
-| **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread_spec(...)` / `death_clear` | `scripts/bullet/*` / `laser/*` · **内核** `gdextension/src/danmaku_store.*` |
+| **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread(...)` / `death_clear` | `scripts/bullet/*` / `laser/*` · **内核** `gdextension/src/danmaku_store.*` |
 | **玩家** | 移动/射击/僚机/道具 | `ctx.player` / `ctx.effects` | `scripts/player/player.gd` / `coroutine/player/*` |
 | **对话** | 纯逻辑步骤 + 渲染 | `ctx.play_dialogue_steps(steps)` / `d.event(...)` | `scripts/coroutine/services/dialogue/*` |
 | **记录** | 持久化符卡簿 | `RecordService.record_phase_*` | `scripts/data/spell_*.gd` |
@@ -59,7 +59,7 @@
 ```
 内容面 = data/bullets/<key>.tres（BulletDef：外观/碰撞/朝向）+ 发射脚本里的 SpawnSpec.with_behavior(...)
   └─ BehaviorSpec（C++ pack id + float 参数；内容直接挂）
-       └─ KernelBulletHost.prepare_spec()        ← 弹型 / 锚点 / 行为装配
+       └─ KernelBulletHost.prepare_shot()        ← 弹型 / 锚点 / 行为装配
             └─ KernelNativeSystem.spawn()           ← 原生 DanmakuStore.spawn + set_hitbox + set_behavior
                  └─ [每物理帧] DanmakuStore.integrate() + behavior_tick()    ← 积分 + 行为，全原生
                       └─ KernelNativeSystem._pull_snapshot()                 ← 原生 → GDScript 只读快照
@@ -80,7 +80,7 @@
 
 | 类别 | 形态 | 例子 | 归属 |
 |---|---|---|---|
-| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread_spec(...)` `ctx.enemies.spawn(data)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
+| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.enemies.spawn(data)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
 | **场景动词**（宏观，跨子系统，一意图） | `dir.verb()` | `dir.boss("boss_mid", data, from, to)` `dir.on(event, handler)` `dir.dialogue(steps)` | `StageDirector` `BossHandle` |
 | **名词构建词** | `Data.builder()` | `ctx.enemies.spawn(EnemyData.new().with_script().pos().param())` | 各 `*Data` |
 | **时序粘合剂** | `timeline.at()/wait()/every()` | `timeline.at(35).do(func(): dir.boss(...))` | `Timeline` |

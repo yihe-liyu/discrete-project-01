@@ -28,22 +28,22 @@ func register_behavior_sfx(stream: AudioStream) -> int:
 
 
 ## SpawnSpec 单发入口。
-func shoot_spec(spec: SpawnSpec, at: Vector2, direction: Vector2, sfx: AudioStream = null) -> void:
+func shoot(spec: SpawnSpec, at: Vector2, direction: Vector2, sfx: AudioStream = null) -> void:
 	if not is_active or spec == null or bullet_manager == null:
 		return
 	if sfx:
 		AudioManager.play_sfx(sfx)
-	bullet_manager.shoot_spec(spec, at, direction)
+	bullet_manager.shoot(spec, at, direction)
 
 
 ## 扇形散弹。count == 1 打一发（忽略 spread_angle）；不发弹（active=false / count ≤ 0）时静默返回。
-func shoot_spread_spec(spec: SpawnSpec, count: int, spread_angle: float,
+func shoot_spread(spec: SpawnSpec, count: int, spread_angle: float,
 		base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void:
-	shoot_spread_ids_spec(spec, count, spread_angle, base_dir, at, sfx)
+	shoot_spread_ids(spec, count, spread_angle, base_dir, at, sfx)
 
 
-## 同 shoot_spread_spec，但返回稳定句柄（uid，不是行号）；供逐弹预览 / 调试绑定。
-func shoot_spread_ids_spec(spec: SpawnSpec, count: int, spread_angle: float,
+## 同 shoot_spread，但返回稳定句柄（uid，不是行号）；供逐弹预览 / 调试绑定。
+func shoot_spread_ids(spec: SpawnSpec, count: int, spread_angle: float,
 		base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> Array[int]:
 	var ids: Array[int] = []
 	if not is_active or spec == null or count <= 0 or bullet_manager == null:
@@ -51,7 +51,7 @@ func shoot_spread_ids_spec(spec: SpawnSpec, count: int, spread_angle: float,
 	if sfx:
 		AudioManager.play_sfx(sfx)
 	if count == 1:
-		var row := bullet_manager.shoot_spec(spec, at, base_dir)
+		var row := bullet_manager.shoot(spec, at, base_dir)
 		var uid := bullet_manager.bullet_uid(row)
 		if uid > 0:
 			ids.append(uid)
@@ -59,7 +59,7 @@ func shoot_spread_ids_spec(spec: SpawnSpec, count: int, spread_angle: float,
 	var step := spread_angle / (count - 1) if spread_angle < TAU - 0.001 else spread_angle / count
 	for i in count:
 		var dir := base_dir.rotated(-spread_angle / 2.0 + step * i)
-		var row := bullet_manager.shoot_spec(spec, at, dir)
+		var row := bullet_manager.shoot(spec, at, dir)
 		var uid := bullet_manager.bullet_uid(row)
 		if uid > 0:
 			ids.append(uid)
@@ -67,14 +67,14 @@ func shoot_spread_ids_spec(spec: SpawnSpec, count: int, spread_angle: float,
 
 
 ## 按方向数组逐发（pattern 用：方向已在 pattern 里算好，服务只负责发射）。
-func shoot_directions_spec(spec: SpawnSpec, directions: Array[Vector2], at: Vector2,
+func shoot_directions(spec: SpawnSpec, directions: Array[Vector2], at: Vector2,
 		sfx: AudioStream = null) -> void:
 	if not is_active or spec == null or directions.is_empty() or bullet_manager == null:
 		return
 	if sfx:
 		AudioManager.play_sfx(sfx)
 	for direction in directions:
-		bullet_manager.shoot_spec(spec, at, direction)
+		bullet_manager.shoot(spec, at, direction)
 
 
 # ── 激光 ──

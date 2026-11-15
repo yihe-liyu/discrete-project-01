@@ -20,8 +20,8 @@ func test_spawn_spec_keeps_type_and_child() -> void:
 
 func test_spawn_spec_service_accepts_spec() -> void:
 	var svc := BulletService.new()
-	assert_true(svc.has_method("shoot_spec"), "应提供 SpawnSpec 单发入口")
-	assert_true(svc.has_method("shoot_spread_spec"), "应提供 SpawnSpec 扇形入口")
+	assert_true(svc.has_method("shoot"), "应提供 SpawnSpec 单发入口")
+	assert_true(svc.has_method("shoot_spread"), "应提供 SpawnSpec 扇形入口")
 
 
 
@@ -48,7 +48,7 @@ func test_spawn_spec_spawns_directly() -> void:
 	var host := KernelBulletHost.new()
 	add_child_autofree(host)
 	var spec := SpawnSpec.new().tex("小玉").enemy().speed(120.0)
-	var id := host.shoot_spec(spec, Vector2(300, 300), Vector2.DOWN)
+	var id := host.shoot(spec, Vector2(300, 300), Vector2.DOWN)
 	assert_true(id >= 0, "应能直接发射 SpawnSpec")
 	assert_eq(host.system.get_behavior(id), -1, "无 behavior 的普通弹")
 	assert_gt(host.system.get_active_count(), 0, "内核应有行")

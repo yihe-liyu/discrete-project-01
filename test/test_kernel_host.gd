@@ -8,17 +8,17 @@ func _make_backend() -> KernelBulletHost:
 	return b
 
 
-func _enemy_spec() -> SpawnSpec:
+func _enemy_bullet() -> SpawnSpec:
 	return SpawnSpec.new().enemy().blend(true).tex("小玉")
 
 
 func test_type_reused_per_spawn_spec() -> void:
 	var b := _make_backend()
 	# 弹型缓存在 SpawnSpec **实例**上 —— 同实例复用同一内核弹型
-	var d := _enemy_spec()
+	var d := _enemy_bullet()
 	assert_same(d.to_bullet_type(), d.to_bullet_type(), "同一 SpawnSpec 应复用内核弹型")
-	b.shoot_spec(d, Vector2.ZERO, Vector2.RIGHT)
-	b.shoot_spec(d, Vector2.ZERO, Vector2.RIGHT)
+	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
+	b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
 	assert_eq(b.system.get_type_registry().size(), 1, "复用实例 → 弹型表不随发射增长")
 	assert_eq(b.system.get_active_count(), 2, "两发应占两行")
 
@@ -26,16 +26,16 @@ func test_type_reused_per_spawn_spec() -> void:
 func test_distinct_instances_own_distinct_types() -> void:
 	var b := _make_backend()
 	# 契约收紧：内容**必须复用实例**，不得每发 new
-	b.shoot_spec(_enemy_spec(), Vector2.ZERO, Vector2.RIGHT)
-	b.shoot_spec(_enemy_spec(), Vector2.ZERO, Vector2.RIGHT)
+	b.shoot(_enemy_bullet(), Vector2.ZERO, Vector2.RIGHT)
+	b.shoot(_enemy_bullet(), Vector2.ZERO, Vector2.RIGHT)
 	assert_eq(b.system.get_type_registry().size(), 2, "每发 new 实例 = 各自弹型")
 
 
 func test_shoot_velocity_follows_direction_not_spec_axis() -> void:
 	var b := _make_backend()
-	var d := _enemy_spec()
+	var d := _enemy_bullet()
 	d.velocity = Vector2.UP * 200.0   # speed() 只写 y，方向另给
-	var id := b.shoot_spec(d, Vector2(100, 100), Vector2.RIGHT)
+	var id := b.shoot(d, Vector2(100, 100), Vector2.RIGHT)
 	assert_eq(b.system.get_position(id), Vector2(100, 100), "出生位置应等于传入 pos")
 	assert_eq(b.system.get_velocity(id), Vector2(200, 0), "方向取 direction，速度取 spec.velocity 的长度")
 	assert_eq(b.system.get_color(id), d.tint, "颜色取 spec.tint")
@@ -43,8 +43,8 @@ func test_shoot_velocity_follows_direction_not_spec_axis() -> void:
 
 func test_texture_side_table() -> void:
 	var b := _make_backend()
-	var d := _enemy_spec()
-	var id := b.shoot_spec(d, Vector2.ZERO, Vector2.RIGHT)
+	var d := _enemy_bullet()
+	var id := b.shoot(d, Vector2.ZERO, Vector2.RIGHT)
 	var ti: int = b.system.get_type_indices()[id]
 	assert_eq(b.texture_for_index(ti), d.texture, "旁表应给出该弹型的贴图（内核弹型不含 Texture2D）")
 	assert_null(b.texture_for_index(999), "越界应返回 null")

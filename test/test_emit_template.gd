@@ -11,7 +11,7 @@ func test_register_valid_template() -> void:
 	var reg := EmitTemplateRegistry.new()
 	assert_true(reg.register(_valid()), "有效模板应注册")
 	assert_true(reg.has(&"rebound"), "应能按 id 查到")
-	assert_eq(reg.get_template(&"rebound").spawn_spec.texture != null, true, "模板保留弹型")
+	assert_eq(reg.get_template(&"rebound").spawn.texture != null, true, "模板保留弹型")
 	var t := reg.get_template(&"rebound")
 	assert_gt(t.numeric_id, 0, "注册应分配数字 id")
 	assert_eq(reg.get_by_numeric(t.numeric_id), t, "数字 id 应能反查")
@@ -28,7 +28,7 @@ func test_duplicate_id_is_rejected() -> void:
 func test_empty_id_and_spec_are_rejected() -> void:
 	var reg := EmitTemplateRegistry.new()
 	var empty := EmitTemplate.new(&"", null)
-	assert_false(reg.register(empty), "空 id / spawn_spec 应拒绝")
+	assert_false(reg.register(empty), "空 id / spawn 应拒绝")
 	assert_gt(reg.last_errors().size(), 0, "应给出错误")
 
 
@@ -41,8 +41,8 @@ func test_behavior_params_limit() -> void:
 func test_emit_template_accepts_spawn_spec() -> void:
 	var spec := SpawnSpec.new().tex("米弹").enemy()
 	var tpl := EmitTemplate.new(&"from_spec", spec)
-	assert_not_null(tpl.spawn_spec, "EmitTemplate 应保留 SpawnSpec 路径")
-	assert_eq(tpl.spawn_spec.texture, BulletShapes.atlas_texture(&"米弹"), "外观应保留")
+	assert_not_null(tpl.spawn, "EmitTemplate 应保留 SpawnSpec 路径")
+	assert_eq(tpl.spawn.texture, BulletShapes.atlas_texture(&"米弹"), "外观应保留")
 
 
 func test_re_register_same_id_reuses_numeric_id() -> void:

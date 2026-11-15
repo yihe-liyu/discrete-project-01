@@ -41,7 +41,7 @@ func _on_start() -> void:
 		# 同一方向连成一条线；每颗比上一颗快 50，形成纵向拉开。
 		for i in diff_pick([1, 3, 5, 8]) / rate:
 			_plain_bullet_data.velocity = Vector2(0, 普通弹速度 + i * 50)
-			ctx.bullets.shoot_spread_spec(
+			ctx.bullets.shoot_spread(
 				_plain_bullet_data, 1, 0, 发射方向,
 				target.global_position, AssetRegistry.sounds["shoot"])
 
@@ -52,7 +52,7 @@ func _on_start() -> void:
 				_heavy_bullet_data.with_behavior(BulletBehaviors.accel(Vector2(0, 200)))
 			for i in diff_pick([0, 0, 1, 2]):
 				_heavy_bullet_data.velocity = Vector2(0, 175 + i * 25)
-				ctx.bullets.shoot_spread_spec(
+				ctx.bullets.shoot_spread(
 					_heavy_bullet_data, diff_pick([0, 0, 3, 6]),
 					PI / (3 - i), -发射方向,
 					target.global_position)

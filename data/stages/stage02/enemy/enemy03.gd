@@ -35,7 +35,7 @@ func _on_start() -> void:
 	# 0 秒起持续发射；每次把发射方向转 22.5°，让整圈慢慢扫过。
 	timeline.at(0.0).every(间隔).do(func():
 		ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
-		ctx.bullets.shoot_spread_spec(
+		ctx.bullets.shoot_spread(
 			开花弹, 个数, TAU, 发射方向,
 			target.global_position)
 		发射方向 = 发射方向.rotated(PI / 23.0 * 旋转方向)

@@ -48,8 +48,8 @@ func test_clear_enemy_bullets_wipes_field_and_spawns_clear_fx() -> void:
 		pending("无原生扩展")
 		return
 	var data := _mk_data()
-	bm.shoot_spec(data, Vector2.ZERO, Vector2.DOWN)
-	bm.shoot_spec(data, Vector2(300, 100), Vector2.DOWN)
+	bm.shoot(data, Vector2.ZERO, Vector2.DOWN)
+	bm.shoot(data, Vector2(300, 100), Vector2.DOWN)
 	assert_eq(_bullet_count(sys), 2, "应有 2 颗弹")
 	var fx_before := _fx_count(sys)
 
@@ -70,8 +70,8 @@ func test_clear_is_immediate_unlike_death_clear() -> void:
 		pending("无原生扩展")
 		return
 	var data := _mk_data()
-	bm.shoot_spec(data, Vector2(300, 0), Vector2.DOWN)    # 离圈心很远 ⇒ 膨胀圈当帧清不到
-	bm.shoot_spec(data, Vector2(400, 0), Vector2.DOWN)
+	bm.shoot(data, Vector2(300, 0), Vector2.DOWN)    # 离圈心很远 ⇒ 膨胀圈当帧清不到
+	bm.shoot(data, Vector2(400, 0), Vector2.DOWN)
 	assert_eq(_bullet_count(sys), 2, "应有 2 颗弹")
 
 	var svc = _bind(bm)
@@ -91,7 +91,7 @@ func test_shoot_spread_ids_returns_trackable_rows() -> void:
 		pending("无原生扩展")
 		return
 	var svc = _bind(bm)
-	var ids: Array[int] = svc.shoot_spread_ids_spec(
+	var ids: Array[int] = svc.shoot_spread_ids(
 		_mk_data(), 3, TAU, Vector2.DOWN, Vector2(448, 240))
 	assert_eq(ids.size(), 3, "三发应返回三个 uid")
 	for uid in ids:
@@ -109,7 +109,7 @@ func test_uid_survives_swap_remove() -> void:
 		pending("无原生扩展")
 		return
 	var svc = _bind(bm)
-	var uids: Array[int] = svc.shoot_spread_ids_spec(
+	var uids: Array[int] = svc.shoot_spread_ids(
 		_mk_data(), 3, TAU, Vector2.DOWN, Vector2(448, 240))
 	assert_eq(uids.size(), 3)
 	var row := bm.find_bullet_uid(uids[2])
@@ -119,8 +119,8 @@ func test_uid_survives_swap_remove() -> void:
 	assert_eq(bm.find_bullet_uid(uids[2]), 0, "被搬走的弹仍应能找到新行")
 
 
-## 整圈语义由 shoot_spread_spec 保证：spread=TAU 时 step=TAU/count，从 -TAU/2 起。
-func test_shoot_spread_spec_ring_directions() -> void:
+## 整圈语义由 shoot_spread 保证：spread=TAU 时 step=TAU/count，从 -TAU/2 起。
+func test_shoot_spread_ring_directions() -> void:
 	var bm := _mk_manager()
 	await get_tree().process_frame
 	var sys := bm.kernel_system()
@@ -128,7 +128,7 @@ func test_shoot_spread_spec_ring_directions() -> void:
 		pending("无原生扩展")
 		return
 	var svc = _bind(bm)
-	var uids: Array[int] = svc.shoot_spread_ids_spec(
+	var uids: Array[int] = svc.shoot_spread_ids(
 		_mk_data(), 4, TAU, Vector2.UP, Vector2(448, 240))
 	assert_eq(uids.size(), 4)
 	var expected := [Vector2.DOWN, Vector2.LEFT, Vector2.UP, Vector2.RIGHT]

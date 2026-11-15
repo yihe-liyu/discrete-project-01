@@ -35,7 +35,7 @@ static func evaluate(spec: SpawnSpec, origin: Vector2, velocity: Vector2,
 	if spec == null or max_time <= 0.0 or dt <= 0.0:
 		return result
 	var frames := clampi(int(ceil(max_time / dt)), 1, MAX_FRAMES)
-	var behavior := spec.behavior_spec
+	var behavior := spec.behavior
 	if behavior == null or not ClassDB.class_exists("DanmakuStore"):
 		return _straight(result, origin, velocity, frames, dt, &"no_behavior" if behavior == null else &"no_native")
 

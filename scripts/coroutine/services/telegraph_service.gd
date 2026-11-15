@@ -85,7 +85,7 @@ func shoot_tracked(spec: SpawnSpec, count: int, spread_angle: float,
 		max_time: float = -1.0) -> bool:
 	if bullet_service == null or spec == null:
 		return false
-	var uids := bullet_service.shoot_spread_ids_spec(
+	var uids := bullet_service.shoot_spread_ids(
 		spec, count, spread_angle, base_dir, at, sfx)
 	return add_tracked_bullets(uids, spec, color, width, max_time)
 

@@ -31,7 +31,7 @@ func _on_start() -> void:
 		var 发射方向 := Vector2.ONE.rotated(RNG.randf_range(-PI, PI))
 		for i in diff_pick([1, 2, 2, 3]):
 			_plain_bullet_data.velocity = Vector2(0, 100 + i * 100)
-			ctx.bullets.shoot_spread_spec(
+			ctx.bullets.shoot_spread(
 				_plain_bullet_data, diff_pick([10, 14, 20, 20]),
 				TAU, 发射方向,
 				target.global_position, AssetRegistry.sounds["shoot"])
@@ -47,7 +47,7 @@ func _on_start() -> void:
 				_heavy_bullet_data.velocity = Vector2(0, 175)
 				# 点射方向在正上方左右各偏 60°，形成窄扇。
 				var 发射方向 := Vector2.UP.rotated(RNG.randf_range(-PI / 3, PI / 3))
-				ctx.bullets.shoot_spread_spec(
+				ctx.bullets.shoot_spread(
 					_heavy_bullet_data, 1, 0, 发射方向,
 					target.global_position, AssetRegistry.sounds["kira"])
 			)

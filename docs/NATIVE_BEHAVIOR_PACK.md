@@ -7,7 +7,7 @@
 
 ```text
 SpawnSpec.with_behavior(BehaviorSpec)
-  → KernelBulletHost.prepare_spec()
+  → KernelBulletHost.prepare_shot()
   → KernelNativeSystem.spawn() + set_behavior()
   → DanmakuStore.integrate(dt)
   → behavior_tick(dt)          # 只跑这一颗弹的 C++ pack

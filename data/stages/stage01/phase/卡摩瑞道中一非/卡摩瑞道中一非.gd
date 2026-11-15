@@ -43,7 +43,7 @@ func _ensure_sonar(p_ctx: StageContext) -> bool:
 		if not p_ctx.bullets.register_emit_template(tpl):
 			push_error("[卡摩瑞道中一非] 模板注册失败：%s" % tpl.id)
 			return false
-	if 声呐弹.behavior_spec == null:
+	if 声呐弹.behavior == null:
 		var mode := 0
 		if SaveData.selected_difficulty == Difficulty.HARD:
 			mode = 1
@@ -64,6 +64,6 @@ func _tick(p_ctx: StageContext) -> Variant:
 
 	# 每轮整体随机旋转，避免声呐弹总从同一个方向起飞。
 	var 随机角度 := Vector2.DOWN.rotated(RNG.randf() * TAU)
-	p_ctx.bullets.shoot_spread_spec(声呐弹, 声呐弹个数, TAU, 随机角度, target.global_position)
+	p_ctx.bullets.shoot_spread(声呐弹, 声呐弹个数, TAU, 随机角度, target.global_position)
 
 	return p_ctx.clock.wait(发射间隔)

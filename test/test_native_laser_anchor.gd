@@ -25,7 +25,7 @@ func test_marisa_laser_segments_track_anchor() -> void:
 	d.velocity = Vector2.UP * 100.0
 	d.with_behavior(BulletBehaviors.anchor_drift(0.0, 800.0, 0.0, true))
 	d.anchor = {&"id": anchor.get_instance_id(), &"offset": Vector2.ZERO, &"use_global": true}
-	BulletManager.current.shoot_spec(d, Vector2(200.0, 700.0), Vector2.UP)
+	BulletManager.current.shoot(d, Vector2(200.0, 700.0), Vector2.UP)
 	assert_eq(ns.get_active_count(), 1, "激光段应进内核池")
 	for i in 3:
 		await get_tree().physics_frame
@@ -44,11 +44,11 @@ func test_clear_laser_bullets_only_clears_laser_kind() -> void:
 	laser.kind = BulletType.Kind.LASER
 	laser.velocity = Vector2.UP * 100.0
 	laser.with_behavior(BulletBehaviors.anchor_drift(0.0, 800.0, 0.0, true))
-	BulletManager.current.shoot_spec(laser, Vector2(200.0, 700.0), Vector2.UP)
+	BulletManager.current.shoot(laser, Vector2(200.0, 700.0), Vector2.UP)
 
 	var point := SpawnSpec.new().enemy().no_spawn_fog()
 	point.velocity = Vector2.UP * 100.0
-	BulletManager.current.shoot_spec(point, Vector2(220.0, 700.0), Vector2.UP)
+	BulletManager.current.shoot(point, Vector2(220.0, 700.0), Vector2.UP)
 
 	assert_eq(ns.get_active_count(), 2, "先有 1 LASER + 1 POINT")
 	BulletManager.current.clear_laser_bullets()

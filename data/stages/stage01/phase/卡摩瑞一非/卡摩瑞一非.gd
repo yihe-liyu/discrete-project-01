@@ -5,7 +5,7 @@ extends AsyncCoroutineScript
 ## 生成一颗金色米弹，朝 Boss 方向回弹。回弹角按“当前圈相对本波中点”偏移，
 ## 所以同一波里前半圈与后半圈的反弹方向是镜像的。
 ##
-## 环形发射直接用 `ctx.bullets.shoot_spread_spec` 的整圈语义，不经过 pattern 层。
+## 环形发射直接用 `ctx.bullets.shoot_spread` 的整圈语义，不经过 pattern 层。
 
 ## 两波之间的等待（秒）。
 var 波间隔: float = 2.4
@@ -81,6 +81,6 @@ func 发射一圈(p_ctx: StageContext, 本波开花次数: int) -> void:
 	开花弹.with_behavior(BulletBehaviors.bounce_emit(
 		回弹模板, 0.0, 本圈加速度, 单圈反弹附加角, true))
 
-	# 整圈：shoot_spread_spec 在 spread >= TAU 时 step = TAU / count，与旧 ring 完全一致。
-	p_ctx.bullets.shoot_spread_spec(
+	# 整圈：shoot_spread 在 spread >= TAU 时 step = TAU / count，与旧 ring 完全一致。
+	p_ctx.bullets.shoot_spread(
 		开花弹, 个数, TAU, 随机角度, target.global_position)

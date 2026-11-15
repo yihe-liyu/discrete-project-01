@@ -23,7 +23,7 @@ func _run(n: int) -> void:
 	var data := SpawnSpec.new().enemy().tex("小玉").speed(200.0).blend(true).no_spawn_fog()
 	for i in n:
 		var dir := Vector2.RIGHT.rotated(randf() * TAU)
-		backend.shoot_spec(data, CENTER + dir * sqrt(randf()) * 300.0, dir)
+		backend.shoot(data, CENTER + dir * sqrt(randf()) * 300.0, dir)
 
 	var mm := BulletMultiMesh.new()
 	mm.is_enabled = true

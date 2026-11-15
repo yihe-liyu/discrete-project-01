@@ -18,7 +18,7 @@ var faction: int = Faction.PLAYER
 var velocity: Vector2 = Vector2.UP
 ## per-shot 锚点 spec（{id, offset, use_global}）；仅锚定型弹道（激光）需要。
 var anchor: Variant = null
-var behavior_spec: BehaviorSpec
+var behavior: BehaviorSpec
 var out_grace: float = 0.0
 var wrap_mask: int = 0
 
@@ -154,7 +154,7 @@ func with_spawn_fog(effect: EffectType = null) -> SpawnSpec:
 
 
 func with_behavior(spec: BehaviorSpec) -> SpawnSpec:
-	behavior_spec = spec
+	behavior = spec
 	_cached_type = null
 	return self
 

@@ -20,13 +20,13 @@ func get_boss():
 	return _backend.entity_registry.get_boss() if _backend != null and _backend.entity_registry != null else null
 
 
-## 入队一次发射。入队瞬间快照 per-shot 状态（backend.prepare_spec）：
+## 入队一次发射。入队瞬间快照 per-shot 状态（backend.prepare_shot）：
 ## 内容复用同一 SpawnSpec 模板改速度 / 染色再入队是正常写法；
 ## 若拖到 flush 时才读实例，同一帧所有入队项会被最后一次写入覆盖（non_mid01 红弹速度梯度消失即此因）。
 func queue_spawn(spec: SpawnSpec, pos: Vector2, dir: Vector2) -> void:
 	if _backend == null or spec == null:
 		return
-	_spawns.append(_backend.prepare_spec(spec, pos, dir))
+	_spawns.append(_backend.prepare_shot(spec, pos, dir))
 
 
 ## 入队一条激光（骨架 / 颜色 / opts / 平移量）；flush 时交宿主 LaserEngine。

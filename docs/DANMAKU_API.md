@@ -1,6 +1,6 @@
 # 弹幕内核接口（DANMAKU API）
 
-> **一句话**：给一颗弹写飞行规律 = `SpawnSpec.with_behavior(BulletBehaviors.xxx)`；发射 = `ctx.bullets.shoot_spread_spec(...)`。
+> **一句话**：给一颗弹写飞行规律 = `SpawnSpec.with_behavior(BulletBehaviors.xxx)`；发射 = `ctx.bullets.shoot_spread(...)`。
 > 本文是弹幕创作的**唯一权威参考**；教学路径见 `CONTENT_GUIDE.md` §六；原生执行器在 `gdextension/src/danmaku_store.cpp`。
 > 读法：新建弹幕看 §1 + §3；查 behavior 看 §3；发射看 §4；踩坑看 §9。
 
@@ -32,16 +32,16 @@ var _spec: SpawnSpec            # 成员：建一次、复用（铁律）
 func _tick(p_ctx: StageContext) -> Variant:
 	if _spec == null:
 		_spec = SpawnSpec.new().tex("小玉").speed(220).color(Color.AQUA).enemy()
-	p_ctx.bullets.shoot_spread_spec(_spec, 5, deg_to_rad(40.0), Vector2.DOWN, target.global_position)
+	p_ctx.bullets.shoot_spread(_spec, 5, deg_to_rad(40.0), Vector2.DOWN, target.global_position)
 	return p_ctx.clock.wait(0.4)
 ```
 
 - `target` = 宿主注入的节点（敌人 / Boss 自己）。
-- 返回值语义见 §5.1；`shoot_spread_spec` 的 `base_dir` 定方向、`spec.velocity.length()` 定速度（§4.1）。
+- 返回值语义见 §5.1；`shoot_spread` 的 `base_dir` 定方向、`spec.velocity.length()` 定速度（§4.1）。
 
 ## 2. SpawnSpec（发射描述 + 构造链）
 
-`scripts/data/spawn_spec.gd` ｜ `extends RefCounted, class_name SpawnSpec`
+`scripts/data/spawn.gd` ｜ `extends RefCounted, class_name SpawnSpec`
 
 ### 2.1 字段
 
@@ -67,7 +67,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 | spawn_fx | EffectType | null | 这型的出生特效（null=用阵营默认） |
 | out_grace | float | 0.0 | **逐弹出界宽限（秒）**：出界后仍活这么久；0 = 出界立即回收 |
 | wrap_mask | int | 0 | 环绕边掩码：1 左 / 2 右 / 4 上 / 8 下 |
-| behavior_spec | BehaviorSpec | null | 弹道 behavior（C++ pack） |
+| behavior | BehaviorSpec | null | 弹道 behavior（C++ pack） |
 | anchor | Variant | null | per-shot 锚点 `{id, offset, use_global}`（激光用） |
 | child | SpawnSpec | null | 一层替换弹（可选） |
 
@@ -154,10 +154,10 @@ spec.anchor = {&"id": marker.get_instance_id(), &"offset": Vector2.ZERO, &"use_g
 
 `scripts/coroutine/services/bullet_service.gd`
 
-### 4.1 shoot_spread_spec（唯一弹幕发射入口）
+### 4.1 shoot_spread（唯一弹幕发射入口）
 
 ```gdscript
-ctx.bullets.shoot_spread_spec(spec: SpawnSpec, count: int, spread_angle: float,
+ctx.bullets.shoot_spread(spec: SpawnSpec, count: int, spread_angle: float,
 	base_dir: Vector2, at: Vector2, sfx: AudioStream = null) -> void
 ```
 
@@ -165,8 +165,8 @@ ctx.bullets.shoot_spread_spec(spec: SpawnSpec, count: int, spread_angle: float,
 - `count > 1`：`spread_angle >= TAU` → 铺满一圈，step = spread/count；否则以 base_dir 为中心左右展开，step = spread/(count-1)。
 - 每发速度 = `spec.velocity.length()`；方向来自这里，不是 spec.velocity 的方向。
 - 想逐发不同速度/颜色：复用实例、每发改 `velocity` / `tint` 后再发射（入队瞬间快照，安全）。
-- 需要逐弹稳定句柄（预览 / 调试）时用 [code]shoot_spread_spec_ids_spec[/code]。
-- 其他入口：`shoot_spec`（单发）、`shoot_directions_spec`（方向数组）。
+- 需要逐弹稳定句柄（预览 / 调试）时用 [code]shoot_spread_ids[/code]。
+- 其他入口：`shoot`（单发）、`shoot_directions`（方向数组）。
 
 ### 4.2 激光
 
@@ -247,7 +247,7 @@ tl.loop()
 | 服务 | 关键方法 |
 |---|---|
 | `ctx.clock` | `wait(sec)` / `wait_frames(n)` |
-| `ctx.bullets` | `shoot_spread_spec` / `fire_*_laser` / `death_clear` / `shoot_bomb` / `clear_enemy_bullets` |
+| `ctx.bullets` | `shoot_spread` / `fire_*_laser` / `death_clear` / `shoot_bomb` / `clear_enemy_bullets` |
 | `ctx.player` | `get_player()` / `get_position()` |
 | `ctx.boss` | `current()` / `exists()` |
 | `ctx.enemies` | `spawn(data)` / `despawn(enemy)` / `despawn_all()` / `despawn_clear(enemy)` |
@@ -376,7 +376,7 @@ data/stages/<stage>/
 7. **`bounce_emit` / `split_after` 的 emit 发生在行为遍历结束后**；不要在行为 tick 里等子弹出。
 8. **`homing(target_mode=1)` 没有敌人时只做速度插值、不转向**；不要把它当“必定追踪”。
 9. **`anchor_drift` 必须给 `spec.anchor`**；id 失效时宿主退回自机 + offset（静默降级）。
-10. **自机弹 tint 会被记忆值往红 lerp**（`prepare_spec`）；内容设的 tint 只是基底。
+10. **自机弹 tint 会被记忆值往红 lerp**（`prepare_shot`）；内容设的 tint 只是基底。
 11. **类型级字段在首次发射时快照**；请在构造时定好，不要在运行期改型。
 12. **behavior 的 state/params 是固定 float 槽**；不能在行为里 new 对象 / 存引用。
 13. **RNG 单通道、按「弹行遍历顺序」消耗**：增删随机 behavior 会平移后续随机序列（回放仍可复现，但结果会变）。
@@ -396,7 +396,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 	if _spec == null:
 		_spec = SpawnSpec.new().tex("小玉").speed(160).color(Color.AQUA).blend(true).enemy() \
 			.with_behavior(BulletBehaviors.accel(Vector2(0, 60)))
-	p_ctx.bullets.shoot_spread_spec(_spec, 12, TAU, Vector2.RIGHT, target.global_position)
+	p_ctx.bullets.shoot_spread(_spec, 12, TAU, Vector2.RIGHT, target.global_position)
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"], -10.0)
 	return p_ctx.clock.wait(1.2)
 ```
@@ -438,8 +438,8 @@ _spec.with_behavior(BulletBehaviors.split_after(ta, tb, 0.6, -150.0, 0.1, 60.0))
 
 ```
 SpawnSpec（贴图/判定/阵营 + with_behavior）
-  → ctx.bullets.shoot_spread_spec
-  → KernelBulletHost.prepare_spec / KernelNativeSystem.spawn
+  → ctx.bullets.shoot_spread
+  → KernelBulletHost.prepare_shot / KernelNativeSystem.spawn
   → DanmakuStore.integrate + behavior_tick（原生）
   → 只读快照 → BulletMultiMesh → MultiMesh
   → 判定 KernelBulletPhysics（原生宽相网格）

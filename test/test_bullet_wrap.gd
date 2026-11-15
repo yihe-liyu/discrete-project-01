@@ -20,7 +20,7 @@ func test_wrap_bottom_to_top() -> void:
 		return
 	var bm := BulletManager.current
 	var data := SpawnSpec.new().tex("小玉").speed(200.0).enemy().no_spawn_fog().wrap_around()
-	var row := bm.shoot_spec(data, Vector2(448, GameConfig.FIELD_BOTTOM + 10), Vector2.DOWN)
+	var row := bm.shoot(data, Vector2(448, GameConfig.FIELD_BOTTOM + 10), Vector2.DOWN)
 	sys.set_position(row, Vector2(448, GameConfig.FIELD_BOTTOM + 10))
 	sys.set_velocity(row, Vector2(0, 200))
 	sys.step(1.0 / 60.0)
@@ -36,7 +36,7 @@ func test_wrap_left_to_right() -> void:
 		return
 	var bm := BulletManager.current
 	var data := SpawnSpec.new().tex("小玉").speed(200.0).enemy().no_spawn_fog().wrap_around()
-	var row := bm.shoot_spec(data, Vector2(GameConfig.FIELD_LEFT - 10, 300), Vector2.LEFT)
+	var row := bm.shoot(data, Vector2(GameConfig.FIELD_LEFT - 10, 300), Vector2.LEFT)
 	sys.set_position(row, Vector2(GameConfig.FIELD_LEFT - 10, 300))
 	sys.set_velocity(row, Vector2(-200, 0))
 	sys.step(1.0 / 60.0)

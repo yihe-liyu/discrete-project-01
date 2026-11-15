@@ -34,9 +34,9 @@ var _segments: int = -1                   # 段数缓存（由图集自动算）
 var _segment_textures: Array[AtlasTexture] = []  # 切片缓存（省每段 new）
 
 ## 复用弹型实例（内核弹型缓存在 SpawnSpec 实例上，禁止每发 new）
-var _main_spec: SpawnSpec
-var _focus_spec: SpawnSpec
-var _laser_specs: Array[SpawnSpec] = []
+var _main_bullet: SpawnSpec
+var _focus_bullet: SpawnSpec
+var _laser_bullets: Array[SpawnSpec] = []
 ## 子机的稳定锚点：不直接引用会被重建/释放的 Option 节点。
 ## 每帧把锚点移到对应子机的 global_position；激光锚点 id 永远有效。
 var _laser_anchors: Array[Node2D] = []
@@ -91,27 +91,27 @@ func _cleanup_options() -> void:
 
 
 func _main_shoot(_ctx: StageContext, player: Player) -> float:
-	if _main_spec == null:
-		_main_spec = SpawnSpec.new().tex("marisa_main").blend(false).speed(4000).player()
-		_main_spec.color(Color(1, 1, 1, 0.5))
-		_main_spec.damage = 6
-		_main_spec.hit_effect = preload("res://scenes/effect/hit_effect_marisa.tscn")
-	ctx.bullets.shoot_spread_spec(_main_spec, 1, 0.0, Vector2.UP, player.global_position + Vector2(-15, 0))
-	ctx.bullets.shoot_spread_spec(_main_spec, 1, 0.0, Vector2.UP, player.global_position + Vector2(15, 0))
+	if _main_bullet == null:
+		_main_bullet = SpawnSpec.new().tex("marisa_main").blend(false).speed(4000).player()
+		_main_bullet.color(Color(1, 1, 1, 0.5))
+		_main_bullet.damage = 6
+		_main_bullet.hit_effect = preload("res://scenes/effect/hit_effect_marisa.tscn")
+	ctx.bullets.shoot_spread(_main_bullet, 1, 0.0, Vector2.UP, player.global_position + Vector2(-15, 0))
+	ctx.bullets.shoot_spread(_main_bullet, 1, 0.0, Vector2.UP, player.global_position + Vector2(15, 0))
 	return ctx.clock.wait_frames(MAIN_INTERVAL)
 
 
 func _option_shoot(_ctx: StageContext, _count: int) -> float:
 	if Input.is_action_pressed("focus"):
 		# focus：竖直向上匀加速星弹（初速 + 加速度，每秒加速 —— 数值可调）
-		if _focus_spec == null:
-			_focus_spec = SpawnSpec.new().tex("marisa_opt2").blend(false).speed(1500).with_behavior(
+		if _focus_bullet == null:
+			_focus_bullet = SpawnSpec.new().tex("marisa_opt2").blend(false).speed(1500).with_behavior(
 				BulletBehaviors.accel(Vector2(0, -5000))).player()
-			_focus_spec.color(Color(1, 1, 1, 0.5))
-			_focus_spec.damage = 4
-			_focus_spec.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
-			_focus_spec.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option02.tscn")
-		_shoot_options(ctx, _focus_spec, 1, 0.0, Vector2.UP, Vector2.ZERO)
+			_focus_bullet.color(Color(1, 1, 1, 0.5))
+			_focus_bullet.damage = 4
+			_focus_bullet.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
+			_focus_bullet.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option02.tscn")
+		_shoot_options(ctx, _focus_bullet, 1, 0.0, Vector2.UP, Vector2.ZERO)
 		ctx.audio.play_sfx(AssetRegistry.sounds["msl"])
 		return ctx.clock.wait_frames(5)
 	else:
@@ -172,10 +172,10 @@ func _laser_anchor(player: Player, source: Node2D) -> Dictionary:
 
 
 ## 段弹型：按帧缓存（同一帧复用同一 SpawnSpec 实例 → 内核弹型表不随发射增长）。
-func _get_laser_spec(frame: int) -> SpawnSpec:
+func _get_laser_bullet(frame: int) -> SpawnSpec:
 	var i: int = frame % _seg_count()
-	while _laser_specs.size() < _seg_count():
-		var k: int = _laser_specs.size()
+	while _laser_bullets.size() < _seg_count():
+		var k: int = _laser_bullets.size()
 		var spec := SpawnSpec.new().player().blend(false)
 		spec.kind = BulletType.Kind.LASER
 		spec.texture = _make_laser_segment(k)
@@ -184,8 +184,8 @@ func _get_laser_spec(frame: int) -> SpawnSpec:
 		spec.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option01.tscn")  # 激光专用击中特效
 		# 矩形判定覆盖整段（贴视觉：64x32，旋转后 32x64 竖条）
 		spec.hitbox_rect(Vector2(SEG_W, SEG_H))
-		_laser_specs.append(spec)
-	return _laser_specs[i]
+		_laser_bullets.append(spec)
+	return _laser_bullets[i]
 
 
 ## 从指定子机喷出一段激光：段在发射口生成，向上漂移，间距=漂移×间隔（自动无缝）
@@ -195,7 +195,7 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 		source = player
 
 	# 本轮共享帧：同轮所有子机图案一致，轮间变换 → 整齐且流动
-	var spec := _get_laser_spec(frame)
+	var spec := _get_laser_bullet(frame)
 
 	# 按火力 + 子机索引查发射角度（LASER_ANGLES 表）——旧池/内核共用
 	var opt_idx: int = _options.find(source)
@@ -215,4 +215,4 @@ func _spawn_laser_segment(player: Player, source: Node2D, frame: int) -> void:
 	var spawn_dir := Vector2(sin(angle_rad), -cos(angle_rad))
 	# 第一帧的渲染位置 = 第一次 anchor_drift 写出的位置，避免在子机原点多停一帧。
 	var spawn_pos := source.global_position + spawn_dir * LASER_FIRST_STEP
-	ctx.bullets.shoot_spread_spec(spec, 1, 0.0, spawn_dir, spawn_pos)
+	ctx.bullets.shoot_spread(spec, 1, 0.0, spawn_dir, spawn_pos)

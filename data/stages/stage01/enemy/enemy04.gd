@@ -35,7 +35,7 @@ func _on_start() -> void:
 		var 每圈弹数: int = diff_pick([15, 20, 20, 30])
 		for i in diff_pick([1, 1, 2, 2]):
 			_radial_bullet_data.velocity = Vector2(0, 50 + i * 50)
-			ctx.bullets.shoot_spread_spec(
+			ctx.bullets.shoot_spread(
 				_radial_bullet_data, 每圈弹数,
 				TAU, 发射方向,
 				target.global_position, AssetRegistry.sounds["shoot"])
@@ -57,7 +57,7 @@ func _ensure_top_behavior(p_ctx: StageContext) -> bool:
 	if not p_ctx.bullets.register_emit_template(_top_template):
 		push_error("[enemy04] top 模板注册失败")
 		return false
-	if _radial_bullet_data.behavior_spec == null:
+	if _radial_bullet_data.behavior == null:
 		_radial_bullet_data.with_behavior(
 			BulletBehaviors.top_emit(_top_template, 150.0, PI, 0.0))
 	return true

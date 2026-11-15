@@ -45,7 +45,7 @@ func _on_start() -> void:
 	for i in diff_pick([36, 72, 72, 144]):
 		# 0.365i - 0.005i²：先快后慢，链弹在前段拉开、后段收密。
 		timeline.at(0.365 * i - 0.005 * i * i).do(func():
-			ctx.bullets.shoot_spread_spec(
+			ctx.bullets.shoot_spread(
 				链弹, 1, 0,
 				发射方向.rotated(PI / 角度分段数 * i * bullet_l_or_r),
 				target.global_position, AssetRegistry.sounds["shoot"])

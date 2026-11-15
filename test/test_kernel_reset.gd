@@ -33,7 +33,7 @@ func test_bullet_manager_reset_world_drops_registries() -> void:
 		pending("无原生扩展")
 		return
 	var data := SpawnSpec.new().tex("小玉").speed(100.0).enemy()
-	bm.shoot_spec(data, Vector2.ZERO, Vector2.DOWN)
+	bm.shoot(data, Vector2.ZERO, Vector2.DOWN)
 	assert_gt(bm.active_count(), 0, "应有弹")
 	assert_gt(sys.get_type_registry().size(), 0, "发弹后应注册弹型")
 

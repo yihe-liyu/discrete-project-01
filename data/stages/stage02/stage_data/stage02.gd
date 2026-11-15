@@ -148,7 +148,7 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 		if (随机位置.distance_squared_to(p_ctx.player.get_position()) > 10000):
 			var 随机角度 := Vector2.ONE.rotated(RNG.randf() * TAU)
 			p_ctx.audio.play_sfx(AssetRegistry.sounds["kira"])
-			p_ctx.bullets.shoot_spec(无主弹幕, 随机位置, 随机角度)
+			p_ctx.bullets.shoot(无主弹幕, 随机位置, 随机角度)
 		var 颜色: float = 1.0 - 1.0 / 星弹次数 * 颜色计数
 		无主弹幕.color(Color(颜色, 颜色, 颜色, 1))
 		颜色计数 += 1

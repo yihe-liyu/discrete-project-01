@@ -139,8 +139,8 @@ func _physics_process(_delta: float) -> void:
 
 ## 发射一颗弹，返回内核行 id（spec 为空 = -1）。阵营由 [code]SpawnSpec.faction[/code] 决定。
 ## direction 只定方向（零向量 = 用 spec.velocity 的方向）；速度大小取 spec.velocity 的长度。
-func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
-	return _kernel_bullet_host.shoot_spec(spec, pos, direction)
+func shoot(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
+	return _kernel_bullet_host.shoot(spec, pos, direction)
 
 func _on_behavior_bullet_spawned(uid: int, spec: SpawnSpec) -> void:
 	bullet_spawned.emit(uid, spec)

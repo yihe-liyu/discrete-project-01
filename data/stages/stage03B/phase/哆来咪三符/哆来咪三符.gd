@@ -107,7 +107,7 @@ func _ensure_split_resources(p_ctx: StageContext) -> bool:
 
 ## 模板注册后绑定父弹行为；拆出来让内容形状测试可以单独验证。
 func _bind_parent_behavior() -> void:
-	if 往返弹.behavior_spec != null:
+	if 往返弹.behavior != null:
 		return
 	往返弹.with_behavior(BulletBehaviors.split_after(
 		夹角模板, 夹角狙模板,
@@ -164,7 +164,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
 	var 夹角弹角度间隔 := TAU / 个数
 	for i in 个数:
-		p_ctx.bullets.shoot_spread_spec(
+		p_ctx.bullets.shoot_spread(
 			往返弹, 1, 0.0,
 			往返弹方向.rotated(夹角弹角度间隔 * i),
 			发弹点坐标)

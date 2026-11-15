@@ -120,7 +120,7 @@ func test_mist_clear_shape_is_exact_ellipse() -> void:
 	for p in [inside_pt, corner_pt]:
 		var ed := SpawnSpec.new().enemy().tex("小玉")
 		ed.velocity = Vector2.ZERO
-		BulletManager.current.shoot_spec(ed, p, Vector2.UP)
+		BulletManager.current.shoot(ed, p, Vector2.UP)
 	assert_eq(BulletManager.current.kernel_system().get_active_count(), 2, "先有 2 颗敌弹")
 	bomb._physics_process(1.0 / 60.0)
 	assert_eq(_live_bullets(), 1, "只清椭圆内的那颗")
@@ -151,7 +151,7 @@ func test_mist_bomb_stages_grow_follow_and_expire() -> void:
 
 	var ed := SpawnSpec.new().enemy().tex("小玉")
 	ed.velocity = Vector2.UP * 10.0
-	BulletManager.current.shoot_spec(ed, player.global_position, Vector2.UP)
+	BulletManager.current.shoot(ed, player.global_position, Vector2.UP)
 
 	var bomb = BulletManager.current.shoot_bomb_bullet(bd, player.global_position, Vector2.RIGHT)
 	assert_true(bomb is BombEntity, "应是宿主 bomb 实体")

@@ -67,10 +67,10 @@ func _ensure_card_behaviors(p_ctx: StageContext) -> bool:
 	if 金反射模板 != null and not p_ctx.bullets.register_emit_template(金反射模板):
 		push_error("[卡摩瑞二符] 金色反射模板注册失败")
 		return false
-	if 开花弹.behavior_spec == null:
+	if 开花弹.behavior == null:
 		开花弹.with_behavior(BulletBehaviors.bounce_emit(
 			反射模板, 0.01, 0.0, 0.0, true, true))
-	if 金开花弹 != null and 金开花弹.behavior_spec == null:
+	if 金开花弹 != null and 金开花弹.behavior == null:
 		金开花弹.with_behavior(BulletBehaviors.bounce_emit(
 			金反射模板, 0.01, 0.0, 0.0, true, true))
 	return true
@@ -85,12 +85,12 @@ func _tick(p_ctx: StageContext) -> Variant:
 	if SaveData.selected_difficulty >= Difficulty.HARD:
 		# Hard / Lunatic：固定节奏连发。蓝环从半格偏移开始，金环每圈随机旋转 3 颗。
 		随机角度 = Vector2.DOWN.rotated(RNG.randf() * TAU)
-		p_ctx.bullets.shoot_spread_spec(
+		p_ctx.bullets.shoot_spread(
 			开花弹, 开花弹条数, TAU,
 			Vector2.RIGHT.rotated(TAU / 开花弹条数 / 2.0),
 			target.global_position,
 			AssetRegistry.sounds["shoot"])
-		p_ctx.bullets.shoot_spread_spec(金开花弹, 3, TAU, 随机角度, target.global_position)
+		p_ctx.bullets.shoot_spread(金开花弹, 3, TAU, 随机角度, target.global_position)
 		return p_ctx.clock.wait(波内两次开花间隔)
 
 	# Easy / Normal：按波次走。先等波间隔，再在波内按间隔逐圈发射。
@@ -100,7 +100,7 @@ func _tick(p_ctx: StageContext) -> Variant:
 		if 波内距下次开花计时 >= 波内两次开花间隔:
 			波内距下次开花计时 = 0.0
 			波内剩余开花弹次数 -= 1
-			p_ctx.bullets.shoot_spread_spec(
+			p_ctx.bullets.shoot_spread(
 				开花弹, 开花弹条数, TAU, 随机角度,
 				target.global_position,
 				AssetRegistry.sounds["shoot"])

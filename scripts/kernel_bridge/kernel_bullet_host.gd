@@ -1,7 +1,7 @@
 ## SpawnSpec → BulletType 的宿主适配器。
 ##
 ## 原生内核不认识 SpawnSpec；弹型由 [code]SpawnSpec.to_bullet_type()[/code] 在内容侧缓存。
-## 弹道由 SpawnSpec.behavior_spec 携带，逐帧在 C++ behavior pack 里执行。
+## 弹道由 SpawnSpec.behavior 携带，逐帧在 C++ behavior pack 里执行。
 ## 渲染不在本类：纹理走 [code]texture_for_index()[/code]，由 BulletMultiMesh 消费。
 class_name KernelBulletHost
 extends Node
@@ -163,23 +163,23 @@ func _spawn_emit_template(template: EmitTemplate, pos: Vector2, vel: Vector2, co
 	if template == null:
 		push_error("[KernelBulletHost] emit template 无效")
 		return
-	var spec := template.spawn_spec
+	var spec := template.spawn
 	if spec == null:
-		push_error("[KernelBulletHost] emit template 没有 spawn_spec")
+		push_error("[KernelBulletHost] emit template 没有 spawn")
 		return
 	spec.velocity = vel
 	if color != Color.WHITE:
 		spec.color(color)
 	if template.behavior != null:
-		spec.behavior_spec = template.behavior
+		spec.behavior = template.behavior
 	var dir := vel.normalized() if vel.length_squared() > 0.000001 else Vector2.DOWN
-	var snapshot := prepare_spec(spec, pos, dir)
+	var snapshot := prepare_shot(spec, pos, dir)
 	var id := spawn_prepared(snapshot)
 	notify_behavior_spawned(id, snapshot)
 
 
 ## 解析一次 SpawnSpec 发射所需的 per-shot 状态（类型 / 速度 / 行为 / 染色），不写内核池。
-func prepare_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictionary:
+func prepare_shot(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictionary:
 	if spec == null:
 		return {}
 	_ensure_system()
@@ -197,15 +197,15 @@ func prepare_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> Dictiona
 		if res != null and res.memory_value < 50.0:
 			tint = tint.lerp(Color.RED, remap(res.memory_value, 0.0, 50.0, 1.0, 0.0) * 0.5)
 	return {type = type, pos = pos, vel = vel, tint = tint,
-		texture = spec.texture, behavior = spec.behavior_spec, anchor_slot = anchor_slot,
-		spawn_spec = spec}
+		texture = spec.texture, behavior = spec.behavior, anchor_slot = anchor_slot,
+		spawn = spec}
 
 
-func shoot_spec(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
-	return spawn_prepared(prepare_spec(spec, pos, direction))
+func shoot(spec: SpawnSpec, pos: Vector2, direction: Vector2) -> int:
+	return spawn_prepared(prepare_shot(spec, pos, direction))
 
 
-## 把 prepare_spec 的快照写入内核池（延后队列 flush 用；也可直接调）。
+## 把 prepare_shot 的快照写入内核池（延后队列 flush 用；也可直接调）。
 func spawn_prepared(spec: Dictionary) -> int:
 	if spec.is_empty():
 		return -1
@@ -230,7 +230,7 @@ func notify_behavior_spawned(id: int, spec: Dictionary) -> void:
 	var uid: int = system.get_uid(id)
 	if uid <= 0:
 		return
-	var source: SpawnSpec = spec.get("spawn_spec")
+	var source: SpawnSpec = spec.get("spawn")
 	if source != null:
 		behavior_bullet_spawned.emit(uid, source)
 

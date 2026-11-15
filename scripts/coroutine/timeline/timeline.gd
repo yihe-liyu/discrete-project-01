@@ -12,7 +12,7 @@
 ## [b]用法[/b][br]
 ## [codeblock]
 ## var tl := start_timeline()
-## tl.at(10.0).do(func(): ctx.bullets.shoot_spread_spec(...))
+## tl.at(10.0).do(func(): ctx.bullets.shoot_spread(...))
 ## tl.loop()
 ##
 ## func _on_step(_ctx):

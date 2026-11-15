@@ -148,7 +148,7 @@ timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))         
 `EnemyData` 提供构造链：`red_little_fairy() / blue_middle_fairy() / red_middle_fairy() / ...`
 （外观/血量/判定/掉落直接写死，`enemy_presets/*.tres` 已移除——数据即代码）。
 
-生成走 **`ctx.enemies.spawn(data)`**（与 `ctx.bullets.shoot_spread_spec` 对称的服务动词；实例化/挂载协程/入场景在 `StageRuntime`）。
+生成走 **`ctx.enemies.spawn(data)`**（与 `ctx.bullets.shoot_spread` 对称的服务动词；实例化/挂载协程/入场景在 `StageRuntime`）。
 
 ### 行为脚本
 
@@ -350,7 +350,7 @@ func _fire(ctx):
 	if _spec == null:
 		_spec = SpawnSpec.new().tex("小玉").speed(300).enemy()
 	_spec.velocity = Vector2(0, 300 + i * 50)   # 速度 / params 每发写（不属弹型）
-	ctx.bullets.shoot_spread_spec(_spec, count, TAU, dir, pos)
+	ctx.bullets.shoot_spread(_spec, count, TAU, dir, pos)
 ```
 
 > 类型级字段（贴图 / 阵营 / 判定 / 伤害 / 命中特效）在**首次发射时快照**；建实例时定好，不要运行期改型。
@@ -382,7 +382,7 @@ func _on_start() -> void:
 	ctx.enemies.move_to(target, Vector2(target.global_position.x, target_y), 1.5)
 	var timeline := start_timeline()
 	timeline.at(0.0).every(2.5).do(func():
-		ctx.bullets.shoot_spread_spec(...)
+		ctx.bullets.shoot_spread(...)
 	)
 ```
 
@@ -410,7 +410,7 @@ func _fire(p_ctx: StageContext) -> void:
 				500.0, deg_to_rad(720.0),
 				BulletBehaviors.HOMING_NEAREST_ENEMY,
 				2000.0, 2.0, 2.0, 150.0, 2.0))
-	p_ctx.bullets.shoot_spread_spec(_spec, 8, TAU, Vector2.RIGHT, global_position)
+	p_ctx.bullets.shoot_spread(_spec, 8, TAU, Vector2.RIGHT, global_position)
 ```
 
 > 一颗弹**只有一个** behavior；要组合就在 C++ pack 里写普通 `if` / `for`，不在内容侧叠多个。

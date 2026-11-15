@@ -57,7 +57,7 @@ func _run(n: int, with_behavior: bool) -> void:
 	for i in n:
 		var dir := Vector2.RIGHT.rotated(randf() * TAU)
 		var pos := CENTER + dir * sqrt(randf()) * 300.0
-		backend.shoot_spec(_data, pos, dir)
+		backend.shoot(_data, pos, dir)
 
 	for f in WARMUP:
 		backend.system._physics_process(DT)

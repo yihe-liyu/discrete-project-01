@@ -53,11 +53,11 @@ func _on_start() -> void:
 	timeline.at(0.0).every(间隔).do(func():
 		ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
 		if(发射次数 % 频率 == 0):
-			ctx.bullets.shoot_spread_spec(
+			ctx.bullets.shoot_spread(
 				开花弹2, 个数, TAU, 发射方向,
 				target.global_position)
 		else:
-			ctx.bullets.shoot_spread_spec(
+			ctx.bullets.shoot_spread(
 				开花弹1, 个数, TAU, 发射方向,
 				target.global_position)
 		发射方向 = 发射方向.rotated(PI / 8.0 * 旋转方向)

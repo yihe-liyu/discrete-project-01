@@ -54,7 +54,7 @@ func test_track_bullets_prunes_dead_uids() -> void:
 	var bs = BULLET_SERVICE.new()
 	bs.bullet_manager = bm
 	var spec := SpawnSpec.new().tex("小玉").speed(100.0).enemy()
-	var uids: Array[int] = bs.shoot_spread_ids_spec(
+	var uids: Array[int] = bs.shoot_spread_ids(
 		spec, 3, TAU, Vector2.DOWN, Vector2(448, 240))
 	assert_eq(uids.size(), 3)
 
@@ -68,7 +68,7 @@ func test_track_bullets_prunes_dead_uids() -> void:
 	assert_eq(path.path_count(), 3, "三颗应各一条线")
 
 	var spec2 := SpawnSpec.new().tex("小玉").speed(100.0).enemy()
-	var more: Array[int] = bs.shoot_spread_ids_spec(
+	var more: Array[int] = bs.shoot_spread_ids(
 		spec2, 2, TAU, Vector2.DOWN, Vector2(448, 240))
 	assert_true(service.add_tracked_bullets(more, spec2), "不同 SpawnSpec 也应追加")
 	path.call("_process", 0.2)
@@ -123,8 +123,8 @@ func test_track_emitted_filters_spec() -> void:
 	bs.bullet_manager = bm
 	var spec1 := SpawnSpec.new().tex("小玉").speed(100.0).enemy()
 	var spec2 := SpawnSpec.new().tex("小玉").speed(100.0).enemy()
-	var uid1: int = bs.shoot_spread_ids_spec(spec1, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
-	var uid2: int = bs.shoot_spread_ids_spec(spec2, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
+	var uid1: int = bs.shoot_spread_ids(spec1, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
+	var uid2: int = bs.shoot_spread_ids(spec2, 1, 0.0, Vector2.DOWN, Vector2(448, 240))[0]
 
 	var path = PATH.new()
 	add_child_autofree(path)

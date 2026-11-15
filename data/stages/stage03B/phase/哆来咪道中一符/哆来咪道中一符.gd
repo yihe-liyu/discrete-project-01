@@ -50,17 +50,17 @@ func _ensure_rain_behaviors(p_ctx: StageContext) -> bool:
 	if not p_ctx.bullets.register_emit_template(三阶段模板):
 		push_error("[哆来咪道中一符] stage3 模板注册失败")
 		return false
-	if 雨弹一阶段.behavior_spec == null:
+	if 雨弹一阶段.behavior == null:
 		雨弹一阶段.with_behavior(BulletBehaviors.rain_stage(
 			二阶段模板, 重力加速度, 1000.0, 0.0, true, true))
-	if 雨弹二阶段.behavior_spec == null:
+	if 雨弹二阶段.behavior == null:
 		if SaveData.selected_difficulty >= Difficulty.NORMAL:
 			雨弹二阶段.with_behavior(BulletBehaviors.rain_stage(
 				三阶段模板, 重力加速度, 1000.0, -1000.0, true, true))
 		else:
 			雨弹二阶段.with_behavior(BulletBehaviors.rain_stage(
 				null, 重力加速度, 1000.0, -1000.0, false, false))
-	if 雨弹三阶段.behavior_spec == null:
+	if 雨弹三阶段.behavior == null:
 		if SaveData.selected_difficulty >= Difficulty.HARD:
 			if 激光模板 != null and 激光模板.numeric_id < 0:
 				if not p_ctx.bullets.register_laser_template(激光模板):
@@ -84,6 +84,6 @@ func _tick(p_ctx: StageContext) -> Variant:
 	var 随机位置 := Vector2(RNG.randi_range(64, 832), -32)
 
 	p_ctx.audio.play_sfx(AssetRegistry.sounds["kira"])
-	p_ctx.bullets.shoot_spread_spec(雨弹一阶段, 1, 0, 随机角度, 随机位置)
+	p_ctx.bullets.shoot_spread(雨弹一阶段, 1, 0, 随机角度, 随机位置)
 
 	return 发射间隔

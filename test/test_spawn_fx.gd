@@ -85,7 +85,7 @@ func test_sweep_turns_fog_into_clear_effect() -> void:
 		return
 	var backend: KernelBulletHost = add_child_autofree(KernelBulletHost.new())
 	backend.system.set_spawn_fx(BulletType.Faction.ENEMY, fog)
-	backend.shoot_spec(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
+	backend.shoot(_enemy_data(), Vector2(100, 100), Vector2.RIGHT)
 	assert_gt(backend.system.get_fx_phase(0), 0.0, "出生即处于雾相位")
 	var physics := KernelBulletPhysics.new()
 	physics.setup(backend)

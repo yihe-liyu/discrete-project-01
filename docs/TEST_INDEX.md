@@ -108,7 +108,7 @@
 | [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 + **`ctx.bullets` 绑定 stage 后会刷新 BulletManager**（自机射击 ctx 早于组合根注入） | 11 | 0 |
 | [test_stage_route](../test/test_stage_route.gd) | StageRoute：同一 StageData 多路线引用；空链校验；route_index 推进 / 末尾 / reset；记录主键；练习列表 route 优先 | 6 | 0 |
 | [test_bullet_wrap](../test/test_bullet_wrap.gd) | 弹幕边环绕：下→上、左→右；上下/左右/四边掩码进入 BulletType | 4 | 0 |
-| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids_spec` 返回稳定 uid 且整圈方向等分，swap-remove 后仍能跟踪 velocity；无管理器静默 | 5 | 0 |
+| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids` 返回稳定 uid 且整圈方向等分，swap-remove 后仍能跟踪 velocity；无管理器静默 | 5 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData 基准取曲（跨难度共享）** | 12 | 0 |
 | [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪；`shoot_tracked`；`track_emitted` SpawnSpec 过滤；空列表防护 | 7 | 0 |

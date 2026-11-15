@@ -30,7 +30,7 @@ func _build(difficulty: int):
 func test_probe_bullet_uses_split_behavior() -> void:
 	var shot = _build(0)
 	_bind(shot)
-	var b = shot.往返弹.behavior_spec
+	var b = shot.往返弹.behavior
 	assert_not_null(b, "往返弹应挂 behavior")
 	assert_eq(b.id, &"split_after", "应使用 split_after")
 
@@ -38,15 +38,15 @@ func test_probe_bullet_uses_split_behavior() -> void:
 func test_variant_emits_the_two_split_templates() -> void:
 	var shot = _build(0)
 	_bind(shot)
-	var b = shot.往返弹.behavior_spec
+	var b = shot.往返弹.behavior
 	assert_eq(int(b.params[2]), shot.夹角模板.numeric_id, "params[2] = 普通模板")
 	assert_eq(int(b.params[3]), shot.夹角狙模板.numeric_id, "params[3] = 自机狙模板")
 
 
 func test_split_templates_carry_own_behavior_and_color() -> void:
 	var shot = _build(0)
-	assert_eq(shot.夹角弹.behavior_spec.id, &"accel_heading", "普通分裂弹应挂沿朝向加速")
-	assert_eq(shot.夹角狙.behavior_spec.id, &"accel_heading", "自机狙分裂弹应挂沿朝向加速")
+	assert_eq(shot.夹角弹.behavior.id, &"accel_heading", "普通分裂弹应挂沿朝向加速")
+	assert_eq(shot.夹角狙.behavior.id, &"accel_heading", "自机狙分裂弹应挂沿朝向加速")
 	assert_eq(shot.夹角弹.tint, Color.AQUA, "普通分裂弹 AQUA")
 	assert_eq(shot.夹角狙.tint, Color.RED, "自机狙分裂弹 RED")
 
@@ -57,12 +57,12 @@ func test_split_templates_carry_own_behavior_and_color() -> void:
 func test_split_behavior_differs_by_difficulty() -> void:
 	var easy = _build(0)
 	var hard = _build(2)
-	assert_ne(easy.夹角弹.behavior_spec.params,
-		hard.夹角弹.behavior_spec.params,
+	assert_ne(easy.夹角弹.behavior.params,
+		hard.夹角弹.behavior.params,
 		"难度不同 → 夹角弹 behavior 参数应不同")
-	assert_eq(easy.夹角弹.behavior_spec.params[1], 0.0, "E/N 夹角弹不自我回收")
-	assert_gt(hard.夹角弹.behavior_spec.params[1], 0.0, "H/L 夹角弹应有 lifetime")
-	assert_eq(hard.夹角弹.behavior_spec.params[2], 1.0, "H/L 夹角弹应带 clear_fx")
+	assert_eq(easy.夹角弹.behavior.params[1], 0.0, "E/N 夹角弹不自我回收")
+	assert_gt(hard.夹角弹.behavior.params[1], 0.0, "H/L 夹角弹应有 lifetime")
+	assert_eq(hard.夹角弹.behavior.params[2], 1.0, "H/L 夹角弹应带 clear_fx")
 
 
 ## 变自机狙概率 0（E/N）vs 0.1（H/L）会进 program 参数 → 两份 program 必须不同。
@@ -71,6 +71,6 @@ func test_aim_chance_differs_by_difficulty() -> void:
 	var hard = _build(2)
 	_bind(easy)
 	_bind(hard)
-	assert_ne(easy.往返弹.behavior_spec.params[4],
-		hard.往返弹.behavior_spec.params[4],
+	assert_ne(easy.往返弹.behavior.params[4],
+		hard.往返弹.behavior.params[4],
 		"变自机狙概率 0 vs >0 → behavior 参数不同")
