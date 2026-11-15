@@ -162,7 +162,7 @@
 - **bomb 数据模型**（`BombData` 家族 + `KernelBulletHost.spawn_bomb` 按实际类型分派）→ `ARCHITECTURE.md` §6 · `CONTENT_GUIDE.md` §四。
 - **弹型与贴图**（`data/bullets/*.tres` = 外观+碰撞+朝向；贴图 = 1024² 图集）→ `DANMAKU_API.md` §7.1。
 - **纹理插座**（`_texture_by_index` / `texture_for_index()` 是设计 seam，不是债）→ `docs/archive/M3_TEXTURE_OWNERSHIP_DECISION.md`。
-- **Pattern（实验）**：`BulletPattern` 基类 + `PatternParams`（手感 `.tres`）+ `data/patterns/ring.gd`；具体 pattern **不写 `class_name`**，由内容 preload；只给基类/参数类进全局类表。
+- **环形发射**：直接用 `ctx.bullets.shoot_spread_spec` 的整圈语义（spread ≥ TAU 时 step = TAU/count）；不再有 `BulletPattern` / `PatternParams` / `data/patterns/`。
 - **内容协程 async（实验）**：`extends AsyncCoroutineScript` + `run_async(ctx)`；只 `await ctx.clock.delay/next_tick`（跟 `CoroutineRunner` 时钟）；不要用 `Timer`/`SceneTreeTimer` 做内容时间。旧 `_tick` 返回秒数风格保留。
 - **API 文档**：核心 `class_name` 用 `##`（`[codeblock]` / `[code]` / `[method]`）写“描述 + 模型 + 用法 + 边界”；长教程留在 `docs/`，代码只放链接。试点：`SpawnSpec` / `NativeBehaviorContext`。
 - **文档注释风格**：不写内部版本号（V18/DSL7）和 `**` 强调；用平实中文、`[code]`/`[codeblock]`；长文留 `docs/`。

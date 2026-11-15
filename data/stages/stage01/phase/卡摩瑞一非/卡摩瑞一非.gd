@@ -5,11 +5,7 @@ extends AsyncCoroutineScript
 ## 生成一颗金色米弹，朝 Boss 方向回弹。回弹角按“当前圈相对本波中点”偏移，
 ## 所以同一波里前半圈与后半圈的反弹方向是镜像的。
 ##
-## 这里用 `data/patterns/ring.gd` 作为可复用的“开环”模式：模板、数量、速度
-## 每次由本脚本传入，模式本身不持有卡牌身份。
-
-const 环弹模式脚本 := preload("res://data/patterns/ring.gd")
-const 环弹参数脚本 := preload("res://scripts/patterns/pattern_params.gd")
+## 环形发射直接用 `ctx.bullets.shoot_spread_spec` 的整圈语义，不经过 pattern 层。
 
 ## 两波之间的等待（秒）。
 var 波间隔: float = 2.4
@@ -30,8 +26,6 @@ var 随机角度: Vector2
 ## 复用弹型实例：弹型缓存在 SpawnSpec 上，禁止每发 new。
 var 开花弹: SpawnSpec
 var 反弹弹: SpawnSpec
-var 环弹模式: BulletPattern
-var 环弹参数: PatternParams
 ## 撞墙后回弹的子弹出模板；run_async 注册到 ctx.bullets。
 var 回弹模板: EmitTemplate
 ## 撞墙音效的 behavior sfx id。
@@ -40,8 +34,6 @@ var 回弹模板: EmitTemplate
 func _on_start() -> void:
 	开花弹 = SpawnSpec.new().tex("棱弹").color(Color.AQUA).blend(true).enemy()
 	反弹弹 = SpawnSpec.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
-	环弹模式 = 环弹模式脚本.new()
-	环弹参数 = 环弹参数脚本.new()
 	回弹模板 = EmitTemplate.new(&"卡摩瑞一非_rebound", 反弹弹)
 
 
@@ -89,8 +81,6 @@ func 发射一圈(p_ctx: StageContext, 本波开花次数: int) -> void:
 	开花弹.with_behavior(BulletBehaviors.bounce_emit(
 		回弹模板, 0.0, 本圈加速度, 单圈反弹附加角, true))
 
-	# 环弹模式复用同一份 SpawnSpec：颜色 / 阵营 / 运动都不变，只换本次数量与速度。
-	环弹参数.template = 开花弹
-	环弹参数.count = 个数
-	环弹参数.speed = 速度
-	环弹模式.fire(p_ctx, 环弹参数, target.global_position, 随机角度)
+	# 整圈：shoot_spread_spec 在 spread >= TAU 时 step = TAU / count，与旧 ring 完全一致。
+	p_ctx.bullets.shoot_spread_spec(
+		开花弹, 个数, TAU, 随机角度, target.global_position)

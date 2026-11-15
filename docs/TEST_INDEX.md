@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：106 脚本 / **741 用例（740 通过 / 1 红）/ 6079 断言 / 52.1s** / 0 orphans / **0 pending**。
+**现状**：105 脚本 / **736 用例（735 通过 / 1 红）/ 6043 断言 / 52.1s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 54 | 433 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 53 | 428 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 16 | 113 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,9 +93,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（54 / 433）
+## C · 宿主 · 运行时系统（53 / 428）
 
-### C1 组合根 / 服务 / 时间线（18 / 80）
+### C1 组合根 / 服务 / 时间线（17 / 75）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -108,7 +108,7 @@
 | [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 + **`ctx.bullets` 绑定 stage 后会刷新 BulletManager**（自机射击 ctx 早于组合根注入） | 11 | 0 |
 | [test_stage_route](../test/test_stage_route.gd) | StageRoute：同一 StageData 多路线引用；空链校验；route_index 推进 / 末尾 / reset；记录主键；练习列表 route 优先 | 6 | 0 |
 | [test_bullet_wrap](../test/test_bullet_wrap.gd) | 弹幕边环绕：下→上、左→右；上下/左右/四边掩码进入 BulletType | 4 | 0 |
-| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids_spec` 返回稳定 uid，swap-remove 后仍能跟踪 phase / velocity；无管理器静默 | 4 | 0 |
+| [test_bullet_service](../test/test_bullet_service.gd) | `ctx.bullets` 清场动词：即时全屏清敌弹 + 消弹特效；`shoot_spread_ids_spec` 返回稳定 uid 且整圈方向等分，swap-remove 后仍能跟踪 velocity；无管理器静默 | 5 | 0 |
 | [test_entity_registry](../test/test_entity_registry.gd) | `EntityRegistry` —— 自机/敌机/Boss 的运行时单一真源 + **B6：资源读取走 `PlayerBase` 类型化接口**（不认 `get("resources")` 字符串键） | 6 | 0 |
 | [test_stage_director](../test/test_stage_director.gd) | `BossHandle` 句柄纯逻辑：缺槽 / 容错 / 不崩（含 `defeat()`）+ `StageDirector.finish_stage()` 转达 + **`stage_bgm_key` 从 StageData 基准取曲（跨难度共享）** | 12 | 0 |
 | [test_telegraph_service](../test/test_telegraph_service.gd) | 路径服务：单/多方向 chain；多 uid 跟踪；`shoot_tracked`；`track_emitted` SpawnSpec 过滤；空列表防护 | 7 | 0 |
@@ -119,7 +119,6 @@
 | [test_difficulty](../test/test_difficulty.gd) | 难度维度契约：0..4 / 展示名；`diff_pick` / `diff_get` 的非法难度、空数组、Extra 用 4 项数组会响亮报错并回落最后一项 | 6 | 0 |
 | [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：12 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
 | [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环（Dialogue / Item / Player / Boss / Enemy 五个服务都有回归） + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 8 | 0 |
-| [test_pattern_ring](../test/test_pattern_ring.gd) | Pattern spike：`BulletPattern` 基类 / `PatternParams` 默认值 / **Ring 的方向计算（整圈、扇形、单发）** / **`.tres` 预设加载** / **真实 `BulletManager` 发射 6 发** | 6 | 0 |
 | [test_timeline_phase_unfreeze](../test/test_timeline_phase_unfreeze.gd) | B 方案回归：Boss 阶段战斗不再冻结时间轴 | 1 | 0 |
 
 ### C2 自机 / 道具 / 资源（5 / 63）

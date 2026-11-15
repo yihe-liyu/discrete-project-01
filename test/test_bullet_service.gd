@@ -117,3 +117,21 @@ func test_uid_survives_swap_remove() -> void:
 	bm.despawn_bullet(0)   # 删第一颗 → 尾行搬进 0
 	assert_eq(bm.find_bullet_uid(uids[0]), -1, "被删的 uid 应失效")
 	assert_eq(bm.find_bullet_uid(uids[2]), 0, "被搬走的弹仍应能找到新行")
+
+
+## 整圈语义由 shoot_spread_spec 保证：spread=TAU 时 step=TAU/count，从 -TAU/2 起。
+func test_shoot_spread_spec_ring_directions() -> void:
+	var bm := _mk_manager()
+	await get_tree().process_frame
+	var sys := bm.kernel_system()
+	if sys == null or not sys.is_native_ready():
+		pending("无原生扩展")
+		return
+	var svc = _bind(bm)
+	var uids: Array[int] = svc.shoot_spread_ids_spec(
+		_mk_data(), 4, TAU, Vector2.UP, Vector2(448, 240))
+	assert_eq(uids.size(), 4)
+	var expected := [Vector2.DOWN, Vector2.LEFT, Vector2.UP, Vector2.RIGHT]
+	for i in 4:
+		assert_almost_eq(bm.bullet_velocity_uid(uids[i]).normalized(), expected[i],
+			Vector2(0.001, 0.001), "第 %d 发方向应为整圈等分" % i)
