@@ -24,3 +24,9 @@ func get_player() -> Player:
 func get_position() -> Vector2:
 	var player := get_player()
 	return player.global_position if player else Vector2.ZERO
+
+
+## 取自机当前记忆值（0..100）；无自机 = 0.0。
+func get_memory() -> float:
+	var player := get_player()
+	return player.resources.get_memory() if player else 0.0

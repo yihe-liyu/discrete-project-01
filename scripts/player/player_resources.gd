@@ -44,6 +44,10 @@ var max_point: int = 10000
 ## 记忆值 0..100：>= 50 擦弹有概率消弹、可释放记忆（C）；< 50 有伤害加成。
 var memory_value: float = 50.0
 
+## 当前记忆值（只读查询；修改走 add_memory / reduce_memory）。
+func get_memory() -> float:
+	return memory_value
+
 ## 火力值内部表示：0 = 1.00，300 = 4.00，每 1 单位 = 0.01。
 const MAX_POWER_RAW: int = 300
 ## 火力原始值 0..300（显示 = 1.00 + raw × 0.01）。

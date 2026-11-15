@@ -165,3 +165,23 @@ func test_bullets_service_refreshes_after_stage_binding():
 	ctx.stage = null
 	rt.free()
 	manager.free()
+
+
+# ═══ ctx.player 资源查询 ═══
+
+func test_player_memory_query() -> void:
+	var ctx := StageContext.new(null)
+	assert_eq(ctx.player.get_memory(), 0.0, "无自机时记忆值应为 0")
+
+	var stage := StageRuntime.new()
+	add_child_autofree(stage)
+	var holder := Node2D.new()
+	add_child_autofree(holder)
+	var p := StageHost.make_player(holder,
+		preload("res://scripts/debug/ghost_player.gd"), "Player",
+		preload("res://data/player_data/reimu_data.tres"))
+	p.resources.memory_value = 73.5
+	stage.entity_registry.bind_player(p)
+	ctx.stage = stage
+	assert_eq(p.resources.get_memory(), 73.5, "PlayerResources.get_memory 应读字段")
+	assert_eq(ctx.player.get_memory(), 73.5, "应读自机当前记忆值")

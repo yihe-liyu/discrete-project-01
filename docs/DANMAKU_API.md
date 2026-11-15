@@ -248,7 +248,7 @@ tl.loop()
 |---|---|
 | `ctx.clock` | `wait(sec)` / `wait_frames(n)` |
 | `ctx.bullets` | `shoot_spread` / `fire_*_laser` / `death_clear` / `shoot_bomb` / `clear_enemy_bullets` |
-| `ctx.player` | `get_player()` / `get_position()` |
+| `ctx.player` | `get_player()` / `get_position()` / `get_memory()` |
 | `ctx.boss` | `current()` / `exists()` |
 | `ctx.enemies` | `spawn(data)` / `despawn(enemy)` / `despawn_all()` / `despawn_clear(enemy)` |
 | `ctx.diff` | `picked()` / `pick(arr)` / `pick_from(dict, key, def)` / `at_least(n)` |
