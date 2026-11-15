@@ -68,7 +68,8 @@ func current_stage_script() -> CoroutineScript:
 	return _coroutine_script
 
 
-## 加载关卡：校验 → 重置资源（+ 关卡练习火力）→ 启动关卡脚本与背景协程 → stage_started。
+## 加载关卡：校验 → 启动关卡脚本与背景协程 → stage_started。
+## 自机资源由 GameScene 在开局 / 切面时处理；本方法不重置整局资源。
 ## 背景实例由 current_background 注入；非法数据 push_error 并拒绝启动。
 func load_stage(data: StageData) -> void:
 	if _is_stage_active:
@@ -80,11 +81,6 @@ func load_stage(data: StageData) -> void:
 		push_error("StageRuntime 配置错误: " + e)
 	if not errs.is_empty():
 		return
-
-	SaveData.reset_all(entity_registry)   # 注册表显式传入，不再读全局
-	# 关卡练习的起始火力：紧跟在复位之后（复位会把火力归 0；放别处会被这里冲掉）。
-	# 非关卡练习 / 第 1 面 ⇒ 空跑。
-	SaveData.apply_stage_practice_power(entity_registry)
 
 	current_stage = data
 	_is_stage_active = true
@@ -151,13 +147,19 @@ func _on_stage_finished() -> void:
 	if not current_stage:
 		return
 	_is_stage_active = false
-	stage_cleared.emit()
-	all_enemies_defeated.emit()
+	# 先结算高分：stage_cleared 的监听者（GameScene）会改 is_stage_practice /
+	# current_stage_id，放在 signal 之后会把「关卡练习」误记到 run 高分。
 	var score := 0
 	var res: PlayerResources = entity_registry.get_player_resources()
 	if res != null:
 		score = res.current_score
-	SaveData.save_high_score(current_stage.stage_id, score)
+	if SaveData.is_stage_practice:
+		SaveData.save_high_score(current_stage.stage_id, score)
+	elif not PracticeSession.is_practice_mode:
+		# 正常路线：高分按整条 run 的累计分算，HUD 读 key 0。
+		SaveData.save_high_score(0, score)
+	stage_cleared.emit()
+	all_enemies_defeated.emit()
 
 
 ## 从 EnemyData 生成敌人：实例化、挂行为协程、严格注入 params、入场景。

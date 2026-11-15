@@ -43,6 +43,16 @@ static var save_mgr := SaveManager.new()
 static var is_stage_practice: bool = false
 ## 重开中（暂停 / GameOver 选重开时置位；重开不结束练习）。
 static var is_restarting: bool = false
+## 路线切面时上一面的自机资源快照；normal route 的下一面恢复它。
+static var run_state: Dictionary = {}
+## true = 下一次 GameScene._ready 是路线切面（保留 run_state），不是新开一局。
+static var is_route_transition: bool = false
+
+## 跨面要继承的自机资源字段（全部 run 级状态）。
+const RUN_STATE_KEYS: Array[StringName] = [
+	&"current_score", &"max_point", &"graze_count", &"power_raw",
+	&"lives", &"life_fragments", &"bomb_count", &"bomb_fragments", &"memory_value",
+]
 
 
 # ═══ 启动装配 ═══
@@ -115,11 +125,39 @@ static func clear_player_data() -> void:
 ## 注册表由组合根显式传入；注册表存在但取不到资源时警告并空跑。
 static func reset_all(entity_registry: EntityRegistry) -> void:
 	PracticeSession.clear()
+	clear_run_state()
 	var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
 	if entity_registry != null and res == null:
 		push_warning("SaveData.reset_all: 注册表存在但取不到自机资源（Player 未绑定？）——重置空跑")
 	if res != null:
 		res.reset_all()
+
+
+## 保存上一面的自机资源快照，供路线切面恢复。
+static func capture_run_state(res: PlayerResources) -> void:
+	run_state.clear()
+	if res == null:
+		return
+	for key in RUN_STATE_KEYS:
+		run_state[key] = res.get(key)
+
+
+## 把快照写回新的 PlayerResources（新场景里的自机资源是新实例）。
+## 返回 false = 没有快照 / 资源为空（调用方应回退到 reset_all）。
+static func apply_run_state(res: PlayerResources) -> bool:
+	if res == null or run_state.is_empty():
+		return false
+	for key in RUN_STATE_KEYS:
+		if run_state.has(key):
+			res.set(key, run_state[key])
+	res.changed.emit()
+	return true
+
+
+## 清掉跨面快照与切面标志（新开一局 / 路线结束 / 重开）。
+static func clear_run_state() -> void:
+	run_state.clear()
+	is_route_transition = false
 
 
 ## 关卡练习的起始火力约定：第 1 面按正常 1.00 起步，其余面直接满火力（4.00）。
@@ -162,6 +200,7 @@ static func reset_practice(entity_registry: EntityRegistry) -> void:
 static func reset_session() -> void:
 	PracticeSession.clear()
 	reset_route_state()
+	clear_run_state()
 	is_restarting = false
 	is_stage_practice = false
 
@@ -171,6 +210,7 @@ static func reset_route_state() -> void:
 	current_route_id = &""
 	current_route_index = 0
 	current_stage_id = 1
+	clear_run_state()
 
 
 ## 当前路线资源；没有 = null。
@@ -189,6 +229,7 @@ static func begin_route_for_difficulty(difficulty: int) -> bool:
 	current_route_id = route.route_id
 	current_route_index = 0
 	current_stage_id = route.stages[0].stage_id
+	clear_run_state()
 	return true
 
 

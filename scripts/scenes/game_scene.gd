@@ -77,8 +77,15 @@ func _ready():
 		if PracticeSession.phase != null:
 			push_warning("GameScene: practice_phase 已设置但 is_practice_mode=false —— 练习标志被提前清除，误走普通关卡")
 		SaveData.is_restarting = false
-		_setup_player()          # 先绑定自机（reset_* 经注册表取同一 PlayerResources）
-		SaveData.reset_all(_stage_runtime.entity_registry)
+		var carry_run := SaveData.is_route_transition
+		SaveData.is_route_transition = false
+		_setup_player()          # 先绑定自机（资源恢复 / reset_* 经注册表取同一 PlayerResources）
+		if carry_run:
+			if not SaveData.apply_run_state(_stage_runtime.entity_registry.get_player_resources()):
+				SaveData.reset_all(_stage_runtime.entity_registry)
+		else:
+			SaveData.reset_all(_stage_runtime.entity_registry)
+			SaveData.apply_stage_practice_power(_stage_runtime.entity_registry)
 		_start_normal_game()
 
 
@@ -289,6 +296,11 @@ func _on_player_death():
 	# 这段窗口里可能已被击破/通关结算过（那时主菜单已经出来了）→ 不能再叠一个 Game Over
 	if _ending or not is_inside_tree():
 		return
+	# Game Over 也是一次 run 的结束：整条 run 的累计分同样要参与高分。
+	if not SaveData.is_stage_practice and not PracticeSession.is_practice_mode:
+		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+		if res != null:
+			SaveData.save_high_score(0, res.current_score)
 	_ending = true
 	var menu: Control = GAME_OVER_MENU.instantiate()
 	menu.title_text = "Game Over"
@@ -316,8 +328,11 @@ func _on_stage_cleared():
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 	elif not PracticeSession.is_practice_mode:
+		# 路线切面继承上一面的自机资源；高分由 StageRuntime 按整条 run 累计写入 key 0。
+		SaveData.capture_run_state(_stage_runtime.entity_registry.get_player_resources())
 		var next_stage := SaveData.advance_route()
 		if next_stage != null:
+			SaveData.is_route_transition = true
 			GameManager.reload_current_scene()
 		else:
 			# 路线结束 = 通关：回标题并复位会话（路线状态不会泄漏到下一局）

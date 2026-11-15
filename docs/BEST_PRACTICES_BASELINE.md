@@ -133,12 +133,15 @@
 |---|---|---|---|
 | `is_practice_mode` / `practice_*` | `SaveData` | `start_practice` | `reset_session` |
 | `current_stage_id` | `SaveData` | 默认 1；通关 +1（仅当下一关存在） | `reset_session` |
+| `run_state` / `is_route_transition` | `SaveData` | 通关切面时 `capture_run_state` + `is_route_transition = true` | `reset_session` / `reset_all` / 路线结束 |
 | `restarting` | `SaveData` | `pause_menu` / `game_over_menu` | `reset_session` |
 | `is_stage_practice` | `SaveData` | `stage_practice_menu` | `reset_session` |
 | `BulletManager.current` | 各自 | `_ready` | `_exit_tree` |
 | `AssetRegistry._bgm_cache` / `BossCatalog._cache` | 各自 | 懒加载 | 进程级缓存，无需清 |
 
-> 校验：`test/test_session_state.gd`；只复位布尔、留下载荷 = 脏状态（已修）。
+> 校验：`test/test_session_state.gd` + `test/test_run_state.gd`；只复位布尔、留下载荷 = 脏状态（已修）。
+> **正常路线切面**：自机资源（分数/擦弹/火力/残机/雷/碎片/记忆）全部继承；高分写 run key `0`。
+> **单关 / 符卡练习**：仍走 `reset_all` / `reset_practice`，高分按本面 `stage_id` 存。
 
 ## 踩坑铁律（只留高频）
 
