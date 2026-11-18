@@ -4,6 +4,7 @@ extends BasePage
 var _entries: Array[Dictionary] = []
 var _rows: Array[Label] = []
 var _selected: int = 0
+var _delete_armed: bool = false
 
 
 func on_enter() -> void:
@@ -23,6 +24,7 @@ func on_enter() -> void:
 func _show_replays() -> void:
 	_entries = ReplaySession.list_replays()
 	_selected = 0
+	_delete_armed = false
 	_rows.clear()
 	var old := get_node_or_null("ReplayBox")
 	if old:
@@ -40,6 +42,7 @@ func _show_replays() -> void:
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		empty.add_theme_font_size_override("font_size", 20)
 		box.add_child(empty)
+		_add_hint()
 		return
 	for i in _entries.size():
 		var e := _entries[i]
@@ -57,11 +60,59 @@ func _show_replays() -> void:
 		box.add_child(row)
 		_rows.append(row)
 	_refresh_selection()
+	_add_hint()
+
+
+func _add_hint() -> void:
+	var old := get_node_or_null("HintLabel")
+	if old:
+		old.name = "HintLabelOld"
+		old.queue_free()
+	var hint := Label.new()
+	hint.name = "HintLabel"
+	hint.position = Vector2(240, 800)
+	hint.size = Vector2(800, 80)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_font_size_override("font_size", 16)
+	if _delete_armed:
+		hint.text = "再按一次 Delete 确认删除"
+		hint.modulate = Color(1, 0.4, 0.4)
+	else:
+		hint.text = "↑↓ 选择 · Z/Enter 播放 · Delete 删除 · Esc 返回"
+	add_child(hint)
 
 
 func _refresh_selection() -> void:
 	for i in _rows.size():
-		_rows[i].modulate = Color.WHITE if i == _selected else Color(0.5, 0.5, 0.5)
+		if i == _selected:
+			_rows[i].modulate = Color(1, 0.4, 0.4) if _delete_armed else Color.WHITE
+		else:
+			_rows[i].modulate = Color(0.5, 0.5, 0.5)
+	if _delete_armed:
+		var old := get_node_or_null("HintLabel")
+		if old:
+			old.text = "再按一次 Delete 确认删除"
+			old.modulate = Color(1, 0.4, 0.4)
+
+
+func _delete_selected() -> void:
+	if _selected < 0 or _selected >= _entries.size():
+		return
+	if not _delete_armed:
+		_delete_armed = true
+		_refresh_selection()
+		return
+	var path := str(_entries[_selected].get("path", ""))
+	_delete_armed = false
+	if not ReplaySession.delete_replay(path):
+		push_warning("ReplayMenu: 删除回放失败 " + path)
+		_refresh_selection()
+		return
+	var keep := _selected
+	_show_replays()
+	if not _entries.is_empty():
+		_selected = mini(keep, _entries.size() - 1)
+		_refresh_selection()
 
 
 func _play_selected() -> void:
@@ -92,14 +143,22 @@ func _input(event: InputEvent) -> void:
 		return
 	if _entries.is_empty():
 		return
+	if event is InputEventKey and event.pressed and not event.echo \
+			and (event.keycode == KEY_DELETE or event.keycode == KEY_BACKSPACE):
+		get_viewport().set_input_as_handled()
+		_delete_selected()
+		return
 	if event.is_action_pressed("ui_up"):
 		get_viewport().set_input_as_handled()
+		_delete_armed = false
 		_selected = wrapi(_selected - 1, 0, _rows.size())
 		_refresh_selection()
 	elif event.is_action_pressed("ui_down"):
 		get_viewport().set_input_as_handled()
+		_delete_armed = false
 		_selected = wrapi(_selected + 1, 0, _rows.size())
 		_refresh_selection()
 	elif event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()
+		_delete_armed = false
 		_play_selected()

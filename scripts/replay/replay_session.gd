@@ -311,6 +311,15 @@ static func stop_playback() -> void:
 	_recorder = null
 
 
+## 删除一份已存回放；只允许删 user://replays 下的文件。
+static func delete_replay(path: String) -> bool:
+	if not path.begins_with(DIR + "/"):
+		push_warning("ReplaySession.delete_replay: 拒绝删除目录外文件 " + path)
+		return false
+	var absolute_path := ProjectSettings.globalize_path(path)
+	return DirAccess.remove_absolute(absolute_path) == OK
+
+
 ## 放弃当前录制（新开一局 / 拆场景且不保存）。
 static func cancel_run() -> void:
 	if _recorder != null:

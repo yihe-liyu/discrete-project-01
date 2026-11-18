@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：108 脚本 / **755 用例（753 通过 / 2 红：BossRegistry WIP + BGM）/ 6129 断言 / 52.2s** / 0 orphans / **0 pending**。
+**现状**：108 脚本 / **756 用例（754 通过 / 2 红：BossRegistry WIP + BGM）/ 6133 断言 / 52.2s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 55 | 443 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 55 | 444 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 17 | 117 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,7 +93,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（55 / 443）
+## C · 宿主 · 运行时系统（55 / 444）
 
 ### C1 组合根 / 服务 / 时间线（17 / 76）
 
@@ -170,12 +170,12 @@
 | [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类 | 5 | 0 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
-### C7 存档 / 回放 / 随机（7 / 42）
+### C7 存档 / 回放 / 随机（7 / 43）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_replay_recorder](../test/test_replay_recorder.gd) | `ReplayRecorder` 录输入基础设施 + metadata / 离散事件 / 状态采样往返 | 7 | 0 |
-| [test_replay_session](../test/test_replay_session.gd) | `ReplaySession`：录制落盘 / 列表可见 / 切面 reload 不重置；回放恢复 seed、路线、输入掩码与 bomb 事件；定格期 `_process`/`_physics_process` 仍运行；bomb 严格按录制帧消费，不提前抢跑 | 8 | 0 |
+| [test_replay_session](../test/test_replay_session.gd) | `ReplaySession`：录制落盘 / 列表可见 / 切面 reload 不重置；回放恢复 seed、路线、输入掩码与 bomb 事件；定格期 `_process`/`_physics_process` 仍运行；bomb 严格按录制帧消费；回放删除只允许目录内 | 9 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 + **表现随机流不消耗 gameplay RNG** | 7 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |

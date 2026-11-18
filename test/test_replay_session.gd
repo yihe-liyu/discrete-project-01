@@ -127,3 +127,14 @@ func test_far_future_bomb_is_not_consumed_early() -> void:
 	assert_eq(ReplaySession.poll_events(), [], "未来 bomb 不能提前消费")
 	ReplaySession.stop_playback()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_delete_replay_only_in_replay_dir() -> void:
+	var path := ReplaySession.DIR + "/test_delete_me.json"
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	assert_not_null(f)
+	if f != null:
+		f.store_string("{}")
+	assert_true(ReplaySession.delete_replay(path), "应能删除回放目录内文件")
+	assert_false(FileAccess.file_exists(path))
+	assert_false(ReplaySession.delete_replay("/tmp/not_a_replay.json"), "目录外文件必须拒绝")
