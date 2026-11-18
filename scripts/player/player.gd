@@ -137,7 +137,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _poll_replay_events() -> void:
 	if not ReplaySession.is_playing():
 		return
-	for action in ReplaySession.poll_events():
+	for action in ReplaySession.poll_events(true):
 		match action:
 			&"memory_release":
 				_memory_release()
@@ -154,7 +154,11 @@ func _poll_replay_events() -> void:
 
 
 func _process(_delta: float) -> void:
-	if ReplaySession.is_playing() and Engine.time_scale <= 0.0:
+	if not ReplaySession.is_playing():
+		return
+	if _is_deathbombing and ReplaySession.take_event(&"deathbomb_end_miss"):
+		_end_deathbomb(false)
+	if Engine.time_scale <= 0.0:
 		_poll_replay_events()
 
 ## 注入/切换机体：应用数值 + (重)装配射击。同数据且已装配 → 跳过（幂等，避免组合根重复初始化）。
