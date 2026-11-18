@@ -322,7 +322,7 @@ func _fire_bomb(bomb_data: BombData) -> void:
 	# Bomb 期间短暂无敌
 	is_invincible = true
 	_invincible_timer = bomb_data.invincible_time
-	var base_hue := RNG.randf()
+	var base_hue := RNG.fx_randf()
 	var tween := create_tween()
 	# 回放确定性：bomb 编队按时序推进，不走渲染帧。
 	tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)

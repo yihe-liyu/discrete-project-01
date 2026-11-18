@@ -59,3 +59,12 @@ func test_snapshot_restore_state():
 	var next: float = rng.randf()
 	rng.restore_state(snapshot)
 	assert_eq(rng.randf(), next, "快照恢复后应回到同一 RNG 状态")
+
+
+func test_fx_random_does_not_touch_gameplay_state() -> void:
+	var rng = _make_rng(42)
+	var before: Dictionary = rng.snapshot_state()
+	for i in 20:
+		rng.fx_randf()
+		rng.fx_randf_range(-1.0, 1.0)
+	assert_eq(rng.snapshot_state(), before, "表现随机流不应消耗 gameplay RNG")

@@ -75,7 +75,7 @@ func spawn(layer_name: String, pos: Vector3, tex_scale: Vector2, follow: Backgro
 	if not g: return
 	var sz := tex_scale
 	if sz == Vector2.ZERO:
-		sz = Vector2(RNG.randf_range(g.layer.size_min.x, g.layer.size_max.x), RNG.randf_range(g.layer.size_min.y, g.layer.size_max.y))
+		sz = Vector2(RNG.fx_randf_range(g.layer.size_min.x, g.layer.size_max.x), RNG.fx_randf_range(g.layer.size_min.y, g.layer.size_max.y))
 	_alloc_slot(g, pos - g.scroll_offset, sz, follow, lifetime)
 
 
@@ -89,8 +89,8 @@ func batch_spawn(layer_name: String, count: int, x_range: Vector2, z_range: Vect
 	var s_min := layer.size_min
 	var s_max := layer.size_max
 	for _i in count:
-		var tex_scale := Vector2(RNG.randf_range(s_min.x, s_max.x), RNG.randf_range(s_min.y, s_max.y))
-		var pos := Vector3(RNG.randf_range(x_range.x, x_range.y), tex_scale.y / 2.0 + RNG.randf_range(-y_var, y_var), RNG.randf_range(band.x, band.y))
+		var tex_scale := Vector2(RNG.fx_randf_range(s_min.x, s_max.x), RNG.fx_randf_range(s_min.y, s_max.y))
+		var pos := Vector3(RNG.fx_randf_range(x_range.x, x_range.y), tex_scale.y / 2.0 + RNG.fx_randf_range(-y_var, y_var), RNG.fx_randf_range(band.x, band.y))
 		_alloc_slot(g, pos - g.scroll_offset, tex_scale, follow, lifetime)
 
 ## 清空该层所有实例与滚动偏移。

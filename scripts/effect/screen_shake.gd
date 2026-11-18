@@ -55,7 +55,7 @@ func _process(p_delta: float) -> void:
 		_sync_layers(Vector2.ZERO)
 		return
 	# mag²：弱震更细、强震更猛
-	offset = Vector2(RNG.randf_range(-1.0, 1.0), RNG.randf_range(-1.0, 1.0)) * MAX_OFFSET * mag * mag
+	offset = Vector2(RNG.fx_randf_range(-1.0, 1.0), RNG.fx_randf_range(-1.0, 1.0)) * MAX_OFFSET * mag * mag
 	# Camera2D.offset 让 World 反向位移；层 offset 取负号，让绑定的背景与 World 同向。
 	_sync_layers(-offset)
 
