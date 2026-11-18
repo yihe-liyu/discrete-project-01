@@ -64,6 +64,23 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 	})
 
 
+## 回放帧开始：把 gameplay RNG 恢复到录制时的状态。
+## 表现 RNG 已分离；这里保证掉落 / 擦弹等 gameplay 随机逐帧一致。
+static func sync_rng_for_frame() -> void:
+	if not _playing or _samples.is_empty():
+		return
+	var idx := _frame_index - 1
+	if idx < 0 or idx >= _samples.size():
+		return
+	var sample: Dictionary = _samples[idx]
+	if not sample.has("seed") or not sample.has("state"):
+		return
+	RNG.restore_state({
+		"seed": int(str(sample.get("seed", "0"))),
+		"state": int(str(sample.get("state", "0"))),
+	})
+
+
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
 static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():

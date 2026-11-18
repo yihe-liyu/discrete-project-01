@@ -117,6 +117,7 @@ func _physics_process(_delta: float) -> void:
 			_finish_playback()
 			return
 		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+		ReplaySession.sync_rng_for_frame()
 		if _stage_runtime.player != null:
 			ReplaySession.check_sample(_stage_runtime.player.global_position, res,
 				_bullet_manager.active_count(), _bullet_manager.bullet_signature())
