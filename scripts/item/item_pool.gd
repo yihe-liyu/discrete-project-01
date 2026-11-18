@@ -41,6 +41,25 @@ func spawn(pos: Vector2, type: int) -> Item:
 	return item
 
 
+## 当前场上可见道具的状态指纹（位置 + 类型）；回放 trace 用。
+func item_signature() -> int:
+	var h := 0
+	for child in get_children():
+		if child is Item and child.visible:
+			h = (h * 31 + hash(child.global_position)) & 0x7fffffff
+			h = (h * 31 + int(child.item_type)) & 0x7fffffff
+	return h
+
+
+## 场上可见道具数量。
+func visible_count() -> int:
+	var n := 0
+	for child in get_children():
+		if child is Item and child.visible:
+			n += 1
+	return n
+
+
 ## 回收 Item：隐藏 / 停物理，池未满回池，否则 queue_free；已在池中忽略。
 func recycle(item: Item) -> void:
 	if not is_instance_valid(item):
