@@ -48,7 +48,7 @@ static func capture_event(action: StringName) -> void:
 
 
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
-static func capture_sample(pos: Vector2, res: PlayerResources) -> void:
+static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0) -> void:
 	if not _active or _recorder == null:
 		return
 	var rng := RNG.snapshot_state()
@@ -59,11 +59,13 @@ static func capture_sample(pos: Vector2, res: PlayerResources) -> void:
 		"score": res.current_score if res != null else 0,
 		"lives": res.lives if res != null else 0,
 		"bombs": res.bomb_count if res != null else 0,
+		"bullets": bullets,
+		"bhash": bhash,
 	})
 
 
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
-static func check_sample(pos: Vector2, res: PlayerResources) -> void:
+static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():
 		return
 	var idx := _frame_index - 1
@@ -88,6 +90,10 @@ static func check_sample(pos: Vector2, res: PlayerResources) -> void:
 		mismatch.append("lives")
 	if (res.bomb_count if res != null else 0) != int(expected.get("bombs", 0)):
 		mismatch.append("bombs")
+	if expected.has("bullets") and bullets != int(expected.get("bullets", 0)):
+		mismatch.append("bullets")
+	if expected.has("bhash") and bhash != int(expected.get("bhash", 0)):
+		mismatch.append("bhash")
 	if not mismatch.is_empty():
 		_trace_diverged = true
 		push_warning("Replay 分歧 frame=%d: %s" % [idx, ", ".join(mismatch)])

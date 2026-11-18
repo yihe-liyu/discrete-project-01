@@ -118,12 +118,14 @@ func _physics_process(_delta: float) -> void:
 			return
 		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 		if _stage_runtime.player != null:
-			ReplaySession.check_sample(_stage_runtime.player.global_position, res)
+			ReplaySession.check_sample(_stage_runtime.player.global_position, res,
+				_bullet_manager.active_count(), _bullet_manager.bullet_signature())
 		return
 	ReplaySession.capture_frame()
 	var sample_res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 	if _stage_runtime.player != null:
-		ReplaySession.capture_sample(_stage_runtime.player.global_position, sample_res)
+		ReplaySession.capture_sample(_stage_runtime.player.global_position, sample_res,
+			_bullet_manager.active_count(), _bullet_manager.bullet_signature())
 
 
 func _start_practice_game() -> void:

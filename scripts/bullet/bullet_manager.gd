@@ -88,6 +88,20 @@ func active_count() -> int:
 	return _kernel_bullet_host.system.get_active_count() if _kernel_bullet_host != null else 0
 
 
+## 当前弹幕状态指纹（位置 + 类型 + 数量）；回放 trace 定位弹幕分歧用。
+func bullet_signature() -> int:
+	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
+		return 0
+	var positions := _kernel_bullet_host.system.get_positions()
+	var types := _kernel_bullet_host.system.get_type_indices()
+	var h: int = positions.size()
+	for i in positions.size():
+		h = (h * 31 + hash(positions[i])) & 0x7fffffff
+		if i < types.size():
+			h = (h * 31 + int(types[i])) & 0x7fffffff
+	return h
+
+
 ## 子弹协程共享 ctx（由 WorldClock 驱动，宿主绑定的 stage 经 [method inject_stage_runtime] 注入）。
 func get_bullet_ctx() -> StageContext:
 	return _stage_context
