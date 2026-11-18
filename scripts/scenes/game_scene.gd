@@ -111,8 +111,6 @@ func _start_normal_game() -> void:
 func _physics_process(_delta: float) -> void:
 	if _ending:
 		return
-	if ReplaySession.is_playing() and ReplaySession.is_playback_paused():
-		return
 	if ReplaySession.is_playing():
 		if not ReplaySession.advance_frame():
 			_ending = true

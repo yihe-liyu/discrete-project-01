@@ -32,14 +32,14 @@ var _portrait_map: Dictionary = {}  # char_name → {node, profile}
 var _cancel_held: float = 0.0
 var _is_input_ready: bool = false
 var _is_closing: bool = false
-## >0 = 回放模式自动推进（秒/句）；0 = 等玩家按键。
-var _auto_advance_interval: float = 0.0
-var _auto_advance_timer: float = 0.0
+## 回放里用射击键的上升沿推进（shoot 已在 ReplayRecorder.ACTIONS 里）。
+var _replay_shoot_was_down: bool = false
 
 # ═══ 生命周期 ═══
 
 func _ready() -> void:
 	visible = false
+	_replay_shoot_was_down = false
 	_root.modulate.a = 0.0
 	_fit_to_viewport()
 	get_viewport().size_changed.connect(_fit_to_viewport)
@@ -103,11 +103,6 @@ func _fit_to_viewport() -> void:
 	_root.position = (target - DESIGN_SIZE * fit) * 0.5
 
 
-func set_auto_advance(interval: float) -> void:
-	_auto_advance_interval = maxf(interval, 0.0)
-	_auto_advance_timer = 0.0
-
-
 func _process(delta: float) -> void:
 	if _is_closing or not _dialogue_runner:
 		return
@@ -119,12 +114,12 @@ func _process(delta: float) -> void:
 	_dialogue_runner.tick(delta)
 	if not _is_input_ready:
 		return
-	if _auto_advance_interval > 0.0:
-		_auto_advance_timer += delta
-		if _auto_advance_timer >= _auto_advance_interval:
-			_auto_advance_timer = 0.0
+	# 回放没有 UI 事件：用录制里的射击键上升沿推进。正常游戏走下面的 _input。
+	if ReplaySession.is_playing():
+		var shoot_down := PlayerInput.is_action_pressed("shoot")
+		if shoot_down and not _replay_shoot_was_down:
 			_advance()
-			return
+		_replay_shoot_was_down = shoot_down
 	# 长按取消 → 关闭对话
 	if Input.is_action_pressed("ui_cancel"):
 		_cancel_held += delta
@@ -144,7 +139,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		_cancel_held = 0.0
 
-	if event.is_action_pressed("ui_accept"):
+	if event.is_action_pressed("shoot"):
 		get_viewport().set_input_as_handled()
 		_advance()
 
