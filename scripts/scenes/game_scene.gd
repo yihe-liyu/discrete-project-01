@@ -13,6 +13,8 @@ var _current_boss: Boss
 ## 而结算菜单挂在 autoload 的菜单栈上（切场景后仍在）——不加闸门就会「主菜单 + Game Over」叠一起。
 ## 规则：谁先到谁生效，其余一律放弃。
 var _ending: bool = false
+## 路线切面的场景 reload 不取消录制；普通退出 / 重开才取消。
+var _continuing_replay: bool = false
 ## 符卡练习的 SE 额外压低（dB）。当前 0.0 = 关闭 ——
 ## 真凶已修（[code]lc.sfx()[/code] 的 db 默认 0.0 = 满音量，比正常大 15 dB），所以这条补偿先撤掉。
 ## 若还是嫌大，从这里往负调（-3 → -6 → -9）；旋钮保留着，改一个数即可。
@@ -87,6 +89,8 @@ func _ready():
 		else:
 			SaveData.reset_all(_stage_runtime.entity_registry)
 			SaveData.apply_stage_practice_power(_stage_runtime.entity_registry)
+		if not SaveData.is_stage_practice:
+			ReplaySession.start_run()
 		_start_normal_game()
 
 
@@ -102,6 +106,12 @@ func _start_normal_game() -> void:
 		return
 	_load_background(data.background_scene)
 	_stage_runtime.load_stage(data)
+
+
+func _physics_process(_delta: float) -> void:
+	if _ending:
+		return
+	ReplaySession.capture_frame()
 
 
 func _start_practice_game() -> void:
@@ -163,6 +173,8 @@ func _load_background(scene: PackedScene) -> void:
 
 
 func _exit_tree():
+	if not _continuing_replay:
+		ReplaySession.cancel_run()
 	# 断开 autoload 信号连接（防悬空连接：接收者 free 后连接仍在发出者）
 	if GameEvents.player_death.is_connected(_on_player_death):
 		GameEvents.player_death.disconnect(_on_player_death)
@@ -302,6 +314,7 @@ func _on_player_death():
 		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 		if res != null:
 			SaveData.save_high_score(0, res.current_score)
+	ReplaySession.finish_run(_replay_meta("game_over"))
 	_ending = true
 	var menu: Control = GAME_OVER_MENU.instantiate()
 	menu.title_text = "Game Over"
@@ -363,11 +376,27 @@ func _on_stage_result_action(result: Dictionary, menu: BasePage) -> void:
 		SaveData.capture_run_state(_stage_runtime.entity_registry.get_player_resources())
 		var next_stage := SaveData.advance_route()
 		if next_stage != null:
+			_continuing_replay = true
 			SaveData.is_route_transition = true
 			GameManager.reload_current_scene()
 			return
+	ReplaySession.finish_run(_replay_meta("cleared"))
 	SaveData.reset_session()
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+
+
+func _replay_meta(result: String) -> Dictionary:
+	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	return {
+		"result": result,
+		"difficulty": SaveData.selected_difficulty,
+		"character": SaveData.selected_character,
+		"route_id": String(SaveData.current_route_id),
+		"stage_id": SaveData.current_stage_id,
+		"stage_no": SaveData.current_route_index + 1,
+		"score": res.current_score if res != null else 0,
+		"recorded_at": Time.get_datetime_string_from_system(),
+	}
 
 
 func _on_practice_cleared(_boss: Node) -> void:

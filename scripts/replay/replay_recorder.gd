@@ -17,6 +17,8 @@ var rng_seed: int = 0
 var recording := false
 ## 已录帧数
 var duration_frames := 0
+## 回放元数据（关卡 / 难度 / 角色 / 分数等；由录制方填写）
+var metadata: Dictionary = {}
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
@@ -65,6 +67,7 @@ func to_dict() -> Dictionary:
 		"seed": str(rng_seed),  # 字符串防 JSON int64 精度丢失（种子决定可复现性！）
 		"duration": duration_frames,
 		"frames_hex": frames.hex_encode(),
+		"metadata": metadata,
 	}
 
 
@@ -87,6 +90,9 @@ func load_dict(data: Dictionary) -> bool:
 	frames = (data.get("frames_hex", "") as String).hex_decode()
 	if frames.size() != duration_frames:
 		return false
+	metadata = data.get("metadata", {})
+	if metadata is not Dictionary:
+		metadata = {}
 	return true
 
 

@@ -56,6 +56,7 @@ func test_save_load_roundtrip():
 	rec.capture()
 	rec.capture()
 	rec.stop()
+	rec.metadata = {"difficulty": 2, "character": 1, "score": 1234}
 	var path := "user://test_replay.json"
 	assert_true(rec.save(path), "应能存盘")
 	var rec2 := ReplayRecorder.new()
@@ -63,6 +64,9 @@ func test_save_load_roundtrip():
 	assert_eq(rec2.rng_seed, rec.rng_seed, "种子应一致")
 	assert_eq(rec2.duration_frames, rec.duration_frames, "帧数应一致")
 	assert_eq(rec2.frames, rec.frames, "帧数据应一致")
+	assert_eq(int(rec2.metadata.get("difficulty", -1)), 2, "难度元数据应一致")
+	assert_eq(int(rec2.metadata.get("character", -1)), 1, "角色元数据应一致")
+	assert_eq(int(rec2.metadata.get("score", -1)), 1234, "分数字段应一致")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func test_load_rejects_bad_version():
