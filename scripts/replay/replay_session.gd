@@ -17,6 +17,8 @@ static var _frame_index: int = 0
 static var _mask: int = 0
 static var _events: Array[Dictionary] = []
 static var _event_index: int = 0
+static var _samples: Array[Dictionary] = []
+static var _trace_diverged: bool = false
 
 
 static func is_recording() -> bool:
@@ -43,6 +45,52 @@ static func capture_frame() -> void:
 static func capture_event(action: StringName) -> void:
 	if _active and _recorder != null:
 		_recorder.capture_event(action)
+
+
+## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
+static func capture_sample(pos: Vector2, res: PlayerResources) -> void:
+	if not _active or _recorder == null:
+		return
+	var rng := RNG.snapshot_state()
+	_recorder.capture_sample({
+		"p": [pos.x, pos.y],
+		"seed": str(rng.get("seed", 0)),
+		"state": str(rng.get("state", 0)),
+		"score": res.current_score if res != null else 0,
+		"lives": res.lives if res != null else 0,
+		"bombs": res.bomb_count if res != null else 0,
+	})
+
+
+## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
+static func check_sample(pos: Vector2, res: PlayerResources) -> void:
+	if not _playing or _trace_diverged or _samples.is_empty():
+		return
+	var idx := _frame_index - 1
+	if idx < 0 or idx >= _samples.size():
+		return
+	var expected: Dictionary = _samples[idx]
+	var p: Array = expected.get("p", [])
+	if p.size() != 2:
+		return
+	var ep := Vector2(float(p[0]), float(p[1]))
+	var rng := RNG.snapshot_state()
+	var mismatch := []
+	if pos.distance_to(ep) > 0.01:
+		mismatch.append("pos %s != %s" % [pos, ep])
+	if str(rng.get("seed", 0)) != str(expected.get("seed", "")):
+		mismatch.append("rng_seed")
+	if str(rng.get("state", 0)) != str(expected.get("state", "")):
+		mismatch.append("rng_state")
+	if (res.current_score if res != null else 0) != int(expected.get("score", 0)):
+		mismatch.append("score")
+	if (res.lives if res != null else 0) != int(expected.get("lives", 0)):
+		mismatch.append("lives")
+	if (res.bomb_count if res != null else 0) != int(expected.get("bombs", 0)):
+		mismatch.append("bombs")
+	if not mismatch.is_empty():
+		_trace_diverged = true
+		push_warning("Replay 分歧 frame=%d: %s" % [idx, ", ".join(mismatch)])
 
 
 ## 结束并落盘；meta 为空时仍写一份只有输入/种子的录制。
@@ -88,6 +136,8 @@ static func start_playback(path: String) -> bool:
 	_mask = 0
 	_events = rec.events.duplicate(true)
 	_event_index = 0
+	_samples = rec.samples.duplicate(true)
+	_trace_diverged = false
 	_playing = true
 	return true
 
@@ -142,6 +192,8 @@ static func stop_playback() -> void:
 	_mask = 0
 	_events.clear()
 	_event_index = 0
+	_samples.clear()
+	_trace_diverged = false
 	_recorder = null
 
 

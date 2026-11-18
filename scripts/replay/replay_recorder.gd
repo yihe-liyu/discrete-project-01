@@ -22,12 +22,15 @@ var metadata: Dictionary = {}
 ## 离散输入事件（bomb / memory_release）：{frame, action}。
 ## 不能只靠每帧位掩码：deathbomb 定格期间物理帧停止，bomb 事件必须单独记。
 var events: Array[Dictionary] = []
+## 逐帧状态采样（位置 / RNG / 分数 / 残机 / 雷）；用于定位回放首个分歧。
+var samples: Array[Dictionary] = []
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
 func start() -> void:
 	frames = PackedByteArray()
 	events.clear()
+	samples.clear()
 	rng_seed = RNG.get_seed()
 	recording = true
 	duration_frames = 0
@@ -46,6 +49,13 @@ func capture_event(action: StringName) -> void:
 	if not recording:
 		return
 	events.append({"frame": duration_frames, "action": String(action)})
+
+
+## 记录一帧状态采样（与 frames 同序）。
+func capture_sample(sample: Dictionary) -> void:
+	if not recording:
+		return
+	samples.append(sample.duplicate(true))
 
 
 ## 停止录制
@@ -80,6 +90,7 @@ func to_dict() -> Dictionary:
 		"frames_hex": frames.hex_encode(),
 		"metadata": metadata,
 		"events": events,
+		"samples": samples,
 	}
 
 
@@ -111,6 +122,12 @@ func load_dict(data: Dictionary) -> bool:
 		for e in raw_events:
 			if e is Dictionary:
 				events.append(e.duplicate(true))
+	samples.clear()
+	var raw_samples = data.get("samples", [])
+	if raw_samples is Array:
+		for sample in raw_samples:
+			if sample is Dictionary:
+				samples.append(sample.duplicate(true))
 	return true
 
 

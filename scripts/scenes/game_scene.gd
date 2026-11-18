@@ -115,8 +115,15 @@ func _physics_process(_delta: float) -> void:
 		if not ReplaySession.advance_frame():
 			_ending = true
 			_finish_playback()
+			return
+		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+		if _stage_runtime.player != null:
+			ReplaySession.check_sample(_stage_runtime.player.global_position, res)
 		return
 	ReplaySession.capture_frame()
+	var sample_res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	if _stage_runtime.player != null:
+		ReplaySession.capture_sample(_stage_runtime.player.global_position, sample_res)
 
 
 func _start_practice_game() -> void:
