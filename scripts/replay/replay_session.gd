@@ -56,7 +56,7 @@ static func capture_score(amount: int, source: StringName) -> void:
 
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
 static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
-		items: int = 0, ihash: int = 0, bsnap: Array = []) -> void:
+		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0) -> void:
 	if not _active or _recorder == null:
 		return
 	var rng := RNG.snapshot_state()
@@ -72,6 +72,7 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 		"items": items,
 		"ihash": ihash,
 		"bsnap": bsnap,
+		"graze": graze,
 	})
 
 
@@ -94,7 +95,7 @@ static func sync_rng_for_frame() -> void:
 
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
 static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
-		items: int = 0, ihash: int = 0, bsnap: Array = []) -> void:
+		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():
 		return
 	var idx := _frame_index - 1
@@ -113,6 +114,8 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 		mismatch.append("rng_seed")
 	if str(rng.get("state", 0)) != str(expected.get("state", "")):
 		mismatch.append("rng_state")
+	if expected.has("graze") and graze != int(expected.get("graze", 0)):
+		mismatch.append("graze")
 	if (res.current_score if res != null else 0) != int(expected.get("score", 0)):
 		mismatch.append("score[%s]" % _score_events_near(idx))
 	if (res.lives if res != null else 0) != int(expected.get("lives", 0)):
@@ -144,8 +147,19 @@ static func _score_events_near(frame: int) -> String:
 static func _first_bullet_diff(current: Array, expected: Array) -> String:
 	var n := mini(current.size(), expected.size())
 	for i in n:
-		if current[i] != expected[i]:
-			return "i=%d cur=%s exp=%s" % [i, current[i], expected[i]]
+		var a: Array = current[i]
+		var b: Array = expected[i]
+		if a.size() != b.size():
+			return "i=%d shape" % i
+		var bad := false
+		for j in a.size():
+			if j == 1 or j == 2:
+				if absf(float(a[j]) - float(b[j])) > 0.001:
+					bad = true
+			elif int(a[j]) != int(b[j]):
+				bad = true
+		if bad:
+			return "i=%d cur=%s exp=%s" % [i, a, b]
 	if current.size() != expected.size():
 		return "len %d vs %d" % [current.size(), expected.size()]
 	return "order/hash"

@@ -96,7 +96,7 @@ func bullet_snapshot() -> Array:
 	var system = _kernel_bullet_host.system
 	for i in system.get_active_count():
 		var p: Vector2 = system.get_position(i)
-		out.append([system.get_uid(i), p.x, p.y, system.get_type_index(i)])
+		out.append([system.get_uid(i), p.x, p.y, system.get_type_index(i), int(system.is_grazed(i))])
 	return out
 
 
@@ -111,6 +111,7 @@ func bullet_signature() -> int:
 		h = (h * 31 + hash(positions[i])) & 0x7fffffff
 		if i < types.size():
 			h = (h * 31 + int(types[i])) & 0x7fffffff
+		h = (h * 31 + int(_kernel_bullet_host.system.is_grazed(i))) & 0x7fffffff
 	return h
 
 
