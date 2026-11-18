@@ -64,6 +64,8 @@ var _respawn_from: Vector2 = Vector2.ZERO
 var _respawn_elapsed: float = 0.0
 ## deathbomb 窗口开着（刚被弹、还没死，等玩家按 bomb）。
 var _is_deathbombing: bool = false
+## 定格期间是否由本窗口暂停了弹幕处理（退出时要恢复）。
+var _deathbomb_bullets_paused: bool = false
 ## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
 var _deathbomb_saved_time_scale: float = 1.0
 ## 无敌闪烁相位累加器（秒）。
@@ -100,6 +102,7 @@ func _exit_tree() -> void:
 	# 定格安全阀：被弹炸弹窗口没走完就出树（切场景 / 测试回收）也绝不能把 time_scale 留在 0
 	if _is_deathbombing:
 		_is_deathbombing = false
+		_resume_bullets_after_deathbomb()
 		_restore_time_scale()
 		GameEvents.deathbomb_ended.emit()
 	if GameEvents.enemy_killed.is_connected(_on_enemy_killed):
@@ -564,6 +567,11 @@ func _begin_deathbomb_window() -> bool:
 		return false
 	_is_deathbombing = true
 	ReplaySession.capture_event(&"deathbomb_start")
+	# time_scale=0 只把 delta 变 0，_physics_process 仍会跑；不暂停弹幕的话，
+	# 定格帧里仍会擦弹 / 清弹，正是回放 graze 分歧的来源。
+	if ctx != null and ctx.bullets != null and ctx.bullets.bullet_manager != null:
+		ctx.bullets.bullet_manager.pause_processing()
+		_deathbomb_bullets_paused = true
 	_deathbomb_saved_time_scale = Engine.time_scale
 	Engine.time_scale = 0.0
 	GameEvents.deathbomb_started.emit()
@@ -585,6 +593,7 @@ func _on_deathbomb_timeout() -> void:
 func _end_deathbomb(p_cancelled: bool) -> void:
 	_is_deathbombing = false
 	ReplaySession.capture_event(&"deathbomb_end_cancel" if p_cancelled else &"deathbomb_end_miss")
+	_resume_bullets_after_deathbomb()
 	_restore_time_scale()
 	GameEvents.deathbomb_ended.emit()
 	if p_cancelled:
@@ -606,6 +615,14 @@ func _cancel_miss_by_deathbomb() -> void:
 ## 解开定格：恢复开窗前的 time_scale（可能叠加在别的定格上）。
 func _restore_time_scale() -> void:
 	Engine.time_scale = _deathbomb_saved_time_scale
+
+
+func _resume_bullets_after_deathbomb() -> void:
+	if not _deathbomb_bullets_paused:
+		return
+	_deathbomb_bullets_paused = false
+	if ctx != null and ctx.bullets != null and ctx.bullets.bullet_manager != null:
+		ctx.bullets.bullet_manager.resume_processing()
 
 
 # ═══ 系统操作服务（统一走 ctx 服务；ctx 为 null 时跳过，不回退全局） ═══
