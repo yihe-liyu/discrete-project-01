@@ -56,7 +56,7 @@ static func capture_score(amount: int, source: StringName) -> void:
 
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
 static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
-		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0) -> void:
+		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = []) -> void:
 	if not _active or _recorder == null:
 		return
 	var rng := RNG.snapshot_state()
@@ -73,6 +73,7 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 		"ihash": ihash,
 		"bsnap": bsnap,
 		"graze": graze,
+		"isnap": isnap,
 	})
 
 
@@ -95,7 +96,7 @@ static func sync_rng_for_frame() -> void:
 
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
 static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
-		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0) -> void:
+		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = []) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():
 		return
 	var idx := _frame_index - 1
@@ -132,8 +133,11 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 		mismatch.append("bhash[%s]" % _first_bullet_diff(bsnap, expected.get("bsnap", [])))
 	if expected.has("items") and items != int(expected.get("items", 0)):
 		mismatch.append("items")
-	if expected.has("ihash") and ihash != int(expected.get("ihash", 0)):
-		mismatch.append("ihash")
+	var expected_ihash := int(expected.get("ihash", 0))
+	if expected.has("isnap"):
+		expected_ihash = _snapshot_hash(expected.get("isnap", []))
+	if expected.has("ihash") and ihash != expected_ihash:
+		mismatch.append("ihash[%s]" % _first_item_diff(isnap, expected.get("isnap", [])))
 	if not mismatch.is_empty():
 		_trace_diverged = true
 		push_warning("Replay 分歧 frame=%d: %s" % [idx, ", ".join(mismatch)])
@@ -149,6 +153,13 @@ static func _score_events_near(frame: int) -> String:
 
 
 static func _snapshot_hash(raw: Array) -> int:
+	# 注意：这是道具快照重算（[type,x,y]）；子弹哈希在 BulletManager 里。
+	if raw.size() > 0 and (raw[0] as Array).size() == 3:
+		var ih: int = 0
+		for e in raw:
+			ih = (ih * 31 + int(e[0])) & 0x7fffffff
+			ih = (ih * 31 + hash(Vector2(float(e[1]), float(e[2])))) & 0x7fffffff
+		return ih
 	var snap := _clean_snapshot(raw)
 	var h: int = snap.size()
 	for e in snap:
@@ -166,6 +177,28 @@ static func _clean_snapshot(raw: Array) -> Array:
 			snap.append(e)
 	snap.sort_custom(func(a: Array, b: Array) -> bool: return int(a[0]) < int(b[0]))
 	return snap
+
+
+static func _first_item_diff(current: Array, expected_raw: Array) -> String:
+	if expected_raw.is_empty():
+		return "no-snapshot"
+	var expected := expected_raw.duplicate(true)
+	expected.sort_custom(func(a: Array, b: Array) -> bool:
+		if int(a[0]) != int(b[0]): return int(a[0]) < int(b[0])
+		if not is_equal_approx(float(a[1]), float(b[1])): return float(a[1]) < float(b[1])
+		return float(a[2]) < float(b[2]))
+	var cur := current.duplicate(true)
+	cur.sort_custom(func(a: Array, b: Array) -> bool:
+		if int(a[0]) != int(b[0]): return int(a[0]) < int(b[0])
+		if not is_equal_approx(float(a[1]), float(b[1])): return float(a[1]) < float(b[1])
+		return float(a[2]) < float(b[2]))
+	var n := mini(cur.size(), expected.size())
+	for i in n:
+		if cur[i] != expected[i]:
+			return "i=%d cur=%s exp=%s" % [i, cur[i], expected[i]]
+	if cur.size() != expected.size():
+		return "len %d vs %d" % [cur.size(), expected.size()]
+	return "order/hash"
 
 
 static func _first_bullet_diff(current: Array, expected_raw: Array) -> String:

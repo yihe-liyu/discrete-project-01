@@ -122,7 +122,8 @@ func _physics_process(_delta: float) -> void:
 			ReplaySession.check_sample(_stage_runtime.player.global_position, res,
 				_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 				_item_pool.visible_count(), _item_pool.item_signature(),
-				_bullet_manager.bullet_snapshot(), res.graze_count if res != null else 0)
+				_bullet_manager.bullet_snapshot(), res.graze_count if res != null else 0,
+				_item_pool.item_snapshot())
 		return
 	ReplaySession.capture_frame()
 	var sample_res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
@@ -130,7 +131,8 @@ func _physics_process(_delta: float) -> void:
 		ReplaySession.capture_sample(_stage_runtime.player.global_position, sample_res,
 			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 			_item_pool.visible_count(), _item_pool.item_signature(),
-			_bullet_manager.bullet_snapshot(), sample_res.graze_count if sample_res != null else 0)
+			_bullet_manager.bullet_snapshot(), sample_res.graze_count if sample_res != null else 0,
+			_item_pool.item_snapshot())
 
 
 func _start_practice_game() -> void:

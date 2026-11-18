@@ -41,13 +41,27 @@ func spawn(pos: Vector2, type: int) -> Item:
 	return item
 
 
-## 当前场上可见道具的状态指纹（位置 + 类型）；回放 trace 用。
-func item_signature() -> int:
-	var h := 0
+## 当前场上可见道具 [type, x, y]；按类型/位置排序，避免回收顺序造成假差异。
+func item_snapshot() -> Array:
+	var out: Array = []
 	for child in get_children():
 		if child is Item and child.visible:
-			h = (h * 31 + hash(child.global_position)) & 0x7fffffff
-			h = (h * 31 + int(child.item_type)) & 0x7fffffff
+			out.append([int(child.item_type), child.global_position.x, child.global_position.y])
+	out.sort_custom(func(a: Array, b: Array) -> bool:
+		if int(a[0]) != int(b[0]):
+			return int(a[0]) < int(b[0])
+		if not is_equal_approx(float(a[1]), float(b[1])):
+			return float(a[1]) < float(b[1])
+		return float(a[2]) < float(b[2]))
+	return out
+
+
+## 当前场上可见道具的状态指纹（排序后的位置 + 类型）；回放 trace 用。
+func item_signature() -> int:
+	var h := 0
+	for e in item_snapshot():
+		h = (h * 31 + int(e[0])) & 0x7fffffff
+		h = (h * 31 + hash(Vector2(float(e[1]), float(e[2])))) & 0x7fffffff
 	return h
 
 
