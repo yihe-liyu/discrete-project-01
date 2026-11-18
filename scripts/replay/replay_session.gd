@@ -266,7 +266,7 @@ static func poll_events(defer_miss_timeout: bool = false) -> Array[StringName]:
 		var action := StringName(str(e.get("action", "")))
 		if int(e.get("frame", 0)) > _frame_index:
 			break
-		if defer_miss_timeout and action == &"deathbomb_end_miss":
+		if defer_miss_timeout and (action == &"deathbomb_end_miss" or action == &"memory_release"):
 			break
 		out.append(action)
 		_event_index += 1

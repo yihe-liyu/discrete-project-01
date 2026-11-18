@@ -156,6 +156,8 @@ func _poll_replay_events() -> void:
 func _process(_delta: float) -> void:
 	if not ReplaySession.is_playing():
 		return
+	if ReplaySession.take_event(&"memory_release"):
+		_memory_release()
 	if _is_deathbombing and ReplaySession.take_event(&"deathbomb_end_miss"):
 		_end_deathbomb(false)
 	if Engine.time_scale <= 0.0:
