@@ -3,6 +3,7 @@ class_name GameScene
 extends Node
 
 const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
+const STAGE_RESULT_MENU = preload("res://scenes/ui/stage_result_menu.tscn")
 
 var _blur_rect: ColorRect
 var _background_instance: Node  # StageBackground 或测试 Node3D
@@ -328,16 +329,45 @@ func _on_stage_cleared():
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 	elif not PracticeSession.is_practice_mode:
+		_show_stage_result()
+
+
+## 先展示结算，不提前推进路线；Continue 时才 capture + advance。
+func _show_stage_result() -> void:
+	var route := SaveData.current_route()
+	var has_next := route != null \
+		and SaveData.current_route_index + 1 < route.stages.size()
+	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	var stage := _stage_runtime.current_stage
+	var data := {
+		"has_next": has_next,
+		"stage_no": SaveData.current_route_index + 1,
+		"stage_name": stage.display_name if stage != null else "",
+		"score": res.current_score if res != null else 0,
+		"high_score": SaveData.get_high_score(0),
+		"graze": res.graze_count if res != null else 0,
+		"power": res.get_power_display() if res != null else "1.00",
+		"lives": res.lives if res != null else 0,
+		"bombs": res.bomb_count if res != null else 0,
+	}
+	var menu: StageResultMenu = STAGE_RESULT_MENU.instantiate() as StageResultMenu
+	menu.configure(data)
+	menu.finished.connect(_on_stage_result_action.bind(menu), CONNECT_ONE_SHOT)
+	GameManager.push_overlay_menu(menu)
+
+
+func _on_stage_result_action(result: Dictionary, menu: BasePage) -> void:
+	GameManager.pop_overlay_menu(menu)
+	if result.get("action") == "continue":
 		# 路线切面继承上一面的自机资源；高分由 StageRuntime 按整条 run 累计写入 key 0。
 		SaveData.capture_run_state(_stage_runtime.entity_registry.get_player_resources())
 		var next_stage := SaveData.advance_route()
 		if next_stage != null:
 			SaveData.is_route_transition = true
 			GameManager.reload_current_scene()
-		else:
-			# 路线结束 = 通关：回标题并复位会话（路线状态不会泄漏到下一局）
-			SaveData.reset_session()
-			GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+			return
+	SaveData.reset_session()
+	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 
 func _on_practice_cleared(_boss: Node) -> void:
