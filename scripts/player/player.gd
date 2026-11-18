@@ -577,8 +577,11 @@ func _begin_deathbomb_window() -> bool:
 	GameEvents.deathbomb_started.emit()
 	# 收尾用真实时间计时（process_always + ignore_time_scale）：定格 / 暂停中也照样到点，
 	# 否则窗口永远走不完，time_scale 卡在 0，暂停菜单会被一起冻住。
-	var timer := get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, true, false, true)
-	timer.timeout.connect(_on_deathbomb_timeout)
+	# 回放时不用真实时间 timer —— 录制里的 deathbomb_end_miss 事件才是权威帧；
+	# 否则 timer 可能比事件早一帧触发，直接结算 miss。
+	if not ReplaySession.is_playing():
+		var timer := get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, true, false, true)
+		timer.timeout.connect(_on_deathbomb_timeout)
 	return true
 
 
