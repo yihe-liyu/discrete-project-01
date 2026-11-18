@@ -49,7 +49,7 @@ static func capture_event(action: StringName) -> void:
 
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
 static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
-		items: int = 0, ihash: int = 0) -> void:
+		items: int = 0, ihash: int = 0, bsnap: Array = []) -> void:
 	if not _active or _recorder == null:
 		return
 	var rng := RNG.snapshot_state()
@@ -64,6 +64,7 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 		"bhash": bhash,
 		"items": items,
 		"ihash": ihash,
+		"bsnap": bsnap,
 	})
 
 
@@ -86,7 +87,7 @@ static func sync_rng_for_frame() -> void:
 
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
 static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
-		items: int = 0, ihash: int = 0) -> void:
+		items: int = 0, ihash: int = 0, bsnap: Array = []) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():
 		return
 	var idx := _frame_index - 1
@@ -114,7 +115,7 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 	if expected.has("bullets") and bullets != int(expected.get("bullets", 0)):
 		mismatch.append("bullets")
 	if expected.has("bhash") and bhash != int(expected.get("bhash", 0)):
-		mismatch.append("bhash")
+		mismatch.append("bhash[%s]" % _first_bullet_diff(bsnap, expected.get("bsnap", [])))
 	if expected.has("items") and items != int(expected.get("items", 0)):
 		mismatch.append("items")
 	if expected.has("ihash") and ihash != int(expected.get("ihash", 0)):
@@ -122,6 +123,16 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 	if not mismatch.is_empty():
 		_trace_diverged = true
 		push_warning("Replay 分歧 frame=%d: %s" % [idx, ", ".join(mismatch)])
+
+
+static func _first_bullet_diff(current: Array, expected: Array) -> String:
+	var n := mini(current.size(), expected.size())
+	for i in n:
+		if current[i] != expected[i]:
+			return "i=%d cur=%s exp=%s" % [i, current[i], expected[i]]
+	if current.size() != expected.size():
+		return "len %d vs %d" % [current.size(), expected.size()]
+	return "order/hash"
 
 
 ## 结束并落盘；meta 为空时仍写一份只有输入/种子的录制。

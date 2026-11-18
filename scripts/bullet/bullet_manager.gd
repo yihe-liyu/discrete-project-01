@@ -88,6 +88,18 @@ func active_count() -> int:
 	return _kernel_bullet_host.system.get_active_count() if _kernel_bullet_host != null else 0
 
 
+## 当前活跃弹的逐颗快照 [uid, x, y, type_index]；回放 trace 用。
+func bullet_snapshot() -> Array:
+	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
+		return []
+	var out: Array = []
+	var system = _kernel_bullet_host.system
+	for i in system.get_active_count():
+		var p: Vector2 = system.get_position(i)
+		out.append([system.get_uid(i), p.x, p.y, system.get_type_index(i)])
+	return out
+
+
 ## 当前弹幕状态指纹（位置 + 类型 + 数量）；回放 trace 定位弹幕分歧用。
 func bullet_signature() -> int:
 	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
