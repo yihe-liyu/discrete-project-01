@@ -137,10 +137,15 @@ func _poll_replay_events() -> void:
 		match action:
 			&"memory_release":
 				_memory_release()
-			&"cancel&bomb":
+			&"deathbomb_end_cancel":
 				if _is_deathbombing:
 					_end_deathbomb(true)
-				else:
+			&"deathbomb_end_miss":
+				if _is_deathbombing:
+					_end_deathbomb(false)
+			&"cancel&bomb":
+				# deathbomb 期间由录制的 end 事件决定关窗帧；普通 bomb 才直接放。
+				if not _is_deathbombing:
 					_bomb()
 
 
@@ -557,6 +562,7 @@ func _begin_deathbomb_window() -> bool:
 	if resources.bomb_count < DEATHBOMB_MIN_BOMBS:
 		return false
 	_is_deathbombing = true
+	ReplaySession.capture_event(&"deathbomb_start")
 	_deathbomb_saved_time_scale = Engine.time_scale
 	Engine.time_scale = 0.0
 	GameEvents.deathbomb_started.emit()
@@ -577,6 +583,7 @@ func _on_deathbomb_timeout() -> void:
 ## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
 func _end_deathbomb(p_cancelled: bool) -> void:
 	_is_deathbombing = false
+	ReplaySession.capture_event(&"deathbomb_end_cancel" if p_cancelled else &"deathbomb_end_miss")
 	_restore_time_scale()
 	GameEvents.deathbomb_ended.emit()
 	if p_cancelled:
