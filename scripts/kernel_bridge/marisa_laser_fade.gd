@@ -43,7 +43,7 @@ func on_laser_spawned() -> void:
 
 
 func _is_released() -> bool:
-	return not Input.is_action_pressed("shoot") or Input.is_action_pressed("focus")
+	return not PlayerInput.is_action_pressed("shoot") or PlayerInput.is_action_pressed("focus")
 
 
 func _despawn_lasers(system) -> void:

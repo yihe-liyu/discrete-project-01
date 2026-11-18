@@ -89,7 +89,7 @@ func _ready():
 		else:
 			SaveData.reset_all(_stage_runtime.entity_registry)
 			SaveData.apply_stage_practice_power(_stage_runtime.entity_registry)
-		if not SaveData.is_stage_practice:
+		if not SaveData.is_stage_practice and not ReplaySession.is_playing():
 			ReplaySession.start_run()
 		_start_normal_game()
 
@@ -110,6 +110,11 @@ func _start_normal_game() -> void:
 
 func _physics_process(_delta: float) -> void:
 	if _ending:
+		return
+	if ReplaySession.is_playing():
+		if not ReplaySession.advance_frame():
+			_ending = true
+			_finish_playback()
 		return
 	ReplaySession.capture_frame()
 
@@ -175,6 +180,7 @@ func _load_background(scene: PackedScene) -> void:
 func _exit_tree():
 	if not _continuing_replay:
 		ReplaySession.cancel_run()
+		ReplaySession.stop_playback()
 	# 断开 autoload 信号连接（防悬空连接：接收者 free 后连接仍在发出者）
 	if GameEvents.player_death.is_connected(_on_player_death):
 		GameEvents.player_death.disconnect(_on_player_death)
@@ -305,6 +311,10 @@ func _resolve_spell_background() -> PackedScene:
 func _on_player_death():
 	if _ending:
 		return
+	if ReplaySession.is_playing():
+		_ending = true
+		_finish_playback()
+		return
 	await get_tree().create_timer(GameConfig.DEATH_MENU_DELAY).timeout
 	# 这段窗口里可能已被击破/通关结算过（那时主菜单已经出来了）→ 不能再叠一个 Game Over
 	if _ending or not is_inside_tree():
@@ -338,6 +348,9 @@ func _on_stage_cleared():
 	if _ending:
 		return
 	_ending = true
+	if ReplaySession.is_playing():
+		_advance_playback_stage()
+		return
 	if SaveData.is_stage_practice:
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
@@ -382,6 +395,25 @@ func _on_stage_result_action(result: Dictionary, menu: BasePage) -> void:
 			return
 	ReplaySession.finish_run(_replay_meta("cleared"))
 	SaveData.reset_session()
+	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+
+
+func _advance_playback_stage() -> void:
+	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	SaveData.capture_run_state(res)
+	var next_stage := SaveData.advance_route()
+	if next_stage != null:
+		_continuing_replay = true
+		SaveData.is_route_transition = true
+		GameManager.reload_current_scene()
+		return
+	_finish_playback()
+
+
+func _finish_playback() -> void:
+	ReplaySession.stop_playback()
+	SaveData.reset_session()
+	GameManager.pending_page_path = "res://scenes/ui/replay_menu.tscn"
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 

@@ -6,6 +6,8 @@ func before_each() -> void:
 
 func after_each() -> void:
 	ReplaySession.cancel_run()
+	ReplaySession.stop_playback()
+	SaveData.reset_session()
 
 func test_finish_writes_file_and_lists_it() -> void:
 	assert_true(ReplaySession.start_run(), "首次 start_run 应开始录制")
@@ -35,3 +37,32 @@ func test_start_run_is_idempotent_while_recording() -> void:
 	assert_false(ReplaySession.start_run(), "切面 reload 不应重置正在录的局")
 	ReplaySession.cancel_run()
 	assert_false(ReplaySession.is_recording())
+
+
+func test_playback_loads_route_seed_and_input() -> void:
+	# 造一份可回放：seed + 一帧 shoot。
+	var rec := ReplayRecorder.new()
+	rec.start()
+	rec.frames = PackedByteArray([1 << ReplayRecorder.ACTIONS.find("shoot")])
+	rec.duration_frames = 1
+	rec.metadata = {"difficulty": 1, "character": 0}
+	var path := "user://test_replay_playback.json"
+	assert_true(rec.save(path))
+
+	assert_true(ReplaySession.start_playback(path), "应能进入回放")
+	assert_true(ReplaySession.is_playing())
+	assert_eq(SaveData.selected_difficulty, 1)
+	assert_eq(SaveData.current_stage_id, 1)
+	assert_eq(RNG.get_seed(), rec.rng_seed, "回放应恢复录制种子")
+	assert_true(ReplaySession.advance_frame(), "首帧应可推进")
+	assert_true(PlayerInput.is_action_pressed("shoot"), "回放输入应覆盖真实 Input")
+	assert_false(ReplaySession.advance_frame(), "帧用完后应结束")
+	assert_false(ReplaySession.is_playing())
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_replay_menu_builds_list() -> void:
+	var menu = load("res://scenes/ui/replay_menu.tscn").instantiate()
+	add_child_autofree(menu)
+	menu.on_enter()
+	assert_not_null(menu.get_node_or_null("ReplayBox"), "回放页应生成列表容器")

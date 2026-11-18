@@ -1,7 +1,8 @@
 ## ReplaySession —— 一局录制的跨场景持有者。
 ##
 ## 录制从正常路线开局开始，跨 stage reload 持续采样；只在 run 结束
-## （通关 Return / Game Over）落盘。回放播放不在本类：这里先解决“录得下来”。
+## （通关 Return / Game Over）落盘。同一类也持有回放文件、当前帧与输入掩码，
+## GameScene 每物理帧推进一帧；PlayerInput 在回放时读这里的掩码。
 class_name ReplaySession
 extends RefCounted
 
@@ -10,6 +11,11 @@ const DIR := "user://replays"
 static var _recorder: ReplayRecorder
 static var _active: bool = false
 
+static var _playing: bool = false
+static var _frames: PackedByteArray = PackedByteArray()
+static var _frame_index: int = 0
+static var _mask: int = 0
+
 
 static func is_recording() -> bool:
 	return _active
@@ -17,7 +23,7 @@ static func is_recording() -> bool:
 
 ## 开一局：清空并开始采样。已在录制中（切面 reload）则保持原录制。
 static func start_run() -> bool:
-	if _active:
+	if _active or _playing:
 		return false
 	_recorder = ReplayRecorder.new()
 	_recorder.start()
@@ -47,6 +53,68 @@ static func finish_run(meta: Dictionary = {}) -> String:
 		return ""
 	_recorder = null
 	return path
+
+
+## 从文件进入回放：装载 seed / 难度 / 角色 / 路线，再交给 GameScene 启动。
+static func start_playback(path: String) -> bool:
+	var rec := ReplayRecorder.new()
+	if not rec.load_file(path):
+		push_warning("ReplaySession: 无法加载回放 " + path)
+		return false
+	var meta := rec.metadata
+	var diff := int(meta.get("difficulty", 1))
+	if not Difficulty.is_valid(diff):
+		diff = 1
+	SaveData.reset_session()
+	SaveData.selected_difficulty = diff
+	SaveData.selected_character = int(meta.get("character", 0))
+	PracticeSession.finish()
+	SaveData.is_stage_practice = false
+	SaveData.is_restarting = false
+	if not SaveData.begin_route_for_difficulty(diff):
+		return false
+	RNG.set_seed(rec.rng_seed)
+	_recorder = rec
+	_frames = rec.frames
+	_frame_index = 0
+	_mask = 0
+	_playing = true
+	return true
+
+
+## 回放推进一帧；返回 false = 文件已放完。
+static func advance_frame() -> bool:
+	if not _playing:
+		return false
+	if _frame_index >= _frames.size():
+		_playing = false
+		return false
+	_mask = int(_frames[_frame_index])
+	_frame_index += 1
+	return true
+
+
+static func is_playing() -> bool:
+	return _playing
+
+
+static func action_pressed(action: StringName) -> bool:
+	var idx := ReplayRecorder.ACTIONS.find(action)
+	return idx >= 0 and (_mask & (1 << idx)) != 0
+
+
+static func axis(negative: StringName, positive: StringName) -> float:
+	var neg := 1.0 if action_pressed(negative) else 0.0
+	var pos := 1.0 if action_pressed(positive) else 0.0
+	return pos - neg
+
+
+static func stop_playback() -> void:
+	_playing = false
+	_frames = PackedByteArray()
+	_frame_index = 0
+	_mask = 0
+	_recorder = null
 
 
 ## 放弃当前录制（新开一局 / 拆场景且不保存）。

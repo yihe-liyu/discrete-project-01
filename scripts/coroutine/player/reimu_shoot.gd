@@ -44,7 +44,7 @@ func _main_shoot(_ctx: StageContext, player: Player) -> float:
 
 
 func _option_shoot(_ctx: StageContext, _count: int) -> float:
-	if Input.is_action_pressed("focus"):
+	if PlayerInput.is_action_pressed("focus"):
 		if _focus_bullet == null:
 			_focus_bullet = SpawnSpec.new().tex("reimu_opt2").blend(false).speed(5000).player()
 			_focus_bullet.color(Color(1, 1, 1, 0.5))

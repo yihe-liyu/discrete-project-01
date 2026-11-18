@@ -58,7 +58,7 @@ func _option_shoot(_ctx: StageContext, _options_count: int) -> float:
 # ── 通用实现 ──
 
 func _main_step(_ctx: StageContext) -> Variant:
-	if not Input.is_action_pressed("shoot"):
+	if not PlayerInput.is_action_pressed("shoot"):
 		return true
 	var player: Player = ctx.player.get_player()
 	if not is_instance_valid(player):
@@ -69,7 +69,7 @@ func _main_step(_ctx: StageContext) -> Variant:
 
 
 func _option_step(_ctx: StageContext) -> Variant:
-	if not Input.is_action_pressed("shoot"):
+	if not PlayerInput.is_action_pressed("shoot"):
 		return true
 	if _options.size() > 0:
 		return _option_shoot(_ctx, _options.size())
@@ -84,7 +84,7 @@ func _sync_options(leader: Player, _ctx: StageContext) -> void:
 	# R5：直接读 leader（Player）的 resources —— 不再用 leader.get("resources") 字符串访问
 	var res: PlayerResources = leader.resources
 	var pw: int = res.power_raw if res != null else 0
-	var focused := Input.is_action_pressed("focus")
+	var focused := PlayerInput.is_action_pressed("focus")
 
 	var levels: Array = setup.get("counts", [])
 	var offsets_focus: Array = setup.get("offsets_focus", [])

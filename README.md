@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-748%20tests%20/%20108%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-750%20tests%20/%20108%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -38,7 +38,7 @@
 | 叙事 | ██████████ 50% |
 | 打磨/QoL | ██████████████ 70% |
 
-已知待做：Stage 2~6 内容（面脚本 / Boss / 符卡）、Replay 播放器（录制已接线）、完整 run 结算 / Continue。
+已知待做：Stage 2~6 内容（面脚本 / Boss / 符卡）、Replay 的暂停/seek/重试、完整 run 结算 / Continue。
 待办逐条清单在 [docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md) 的「🔴 待改进」与本地 `TODO_TEMP.md`。
 
 ---

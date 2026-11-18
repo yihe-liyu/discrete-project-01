@@ -153,11 +153,12 @@ func _on_stage_finished() -> void:
 	var res: PlayerResources = entity_registry.get_player_resources()
 	if res != null:
 		score = res.current_score
-	if SaveData.is_stage_practice:
-		SaveData.save_high_score(current_stage.stage_id, score)
-	elif not PracticeSession.is_practice_mode:
-		# 正常路线：高分按整条 run 的累计分算，HUD 读 key 0。
-		SaveData.save_high_score(0, score)
+	if not ReplaySession.is_playing():
+		if SaveData.is_stage_practice:
+			SaveData.save_high_score(current_stage.stage_id, score)
+		elif not PracticeSession.is_practice_mode:
+			# 正常路线：高分按整条 run 的累计分算，HUD 读 key 0。
+			SaveData.save_high_score(0, score)
 	stage_cleared.emit()
 	all_enemies_defeated.emit()
 
