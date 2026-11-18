@@ -12,6 +12,7 @@ static var _recorder: ReplayRecorder
 static var _active: bool = false
 
 static var _playing: bool = false
+static var _playback_paused: bool = false
 static var _frames: PackedByteArray = PackedByteArray()
 static var _frame_index: int = 0
 static var _mask: int = 0
@@ -238,6 +239,7 @@ static func start_playback(path: String) -> bool:
 	_score_events = rec.score_events.duplicate(true)
 	_trace_diverged = false
 	_playing = true
+	_playback_paused = false
 	return true
 
 
@@ -255,6 +257,20 @@ static func advance_frame() -> bool:
 
 static func is_playing() -> bool:
 	return _playing
+
+
+static func is_playback_paused() -> bool:
+	return _playback_paused
+
+
+## 对话等需要人工节奏的 UI 打开时暂停回放帧推进；关闭后恢复。
+static func pause_playback() -> void:
+	if _playing:
+		_playback_paused = true
+
+
+static func resume_playback() -> void:
+	_playback_paused = false
 
 
 ## 取出当前帧已到点的离散动作；定格中也可以 call（Player._process）。
@@ -299,6 +315,7 @@ static func axis(negative: StringName, positive: StringName) -> float:
 
 static func stop_playback() -> void:
 	_playing = false
+	_playback_paused = false
 	_frames = PackedByteArray()
 	_frame_index = 0
 	_mask = 0

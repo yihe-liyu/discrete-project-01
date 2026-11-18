@@ -32,6 +32,9 @@ var _portrait_map: Dictionary = {}  # char_name → {node, profile}
 var _cancel_held: float = 0.0
 var _is_input_ready: bool = false
 var _is_closing: bool = false
+## >0 = 回放模式自动推进（秒/句）；0 = 等玩家按键。
+var _auto_advance_interval: float = 0.0
+var _auto_advance_timer: float = 0.0
 
 # ═══ 生命周期 ═══
 
@@ -100,6 +103,11 @@ func _fit_to_viewport() -> void:
 	_root.position = (target - DESIGN_SIZE * fit) * 0.5
 
 
+func set_auto_advance(interval: float) -> void:
+	_auto_advance_interval = maxf(interval, 0.0)
+	_auto_advance_timer = 0.0
+
+
 func _process(delta: float) -> void:
 	if _is_closing or not _dialogue_runner:
 		return
@@ -111,6 +119,12 @@ func _process(delta: float) -> void:
 	_dialogue_runner.tick(delta)
 	if not _is_input_ready:
 		return
+	if _auto_advance_interval > 0.0:
+		_auto_advance_timer += delta
+		if _auto_advance_timer >= _auto_advance_interval:
+			_auto_advance_timer = 0.0
+			_advance()
+			return
 	# 长按取消 → 关闭对话
 	if Input.is_action_pressed("ui_cancel"):
 		_cancel_held += delta

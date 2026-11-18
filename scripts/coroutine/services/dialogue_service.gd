@@ -32,7 +32,12 @@ func play_steps(steps: Array) -> float:
 		var alive := runner_ref.get_ref() as CoroutineRunner
 		if alive != null and is_instance_valid(alive):
 			alive.resume()
+		ReplaySession.resume_playback()
 	, CONNECT_ONE_SHOT)
+	# 回放没有 UI 输入帧：对话自动推进，并暂停回放帧推进，避免对话期间时间轴跑掉。
+	if ReplaySession.is_playing():
+		ReplaySession.pause_playback()
+		box.set_auto_advance(0.9)
 	box.play_steps(steps)
 	return 0.0
 
