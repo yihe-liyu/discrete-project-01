@@ -129,7 +129,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if not ReplaySession.is_playing():
 		return
-	for action in ReplaySession.poll_events():
+	for action in ReplaySession.poll_events(_is_deathbombing):
 		match action:
 			&"memory_release":
 				_memory_release()

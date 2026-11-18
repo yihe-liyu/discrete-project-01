@@ -68,3 +68,47 @@ func test_replay_menu_builds_list() -> void:
 	add_child_autofree(menu)
 	menu.on_enter()
 	assert_not_null(menu.get_node_or_null("ReplayBox"), "回放页应生成列表容器")
+
+class ProcessProbe extends Node:
+	var ticks: int = 0
+	func _process(_delta: float) -> void:
+		ticks += 1
+
+func test_process_runs_at_zero_time_scale() -> void:
+	var p := ProcessProbe.new()
+	add_child_autofree(p)
+	Engine.time_scale = 0.0
+	await get_tree().process_frame
+	await get_tree().process_frame
+	Engine.time_scale = 1.0
+	assert_gt(p.ticks, 0, "time_scale=0 时 _process 仍应运行（deathbomb 事件轮询依赖它）")
+
+class PhysicsProbe extends Node:
+	var ticks: int = 0
+	func _physics_process(_delta: float) -> void:
+		ticks += 1
+
+func test_physics_runs_at_zero_time_scale() -> void:
+	var p := PhysicsProbe.new()
+	add_child_autofree(p)
+	Engine.time_scale = 0.0
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	Engine.time_scale = 1.0
+	print("physics ticks at zero time_scale: ", p.ticks)
+	assert_gt(p.ticks, 0, "time_scale=0 时 _physics_process 仍应运行")
+
+
+func test_deathbomb_event_can_fire_one_frame_early() -> void:
+	var rec := ReplayRecorder.new()
+	rec.start()
+	rec.frames = PackedByteArray([0, 0, 0])
+	rec.duration_frames = 3
+	rec.events = [{"frame": 2, "action": "cancel&bomb"}]
+	var path := "user://test_replay_deathbomb.json"
+	assert_true(rec.save(path))
+	assert_true(ReplaySession.start_playback(path))
+	assert_eq(ReplaySession.poll_events(false), [], "普通轮询不应提前消费")
+	assert_eq(ReplaySession.poll_events(true), [&"cancel&bomb"], "deathbomb 定格应允许提前消费")
+	ReplaySession.stop_playback()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
