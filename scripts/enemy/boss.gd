@@ -443,6 +443,7 @@ func clear_phase(captured: bool) -> void:
 		var entity_registry = _refs()
 		var res: PlayerResources = entity_registry.get_player_resources() if entity_registry else null
 		if res != null:
+			ReplaySession.capture_score(_bonus, &"spell_bonus")
 			res.add_score(_bonus)
 
 	_drop_items()

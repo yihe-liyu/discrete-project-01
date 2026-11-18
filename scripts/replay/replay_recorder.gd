@@ -24,6 +24,8 @@ var metadata: Dictionary = {}
 var events: Array[Dictionary] = []
 ## 逐帧状态采样（位置 / RNG / 分数 / 残机 / 雷）；用于定位回放首个分歧。
 var samples: Array[Dictionary] = []
+## 得分来源事件 {frame, amount, source}：追 score 分歧用。
+var score_events: Array[Dictionary] = []
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
@@ -31,6 +33,7 @@ func start() -> void:
 	frames = PackedByteArray()
 	events.clear()
 	samples.clear()
+	score_events.clear()
 	rng_seed = RNG.get_seed()
 	recording = true
 	duration_frames = 0
@@ -49,6 +52,13 @@ func capture_event(action: StringName) -> void:
 	if not recording:
 		return
 	events.append({"frame": duration_frames, "action": String(action)})
+
+
+## 记录一次得分来源（敌人 / 道具 / 擦弹 / 符卡奖励）。
+func capture_score(amount: int, source: StringName) -> void:
+	if not recording:
+		return
+	score_events.append({"frame": duration_frames, "amount": amount, "source": String(source)})
 
 
 ## 记录一帧状态采样（与 frames 同序）。
@@ -91,6 +101,7 @@ func to_dict() -> Dictionary:
 		"metadata": metadata,
 		"events": events,
 		"samples": samples,
+		"score_events": score_events,
 	}
 
 
@@ -128,6 +139,12 @@ func load_dict(data: Dictionary) -> bool:
 		for sample in raw_samples:
 			if sample is Dictionary:
 				samples.append(sample.duplicate(true))
+	score_events.clear()
+	var raw_scores = data.get("score_events", [])
+	if raw_scores is Array:
+		for e in raw_scores:
+			if e is Dictionary:
+				score_events.append(e.duplicate(true))
 	return true
 
 

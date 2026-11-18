@@ -182,6 +182,7 @@ func on_graze() -> void:
 	var res := _player_res()
 	if res != null:
 		res.graze_count += 1
+		ReplaySession.capture_score(10, &"graze")
 		res.add_score(10)
 		res.add_memory(PlayerResources.MEMORY_GRAZE)
 	AudioManager.play_sfx_throttled(AssetRegistry.sounds["graze"], 0.03)

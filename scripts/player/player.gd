@@ -107,6 +107,7 @@ func _exit_tree() -> void:
 
 
 func _on_enemy_killed(score: int, _position: Vector2) -> void:
+	ReplaySession.capture_score(score, &"enemy")
 	resources.add_score(score)
 
 

@@ -210,6 +210,7 @@ func collect() -> void:
 	if got_life:
 		AudioManager.play_sfx(AssetRegistry.sounds[EXTEND_SFX])
 	if gained > 0:
+		ReplaySession.capture_score(gained, &"item")
 		GameEvents.item_score.emit(gained, global_position, _is_highlight)
 	_recycle()
 

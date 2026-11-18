@@ -18,6 +18,7 @@ static var _mask: int = 0
 static var _events: Array[Dictionary] = []
 static var _event_index: int = 0
 static var _samples: Array[Dictionary] = []
+static var _score_events: Array[Dictionary] = []
 static var _trace_diverged: bool = false
 
 
@@ -45,6 +46,12 @@ static func capture_frame() -> void:
 static func capture_event(action: StringName) -> void:
 	if _active and _recorder != null:
 		_recorder.capture_event(action)
+
+
+## 记录一次得分来源（录制时由敌人 / 道具 / 擦弹 / 符卡奖励调用）。
+static func capture_score(amount: int, source: StringName) -> void:
+	if _active and _recorder != null:
+		_recorder.capture_score(amount, source)
 
 
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
@@ -107,7 +114,7 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 	if str(rng.get("state", 0)) != str(expected.get("state", "")):
 		mismatch.append("rng_state")
 	if (res.current_score if res != null else 0) != int(expected.get("score", 0)):
-		mismatch.append("score")
+		mismatch.append("score[%s]" % _score_events_near(idx))
 	if (res.lives if res != null else 0) != int(expected.get("lives", 0)):
 		mismatch.append("lives")
 	if (res.bomb_count if res != null else 0) != int(expected.get("bombs", 0)):
@@ -123,6 +130,15 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 	if not mismatch.is_empty():
 		_trace_diverged = true
 		push_warning("Replay 分歧 frame=%d: %s" % [idx, ", ".join(mismatch)])
+
+
+static func _score_events_near(frame: int) -> String:
+	var parts: Array[String] = []
+	for e in _score_events:
+		var f := int(e.get("frame", -9999))
+		if absi(f - frame) <= 2:
+			parts.append("%s+%d@%d" % [str(e.get("source", "?")), int(e.get("amount", 0)), f])
+	return ",".join(parts) if not parts.is_empty() else "no-event"
 
 
 static func _first_bullet_diff(current: Array, expected: Array) -> String:
@@ -179,6 +195,7 @@ static func start_playback(path: String) -> bool:
 	_events = rec.events.duplicate(true)
 	_event_index = 0
 	_samples = rec.samples.duplicate(true)
+	_score_events = rec.score_events.duplicate(true)
 	_trace_diverged = false
 	_playing = true
 	return true
@@ -232,6 +249,7 @@ static func stop_playback() -> void:
 	_events.clear()
 	_event_index = 0
 	_samples.clear()
+	_score_events.clear()
 	_trace_diverged = false
 	_recorder = null
 
