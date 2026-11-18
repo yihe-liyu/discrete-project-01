@@ -23,9 +23,12 @@ func _make(overrides: Dictionary = {}) -> StageResultMenu:
 
 func test_configure_fills_title_stage_and_stats() -> void:
 	var menu := _make()
-	assert_eq((menu.get_node("Panel/TitleLabel") as Label).text, "STAGE CLEAR")
-	assert_eq((menu.get_node("Panel/StageLabel") as Label).text, "Stage 2 · 测试面")
-	var stats := (menu.get_node("Panel/StatsLabel") as Label).text
+	var frame := menu.get_node("Panel/Frame") as Control
+	assert_eq(frame.offset_left, GameConfig.FIELD_LEFT, "内容框应贴场地左缘")
+	assert_eq(frame.offset_right, GameConfig.FIELD_RIGHT, "内容框应贴场地右缘")
+	assert_eq((menu.get_node("Panel/Frame/TitleLabel") as Label).text, "STAGE CLEAR")
+	assert_eq((menu.get_node("Panel/Frame/StageLabel") as Label).text, "Stage 2 · 测试面")
+	var stats := (menu.get_node("Panel/Frame/StatsLabel") as Label).text
 	assert_string_contains(stats, "Score        12345")
 	assert_string_contains(stats, "High Score   67890")
 	assert_string_contains(stats, "Graze        321")
@@ -35,9 +38,9 @@ func test_configure_fills_title_stage_and_stats() -> void:
 
 func test_all_clear_removes_continue() -> void:
 	var menu := _make({"has_next": false})
-	assert_eq((menu.get_node("Panel/TitleLabel") as Label).text, "ALL CLEAR")
-	assert_null(menu.get_node_or_null("Panel/Container/ContinueLabel"), "All Clear 不应留下 Continue")
-	assert_not_null(menu.get_node_or_null("Panel/Container/ReturnTitleLabel"))
+	assert_eq((menu.get_node("Panel/Frame/TitleLabel") as Label).text, "ALL CLEAR")
+	assert_null(menu.get_node_or_null("Panel/Frame/Container/ContinueLabel"), "All Clear 不应留下 Continue")
+	assert_not_null(menu.get_node_or_null("Panel/Frame/Container/ReturnTitleLabel"))
 
 func test_continue_and_return_actions() -> void:
 	var menu := _make()

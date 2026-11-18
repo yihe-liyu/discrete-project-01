@@ -2,6 +2,7 @@
 ##
 ## 由 GameScene 在 stage_cleared 后实例化并 push；不负责推进路线，
 ## Continue 的语义由 GameScene._on_stage_result_action() 决定。
+## 内容放在 GameConfig.FIELD_RECT 内（不是全窗口居中），避免跑到场地框外。
 @tool
 class_name StageResultMenu
 extends NavPage
@@ -12,16 +13,16 @@ var _has_next: bool = false
 ## 在 push 之前调用：填标题 / 统计；All Clear 时移除 Continue，只留 Return。
 func configure(data: Dictionary) -> void:
 	_has_next = bool(data.get("has_next", false))
-	var title := get_node_or_null("Panel/TitleLabel") as Label
+	var title := get_node_or_null("Panel/Frame/TitleLabel") as Label
 	if title:
 		title.text = "ALL CLEAR" if not _has_next else "STAGE CLEAR"
-	var stage_label := get_node_or_null("Panel/StageLabel") as Label
+	var stage_label := get_node_or_null("Panel/Frame/StageLabel") as Label
 	if stage_label:
 		stage_label.text = "Stage %d · %s" % [
 			int(data.get("stage_no", 0)),
 			str(data.get("stage_name", "")),
 		]
-	var stats := get_node_or_null("Panel/StatsLabel") as Label
+	var stats := get_node_or_null("Panel/Frame/StatsLabel") as Label
 	if stats:
 		stats.text = "\n".join([
 			"Score        %d" % int(data.get("score", 0)),
@@ -32,7 +33,7 @@ func configure(data: Dictionary) -> void:
 			"Bombs        %d" % int(data.get("bombs", 0)),
 		])
 	if not _has_next:
-		var continue_label := get_node_or_null("Panel/Container/ContinueLabel")
+		var continue_label := get_node_or_null("Panel/Frame/Container/ContinueLabel")
 		if continue_label:
 			continue_label.get_parent().remove_child(continue_label)
 			continue_label.free()
