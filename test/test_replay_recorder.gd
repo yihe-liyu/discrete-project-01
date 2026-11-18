@@ -55,6 +55,7 @@ func test_save_load_roundtrip():
 	Input.action_press("focus")
 	rec.capture()
 	rec.capture()
+	rec.capture_event(&"cancel&bomb")
 	rec.stop()
 	rec.metadata = {"difficulty": 2, "character": 1, "score": 1234}
 	var path := "user://test_replay.json"
@@ -67,6 +68,8 @@ func test_save_load_roundtrip():
 	assert_eq(int(rec2.metadata.get("difficulty", -1)), 2, "难度元数据应一致")
 	assert_eq(int(rec2.metadata.get("character", -1)), 1, "角色元数据应一致")
 	assert_eq(int(rec2.metadata.get("score", -1)), 1234, "分数字段应一致")
+	assert_eq(rec2.events.size(), 1, "离散事件应往返")
+	assert_eq(str(rec2.events[0].get("action", "")), "cancel&bomb")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func test_load_rejects_bad_version():

@@ -46,6 +46,7 @@ func test_playback_loads_route_seed_and_input() -> void:
 	rec.frames = PackedByteArray([1 << ReplayRecorder.ACTIONS.find("shoot")])
 	rec.duration_frames = 1
 	rec.metadata = {"difficulty": 1, "character": 0}
+	rec.events = [{"frame": 0, "action": "cancel&bomb"}]
 	var path := "user://test_replay_playback.json"
 	assert_true(rec.save(path))
 
@@ -56,6 +57,7 @@ func test_playback_loads_route_seed_and_input() -> void:
 	assert_eq(RNG.get_seed(), rec.rng_seed, "回放应恢复录制种子")
 	assert_true(ReplaySession.advance_frame(), "首帧应可推进")
 	assert_true(PlayerInput.is_action_pressed("shoot"), "回放输入应覆盖真实 Input")
+	assert_eq(ReplaySession.poll_events(), [&"cancel&bomb"], "离散 bomb 事件应按帧触发")
 	assert_false(ReplaySession.advance_frame(), "帧用完后应结束")
 	assert_false(ReplaySession.is_playing())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

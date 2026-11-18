@@ -15,6 +15,8 @@ static var _playing: bool = false
 static var _frames: PackedByteArray = PackedByteArray()
 static var _frame_index: int = 0
 static var _mask: int = 0
+static var _events: Array[Dictionary] = []
+static var _event_index: int = 0
 
 
 static func is_recording() -> bool:
@@ -35,6 +37,12 @@ static func start_run() -> bool:
 static func capture_frame() -> void:
 	if _active and _recorder != null:
 		_recorder.capture()
+
+
+## 离散动作（bomb / memory_release）由 Player 的输入事件调用。
+static func capture_event(action: StringName) -> void:
+	if _active and _recorder != null:
+		_recorder.capture_event(action)
 
 
 ## 结束并落盘；meta 为空时仍写一份只有输入/种子的录制。
@@ -78,6 +86,8 @@ static func start_playback(path: String) -> bool:
 	_frames = rec.frames
 	_frame_index = 0
 	_mask = 0
+	_events = rec.events.duplicate(true)
+	_event_index = 0
 	_playing = true
 	return true
 
@@ -98,6 +108,18 @@ static func is_playing() -> bool:
 	return _playing
 
 
+## 取出当前帧已到点的离散动作；定格中也可以 call（Player._process）。
+static func poll_events() -> Array[StringName]:
+	var out: Array[StringName] = []
+	while _event_index < _events.size():
+		var e: Dictionary = _events[_event_index]
+		if int(e.get("frame", 0)) > _frame_index:
+			break
+		out.append(StringName(str(e.get("action", ""))))
+		_event_index += 1
+	return out
+
+
 static func action_pressed(action: StringName) -> bool:
 	var idx := ReplayRecorder.ACTIONS.find(action)
 	return idx >= 0 and (_mask & (1 << idx)) != 0
@@ -114,6 +136,8 @@ static func stop_playback() -> void:
 	_frames = PackedByteArray()
 	_frame_index = 0
 	_mask = 0
+	_events.clear()
+	_event_index = 0
 	_recorder = null
 
 

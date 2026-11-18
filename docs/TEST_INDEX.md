@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：108 脚本 / **750 用例（748 通过 / 2 红：BossRegistry WIP + BGM）/ 6113 断言 / 52.2s** / 0 orphans / **0 pending**。
+**现状**：108 脚本 / **750 用例（748 通过 / 2 红：BossRegistry WIP + BGM）/ 6116 断言 / 52.2s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -174,8 +174,8 @@
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_replay_recorder](../test/test_replay_recorder.gd) | `ReplayRecorder` 录输入基础设施 + metadata 往返 | 7 | 0 |
-| [test_replay_session](../test/test_replay_session.gd) | `ReplaySession`：录制落盘 / 列表可见 / 切面 reload 不重置；回放恢复 seed、路线与输入掩码；回放页列表 | 4 | 0 |
+| [test_replay_recorder](../test/test_replay_recorder.gd) | `ReplayRecorder` 录输入基础设施 + metadata / 离散事件往返 | 7 | 0 |
+| [test_replay_session](../test/test_replay_session.gd) | `ReplaySession`：录制落盘 / 列表可见 / 切面 reload 不重置；回放恢复 seed、路线、输入掩码与 bomb 事件；回放页列表 | 4 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |

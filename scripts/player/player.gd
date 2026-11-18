@@ -109,16 +109,35 @@ func _on_enemy_killed(score: int, _position: Vector2) -> void:
 
 ## R4：离散动作（解放记忆 / 炸弹）走事件，不在物理帧轮询
 func _unhandled_input(event: InputEvent) -> void:
+	if ReplaySession.is_playing():
+		return  # 回放时真实键盘的离散动作不得穿透
 	if event.is_action_pressed("memory_release"):
+		ReplaySession.capture_event(&"memory_release")
 		_memory_release()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cancel&bomb"):
+		ReplaySession.capture_event(&"cancel&bomb")
 		if _is_deathbombing:
 			# 抢在被弹炸弹窗口关掉之前按下 bomb → 抵消这次 miss（只花雷，不掉命）
 			_end_deathbomb(true)
 		else:
 			_bomb()
 		get_viewport().set_input_as_handled()
+
+
+## 回放离散动作：事件按录制帧号触发；定格期间也照样轮询（物理帧停了，_process 还在）。
+func _process(_delta: float) -> void:
+	if not ReplaySession.is_playing():
+		return
+	for action in ReplaySession.poll_events():
+		match action:
+			&"memory_release":
+				_memory_release()
+			&"cancel&bomb":
+				if _is_deathbombing:
+					_end_deathbomb(true)
+				else:
+					_bomb()
 
 ## 注入/切换机体：应用数值 + (重)装配射击。同数据且已装配 → 跳过（幂等，避免组合根重复初始化）。
 func setup_character(data: PlayerData) -> void:
