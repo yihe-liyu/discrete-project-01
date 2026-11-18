@@ -56,7 +56,8 @@ static func capture_score(amount: int, source: StringName) -> void:
 
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
 static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
-		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = []) -> void:
+		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = [],
+		krng: int = 0) -> void:
 	if not _active or _recorder == null:
 		return
 	var rng := RNG.snapshot_state()
@@ -74,7 +75,20 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 		"bsnap": bsnap,
 		"graze": graze,
 		"isnap": isnap,
+		"krng": krng,
 	})
+
+
+## 回放帧开始：恢复内核 bullet RNG 状态（宿主 RNG 已由 sync_rng_for_frame 恢复）。
+static func sync_kernel_rng(manager: BulletManager) -> void:
+	if not _playing or _samples.is_empty() or manager == null:
+		return
+	var idx := _frame_index - 1
+	if idx < 0 or idx >= _samples.size():
+		return
+	var sample: Dictionary = _samples[idx]
+	if sample.has("krng"):
+		manager.set_kernel_rng_state(int(str(sample.get("krng", "0"))))
 
 
 ## 回放帧开始：把 gameplay RNG 恢复到录制时的状态。
@@ -96,7 +110,8 @@ static func sync_rng_for_frame() -> void:
 
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
 static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
-		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = []) -> void:
+		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = [],
+		krng: int = 0) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():
 		return
 	var idx := _frame_index - 1
@@ -117,6 +132,8 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 		mismatch.append("rng_state")
 	if expected.has("graze") and graze != int(expected.get("graze", 0)):
 		mismatch.append("graze")
+	if expected.has("krng") and krng != int(str(expected.get("krng", "0"))):
+		mismatch.append("krng")
 	if (res.current_score if res != null else 0) != int(expected.get("score", 0)):
 		mismatch.append("score[%s]" % _score_events_near(idx))
 	if (res.lives if res != null else 0) != int(expected.get("lives", 0)):

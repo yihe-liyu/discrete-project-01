@@ -146,6 +146,8 @@ public:
 	void set_default_life(float p_life); // 新行默认寿命。
 	void set_field(float p_left, float p_right, float p_top); // 反射/边界场地范围。
 	void set_seed(int p_seed); // PRNG 种子；0 会兜底成黄金比常量。
+	int get_rng_state() const; // 当前 PRNG 状态（回放逐帧恢复）。
+	void set_rng_state(int p_state); // 直接恢复 PRNG 状态。
 	// 判定（与 GDScript 内核 1:1）
 	void set_hitbox(int p_id, float p_radius, const Vector2 &p_offset, const Vector2 &p_size, bool p_follow_dir, float p_dir_offset);
 	bool hit_test(int p_id, const Vector2 &p_center, float p_radius) const; // 单行精确判定。

@@ -88,6 +88,16 @@ func active_count() -> int:
 	return _kernel_bullet_host.system.get_active_count() if _kernel_bullet_host != null else 0
 
 
+## 内核 bullet RNG 状态（回放逐帧同步；不暴露给内容）。
+func kernel_rng_state() -> int:
+	return _kernel_bullet_host.system.get_rng_state() if _kernel_bullet_host != null and _kernel_bullet_host.system != null else 0
+
+
+func set_kernel_rng_state(state: int) -> void:
+	if _kernel_bullet_host != null and _kernel_bullet_host.system != null:
+		_kernel_bullet_host.system.set_rng_state(state)
+
+
 ## 当前活跃弹的逐颗快照 [uid, x, y, type_index, grazed]；按 uid 排序。
 ## 排序让快照/指纹不受内核 swap-remove 顺序影响（回放 trace 只关心集合）。
 func bullet_snapshot() -> Array:

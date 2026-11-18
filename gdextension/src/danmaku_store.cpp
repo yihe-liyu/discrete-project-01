@@ -58,6 +58,8 @@ void DanmakuStore::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_graze_interval_ticks", "ticks"), &DanmakuStore::set_graze_interval_ticks);
 	ClassDB::bind_method(D_METHOD("set_field", "left", "right", "top"), &DanmakuStore::set_field);
 	ClassDB::bind_method(D_METHOD("set_seed", "seed"), &DanmakuStore::set_seed);
+	ClassDB::bind_method(D_METHOD("get_rng_state"), &DanmakuStore::get_rng_state);
+	ClassDB::bind_method(D_METHOD("set_rng_state", "state"), &DanmakuStore::set_rng_state);
 	ClassDB::bind_method(D_METHOD("set_behavior", "id", "behavior", "params"), &DanmakuStore::set_behavior, DEFVAL(PackedFloat32Array()));
 	ClassDB::bind_method(D_METHOD("get_behavior", "id"), &DanmakuStore::get_behavior);
 	ClassDB::bind_method(D_METHOD("get_behavior_id", "name"), &DanmakuStore::get_behavior_id);
@@ -874,6 +876,13 @@ Dictionary DanmakuStore::behavior_tick(double p_delta, const Vector2 &p_player, 
 
 void DanmakuStore::set_seed(int p_seed) {
 	_rng_state = (uint32_t)((uint64_t)p_seed & 0xFFFFFFFFu);
+	if (_rng_state == 0) { _rng_state = 0x9E3779B9u; }
+}
+
+int DanmakuStore::get_rng_state() const { return (int)_rng_state; }
+
+void DanmakuStore::set_rng_state(int p_state) {
+	_rng_state = (uint32_t)p_state;
 	if (_rng_state == 0) { _rng_state = 0x9E3779B9u; }
 }
 

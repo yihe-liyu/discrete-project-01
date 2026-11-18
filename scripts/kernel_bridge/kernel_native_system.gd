@@ -610,6 +610,15 @@ func set_seed(seed_value: int) -> void:
 		_accel.set_seed(seed_value)   # 转发原生 store（行为随机走内核单通道）
 
 ## 宿主 RNG：0..1。
+func get_rng_state() -> int:
+	return int(_accel.get_rng_state()) if _accel != null else 0
+
+
+func set_rng_state(state: int) -> void:
+	if _accel != null:
+		_accel.set_rng_state(state)
+
+
 func randf() -> float:
 	return _random.randf()
 
