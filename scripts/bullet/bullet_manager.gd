@@ -96,8 +96,13 @@ func bullet_snapshot() -> Array:
 	var out: Array = []
 	var system = _kernel_bullet_host.system
 	for i in system.get_active_count():
+		var uid: int = system.get_uid(i)
+		var ti: int = system.get_type_index(i)
+		# 清弹/swap-remove 过程中可能出现 type=-1、uid=0 的死行；它们不参与回放比较。
+		if uid <= 0 or ti < 0:
+			continue
 		var p: Vector2 = system.get_position(i)
-		out.append([system.get_uid(i), p.x, p.y, system.get_type_index(i), int(system.is_grazed(i))])
+		out.append([uid, p.x, p.y, ti, int(system.is_grazed(i))])
 	out.sort_custom(func(a: Array, b: Array) -> bool: return int(a[0]) < int(b[0]))
 	return out
 
