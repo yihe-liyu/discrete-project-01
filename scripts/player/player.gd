@@ -59,6 +59,9 @@ var _invincible_timer: float = 0.0
 var _respawn_pos: Vector2 = MISS_RESPAWN_POS
 ## 复位移动进行中（锁移动输入）。
 var _is_respawning: bool = false
+## 复位移动的起点与已用时间（手工按物理帧推进，保证回放确定性）。
+var _respawn_from: Vector2 = Vector2.ZERO
+var _respawn_elapsed: float = 0.0
 ## deathbomb 窗口开着（刚被弹、还没死，等玩家按 bomb）。
 var _is_deathbombing: bool = false
 ## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
@@ -163,6 +166,7 @@ func apply_player_data() -> void:
 		animation.play(IDLE)
 
 func _physics_process(delta):
+	_update_respawn(delta)
 	# 记忆值自动恢复（原全局状态 _process，迁来）
 	resources.regen(delta)
 	# 无敌倒计时（替代 await，不挂起调用链）
@@ -308,6 +312,8 @@ func _fire_bomb(bomb_data: BombData) -> void:
 	_invincible_timer = bomb_data.invincible_time
 	var base_hue := RNG.randf()
 	var tween := create_tween()
+	# 回放确定性：bomb 编队按时序推进，不走渲染帧。
+	tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	for i in bomb_data.count:
 		tween.tween_callback(_spawn_bomb_bullet.bind(i, base_hue))
 		tween.tween_interval(bomb_data.interval)
@@ -515,10 +521,22 @@ func _move_to_respawn() -> void:
 	if _is_respawning:
 		return
 	_is_respawning = true
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "global_position", _respawn_pos, MISS_RESPAWN_TIME)
-	tween.finished.connect(func() -> void: _is_respawning = false)
+	_respawn_from = global_position
+	_respawn_elapsed = 0.0
+
+
+## 复位移动：按物理帧推进（不用 tween —— 渲染帧 tween 会让回放采样抖动）。
+func _update_respawn(delta: float) -> void:
+	if not _is_respawning:
+		return
+	_respawn_elapsed += delta
+	var t := clampf(_respawn_elapsed / MISS_RESPAWN_TIME, 0.0, 1.0)
+	# TRANS_QUAD / EASE_OUT
+	var eased := t * (2.0 - t)
+	global_position = _respawn_from.lerp(_respawn_pos, eased)
+	if t >= 1.0:
+		_is_respawning = false
+		global_position = _respawn_pos
 
 
 # ═══ 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命 ═══

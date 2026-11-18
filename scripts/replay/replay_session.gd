@@ -166,8 +166,12 @@ static func poll_events(allow_future_bomb: bool = false) -> Array[StringName]:
 	while _event_index < _events.size():
 		var e: Dictionary = _events[_event_index]
 		var action := StringName(str(e.get("action", "")))
-		if int(e.get("frame", 0)) > _frame_index:
-			if not (allow_future_bomb and action == &"cancel&bomb"):
+		var event_frame := int(e.get("frame", 0))
+		if event_frame > _frame_index:
+			# 只允许提前一帧：deathbomb 定格时事件可能记成“下一帧”。
+			# 绝不把几十帧后的普通 bomb 提前消费（会把后面的决战线整段拉前）。
+			if not (allow_future_bomb and action == &"cancel&bomb"
+					and event_frame <= _frame_index + 1):
 				break
 		out.append(action)
 		_event_index += 1

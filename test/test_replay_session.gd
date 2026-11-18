@@ -104,11 +104,25 @@ func test_deathbomb_event_can_fire_one_frame_early() -> void:
 	rec.start()
 	rec.frames = PackedByteArray([0, 0, 0])
 	rec.duration_frames = 3
-	rec.events = [{"frame": 2, "action": "cancel&bomb"}]
+	rec.events = [{"frame": 1, "action": "cancel&bomb"}]
 	var path := "user://test_replay_deathbomb.json"
 	assert_true(rec.save(path))
 	assert_true(ReplaySession.start_playback(path))
 	assert_eq(ReplaySession.poll_events(false), [], "普通轮询不应提前消费")
-	assert_eq(ReplaySession.poll_events(true), [&"cancel&bomb"], "deathbomb 定格应允许提前消费")
+	assert_eq(ReplaySession.poll_events(true), [&"cancel&bomb"], "deathbomb 定格应允许提前一帧消费")
+	ReplaySession.stop_playback()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_far_future_bomb_is_not_consumed_early() -> void:
+	var rec := ReplayRecorder.new()
+	rec.start()
+	rec.frames = PackedByteArray([0, 0, 0])
+	rec.duration_frames = 3
+	rec.events = [{"frame": 2, "action": "cancel&bomb"}]
+	var path := "user://test_replay_far_bomb.json"
+	assert_true(rec.save(path))
+	assert_true(ReplaySession.start_playback(path))
+	assert_eq(ReplaySession.poll_events(true), [], "只允许提前一帧，不能提前多帧")
 	ReplaySession.stop_playback()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
