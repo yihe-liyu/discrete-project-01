@@ -5,6 +5,8 @@ var _entries: Array[Dictionary] = []
 var _rows: Array[Label] = []
 var _selected: int = 0
 var _delete_armed: bool = false
+var _box: VBoxContainer
+var _hint: Label
 
 
 func on_enter() -> void:
@@ -26,15 +28,15 @@ func _show_replays() -> void:
 	_selected = 0
 	_delete_armed = false
 	_rows.clear()
-	var old := get_node_or_null("ReplayBox")
-	if old:
-		old.queue_free()
+	_clear_box()
+	_clear_hint()
 	var box := VBoxContainer.new()
 	box.name = "ReplayBox"
 	box.position = Vector2(240, 220)
 	box.size = Vector2(800, 560)
 	box.add_theme_constant_override("separation", 14)
 	add_child(box)
+	_box = box
 	if _entries.is_empty():
 		var empty := Label.new()
 		empty.text = "暂无回放。\n完整打完一局（通关或 Game Over）后会自动生成。"
@@ -63,11 +65,22 @@ func _show_replays() -> void:
 	_add_hint()
 
 
+func _clear_box() -> void:
+	if is_instance_valid(_box):
+		_box.get_parent().remove_child(_box)
+		_box.free()
+	_box = null
+
+
+func _clear_hint() -> void:
+	if is_instance_valid(_hint):
+		_hint.get_parent().remove_child(_hint)
+		_hint.free()
+	_hint = null
+
+
 func _add_hint() -> void:
-	var old := get_node_or_null("HintLabel")
-	if old:
-		old.name = "HintLabelOld"
-		old.queue_free()
+	_clear_hint()
 	var hint := Label.new()
 	hint.name = "HintLabel"
 	hint.position = Vector2(240, 800)
@@ -80,6 +93,7 @@ func _add_hint() -> void:
 	else:
 		hint.text = "↑↓ 选择 · Z/Enter 播放 · Delete 删除 · Esc 返回"
 	add_child(hint)
+	_hint = hint
 
 
 func _refresh_selection() -> void:
@@ -88,11 +102,9 @@ func _refresh_selection() -> void:
 			_rows[i].modulate = Color(1, 0.4, 0.4) if _delete_armed else Color.WHITE
 		else:
 			_rows[i].modulate = Color(0.5, 0.5, 0.5)
-	if _delete_armed:
-		var old := get_node_or_null("HintLabel")
-		if old:
-			old.text = "再按一次 Delete 确认删除"
-			old.modulate = Color(1, 0.4, 0.4)
+	if _delete_armed and is_instance_valid(_hint):
+		_hint.text = "再按一次 Delete 确认删除"
+		_hint.modulate = Color(1, 0.4, 0.4)
 
 
 func _delete_selected() -> void:

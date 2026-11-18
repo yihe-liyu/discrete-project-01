@@ -138,3 +138,19 @@ func test_delete_replay_only_in_replay_dir() -> void:
 	assert_true(ReplaySession.delete_replay(path), "应能删除回放目录内文件")
 	assert_false(FileAccess.file_exists(path))
 	assert_false(ReplaySession.delete_replay("/tmp/not_a_replay.json"), "目录外文件必须拒绝")
+
+
+func test_replay_menu_rebuild_does_not_accumulate_nodes() -> void:
+	var menu = load("res://scenes/ui/replay_menu.tscn").instantiate()
+	add_child_autofree(menu)
+	menu._show_replays()
+	menu._show_replays()
+	var boxes := 0
+	var hints := 0
+	for child in menu.get_children():
+		if str(child.name).begins_with("ReplayBox"):
+			boxes += 1
+		if str(child.name).begins_with("HintLabel"):
+			hints += 1
+	assert_eq(boxes, 1, "重建列表后只应保留一个 ReplayBox")
+	assert_eq(hints, 1, "重建列表后只应保留一个 HintLabel")
