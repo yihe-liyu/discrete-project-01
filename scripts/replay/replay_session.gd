@@ -124,7 +124,11 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 		mismatch.append("bombs")
 	if expected.has("bullets") and bullets != int(expected.get("bullets", 0)):
 		mismatch.append("bullets")
-	if expected.has("bhash") and bhash != int(expected.get("bhash", 0)):
+	var expected_bhash := int(expected.get("bhash", 0))
+	if expected.has("bsnap"):
+		# 旧回放的 bhash 可能包含清弹中的死行/未排序；用快照重算。
+		expected_bhash = _snapshot_hash(expected.get("bsnap", []))
+	if expected.has("bhash") and bhash != expected_bhash:
 		mismatch.append("bhash[%s]" % _first_bullet_diff(bsnap, expected.get("bsnap", [])))
 	if expected.has("items") and items != int(expected.get("items", 0)):
 		mismatch.append("items")
@@ -144,7 +148,29 @@ static func _score_events_near(frame: int) -> String:
 	return ",".join(parts) if not parts.is_empty() else "no-event"
 
 
-static func _first_bullet_diff(current: Array, expected: Array) -> String:
+static func _snapshot_hash(raw: Array) -> int:
+	var snap := _clean_snapshot(raw)
+	var h: int = snap.size()
+	for e in snap:
+		h = (h * 31 + int(e[0])) & 0x7fffffff
+		h = (h * 31 + hash(Vector2(float(e[1]), float(e[2])))) & 0x7fffffff
+		h = (h * 31 + int(e[3])) & 0x7fffffff
+		h = (h * 31 + int(e[4])) & 0x7fffffff
+	return h
+
+
+static func _clean_snapshot(raw: Array) -> Array:
+	var snap: Array = []
+	for e in raw:
+		if e is Array and e.size() >= 4 and int(e[0]) > 0 and int(e[3]) >= 0:
+			snap.append(e)
+	snap.sort_custom(func(a: Array, b: Array) -> bool: return int(a[0]) < int(b[0]))
+	return snap
+
+
+static func _first_bullet_diff(current: Array, expected_raw: Array) -> String:
+	var expected := _clean_snapshot(expected_raw)
+	current = _clean_snapshot(current)
 	var n := mini(current.size(), expected.size())
 	for i in n:
 		var a: Array = current[i]
