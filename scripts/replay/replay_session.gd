@@ -159,21 +159,14 @@ static func is_playing() -> bool:
 
 
 ## 取出当前帧已到点的离散动作；定格中也可以 call（Player._process）。
-## allow_future_bomb：deathbomb 定格时允许提前消费下一条 bomb 事件——
-## 物理帧停在命中帧，而事件帧可能记成“下一帧”，不提前会让 bomb 在恢复时间后才落地。
-static func poll_events(allow_future_bomb: bool = false) -> Array[StringName]:
+## 严格按录制帧号消费：提前消费会让炸弹/RNG 比录制早一帧。
+static func poll_events() -> Array[StringName]:
 	var out: Array[StringName] = []
 	while _event_index < _events.size():
 		var e: Dictionary = _events[_event_index]
-		var action := StringName(str(e.get("action", "")))
-		var event_frame := int(e.get("frame", 0))
-		if event_frame > _frame_index:
-			# 只允许提前一帧：deathbomb 定格时事件可能记成“下一帧”。
-			# 绝不把几十帧后的普通 bomb 提前消费（会把后面的决战线整段拉前）。
-			if not (allow_future_bomb and action == &"cancel&bomb"
-					and event_frame <= _frame_index + 1):
-				break
-		out.append(action)
+		if int(e.get("frame", 0)) > _frame_index:
+			break
+		out.append(StringName(str(e.get("action", ""))))
 		_event_index += 1
 	return out
 

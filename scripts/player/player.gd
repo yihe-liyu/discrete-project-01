@@ -128,11 +128,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## 回放离散动作：事件按录制帧号触发；定格期间也照样轮询（物理帧停了，_process 还在）。
-func _process(_delta: float) -> void:
+## 回放离散动作：按录制帧号触发。普通帧在物理帧开头消费，
+## 定格（time_scale = 0）时物理帧不可靠，由 _process 兜底。
+func _poll_replay_events() -> void:
 	if not ReplaySession.is_playing():
 		return
-	for action in ReplaySession.poll_events(_is_deathbombing):
+	for action in ReplaySession.poll_events():
 		match action:
 			&"memory_release":
 				_memory_release()
@@ -141,6 +142,11 @@ func _process(_delta: float) -> void:
 					_end_deathbomb(true)
 				else:
 					_bomb()
+
+
+func _process(_delta: float) -> void:
+	if ReplaySession.is_playing() and Engine.time_scale <= 0.0:
+		_poll_replay_events()
 
 ## 注入/切换机体：应用数值 + (重)装配射击。同数据且已装配 → 跳过（幂等，避免组合根重复初始化）。
 func setup_character(data: PlayerData) -> void:
@@ -166,6 +172,7 @@ func apply_player_data() -> void:
 		animation.play(IDLE)
 
 func _physics_process(delta):
+	_poll_replay_events()
 	_update_respawn(delta)
 	# 记忆值自动恢复（原全局状态 _process，迁来）
 	resources.regen(delta)

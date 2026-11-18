@@ -99,7 +99,7 @@ func test_physics_runs_at_zero_time_scale() -> void:
 	assert_gt(p.ticks, 0, "time_scale=0 时 _physics_process 仍应运行")
 
 
-func test_deathbomb_event_can_fire_one_frame_early() -> void:
+func test_deathbomb_event_is_not_consumed_early() -> void:
 	var rec := ReplayRecorder.new()
 	rec.start()
 	rec.frames = PackedByteArray([0, 0, 0])
@@ -108,8 +108,9 @@ func test_deathbomb_event_can_fire_one_frame_early() -> void:
 	var path := "user://test_replay_deathbomb.json"
 	assert_true(rec.save(path))
 	assert_true(ReplaySession.start_playback(path))
-	assert_eq(ReplaySession.poll_events(false), [], "普通轮询不应提前消费")
-	assert_eq(ReplaySession.poll_events(true), [&"cancel&bomb"], "deathbomb 定格应允许提前一帧消费")
+	assert_eq(ReplaySession.poll_events(), [], "事件必须按录制帧号准时消费")
+	assert_true(ReplaySession.advance_frame())
+	assert_eq(ReplaySession.poll_events(), [&"cancel&bomb"])
 	ReplaySession.stop_playback()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
@@ -123,6 +124,6 @@ func test_far_future_bomb_is_not_consumed_early() -> void:
 	var path := "user://test_replay_far_bomb.json"
 	assert_true(rec.save(path))
 	assert_true(ReplaySession.start_playback(path))
-	assert_eq(ReplaySession.poll_events(true), [], "只允许提前一帧，不能提前多帧")
+	assert_eq(ReplaySession.poll_events(), [], "未来 bomb 不能提前消费")
 	ReplaySession.stop_playback()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
