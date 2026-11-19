@@ -421,6 +421,7 @@ func _advance_playback_stage() -> void:
 	var next_stage := SaveData.advance_route()
 	if next_stage != null:
 		_continuing_replay = true
+		ReplaySession.mark_preserve_on_scene_change()
 		SaveData.is_route_transition = true
 		GameManager.reload_current_scene()
 		return

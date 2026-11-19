@@ -308,6 +308,11 @@ static func restart_playback() -> bool:
 	return true
 
 
+## 路线切面也要跨 GameScene reload 保留 playback。
+static func mark_preserve_on_scene_change() -> void:
+	_preserve_on_exit = true
+
+
 ## GameScene 退出时消费：true = 这次场景 reload 是回放重开，别停 playback。
 static func consume_preserve_on_exit() -> bool:
 	var keep := _preserve_on_exit
