@@ -108,6 +108,7 @@ var _stage_id: int
 ## 全破定格：是否正压着时间倍率 + 压之前的原值（恢复用；见 play_defeat）
 var _time_scaled: bool = false
 var _saved_time_scale: float = 1.0
+var _hitstop_frames_left: int = 0
 var _phase_identity: PhaseIdentity
 var _is_exit_controlled: bool = false
 var _is_cleared: bool = false
@@ -328,6 +329,14 @@ func _run_pre_move(data: PhaseData) -> void:
 		pre.queue_free()
 
 
+func _physics_process(_delta: float) -> void:
+	# 全破 hitstop 用物理帧倒计时，保证 normal / replay 关窗帧一致。
+	if _hitstop_frames_left > 0:
+		_hitstop_frames_left -= 1
+		if _hitstop_frames_left <= 0:
+			_restore_time_scale()
+
+
 func _process(delta: float) -> void:
 	# Boss 位置指示器：x 始终跟随 Boss，y 固定游戏框底（在 phase 开始前也显示）
 	if _pos_indicator and is_instance_valid(_pos_indicator):
@@ -470,9 +479,7 @@ func play_defeat() -> void:
 		_saved_time_scale = Engine.time_scale
 		_time_scaled = true
 		Engine.time_scale = _saved_time_scale * DEFEAT_HITSTOP_SCALE
-		# 真实时间计时（ignore_time_scale=true）→ 自己的恢复不受定格影响
-		get_tree().create_timer(hitstop, true, false, true).timeout.connect(
-			_restore_time_scale, CONNECT_ONE_SHOT)
+		_hitstop_frames_left = maxi(1, ceili(hitstop * 60.0))
 
 	# ② 清弹（比阶段击破扫得更大）+ 反色圈（与自机 miss 同参数）+ 全破爆点
 	if _stage_context:
@@ -511,6 +518,7 @@ func _flash_and_fade_out() -> void:
 
 ## 恢复定格前的时间倍率（幂等）
 func _restore_time_scale() -> void:
+	_hitstop_frames_left = 0
 	if _time_scaled:
 		_time_scaled = false
 		Engine.time_scale = _saved_time_scale
