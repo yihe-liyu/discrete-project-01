@@ -119,7 +119,7 @@ func _physics_process(_delta: float) -> void:
 		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 		ReplaySession.sync_rng_for_frame()
 		ReplaySession.sync_kernel_rng(_bullet_manager)
-		if _stage_runtime.player != null:
+		if ReplaySession.trace_enabled and _stage_runtime.player != null:
 			ReplaySession.check_sample(_stage_runtime.player.global_position, res,
 				_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 				_item_pool.visible_count(), _item_pool.item_signature(),
@@ -128,7 +128,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	ReplaySession.capture_frame()
 	var sample_res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
-	if _stage_runtime.player != null:
+	if ReplaySession.trace_enabled and _stage_runtime.player != null:
 		ReplaySession.capture_sample(_stage_runtime.player.global_position, sample_res,
 			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 			_item_pool.visible_count(), _item_pool.item_signature(),

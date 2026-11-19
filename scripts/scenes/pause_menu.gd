@@ -16,7 +16,11 @@ func on_enter() -> void:
 		var resume := _container.get_node_or_null("ResumeLabel")
 		if resume:
 			resume.set_meta("is_locked", true)
-			refresh_colors()
+	# 没有进行中的录制（练习 / 已结算）时不允许“保存并结束”。
+	var save := _container.get_node_or_null("SaveReplayLabel")
+	if save and not ReplaySession.is_recording():
+		save.set_meta("is_locked", true)
+	refresh_colors()
 
 	AudioManager.play_sfx(AssetRegistry.sounds["pause"])
 
@@ -38,12 +42,38 @@ func _on_item_selected(index: int) -> void:
 			SaveData.is_restarting = true
 			GameManager.reload_current_scene()
 		2:
+			_save_replay_and_end()
+		3:
 			# 符卡练习里"返回"→ 回**符卡练习菜单**（并还原到离开时那一级），而不是主菜单根
 			# （逐面练习 is_practice_mode 为 false，仍走主菜单 ✓）
 			if PracticeSession.is_practice_mode:
 				PracticeSession.restore_menu_on_enter = true
 				GameManager.pending_page_path = "res://scenes/ui/spell_practice_menu.tscn"
 			GameManager.change_scene.call_deferred("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+
+
+func _save_replay_and_end() -> void:
+	if not ReplaySession.is_recording():
+		return
+	var res: PlayerResources = GameManager.entity_registry.get_player_resources() \
+		if GameManager.entity_registry != null else null
+	var meta := {
+		"result": "pause_save",
+		"difficulty": SaveData.selected_difficulty,
+		"character": SaveData.selected_character,
+		"route_id": String(SaveData.current_route_id),
+		"stage_id": SaveData.current_stage_id,
+		"stage_no": SaveData.current_route_index + 1,
+		"score": res.current_score if res != null else 0,
+		"recorded_at": Time.get_datetime_string_from_system(),
+	}
+	var path := ReplaySession.finish_run(meta)
+	if path == "":
+		push_warning("PauseMenu: 保存 Replay 失败，结束取消")
+		return
+	SaveData.reset_session()
+	AudioManager.stop_bgm(0.0)
+	GameManager.change_scene.call_deferred("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 
 func _on_cancel() -> void:
