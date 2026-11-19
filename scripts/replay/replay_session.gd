@@ -22,6 +22,9 @@ static var _events: Array[Dictionary] = []
 static var _event_index: int = 0
 static var _path: String = ""
 static var _preserve_on_exit: bool = false
+static var _start_stage_id: int = 1
+static var _start_stage_no: int = 1
+static var _start_route_id: StringName = &""
 static var _samples: Array[Dictionary] = []
 static var _score_events: Array[Dictionary] = []
 static var _trace_diverged: bool = false
@@ -36,6 +39,9 @@ static func start_run() -> bool:
 	if _active or _playing:
 		return false
 	trace_enabled = OS.get_cmdline_user_args().has("--replay-trace")
+	_start_stage_id = SaveData.current_stage_id
+	_start_stage_no = SaveData.current_route_index + 1
+	_start_route_id = SaveData.current_route_id
 	_recorder = ReplayRecorder.new()
 	_recorder.start()
 	_active = true
@@ -254,6 +260,10 @@ static func finish_run(meta: Dictionary = {}) -> String:
 		return ""
 	_recorder.stop()
 	_recorder.metadata = meta.duplicate(true)
+	# 回放必须从录制起点开始，不能默认 Stage1；旧字段缺失时由调用方兜底。
+	_recorder.metadata["start_stage_id"] = _start_stage_id
+	_recorder.metadata["start_stage_no"] = _start_stage_no
+	_recorder.metadata["start_route_id"] = String(_start_route_id)
 	_active = false
 	var dir := ProjectSettings.globalize_path(DIR)
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -283,6 +293,15 @@ static func start_playback(path: String) -> bool:
 	SaveData.is_restarting = false
 	if not SaveData.begin_route_for_difficulty(diff):
 		return false
+	# 录像可能从 Stage2 开始（例如从路线中途进入）；播到录制起点，而不是强行 Stage1。
+	var start_stage := int(meta.get("start_stage_id", 1))
+	var route := SaveData.current_route()
+	if route != null:
+		for i in route.stages.size():
+			if route.stages[i] != null and route.stages[i].stage_id == start_stage:
+				SaveData.current_route_index = i
+				SaveData.current_stage_id = start_stage
+				break
 	RNG.set_seed(rec.rng_seed)
 	_path = path
 	_recorder = rec
