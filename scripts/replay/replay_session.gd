@@ -61,6 +61,21 @@ static func capture_event(action: StringName) -> void:
 
 
 ## 记录一次得分来源（录制时由敌人 / 道具 / 擦弹 / 符卡奖励调用）。
+## 敌弹命中自机：录制时落盘；回放时打印本次受击来源，便于查“多出来的受击”。
+static func capture_hit(uid: int, type_index: int, pos: Vector2) -> void:
+	if _active and _recorder != null:
+		_recorder.hit_events.append({
+			"frame": _recorder.duration_frames,
+			"uid": uid,
+			"type": type_index,
+			"p": [pos.x, pos.y],
+		})
+	elif _playing:
+		push_warning("Replay 受击 frame=%d uid=%d type=%d pos=%s" % [
+			_frame_index, uid, type_index, pos,
+		])
+
+
 static func capture_score(amount: int, source: StringName) -> void:
 	if _active and _recorder != null:
 		_recorder.capture_score(amount, source)
@@ -330,6 +345,29 @@ static func restart_playback() -> bool:
 ## 路线切面也要跨 GameScene reload 保留 playback。
 static func mark_preserve_on_scene_change() -> void:
 	_preserve_on_exit = true
+
+
+## 当前帧所属的 deathbomb 窗口的真实 end 帧；只接受 24 帧附近的配对。
+static func deathbomb_end_for_current() -> Dictionary:
+	if not _playing:
+		return {"frame": -1, "cancelled": false}
+	var start := -1
+	for e in _events:
+		var action := StringName(str(e.get("action", "")))
+		var f := int(e.get("frame", 0))
+		if action == &"deathbomb_start":
+			start = f
+		elif (action == &"deathbomb_end_cancel" or action == &"deathbomb_end_miss") and start >= 0:
+			var near := _frame_index >= start - 2 and _frame_index <= f + 2
+			var sane := f - _frame_index <= 26
+			if near and sane:
+				return {"frame": f, "cancelled": action == &"deathbomb_end_cancel"}
+			start = -1
+	return {"frame": -1, "cancelled": false}
+
+
+static func current_frame() -> int:
+	return _frame_index
 
 
 ## GameScene 退出时消费：true = 这次场景 reload 是回放重开，别停 playback。

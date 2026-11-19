@@ -26,6 +26,8 @@ var events: Array[Dictionary] = []
 var samples: Array[Dictionary] = []
 ## 得分来源事件 {frame, amount, source}：追 score 分歧用。
 var score_events: Array[Dictionary] = []
+## 每次敌弹命中自机：frame / uid / type / pos。很小，常驻。
+var hit_events: Array[Dictionary] = []
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
@@ -102,6 +104,7 @@ func to_dict() -> Dictionary:
 		"events": events,
 		"samples": samples,
 		"score_events": score_events,
+		"hits": hit_events,
 	}
 
 

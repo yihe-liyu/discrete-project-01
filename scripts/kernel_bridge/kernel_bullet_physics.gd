@@ -59,6 +59,7 @@ func _enemy_bullets_vs_player() -> void:
 	for k in range(ids.size() - 1, -1, -1):
 		var id: int = ids[k]
 		if system.hit_test_swept(id, player.global_position, player.hitbox_radius):
+			ReplaySession.capture_hit(system.get_uid(id), system.get_type_index(id), system.get_position(id))
 			player.miss()
 			system.despawn(id)
 		elif not system.is_grazed(id) and system.hit_test_swept(id, player.global_position, player.graze_radius):

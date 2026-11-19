@@ -68,6 +68,9 @@ var _is_deathbombing: bool = false
 var _deathbomb_bullets_paused: bool = false
 ## deathbomb 窗口的物理帧起点（回放/普通共用；回放按帧数自行关窗）。
 var _deathbomb_start_physics_frame: int = 0
+## 回放中该窗口的录制 end 帧；-1 = 没有靠近的配对，走 24 帧。
+var _replay_deathbomb_end_frame: int = -1
+var _replay_deathbomb_end_cancelled: bool = false
 ## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
 var _deathbomb_saved_time_scale: float = 1.0
 ## 无敌闪烁相位累加器（秒）。
@@ -156,10 +159,14 @@ func _poll_replay_events() -> void:
 
 
 func _process(_delta: float) -> void:
-	if ReplaySession.is_playing() and _is_deathbombing \
-			and Engine.get_physics_frames() - _deathbomb_start_physics_frame >= DEATHBOMB_FRAMES:
-		_end_deathbomb(false)
-		return
+	if ReplaySession.is_playing() and _is_deathbombing:
+		if _replay_deathbomb_end_frame >= 0 \
+				and ReplaySession.current_frame() >= _replay_deathbomb_end_frame:
+			_end_deathbomb(_replay_deathbomb_end_cancelled)
+			return
+		if Engine.get_physics_frames() - _deathbomb_start_physics_frame >= DEATHBOMB_FRAMES:
+			_end_deathbomb(false)
+			return
 	if not ReplaySession.is_playing():
 		return
 	if ReplaySession.take_event(&"memory_release"):
@@ -582,6 +589,12 @@ func _begin_deathbomb_window() -> bool:
 		return false
 	_is_deathbombing = true
 	_deathbomb_start_physics_frame = Engine.get_physics_frames()
+	_replay_deathbomb_end_frame = -1
+	_replay_deathbomb_end_cancelled = false
+	if ReplaySession.is_playing():
+		var end := ReplaySession.deathbomb_end_for_current()
+		_replay_deathbomb_end_frame = int(end.get("frame", -1))
+		_replay_deathbomb_end_cancelled = bool(end.get("cancelled", false))
 	ReplaySession.capture_event(&"deathbomb_start")
 	# time_scale=0 只把 delta 变 0，_physics_process 仍会跑；不暂停弹幕的话，
 	# 定格帧里仍会擦弹 / 清弹，正是回放 graze 分歧的来源。
@@ -609,6 +622,8 @@ func _on_deathbomb_timeout() -> void:
 func _end_deathbomb(p_cancelled: bool) -> void:
 	_is_deathbombing = false
 	_deathbomb_start_physics_frame = 0
+	_replay_deathbomb_end_frame = -1
+	_replay_deathbomb_end_cancelled = false
 	ReplaySession.capture_event(&"deathbomb_end_cancel" if p_cancelled else &"deathbomb_end_miss")
 	_resume_bullets_after_deathbomb()
 	_restore_time_scale()
