@@ -41,6 +41,11 @@ const PRACTICE_SFX_TRIM_DB := 0.0
 
 
 func _ready():
+	if ReplaySession.is_playing():
+		process_physics_priority = -200
+		var sampler: Node = load("res://scripts/scenes/replay_sampler.gd").new()
+		sampler.game = self
+		add_child(sampler)
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
 	# R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
@@ -147,6 +152,9 @@ func _playback_tick() -> void:
 
 
 func _process(_delta: float) -> void:
+	# priority -50 sampler 若因时序/优先级没跑到，idle 兜底一次。
+	if _sample_pending and ReplaySession.is_playing() and not _ending:
+		flush_replay_sample()
 	# deathbomb 定格时 physics 可能停，但回放帧号必须继续走，否则 446→451 的
 	# 录制输入/事件永远到不了。每个物理帧最多推进一次。
 	if not _ending and ReplaySession.is_playing() and Engine.time_scale == 0.0:
