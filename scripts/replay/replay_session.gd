@@ -83,6 +83,10 @@ static func capture_spawn(uid: int, type_index: int, pos: Vector2, faction: int,
 		var f := _frame_index
 		while _spawn_cursor < _recorder.spawn_events.size() \
 				and int(_recorder.spawn_events[_spawn_cursor].get("frame", 0)) < f:
+			var missing: Dictionary = _recorder.spawn_events[_spawn_cursor]
+			push_warning("Replay 缺少生成 frame=%d type=%d" % [
+				int(missing.get("frame", 0)), int(missing.get("type", -1)),
+			])
 			_spawn_cursor += 1
 		if _spawn_cursor < _recorder.spawn_events.size():
 			var e: Dictionary = _recorder.spawn_events[_spawn_cursor]
