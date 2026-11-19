@@ -8,8 +8,9 @@ extends RefCounted
 
 const DIR := "user://replays"
 
-## 默认只录输入/元数据；逐帧状态 trace 只用于调试（--replay-trace）。
-static var trace_enabled: bool = false
+## 默认录轻量逐帧状态（不含逐颗弹/道具快照）；--replay-trace 才加完整快照。
+static var trace_enabled: bool = true
+static var full_trace: bool = false
 
 static var _recorder: ReplayRecorder
 static var _active: bool = false
@@ -38,7 +39,8 @@ static func is_recording() -> bool:
 static func start_run() -> bool:
 	if _active or _playing:
 		return false
-	trace_enabled = OS.get_cmdline_user_args().has("--replay-trace")
+	full_trace = OS.get_cmdline_user_args().has("--replay-trace")
+	trace_enabled = true
 	_start_stage_id = SaveData.current_stage_id
 	_start_stage_no = SaveData.current_route_index + 1
 	_start_route_id = SaveData.current_route_id

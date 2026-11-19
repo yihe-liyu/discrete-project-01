@@ -132,8 +132,10 @@ func _physics_process(_delta: float) -> void:
 		ReplaySession.capture_sample(_stage_runtime.player.global_position, sample_res,
 			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 			_item_pool.visible_count(), _item_pool.item_signature(),
-			_bullet_manager.bullet_snapshot(), sample_res.graze_count if sample_res != null else 0,
-			_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state())
+			_bullet_manager.bullet_snapshot() if ReplaySession.full_trace else [],
+			sample_res.graze_count if sample_res != null else 0,
+			_item_pool.item_snapshot() if ReplaySession.full_trace else [],
+			_bullet_manager.kernel_rng_state())
 
 
 func _start_practice_game() -> void:
