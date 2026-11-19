@@ -68,6 +68,8 @@ var _is_deathbombing: bool = false
 var _deathbomb_bullets_paused: bool = false
 ## 回放兜底 timer 的结算方向（录制 end 是 cancel 还是 miss）。
 var _replay_deathbomb_cancel_fallback: bool = false
+## deathbomb 窗口的真实时间起点：最后一道 watchdog，防 timer/事件都失效。
+var _deathbomb_wall_start_ms: int = 0
 ## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
 var _deathbomb_saved_time_scale: float = 1.0
 ## 无敌闪烁相位累加器（秒）。
@@ -156,6 +158,11 @@ func _poll_replay_events() -> void:
 
 
 func _process(_delta: float) -> void:
+	# Watchdog：无论 timer / 录制事件是否失效，deathbomb 窗口都不能永久冻住。
+	if _is_deathbombing and _deathbomb_wall_start_ms > 0 \
+			and Time.get_ticks_msec() - _deathbomb_wall_start_ms > 3000:
+		_end_deathbomb(_replay_deathbomb_cancel_fallback)
+		return
 	if not ReplaySession.is_playing():
 		return
 	if ReplaySession.take_event(&"memory_release"):
@@ -577,6 +584,7 @@ func _begin_deathbomb_window() -> bool:
 	if resources.bomb_count < DEATHBOMB_MIN_BOMBS:
 		return false
 	_is_deathbombing = true
+	_deathbomb_wall_start_ms = Time.get_ticks_msec()
 	ReplaySession.capture_event(&"deathbomb_start")
 	# time_scale=0 只把 delta 变 0，_physics_process 仍会跑；不暂停弹幕的话，
 	# 定格帧里仍会擦弹 / 清弹，正是回放 graze 分歧的来源。
@@ -617,6 +625,7 @@ func _on_deathbomb_timeout() -> void:
 ## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
 func _end_deathbomb(p_cancelled: bool) -> void:
 	_is_deathbombing = false
+	_deathbomb_wall_start_ms = 0
 	_replay_deathbomb_cancel_fallback = false
 	ReplaySession.capture_event(&"deathbomb_end_cancel" if p_cancelled else &"deathbomb_end_miss")
 	_resume_bullets_after_deathbomb()
