@@ -437,6 +437,28 @@ static func consume_preserve_on_exit() -> bool:
 	return keep
 
 
+## 回放结束时对比最终资源；trace 只覆盖逐帧，末段结算差异在这里暴露。
+static func check_final(res: PlayerResources) -> void:
+	if not _playing or _recorder == null:
+		return
+	var meta := _recorder.metadata
+	var expected_score := int(meta.get("score", 0))
+	var actual_score := res.current_score if res != null else -1
+	if actual_score != expected_score:
+		var tail: Array[String] = []
+		for i in range(maxi(0, _score_events.size() - 5), _score_events.size()):
+			var e: Dictionary = _score_events[i]
+			tail.append("%s+%d@%d" % [
+				str(e.get("source", "?")), int(e.get("amount", 0)), int(e.get("frame", 0)),
+			])
+		push_warning("Replay final 分歧 score=%d expected=%d lives=%d/%d bombs=%d/%d last_score_events=%s" % [
+			actual_score, expected_score,
+			res.lives if res != null else -1, int(meta.get("lives", -1)),
+			res.bomb_count if res != null else -1, int(meta.get("bombs", -1)),
+			",".join(tail),
+		])
+
+
 ## 回放推进一帧；返回 false = 文件已放完。
 static func advance_frame() -> bool:
 	if not _playing:

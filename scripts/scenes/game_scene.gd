@@ -133,6 +133,7 @@ func _playback_tick() -> void:
 		return
 	if not ReplaySession.advance_frame():
 		_ending = true
+		ReplaySession.check_final(_stage_runtime.entity_registry.get_player_resources())
 		_finish_playback()
 		return
 	# before_sample 的事件必须在采样前消费，after_sample 的留给 Player._process。
