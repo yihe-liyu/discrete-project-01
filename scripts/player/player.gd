@@ -139,6 +139,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## 回放采样前的离散动作：只消费录制时 before_sample 的事件。
+func poll_replay_before_sample() -> void:
+	if not ReplaySession.is_playing():
+		return
+	for action in ReplaySession.poll_events(false, 0):
+		match action:
+			&"memory_release":
+				_memory_release()
+			&"cancel&bomb":
+				if not _is_deathbombing:
+					_bomb()
+			&"deathbomb_end_cancel":
+				if _is_deathbombing:
+					_end_deathbomb(true)
+			&"deathbomb_end_miss":
+				if _is_deathbombing:
+					_end_deathbomb(false)
+
+
 ## 回放离散动作：按录制帧号触发。普通帧在物理帧开头消费，
 ## 定格（time_scale = 0）时物理帧不可靠，由 _process 兜底。
 func _poll_replay_events() -> void:
@@ -172,12 +191,12 @@ func _process(_delta: float) -> void:
 			return
 	if not ReplaySession.is_playing():
 		return
-	if ReplaySession.take_event(&"memory_release"):
+	if ReplaySession.take_event(&"memory_release", 1):
 		_memory_release()
 	if _is_deathbombing:
-		if ReplaySession.take_event(&"deathbomb_end_cancel"):
+		if ReplaySession.take_event(&"deathbomb_end_cancel", 1):
 			_end_deathbomb(true)
-		elif ReplaySession.take_event(&"deathbomb_end_miss"):
+		elif ReplaySession.take_event(&"deathbomb_end_miss", 1):
 			_end_deathbomb(false)
 	if Engine.time_scale <= 0.0:
 		_poll_replay_events()

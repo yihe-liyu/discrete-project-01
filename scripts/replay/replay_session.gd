@@ -456,12 +456,14 @@ static func is_playing() -> bool:
 
 ## 取出当前帧已到点的离散动作；定格中也可以 call（Player._process）。
 ## 严格按录制帧号消费：提前消费会让炸弹/RNG 比录制早一帧。
-static func poll_events(defer_miss_timeout: bool = false) -> Array[StringName]:
+static func poll_events(defer_miss_timeout: bool = false, after_sample: int = -1) -> Array[StringName]:
 	var out: Array[StringName] = []
 	while _event_index < _events.size():
 		var e: Dictionary = _events[_event_index]
 		var action := StringName(str(e.get("action", "")))
 		if int(e.get("frame", 0)) > _frame_index:
+			break
+		if after_sample >= 0 and bool(e.get("after_sample", true)) != (after_sample == 1):
 			break
 		if defer_miss_timeout and (action == &"deathbomb_end_miss" or action == &"memory_release"):
 			break
@@ -471,11 +473,13 @@ static func poll_events(defer_miss_timeout: bool = false) -> Array[StringName]:
 
 
 ## 取队首指定事件；用于把 deathbomb_end_miss 推迟到物理帧之后（对齐真实 timer）。
-static func take_event(action: StringName) -> bool:
+static func take_event(action: StringName, after_sample: int = -1) -> bool:
 	if _event_index >= _events.size():
 		return false
 	var e: Dictionary = _events[_event_index]
 	if int(e.get("frame", 0)) > _frame_index:
+		return false
+	if after_sample >= 0 and bool(e.get("after_sample", true)) != (after_sample == 1):
 		return false
 	if StringName(str(e.get("action", ""))) != action:
 		return false

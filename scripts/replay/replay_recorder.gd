@@ -55,7 +55,13 @@ func capture() -> void:
 func capture_event(action: StringName) -> void:
 	if not recording:
 		return
-	events.append({"frame": duration_frames, "action": String(action)})
+	# 当前帧 sample 已写 = 事件发生在采样之后；否则会落在下一帧采样前。
+	var after_sample := samples.size() >= duration_frames
+	events.append({
+		"frame": duration_frames,
+		"action": String(action),
+		"after_sample": after_sample,
+	})
 
 
 ## 记录一次得分来源（敌人 / 道具 / 擦弹 / 符卡奖励）。

@@ -135,6 +135,9 @@ func _playback_tick() -> void:
 		_ending = true
 		_finish_playback()
 		return
+	# before_sample 的事件必须在采样前消费，after_sample 的留给 Player._process。
+	if _stage_runtime.player != null:
+		_stage_runtime.player.poll_replay_before_sample()
 	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 	ReplaySession.sync_rng_for_frame()
 	ReplaySession.sync_kernel_rng(_bullet_manager)
