@@ -324,14 +324,21 @@ static func consume_preserve_on_exit() -> bool:
 static func next_deathbomb_end() -> Dictionary:
 	if not _playing:
 		return {"frame": -1, "cancelled": false}
-	for i in range(_event_index, _events.size()):
-		var e: Dictionary = _events[i]
+	# 必须先把 start/end 配对，且 current_frame 真的落在这一对窗口附近；
+	# 否则会把几十秒后的 end 拿来关当前窗口，造成超长定格。
+	var start := -1
+	for e in _events:
 		var action := StringName(str(e.get("action", "")))
-		if action == &"deathbomb_end_cancel" or action == &"deathbomb_end_miss":
-			return {
-				"frame": int(e.get("frame", 0)),
-				"cancelled": action == &"deathbomb_end_cancel",
-			}
+		var f := int(e.get("frame", 0))
+		if action == &"deathbomb_start":
+			start = f
+		elif (action == &"deathbomb_end_cancel" or action == &"deathbomb_end_miss") and start >= 0:
+			if _frame_index >= start - 2 and _frame_index <= f + 2:
+				return {
+					"frame": f,
+					"cancelled": action == &"deathbomb_end_cancel",
+				}
+			start = -1
 	return {"frame": -1, "cancelled": false}
 
 

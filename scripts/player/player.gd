@@ -582,7 +582,21 @@ func _begin_deathbomb_window() -> bool:
 		return false
 	if resources.bomb_count < DEATHBOMB_MIN_BOMBS:
 		return false
+
+	var replay_end_frame := -1
+	var replay_end_cancelled := false
+	if ReplaySession.is_playing():
+		var end := ReplaySession.next_deathbomb_end()
+		replay_end_frame = int(end.get("frame", -1))
+		replay_end_cancelled = bool(end.get("cancelled", false))
+		# 当前帧不属于任何录制的 deathbomb 窗口：回放状态已经跑偏。
+		# 不能开一个等几十秒后 end 的窗口；直接走普通 miss。
+		if replay_end_frame < 0:
+			return false
+
 	_is_deathbombing = true
+	_replay_deathbomb_end_frame = replay_end_frame
+	_replay_deathbomb_end_cancelled = replay_end_cancelled
 	ReplaySession.capture_event(&"deathbomb_start")
 	# time_scale=0 只把 delta 变 0，_physics_process 仍会跑；不暂停弹幕的话，
 	# 定格帧里仍会擦弹 / 清弹，正是回放 graze 分歧的来源。
@@ -592,26 +606,11 @@ func _begin_deathbomb_window() -> bool:
 	_deathbomb_saved_time_scale = Engine.time_scale
 	Engine.time_scale = 0.0
 	GameEvents.deathbomb_started.emit()
-	# 收尾用真实时间计时（process_always + ignore_time_scale）：定格 / 暂停中也照样到点，
-	# 否则窗口永远走不完，time_scale 卡在 0，暂停菜单会被一起冻住。
-	# 回放以录制的 deathbomb_end 事件为权威；但仍留一个“迟到几帧”的兜底 timer。
-	# 如果事件因旧回放/顺序问题没被消费，至少不会让 time_scale 永远卡在 0。
-	# 回放的录制 end 事件是权威；兜底只防永久卡死（2 秒），不能抢在事件前结算。
-	var wait_frames := DEATHBOMB_FRAMES
-	_replay_deathbomb_end_frame = -1
-	_replay_deathbomb_end_cancelled = false
-	if ReplaySession.is_playing():
-		var end := ReplaySession.next_deathbomb_end()
-		_replay_deathbomb_end_frame = int(end.get("frame", -1))
-		_replay_deathbomb_end_cancelled = bool(end.get("cancelled", false))
-		if _replay_deathbomb_end_frame < 0:
-			wait_frames = 120  # 旧回放没有 end：防永久冻结的兜底
-	# 有录制 end 时由 _process 按帧关闭；没有时才用 timer 兜底。
+	# 普通游玩用真实时间 timer；回放有录制 end 时由 _process 按帧关闭。
 	if _replay_deathbomb_end_frame < 0:
-		var timer := get_tree().create_timer(wait_frames / 60.0, true, false, true)
+		var timer := get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, true, false, true)
 		timer.timeout.connect(_on_deathbomb_timeout)
 	return true
-
 
 ## 窗口到点（真实时间，定格 / 暂停中都会到）：还没按 bomb → 这次 miss 照常结算。
 func _on_deathbomb_timeout() -> void:
