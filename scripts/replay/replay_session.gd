@@ -20,6 +20,8 @@ static var _frame_index: int = 0
 static var _mask: int = 0
 static var _events: Array[Dictionary] = []
 static var _event_index: int = 0
+static var _path: String = ""
+static var _preserve_on_exit: bool = false
 static var _samples: Array[Dictionary] = []
 static var _score_events: Array[Dictionary] = []
 static var _trace_diverged: bool = false
@@ -282,6 +284,7 @@ static func start_playback(path: String) -> bool:
 	if not SaveData.begin_route_for_difficulty(diff):
 		return false
 	RNG.set_seed(rec.rng_seed)
+	_path = path
 	_recorder = rec
 	_frames = rec.frames
 	_frame_index = 0
@@ -293,6 +296,23 @@ static func start_playback(path: String) -> bool:
 	_trace_diverged = false
 	_playing = true
 	return true
+
+
+## 从头重播当前录像；保留场景跨 reload 的标志。
+static func restart_playback() -> bool:
+	if _path == "":
+		return false
+	if not start_playback(_path):
+		return false
+	_preserve_on_exit = true
+	return true
+
+
+## GameScene 退出时消费：true = 这次场景 reload 是回放重开，别停 playback。
+static func consume_preserve_on_exit() -> bool:
+	var keep := _preserve_on_exit
+	_preserve_on_exit = false
+	return keep
 
 
 ## 回放推进一帧；返回 false = 文件已放完。
@@ -359,6 +379,8 @@ static func stop_playback() -> void:
 	_mask = 0
 	_events.clear()
 	_event_index = 0
+	_path = ""
+	_preserve_on_exit = false
 	_samples.clear()
 	_score_events.clear()
 	_trace_diverged = false

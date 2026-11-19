@@ -195,7 +195,7 @@ func _load_background(scene: PackedScene) -> void:
 
 
 func _exit_tree():
-	if not _continuing_replay:
+	if not _continuing_replay and not ReplaySession.consume_preserve_on_exit():
 		ReplaySession.cancel_run()
 		ReplaySession.stop_playback()
 	# 断开 autoload 信号连接（防悬空连接：接收者 free 后连接仍在发出者）

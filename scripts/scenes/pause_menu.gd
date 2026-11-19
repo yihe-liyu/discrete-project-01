@@ -20,6 +20,13 @@ func on_enter() -> void:
 	var save := _container.get_node_or_null("SaveReplayLabel")
 	if save and not ReplaySession.is_recording():
 		save.set_meta("is_locked", true)
+	if ReplaySession.is_playing():
+		var restart := _container.get_node_or_null("RestartLabel")
+		if restart:
+			restart.text = "Restart Replay"
+		var s := _container.get_node_or_null("SaveReplayLabel")
+		if s:
+			s.set_meta("is_locked", true)
 	refresh_colors()
 
 	AudioManager.play_sfx(AssetRegistry.sounds["pause"])
@@ -37,6 +44,11 @@ func _on_item_selected(index: int) -> void:
 			if not is_game_over_mode:
 				GameManager.resume_game()
 		1:
+			# 回放中 Restart = 从头重播录像，不切回游玩。
+			if ReplaySession.is_playing():
+				if ReplaySession.restart_playback():
+					GameManager.reload_current_scene()
+				return
 			# 重开是硬切：淡出会让旧曲继续响 0.6s，新场景再起同一首时听感就是"先放一会再重播"。
 			AudioManager.stop_bgm(0.0)
 			SaveData.is_restarting = true
