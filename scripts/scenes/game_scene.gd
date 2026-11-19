@@ -13,6 +13,8 @@ var _current_boss: Boss
 ## 而结算菜单挂在 autoload 的菜单栈上（切场景后仍在）——不加闸门就会「主菜单 + Game Over」叠一起。
 ## 规则：谁先到谁生效，其余一律放弃。
 var _ending: bool = false
+## 回放采样推迟到物理帧之后（Marisa 射击脚本 priority -100 会先 spawn）。
+var _sample_pending: bool = false
 ## 路线切面的场景 reload 不取消录制；普通退出 / 重开才取消。
 var _continuing_replay: bool = false
 ## 符卡练习的 SE 额外压低（dB）。当前 0.0 = 关闭 ——
@@ -139,15 +141,9 @@ func _playback_tick() -> void:
 	# before_sample 的事件必须在采样前消费，after_sample 的留给 Player._process。
 	if _stage_runtime.player != null:
 		_stage_runtime.player.poll_replay_before_sample()
-	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 	ReplaySession.sync_rng_for_frame()
 	ReplaySession.sync_kernel_rng(_bullet_manager)
-	if ReplaySession.trace_enabled and _stage_runtime.player != null:
-		ReplaySession.check_sample(_stage_runtime.player.global_position, res,
-			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
-			_item_pool.visible_count(), _item_pool.item_signature(),
-			_bullet_manager.bullet_snapshot(), res.graze_count if res != null else 0,
-			_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state())
+	_sample_pending = true
 
 
 func _process(_delta: float) -> void:
@@ -156,6 +152,18 @@ func _process(_delta: float) -> void:
 	if not _ending and ReplaySession.is_playing() and Engine.time_scale == 0.0:
 		if ReplaySession.begin_playback_tick():
 			_playback_tick()
+## priority -50 采样节点调用：此时射击脚本已 spawn，玩家还没移动。
+func flush_replay_sample() -> void:
+	if not _sample_pending or _ending or not ReplaySession.is_playing():
+		return
+	_sample_pending = false
+	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	if ReplaySession.trace_enabled and _stage_runtime.player != null:
+		ReplaySession.check_sample(_stage_runtime.player.global_position, res,
+			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
+			_item_pool.visible_count(), _item_pool.item_signature(),
+			_bullet_manager.bullet_snapshot(), res.graze_count if res != null else 0,
+			_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state())
 
 
 func _start_practice_game() -> void:
