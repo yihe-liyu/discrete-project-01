@@ -15,6 +15,7 @@ var _current_boss: Boss
 var _ending: bool = false
 ## 回放采样推迟到物理帧之后（Marisa 射击脚本 priority -100 会先 spawn）。
 var _sample_pending: bool = false
+var _record_sample_pending: bool = false
 ## 路线切面的场景 reload 不取消录制；普通退出 / 重开才取消。
 var _continuing_replay: bool = false
 ## 符卡练习的 SE 额外压低（dB）。当前 0.0 = 关闭 ——
@@ -41,11 +42,6 @@ const PRACTICE_SFX_TRIM_DB := 0.0
 
 
 func _ready():
-	if ReplaySession.is_playing():
-		process_physics_priority = -200
-		var sampler: Node = load("res://scripts/scenes/replay_sampler.gd").new()
-		sampler.game = self
-		add_child(sampler)
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
 	# R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
@@ -123,15 +119,7 @@ func _physics_process(_delta: float) -> void:
 			_playback_tick()
 		return
 	ReplaySession.capture_frame()
-	var sample_res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
-	if ReplaySession.trace_enabled and _stage_runtime.player != null:
-		ReplaySession.capture_sample(_stage_runtime.player.global_position, sample_res,
-			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
-			_item_pool.visible_count(), _item_pool.item_signature(),
-			_bullet_manager.bullet_snapshot() if ReplaySession.full_trace else [],
-			sample_res.graze_count if sample_res != null else 0,
-			_item_pool.item_snapshot() if ReplaySession.full_trace else [],
-			_bullet_manager.kernel_rng_state())
+	_record_sample_pending = true
 
 
 ## 回放帧推进。定格（time_scale=0）时 physics 可能不跑，由 _process 双驱动。
@@ -152,7 +140,18 @@ func _playback_tick() -> void:
 
 
 func _process(_delta: float) -> void:
-	# priority -50 sampler 若因时序/优先级没跑到，idle 兜底一次。
+	# 采样统一放在物理帧结束：RNG / 自机位置 / 子弹都已推进。
+	if _record_sample_pending and not ReplaySession.is_playing() and not _ending:
+		_record_sample_pending = false
+		if ReplaySession.trace_enabled and _stage_runtime.player != null:
+			var rs: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+			ReplaySession.capture_sample(_stage_runtime.player.global_position, rs,
+				_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
+				_item_pool.visible_count(), _item_pool.item_signature(),
+				_bullet_manager.bullet_snapshot() if ReplaySession.full_trace else [],
+				rs.graze_count if rs != null else 0,
+				_item_pool.item_snapshot() if ReplaySession.full_trace else [],
+				_bullet_manager.kernel_rng_state())
 	if _sample_pending and ReplaySession.is_playing() and not _ending:
 		flush_replay_sample()
 	# deathbomb 定格时 physics 可能停，但回放帧号必须继续走，否则 446→451 的
