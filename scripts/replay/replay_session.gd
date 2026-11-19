@@ -172,15 +172,15 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 	if expected.has("bullets") and bullets != int(expected.get("bullets", 0)):
 		mismatch.append("bullets")
 	var expected_bhash := int(expected.get("bhash", 0))
-	if expected.has("bsnap"):
-		# 旧回放的 bhash 可能包含清弹中的死行/未排序；用快照重算。
+	if expected.has("bsnap") and not (expected.get("bsnap", []) as Array).is_empty():
+		# 完整 trace 才用逐颗快照重算；compact trace 的 bsnap 是空数组。
 		expected_bhash = _snapshot_hash(expected.get("bsnap", []))
 	if expected.has("bhash") and bhash != expected_bhash:
 		mismatch.append("bhash[%s]" % _first_bullet_diff(bsnap, expected.get("bsnap", [])))
 	if expected.has("items") and items != int(expected.get("items", 0)):
 		mismatch.append("items")
 	var expected_ihash := int(expected.get("ihash", 0))
-	if expected.has("isnap"):
+	if expected.has("isnap") and not (expected.get("isnap", []) as Array).is_empty():
 		expected_ihash = _snapshot_hash(expected.get("isnap", []))
 	if expected.has("ihash") and ihash != expected_ihash:
 		mismatch.append("ihash[%s]" % _first_item_diff(isnap, expected.get("isnap", [])))

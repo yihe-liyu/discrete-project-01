@@ -96,6 +96,7 @@ func step(delta: float) -> void:
 			var pos := player.global_position
 			if beam.is_hitting(pos):
 				is_missed = true
+				ReplaySession.capture_hit(-1, -1, pos)
 				player.miss()
 			elif _graze_cooldown <= 0 and beam.is_grazing(pos, player.graze_radius):
 				_graze_cooldown = GRAZE_COOLDOWN_FRAMES

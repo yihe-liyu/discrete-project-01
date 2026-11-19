@@ -164,7 +164,8 @@ func _process(_delta: float) -> void:
 				and ReplaySession.current_frame() >= _replay_deathbomb_end_frame:
 			_end_deathbomb(_replay_deathbomb_end_cancelled)
 			return
-		if Engine.get_physics_frames() - _deathbomb_start_physics_frame >= DEATHBOMB_FRAMES:
+		if _replay_deathbomb_end_frame < 0 \
+				and Engine.get_physics_frames() - _deathbomb_start_physics_frame >= DEATHBOMB_FRAMES:
 			_end_deathbomb(false)
 			return
 	if not ReplaySession.is_playing():
@@ -606,10 +607,22 @@ func _begin_deathbomb_window() -> bool:
 	GameEvents.deathbomb_started.emit()
 	# 普通游玩用真实时间 timer，暂停中也照走完；
 	# 回放由 _process 的物理帧计数关窗，另留更长 timer 只防永久冻住。
-	var wait_frames := DEATHBOMB_FRAMES + (8 if ReplaySession.is_playing() else 0)
-	var timer := get_tree().create_timer(wait_frames / 60.0, true, false, true)
-	timer.timeout.connect(_on_deathbomb_timeout)
+	if ReplaySession.is_playing() and _replay_deathbomb_end_frame >= 0:
+		# 定格时回放帧号可能不前进，事件队列到不了 end 帧；
+		# 用录制 end 与本帧的差值做真实时间短 timer，到点按录制方向关窗。
+		var delay := maxi(1, _replay_deathbomb_end_frame - ReplaySession.current_frame())
+		var end_timer := get_tree().create_timer(delay / 60.0, true, false, true)
+		end_timer.timeout.connect(_on_replay_deathbomb_timeout)
+	else:
+		var wait_frames := DEATHBOMB_FRAMES + (8 if ReplaySession.is_playing() else 0)
+		var timer := get_tree().create_timer(wait_frames / 60.0, true, false, true)
+		timer.timeout.connect(_on_deathbomb_timeout)
 	return true
+
+
+func _on_replay_deathbomb_timeout() -> void:
+	if _is_deathbombing and _replay_deathbomb_end_frame >= 0:
+		_end_deathbomb(_replay_deathbomb_end_cancelled)
 
 ## 窗口到点（真实时间，定格 / 暂停中都会到）：还没按 bomb → 这次 miss 照常结算。
 func _on_deathbomb_timeout() -> void:
@@ -620,6 +633,10 @@ func _on_deathbomb_timeout() -> void:
 
 ## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
 func _end_deathbomb(p_cancelled: bool) -> void:
+	# 回放有近距离录制 end 时，结局以录制为准（cancel / miss），
+	# 不因为 timer 或帧计数提前走到这里就改成 miss。
+	if ReplaySession.is_playing() and _replay_deathbomb_end_frame >= 0:
+		p_cancelled = _replay_deathbomb_end_cancelled
 	_is_deathbombing = false
 	_deathbomb_start_physics_frame = 0
 	_replay_deathbomb_end_frame = -1
