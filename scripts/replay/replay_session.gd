@@ -315,6 +315,21 @@ static func consume_preserve_on_exit() -> bool:
 	return keep
 
 
+## 下一条 deathbomb_end 事件相对当前帧的延迟；无 = {frames=-1, cancelled=false}。
+static func next_deathbomb_end() -> Dictionary:
+	if not _playing:
+		return {"frames": -1, "cancelled": false}
+	for i in range(_event_index, _events.size()):
+		var e: Dictionary = _events[i]
+		var action := StringName(str(e.get("action", "")))
+		if action == &"deathbomb_end_cancel" or action == &"deathbomb_end_miss":
+			return {
+				"frames": maxi(0, int(e.get("frame", 0)) - _frame_index),
+				"cancelled": action == &"deathbomb_end_cancel",
+			}
+	return {"frames": -1, "cancelled": false}
+
+
 ## 回放推进一帧；返回 false = 文件已放完。
 static func advance_frame() -> bool:
 	if not _playing:

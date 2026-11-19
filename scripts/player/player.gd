@@ -66,6 +66,8 @@ var _respawn_elapsed: float = 0.0
 var _is_deathbombing: bool = false
 ## 定格期间是否由本窗口暂停了弹幕处理（退出时要恢复）。
 var _deathbomb_bullets_paused: bool = false
+## 回放兜底 timer 的结算方向（录制 end 是 cancel 还是 miss）。
+var _replay_deathbomb_cancel_fallback: bool = false
 ## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
 var _deathbomb_saved_time_scale: float = 1.0
 ## 无敌闪烁相位累加器（秒）。
@@ -158,8 +160,11 @@ func _process(_delta: float) -> void:
 		return
 	if ReplaySession.take_event(&"memory_release"):
 		_memory_release()
-	if _is_deathbombing and ReplaySession.take_event(&"deathbomb_end_miss"):
-		_end_deathbomb(false)
+	if _is_deathbombing:
+		if ReplaySession.take_event(&"deathbomb_end_cancel"):
+			_end_deathbomb(true)
+		elif ReplaySession.take_event(&"deathbomb_end_miss"):
+			_end_deathbomb(false)
 	if Engine.time_scale <= 0.0:
 		_poll_replay_events()
 
@@ -583,11 +588,22 @@ func _begin_deathbomb_window() -> bool:
 	GameEvents.deathbomb_started.emit()
 	# 收尾用真实时间计时（process_always + ignore_time_scale）：定格 / 暂停中也照样到点，
 	# 否则窗口永远走不完，time_scale 卡在 0，暂停菜单会被一起冻住。
-	# 回放时不用真实时间 timer —— 录制里的 deathbomb_end_miss 事件才是权威帧；
-	# 否则 timer 可能比事件早一帧触发，直接结算 miss。
-	if not ReplaySession.is_playing():
-		var timer := get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, true, false, true)
-		timer.timeout.connect(_on_deathbomb_timeout)
+	# 回放以录制的 deathbomb_end 事件为权威；但仍留一个“迟到几帧”的兜底 timer。
+	# 如果事件因旧回放/顺序问题没被消费，至少不会让 time_scale 永远卡在 0。
+	# 回放的录制 end 事件是权威；兜底只防永久卡死（2 秒），不能抢在事件前结算。
+	var wait_frames := DEATHBOMB_FRAMES
+	_replay_deathbomb_cancel_fallback = false
+	if ReplaySession.is_playing():
+		var end := ReplaySession.next_deathbomb_end()
+		var delay := int(end.get("frames", -1))
+		if delay >= 0:
+			# 事件可能因定格期物理帧不推进而晚到；给足够的迟到余量，绝不提前结算。
+			wait_frames = delay + 12
+			_replay_deathbomb_cancel_fallback = bool(end.get("cancelled", false))
+		else:
+			wait_frames = 120  # 没有录制 end：防永久冻结的兜底
+	var timer := get_tree().create_timer(wait_frames / 60.0, true, false, true)
+	timer.timeout.connect(_on_deathbomb_timeout)
 	return true
 
 
@@ -595,12 +611,13 @@ func _begin_deathbomb_window() -> bool:
 func _on_deathbomb_timeout() -> void:
 	if not _is_deathbombing:
 		return  # 已抢命成功 / 已出树 → 什么都不做（SceneTreeTimer 取消不掉，只能这样忽略）
-	_end_deathbomb(false)
+	_end_deathbomb(_replay_deathbomb_cancel_fallback)
 
 
 ## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
 func _end_deathbomb(p_cancelled: bool) -> void:
 	_is_deathbombing = false
+	_replay_deathbomb_cancel_fallback = false
 	ReplaySession.capture_event(&"deathbomb_end_cancel" if p_cancelled else &"deathbomb_end_miss")
 	_resume_bullets_after_deathbomb()
 	_restore_time_scale()
