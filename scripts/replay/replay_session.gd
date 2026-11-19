@@ -374,6 +374,18 @@ static func current_frame() -> int:
 	return _frame_index
 
 
+## 开新窗口前，清掉早于当前帧的旧 deathbomb end，防止旧事件关新窗口。
+static func discard_stale_deathbomb_ends(before_frame: int) -> void:
+	var i := _event_index
+	while i < _events.size():
+		var action := StringName(str(_events[i].get("action", "")))
+		if (action == &"deathbomb_end_cancel" or action == &"deathbomb_end_miss") \
+				and int(_events[i].get("frame", 0)) < before_frame:
+			_events.remove_at(i)
+		else:
+			i += 1
+
+
 ## 每个物理帧最多推进一次；physics 与 process 双驱动时防重复。
 static func begin_playback_tick() -> bool:
 	var pf := Engine.get_physics_frames()
