@@ -66,9 +66,8 @@ var _respawn_elapsed: float = 0.0
 var _is_deathbombing: bool = false
 ## 定格期间是否由本窗口暂停了弹幕处理（退出时要恢复）。
 var _deathbomb_bullets_paused: bool = false
-## 回放的 deathbomb 结束帧（帧驱动，不依赖 timer/事件队列）；-1 = 无录制信息。
-var _replay_deathbomb_end_frame: int = -1
-var _replay_deathbomb_end_cancelled: bool = false
+## deathbomb 窗口的物理帧起点（回放/普通共用；回放按帧数自行关窗）。
+var _deathbomb_start_physics_frame: int = 0
 ## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
 var _deathbomb_saved_time_scale: float = 1.0
 ## 无敌闪烁相位累加器（秒）。
@@ -158,9 +157,8 @@ func _poll_replay_events() -> void:
 
 func _process(_delta: float) -> void:
 	if ReplaySession.is_playing() and _is_deathbombing \
-			and _replay_deathbomb_end_frame >= 0 \
-			and ReplaySession.current_frame() >= _replay_deathbomb_end_frame:
-		_end_deathbomb(_replay_deathbomb_end_cancelled)
+			and Engine.get_physics_frames() - _deathbomb_start_physics_frame >= DEATHBOMB_FRAMES:
+		_end_deathbomb(false)
 		return
 	if not ReplaySession.is_playing():
 		return
@@ -582,21 +580,8 @@ func _begin_deathbomb_window() -> bool:
 		return false
 	if resources.bomb_count < DEATHBOMB_MIN_BOMBS:
 		return false
-
-	var replay_end_frame := -1
-	var replay_end_cancelled := false
-	if ReplaySession.is_playing():
-		var end := ReplaySession.next_deathbomb_end()
-		replay_end_frame = int(end.get("frame", -1))
-		replay_end_cancelled = bool(end.get("cancelled", false))
-		# 当前帧不属于任何录制的 deathbomb 窗口：回放状态已经跑偏。
-		# 不能开一个等几十秒后 end 的窗口；直接走普通 miss。
-		if replay_end_frame < 0:
-			return false
-
 	_is_deathbombing = true
-	_replay_deathbomb_end_frame = replay_end_frame
-	_replay_deathbomb_end_cancelled = replay_end_cancelled
+	_deathbomb_start_physics_frame = Engine.get_physics_frames()
 	ReplaySession.capture_event(&"deathbomb_start")
 	# time_scale=0 只把 delta 变 0，_physics_process 仍会跑；不暂停弹幕的话，
 	# 定格帧里仍会擦弹 / 清弹，正是回放 graze 分歧的来源。
@@ -606,10 +591,11 @@ func _begin_deathbomb_window() -> bool:
 	_deathbomb_saved_time_scale = Engine.time_scale
 	Engine.time_scale = 0.0
 	GameEvents.deathbomb_started.emit()
-	# 普通游玩用真实时间 timer；回放有录制 end 时由 _process 按帧关闭。
-	if _replay_deathbomb_end_frame < 0:
-		var timer := get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, true, false, true)
-		timer.timeout.connect(_on_deathbomb_timeout)
+	# 普通游玩用真实时间 timer，暂停中也照走完；
+	# 回放由 _process 的物理帧计数关窗，另留更长 timer 只防永久冻住。
+	var wait_frames := DEATHBOMB_FRAMES + (8 if ReplaySession.is_playing() else 0)
+	var timer := get_tree().create_timer(wait_frames / 60.0, true, false, true)
+	timer.timeout.connect(_on_deathbomb_timeout)
 	return true
 
 ## 窗口到点（真实时间，定格 / 暂停中都会到）：还没按 bomb → 这次 miss 照常结算。
@@ -622,8 +608,7 @@ func _on_deathbomb_timeout() -> void:
 ## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
 func _end_deathbomb(p_cancelled: bool) -> void:
 	_is_deathbombing = false
-	_replay_deathbomb_end_frame = -1
-	_replay_deathbomb_end_cancelled = false
+	_deathbomb_start_physics_frame = 0
 	ReplaySession.capture_event(&"deathbomb_end_cancel" if p_cancelled else &"deathbomb_end_miss")
 	_resume_bullets_after_deathbomb()
 	_restore_time_scale()

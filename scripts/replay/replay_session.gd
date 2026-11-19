@@ -339,33 +339,6 @@ static func consume_preserve_on_exit() -> bool:
 	return keep
 
 
-## 下一条 deathbomb_end 事件相对当前帧的延迟；无 = {frames=-1, cancelled=false}。
-static func next_deathbomb_end() -> Dictionary:
-	if not _playing:
-		return {"frame": -1, "cancelled": false}
-	# 必须先把 start/end 配对，且 current_frame 真的落在这一对窗口附近；
-	# 否则会把几十秒后的 end 拿来关当前窗口，造成超长定格。
-	var start := -1
-	for e in _events:
-		var action := StringName(str(e.get("action", "")))
-		var f := int(e.get("frame", 0))
-		if action == &"deathbomb_start":
-			start = f
-		elif (action == &"deathbomb_end_cancel" or action == &"deathbomb_end_miss") and start >= 0:
-			if _frame_index >= start - 2 and _frame_index <= f + 2:
-				return {
-					"frame": f,
-					"cancelled": action == &"deathbomb_end_cancel",
-				}
-			start = -1
-	return {"frame": -1, "cancelled": false}
-
-
-## 当前已应用的录制帧号（回放窗口的帧驱动判据）。
-static func current_frame() -> int:
-	return _frame_index
-
-
 ## 回放推进一帧；返回 false = 文件已放完。
 static func advance_frame() -> bool:
 	if not _playing:
