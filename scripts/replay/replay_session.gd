@@ -30,6 +30,7 @@ static var _samples: Array[Dictionary] = []
 static var _score_events: Array[Dictionary] = []
 static var _trace_diverged: bool = false
 static var _last_tick_physics_frame: int = -1
+static var _spawn_cursor: int = 0
 
 
 static func is_recording() -> bool:
@@ -64,6 +65,35 @@ static func capture_event(action: StringName) -> void:
 
 
 ## 记录一次得分来源（录制时由敌人 / 道具 / 擦弹 / 符卡奖励调用）。
+## 弹幕生成：录制时落盘；回放时对比录制生成序列，报第一颗多余/缺失。
+static func capture_spawn(uid: int, type_index: int, pos: Vector2, faction: int,
+		behavior: StringName = &"") -> void:
+	if _active and _recorder != null:
+		_recorder.spawn_events.append({
+			"frame": _recorder.duration_frames,
+			"uid": uid,
+			"type": type_index,
+			"p": [pos.x, pos.y],
+			"f": faction,
+			"b": String(behavior),
+		})
+	elif _playing:
+		if _recorder == null or _recorder.spawn_events.is_empty():
+			return
+		var f := _frame_index
+		while _spawn_cursor < _recorder.spawn_events.size() \
+				and int(_recorder.spawn_events[_spawn_cursor].get("frame", 0)) < f:
+			_spawn_cursor += 1
+		if _spawn_cursor < _recorder.spawn_events.size():
+			var e: Dictionary = _recorder.spawn_events[_spawn_cursor]
+			if int(e.get("frame", -1)) == f and int(e.get("type", -1)) == type_index:
+				_spawn_cursor += 1
+				return
+		push_warning("Replay 多余生成 frame=%d uid=%d type=%d pos=%s behavior=%s" % [
+			f, uid, type_index, pos, behavior,
+		])
+
+
 ## 敌弹命中自机：录制时落盘；回放时打印本次受击来源，便于查“多出来的受击”。
 static func capture_hit(uid: int, type_index: int, pos: Vector2) -> void:
 	if _active and _recorder != null:
@@ -327,6 +357,7 @@ static func start_playback(path: String) -> bool:
 	_frame_index = 0
 	_mask = 0
 	_last_tick_physics_frame = -1
+	_spawn_cursor = 0
 	_events = rec.events.duplicate(true)
 	_event_index = 0
 	_samples = rec.samples.duplicate(true)
@@ -466,6 +497,7 @@ static func stop_playback() -> void:
 	_frame_index = 0
 	_mask = 0
 	_last_tick_physics_frame = -1
+	_spawn_cursor = 0
 	_events.clear()
 	_event_index = 0
 	_path = ""

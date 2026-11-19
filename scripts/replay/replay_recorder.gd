@@ -28,6 +28,8 @@ var samples: Array[Dictionary] = []
 var score_events: Array[Dictionary] = []
 ## 每次敌弹命中自机：frame / uid / type / pos。很小，常驻。
 var hit_events: Array[Dictionary] = []
+## 弹幕生成事件：frame / uid / type / p / faction / behavior。很小，常驻。
+var spawn_events: Array[Dictionary] = []
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
@@ -105,6 +107,7 @@ func to_dict() -> Dictionary:
 		"samples": samples,
 		"score_events": score_events,
 		"hits": hit_events,
+		"spawns": spawn_events,
 	}
 
 
