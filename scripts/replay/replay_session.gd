@@ -29,6 +29,7 @@ static var _start_route_id: StringName = &""
 static var _samples: Array[Dictionary] = []
 static var _score_events: Array[Dictionary] = []
 static var _trace_diverged: bool = false
+static var _last_tick_physics_frame: int = -1
 
 
 static func is_recording() -> bool:
@@ -325,6 +326,7 @@ static func start_playback(path: String) -> bool:
 	_frames = rec.frames
 	_frame_index = 0
 	_mask = 0
+	_last_tick_physics_frame = -1
 	_events = rec.events.duplicate(true)
 	_event_index = 0
 	_samples = rec.samples.duplicate(true)
@@ -370,6 +372,15 @@ static func deathbomb_end_for_current() -> Dictionary:
 
 static func current_frame() -> int:
 	return _frame_index
+
+
+## 每个物理帧最多推进一次；physics 与 process 双驱动时防重复。
+static func begin_playback_tick() -> bool:
+	var pf := Engine.get_physics_frames()
+	if pf == _last_tick_physics_frame:
+		return false
+	_last_tick_physics_frame = pf
+	return true
 
 
 ## GameScene 退出时消费：true = 这次场景 reload 是回放重开，别停 playback。
@@ -438,9 +449,11 @@ static func axis(negative: StringName, positive: StringName) -> float:
 
 static func stop_playback() -> void:
 	_playing = false
+	_last_tick_physics_frame = -1
 	_frames = PackedByteArray()
 	_frame_index = 0
 	_mask = 0
+	_last_tick_physics_frame = -1
 	_events.clear()
 	_event_index = 0
 	_path = ""

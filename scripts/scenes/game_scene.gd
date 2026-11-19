@@ -112,19 +112,8 @@ func _physics_process(_delta: float) -> void:
 	if _ending:
 		return
 	if ReplaySession.is_playing():
-		if not ReplaySession.advance_frame():
-			_ending = true
-			_finish_playback()
-			return
-		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
-		ReplaySession.sync_rng_for_frame()
-		ReplaySession.sync_kernel_rng(_bullet_manager)
-		if ReplaySession.trace_enabled and _stage_runtime.player != null:
-			ReplaySession.check_sample(_stage_runtime.player.global_position, res,
-				_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
-				_item_pool.visible_count(), _item_pool.item_signature(),
-				_bullet_manager.bullet_snapshot(), res.graze_count if res != null else 0,
-				_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state())
+		if ReplaySession.begin_playback_tick():
+			_playback_tick()
 		return
 	ReplaySession.capture_frame()
 	var sample_res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
@@ -136,6 +125,33 @@ func _physics_process(_delta: float) -> void:
 			sample_res.graze_count if sample_res != null else 0,
 			_item_pool.item_snapshot() if ReplaySession.full_trace else [],
 			_bullet_manager.kernel_rng_state())
+
+
+## 回放帧推进。定格（time_scale=0）时 physics 可能不跑，由 _process 双驱动。
+func _playback_tick() -> void:
+	if _ending:
+		return
+	if not ReplaySession.advance_frame():
+		_ending = true
+		_finish_playback()
+		return
+	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	ReplaySession.sync_rng_for_frame()
+	ReplaySession.sync_kernel_rng(_bullet_manager)
+	if ReplaySession.trace_enabled and _stage_runtime.player != null:
+		ReplaySession.check_sample(_stage_runtime.player.global_position, res,
+			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
+			_item_pool.visible_count(), _item_pool.item_signature(),
+			_bullet_manager.bullet_snapshot(), res.graze_count if res != null else 0,
+			_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state())
+
+
+func _process(_delta: float) -> void:
+	# deathbomb 定格时 physics 可能停，但回放帧号必须继续走，否则 446→451 的
+	# 录制输入/事件永远到不了。每个物理帧最多推进一次。
+	if not _ending and ReplaySession.is_playing() and Engine.time_scale == 0.0:
+		if ReplaySession.begin_playback_tick():
+			_playback_tick()
 
 
 func _start_practice_game() -> void:

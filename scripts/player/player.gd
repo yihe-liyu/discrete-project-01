@@ -607,22 +607,14 @@ func _begin_deathbomb_window() -> bool:
 	GameEvents.deathbomb_started.emit()
 	# 普通游玩用真实时间 timer，暂停中也照走完；
 	# 回放由 _process 的物理帧计数关窗，另留更长 timer 只防永久冻住。
-	if ReplaySession.is_playing() and _replay_deathbomb_end_frame >= 0:
-		# 定格时回放帧号可能不前进，事件队列到不了 end 帧；
-		# 用录制 end 与本帧的差值做真实时间短 timer，到点按录制方向关窗。
-		var delay := maxi(1, _replay_deathbomb_end_frame - ReplaySession.current_frame())
-		var end_timer := get_tree().create_timer(delay / 60.0, true, false, true)
-		end_timer.timeout.connect(_on_replay_deathbomb_timeout)
-	else:
+	# 回放帧时钟现在会在定格期间继续走：有录制 end 就由 _process 按帧关窗。
+	# 只在没有录制 end 时用 timer 兜底，避免真实 timer 比帧早到。
+	if _replay_deathbomb_end_frame < 0:
 		var wait_frames := DEATHBOMB_FRAMES + (8 if ReplaySession.is_playing() else 0)
 		var timer := get_tree().create_timer(wait_frames / 60.0, true, false, true)
 		timer.timeout.connect(_on_deathbomb_timeout)
 	return true
 
-
-func _on_replay_deathbomb_timeout() -> void:
-	if _is_deathbombing and _replay_deathbomb_end_frame >= 0:
-		_end_deathbomb(_replay_deathbomb_end_cancelled)
 
 ## 窗口到点（真实时间，定格 / 暂停中都会到）：还没按 bomb → 这次 miss 照常结算。
 func _on_deathbomb_timeout() -> void:
