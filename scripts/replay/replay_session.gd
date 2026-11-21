@@ -101,6 +101,18 @@ static func capture_rng_call(method: StringName, before: int, after: int, caller
 			])
 
 
+## 当前回放帧录制过的擦弹 uid（强制 graze 用）。
+static func replay_graze_uids_for_frame() -> Array[int]:
+	var out: Array[int] = []
+	if not _playing or _recorder == null:
+		return out
+	var f := _frame_index - 1
+	for e in _recorder.graze_events:
+		if int(e.get("frame", -1)) == f:
+			out.append(int(e.get("uid", -1)))
+	return out
+
+
 ## 擦弹事件：录制时记录 uid/roll 前后 state；回放时对比序列。
 static func capture_graze(uid: int, before: int, after: int) -> void:
 	if _active and _recorder != null:

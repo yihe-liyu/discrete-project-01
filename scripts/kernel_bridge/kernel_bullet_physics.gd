@@ -57,6 +57,20 @@ func _enemy_bullets_vs_player() -> void:
 		system, player.global_position, player.graze_radius + system.get_max_step(), BulletType.Faction.ENEMY)
 	# 按稳定 uid 排序，而不是原生行 id：swap-remove 会改变行顺序。
 	# despawn 全部延后，循环中只做判定/标记，避免交换让后续 id 指向别的弹。
+	# 回放：先按录制 uid 强制补上本帧的擦弹，避免半径重算漏掉一颗。
+	var forced_clears: Array[int] = []
+	if ReplaySession.is_playing():
+		for uid in ReplaySession.replay_graze_uids_for_frame():
+			var gid: int = system.find_uid(uid)
+			if gid >= 0 and not system.is_grazed(gid):
+				if _graze_bullet(gid):
+					forced_clears.append(gid)
+			elif gid < 0:
+				# 录制里有这次 graze，但回放里弹已回收：仍补计分/RNG。
+				on_graze()
+				var gb: int = int(RNG.snapshot_state().get("state", 0))
+				RNG.randf()
+				ReplaySession.capture_graze(uid, gb, int(RNG.snapshot_state().get("state", 0)))
 	var entries: Array[Dictionary] = []
 	for id in ids:
 		entries.append({"id": id, "uid": system.get_uid(id)})
@@ -72,22 +86,30 @@ func _enemy_bullets_vs_player() -> void:
 			player.miss()
 			to_despawn.append(id)
 		elif not system.is_grazed(id) and system.hit_test_swept(id, player.global_position, player.graze_radius):
-			system.mark_grazed(id)
-			on_graze()
-			# 每次新擦弹固定消耗一次 RNG；memory 条件只决定是否使用结果。
-			var graze_before: int = int(RNG.snapshot_state().get("state", 0))
-			var roll := RNG.randf()
-			ReplaySession.capture_graze(system.get_uid(id), int(graze_before), int(RNG.snapshot_state().get("state", 0)))
-			var res := _player_res()
-			if res != null and res.memory_value >= 50.0:
-				var chance := remap(res.memory_value, 50.0, 100.0, 0.05, 0.30)
-				if roll < chance:
-					_play_clear(system.get_position(id), system.get_color(id))
-					to_despawn.append(id)
+			if _graze_bullet(id):
+				to_despawn.append(id)
+	to_despawn.append_array(forced_clears)
 	# 行 id 降序回收，保证 swap-with-last 不破坏尚未处理的 id。
 	to_despawn.sort()
 	for i in range(to_despawn.size() - 1, -1, -1):
 		system.despawn(to_despawn[i])
+
+
+## 单颗擦弹结算：标记 / 计分 / RNG / 可选清弹；返回是否清掉。
+func _graze_bullet(id: int) -> bool:
+	var system := backend.system
+	system.mark_grazed(id)
+	on_graze()
+	var graze_before: int = int(RNG.snapshot_state().get("state", 0))
+	var roll := RNG.randf()
+	ReplaySession.capture_graze(system.get_uid(id), graze_before, int(RNG.snapshot_state().get("state", 0)))
+	var res := _player_res()
+	if res != null and res.memory_value >= 50.0:
+		var chance := remap(res.memory_value, 50.0, 100.0, 0.05, 0.30)
+		if roll < chance:
+			_play_clear(system.get_position(id), system.get_color(id))
+			return true
+	return false
 
 
 ## 自机弹 ↔ 敌人：与旧 BulletPhysics._player_vs_enemies 1:1（伤害读 BulletType.damage；起内核自带）。
