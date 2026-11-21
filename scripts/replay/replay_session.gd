@@ -316,7 +316,7 @@ static func finish_run(meta: Dictionary = {}) -> String:
 	_recorder.metadata["start_stage_id"] = _start_stage_id
 	_recorder.metadata["start_stage_no"] = _start_stage_no
 	_recorder.metadata["start_route_id"] = String(_start_route_id)
-	_recorder.metadata["sample_phase"] = "end"
+	_recorder.metadata["sample_phase"] = "next_physics"
 	_active = false
 	var dir := ProjectSettings.globalize_path(DIR)
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -366,7 +366,7 @@ static func start_playback(path: String) -> bool:
 	_events = rec.events.duplicate(true)
 	_event_index = 0
 	_samples.clear()
-	if str(meta.get("sample_phase", "")) == "end":
+	if str(meta.get("sample_phase", "")) == "next_physics":
 		_samples = rec.samples.duplicate(true)
 	_score_events = rec.score_events.duplicate(true)
 	_trace_diverged = false

@@ -115,11 +115,31 @@ func _physics_process(_delta: float) -> void:
 	if _ending:
 		return
 	if ReplaySession.is_playing():
+		# 上一物理帧已经完整结束：在推进下一帧之前采样。
+		if _sample_pending:
+			flush_replay_sample()
 		if ReplaySession.begin_playback_tick():
 			_playback_tick()
 		return
+	# 录制同理：先结算上一帧采样，再录当前帧输入。
+	if _record_sample_pending:
+		_capture_record_sample()
 	ReplaySession.capture_frame()
 	_record_sample_pending = true
+
+
+func _capture_record_sample() -> void:
+	_record_sample_pending = false
+	if not ReplaySession.trace_enabled or _stage_runtime.player == null:
+		return
+	var rs: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	ReplaySession.capture_sample(_stage_runtime.player.global_position, rs,
+		_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
+		_item_pool.visible_count(), _item_pool.item_signature(),
+		_bullet_manager.bullet_snapshot() if ReplaySession.full_trace else [],
+		rs.graze_count if rs != null else 0,
+		_item_pool.item_snapshot() if ReplaySession.full_trace else [],
+		_bullet_manager.kernel_rng_state())
 
 
 ## 回放帧推进。定格（time_scale=0）时 physics 可能不跑，由 _process 双驱动。
@@ -140,26 +160,15 @@ func _playback_tick() -> void:
 
 
 func _process(_delta: float) -> void:
-	# 采样统一放在物理帧结束：RNG / 自机位置 / 子弹都已推进。
-	if _record_sample_pending and not ReplaySession.is_playing() and not _ending:
-		_record_sample_pending = false
-		if ReplaySession.trace_enabled and _stage_runtime.player != null:
-			var rs: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
-			ReplaySession.capture_sample(_stage_runtime.player.global_position, rs,
-				_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
-				_item_pool.visible_count(), _item_pool.item_signature(),
-				_bullet_manager.bullet_snapshot() if ReplaySession.full_trace else [],
-				rs.graze_count if rs != null else 0,
-				_item_pool.item_snapshot() if ReplaySession.full_trace else [],
-				_bullet_manager.kernel_rng_state())
-	if _sample_pending and ReplaySession.is_playing() and not _ending:
-		flush_replay_sample()
-	# deathbomb 定格时 physics 可能停，但回放帧号必须继续走，否则 446→451 的
-	# 录制输入/事件永远到不了。每个物理帧最多推进一次。
+	# 只在定格时接管帧时钟；正常帧的采样固定在下一物理帧开头。
 	if not _ending and ReplaySession.is_playing() and Engine.time_scale == 0.0:
+		if _sample_pending:
+			flush_replay_sample()
 		if ReplaySession.begin_playback_tick():
 			_playback_tick()
-## priority -50 采样节点调用：此时射击脚本已 spawn，玩家还没移动。
+
+
+## 在下一物理帧开头调用：此时上一帧的 RNG / 位置 / 子弹已全部结束。
 func flush_replay_sample() -> void:
 	if not _sample_pending or _ending or not ReplaySession.is_playing():
 		return
