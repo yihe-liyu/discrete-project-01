@@ -46,7 +46,7 @@ func test_playback_loads_route_seed_and_input() -> void:
 	rec.frames = PackedByteArray([1 << ReplayRecorder.ACTIONS.find("shoot")])
 	rec.duration_frames = 1
 	rec.metadata = {"difficulty": 1, "character": 0}
-	rec.events = [{"frame": 0, "action": "cancel&bomb"}]
+	rec.events = [{"frame": 0, "tick": 0, "action": "cancel&bomb"}]
 	var path := "user://test_replay_playback.json"
 	assert_true(rec.save(path))
 
@@ -104,7 +104,7 @@ func test_deathbomb_event_is_not_consumed_early() -> void:
 	rec.start()
 	rec.frames = PackedByteArray([0, 0, 0])
 	rec.duration_frames = 3
-	rec.events = [{"frame": 1, "action": "cancel&bomb"}]
+	rec.events = [{"frame": 1, "tick": 1, "action": "cancel&bomb"}]
 	var path := "user://test_replay_deathbomb.json"
 	assert_true(rec.save(path))
 	assert_true(ReplaySession.start_playback(path))
@@ -120,7 +120,7 @@ func test_far_future_bomb_is_not_consumed_early() -> void:
 	rec.start()
 	rec.frames = PackedByteArray([0, 0, 0])
 	rec.duration_frames = 3
-	rec.events = [{"frame": 2, "action": "cancel&bomb"}]
+	rec.events = [{"frame": 2, "tick": 2, "action": "cancel&bomb"}]
 	var path := "user://test_replay_far_bomb.json"
 	assert_true(rec.save(path))
 	assert_true(ReplaySession.start_playback(path))

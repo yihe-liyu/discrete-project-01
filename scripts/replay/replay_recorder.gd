@@ -60,7 +60,9 @@ func capture() -> void:
 
 
 ## 记录一次离散动作；frame = 当前已录物理帧数（定格中也可用）。
-func capture_event(action: StringName) -> void:
+## [param at_next_tick] 用于输入事件：输入在物理帧之间派发，效果从下一物理帧开始，
+## 因此归属 tick = duration_frames + 1；物理帧内派发的事件归属当前 tick。
+func capture_event(action: StringName, at_next_tick: bool = false) -> void:
 	if not recording:
 		return
 	# 当前帧 sample 已写 = 事件发生在采样之后；否则会落在下一帧采样前。
@@ -72,8 +74,13 @@ func capture_event(action: StringName) -> void:
 		event_frame = duration_frames - 1
 	events.append({
 		"frame": event_frame,
+		# tick 是回放消费用的真实物理 tick（与 frame 的 sample 相位解耦）。
+		"tick": duration_frames + (1 if at_next_tick else 0),
+		# engine_tick 是 Engine 物理帧号：回放/录制场景装载差不会让它漂移。
+		"engine_tick": Engine.get_physics_frames() + (1 if at_next_tick else 0),
 		"action": String(action),
 		"after_sample": after_sample,
+		"at_next_tick": at_next_tick,
 	})
 
 

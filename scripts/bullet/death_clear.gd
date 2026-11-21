@@ -16,7 +16,10 @@ func setup(p_laser_sys, p_sweep: Callable) -> void:
 
 
 ## 加一个扩张清弹圈（pos / max_radius / duration / start_radius / on_clear）。
-func start(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
+## [param delay_frames] 延后多少物理帧才开始扫掠（回放 deathbomb 关窗在物理帧内触发，
+## 录制时它在帧间触发；延后一帧才能与录制的首次扫掠对齐）。
+func start(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, start_radius: float = 30.0,
+		on_clear: Callable = Callable(), delay_frames: int = 0) -> void:
 	_death_clears.append({
 		pos = pos,
 		age = 0.0,
@@ -24,6 +27,7 @@ func start(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, star
 		start_r = start_radius,
 		max_r = max_radius,
 		on_clear = on_clear,
+		delay = delay_frames,
 	})
 
 
@@ -36,6 +40,9 @@ func clear_all() -> void:
 func process(delta: float) -> void:
 	for i in range(_death_clears.size() - 1, -1, -1):
 		var circle: Dictionary = _death_clears[i]
+		if int(circle.get("delay", 0)) > 0:
+			circle.delay = int(circle.delay) - 1
+			continue
 		circle.age += delta
 		if circle.age >= circle.duration:
 			_death_clears.remove_at(i)

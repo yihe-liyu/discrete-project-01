@@ -62,9 +62,11 @@ static func capture_frame() -> void:
 
 
 ## 离散动作（bomb / memory_release）由 Player 的输入事件调用。
-static func capture_event(action: StringName) -> void:
+## 输入事件发生在两个物理帧之间，效果从下一物理帧开始；归属 tick 要与物理帧内
+## 事件区分，否则回放会提前一帧执行（清弹圈 / 掉道具会整体错位）。
+static func capture_event(action: StringName, at_next_tick: bool = false) -> void:
 	if _active and _recorder != null:
-		_recorder.capture_event(action)
+		_recorder.capture_event(action, at_next_tick)
 
 
 ## 记录一次得分来源（录制时由敌人 / 道具 / 擦弹 / 符卡奖励调用）。
@@ -473,21 +475,23 @@ static func mark_preserve_on_scene_change() -> void:
 	_preserve_on_exit = true
 
 
-## 当前帧所属的 deathbomb 窗口的真实 end 帧；只接受 24 帧附近的配对。
+## 当前帧所属的 deathbomb 窗口的真实 end tick；只接受 24 帧附近的配对。
+## 返回的 frame 字段是事件真正生效的物理 tick（不是 sample 帧），
+## 否则回放会在录制结束前一个 tick 就提前关窗复位。
 static func deathbomb_end_for_current() -> Dictionary:
 	if not _playing:
 		return {"frame": -1, "cancelled": false}
 	var start := -1
 	for e in _events:
 		var action := StringName(str(e.get("action", "")))
-		var f := int(e.get("frame", 0))
+		var t := _event_target_frame(e)
 		if action == &"deathbomb_start":
-			start = f
+			start = t
 		elif (action == &"deathbomb_end_cancel" or action == &"deathbomb_end_miss") and start >= 0:
-			var near := _frame_index >= start - 2 and _frame_index <= f + 2
-			var sane := f - _frame_index <= 26
+			var near := _frame_index >= start - 2 and _frame_index <= t + 2
+			var sane := t - _frame_index <= 26
 			if near and sane:
-				return {"frame": f, "cancelled": action == &"deathbomb_end_cancel"}
+				return {"frame": t, "cancelled": action == &"deathbomb_end_cancel"}
 			start = -1
 	return {"frame": -1, "cancelled": false}
 
@@ -502,7 +506,7 @@ static func discard_stale_deathbomb_ends(before_frame: int) -> void:
 	while i < _events.size():
 		var action := StringName(str(_events[i].get("action", "")))
 		if (action == &"deathbomb_end_cancel" or action == &"deathbomb_end_miss") \
-				and int(_events[i].get("frame", 0)) < before_frame:
+				and _event_target_frame(_events[i]) < before_frame:
 			_events.remove_at(i)
 		else:
 			i += 1
@@ -563,18 +567,47 @@ static func is_playing() -> bool:
 
 
 
+## 新录制用 Engine 物理帧号；换算成当前回放帧号。
+static func _event_target_frame(e: Dictionary) -> int:
+	if not e.has("engine_tick"):
+		return _event_tick(e)
+	# 用「当前帧 + 剩余 Engine 帧」换算，窗口开启时也稳。
+	return _frame_index + (int(e.get("engine_tick", 0)) - Engine.get_physics_frames())
+
+
+## 事件是否已到点。新录制按 Engine 物理帧比较（不受场景装载差影响）。
+static func _event_due(e: Dictionary) -> bool:
+	if e.has("engine_tick"):
+		return Engine.get_physics_frames() >= int(e.get("engine_tick", 0))
+	return _event_tick(e) <= _frame_index
+
+
+## 事件真正生效的物理 tick。新录制直接写 tick；旧录制按动作补算：
+## 输入事件（memory_release / bomb）在帧间派发，比 sample 帧晚 2 个 tick；
+## 物理帧内事件（deathbomb）晚 1 个 tick。
+static func _event_tick(e: Dictionary) -> int:
+	if e.has("tick"):
+		return int(e.get("tick", 0))
+	var action := StringName(str(e.get("action", "")))
+	var frame := int(e.get("frame", 0))
+	if action == &"memory_release" or action == &"cancel&bomb":
+		return frame + 2
+	return frame + 1
+
+
 ## 取出当前帧已到点的离散动作；定格中也可以 call（Player._process）。
-## 严格按录制帧号消费：提前消费会让炸弹/RNG 比录制早一帧。
+## 严格按事件 tick 消费：提前消费会让炸弹/RNG 比录制早一帧。
 static func poll_events(defer_miss_timeout: bool = false, after_sample: int = -1) -> Array[StringName]:
 	var out: Array[StringName] = []
 	while _event_index < _events.size():
 		var e: Dictionary = _events[_event_index]
 		var action := StringName(str(e.get("action", "")))
-		if int(e.get("frame", 0)) > _frame_index:
+		if not _event_due(e):
 			break
 		if after_sample >= 0 and bool(e.get("after_sample", true)) != (after_sample == 1):
 			break
-		if defer_miss_timeout and (action == &"deathbomb_end_miss" or action == &"memory_release"):
+		if defer_miss_timeout and (action == &"deathbomb_end_miss" \
+				or action == &"deathbomb_end_cancel" or action == &"memory_release"):
 			break
 		out.append(action)
 		_event_index += 1
@@ -586,7 +619,7 @@ static func take_event(action: StringName, after_sample: int = -1) -> bool:
 	if _event_index >= _events.size():
 		return false
 	var e: Dictionary = _events[_event_index]
-	if int(e.get("frame", 0)) > _frame_index:
+	if not _event_due(e):
 		return false
 	if after_sample >= 0 and bool(e.get("after_sample", true)) != (after_sample == 1):
 		return false

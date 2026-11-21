@@ -126,11 +126,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if ReplaySession.is_playing():
 		return  # 回放时真实键盘的离散动作不得穿透
 	if event.is_action_pressed("memory_release"):
-		ReplaySession.capture_event(&"memory_release")
+		ReplaySession.capture_event(&"memory_release", true)
 		_memory_release()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cancel&bomb"):
-		ReplaySession.capture_event(&"cancel&bomb")
+		ReplaySession.capture_event(&"cancel&bomb", true)
 		if _is_deathbombing:
 			# 抢在被弹炸弹窗口关掉之前按下 bomb → 抵消这次 miss（只花雷，不掉命）
 			_end_deathbomb(true)
@@ -525,7 +525,7 @@ func miss() -> void:
 
 ## 真正的 miss 结算（清弹 / 记忆 / 火力惩罚 / P 点扇形 / 扣残机 / 复位两步，最后触发）。
 ## 反色圈等演出用的是这里捕获的 pos（中弹那一刻的位置），所以复位移动必须放在本函数末尾。
-func _apply_miss() -> void:
+func _apply_miss(death_clear_delay_frames: int = 0) -> void:
 	_play_sfx(AssetRegistry.sounds["player_die"])
 	var pos: Vector2 = global_position
 	_miss_circle(pos, 2.5, 1280)
@@ -535,7 +535,7 @@ func _apply_miss() -> void:
 	_miss_circle(pos + Vector2(0, -100), 2.5, 1280)
 	_miss_circle(pos, 1.0, 1280, 0.0, 1.5)
 
-	_death_clear(pos, 2048, 3.0)
+	_death_clear(pos, 2048, 3.0, 30.0, Callable(), death_clear_delay_frames)
 
 	# Miss 后记忆值增加 25%
 	resources.add_memory(PlayerResources.MEMORY_MISS)
@@ -664,7 +664,7 @@ func _end_deathbomb(p_cancelled: bool) -> void:
 	if p_cancelled:
 		_cancel_miss_by_deathbomb()
 	else:
-		_apply_miss()
+		_apply_miss(1 if ReplaySession.is_playing() and resources.lives <= 1 else 0)
 
 
 ## deathbomb 成功：花掉 DEATHBOMB_COST 个雷（不足则用完）并照常放炸弹，不掉命。
@@ -704,6 +704,7 @@ func _play_sfx(stream: AudioStream, volume_db: float = AudioManager.SFX_LEVEL_DB
 
 
 func _death_clear(pos: Vector2, max_radius: float, duration: float,
-		start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
+		start_radius: float = 30.0, on_clear: Callable = Callable(),
+		delay_frames: int = 0) -> void:
 	if ctx:
-		ctx.bullets.death_clear(pos, max_radius, duration, start_radius, on_clear)
+		ctx.bullets.death_clear(pos, max_radius, duration, start_radius, on_clear, delay_frames)

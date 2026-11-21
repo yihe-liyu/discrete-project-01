@@ -286,8 +286,9 @@ func clear_enemy_bullets_in_shape(center: Vector2, radius: float, inside: Callab
 
 ## 起一个死亡清弹圈：半径从 start_radius 扩到 max_radius，持续 duration 秒。
 ## 每帧清掉圆内敌弹（逐颗消散特效 + on_clear 回调），并切掉碰到圈的生长激光头。
-func start_death_clear(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
-	_death_clear.start(pos, max_radius, duration, start_radius, on_clear)
+func start_death_clear(pos: Vector2, max_radius: float = 1280.0, duration: float = 1.0, start_radius: float = 30.0,
+		on_clear: Callable = Callable(), delay_frames: int = 0) -> void:
+	_death_clear.start(pos, max_radius, duration, start_radius, on_clear, delay_frames)
 
 
 func _sweep_death_clear(center: Vector2, radius: float, on_clear: Callable) -> void:

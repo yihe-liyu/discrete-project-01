@@ -133,8 +133,9 @@ func clear_enemy_bullets() -> void:
 
 ## 死亡清弹圈：从 start_radius 膨胀到 max_radius 消除敌弹
 func death_clear(pos: Vector2, max_radius: float, duration: float,
-		start_radius: float = 30.0, on_clear: Callable = Callable()) -> void:
-	if bullet_manager: bullet_manager.start_death_clear(pos, max_radius, duration, start_radius, on_clear)
+		start_radius: float = 30.0, on_clear: Callable = Callable(),
+		delay_frames: int = 0) -> void:
+	if bullet_manager: bullet_manager.start_death_clear(pos, max_radius, duration, start_radius, on_clear, delay_frames)
 
 
 ## 炸弹（宿主节点版，不进内核池）——玩家炸弹用；数据是 BombData（炸弹走宿主节点，不是弹幕）

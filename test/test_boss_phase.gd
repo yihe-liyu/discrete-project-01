@@ -25,7 +25,8 @@ class BulletSpy:
 	var calls: Array = []
 
 	func death_clear(pos: Vector2, max_radius: float, duration: float,
-			_start_radius: float = 30.0, _on_clear: Callable = Callable()) -> void:
+			_start_radius: float = 30.0, _on_clear: Callable = Callable(),
+			_delay_frames: int = 0) -> void:
 		calls.append([pos, max_radius, duration])
 
 
