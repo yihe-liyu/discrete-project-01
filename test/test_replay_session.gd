@@ -63,6 +63,30 @@ func test_playback_loads_route_seed_and_input() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
+func test_engine_tick_events_are_relative_to_recording_start() -> void:
+	# 跨进程回放：录制时 Engine 帧号很大，回放时 Engine 帧号很小/更小。
+	# 事件必须按「录制内相对 tick」消费，不能因为绝对帧号已过就一开始全部触发。
+	var rec := ReplayRecorder.new()
+	rec.start()
+	rec.start_engine_tick = Engine.get_physics_frames() - 1000
+	rec.frames = PackedByteArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+	rec.duration_frames = 10
+	rec.events = [{
+		"frame": 4,
+		"tick": 5,
+		"engine_tick": rec.start_engine_tick + 5,
+		"action": "memory_release",
+		"after_sample": false,
+	}]
+	var path := "user://test_replay_engine_tick.json"
+	assert_true(rec.save(path))
+	assert_true(ReplaySession.start_playback(path))
+	assert_true(ReplaySession.advance_frame())
+	assert_eq(ReplaySession.poll_events(), [], "相对第 5 tick 的事件不能在第一帧就触发")
+	ReplaySession.stop_playback()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
 func test_replay_menu_builds_list() -> void:
 	var menu = load("res://scenes/ui/replay_menu.tscn").instantiate()
 	add_child_autofree(menu)

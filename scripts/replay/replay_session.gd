@@ -33,6 +33,8 @@ static var _last_tick_physics_frame: int = -1
 static var _spawn_cursor: int = 0
 static var _rng_cursor: int = 0
 static var _graze_cursor: int = 0
+## 回放首个物理帧的 Engine 帧号；与新录像的 start_engine_tick 配对做相对换算。
+static var _playback_start_engine_tick: int = -1
 
 
 static func is_recording() -> bool:
@@ -443,6 +445,7 @@ static func start_playback(path: String) -> bool:
 	_frames = rec.frames
 	_frame_index = 0
 	_mask = 0
+	_playback_start_engine_tick = -1
 	_last_tick_physics_frame = -1
 	_spawn_cursor = 0
 	_rng_cursor = 0
@@ -559,6 +562,8 @@ static func advance_frame() -> bool:
 		return false
 	_mask = int(_frames[_frame_index])
 	_frame_index += 1
+	if _frame_index == 1:
+		_playback_start_engine_tick = Engine.get_physics_frames()
 	return true
 
 
@@ -567,18 +572,31 @@ static func is_playing() -> bool:
 
 
 
-## 新录制用 Engine 物理帧号；换算成当前回放帧号。
+## 事件是否带可用的 Engine 相对时间戳。新录像有 start_engine_tick；
+## 旧录像（缺这个字段）退回 frame/tick，绝不能拿绝对 Engine 帧号跨进程比较。
+static func _has_relative_engine_tick(e: Dictionary) -> bool:
+	return e.has("engine_tick") and _recorder != null \
+		and _recorder.start_engine_tick >= 0 and _playback_start_engine_tick >= 0
+
+
+## 事件相对录制起点的物理 tick。
+static func _event_relative_engine_tick(e: Dictionary) -> int:
+	return int(e.get("engine_tick", 0)) - _recorder.start_engine_tick
+
+
+## 新录制用 Engine 相对 tick；换算成当前回放帧号。
 static func _event_target_frame(e: Dictionary) -> int:
-	if not e.has("engine_tick"):
+	if not _has_relative_engine_tick(e):
 		return _event_tick(e)
-	# 用「当前帧 + 剩余 Engine 帧」换算，窗口开启时也稳。
-	return _frame_index + (int(e.get("engine_tick", 0)) - Engine.get_physics_frames())
+	var current_rel := Engine.get_physics_frames() - _playback_start_engine_tick
+	return _frame_index + (_event_relative_engine_tick(e) - current_rel)
 
 
-## 事件是否已到点。新录制按 Engine 物理帧比较（不受场景装载差影响）。
+## 事件是否已到点。新录制按录制内相对 Engine tick 比较（跨进程也成立）。
 static func _event_due(e: Dictionary) -> bool:
-	if e.has("engine_tick"):
-		return Engine.get_physics_frames() >= int(e.get("engine_tick", 0))
+	if _has_relative_engine_tick(e):
+		var current_rel := Engine.get_physics_frames() - _playback_start_engine_tick
+		return current_rel >= _event_relative_engine_tick(e)
 	return _event_tick(e) <= _frame_index
 
 
@@ -647,6 +665,7 @@ static func stop_playback() -> void:
 	_frames = PackedByteArray()
 	_frame_index = 0
 	_mask = 0
+	_playback_start_engine_tick = -1
 	_last_tick_physics_frame = -1
 	_spawn_cursor = 0
 	_rng_cursor = 0

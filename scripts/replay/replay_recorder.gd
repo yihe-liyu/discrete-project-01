@@ -19,6 +19,10 @@ var rng_state: int = 0
 var recording := false
 ## 已录帧数
 var duration_frames := 0
+## 首个录制物理帧的 Engine 帧号；事件 engine_tick 是绝对帧号，回放用它与本值
+## 一起换算成“录制内相对 tick”，避免跨进程回放时事件被当成早就到点。
+var start_engine_tick: int = -1
+var _capture_started := false
 ## 回放元数据（关卡 / 难度 / 角色 / 分数等；由录制方填写）
 var metadata: Dictionary = {}
 ## 离散输入事件（bomb / memory_release）：{frame, action}。
@@ -49,12 +53,17 @@ func start() -> void:
 	rng_state = int(rng_snapshot.get("state", 0))
 	recording = true
 	duration_frames = 0
+	start_engine_tick = -1
+	_capture_started = false
 
 
 ## 每帧调用一次：采样当前输入为位掩码
 func capture() -> void:
 	if not recording:
 		return
+	if not _capture_started:
+		_capture_started = true
+		start_engine_tick = Engine.get_physics_frames()
 	frames.append(input_mask())
 	duration_frames += 1
 
@@ -128,6 +137,7 @@ func to_dict() -> Dictionary:
 		"seed": str(rng_seed),
 		"rng_state": str(rng_state),  # 字符串防 JSON int64 精度丢失（种子决定可复现性！）
 		"duration": duration_frames,
+		"start_engine_tick": start_engine_tick,
 		"frames_hex": frames.hex_encode(),
 		"metadata": metadata,
 		"events": events,
@@ -157,6 +167,7 @@ func load_dict(data: Dictionary) -> bool:
 	rng_seed = int(data.get("seed", "0"))  # 兼容字符串存储（JSON 键仍叫 seed）
 	rng_state = int(data.get("rng_state", "0"))
 	duration_frames = data.get("duration", 0)
+	start_engine_tick = int(data.get("start_engine_tick", -1))
 	frames = (data.get("frames_hex", "") as String).hex_decode()
 	if frames.size() != duration_frames:
 		return false
