@@ -66,6 +66,12 @@ var _respawn_elapsed: float = 0.0
 var _is_deathbombing: bool = false
 ## 定格期间是否由本窗口暂停了弹幕处理（退出时要恢复）。
 var _deathbomb_bullets_paused: bool = false
+## 回放关窗发生在物理帧内时，把「恢复弹幕 / 恢复 time_scale / 火力惩罚 / 清弹圈」
+## 推迟到本帧物理结束：录制里这些是帧间事件，自机射击协程这一 tick 仍按旧火力
+## 和旧子机数量打一轮；若提前扣火力，子机先消失，就会「缺少生成」。
+var _deferred_resume_pending: bool = false
+var _deferred_miss_pos: Vector2 = Vector2.ZERO
+var _deferred_miss_pending: bool = false
 ## deathbomb 窗口的物理帧起点（回放/普通共用；回放按帧数自行关窗）。
 var _deathbomb_start_physics_frame: int = 0
 ## 回放中该窗口的录制 end 帧；-1 = 没有靠近的配对，走 24 帧。
@@ -107,8 +113,9 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	# 定格安全阀：被弹炸弹窗口没走完就出树（切场景 / 测试回收）也绝不能把 time_scale 留在 0
-	if _is_deathbombing:
+	if _is_deathbombing or _deferred_resume_pending:
 		_is_deathbombing = false
+		_deferred_resume_pending = false
 		_resume_bullets_after_deathbomb()
 		_restore_time_scale()
 		GameEvents.deathbomb_ended.emit()
@@ -525,7 +532,7 @@ func miss() -> void:
 
 ## 真正的 miss 结算（清弹 / 记忆 / 火力惩罚 / P 点扇形 / 扣残机 / 复位两步，最后触发）。
 ## 反色圈等演出用的是这里捕获的 pos（中弹那一刻的位置），所以复位移动必须放在本函数末尾。
-func _apply_miss(death_clear_delay_frames: int = 0) -> void:
+func _apply_miss(death_clear_delay_frames: int = 0, defer_side_effects: bool = false) -> void:
 	_play_sfx(AssetRegistry.sounds["player_die"])
 	var pos: Vector2 = global_position
 	_miss_circle(pos, 2.5, 1280)
@@ -535,13 +542,19 @@ func _apply_miss(death_clear_delay_frames: int = 0) -> void:
 	_miss_circle(pos + Vector2(0, -100), 2.5, 1280)
 	_miss_circle(pos, 1.0, 1280, 0.0, 1.5)
 
-	_death_clear(pos, 2048, 3.0, 30.0, Callable(), death_clear_delay_frames)
+	if defer_side_effects:
+		_deferred_miss_pos = pos
+		_deferred_miss_pending = true
+		call_deferred("_run_deferred_miss_side_effects")
+	else:
+		_death_clear(pos, 2048, 3.0, 30.0, Callable(), death_clear_delay_frames)
 
 	# Miss 后记忆值增加 25%
 	resources.add_memory(PlayerResources.MEMORY_MISS)
 
 	# 火力惩罚（原作口径）：miss 削 50 火力（clamp 0..300）
-	resources.on_miss_power_penalty()
+	if not defer_side_effects:
+		resources.on_miss_power_penalty()
 
 	# 雷惩罚：扣 2、不低于 3；不撒掉落物、雷碎片不动。
 	# deathbomb 窗口在 miss() 里先判定，所以这次扣雷抢不了这次命。
@@ -646,6 +659,29 @@ func _on_deathbomb_timeout() -> void:
 	_end_deathbomb(false)
 
 
+## 只延后「恢复弹幕 / time_scale」：deathbomb 抢命成功时没有 miss 副作用。
+func _run_deferred_deathbomb_resume() -> void:
+	if not _deferred_resume_pending or _deferred_miss_pending:
+		return
+	_deferred_resume_pending = false
+	_restore_time_scale()
+	_resume_bullets_after_deathbomb()
+
+
+## 回放关窗的帧间副作用：物理帧结束后再扣火力 / 起清弹圈。
+func _run_deferred_miss_side_effects() -> void:
+	if not _deferred_miss_pending:
+		return
+	_deferred_miss_pending = false
+	if _deferred_resume_pending:
+		_deferred_resume_pending = false
+		_restore_time_scale()
+		_resume_bullets_after_deathbomb()
+	if resources != null:
+		resources.on_miss_power_penalty()
+	_death_clear(_deferred_miss_pos, 2048, 3.0)
+
+
 ## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
 func _end_deathbomb(p_cancelled: bool) -> void:
 	_deathbomb_generation += 1
@@ -658,13 +694,19 @@ func _end_deathbomb(p_cancelled: bool) -> void:
 	_replay_deathbomb_end_frame = -1
 	_replay_deathbomb_end_cancelled = false
 	ReplaySession.capture_event(&"deathbomb_end_cancel" if p_cancelled else &"deathbomb_end_miss")
-	_resume_bullets_after_deathbomb()
-	_restore_time_scale()
+	var defer_side_effects := ReplaySession.is_playing() and Engine.is_in_physics_frame()
+	if defer_side_effects:
+		_deferred_resume_pending = true
+	else:
+		_resume_bullets_after_deathbomb()
+		_restore_time_scale()
 	GameEvents.deathbomb_ended.emit()
 	if p_cancelled:
+		if defer_side_effects:
+			call_deferred("_run_deferred_deathbomb_resume")
 		_cancel_miss_by_deathbomb()
 	else:
-		_apply_miss(1 if ReplaySession.is_playing() and resources.lives <= 1 else 0)
+		_apply_miss(0, defer_side_effects)
 
 
 ## deathbomb 成功：花掉 DEATHBOMB_COST 个雷（不足则用完）并照常放炸弹，不掉命。
