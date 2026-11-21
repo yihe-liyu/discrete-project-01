@@ -34,6 +34,8 @@ var _is_input_ready: bool = false
 var _is_closing: bool = false
 ## 回放里用射击键的上升沿推进（shoot 已在 ReplayRecorder.ACTIONS 里）。
 var _replay_shoot_was_down: bool = false
+## 本局回放是否带对话推进轨迹（新录像）；有则完全按录制 tick 推进。
+var _replay_dialogue_trace: bool = false
 
 # ═══ 生命周期 ═══
 
@@ -53,7 +55,9 @@ func play_steps(steps: Array) -> void:
 	_dialogue_runner.line_shown.connect(_on_line_shown)
 	_dialogue_runner.state_changed.connect(_on_state_changed)
 	_dialogue_runner.event_fired.connect(_on_event_fired)
+	_dialogue_runner.wait_resolved.connect(_on_wait_resolved)
 	_dialogue_runner.finished.connect(_on_finished)
+	_replay_dialogue_trace = ReplaySession.is_playing() and ReplaySession.has_dialogue_trace()
 	# 淡入完成后启动步骤（演出立绘在淡入后才开始出现，与旧行为一致）
 	var tw := create_tween()
 	tw.tween_property(_root, "modulate:a", 1.0, 0.3)
@@ -110,12 +114,17 @@ func _process(delta: float) -> void:
 	# 保留 PROCESS_MODE_ALWAYS 让淡出动画照常，仅停掉 _dialogue_runner.tick
 	if GameManager.current_state == GameManager.AppState.PAUSED:
 		return
-	# 步骤计时（WAIT / auto_advance）
-	_dialogue_runner.tick(delta)
+	# 有对话轨迹时不再按真实时间跑 WAIT / auto，完全按录制 tick 推进。
+	if not _replay_dialogue_trace:
+		_dialogue_runner.tick(delta)
 	if not _is_input_ready:
 		return
-	# 回放没有 UI 事件：用录制里的射击键上升沿推进。正常游戏走下面的 _input。
 	if ReplaySession.is_playing():
+		if _replay_dialogue_trace:
+			while ReplaySession.poll_dialogue_advance():
+				_dialogue_runner.force_advance()
+			return
+		# 旧录像没有对话轨迹：退回射击键上升沿。
 		var shoot_down := PlayerInput.is_action_pressed("shoot")
 		if shoot_down and not _replay_shoot_was_down:
 			_advance()
@@ -177,13 +186,19 @@ func _on_line_shown(line: DialogueLine, speakers: Array, state: StageState) -> v
 		if panel._shake_dur > 0.0:
 			panel.shake(info.node)
 
-	# 输入冷却
-	if input_cooldown > 0.0:
+	# 输入冷却；有对话轨迹时由录制 tick 决定推进，不再等真实时间。
+	if input_cooldown > 0.0 and not _replay_dialogue_trace:
 		_is_input_ready = false
 		await get_tree().create_timer(input_cooldown).timeout
 		if not is_inside_tree() or _is_closing:
 			return
 	_is_input_ready = true
+
+
+## 等待结束（LINE/WAIT）：录制时记下 tick；回放由 poll 再次驱动。
+func _on_wait_resolved() -> void:
+	if ReplaySession.is_recording():
+		ReplaySession.capture_dialogue_advance()
 
 
 func _on_state_changed(state: StageState, duration: float) -> void:

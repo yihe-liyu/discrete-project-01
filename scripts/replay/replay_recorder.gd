@@ -40,6 +40,8 @@ var spawn_events: Array[Dictionary] = []
 var rng_calls: Array[Dictionary] = []
 ## 擦弹事件：frame / uid / roll 前后 state；定位 graze 清弹跨帧。
 var graze_events: Array[Dictionary] = []
+## 对话等待结束（LINE/WAIT）的 Engine tick；回放按帧推进对话。
+var dialogue_advances: Array[Dictionary] = []
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
@@ -48,6 +50,7 @@ func start() -> void:
 	events.clear()
 	samples.clear()
 	score_events.clear()
+	dialogue_advances.clear()
 	var rng_snapshot := RNG.snapshot_state()
 	rng_seed = int(rng_snapshot.get("seed", 0))
 	rng_state = int(rng_snapshot.get("state", 0))
@@ -147,6 +150,7 @@ func to_dict() -> Dictionary:
 		"spawns": spawn_events,
 		"rng_calls": rng_calls,
 		"graze_events": graze_events,
+		"dialogue_advances": dialogue_advances,
 	}
 
 
@@ -218,6 +222,12 @@ func load_dict(data: Dictionary) -> bool:
 		for e in raw_rng:
 			if e is Dictionary:
 				rng_calls.append(e.duplicate(true))
+	dialogue_advances.clear()
+	var raw_dialogue = data.get("dialogue_advances", [])
+	if raw_dialogue is Array:
+		for e in raw_dialogue:
+			if e is Dictionary:
+				dialogue_advances.append(e.duplicate(true))
 	graze_events.clear()
 	var raw_graze = data.get("graze_events", [])
 	if raw_graze is Array:

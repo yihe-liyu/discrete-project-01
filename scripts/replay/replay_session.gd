@@ -33,6 +33,7 @@ static var _last_tick_physics_frame: int = -1
 static var _spawn_cursor: int = 0
 static var _rng_cursor: int = 0
 static var _graze_cursor: int = 0
+static var _dialogue_cursor: int = 0
 ## 回放首个物理帧的 Engine 帧号；与新录像的 start_engine_tick 配对做相对换算。
 static var _playback_start_engine_tick: int = -1
 ## 逐帧位置/弹幕哈希探针只给 --replay-trace 调试用；正常回放仍保留
@@ -118,6 +119,34 @@ static func replay_graze_uids_for_frame() -> Array[int]:
 		if int(e.get("frame", -1)) == f:
 			out.append(int(e.get("uid", -1)))
 	return out
+
+
+## 对话推进：录制时记 Engine tick；回放按 tick 驱动 DialogueRunner。
+static func capture_dialogue_advance() -> void:
+	if _active and _recorder != null:
+		_recorder.dialogue_advances.append({"engine_tick": Engine.get_physics_frames()})
+
+
+## 当前录像是否有对话推进轨迹（旧录像没有 → 回放退回 shoot 上升沿）。
+static func has_dialogue_trace() -> bool:
+	return _playing and _recorder != null and not _recorder.dialogue_advances.is_empty()
+
+
+## 回放：到点则消费一个对话推进。
+static func poll_dialogue_advance() -> bool:
+	if not _playing or _recorder == null:
+		return false
+	if _dialogue_cursor >= _recorder.dialogue_advances.size():
+		return false
+	var e: Dictionary = _recorder.dialogue_advances[_dialogue_cursor]
+	if not _has_relative_engine_tick(e):
+		_dialogue_cursor += 1
+		return false
+	var current_rel := Engine.get_physics_frames() - _playback_start_engine_tick
+	if current_rel < _event_relative_engine_tick(e):
+		return false
+	_dialogue_cursor += 1
+	return true
 
 
 ## 擦弹事件：录制时记录 uid/roll 前后 state；回放时对比序列。
@@ -729,6 +758,7 @@ static func stop_playback() -> void:
 	_spawn_cursor = 0
 	_rng_cursor = 0
 	_graze_cursor = 0
+	_dialogue_cursor = 0
 	_events.clear()
 	_event_index = 0
 	_path = ""

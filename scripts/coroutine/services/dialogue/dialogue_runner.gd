@@ -13,6 +13,9 @@ signal line_shown(line: DialogueLine, speakers: Array, state: StageState)
 signal state_changed(state: StageState, duration: float)
 signal event_fired(event_key: String)
 signal finished()
+## 一个 LINE / WAIT 等待结束（手动 advance、auto_advance 或 WAIT 到点）。
+## 回放用它把对话推进时机按帧录下来，不依赖真实时间。
+signal wait_resolved()
 
 ## 当前对话的舞台状态（[method start] 时换成全新实例，是角色状态的唯一真相）。
 var state := StageState.new()
@@ -58,6 +61,12 @@ func advance() -> void:
 		_advance()
 
 
+## 回放推进：不管当前停在 LINE 还是 WAIT，都直接结束这个等待。
+func force_advance() -> void:
+	if is_waiting_line or is_waiting_time:
+		_advance()
+
+
 ## 当前等待的台词行；无 = null。
 func current_line() -> DialogueLine:
 	return _dialogue_line
@@ -69,8 +78,11 @@ func is_finished() -> bool:
 
 
 func _advance() -> void:
+	var was_waiting := is_waiting_line or is_waiting_time
 	is_waiting_line = false
 	is_waiting_time = false
+	if was_waiting:
+		wait_resolved.emit()
 	_idx += 1
 	if _idx >= _steps.size():
 		_dialogue_line = null
