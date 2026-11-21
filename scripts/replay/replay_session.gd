@@ -31,6 +31,7 @@ static var _score_events: Array[Dictionary] = []
 static var _trace_diverged: bool = false
 static var _last_tick_physics_frame: int = -1
 static var _spawn_cursor: int = 0
+static var _rng_cursor: int = 0
 
 
 static func is_recording() -> bool:
@@ -46,6 +47,7 @@ static func start_run() -> bool:
 	_start_stage_id = SaveData.current_stage_id
 	_start_stage_no = SaveData.current_route_index + 1
 	_start_route_id = SaveData.current_route_id
+	RNG.rng_trace_hook = capture_rng_call
 	_recorder = ReplayRecorder.new()
 	_recorder.start()
 	_active = true
@@ -65,6 +67,25 @@ static func capture_event(action: StringName) -> void:
 
 
 ## 记录一次得分来源（录制时由敌人 / 道具 / 擦弹 / 符卡奖励调用）。
+## gameplay RNG 调用：录制时按帧落盘；回放时逐条比对入口与帧。
+static func capture_rng_call(method: StringName) -> void:
+	if _active and _recorder != null:
+		_recorder.rng_calls.append({"frame": _recorder.duration_frames, "m": String(method)})
+	elif _playing and _recorder != null and not _recorder.rng_calls.is_empty():
+		while _rng_cursor < _recorder.rng_calls.size() \
+				and int(_recorder.rng_calls[_rng_cursor].get("frame", 0)) < _frame_index:
+			_rng_cursor += 1
+		if _rng_cursor >= _recorder.rng_calls.size():
+			return
+		var e: Dictionary = _recorder.rng_calls[_rng_cursor]
+		if int(e.get("frame", -1)) == _frame_index and str(e.get("m", "")) == String(method):
+			_rng_cursor += 1
+		else:
+			push_warning("Replay RNG 调用分歧 frame=%d cur=%s exp=%s@%d" % [
+				_frame_index, String(method), str(e.get("m", "")), int(e.get("frame", -1)),
+			])
+
+
 ## 弹幕生成：录制时落盘；回放时对比录制生成序列，报第一颗多余/缺失。
 static func capture_spawn(uid: int, type_index: int, pos: Vector2, faction: int,
 		behavior: StringName = &"") -> void:
@@ -324,6 +345,7 @@ static func finish_run(meta: Dictionary = {}) -> String:
 	var path := "%s/%s_%d.json" % [DIR, stamp, Time.get_ticks_msec()]
 	if not _recorder.save(path):
 		return ""
+	RNG.rng_trace_hook = Callable()
 	_recorder = null
 	return path
 
@@ -356,6 +378,7 @@ static func start_playback(path: String) -> bool:
 				SaveData.current_stage_id = start_stage
 				break
 	RNG.set_seed(rec.rng_seed)
+	RNG.rng_trace_hook = capture_rng_call
 	_path = path
 	_recorder = rec
 	_frames = rec.frames
@@ -363,6 +386,7 @@ static func start_playback(path: String) -> bool:
 	_mask = 0
 	_last_tick_physics_frame = -1
 	_spawn_cursor = 0
+	_rng_cursor = 0
 	_events = rec.events.duplicate(true)
 	_event_index = 0
 	_samples.clear()
@@ -525,12 +549,14 @@ static func axis(negative: StringName, positive: StringName) -> float:
 
 static func stop_playback() -> void:
 	_playing = false
+	RNG.rng_trace_hook = Callable()
 	_last_tick_physics_frame = -1
 	_frames = PackedByteArray()
 	_frame_index = 0
 	_mask = 0
 	_last_tick_physics_frame = -1
 	_spawn_cursor = 0
+	_rng_cursor = 0
 	_events.clear()
 	_event_index = 0
 	_path = ""

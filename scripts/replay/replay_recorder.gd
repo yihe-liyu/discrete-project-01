@@ -30,6 +30,8 @@ var score_events: Array[Dictionary] = []
 var hit_events: Array[Dictionary] = []
 ## 弹幕生成事件：frame / uid / type / p / faction / behavior。很小，常驻。
 var spawn_events: Array[Dictionary] = []
+## gameplay RNG 调用序列：frame / 入口名。用于定位 RNG 流错位。
+var rng_calls: Array[Dictionary] = []
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
@@ -114,6 +116,7 @@ func to_dict() -> Dictionary:
 		"score_events": score_events,
 		"hits": hit_events,
 		"spawns": spawn_events,
+		"rng_calls": rng_calls,
 	}
 
 

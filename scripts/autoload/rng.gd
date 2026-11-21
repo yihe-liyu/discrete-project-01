@@ -7,6 +7,8 @@ signal seed_changed(seed_value: int)
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## 纯表现随机流（屏幕抖动 / 粒子 / UI）：不参与 gameplay，不污染回放 RNG。
 var _fx_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## Replay 调试钩子：每次 gameplay RNG 调用都通知（参数 = 入口名）。
+var rng_trace_hook: Callable = Callable()
 
 func _ready():
 	randomize_seed()   # 走方法以广播 seed（启动期通常无监听者，安全）
@@ -39,18 +41,28 @@ func restore_state(snapshot: Dictionary, p_emit: bool = false) -> void:
 		seed_changed.emit(_rng.seed)
 
 func randf() -> float:
+	if rng_trace_hook.is_valid():
+		rng_trace_hook.call(&"randf")
 	return _rng.randf()
 
 func randi() -> int:
+	if rng_trace_hook.is_valid():
+		rng_trace_hook.call(&"randi")
 	return _rng.randi()
 
 func randf_range(from: float, to: float) -> float:
+	if rng_trace_hook.is_valid():
+		rng_trace_hook.call(&"randf_range")
 	return _rng.randf_range(from, to)
 
 func randi_range(from: int, to: int) -> int:
+	if rng_trace_hook.is_valid():
+		rng_trace_hook.call(&"randi_range")
 	return _rng.randi_range(from, to)
 
 func randfn(mean: float = 0.0, deviation: float = 1.0) -> float:
+	if rng_trace_hook.is_valid():
+		rng_trace_hook.call(&"randfn")
 	return _rng.randfn(mean, deviation)
 
 
