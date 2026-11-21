@@ -374,8 +374,13 @@ static func _first_item_diff(current: Array, expected_raw: Array) -> String:
 		return float(a[2]) < float(b[2]))
 	var n := mini(cur.size(), expected.size())
 	for i in n:
-		if cur[i] != expected[i]:
-			return "i=%d cur=%s exp=%s" % [i, cur[i], expected[i]]
+		var a: Array = cur[i]
+		var b: Array = expected[i]
+		var differs := int(a[0]) != int(b[0]) \
+			or not is_equal_approx(float(a[1]), float(b[1])) \
+			or not is_equal_approx(float(a[2]), float(b[2]))
+		if differs:
+			return "i=%d cur=%s exp=%s" % [i, a, b]
 	if cur.size() != expected.size():
 		return "len %d vs %d" % [cur.size(), expected.size()]
 	return "order/hash"
