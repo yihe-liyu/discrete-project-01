@@ -121,8 +121,9 @@ func _process(delta: float) -> void:
 		return
 	if ReplaySession.is_playing():
 		if _replay_dialogue_trace:
-			while ReplaySession.poll_dialogue_advance():
-				_dialogue_runner.force_advance()
+			if _dialogue_runner.has_started():
+				while ReplaySession.poll_dialogue_advance():
+					_dialogue_runner.force_advance()
 			return
 		# 旧录像没有对话轨迹：退回射击键上升沿。
 		var shoot_down := PlayerInput.is_action_pressed("shoot")

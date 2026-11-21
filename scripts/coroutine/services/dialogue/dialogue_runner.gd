@@ -67,6 +67,11 @@ func force_advance() -> void:
 		_advance()
 
 
+## 是否已经 start()（回放轨迹不能在 start 之前消费 advance）。
+func has_started() -> bool:
+	return _idx >= 0
+
+
 ## 当前等待的台词行；无 = null。
 func current_line() -> DialogueLine:
 	return _dialogue_line
