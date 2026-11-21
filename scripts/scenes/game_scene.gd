@@ -190,7 +190,12 @@ func _actor_snapshot() -> Array:
 		if not is_instance_valid(enemy):
 			continue
 		var pos: Vector2 = (enemy as Node2D).global_position
-		out.append([str(enemy.name), pos.x, pos.y])
+		# 节点自动名（@Area2D@nnn）会随分配顺序变化，不能用于跨进程比较；
+		# 用脚本路径做稳定身份，同名同位置再按坐标排序。
+		var script: Script = enemy.get_script() as Script
+		var label := str(script.resource_path) if script != null and script.resource_path != "" \
+			else str(enemy.get_class())
+		out.append([label, pos.x, pos.y])
 	out.sort_custom(func(a: Array, b: Array) -> bool:
 		if str(a[0]) != str(b[0]):
 			return str(a[0]) < str(b[0])

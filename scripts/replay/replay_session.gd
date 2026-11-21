@@ -296,13 +296,23 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 		if exp_actors.size() != actors.size():
 			mismatch.append("actors(len %d vs %d)" % [actors.size(), exp_actors.size()])
 		else:
-			for i in exp_actors.size():
-				var a: Array = actors[i]
-				var b: Array = exp_actors[i]
-				if str(a[0]) != str(b[0]) \
-						or absf(float(a[1]) - float(b[1])) > 0.01 \
-						or absf(float(a[2]) - float(b[2])) > 0.01:
-					mismatch.append("actor[%d %s vs %s]" % [i, a, b])
+			# 旧录像 actor 标签是节点名（含自动名），新录制是脚本路径；跨版本只比位置。
+			var cur_xy: Array = []
+			var exp_xy: Array = []
+			for a in actors:
+				cur_xy.append([float(a[1]), float(a[2])])
+			for b in exp_actors:
+				exp_xy.append([float(b[1]), float(b[2])])
+			cur_xy.sort_custom(func(a: Array, b: Array) -> bool:
+				return float(a[0]) < float(b[0]) or (is_equal_approx(float(a[0]), float(b[0])) and float(a[1]) < float(b[1])))
+			exp_xy.sort_custom(func(a: Array, b: Array) -> bool:
+				return float(a[0]) < float(b[0]) or (is_equal_approx(float(a[0]), float(b[0])) and float(a[1]) < float(b[1])))
+			for i in exp_xy.size():
+				var a: Array = cur_xy[i]
+				var b: Array = exp_xy[i]
+				if absf(float(a[0]) - float(b[0])) > 0.01 \
+						or absf(float(a[1]) - float(b[1])) > 0.01:
+					mismatch.append("actor[%d cur=%s exp=%s]" % [i, a, b])
 					break
 	if (res.current_score if res != null else 0) != int(expected.get("score", 0)):
 		mismatch.append("score[%s]" % _score_events_near(idx))
