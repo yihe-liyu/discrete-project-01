@@ -174,7 +174,8 @@ func flush_replay_sample() -> void:
 		return
 	_sample_pending = false
 	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
-	if ReplaySession.trace_enabled and _stage_runtime.player != null:
+	if ReplaySession.trace_enabled and ReplaySession.trace_verify_enabled \
+			and _stage_runtime.player != null:
 		ReplaySession.check_sample(_stage_runtime.player.global_position, res,
 			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 			_item_pool.visible_count(), _item_pool.item_signature(),

@@ -35,6 +35,9 @@ static var _rng_cursor: int = 0
 static var _graze_cursor: int = 0
 ## 回放首个物理帧的 Engine 帧号；与新录像的 start_engine_tick 配对做相对换算。
 static var _playback_start_engine_tick: int = -1
+## 逐帧位置/弹幕哈希探针只给 --replay-trace 调试用；正常回放仍保留
+## 生成/擦弹/受击/RNG 这些会影响玩法的分歧检查，但不刷单帧弹幕快照。
+static var trace_verify_enabled: bool = false
 
 
 static func is_recording() -> bool:
@@ -301,7 +304,14 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 	if expected.has("ihash") and ihash != expected_ihash:
 		mismatch.append("ihash[%s]" % _first_item_diff(isnap, expected.get("isnap", [])))
 	if not mismatch.is_empty():
-		_trace_diverged = true
+		var only_bullets := true
+		for part in mismatch:
+			var text := str(part)
+			if not (text == "bullets" or text.begins_with("bhash")):
+				only_bullets = false
+				break
+		if not only_bullets:
+			_trace_diverged = true
 		push_warning("Replay 分歧 frame=%d: %s" % [idx, ", ".join(mismatch)])
 
 
@@ -457,6 +467,7 @@ static func start_playback(path: String) -> bool:
 		_samples = rec.samples.duplicate(true)
 	_score_events = rec.score_events.duplicate(true)
 	_trace_diverged = false
+	trace_verify_enabled = OS.get_cmdline_user_args().has("--replay-trace")
 	_playing = true
 	# 必须在 _playing / cursor 就绪后再挂 hook，否则首批调用会被丢弃。
 	RNG.rng_trace_hook = capture_rng_call
