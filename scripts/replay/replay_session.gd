@@ -209,7 +209,7 @@ static func capture_score(amount: int, source: StringName) -> void:
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
 static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
 		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = [],
-		krng: int = 0) -> void:
+		krng: int = 0, actors: Array = []) -> void:
 	if not _active or _recorder == null:
 		return
 	var rng := RNG.snapshot_state()
@@ -228,6 +228,7 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 		"graze": graze,
 		"isnap": isnap,
 		"krng": krng,
+		"actors": actors,
 	})
 
 
@@ -265,7 +266,7 @@ static func sync_rng_for_frame() -> void:
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
 static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
 		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = [],
-		krng: int = 0) -> void:
+		krng: int = 0, actors: Array = []) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():
 		return
 	var idx := _frame_index - 1
@@ -290,6 +291,19 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 		mismatch.append("graze")
 	if expected.has("krng") and krng != int(str(expected.get("krng", "0"))):
 		mismatch.append("krng")
+	if expected.has("actors"):
+		var exp_actors: Array = expected.get("actors", [])
+		if exp_actors.size() != actors.size():
+			mismatch.append("actors(len %d vs %d)" % [actors.size(), exp_actors.size()])
+		else:
+			for i in exp_actors.size():
+				var a: Array = actors[i]
+				var b: Array = exp_actors[i]
+				if str(a[0]) != str(b[0]) \
+						or absf(float(a[1]) - float(b[1])) > 0.01 \
+						or absf(float(a[2]) - float(b[2])) > 0.01:
+					mismatch.append("actor[%d %s vs %s]" % [i, a, b])
+					break
 	if (res.current_score if res != null else 0) != int(expected.get("score", 0)):
 		mismatch.append("score[%s]" % _score_events_near(idx))
 	if (res.lives if res != null else 0) != int(expected.get("lives", 0)):

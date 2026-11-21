@@ -139,7 +139,7 @@ func _capture_record_sample() -> void:
 		_bullet_manager.bullet_snapshot() if ReplaySession.full_trace else [],
 		rs.graze_count if rs != null else 0,
 		_item_pool.item_snapshot() if ReplaySession.full_trace else [],
-		_bullet_manager.kernel_rng_state())
+		_bullet_manager.kernel_rng_state(), _actor_snapshot())
 
 
 ## 回放帧推进。定格（time_scale=0）时 physics 可能不跑，由 _process 双驱动。
@@ -180,7 +180,24 @@ func flush_replay_sample() -> void:
 			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 			_item_pool.visible_count(), _item_pool.item_signature(),
 			_bullet_manager.bullet_snapshot(), res.graze_count if res != null else 0,
-			_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state())
+			_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state(), _actor_snapshot())
+
+
+## 回放诊断：当前敌机 / Boss 的稳定位置快照（按名字+坐标排序）。
+func _actor_snapshot() -> Array:
+	var out: Array = []
+	for enemy in _stage_runtime.entity_registry.get_active_enemies():
+		if not is_instance_valid(enemy):
+			continue
+		var pos: Vector2 = (enemy as Node2D).global_position
+		out.append([str(enemy.name), pos.x, pos.y])
+	out.sort_custom(func(a: Array, b: Array) -> bool:
+		if str(a[0]) != str(b[0]):
+			return str(a[0]) < str(b[0])
+		if not is_equal_approx(float(a[1]), float(b[1])):
+			return float(a[1]) < float(b[1])
+		return float(a[2]) < float(b[2]))
+	return out
 
 
 func _start_practice_game() -> void:
