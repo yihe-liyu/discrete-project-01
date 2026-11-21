@@ -59,8 +59,13 @@ func capture_event(action: StringName) -> void:
 		return
 	# 当前帧 sample 已写 = 事件发生在采样之后；否则会落在下一帧采样前。
 	var after_sample := samples.size() >= duration_frames
+	# capture_frame 在物理帧开头先 +1，但这一帧的 sample 在帧末才写。
+	# before_sample 事件实际属于 sample(duration-1)，事件帧必须同步减一。
+	var event_frame := duration_frames
+	if not after_sample and duration_frames > 0:
+		event_frame = duration_frames - 1
 	events.append({
-		"frame": duration_frames,
+		"frame": event_frame,
 		"action": String(action),
 		"after_sample": after_sample,
 	})
