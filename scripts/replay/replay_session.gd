@@ -390,7 +390,6 @@ static func start_playback(path: String) -> bool:
 				SaveData.current_stage_id = start_stage
 				break
 	RNG.set_seed(rec.rng_seed)
-	RNG.rng_trace_hook = capture_rng_call
 	_path = path
 	_recorder = rec
 	_frames = rec.frames
@@ -407,6 +406,8 @@ static func start_playback(path: String) -> bool:
 	_score_events = rec.score_events.duplicate(true)
 	_trace_diverged = false
 	_playing = true
+	# 必须在 _playing / cursor 就绪后再挂 hook，否则首批调用会被丢弃。
+	RNG.rng_trace_hook = capture_rng_call
 	return true
 
 
