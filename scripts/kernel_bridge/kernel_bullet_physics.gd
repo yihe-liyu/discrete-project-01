@@ -55,25 +55,37 @@ func _enemy_bullets_vs_player() -> void:
 	# 再加本帧最大位移：高速弹的端点可能在查询圆外，但线段会穿过自机。
 	var ids: PackedInt32Array = _overlap_ids(
 		system, player.global_position, player.graze_radius + system.get_max_step(), BulletType.Faction.ENEMY)
-	# 倒序：despawn 是 swap-with-last，正序会让后续 id 错位 / 漏回收
-	for k in range(ids.size() - 1, -1, -1):
-		var id: int = ids[k]
+	# 按稳定 uid 排序，而不是原生行 id：swap-remove 会改变行顺序。
+	# despawn 全部延后，循环中只做判定/标记，避免交换让后续 id 指向别的弹。
+	var entries: Array[Dictionary] = []
+	for id in ids:
+		entries.append({"id": id, "uid": system.get_uid(id)})
+	entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.uid) < int(b.uid))
+	var to_despawn: Array[int] = []
+	for e in entries:
+		var id: int = int(e.id)
+		if id < 0 or id >= system.get_active_count():
+			continue
 		if system.hit_test_swept(id, player.global_position, player.hitbox_radius):
 			ReplaySession.capture_hit(system.get_uid(id), system.get_type_index(id), system.get_position(id))
 			player.miss()
-			system.despawn(id)
+			to_despawn.append(id)
 		elif not system.is_grazed(id) and system.hit_test_swept(id, player.global_position, player.graze_radius):
 			system.mark_grazed(id)
 			on_graze()
 			# 每次新擦弹固定消耗一次 RNG；memory 条件只决定是否使用结果。
-			# 否则 memory 在 50 附近时，录放会在不同帧决定“要不要 roll”，RNG 流错位。
 			var roll := RNG.randf()
 			var res := _player_res()
 			if res != null and res.memory_value >= 50.0:
 				var chance := remap(res.memory_value, 50.0, 100.0, 0.05, 0.30)
 				if roll < chance:
 					_play_clear(system.get_position(id), system.get_color(id))
-					system.despawn(id)
+					to_despawn.append(id)
+	# 行 id 降序回收，保证 swap-with-last 不破坏尚未处理的 id。
+	to_despawn.sort()
+	for i in range(to_despawn.size() - 1, -1, -1):
+		system.despawn(to_despawn[i])
 
 
 ## 自机弹 ↔ 敌人：与旧 BulletPhysics._player_vs_enemies 1:1（伤害读 BulletType.damage；起内核自带）。
