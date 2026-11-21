@@ -41,32 +41,39 @@ func restore_state(snapshot: Dictionary, p_emit: bool = false) -> void:
 		seed_changed.emit(_rng.seed)
 
 func randf() -> float:
+	var before := _rng.state
+	var value := _rng.randf()
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randf")
-	return _rng.randf()
+		rng_trace_hook.call(&"randf", before, _rng.state)
+	return value
 
 func randi() -> int:
+	var before := _rng.state
+	var value := _rng.randi()
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randi")
-	return _rng.randi()
+		rng_trace_hook.call(&"randi", before, _rng.state)
+	return value
 
 func randf_range(from: float, to: float) -> float:
+	var before := _rng.state
+	var value := _rng.randf_range(from, to)
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randf_range")
-	return _rng.randf_range(from, to)
+		rng_trace_hook.call(&"randf_range", before, _rng.state)
+	return value
 
 func randi_range(from: int, to: int) -> int:
+	var before := _rng.state
+	var value := _rng.randi_range(from, to)
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randi_range")
-	return _rng.randi_range(from, to)
+		rng_trace_hook.call(&"randi_range", before, _rng.state)
+	return value
 
 func randfn(mean: float = 0.0, deviation: float = 1.0) -> float:
+	var before := _rng.state
+	var value := _rng.randfn(mean, deviation)
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randfn")
-	return _rng.randfn(mean, deviation)
-
-
-# ═══ 表现随机（不进 gameplay / Replay）═══
+		rng_trace_hook.call(&"randfn", before, _rng.state)
+	return value
 
 func fx_randf() -> float:
 	return _fx_rng.randf()

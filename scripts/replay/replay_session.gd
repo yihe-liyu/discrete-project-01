@@ -68,21 +68,31 @@ static func capture_event(action: StringName) -> void:
 
 ## 记录一次得分来源（录制时由敌人 / 道具 / 擦弹 / 符卡奖励调用）。
 ## gameplay RNG 调用：录制时按帧落盘；回放时逐条比对入口与帧。
-static func capture_rng_call(method: StringName) -> void:
+static func capture_rng_call(method: StringName, before: int, after: int) -> void:
 	if _active and _recorder != null:
-		_recorder.rng_calls.append({"frame": _recorder.duration_frames, "m": String(method)})
+		_recorder.rng_calls.append({
+			"frame": _recorder.duration_frames - 1,
+			"m": String(method),
+			"before": before,
+			"after": after,
+		})
 	elif _playing and _recorder != null and not _recorder.rng_calls.is_empty():
 		while _rng_cursor < _recorder.rng_calls.size() \
 				and int(_recorder.rng_calls[_rng_cursor].get("frame", 0)) < _frame_index:
 			_rng_cursor += 1
 		if _rng_cursor >= _recorder.rng_calls.size():
+			push_warning("Replay RNG 多余调用 frame=%d %s before=%d" % [_frame_index, String(method), before])
 			return
 		var e: Dictionary = _recorder.rng_calls[_rng_cursor]
 		if int(e.get("frame", -1)) == _frame_index and str(e.get("m", "")) == String(method):
 			_rng_cursor += 1
+			if int(e.get("after", after)) != after:
+				push_warning("Replay RNG 状态分歧 frame=%d %s before=%d cur_after=%d exp_after=%d" % [
+					_frame_index, String(method), before, after, int(e.get("after", after)),
+				])
 		else:
-			push_warning("Replay RNG 调用分歧 frame=%d cur=%s exp=%s@%d" % [
-				_frame_index, String(method), str(e.get("m", "")), int(e.get("frame", -1)),
+			push_warning("Replay RNG 调用分歧 frame=%d cur=%s@%d exp=%s@%d before=%d" % [
+				_frame_index, String(method), _frame_index, str(e.get("m", "")), int(e.get("frame", -1)), before,
 			])
 
 
@@ -214,7 +224,9 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 	if str(rng.get("seed", 0)) != str(expected.get("seed", "")):
 		mismatch.append("rng_seed")
 	if str(rng.get("state", 0)) != str(expected.get("state", "")):
-		mismatch.append("rng_state")
+		mismatch.append("rng_state cur=%s exp=%s rng_calls=%d" % [
+			str(rng.get("state", 0)), str(expected.get("state", "")), _rng_cursor,
+		])
 	if expected.has("graze") and graze != int(expected.get("graze", 0)):
 		mismatch.append("graze")
 	if expected.has("krng") and krng != int(str(expected.get("krng", "0"))):
