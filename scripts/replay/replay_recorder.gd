@@ -34,6 +34,8 @@ var hit_events: Array[Dictionary] = []
 var spawn_events: Array[Dictionary] = []
 ## gameplay RNG 调用序列：frame / 入口名。用于定位 RNG 流错位。
 var rng_calls: Array[Dictionary] = []
+## 擦弹事件：frame / uid / roll 前后 state；定位 graze 清弹跨帧。
+var graze_events: Array[Dictionary] = []
 
 
 ## 开始录制：重置缓冲 + 记录当前 RNG 种子
@@ -127,6 +129,7 @@ func to_dict() -> Dictionary:
 		"hits": hit_events,
 		"spawns": spawn_events,
 		"rng_calls": rng_calls,
+		"graze_events": graze_events,
 	}
 
 
@@ -189,6 +192,12 @@ func load_dict(data: Dictionary) -> bool:
 		for e in raw_rng:
 			if e is Dictionary:
 				rng_calls.append(e.duplicate(true))
+	graze_events.clear()
+	var raw_graze = data.get("graze_events", [])
+	if raw_graze is Array:
+		for e in raw_graze:
+			if e is Dictionary:
+				graze_events.append(e.duplicate(true))
 	return true
 
 

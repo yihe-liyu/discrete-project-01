@@ -75,7 +75,9 @@ func _enemy_bullets_vs_player() -> void:
 			system.mark_grazed(id)
 			on_graze()
 			# 每次新擦弹固定消耗一次 RNG；memory 条件只决定是否使用结果。
+			var graze_before: int = int(RNG.snapshot_state().get("state", 0))
 			var roll := RNG.randf()
+			ReplaySession.capture_graze(system.get_uid(id), int(graze_before), int(RNG.snapshot_state().get("state", 0)))
 			var res := _player_res()
 			if res != null and res.memory_value >= 50.0:
 				var chance := remap(res.memory_value, 50.0, 100.0, 0.05, 0.30)

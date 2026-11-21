@@ -32,6 +32,7 @@ static var _trace_diverged: bool = false
 static var _last_tick_physics_frame: int = -1
 static var _spawn_cursor: int = 0
 static var _rng_cursor: int = 0
+static var _graze_cursor: int = 0
 
 
 static func is_recording() -> bool:
@@ -75,30 +76,53 @@ static func capture_rng_call(method: StringName, before: int, after: int) -> voi
 			"m": String(method),
 			"before": str(before),
 			"after": str(after),
+			"after_sample": _recorder.samples.size() >= _recorder.duration_frames,
 		})
 	elif _playing and _recorder != null and not _recorder.rng_calls.is_empty():
-		var rf := _frame_index - 1
-		while _rng_cursor < _recorder.rng_calls.size() \
-				and int(_recorder.rng_calls[_rng_cursor].get("frame", 0)) < rf:
-			_rng_cursor += 1
+		# 只比较调用序列 + 状态；帧号归属会因 sample 边界差一帧，不能作为硬判据。
 		if _rng_cursor >= _recorder.rng_calls.size():
-			push_warning("Replay RNG 多余调用 frame=%d %s before=%d" % [rf, String(method), before])
+			push_warning("Replay RNG 多余调用 %s before=%d" % [String(method), before])
 			return
 		var e: Dictionary = _recorder.rng_calls[_rng_cursor]
-		if int(e.get("frame", -1)) == rf and str(e.get("m", "")) == String(method):
-			_rng_cursor += 1
-			if str(e.get("before", "")) != str(before):
-				push_warning("Replay RNG 前态分歧 frame=%d %s before=%d exp_before=%s" % [
-					rf, String(method), before, str(e.get("before", "")),
-				])
-			if str(e.get("after", "")) != str(after):
-				push_warning("Replay RNG 状态分歧 frame=%d %s before=%d cur_after=%d exp_after=%s" % [
-					rf, String(method), before, after, str(e.get("after", "")),
-				])
-		else:
-			push_warning("Replay RNG 调用分歧 frame=%d cur=%s exp=%s@%d before=%d" % [
-				rf, String(method), str(e.get("m", "")), int(e.get("frame", -1)), before,
+		if str(e.get("m", "")) != String(method):
+			push_warning("Replay RNG 调用分歧 cur=%s exp=%s@%d before=%d" % [
+				String(method), str(e.get("m", "")), int(e.get("frame", -1)), before,
 			])
+			return
+		_rng_cursor += 1
+		if str(e.get("before", "")) != str(before):
+			push_warning("Replay RNG 前态分歧 %s before=%d exp_before=%s" % [
+				String(method), before, str(e.get("before", "")),
+			])
+		if str(e.get("after", "")) != str(after):
+			push_warning("Replay RNG 状态分歧 %s before=%d cur_after=%d exp_after=%s" % [
+				String(method), before, after, str(e.get("after", "")),
+			])
+
+
+## 擦弹事件：录制时记录 uid/roll 前后 state；回放时对比序列。
+static func capture_graze(uid: int, before: int, after: int) -> void:
+	if _active and _recorder != null:
+		_recorder.graze_events.append({
+			"frame": _recorder.duration_frames - 1,
+			"uid": uid,
+			"before": str(before),
+			"after": str(after),
+		})
+	elif _playing and _recorder != null and not _recorder.graze_events.is_empty():
+		if _graze_cursor >= _recorder.graze_events.size():
+			push_warning("Replay 多余擦弹 uid=%d" % uid)
+			return
+		var e: Dictionary = _recorder.graze_events[_graze_cursor]
+		if int(e.get("uid", -1)) != uid:
+			push_warning("Replay 擦弹 UID 分歧 cur=%d exp=%d@%d" % [
+				uid, int(e.get("uid", -1)), int(e.get("frame", -1)),
+			])
+		elif str(e.get("after", "")) != str(after):
+			push_warning("Replay 擦弹状态分歧 uid=%d cur_after=%d exp_after=%s" % [
+				uid, after, str(e.get("after", "")),
+			])
+		_graze_cursor += 1
 
 
 ## 弹幕生成：录制时落盘；回放时对比录制生成序列，报第一颗多余/缺失。
@@ -407,6 +431,7 @@ static func start_playback(path: String) -> bool:
 	_last_tick_physics_frame = -1
 	_spawn_cursor = 0
 	_rng_cursor = 0
+	_graze_cursor = 0
 	_events = rec.events.duplicate(true)
 	_event_index = 0
 	_samples.clear()
@@ -579,6 +604,7 @@ static func stop_playback() -> void:
 	_last_tick_physics_frame = -1
 	_spawn_cursor = 0
 	_rng_cursor = 0
+	_graze_cursor = 0
 	_events.clear()
 	_event_index = 0
 	_path = ""
