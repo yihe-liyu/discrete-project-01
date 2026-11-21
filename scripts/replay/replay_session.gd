@@ -183,7 +183,7 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 static func sync_kernel_rng(manager: BulletManager) -> void:
 	if not _playing or _samples.is_empty() or manager == null:
 		return
-	var idx := _frame_index - 1
+	var idx := _frame_index - 2
 	if idx < 0 or idx >= _samples.size():
 		return
 	var sample: Dictionary = _samples[idx]
@@ -196,7 +196,9 @@ static func sync_kernel_rng(manager: BulletManager) -> void:
 static func sync_rng_for_frame() -> void:
 	if not _playing or _samples.is_empty():
 		return
-	var idx := _frame_index - 1
+	# 推进到 frame N 后，_frame_index=N+1；此时要用 N-1 的 sample 恢复
+	# “进入 frame N 之前”的 RNG。用 N 的 sample 会把这一帧的调用提前算进去。
+	var idx := _frame_index - 2
 	if idx < 0 or idx >= _samples.size():
 		return
 	var sample: Dictionary = _samples[idx]

@@ -45,10 +45,6 @@ func restore_state(snapshot: Dictionary, p_emit: bool = false) -> void:
 func randf() -> float:
 	var before := _rng.state
 	var value := _rng.randf()
-	if debug_calls_left > 0:
-		debug_calls_left -= 1
-		print("RNG_CALL randf hook=", rng_trace_hook.is_valid(), " before=", before, " after=", _rng.state)
-		print_stack()
 	if rng_trace_hook.is_valid():
 		rng_trace_hook.call(&"randf", before, _rng.state)
 	return value
@@ -56,10 +52,6 @@ func randf() -> float:
 func randi() -> int:
 	var before := _rng.state
 	var value := _rng.randi()
-	if debug_calls_left > 0:
-		debug_calls_left -= 1
-		print("RNG_CALL randi hook=", rng_trace_hook.is_valid(), " before=", before, " after=", _rng.state)
-		print_stack()
 	if rng_trace_hook.is_valid():
 		rng_trace_hook.call(&"randi", before, _rng.state)
 	return value
@@ -67,10 +59,6 @@ func randi() -> int:
 func randf_range(from: float, to: float) -> float:
 	var before := _rng.state
 	var value := _rng.randf_range(from, to)
-	if debug_calls_left > 0:
-		debug_calls_left -= 1
-		print("RNG_CALL randf_range hook=", rng_trace_hook.is_valid(), " before=", before, " after=", _rng.state)
-		print_stack()
 	if rng_trace_hook.is_valid():
 		rng_trace_hook.call(&"randf_range", before, _rng.state)
 	return value
@@ -78,10 +66,6 @@ func randf_range(from: float, to: float) -> float:
 func randi_range(from: int, to: int) -> int:
 	var before := _rng.state
 	var value := _rng.randi_range(from, to)
-	if debug_calls_left > 0:
-		debug_calls_left -= 1
-		print("RNG_CALL randi_range hook=", rng_trace_hook.is_valid(), " before=", before, " after=", _rng.state)
-		print_stack()
 	if rng_trace_hook.is_valid():
 		rng_trace_hook.call(&"randi_range", before, _rng.state)
 	return value
@@ -89,10 +73,6 @@ func randi_range(from: int, to: int) -> int:
 func randfn(mean: float = 0.0, deviation: float = 1.0) -> float:
 	var before := _rng.state
 	var value := _rng.randfn(mean, deviation)
-	if debug_calls_left > 0:
-		debug_calls_left -= 1
-		print("RNG_CALL randfn hook=", rng_trace_hook.is_valid(), " before=", before, " after=", _rng.state)
-		print_stack()
 	if rng_trace_hook.is_valid():
 		rng_trace_hook.call(&"randfn", before, _rng.state)
 	return value
