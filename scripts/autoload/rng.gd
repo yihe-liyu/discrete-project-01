@@ -46,35 +46,55 @@ func randf() -> float:
 	var before := _rng.state
 	var value := _rng.randf()
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randf", before, _rng.state)
+		var caller := ""
+		var st := get_stack()
+		if st.size() > 1:
+			caller = str(st[1].source) + ":" + str(st[1].line)
+		rng_trace_hook.call(&"randf", before, _rng.state, caller)
 	return value
 
 func randi() -> int:
 	var before := _rng.state
 	var value := _rng.randi()
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randi", before, _rng.state)
+		var caller := ""
+		var st := get_stack()
+		if st.size() > 1:
+			caller = str(st[1].source) + ":" + str(st[1].line)
+		rng_trace_hook.call(&"randi", before, _rng.state, caller)
 	return value
 
 func randf_range(from: float, to: float) -> float:
 	var before := _rng.state
 	var value := _rng.randf_range(from, to)
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randf_range", before, _rng.state)
+		var caller := ""
+		var st := get_stack()
+		if st.size() > 1:
+			caller = str(st[1].source) + ":" + str(st[1].line)
+		rng_trace_hook.call(&"randf_range", before, _rng.state, caller)
 	return value
 
 func randi_range(from: int, to: int) -> int:
 	var before := _rng.state
 	var value := _rng.randi_range(from, to)
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randi_range", before, _rng.state)
+		var caller := ""
+		var st := get_stack()
+		if st.size() > 1:
+			caller = str(st[1].source) + ":" + str(st[1].line)
+		rng_trace_hook.call(&"randi_range", before, _rng.state, caller)
 	return value
 
 func randfn(mean: float = 0.0, deviation: float = 1.0) -> float:
 	var before := _rng.state
 	var value := _rng.randfn(mean, deviation)
 	if rng_trace_hook.is_valid():
-		rng_trace_hook.call(&"randfn", before, _rng.state)
+		var caller := ""
+		var st := get_stack()
+		if st.size() > 1:
+			caller = str(st[1].source) + ":" + str(st[1].line)
+		rng_trace_hook.call(&"randfn", before, _rng.state, caller)
 	return value
 
 func fx_randf() -> float:

@@ -69,13 +69,14 @@ static func capture_event(action: StringName) -> void:
 
 ## 记录一次得分来源（录制时由敌人 / 道具 / 擦弹 / 符卡奖励调用）。
 ## gameplay RNG 调用：录制时按帧落盘；回放时逐条比对入口与帧。
-static func capture_rng_call(method: StringName, before: int, after: int) -> void:
+static func capture_rng_call(method: StringName, before: int, after: int, caller: String = "") -> void:
 	if _active and _recorder != null:
 		_recorder.rng_calls.append({
 			"frame": _recorder.duration_frames - 1,
 			"m": String(method),
 			"before": str(before),
 			"after": str(after),
+			"caller": caller,
 			"after_sample": _recorder.samples.size() >= _recorder.duration_frames,
 		})
 	elif _playing and _recorder != null and not _recorder.rng_calls.is_empty():
@@ -85,18 +86,18 @@ static func capture_rng_call(method: StringName, before: int, after: int) -> voi
 			return
 		var e: Dictionary = _recorder.rng_calls[_rng_cursor]
 		if str(e.get("m", "")) != String(method):
-			push_warning("Replay RNG 调用分歧 cur=%s exp=%s@%d before=%d" % [
-				String(method), str(e.get("m", "")), int(e.get("frame", -1)), before,
+			push_warning("Replay RNG 调用分歧 cur=%s caller=%s exp=%s@%d before=%d" % [
+				String(method), caller, str(e.get("m", "")), int(e.get("frame", -1)), before,
 			])
 			return
 		_rng_cursor += 1
 		if str(e.get("before", "")) != str(before):
-			push_warning("Replay RNG 前态分歧 %s before=%d exp_before=%s" % [
-				String(method), before, str(e.get("before", "")),
+			push_warning("Replay RNG 前态分歧 %s caller=%s before=%d exp_before=%s" % [
+				String(method), caller, before, str(e.get("before", "")),
 			])
 		if str(e.get("after", "")) != str(after):
-			push_warning("Replay RNG 状态分歧 %s before=%d cur_after=%d exp_after=%s" % [
-				String(method), before, after, str(e.get("after", "")),
+			push_warning("Replay RNG 状态分歧 %s caller=%s before=%d cur_after=%d exp_after=%s" % [
+				String(method), caller, before, after, str(e.get("after", "")),
 			])
 
 
