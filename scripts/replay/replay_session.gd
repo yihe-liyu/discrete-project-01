@@ -73,26 +73,31 @@ static func capture_rng_call(method: StringName, before: int, after: int) -> voi
 		_recorder.rng_calls.append({
 			"frame": _recorder.duration_frames - 1,
 			"m": String(method),
-			"before": before,
-			"after": after,
+			"before": str(before),
+			"after": str(after),
 		})
 	elif _playing and _recorder != null and not _recorder.rng_calls.is_empty():
+		var rf := _frame_index - 1
 		while _rng_cursor < _recorder.rng_calls.size() \
-				and int(_recorder.rng_calls[_rng_cursor].get("frame", 0)) < _frame_index:
+				and int(_recorder.rng_calls[_rng_cursor].get("frame", 0)) < rf:
 			_rng_cursor += 1
 		if _rng_cursor >= _recorder.rng_calls.size():
-			push_warning("Replay RNG 多余调用 frame=%d %s before=%d" % [_frame_index, String(method), before])
+			push_warning("Replay RNG 多余调用 frame=%d %s before=%d" % [rf, String(method), before])
 			return
 		var e: Dictionary = _recorder.rng_calls[_rng_cursor]
-		if int(e.get("frame", -1)) == _frame_index and str(e.get("m", "")) == String(method):
+		if int(e.get("frame", -1)) == rf and str(e.get("m", "")) == String(method):
 			_rng_cursor += 1
-			if int(e.get("after", after)) != after:
-				push_warning("Replay RNG 状态分歧 frame=%d %s before=%d cur_after=%d exp_after=%d" % [
-					_frame_index, String(method), before, after, int(e.get("after", after)),
+			if str(e.get("before", "")) != str(before):
+				push_warning("Replay RNG 前态分歧 frame=%d %s before=%d exp_before=%s" % [
+					rf, String(method), before, str(e.get("before", "")),
+				])
+			if str(e.get("after", "")) != str(after):
+				push_warning("Replay RNG 状态分歧 frame=%d %s before=%d cur_after=%d exp_after=%s" % [
+					rf, String(method), before, after, str(e.get("after", "")),
 				])
 		else:
-			push_warning("Replay RNG 调用分歧 frame=%d cur=%s@%d exp=%s@%d before=%d" % [
-				_frame_index, String(method), _frame_index, str(e.get("m", "")), int(e.get("frame", -1)), before,
+			push_warning("Replay RNG 调用分歧 frame=%d cur=%s exp=%s@%d before=%d" % [
+				rf, String(method), str(e.get("m", "")), int(e.get("frame", -1)), before,
 			])
 
 

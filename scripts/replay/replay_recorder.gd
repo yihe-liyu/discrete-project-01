@@ -165,6 +165,24 @@ func load_dict(data: Dictionary) -> bool:
 		for e in raw_scores:
 			if e is Dictionary:
 				score_events.append(e.duplicate(true))
+	hit_events.clear()
+	var raw_hits = data.get("hits", [])
+	if raw_hits is Array:
+		for e in raw_hits:
+			if e is Dictionary:
+				hit_events.append(e.duplicate(true))
+	spawn_events.clear()
+	var raw_spawns = data.get("spawns", [])
+	if raw_spawns is Array:
+		for e in raw_spawns:
+			if e is Dictionary:
+				spawn_events.append(e.duplicate(true))
+	rng_calls.clear()
+	var raw_rng = data.get("rng_calls", [])
+	if raw_rng is Array:
+		for e in raw_rng:
+			if e is Dictionary:
+				rng_calls.append(e.duplicate(true))
 	return true
 
 
