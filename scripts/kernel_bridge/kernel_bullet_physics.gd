@@ -65,10 +65,13 @@ func _enemy_bullets_vs_player() -> void:
 		elif not system.is_grazed(id) and system.hit_test_swept(id, player.global_position, player.graze_radius):
 			system.mark_grazed(id)
 			on_graze()
+			# 每次新擦弹固定消耗一次 RNG；memory 条件只决定是否使用结果。
+			# 否则 memory 在 50 附近时，录放会在不同帧决定“要不要 roll”，RNG 流错位。
+			var roll := RNG.randf()
 			var res := _player_res()
 			if res != null and res.memory_value >= 50.0:
 				var chance := remap(res.memory_value, 50.0, 100.0, 0.05, 0.30)
-				if RNG.randf() < chance:
+				if roll < chance:
 					_play_clear(system.get_position(id), system.get_color(id))
 					system.despawn(id)
 
