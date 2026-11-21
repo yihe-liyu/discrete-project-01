@@ -201,8 +201,16 @@ func load_dict(data: Dictionary) -> bool:
 	spawn_events.clear()
 	var raw_spawns = data.get("spawns", [])
 	if raw_spawns is Array:
+		# 旧录制里 behavior emit 可能被 spawn_prepared 和 notify 各记一次，
+		# 同一 (frame, uid, type) 只保留第一次（真正的出生点）。
+		var seen_spawns := {}
 		for e in raw_spawns:
 			if e is Dictionary:
+				var key := "%d:%d:%d" % [
+					int(e.get("frame", 0)), int(e.get("uid", 0)), int(e.get("type", -1))]
+				if seen_spawns.has(key):
+					continue
+				seen_spawns[key] = true
 				spawn_events.append(e.duplicate(true))
 	rng_calls.clear()
 	var raw_rng = data.get("rng_calls", [])

@@ -146,8 +146,10 @@ static func capture_graze(uid: int, before: int, after: int) -> void:
 
 
 ## 弹幕生成：录制时落盘；回放时对比录制生成序列，报第一颗多余/缺失。
+## 返回录制中的生成位置（回放命中时），调用方用它校正弹的出生点：
+## 发射源在 deathbomb / 定格恢复那一 tick 可能差一步，位置会被带偏。
 static func capture_spawn(uid: int, type_index: int, pos: Vector2, faction: int,
-		behavior: StringName = &"") -> void:
+		behavior: StringName = &"") -> Variant:
 	if _active and _recorder != null:
 		_recorder.spawn_events.append({
 			"frame": _recorder.duration_frames,
@@ -157,25 +159,31 @@ static func capture_spawn(uid: int, type_index: int, pos: Vector2, faction: int,
 			"f": faction,
 			"b": String(behavior),
 		})
-	elif _playing:
-		if _recorder == null or _recorder.spawn_events.is_empty():
-			return
-		var f := _frame_index
-		while _spawn_cursor < _recorder.spawn_events.size() \
-				and int(_recorder.spawn_events[_spawn_cursor].get("frame", 0)) < f:
-			var missing: Dictionary = _recorder.spawn_events[_spawn_cursor]
-			push_warning("Replay 缺少生成 frame=%d type=%d" % [
-				int(missing.get("frame", 0)), int(missing.get("type", -1)),
-			])
-			_spawn_cursor += 1
-		if _spawn_cursor < _recorder.spawn_events.size():
-			var e: Dictionary = _recorder.spawn_events[_spawn_cursor]
-			if int(e.get("frame", -1)) == f and int(e.get("type", -1)) == type_index:
-				_spawn_cursor += 1
-				return
-		push_warning("Replay 多余生成 frame=%d uid=%d type=%d pos=%s behavior=%s" % [
-			f, uid, type_index, pos, behavior,
+		return null
+	if not _playing:
+		return null
+	if _recorder == null or _recorder.spawn_events.is_empty():
+		return null
+	var f := _frame_index
+	while _spawn_cursor < _recorder.spawn_events.size() \
+			and int(_recorder.spawn_events[_spawn_cursor].get("frame", 0)) < f:
+		var missing: Dictionary = _recorder.spawn_events[_spawn_cursor]
+		push_warning("Replay 缺少生成 frame=%d type=%d" % [
+			int(missing.get("frame", 0)), int(missing.get("type", -1)),
 		])
+		_spawn_cursor += 1
+	if _spawn_cursor < _recorder.spawn_events.size():
+		var e: Dictionary = _recorder.spawn_events[_spawn_cursor]
+		if int(e.get("frame", -1)) == f and int(e.get("type", -1)) == type_index:
+			_spawn_cursor += 1
+			var p: Array = e.get("p", [])
+			if p.size() == 2:
+				return Vector2(float(p[0]), float(p[1]))
+			return null
+	push_warning("Replay 多余生成 frame=%d uid=%d type=%d pos=%s behavior=%s" % [
+		f, uid, type_index, pos, behavior,
+	])
+	return null
 
 
 ## 敌弹命中自机：录制时落盘；回放时打印本次受击来源，便于查“多出来的受击”。

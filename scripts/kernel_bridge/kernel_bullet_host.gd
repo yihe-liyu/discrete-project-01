@@ -212,9 +212,11 @@ func spawn_prepared(spec: Dictionary) -> int:
 	var id: int = system.spawn(spec.type, spec.pos, spec.vel, spec.tint)
 	if id >= 0:
 		var source_spawn: SpawnSpec = spec.get("spawn")
-		ReplaySession.capture_spawn(system.get_uid(id), system.get_type_index(id), spec.pos,
+		var replay_pos = ReplaySession.capture_spawn(system.get_uid(id), system.get_type_index(id), spec.pos,
 			int(source_spawn.faction) if source_spawn != null else -1,
 			source_spawn.behavior.id if source_spawn != null and source_spawn.behavior != null else &"")
+		if replay_pos is Vector2:
+			system.set_position(id, replay_pos)
 		system.set_anchor_slot(id, int(spec.get("anchor_slot", -1)))
 		var behavior: BehaviorSpec = spec.get("behavior")
 		if behavior != null:
@@ -236,8 +238,7 @@ func notify_behavior_spawned(id: int, spec: Dictionary) -> void:
 		return
 	var source: SpawnSpec = spec.get("spawn")
 	if source != null:
-		ReplaySession.capture_spawn(uid, system.get_type_index(id), system.get_position(id),
-			int(source.faction), source.behavior.id if source.behavior != null else &"")
+		# spawn_prepared 已经写过 spawn trace；这里只发信号，避免同一颗弹记两次。
 		behavior_bullet_spawned.emit(uid, source)
 
 
