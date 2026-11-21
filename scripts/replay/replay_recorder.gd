@@ -13,6 +13,8 @@ const FORMAT_VERSION := 1
 var frames: PackedByteArray = PackedByteArray()
 ## 录制起始 RNG 种子（勿叫 seed：会遮蔽内建 seed()）
 var rng_seed: int = 0
+## 录制开始时的完整 RNG state；只存 seed 会丢掉当前 state。
+var rng_state: int = 0
 ## 是否正在录制
 var recording := false
 ## 已录帧数
@@ -40,7 +42,9 @@ func start() -> void:
 	events.clear()
 	samples.clear()
 	score_events.clear()
-	rng_seed = RNG.get_seed()
+	var rng_snapshot := RNG.snapshot_state()
+	rng_seed = int(rng_snapshot.get("seed", 0))
+	rng_state = int(rng_snapshot.get("state", 0))
 	recording = true
 	duration_frames = 0
 
@@ -112,7 +116,8 @@ func to_dict() -> Dictionary:
 	return {
 		"version": FORMAT_VERSION,
 		"actions": ACTIONS,
-		"seed": str(rng_seed),  # 字符串防 JSON int64 精度丢失（种子决定可复现性！）
+		"seed": str(rng_seed),
+		"rng_state": str(rng_state),  # 字符串防 JSON int64 精度丢失（种子决定可复现性！）
 		"duration": duration_frames,
 		"frames_hex": frames.hex_encode(),
 		"metadata": metadata,
@@ -140,6 +145,7 @@ func load_dict(data: Dictionary) -> bool:
 	if data.get("version", 0) != FORMAT_VERSION:
 		return false
 	rng_seed = int(data.get("seed", "0"))  # 兼容字符串存储（JSON 键仍叫 seed）
+	rng_state = int(data.get("rng_state", "0"))
 	duration_frames = data.get("duration", 0)
 	frames = (data.get("frames_hex", "") as String).hex_decode()
 	if frames.size() != duration_frames:

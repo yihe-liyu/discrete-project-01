@@ -395,6 +395,8 @@ static func start_playback(path: String) -> bool:
 				SaveData.current_stage_id = start_stage
 				break
 	RNG.set_seed(rec.rng_seed)
+	if rec.rng_state != 0:
+		RNG.restore_state({"seed": rec.rng_seed, "state": rec.rng_state})
 	_path = path
 	_recorder = rec
 	_frames = rec.frames
