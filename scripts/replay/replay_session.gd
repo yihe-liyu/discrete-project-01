@@ -461,6 +461,17 @@ static func start_playback(path: String) -> bool:
 	_rng_cursor = 0
 	_graze_cursor = 0
 	_events = rec.events.duplicate(true)
+	# 事件 tick 顺序不一定等于写入顺序（例如 deathbomb 里的 cancel&bomb 比
+	# deathbomb_end 晚一 tick 却先 append）。按 tick 稳定排序，否则前一个未到点
+	# 的事件会把后面已到点的 end 事件堵住，多定格一 tick。
+	for i in _events.size():
+		_events[i]["_order"] = i
+	_events.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var ta := _event_tick(a)
+		var tb := _event_tick(b)
+		if ta == tb:
+			return int(a.get("_order", 0)) < int(b.get("_order", 0))
+		return ta < tb)
 	_event_index = 0
 	_samples.clear()
 	if str(meta.get("sample_phase", "")) == "next_physics":

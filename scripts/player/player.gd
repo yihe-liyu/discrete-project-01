@@ -137,11 +137,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		_memory_release()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cancel&bomb"):
-		ReplaySession.capture_event(&"cancel&bomb", true)
 		if _is_deathbombing:
-			# 抢在被弹炸弹窗口关掉之前按下 bomb → 抵消这次 miss（只花雷，不掉命）
+			# 抢在被弹炸弹窗口关掉之前按下 bomb → 抵消这次 miss（只花雷，不掉命）。
+			# 不再单独记 cancel&bomb：它的 tick 比紧随其后的 deathbomb_end_cancel 大，
+			# 会把后者的消费堵到下一帧，回放因此多定格一 tick。
 			_end_deathbomb(true)
 		else:
+			ReplaySession.capture_event(&"cancel&bomb", true)
 			_bomb()
 		get_viewport().set_input_as_handled()
 
