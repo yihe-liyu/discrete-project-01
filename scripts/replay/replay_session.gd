@@ -140,10 +140,14 @@ static func replay_graze_uids_for_frame() -> Array[int]:
 	return out
 
 
-## 对话推进：录制时记 Engine tick；回放按 tick 驱动 DialogueRunner。
+## 对话推进：录制时同时记 Engine tick 与录制帧；回放优先按帧驱动 DialogueRunner。
+## 只记 Engine tick 会被录制中的暂停 / 场景切换空隙推早，导致对话在开场前被消费完。
 static func capture_dialogue_advance() -> void:
 	if _active and _recorder != null:
-		_recorder.dialogue_advances.append({"engine_tick": Engine.get_physics_frames()})
+		_recorder.dialogue_advances.append({
+			"engine_tick": Engine.get_physics_frames(),
+			"frame": _recorder.duration_frames,
+		})
 
 
 ## 当前录像是否有对话推进轨迹（旧录像没有 → 回放退回 shoot 上升沿）。
@@ -158,6 +162,11 @@ static func poll_dialogue_advance() -> bool:
 	if _dialogue_cursor >= _recorder.dialogue_advances.size():
 		return false
 	var e: Dictionary = _recorder.dialogue_advances[_dialogue_cursor]
+	if _recorder.clock_freeze and e.has("frame"):
+		if _frame_index < int(e.get("frame", 0)):
+			return false
+		_dialogue_cursor += 1
+		return true
 	if not _has_relative_engine_tick(e):
 		_dialogue_cursor += 1
 		return false

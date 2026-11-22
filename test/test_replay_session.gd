@@ -152,6 +152,31 @@ func test_clock_freeze_events_follow_recorded_tick_not_engine_gap() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
+## 对话推进也按录制帧排程：Engine 空隙不能把对话推进提前消费完。
+func test_clock_freeze_dialogue_advance_follows_recorded_frame() -> void:
+	var rec := ReplayRecorder.new()
+	rec.start()
+	rec.frames = PackedByteArray()
+	for i in 10:
+		rec.frames.append(0)
+	rec.duration_frames = 10
+	rec.start_engine_tick = Engine.get_physics_frames() - 500
+	rec.dialogue_advances = [{
+		"engine_tick": rec.start_engine_tick + 2000,
+		"frame": 4,
+	}]
+	var path := "user://test_replay_dialogue_frame.json"
+	assert_true(rec.save(path), "写测试回放")
+	assert_true(ReplaySession.start_playback(path), "进入回放")
+	for i in 3:
+		ReplaySession.advance_frame()
+	assert_false(ReplaySession.poll_dialogue_advance(), "第 4 帧之前不消费")
+	ReplaySession.advance_frame()
+	assert_true(ReplaySession.poll_dialogue_advance(), "到第 4 帧消费")
+	ReplaySession.stop_playback()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
 func test_replay_menu_builds_list() -> void:
 	var menu = load("res://scenes/ui/replay_menu.tscn").instantiate()
 	add_child_autofree(menu)
