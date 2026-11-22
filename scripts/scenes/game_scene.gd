@@ -150,7 +150,8 @@ func _capture_record_sample() -> void:
 		rs.graze_count if rs != null else 0,
 		_item_pool.item_snapshot() if ReplaySession.full_trace else [],
 		_bullet_manager.kernel_rng_state(), _actor_snapshot(),
-		_stage_runtime.player.laser_anchor_snapshot() if _stage_runtime.player != null else [])
+		_stage_runtime.player.laser_anchor_snapshot() if _stage_runtime.player != null else [],
+		_boss_hp())
 
 
 ## 回放帧推进。冻结期由 GameplayClock 的冻结驱动接管（见 _pump_frozen_tick）。
@@ -214,7 +215,14 @@ func flush_replay_sample() -> void:
 			_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 			_item_pool.visible_count(), _item_pool.item_signature(),
 			_bullet_manager.bullet_snapshot(), res.graze_count if res != null else 0,
-			_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state(), _actor_snapshot())
+			_item_pool.item_snapshot(), _bullet_manager.kernel_rng_state(), _actor_snapshot(),
+			[], _boss_hp())
+
+
+## 当前 Boss 血量；无 Boss（阶段间 / 退场）-1。用于定位“伤害早一帧”。
+func _boss_hp() -> int:
+	var boss: Boss = _stage_runtime.entity_registry.get_boss()
+	return boss.hp if boss != null else -1
 
 
 ## 回放诊断：当前敌机 / Boss 的稳定位置快照（按名字+坐标排序）。

@@ -312,7 +312,7 @@ static func capture_score(amount: int, source: StringName) -> void:
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
 static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
 		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = [],
-		krng: int = 0, actors: Array = [], anchors: Array = []) -> void:
+		krng: int = 0, actors: Array = [], anchors: Array = [], boss_hp: int = -1) -> void:
 	if not _active or _recorder == null:
 		return
 	var current_uids := {}
@@ -345,6 +345,7 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 		"stage": SaveData.current_stage_id,
 		"actors": actors,
 		"anchors": anchors,
+		"boss_hp": boss_hp,
 	})
 
 
@@ -410,7 +411,7 @@ static func sync_rng_for_frame() -> void:
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
 static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
 		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = [],
-		krng: int = 0, actors: Array = [], _anchors: Array = []) -> void:
+		krng: int = 0, actors: Array = [], _anchors: Array = [], boss_hp: int = -1) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():
 		return
 	var idx := _frame_index - 1
@@ -464,6 +465,8 @@ static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, b
 		mismatch.append("lives")
 	if (res.bomb_count if res != null else 0) != int(expected.get("bombs", 0)):
 		mismatch.append("bombs")
+	if expected.has("boss_hp") and boss_hp != int(expected.get("boss_hp", -1)):
+		mismatch.append("boss_hp cur=%d exp=%d" % [boss_hp, int(expected.get("boss_hp", -1))])
 	if expected.has("bullets") and bullets != int(expected.get("bullets", 0)):
 		mismatch.append("bullets")
 	var expected_bhash := int(expected.get("bhash", 0))
