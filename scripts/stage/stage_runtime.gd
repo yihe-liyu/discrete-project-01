@@ -185,7 +185,7 @@ func spawn_enemy_data(data: EnemyData, p_ctx: StageContext = null) -> Enemy:
 	if cs.has_method("setup_custom"):
 		cs.setup_custom(params)
 	enemy.add_child(cs)
-	# 先入树再 start：行为的 _on_start() 里可以直接 ctx.enemies.move_to（create_tween 要求节点在树）。
+	# 先入树再 start：行为的 _on_start() 里可以直接 ctx.enemies.move_to（TickMover 要求节点在树）。
 	# 旧顺序是先 start 后入树，敌人脚本只能靠 _ready + call_deferred 兜一层。
 	if not add_enemy_to_scene(enemy):
 		return null

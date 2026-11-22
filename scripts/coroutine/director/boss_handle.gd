@@ -87,10 +87,9 @@ func enter(to: Vector2, from: Vector2, dur: float = 1.5) -> BossHandle:
 	if not boss:
 		return self
 	boss.global_position = from
-	var tw := boss.create_tween()
-	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(boss, "global_position", to, dur)
+	var mover := TickMover.attach(boss)
+	mover.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	mover.tween_property(boss, "global_position", to, dur)
 	return self
 
 ## 进入阶段。idle_only=true 时只在未开战才进入（对话 boss_fight 用，防重入）。
@@ -120,11 +119,10 @@ func retreat(to: Vector2, dur: float = 2.0) -> BossHandle:
 		return self
 	boss.set_exit_controlled()
 	boss.die()
-	var tw := boss.create_tween()
-	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(boss, "global_position", to, dur)
-	tw.tween_callback(boss.queue_free)
+	var mover := TickMover.attach(boss)
+	mover.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	mover.tween_property(boss, "global_position", to, dur)
+	mover.tween_callback(boss.queue_free)
 	return self
 
 
@@ -138,9 +136,8 @@ func defeat(to: Vector2 = Vector2(GameConfig.FIELD_CENTER_X, -150.0), dur: float
 	boss.set_exit_controlled()
 	boss.play_defeat()
 	boss.die()
-	var tw := boss.create_tween()
-	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(boss, "global_position", to, dur)
-	tw.tween_callback(boss.queue_free)
+	var mover := TickMover.attach(boss)
+	mover.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	mover.tween_property(boss, "global_position", to, dur)
+	mover.tween_callback(boss.queue_free)
 	return self
