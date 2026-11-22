@@ -19,6 +19,8 @@ const COMMAND_MEMORY := 2
 
 var tick_rate: int = 60
 var rng_seed: int = 0
+## 录制起点的完整宿主 RNG state；只存 seed 会从错误的流位置开始。
+var rng_state: int = 0
 var sim_version: String = ""
 var content_hash: String = ""
 var metadata: Dictionary = {}
@@ -78,6 +80,7 @@ func to_dict() -> Dictionary:
 		"version": FORMAT_VERSION,
 		"tick_rate": tick_rate,
 		"seed": str(rng_seed),
+		"rng_state": str(rng_state),
 		"sim_version": sim_version,
 		"content_hash": content_hash,
 		"metadata": metadata,
@@ -95,6 +98,7 @@ func load_dict(data: Dictionary) -> bool:
 		return false
 	tick_rate = maxi(1, int(data.get("tick_rate", 60)))
 	rng_seed = int(str(data.get("seed", "0")))
+	rng_state = int(str(data.get("rng_state", "0")))
 	sim_version = str(data.get("sim_version", ""))
 	content_hash = str(data.get("content_hash", ""))
 	metadata = data.get("metadata", {})

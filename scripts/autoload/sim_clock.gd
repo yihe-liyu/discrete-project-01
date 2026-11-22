@@ -15,6 +15,9 @@ extends Node
 
 ## 自加载以来的物理 tick 计数（含冻结帧；暂停菜单期间不走）。
 var tick: int = 0
+## tick 钩子：prepare 在 latch 前（回放注入输入），observer 在 latch 后（录制/校验状态）。
+var tick_prepare: Callable = Callable()
+var tick_observer: Callable = Callable()
 
 ## owner -> {left: int, auto: bool}
 var _freezes: Dictionary = {}
@@ -45,8 +48,13 @@ func _physics_process(_delta: float) -> void:
 	if get_tree().paused and not is_frozen():
 		return
 
-	tick += 1
+	var next_tick := tick + 1
+	if tick_prepare.is_valid():
+		tick_prepare.call(next_tick)
+	tick = next_tick
 	PlayerInput.latch()
+	if tick_observer.is_valid():
+		tick_observer.call(tick)
 	if _freezes.is_empty():
 		return
 	_advance_freezes()
@@ -91,10 +99,25 @@ func frames_left(p_owner: Object) -> int:
 	return int((_freezes[p_owner] as Dictionary).get("left", 0))
 
 
+## 注册 tick 钩子；传空 Callable 清除。
+## prepare：latch 前（回放注入 mask / 命令）；observer：latch 后（录制 / 哈希校验）。
+func set_tick_hooks(prepare: Callable, observer: Callable) -> void:
+	tick_prepare = prepare
+	tick_observer = observer
+
+
+## 清除 tick 钩子（场景退出 / 测试清理）。
+func clear_tick_hooks() -> void:
+	tick_prepare = Callable()
+	tick_observer = Callable()
+
+
 ## 测试 / 场景回收兜底：清空所有冻结并恢复树（覆盖层打开时交给菜单恢复）。
 func reset() -> void:
 	_freezes.clear()
 	_unpause_pending = false
+	tick_prepare = Callable()
+	tick_observer = Callable()
 	if _paused_tree:
 		_paused_tree = false
 		# 场景回收 / 测试兜底：这里必须强制恢复，不能留给可能正在销毁的菜单。

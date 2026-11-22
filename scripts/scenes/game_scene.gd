@@ -13,6 +13,8 @@ var _current_boss: Boss
 ## 而结算菜单挂在 autoload 的菜单栈上（切场景后仍在）——不加闸门就会「主菜单 + Game Over」叠一起。
 ## 规则：谁先到谁生效，其余一律放弃。
 var _ending: bool = false
+## 路线切面 reload 时保留录制 / 回放会话；新场景实例默认 false。
+var _continuing_replay: bool = false
 ## 符卡练习的 SE 额外压低（dB）。当前 0.0 = 关闭 ——
 ## 真凶已修（[code]lc.sfx()[/code] 的 db 默认 0.0 = 满音量，比正常大 15 dB），所以这条补偿先撤掉。
 ## 若还是嫌大，从这里往负调（-3 → -6 → -9）；旋钮保留着，改一个数即可。
@@ -82,6 +84,11 @@ func _ready():
 		SaveData.is_restarting = false
 		var carry_run := SaveData.is_route_transition
 		SaveData.is_route_transition = false
+		if not ReplayV2Session.is_playing() and not ReplayV2Session.is_recording():
+			# 先定路线 / 起始 stage，再抓 RNG 起点；播放端在场景之前恢复同一 state。
+			if not SaveData.is_stage_practice:
+				SaveData.ensure_route_for_difficulty(SaveData.selected_difficulty)
+			ReplayV2Session.start_recording(_replay_meta("recording"))
 		_setup_player()          # 先绑定自机（资源恢复 / reset_* 经注册表取同一 PlayerResources）
 		if carry_run:
 			if not SaveData.apply_run_state(_stage_runtime.entity_registry.get_player_resources()):
@@ -104,6 +111,11 @@ func _start_normal_game() -> void:
 		return
 	_load_background(data.background_scene)
 	_stage_runtime.load_stage(data)
+	# 录制 / 回放的 tick 钩子必须在关卡装好之后挂：observer 要读得到 entity registry。
+	if ReplayV2Session.is_playing():
+		SimClock.set_tick_hooks(_on_replay_prepare, _on_replay_observe)
+	elif not SaveData.is_stage_practice and not PracticeSession.is_practice_mode:
+		SimClock.set_tick_hooks(Callable(), _on_record_observe)
 
 
 func _start_practice_game() -> void:
@@ -154,8 +166,10 @@ func _resolve_stage_data() -> StageData:
 
 
 ## 当前 tick 的规范状态指纹（诊断 / 回放校验用；不改变玩法）。
-func sim_hash() -> int:
-	return SimHash.of(_stage_runtime.entity_registry, _bullet_manager.kernel_system(), SimClock.tick)
+## [param tick] 传相对 tick；回放/录制必须用同一个相对序号，不能混入全局 SimClock.tick。
+func sim_hash(tick: int = -1) -> int:
+	var relative := tick if tick >= 0 else SimClock.tick
+	return SimHash.of(_stage_runtime.entity_registry, _bullet_manager.kernel_system(), relative)
 
 
 func _load_background(scene: PackedScene) -> void:
@@ -170,7 +184,13 @@ func _load_background(scene: PackedScene) -> void:
 
 
 func _exit_tree():
-	# 离开游戏场景：清掉输入锁存 / 注入 / 兜底解冻，菜单不会被上一局状态卡住。
+	# 离开游戏场景：清掉输入锁存 / 注入 / 钩子 / 兜底解冻，菜单不会被上一局状态卡住。
+	SimClock.clear_tick_hooks()
+	if not _continuing_replay:
+		if ReplayV2Session.is_recording():
+			ReplayV2Session.cancel_recording()
+		if ReplayV2Session.is_playing():
+			ReplayV2Session.stop_playback()
 	PlayerInput.clear_latch()
 	PlayerInput.clear_override()
 	SimClock.reset()
@@ -304,6 +324,10 @@ func _resolve_spell_background() -> PackedScene:
 func _on_player_death():
 	if _ending:
 		return
+	if ReplayV2Session.is_playing():
+		_ending = true
+		_finish_playback()
+		return
 	await get_tree().create_timer(GameConfig.DEATH_MENU_DELAY).timeout
 	# 这段窗口里可能已被击破/通关结算过（那时主菜单已经出来了）→ 不能再叠一个 Game Over
 	if _ending or not is_inside_tree():
@@ -313,6 +337,8 @@ func _on_player_death():
 		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 		if res != null:
 			SaveData.save_high_score(0, res.current_score)
+	if ReplayV2Session.is_recording():
+		ReplayV2Session.finish_recording(_replay_meta("game_over"))
 	_ending = true
 	var menu: Control = GAME_OVER_MENU.instantiate()
 	menu.title_text = "Game Over"
@@ -336,6 +362,9 @@ func _on_stage_cleared():
 	if _ending:
 		return
 	_ending = true
+	if ReplayV2Session.is_playing():
+		_advance_playback_stage()
+		return
 	if SaveData.is_stage_practice:
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
@@ -374,9 +403,12 @@ func _on_stage_result_action(result: Dictionary, menu: BasePage) -> void:
 		SaveData.capture_run_state(_stage_runtime.entity_registry.get_player_resources())
 		var next_stage := SaveData.advance_route()
 		if next_stage != null:
+			_continuing_replay = true
 			SaveData.is_route_transition = true
 			GameManager.reload_current_scene()
 			return
+	if ReplayV2Session.is_recording():
+		ReplayV2Session.finish_recording(_replay_meta("cleared"))
 	SaveData.reset_session()
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
@@ -396,6 +428,62 @@ func _on_practice_cleared(_boss: Node) -> void:
 	# 层级/选中项由该页从 PracticeSession.return_menu_state 还原
 	PracticeSession.restore_menu_on_enter = true
 	GameManager.pending_page_path = "res://scenes/ui/spell_practice_menu.tscn"
+	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+
+
+func _on_record_observe(_tick: int) -> void:
+	if not ReplayV2Session.is_recording():
+		return
+	ReplayV2Session.record_tick(
+		PlayerInput.input_mask(), PlayerInput.command_flags(), sim_hash(ReplayV2Session.current_tick()))
+
+
+func _on_replay_prepare(tick: int) -> void:
+	ReplayV2Session.prepare_tick(tick)
+
+
+func _on_replay_observe(tick: int) -> void:
+	if _ending:
+		return
+	if not ReplayV2Session.observe_tick(tick, sim_hash(ReplayV2Session.current_tick())):
+		_ending = true
+		_finish_playback()
+
+
+func _replay_meta(result: String) -> Dictionary:
+	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	return {
+		"result": result,
+		"difficulty": SaveData.selected_difficulty,
+		"character": SaveData.selected_character,
+		"route_id": String(SaveData.current_route_id),
+		"start_stage_id": SaveData.current_stage_id,
+		"start_stage_no": SaveData.current_route_index + 1,
+		"stage_id": SaveData.current_stage_id,
+		"stage_no": SaveData.current_route_index + 1,
+		"score": res.current_score if res != null else 0,
+		"lives": res.lives if res != null else 0,
+		"bombs": res.bomb_count if res != null else 0,
+	}
+
+
+func _advance_playback_stage() -> void:
+	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	SaveData.capture_run_state(res)
+	var next_stage := SaveData.advance_route()
+	if next_stage != null:
+		_continuing_replay = true
+		SaveData.is_route_transition = true
+		GameManager.reload_current_scene()
+		return
+	_finish_playback()
+
+
+func _finish_playback() -> void:
+	ReplayV2Session.stop_playback()
+	SimClock.clear_tick_hooks()
+	SaveData.reset_session()
+	GameManager.pending_page_path = "res://scenes/ui/replay_menu.tscn"
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 
