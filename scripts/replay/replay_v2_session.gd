@@ -258,6 +258,8 @@ static func list_replays() -> Array[Dictionary]:
 		var rec := ReplayV2.new()
 		if not rec.load_file(file_path):
 			continue
+		if rec.sim_version != "" and rec.sim_version != SIM_VERSION:
+			continue  # 不兼容版本不显示，避免玩家点了才失败
 		out.append({
 			"path": file_path,
 			"name": file.get_basename(),

@@ -20,7 +20,7 @@ func after_each() -> void:
 
 func test_lists_v2_entry() -> void:
 	var rec := ReplayV2.new()
-	rec.begin(60, 123, "test")
+	rec.begin(60, 123, ReplayV2Session.SIM_VERSION)
 	rec.metadata = {"difficulty": 1, "character": 0, "start_stage_no": 1, "score": 4321}
 	rec.capture_tick(0, 0, 0)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ReplayV2Session.DIR))
