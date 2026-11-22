@@ -153,6 +153,11 @@ func _resolve_stage_data() -> StageData:
 	return null
 
 
+## 当前 tick 的规范状态指纹（诊断 / 回放校验用；不改变玩法）。
+func sim_hash() -> int:
+	return SimHash.of(_stage_runtime.entity_registry, _bullet_manager.kernel_system(), SimClock.tick)
+
+
 func _load_background(scene: PackedScene) -> void:
 	if not scene: return
 	if _background_instance and is_instance_valid(_background_instance):
@@ -165,8 +170,9 @@ func _load_background(scene: PackedScene) -> void:
 
 
 func _exit_tree():
-	# 离开游戏场景：清掉输入锁存 / 兜底解冻，菜单不会被上一局状态卡住。
+	# 离开游戏场景：清掉输入锁存 / 注入 / 兜底解冻，菜单不会被上一局状态卡住。
 	PlayerInput.clear_latch()
+	PlayerInput.clear_override()
 	SimClock.reset()
 	# 断开 autoload 信号连接（防悬空连接：接收者 free 后连接仍在发出者）
 	if GameEvents.player_death.is_connected(_on_player_death):

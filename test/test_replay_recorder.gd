@@ -3,10 +3,12 @@ extends GutTest
 
 func before_each() -> void:
 	PlayerInput.clear_latch()
+	PlayerInput.clear_override()
 
 
 func after_each() -> void:
 	PlayerInput.clear_latch()
+	PlayerInput.clear_override()
 	for action in PlayerInput.ACTIONS:
 		Input.action_release(action)
 

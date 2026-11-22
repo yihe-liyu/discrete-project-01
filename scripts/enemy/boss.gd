@@ -140,6 +140,16 @@ func current_bonus() -> int: return _bonus
 ## 本阶段已过的秒数（由 tick 换算，不读 delta）。
 func get_elapsed() -> float:
 	return _ticks_to_seconds(_elapsed_ticks)
+
+
+## 本阶段已过的物理 tick（确定性诊断 / 回放哈希用）。
+func get_elapsed_ticks() -> int:
+	return _elapsed_ticks
+
+
+## 开局减伤剩余 tick（0 = 已结束）。
+func get_open_reduce_ticks() -> int:
+	return _open_reduce_ticks
 ## 阶段身份（记录键）；未解析 = null。
 func get_phase_id() -> PhaseIdentity: return _phase_identity
 

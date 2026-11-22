@@ -3,12 +3,14 @@ extends GutTest
 
 func before_each() -> void:
 	PlayerInput.clear_latch()
+	PlayerInput.clear_override()
 	for action in PlayerInput.ACTIONS:
 		Input.action_release(action)
 
 
 func after_each() -> void:
 	PlayerInput.clear_latch()
+	PlayerInput.clear_override()
 	for action in PlayerInput.ACTIONS:
 		Input.action_release(action)
 
@@ -66,3 +68,15 @@ func test_replay_recorder_reads_the_latched_mask() -> void:
 	rec.stop()
 	assert_true(rec.is_action_pressed_at(0, "shoot"),
 		"录制必须与玩法读同一份锁存，而不是重新读 Input")
+
+
+func test_override_mask_bypasses_real_input() -> void:
+	var shoot_idx := PlayerInput.ACTIONS.find("shoot")
+	PlayerInput.set_override_mask(1 << shoot_idx)
+	Input.action_release("shoot")
+	PlayerInput.latch()
+	assert_true(PlayerInput.is_action_pressed(&"shoot"), "注入的掩码应覆盖真实输入")
+
+	PlayerInput.clear_override()
+	PlayerInput.latch()
+	assert_false(PlayerInput.is_action_pressed(&"shoot"), "关闭注入后应回退真实输入")

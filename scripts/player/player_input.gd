@@ -22,12 +22,30 @@ const ACTIONS := [
 static var _has_latch: bool = false
 ## 本 tick 锁存的按键位掩码（顺序同 [constant ACTIONS]）。
 static var _latch_mask: int = 0
+## 测试 / 回放注入：启用后 [method latch] 不再读真实 Input。
+static var _override_active: bool = false
+static var _override_mask: int = 0
 
 
-## 在每个玩法物理 tick 开头调用：把真实 Input 锁成一份快照。
+## 在每个玩法物理 tick 开头调用：把输入锁成一份快照。
+## 启用了 override（测试 / 回放）时锁注入值，不读真实 Input。
 static func latch() -> void:
-	_latch_mask = _read_raw_mask()
+	_latch_mask = _override_mask if _override_active else _read_raw_mask()
 	_has_latch = true
+
+
+## 测试 / 回放：注入本 tick 的输入位掩码；之后每个 latch 都用它，直到 clear_override。
+static func set_override_mask(mask: int) -> void:
+	_override_active = true
+	_override_mask = mask
+
+
+## 关闭注入，恢复读真实 Input。
+static func clear_override() -> void:
+	_override_active = false
+	_override_mask = 0
+	_has_latch = false
+	_latch_mask = 0
 
 
 ## 离开 GameScene / 测试清理：下一帧恢复直接读 Input。
@@ -43,6 +61,8 @@ static func has_latch() -> bool:
 
 ## 本 tick 的玩法输入位掩码；无锁存时现读 Input（测试 / 菜单路径）。
 static func input_mask() -> int:
+	if _override_active:
+		return _override_mask
 	if _has_latch:
 		return _latch_mask
 	return _read_raw_mask()
@@ -53,6 +73,8 @@ static func is_action_pressed(action: StringName) -> bool:
 	var idx := ACTIONS.find(String(action))
 	if idx < 0:
 		return Input.is_action_pressed(action)
+	if _override_active:
+		return (_override_mask & (1 << idx)) != 0
 	if not _has_latch:
 		return Input.is_action_pressed(action)
 	return (_latch_mask & (1 << idx)) != 0
@@ -60,7 +82,7 @@ static func is_action_pressed(action: StringName) -> bool:
 
 ## 本 tick 的 [-1, 1] 轴；无锁存时回退到 Input.get_axis。
 static func get_axis(negative: StringName, positive: StringName) -> float:
-	if not _has_latch:
+	if not _has_latch and not _override_active:
 		return Input.get_axis(negative, positive)
 	var neg := 1.0 if is_action_pressed(negative) else 0.0
 	var pos := 1.0 if is_action_pressed(positive) else 0.0
