@@ -45,6 +45,29 @@ func test_sequence_phases_in_order_with_gap() -> void:
 	assert_eq(fake.started.size(), 3, "序列结束不再起")
 
 
+## 帧模式回归：起手一张后必须等它击破，不能因为 next_frame 还停在当前帧而连开所有阶段。
+func test_sequence_phases_frame_mode_starts_one_at_a_time() -> void:
+	var tl := Timeline.new()
+	tl.frame_timing = true
+	var fake := FakeBoss.new()
+	add_child_autofree(fake)
+	var phases: Array[PhaseData] = [_phase("P0"), _phase("P1"), _phase("P2")]
+	tl.at(0.0).sequence_phases(func(): return fake, phases, 1.0)
+
+	for i in 10:
+		tl.tick(0.0)
+	assert_eq(fake.started.size(), 1, "只起 P0，不能同时起 P1/P2")
+	assert_eq(fake.started[0].name, "P0")
+
+	fake.phase_cleared.emit(false, 0)
+	for i in 59:
+		tl.tick(0.0)
+	assert_eq(fake.started.size(), 1, "1.0s gap 未到不进 P1")
+	tl.tick(0.0)
+	assert_eq(fake.started.size(), 2, "gap 到 → P1")
+	assert_eq(fake.started[1].name, "P1")
+
+
 func test_sequence_phases_arms_wait_only_after_last() -> void:
 	var tl := Timeline.new()
 	var fake := FakeBoss.new()

@@ -34,6 +34,7 @@ var _events: Array[TimelineEvent] = []
 ## 阶段序列（sequence_phases）：{getter, phases, gap, index, next_at, next_frame}
 var _sequences: Array[Dictionary] = []
 ## 整数帧模式：true 时时间线以物理帧推进（新录像/普通游玩），false 保留旧浮点语义。
+const NO_FRAME: int = 1 << 60
 var frame_timing: bool = false
 var _frames: int = 0
 var _frame_cursor: int = 0   # wait() 的整数帧参考点
@@ -134,6 +135,7 @@ func _advance_sequence(seq: Dictionary) -> void:
 	var is_last: bool = seq.index == seq.phases.size() - 1
 	seq.index += 1
 	seq.next_at = INF   # 等本张击破后再定下一张时刻
+	seq.next_frame = NO_FRAME
 	var boss = seq.getter.call()
 	if boss == null:
 		return
