@@ -92,7 +92,7 @@ func shake(parent: Control) -> void:
 	tw.set_loops()
 	var shakes := ceili(_shake_dur / 0.05)
 	for _i in shakes:
-		var off := Vector2(RNG.randf_range(-4, 4), RNG.randf_range(-2, 2))
+		var off := Vector2(RNG.fx_randf_range(-4, 4), RNG.fx_randf_range(-2, 2))
 		tw.tween_property(self, "position", orig + off, 0.025)
 		tw.tween_property(self, "position", orig, 0.025)
 

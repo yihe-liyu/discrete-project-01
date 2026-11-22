@@ -9,7 +9,7 @@ extends RefCounted
 
 const DIR := "user://replays_v2"
 ## 模拟语义版本：玩法代码/顺序变了就升；不匹配的录像直接拒绝。
-const SIM_VERSION := "sim-v2"
+const SIM_VERSION := "sim-v3"
 
 static var _rec: ReplayV2
 static var _play: ReplayV2
@@ -21,6 +21,9 @@ static var _next_index: int = 0
 static var _current_index: int = -1
 ## 回放是否已经出现哈希分歧（测试 / 诊断用）。
 static var _diverged: bool = false
+## 调试：录制时保存人类可读快照，回放时逐 tick 比对（默认关，测试/排查用）。
+static var debug_capture: bool = false
+static var debug_snapshots: Array[String] = []
 
 
 static func is_recording() -> bool:
@@ -33,6 +36,26 @@ static func is_playing() -> bool:
 
 static func has_diverged() -> bool:
 	return _diverged
+
+
+## 调试：比较当前 tick 的现场快照与录制快照；首个差异打印后自动关掉，避免刷屏。
+static func debug_compare(idx: int, live: String) -> void:
+	if not debug_capture or idx < 0 or idx >= debug_snapshots.size():
+		return
+	var expected := debug_snapshots[idx]
+	if expected == live:
+		return
+	debug_capture = false
+	var exp_lines := expected.split("\n")
+	var cur_lines := live.split("\n")
+	push_warning("ReplayV2 状态分歧 idx=%d" % idx)
+	for i in maxi(exp_lines.size(), cur_lines.size()):
+		var a := exp_lines[i] if i < exp_lines.size() else "<missing>"
+		var b := cur_lines[i] if i < cur_lines.size() else "<missing>"
+		if a != b:
+			push_warning("  exp: " + a)
+			push_warning("  cur: " + b)
+			break
 
 
 static func current_path() -> String:
@@ -65,6 +88,7 @@ static func start_recording(meta: Dictionary) -> bool:
 	_rec.begin(Engine.physics_ticks_per_second, int(snap.get("seed", 0)), SIM_VERSION)
 	_rec.rng_state = int(snap.get("state", 0))
 	_rec.metadata = meta.duplicate(true)
+	debug_snapshots.clear()
 	_recording = true
 	_path = ""
 	return true
@@ -82,7 +106,7 @@ static func finish_recording(meta: Dictionary = {}) -> String:
 		return ""
 	_rec.metadata.merge(meta.duplicate(true), true)
 	_rec.metadata["recorded_at"] = Time.get_datetime_string_from_system()
-	_rec.sim_version = "sim-v2"
+	_rec.sim_version = SIM_VERSION
 	var dir := ProjectSettings.globalize_path(DIR)
 	DirAccess.make_dir_recursive_absolute(dir)
 	var stamp := Time.get_datetime_string_from_system().replace(":", "-")

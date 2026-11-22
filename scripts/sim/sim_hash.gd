@@ -134,3 +134,52 @@ static func mix_vec2(h: int, p: Vector2) -> int:
 	h = mix(h, roundi(p.x * POS_SCALE))
 	h = mix(h, roundi(p.y * POS_SCALE))
 	return h
+
+
+## 人类可读的规范状态快照（只在调试分歧时用；不参与正常哈希）。
+static func describe(registry: EntityRegistry, system: KernelNativeSystem, tick: int,
+		items: ItemPool = null, lasers: Array = []) -> String:
+	var lines: Array[String] = ["tick=%d" % tick]
+	var player: Node2D = registry.player if registry != null else null
+	if is_instance_valid(player):
+		var actor := player as PlayerBase
+		var res: PlayerResources = actor.resources if actor != null else null
+		lines.append("player pos=(%.3f,%.3f) score=%d lives=%d bombs=%d power=%d graze=%d mem=%.2f inv=%s" % [
+			player.global_position.x, player.global_position.y,
+			res.current_score if res != null else -1,
+			res.lives if res != null else -1,
+			res.bomb_count if res != null else -1,
+			res.power_raw if res != null else -1,
+			res.graze_count if res != null else -1,
+			res.memory_value if res != null else -1.0,
+			str((actor as Player).is_invincible) if actor is Player else "?",
+		])
+	var boss: Boss = registry.get_boss() if registry != null else null
+	if is_instance_valid(boss):
+		var phase := boss.current_phase()
+		lines.append("boss uid=%d hp=%d elapsed=%d reduce=%d pos=(%.3f,%.3f)" % [
+			phase.uid if phase != null else -1, boss.hp, boss.get_elapsed_ticks(),
+			boss.get_open_reduce_ticks(), boss.global_position.x, boss.global_position.y,
+		])
+	var enemies: Array = registry.get_active_enemies() if registry != null else []
+	lines.append("enemies=%d" % enemies.size())
+	for enemy in enemies:
+		if is_instance_valid(enemy):
+			lines.append("  enemy hp=%d pos=(%.3f,%.3f)" % [
+				enemy.hp, enemy.global_position.x, enemy.global_position.y])
+	if system != null:
+		lines.append("bullets=%d" % system.get_active_count())
+		for id in mini(system.get_active_count(), 8):
+			var p := system.get_position(id)
+			lines.append("  bullet uid=%d type=%d pos=(%.3f,%.3f)" % [
+				system.get_uid(id), system.get_type_index(id), p.x, p.y])
+	if items != null:
+		var item_list := items.active_items()
+		lines.append("items=%d" % item_list.size())
+		for item in item_list:
+			lines.append("  item type=%d pos=(%.3f,%.3f)" % [
+				int(item.item_type), item.global_position.x, item.global_position.y])
+	lines.append("lasers=%d" % lasers.size())
+	var rng := RNG.snapshot_state()
+	lines.append("rng seed=%s state=%s" % [str(rng.get("seed", 0)), str(rng.get("state", 0))])
+	return "\n".join(lines)

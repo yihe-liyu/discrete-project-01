@@ -5,9 +5,12 @@ extends Node
 signal seed_changed(seed_value: int)
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## 纯表现随机流（死亡特效 / bomb 颜色 / 屏幕粒子）：不参与 gameplay，不污染回放 RNG。
+var _fx_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _ready():
 	randomize_seed()   # 走方法以广播 seed（启动期通常无监听者，安全）
+	_fx_rng.randomize()
 
 func set_seed(seed_value: int) -> void:
 	_rng.seed = seed_value
@@ -49,3 +52,13 @@ func randi_range(from: int, to: int) -> int:
 
 func randfn(mean: float = 0.0, deviation: float = 1.0) -> float:
 	return _rng.randfn(mean, deviation)
+
+
+## 纯表现随机：不写 gameplay RNG state，回放不需要复现。
+func fx_randf() -> float:
+	return _fx_rng.randf()
+
+
+## 纯表现随机区间。
+func fx_randf_range(from: float, to: float) -> float:
+	return _fx_rng.randf_range(from, to)

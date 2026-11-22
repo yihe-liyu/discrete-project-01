@@ -59,6 +59,16 @@ var _invincible_timer: float = 0.0
 var _respawn_pos: Vector2 = MISS_RESPAWN_POS
 ## 复位移动进行中（锁移动输入）。
 var _is_respawning: bool = false
+## 复位移动的 tick 状态（不用 Tween；渲染帧率不影响回放）。
+var _respawn_from: Vector2 = Vector2.ZERO
+var _respawn_elapsed_ticks: int = 0
+var _respawn_total_ticks: int = 1
+## Bomb 编队的 tick 调度（替代 Tween）。
+var _bomb_spawn_index: int = 0
+var _bomb_spawn_count: int = 0
+var _bomb_spawn_wait: int = 0
+var _bomb_spawn_interval: int = 1
+var _bomb_spawn_hue: float = 0.0
 ## deathbomb 窗口开着（刚被弹、还没死，等玩家按 bomb）。
 var _is_deathbombing: bool = false
 ## 开窗前的 process_mode（窗口里临时 ALWAYS，收 bomb / 走帧）。
@@ -167,6 +177,8 @@ func _physics_process(delta):
 		if _is_deathbombing and SimClock.frames_left(self) <= 0:
 			_end_deathbomb(false)
 		return
+	_tick_bomb_spawns()
+	_tick_respawn()
 	# 记忆值自动恢复（原全局状态 _process，迁来）
 	resources.regen(delta)
 	# 无敌倒计时（替代 await，不挂起调用链）
@@ -310,11 +322,24 @@ func _fire_bomb(bomb_data: BombData) -> void:
 	# Bomb 期间短暂无敌
 	is_invincible = true
 	_invincible_timer = bomb_data.invincible_time
-	var base_hue := RNG.randf()
-	var tween := create_tween()
-	for i in bomb_data.count:
-		tween.tween_callback(_spawn_bomb_bullet.bind(i, base_hue))
-		tween.tween_interval(bomb_data.interval)
+	# 编队按物理 tick 调度：第一颗下一 tick 出，之后每 interval 秒一颗。
+	_bomb_spawn_count = maxi(0, bomb_data.count)
+	_bomb_spawn_index = 0
+	_bomb_spawn_hue = RNG.fx_randf()
+	_bomb_spawn_interval = maxi(1, roundi(bomb_data.interval * 60.0))
+	_bomb_spawn_wait = 1
+
+
+## 每物理 tick 推进 bomb 编队；不用 Tween，避免帧边界造成回放错位。
+func _tick_bomb_spawns() -> void:
+	if _bomb_spawn_index >= _bomb_spawn_count:
+		return
+	if _bomb_spawn_wait > 0:
+		_bomb_spawn_wait -= 1
+		return
+	_spawn_bomb_bullet(_bomb_spawn_index, _bomb_spawn_hue)
+	_bomb_spawn_index += 1
+	_bomb_spawn_wait = _bomb_spawn_interval
 
 
 func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
@@ -519,10 +544,22 @@ func _move_to_respawn() -> void:
 	if _is_respawning:
 		return
 	_is_respawning = true
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "global_position", _respawn_pos, MISS_RESPAWN_TIME)
-	tween.finished.connect(func() -> void: _is_respawning = false)
+	_respawn_from = global_position
+	_respawn_elapsed_ticks = 0
+	_respawn_total_ticks = maxi(1, roundi(MISS_RESPAWN_TIME * 60.0))
+
+
+## 每物理 tick 推进复位移动（EASE_OUT QUAD，与旧 Tween 同曲线）。
+func _tick_respawn() -> void:
+	if not _is_respawning:
+		return
+	_respawn_elapsed_ticks += 1
+	var t := clampf(float(_respawn_elapsed_ticks) / float(_respawn_total_ticks), 0.0, 1.0)
+	var eased := 1.0 - pow(1.0 - t, 2.0)
+	global_position = _respawn_from.lerp(_respawn_pos, eased)
+	if _respawn_elapsed_ticks >= _respawn_total_ticks:
+		_is_respawning = false
+		global_position = _respawn_pos
 
 
 # ═══ 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命 ═══

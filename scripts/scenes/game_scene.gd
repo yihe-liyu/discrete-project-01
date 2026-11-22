@@ -165,6 +165,15 @@ func _resolve_stage_data() -> StageData:
 	return null
 
 
+## 调试用的人类可读状态快照（只在 ReplayV2Session.debug_capture 时生成）。
+func sim_debug_state(tick: int = -1) -> String:
+	var relative := tick if tick >= 0 else SimClock.tick
+	var laser: LaserEngine = _bullet_manager.laser_engine()
+	var laser_list: Array = laser.get_active() if laser != null else []
+	return SimHash.describe(_stage_runtime.entity_registry, _bullet_manager.kernel_system(),
+		relative, _item_pool, laser_list)
+
+
 ## 当前 tick 的规范状态指纹（诊断 / 回放校验用；不改变玩法）。
 ## [param tick] 传相对 tick；回放/录制必须用同一个相对序号，不能混入全局 SimClock.tick。
 func sim_hash(tick: int = -1) -> int:
@@ -437,6 +446,8 @@ func _on_practice_cleared(_boss: Node) -> void:
 func _on_record_observe(_tick: int) -> void:
 	if not ReplayV2Session.is_recording():
 		return
+	if ReplayV2Session.debug_capture:
+		ReplayV2Session.debug_snapshots.append(sim_debug_state(ReplayV2Session.current_tick()))
 	ReplayV2Session.record_tick(
 		PlayerInput.input_mask(), PlayerInput.command_flags(), sim_hash(ReplayV2Session.current_tick()))
 
@@ -448,6 +459,9 @@ func _on_replay_prepare(tick: int) -> void:
 func _on_replay_observe(tick: int) -> void:
 	if _ending:
 		return
+	if ReplayV2Session.debug_capture:
+		ReplayV2Session.debug_compare(ReplayV2Session.current_tick(),
+			sim_debug_state(ReplayV2Session.current_tick()))
 	if not ReplayV2Session.observe_tick(tick, sim_hash(ReplayV2Session.current_tick())):
 		_ending = true
 		_finish_playback()

@@ -7,6 +7,8 @@ const GAME_SCENE = preload("res://scenes/game_scene.tscn")
 func before_each() -> void:
 	ReplayV2Session.cancel_recording()
 	ReplayV2Session.stop_playback()
+	ReplayV2Session.debug_capture = false
+	ReplayV2Session.debug_snapshots.clear()
 	SimClock.reset()
 	PlayerInput.clear_latch()
 	PlayerInput.clear_override()
@@ -18,6 +20,8 @@ func before_each() -> void:
 func after_each() -> void:
 	ReplayV2Session.cancel_recording()
 	ReplayV2Session.stop_playback()
+	ReplayV2Session.debug_capture = false
+	ReplayV2Session.debug_snapshots.clear()
 	SimClock.reset()
 	SaveData.reset_session()
 
@@ -59,6 +63,36 @@ func test_recorded_run_playback_matches_hashes() -> void:
 	assert_true(ReplayV2Session.is_playing(), "回放应还在进行")
 	assert_false(ReplayV2Session.has_diverged(), "回放前几 tick 不应出现哈希分歧")
 	ReplayV2Session.stop_playback()
+	ReplayV2Session.debug_capture = false
+	playback.queue_free()
+	await get_tree().process_frame
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_bomb_command_is_recorded_and_replayed() -> void:
+	ReplayV2Session.debug_capture = true
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 20:
+		await get_tree().physics_frame
+	PlayerInput.queue_command(&"bomb")
+	for _i in 40:
+		await get_tree().physics_frame
+	var path := ReplayV2Session.finish_recording({"result": "test"})
+	assert_ne(path, "", "bomb 局应落盘")
+
+	scene.queue_free()
+	await get_tree().process_frame
+
+	assert_true(ReplayV2Session.start_playback(path), "bomb 局应能回放")
+	var playback: Node = GAME_SCENE.instantiate()
+	add_child_autofree(playback)
+	for _i in 50:
+		await get_tree().physics_frame
+	assert_true(ReplayV2Session.is_playing(), "bomb 回放应还在进行")
+	assert_false(ReplayV2Session.has_diverged(), "bomb 命令回放不应出现哈希分歧")
+	ReplayV2Session.stop_playback()
+	ReplayV2Session.debug_capture = false
 	playback.queue_free()
 	await get_tree().process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

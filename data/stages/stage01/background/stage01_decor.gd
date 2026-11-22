@@ -51,8 +51,8 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 
 	# ④ 每 4 帧喷一棵树（持续）
 	timeline.at(0.0).every(4.0 / Engine.physics_ticks_per_second).do(func():
-		var x: float = RNG.randf_range(-100, 100)
-		var z: float = RNG.randf_range(-220, -180)
+		var x: float = RNG.fx_randf_range(-100, 100)
+		var z: float = RNG.fx_randf_range(-220, -180)
 		ctx.decor.spawn("橡树", Vector3(x, 8.0, z), Vector2.ZERO, _background_plane)
 	)
 

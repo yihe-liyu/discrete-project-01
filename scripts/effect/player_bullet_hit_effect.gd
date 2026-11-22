@@ -27,8 +27,8 @@ func _setup() -> void:
 	# 生成位置随机偏移（相对命中点）
 	if pos_jitter > 0.0:
 		global_position += Vector2(
-			RNG.randf_range(-pos_jitter, pos_jitter),
-			RNG.randf_range(-pos_jitter, pos_jitter))
+			RNG.fx_randf_range(-pos_jitter, pos_jitter),
+			RNG.fx_randf_range(-pos_jitter, pos_jitter))
 	var anim: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D")
 	var sprite: Sprite2D = get_node_or_null("Sprite2D")
 	if anim:
@@ -60,4 +60,4 @@ func set_tint(color: Color) -> void:
 
 
 func _on_velocity_set() -> void:
-	rotation = velocity.angle() + RNG.randf_range(-jitter, jitter) if jitter > 0.0 else velocity.angle()
+	rotation = velocity.angle() + RNG.fx_randf_range(-jitter, jitter) if jitter > 0.0 else velocity.angle()
