@@ -98,6 +98,11 @@ func _ready():
 
 
 func _start_normal_game() -> void:
+	# 新录制：GameScene 必须先于 MarisaShoot(-100) / 内核(-10/-4) 推进回放帧，
+	# 否则它们会用上一帧输入/RNG。旧录像没有 clock_first，沿用旧时序。
+	process_physics_priority = -1000 if ReplaySession.uses_clock_first() else 0
+	if ReplaySession.is_playing():
+		ReplaySession.align_to_stage(SaveData.current_stage_id)
 	# Route = 本局成员/顺序；stage_id 是路线当前位置的派生结果。
 	# 关卡练习不经过路线：它由菜单直接指定 current_stage_id，不能被 route 重置回第 1 面。
 	if not SaveData.is_stage_practice:
@@ -136,10 +141,11 @@ func _capture_record_sample() -> void:
 	ReplaySession.capture_sample(_stage_runtime.player.global_position, rs,
 		_bullet_manager.active_count(), _bullet_manager.bullet_signature(),
 		_item_pool.visible_count(), _item_pool.item_signature(),
-		_bullet_manager.bullet_snapshot() if ReplaySession.full_trace else [],
+		_bullet_manager.bullet_snapshot(),
 		rs.graze_count if rs != null else 0,
 		_item_pool.item_snapshot() if ReplaySession.full_trace else [],
-		_bullet_manager.kernel_rng_state(), _actor_snapshot())
+		_bullet_manager.kernel_rng_state(), _actor_snapshot(),
+		_stage_runtime.player.laser_anchor_snapshot() if _stage_runtime.player != null else [])
 
 
 ## 回放帧推进。定格（time_scale=0）时 physics 可能不跑，由 _process 双驱动。
@@ -173,6 +179,9 @@ func flush_replay_sample() -> void:
 	if not _sample_pending or _ending or not ReplaySession.is_playing():
 		return
 	_sample_pending = false
+	ReplaySession.apply_despawns(_bullet_manager, ReplaySession.current_frame() - 1)
+	if ReplaySession.trace_verify_enabled:
+		ReplaySession.verify_despawns(_bullet_manager, ReplaySession.current_frame() - 1)
 	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 	if ReplaySession.trace_enabled and ReplaySession.trace_verify_enabled \
 			and _stage_runtime.player != null:

@@ -22,6 +22,9 @@ var duration_frames := 0
 ## 首个录制物理帧的 Engine 帧号；事件 engine_tick 是绝对帧号，回放用它与本值
 ## 一起换算成“录制内相对 tick”，避免跨进程回放时事件被当成早就到点。
 var start_engine_tick: int = -1
+## 录制时 GameScene 是否以 -1000 priority 先推进回放/采样，再让 MarisaShoot(-100)
+## 等负 priority 节点跑。旧录像没有这个字段，回放沿用旧时序。
+var clock_first: bool = false
 var _capture_started := false
 ## 回放元数据（关卡 / 难度 / 角色 / 分数等；由录制方填写）
 var metadata: Dictionary = {}
@@ -40,6 +43,8 @@ var spawn_events: Array[Dictionary] = []
 var rng_calls: Array[Dictionary] = []
 ## 擦弹事件：frame / uid / roll 前后 state；定位 graze 清弹跨帧。
 var graze_events: Array[Dictionary] = []
+## 弹消失事件：frame / uid。回放只用来校验/定位是哪颗弹在录制里被回收。
+var despawn_events: Array[Dictionary] = []
 ## 对话等待结束（LINE/WAIT）的 Engine tick；回放按帧推进对话。
 var dialogue_advances: Array[Dictionary] = []
 
@@ -50,6 +55,7 @@ func start() -> void:
 	events.clear()
 	samples.clear()
 	score_events.clear()
+	despawn_events.clear()
 	dialogue_advances.clear()
 	var rng_snapshot := RNG.snapshot_state()
 	rng_seed = int(rng_snapshot.get("seed", 0))
@@ -57,6 +63,7 @@ func start() -> void:
 	recording = true
 	duration_frames = 0
 	start_engine_tick = -1
+	clock_first = true
 	_capture_started = false
 
 
@@ -141,6 +148,7 @@ func to_dict() -> Dictionary:
 		"rng_state": str(rng_state),  # 字符串防 JSON int64 精度丢失（种子决定可复现性！）
 		"duration": duration_frames,
 		"start_engine_tick": start_engine_tick,
+		"clock_first": clock_first,
 		"frames_hex": frames.hex_encode(),
 		"metadata": metadata,
 		"events": events,
@@ -151,6 +159,7 @@ func to_dict() -> Dictionary:
 		"rng_calls": rng_calls,
 		"graze_events": graze_events,
 		"dialogue_advances": dialogue_advances,
+		"despawns": despawn_events,
 	}
 
 
@@ -172,6 +181,7 @@ func load_dict(data: Dictionary) -> bool:
 	rng_state = int(data.get("rng_state", "0"))
 	duration_frames = data.get("duration", 0)
 	start_engine_tick = int(data.get("start_engine_tick", -1))
+	clock_first = bool(data.get("clock_first", false))
 	frames = (data.get("frames_hex", "") as String).hex_decode()
 	if frames.size() != duration_frames:
 		return false
@@ -222,6 +232,12 @@ func load_dict(data: Dictionary) -> bool:
 		for e in raw_rng:
 			if e is Dictionary:
 				rng_calls.append(e.duplicate(true))
+	despawn_events.clear()
+	var raw_despawns = data.get("despawns", [])
+	if raw_despawns is Array:
+		for e in raw_despawns:
+			if e is Dictionary:
+				despawn_events.append(e.duplicate(true))
 	dialogue_advances.clear()
 	var raw_dialogue = data.get("dialogue_advances", [])
 	if raw_dialogue is Array:

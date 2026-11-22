@@ -197,6 +197,20 @@ func bullet_uid(id: int) -> int:
 
 
 ## 稳定句柄 → 当前行；已回收 → -1。
+func bullet_type_index(uid: int) -> int:
+	var id := find_bullet_uid(uid)
+	if id < 0:
+		return -1
+	return _kernel_bullet_host.system.get_type_index(id)
+
+
+func bullet_position(uid: int) -> Vector2:
+	var id := find_bullet_uid(uid)
+	if id < 0:
+		return Vector2.ZERO
+	return _kernel_bullet_host.system.get_position(id)
+
+
 func find_bullet_uid(uid: int) -> int:
 	if _kernel_bullet_host == null or _kernel_bullet_host.system == null:
 		return -1

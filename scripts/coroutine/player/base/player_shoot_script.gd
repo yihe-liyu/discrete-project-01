@@ -39,6 +39,11 @@ func stop():
 
 # ── 子类覆写 ──
 
+## 回放诊断：激光锚点世界坐标（无激光的角色返回空数组）。
+func laser_anchor_positions() -> Array:
+	return []
+
+
 ## 返回 {visual_script, counts[], offsets_focus[], offsets_spread[]}
 ## 其中 counts/offsets 按 power 升序索引，如 [2, 4] 表示 power_low→2, power_high→4
 func _option_setup() -> Dictionary:

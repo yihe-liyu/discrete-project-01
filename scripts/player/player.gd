@@ -260,6 +260,13 @@ func _init_shoot_script() -> void:
 	_player_shoot_script.start_shooting(shoot_ctx)
 
 ## 停掉旧射击脚本并重建（换角色用）。
+## 录制：激光锚点快照（无激光角色返回空数组）。
+func laser_anchor_snapshot() -> Array:
+	if _player_shoot_script != null:
+		return _player_shoot_script.laser_anchor_positions()
+	return []
+
+
 func reinit_shoot() -> void:
 	if _player_shoot_script:
 		_player_shoot_script.stop()

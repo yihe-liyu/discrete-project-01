@@ -31,6 +31,10 @@ static var _score_events: Array[Dictionary] = []
 static var _trace_diverged: bool = false
 static var _last_tick_physics_frame: int = -1
 static var _spawn_cursor: int = 0
+static var _despawn_verify_cursor: int = 0
+static var _despawn_apply_cursor: int = 0
+## 录制时上一帧的弹 uid 集合；用于生成 despawn_events。
+static var _last_bullet_uids: Dictionary = {}
 static var _rng_cursor: int = 0
 static var _graze_cursor: int = 0
 static var _dialogue_cursor: int = 0
@@ -43,6 +47,13 @@ static var trace_verify_enabled: bool = false
 
 static func is_recording() -> bool:
 	return _active
+
+
+## 新录制（clock_first）需要 GameScene 在负 priority 节点之前推进回放/采样。
+static func uses_clock_first() -> bool:
+	if _active:
+		return true
+	return _playing and _recorder != null and _recorder.clock_first
 
 
 ## 开一局：清空并开始采样。已在录制中（切面 reload）则保持原录制。
@@ -215,6 +226,42 @@ static func capture_spawn(uid: int, type_index: int, pos: Vector2, faction: int,
 	return null
 
 
+## 回放：按录制强制回收该 sample 帧消失的 uid（激光段/普通弹都适用）。
+static func apply_despawns(manager: BulletManager, frame: int) -> void:
+	if not _playing or _recorder == null or manager == null:
+		return
+	while _despawn_apply_cursor < _recorder.despawn_events.size():
+		var e: Dictionary = _recorder.despawn_events[_despawn_apply_cursor]
+		var f := int(e.get("frame", 0))
+		if f > frame:
+			break
+		_despawn_apply_cursor += 1
+		if f != frame:
+			continue
+		var id := manager.find_bullet_uid(int(e.get("uid", -1)))
+		if id >= 0:
+			manager.despawn_bullet(id)
+
+
+## 回放校验：录制里该 sample 帧消失的 uid，回放里是否仍活着。
+static func verify_despawns(manager: BulletManager, frame: int) -> void:
+	if not _playing or _recorder == null or manager == null:
+		return
+	while _despawn_verify_cursor < _recorder.despawn_events.size():
+		var e: Dictionary = _recorder.despawn_events[_despawn_verify_cursor]
+		var f := int(e.get("frame", 0))
+		if f > frame:
+			break
+		_despawn_verify_cursor += 1
+		if f != frame:
+			continue
+		var uid := int(e.get("uid", -1))
+		var id := manager.find_bullet_uid(uid)
+		if id >= 0:
+			push_warning("Replay 弹未回收 frame=%d uid=%d type=%d pos=%s" % [
+				frame, uid, manager.bullet_type_index(uid), manager.bullet_position(uid)])
+
+
 ## 敌弹命中自机：录制时落盘；回放时打印本次受击来源，便于查“多出来的受击”。
 static func capture_hit(uid: int, type_index: int, pos: Vector2) -> void:
 	if _active and _recorder != null:
@@ -238,9 +285,20 @@ static func capture_score(amount: int, source: StringName) -> void:
 ## 记录一帧状态采样（位置 / RNG / 分数 / 残机 / 雷）。
 static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
 		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = [],
-		krng: int = 0, actors: Array = []) -> void:
+		krng: int = 0, actors: Array = [], anchors: Array = []) -> void:
 	if not _active or _recorder == null:
 		return
+	var current_uids := {}
+	for e in bsnap:
+		if e is Array and e.size() > 0:
+			current_uids[int(e[0])] = true
+	if not _last_bullet_uids.is_empty():
+		var sample_frame := _recorder.samples.size()
+		for uid in _last_bullet_uids:
+			if not current_uids.has(uid):
+				_recorder.despawn_events.append({"frame": sample_frame, "uid": uid})
+	_last_bullet_uids = current_uids
+	var stored_snap: Array = bsnap if full_trace else []
 	var rng := RNG.snapshot_state()
 	_recorder.capture_sample({
 		"p": [pos.x, pos.y],
@@ -253,12 +311,24 @@ static func capture_sample(pos: Vector2, res: PlayerResources, bullets: int = 0,
 		"bhash": bhash,
 		"items": items,
 		"ihash": ihash,
-		"bsnap": bsnap,
+		"bsnap": stored_snap,
 		"graze": graze,
 		"isnap": isnap,
 		"krng": krng,
+		"stage": SaveData.current_stage_id,
 		"actors": actors,
+		"anchors": anchors,
 	})
+
+
+## 回放：当前 sample 帧的激光锚点坐标（无记录 = 空）。
+static func replay_laser_anchors() -> Array:
+	if not _playing or _samples.is_empty():
+		return []
+	var idx := _frame_index
+	if idx < 0 or idx >= _samples.size():
+		return []
+	return _samples[idx].get("anchors", [])
 
 
 ## 回放帧开始：恢复内核 bullet RNG 状态（宿主 RNG 已由 sync_rng_for_frame 恢复）。
@@ -271,6 +341,24 @@ static func sync_kernel_rng(manager: BulletManager) -> void:
 	var sample: Dictionary = _samples[idx]
 	if sample.has("krng"):
 		manager.set_kernel_rng_state(int(str(sample.get("krng", "0"))))
+
+
+## 路线切面 reload 后，把回放帧指针对齐到当前 stage 的第一条 sample。
+## 场景切换若多/少跑一帧，RNG 恢复会取到相邻样本，表现为整条 RNG 流错位。
+static func align_to_stage(stage_id: int) -> void:
+	if not _playing or _samples.is_empty():
+		return
+	var idx := maxi(_frame_index, 0)
+	while idx < _samples.size():
+		var s: Dictionary = _samples[idx]
+		if int(s.get("stage", -1)) == stage_id:
+			break
+		idx += 1
+	if idx >= _samples.size():
+		return
+	if idx != _frame_index:
+		_frame_index = idx
+		_mask = int(_frames[mini(idx, _frames.size() - 1)]) if not _frames.is_empty() else _mask
 
 
 ## 回放帧开始：把 gameplay RNG 恢复到录制时的状态。
@@ -295,7 +383,7 @@ static func sync_rng_for_frame() -> void:
 ## 回放时对比当前帧采样；只报第一个分歧，避免刷屏。
 static func check_sample(pos: Vector2, res: PlayerResources, bullets: int = 0, bhash: int = 0,
 		items: int = 0, ihash: int = 0, bsnap: Array = [], graze: int = 0, isnap: Array = [],
-		krng: int = 0, actors: Array = []) -> void:
+		krng: int = 0, actors: Array = [], _anchors: Array = []) -> void:
 	if not _playing or _trace_diverged or _samples.is_empty():
 		return
 	var idx := _frame_index - 1
@@ -759,6 +847,9 @@ static func stop_playback() -> void:
 	_rng_cursor = 0
 	_graze_cursor = 0
 	_dialogue_cursor = 0
+	_despawn_verify_cursor = 0
+	_despawn_apply_cursor = 0
+	_last_bullet_uids = {}
 	_events.clear()
 	_event_index = 0
 	_path = ""

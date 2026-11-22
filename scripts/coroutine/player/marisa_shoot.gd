@@ -149,6 +149,15 @@ func _make_laser_segment(i: int) -> AtlasTexture:
 
 ## 子机锚点：每个子机槽一个持久 Marker2D，每帧跟随子机位置。
 ## 激光只持有 Marker 的 id；子机节点被重建也不会让 id 失效。
+## 录制：当前激光锚点世界坐标（按子机槽顺序）。
+func laser_anchor_positions() -> Array:
+	var out: Array = []
+	for anchor in _laser_anchors:
+		if is_instance_valid(anchor):
+			out.append([anchor.global_position.x, anchor.global_position.y])
+	return out
+
+
 func _sync_laser_anchors(player: Player) -> void:
 	while _laser_anchors.size() < _options.size():
 		var anchor := Node2D.new()
