@@ -75,22 +75,23 @@ func _ready() -> void:
 		(_collision.shape as CircleShape2D).radius = collect_radius
 
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
+	var dt := SimClock.DT
 	if _is_dead:
 		return
 
 	if _collect_grace > 0.0:
 		# 阶段 1 · 弧向飞：只按初速径向飞（不落重力、不吸附），弧形才看得见
-		_collect_grace = maxf(_collect_grace - delta, 0.0)
+		_collect_grace = maxf(_collect_grace - dt, 0.0)
 		if _collect_grace > 0.0:
-			global_position += _velocity * delta
+			global_position += _velocity * dt
 		else:
 			# 阶段 2 · 交还常规物理：清掉径向初速 → 之后只受重力 = 竖直下落
 			# （横向不再飘；下落途中回到吸附范围/收点线时才被正常收走）
 			_velocity = Vector2.ZERO
-			_tick_collect_or_fall(delta)
+			_tick_collect_or_fall(dt)
 	else:
-		_tick_collect_or_fall(delta)
+		_tick_collect_or_fall(dt)
 
 	# 出屏回收
 	if global_position.y > GameConfig.VIEW_HEIGHT:

@@ -14,7 +14,7 @@
 ## run_parallel() — 追加一个并行任务
 ## pause()/resume() — 临时冻结时钟（任务保留），对话/演出期间使用
 ##
-## 计时方式：累积 _physics_process 的 delta，暂停时不累积。
+## 计时方式：每 tick 累积固定 SimClock.DT，暂停时不累积。
 ## 恢复后不会追帧，时钟从暂停处继续。
 extends Node
 class_name CoroutineRunner
@@ -29,13 +29,12 @@ var is_running: bool = false
 var _is_paused: bool = false
 var _tasks: Array[Task] = []
 var _clock: float = 0.0  # 游戏内时间（物理帧累积，暂停时冻结）
-var _last_dt: float = 0.0  # 当前帧物理步长（time_scale 生效；节点/无节点模式一致）
+var _last_dt: float = 0.0  # 当前 tick 的固定步长（节点/无节点模式一致）
 ## async 模式没有 task，但仍要保持 runner 存活（否则空任务会立刻 finished）。
 var _async_keepalive: bool = false
 
 
-## 当前帧物理步长（协程脚本用这个代替 get_physics_process_delta_time()：
-## 无节点模式（子弹协程）下引擎不更新树外节点的 delta，直接调会返回 0！）
+## 当前 tick 的固定步长（协程脚本统一用它；不读引擎 delta）。
 func get_dt() -> float:
 	return _last_dt
 
@@ -116,7 +115,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	if _is_paused:
 		return  # 暂停时不累积时钟
-	_last_dt = get_physics_process_delta_time()  # 用引擎时钟（time_scale 生效，快进/慢动作正确）
+	_last_dt = SimClock.DT  # 玩法固定步长；不读引擎 delta / time_scale
 	_clock += _last_dt
 	ticked.emit(_last_dt)
 	_advance_tasks()

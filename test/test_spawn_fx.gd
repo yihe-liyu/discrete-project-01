@@ -73,9 +73,9 @@ func test_frozen_bullet_does_not_move() -> void:
 	sys.set_spawn_fx(BulletType.Faction.ENEMY, fog)
 	var enemy := _enemy_data()
 	var id: int = sys.spawn(enemy.to_bullet_type(), Vector2(100, 100), Vector2.RIGHT * 600.0, Color.WHITE)
-	sys._physics_process(0.1)
+	sys.step(0.1)
 	assert_eq(sys.get_position(id), Vector2(100, 100), "雾中不移动（预告冻结）")
-	sys._physics_process(0.3)
+	sys.step(0.3)
 	assert_true(sys.get_position(id).x > 100.0, "雾结束后开始移动")
 
 

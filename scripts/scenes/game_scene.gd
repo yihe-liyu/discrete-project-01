@@ -354,7 +354,12 @@ func _on_player_death():
 		_ending = true
 		_finish_playback()
 		return
-	await get_tree().create_timer(GameConfig.DEATH_MENU_DELAY).timeout
+	# 用物理 tick 等，不用真实时间 Timer（否则 Game Over 落盘 tick 会随帧率漂）
+	var delay_ticks := maxi(1, roundi(GameConfig.DEATH_MENU_DELAY * SimClock.TICK_RATE))
+	for _i in delay_ticks:
+		if _ending or not is_inside_tree():
+			return
+		await get_tree().physics_frame
 	# 这段窗口里可能已被击破/通关结算过（那时主菜单已经出来了）→ 不能再叠一个 Game Over
 	if _ending or not is_inside_tree():
 		return

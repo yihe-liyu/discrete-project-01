@@ -166,7 +166,8 @@ func apply_player_data() -> void:
 		animation.sprite_frames = player_data.animation
 		animation.play(IDLE)
 
-func _physics_process(delta):
+func _physics_process(_delta):
+	var dt := SimClock.DT
 	# 先消费本 tick 的离散命令：deathbomb 取消要在冻结判断之前。
 	process_input_commands()
 	# 刚关窗 / 正常暂停：本 tick 不再跑玩法。
@@ -180,13 +181,13 @@ func _physics_process(delta):
 	_tick_bomb_spawns()
 	_tick_respawn()
 	# 记忆值自动恢复（原全局状态 _process，迁来）
-	resources.regen(delta)
+	resources.regen(dt)
 	# 无敌倒计时（替代 await，不挂起调用链）
 	if is_invincible:
-		_invincible_timer -= delta
+		_invincible_timer -= dt
 		if _invincible_timer <= 0.0:
 			is_invincible = false
-	_update_invincible_blink(delta)
+	_update_invincible_blink(dt)
 
 	input_vector.x = PlayerInput.get_axis("move_left", "move_right")
 	input_vector.y = PlayerInput.get_axis("move_up", "move_down")
@@ -194,7 +195,7 @@ func _physics_process(delta):
 
 	update_hitbox_display()
 	update_animation()
-	update_move(delta)
+	update_move(dt)
 
 func _init_shoot_script() -> void:
 	if not player_data or not player_data.shoot_script:

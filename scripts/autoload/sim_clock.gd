@@ -13,6 +13,10 @@
 ## - 暂停菜单自己也会暂停树；本时钟只在“自己暂停的”情况下负责恢复，且覆盖层打开时不抢恢复。
 extends Node
 
+## 固定物理 tick 率；玩法状态只能按这个步长推进，不读引擎 delta。
+const TICK_RATE := 60
+const DT := 1.0 / float(TICK_RATE)
+
 ## 自加载以来的物理 tick 计数（含冻结帧；暂停菜单期间不走）。
 var tick: int = 0
 ## tick 钩子：prepare 在 latch 前（回放注入输入），observer 在 latch 后（录制/校验状态）。

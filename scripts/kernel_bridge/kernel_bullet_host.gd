@@ -135,10 +135,10 @@ func _ensure_system() -> void:
 
 
 ## 行为循环结束后统一执行延后的 re_fire / 分裂（内核契约：循环中途禁止增删行）。
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	flush_behavior_host()
 	if _laser_fade != null:
-		_laser_fade.process(delta)
+		_laser_fade.process(SimClock.DT)
 
 
 ## 执行延后动作队列（幂等：队列空则 no-op）。BulletManager 也会调一次作兜底。

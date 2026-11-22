@@ -65,8 +65,9 @@ func width_now() -> float:
 	return _size.y * _sprite.scale.y
 
 
-func _physics_process(delta: float) -> void:
-	_stage_t += delta
+func _physics_process(_delta: float) -> void:
+	var dt := SimClock.DT
+	_stage_t += dt
 	if _is_follow and entity_registry != null:
 		var p = entity_registry.player
 		if is_instance_valid(p):
@@ -93,7 +94,7 @@ func _physics_process(delta: float) -> void:
 			if _stage_t >= _fade:
 				queue_free()
 			return
-	_damage_and_clear(delta)
+	_damage_and_clear(dt)
 
 
 func _advance(next_stage: int) -> void:

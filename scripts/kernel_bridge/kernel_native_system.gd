@@ -625,11 +625,16 @@ func randi_range(from: int, to: int) -> int:
 # ═══ 每帧 ═══
 
 ## 手动推进一帧（无树 / 测试 / 预览工具用；与 _physics_process 同一条路径）。
+## 手动推进（测试 / 预览）：显式 dt；生产 _physics_process 固定用 SimClock.DT。
 func step(delta: float) -> void:
-	_physics_process(delta)
+	_step_with(delta)
 
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
+	_step_with(SimClock.DT)
+
+
+func _step_with(dt: float) -> void:
 	_ensure_native()
 	if _accel == null:
 		return
@@ -640,9 +645,9 @@ func _physics_process(delta: float) -> void:
 		_pull_snapshot()
 		return
 	native_frames += 1
-	_accel.integrate(delta)
+	_accel.integrate(dt)
 	if enable_native_behaviors:
-		_run_native_behaviors(delta)
+		_run_native_behaviors(dt)
 	_pull_snapshot()
 
 

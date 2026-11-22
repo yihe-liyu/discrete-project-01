@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：113 脚本 / **771 用例（769 通过 / 2 红：BossRegistry WIP + BGM）/ 6171 断言 / 83.0s** / 0 orphans / **0 pending**。
+**现状**：113 脚本 / **771 用例（769 通过 / 2 红：BossRegistry WIP + BGM）/ 6174 断言 / 76.1s** / 0 orphans / **0 pending**。
 
 ## 分层
 

@@ -80,11 +80,17 @@ func spawn(p_skeleton: LaserSkeleton, p_color: Color) -> void:
 	_rebuild_meshes()  # 立即渲染（防止首帧 _is_dirty 被覆盖为 false）
 
 
+func _ready() -> void:
+	# 寿命由 LaserEngine.step 统一驱动；节点自身不再自动步进，避免一 tick 走两次。
+	set_physics_process(false)
+
+
+## 仅供测试/手动推进；生产路径由 LaserEngine.step(SimClock.DT) 调。
 func _physics_process(delta: float) -> void:
 	step(delta)
 
 
-## 手动推进一帧（LaserEngine 统一驱动；节点自身 _physics_process 亦转调）
+## 手动推进一帧（LaserEngine 统一驱动）
 func step(delta: float) -> void:
 	if phase == Phase.DEAD:
 		return

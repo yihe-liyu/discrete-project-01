@@ -59,7 +59,8 @@ func setup(p_data: BombData, pos: Vector2, direction: Vector2, tint: Color = Col
 	z_index = d.z_index
 
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
+	var dt := SimClock.DT
 	var p = entity_registry.player if entity_registry else null
 	var player: Player = p if is_instance_valid(p) else null
 	if not is_instance_valid(player):
@@ -70,15 +71,15 @@ func _physics_process(delta: float) -> void:
 		_fly_dir = _init_dir.normalized()
 	match _phase:
 		Phase.GROW:
-			_angle += orbit_speed * delta
-			_radius += radius_growth * delta
+			_angle += orbit_speed * dt
+			_radius += radius_growth * dt
 			if _radius >= max_radius:
 				_radius = max_radius
 				_hold_timer = 0.0
 				_phase = Phase.HOLD
 		Phase.HOLD:
-			_angle += orbit_speed * delta
-			_hold_timer += delta
+			_angle += orbit_speed * dt
+			_hold_timer += dt
 			if _hold_timer >= hold_time:
 				_phase = Phase.FLY
 				_fly_dir = Vector2.RIGHT.rotated(_angle)
@@ -88,7 +89,7 @@ func _physics_process(delta: float) -> void:
 				_fly_dir = (enemy.global_position - global_position).normalized()
 			velocity = _fly_dir * homing_speed
 	if _phase == Phase.FLY:
-		global_position += velocity * delta
+		global_position += velocity * dt
 		rotation = velocity.angle()
 	else:
 		global_position = player.global_position + Vector2.RIGHT.rotated(_angle) * _radius

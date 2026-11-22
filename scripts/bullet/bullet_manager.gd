@@ -128,7 +128,7 @@ func _exit_tree() -> void:
 func _physics_process(_delta: float) -> void:
 	if _is_processing_paused:
 		return
-	var dt := get_physics_process_delta_time()
+	var dt := SimClock.DT
 	_death_clear.process(dt)
 	_laser_engine.step(dt)
 	if _kernel_bullet_physics != null:

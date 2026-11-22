@@ -35,6 +35,7 @@ var _dialogue_runner: DialogueRunner
 var _portrait_map: Dictionary = {}  # char_name → {node, profile}
 var _cancel_held: float = 0.0
 var _is_input_ready: bool = false
+var _input_cooldown_ticks: int = 0
 var _is_closing: bool = false
 
 # ═══ 生命周期 ═══
@@ -52,12 +53,14 @@ func play_steps(steps: Array) -> void:
 	_is_closing = false
 	visible = true
 	_dialogue_runner = DialogueRunner.new()
+	var typed_steps: Array[DialogueStep] = []
+	typed_steps.assign(steps)
 	_dialogue_runner.line_shown.connect(_on_line_shown)
 	_dialogue_runner.state_changed.connect(_on_state_changed)
 	_dialogue_runner.event_fired.connect(_on_event_fired)
 	_dialogue_runner.finished.connect(_on_finished)
 	# 步骤立刻开始；淡入只是表现，不能把“对话开始”挂在 Tween 回调上。
-	_dialogue_runner.start(steps)
+	_dialogue_runner.start(typed_steps)
 	var tw := create_tween()
 	tw.tween_property(_root, "modulate:a", 1.0, 0.3)
 
@@ -134,7 +137,11 @@ func _physics_process(_delta: float) -> void:
 		return
 	if GameManager.current_state == GameManager.AppState.PAUSED:
 		return
-	_dialogue_runner.tick(1.0 / float(Engine.physics_ticks_per_second))
+	if _input_cooldown_ticks > 0:
+		_input_cooldown_ticks -= 1
+		if _input_cooldown_ticks == 0:
+			_is_input_ready = true
+	_dialogue_runner.tick(SimClock.DT)
 
 
 func _input(event: InputEvent) -> void:
@@ -215,13 +222,9 @@ func _on_line_shown(line: DialogueLine, speakers: Array, state: StageState) -> v
 		if panel._shake_dur > 0.0:
 			panel.shake(info.node)
 
-	# 输入冷却
-	if input_cooldown > 0.0:
-		_is_input_ready = false
-		await get_tree().create_timer(input_cooldown).timeout
-		if not is_inside_tree() or _is_closing:
-			return
-	_is_input_ready = true
+	# 输入冷却：按物理 tick 计，不用真实时间 Timer
+	_input_cooldown_ticks = 0 if input_cooldown <= 0.0 else maxi(1, roundi(input_cooldown * SimClock.TICK_RATE))
+	_is_input_ready = _input_cooldown_ticks == 0
 
 
 func _on_state_changed(state: StageState, duration: float) -> void:
