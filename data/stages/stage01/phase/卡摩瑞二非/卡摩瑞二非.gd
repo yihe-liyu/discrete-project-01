@@ -37,9 +37,10 @@ var 回弹模板: EmitTemplate
 
 
 func _on_start() -> void:
-	波间隔帧 = maxi(1, ctx.clock.frames_for(波间隔))
-	波内开花间隔帧 = maxi(1, ctx.clock.frames_for(波内两次开花间隔))
-	距下一波帧 = maxi(1, ctx.clock.frames_for(2.4))
+	if ctx != null and ctx.clock != null:
+		波间隔帧 = maxi(1, ctx.clock.frames_for(波间隔))
+		波内开花间隔帧 = maxi(1, ctx.clock.frames_for(波内两次开花间隔))
+		距下一波帧 = maxi(1, ctx.clock.frames_for(2.4))
 	开花弹 = SpawnSpec.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
 	反弹弹 = SpawnSpec.new().tex("棱弹").color(Color.AQUA).blend(true).enemy()
 	回弹模板 = EmitTemplate.new(&"卡摩瑞二非_rebound", 反弹弹)

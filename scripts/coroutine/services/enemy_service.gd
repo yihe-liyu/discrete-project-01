@@ -25,16 +25,21 @@ func spawn(data: EnemyData) -> Enemy:
 	return ctx.stage.spawn_enemy_data(data, ctx)
 
 
-## 让杂兵在 duration 秒内移动到目标点（物理时钟；内容不自己 create_tween）。
-## 返回 Tween（便于调试/追加）；参数非法/时长为 0 时返回 null（时长为 0 则瞬移）。
+## 让杂兵在 duration 秒内移动到目标点。新内容按整数帧推进；旧录像保留 Tween。
+## 参数非法 / 时长为 0 返回 null（时长为 0 则瞬移）。
 func move_to(enemy: Node2D, target_pos: Vector2, duration: float,
-		ease_type: int = Tween.EASE_OUT, trans_type: int = Tween.TRANS_QUAD) -> Tween:
+		ease_type: int = Tween.EASE_OUT, trans_type: int = Tween.TRANS_QUAD) -> Variant:
 	if enemy == null or not is_instance_valid(enemy):
 		push_error("EnemyService.move_to(): 传入空 / 已释放的对象 —— 移动空跑")
 		return null
 	if duration <= 0.0:
 		enemy.global_position = target_pos
 		return null
+	if ReplaySession.uses_frame_content():
+		var mover := FrameMover.attach(enemy)
+		mover.set_ease(ease_type).set_trans(trans_type)
+		mover.tween_property(enemy, "global_position", target_pos, duration)
+		return mover
 	var tween := enemy.create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	tween.set_ease(ease_type).set_trans(trans_type)
 	tween.tween_property(enemy, "global_position", target_pos, duration)

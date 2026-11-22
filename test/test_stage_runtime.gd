@@ -152,3 +152,17 @@ func test_enemy_behavior_starts_after_entering_tree():
 	if probe:
 		assert_true(probe.started_in_tree, "行为 _on_start 时 target 应已经在场景树里")
 	enemy.queue_free()
+
+
+## FrameMover：玩法移动按 60 帧/秒推进，不依赖 Tween 的浮点 elapsed。
+func test_frame_mover_interpolates_by_physics_frames():
+	var node := Node2D.new()
+	add_child_autofree(node)
+	var mover := FrameMover.attach(node)
+	mover.tween_property(node, "position", Vector2(60.0, 0.0), 1.0)
+	for i in 30:
+		await get_tree().physics_frame
+	assert_almost_eq(node.position.x, 30.0, 3.0, "半程应到 30px 左右")
+	for i in 31:
+		await get_tree().physics_frame
+	assert_almost_eq(node.position.x, 60.0, 0.01, "60 帧后到终点")

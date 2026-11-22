@@ -87,10 +87,7 @@ func enter(to: Vector2, from: Vector2, dur: float = 1.5) -> BossHandle:
 	if not boss:
 		return self
 	boss.global_position = from
-	var tw := boss.create_tween()
-	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(boss, "global_position", to, dur)
+	_move_boss(boss, to, dur, Tween.EASE_OUT, Tween.TRANS_QUAD)
 	return self
 
 ## 进入阶段。idle_only=true 时只在未开战才进入（对话 boss_fight 用，防重入）。
@@ -120,12 +117,26 @@ func retreat(to: Vector2, dur: float = 2.0) -> BossHandle:
 		return self
 	boss.set_exit_controlled()
 	boss.die()
+	_move_boss(boss, to, dur, Tween.EASE_OUT, Tween.TRANS_QUAD, boss.queue_free)
+	return self
+
+
+## 统一移动：新内容用整数帧 FrameMover；旧录像仍用 Tween。
+func _move_boss(boss: Node2D, to: Vector2, dur: float, ease_type: int, trans_type: int,
+		callback: Callable = Callable()) -> void:
+	if ReplaySession.uses_frame_content():
+		var mover := FrameMover.attach(boss)
+		mover.set_ease(ease_type).set_trans(trans_type)
+		mover.tween_property(boss, "global_position", to, dur)
+		if callback.is_valid():
+			mover.tween_callback(callback)
+		return
 	var tw := boss.create_tween()
 	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.set_trans(trans_type).set_ease(ease_type)
 	tw.tween_property(boss, "global_position", to, dur)
-	tw.tween_callback(boss.queue_free)
-	return self
+	if callback.is_valid():
+		tw.tween_callback(callback)
 
 
 ## 全破：被打死（区别于 [code]retreat[/code] = 没打死的退场/逃走）。
@@ -138,9 +149,5 @@ func defeat(to: Vector2 = Vector2(GameConfig.FIELD_CENTER_X, -150.0), dur: float
 	boss.set_exit_controlled()
 	boss.play_defeat()
 	boss.die()
-	var tw := boss.create_tween()
-	tw.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(boss, "global_position", to, dur)
-	tw.tween_callback(boss.queue_free)
+	_move_boss(boss, to, dur, Tween.EASE_IN_OUT, Tween.TRANS_QUAD, boss.queue_free)
 	return self

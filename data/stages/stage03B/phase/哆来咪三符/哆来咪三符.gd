@@ -47,6 +47,9 @@ var 发弹点当前半径: float = 60.0
 var 发弹点当前半径增加速度: float = -1.0
 ## 距离“缩回中心”还剩多少秒；Hard 以上为 INF。
 var 剩余保持时间: float = 0.0
+## 整数帧路径的保持倒计时 / 总保持帧；-1 = Hard 以上无限保持。
+var 剩余保持帧: int = 0
+var 保持旋转帧: int = 1
 
 ## `难度为Hard以上` 在脚本实例化时读取一次；中途改难度不会重新分派。
 var 难度为Hard以上: bool = SaveData.selected_difficulty >= Difficulty.HARD
@@ -60,6 +63,8 @@ var 夹角狙模板: EmitTemplate
 
 
 func _on_start() -> void:
+	if ctx != null and ctx.clock != null:
+		保持旋转帧 = maxi(1, ctx.clock.frames_for(保持旋转时间))
 	发弹点当前角速度 = 发弹点角速度
 	发弹点当前半径增加速度 = 发弹点半径增加速度
 
@@ -67,6 +72,7 @@ func _on_start() -> void:
 	if 难度为Hard以上:
 		发弹点当前半径 = 发弹点半径上限
 		剩余保持时间 = INF
+		剩余保持帧 = -1
 		发弹点当前角度 = RNG.randf() * TAU
 
 	# 水色夹角弹：沿朝向外扩；Hard 以上加一个短寿命，到点自动清弹。
@@ -123,12 +129,26 @@ func _tick(p_ctx: StageContext) -> Variant:
 	if not target:
 		return p_ctx.clock.wait(发弹间隔)
 
-	var 帧间隔 := get_dt()
+	var 帧间隔 := 1.0 / Engine.physics_ticks_per_second if frame_timing else get_dt()
 
 	发弹点当前角速度 += 发弹点角加速度 * 帧间隔
 	发弹点当前角度 += 发弹点当前角速度 * 帧间隔
 
-	if 剩余保持时间 > 0.0:
+	if frame_timing:
+		if 剩余保持帧 != 0:
+			if 剩余保持帧 > 0:
+				剩余保持帧 -= 1
+				if 剩余保持帧 <= 0:
+					发弹点当前半径 = 发弹点起始半径
+					发弹点当前半径增加速度 = 发弹点半径增加速度
+					发弹点当前角度 = RNG.randf() * TAU
+		else:
+			发弹点当前半径增加速度 += 发弹点半径增加加速度 * 帧间隔
+			发弹点当前半径 += 发弹点当前半径增加速度 * 帧间隔
+			if 发弹点当前半径 >= 发弹点半径上限:
+				发弹点当前半径 = 发弹点半径上限
+				剩余保持帧 = 保持旋转帧
+	elif 剩余保持时间 > 0.0:
 		# 保持阶段：Easy / Normal 倒计时，到点缩回中心；Hard 以上 INF，永不进入。
 		if not 难度为Hard以上:
 			剩余保持时间 -= 帧间隔

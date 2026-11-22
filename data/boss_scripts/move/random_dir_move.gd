@@ -18,7 +18,8 @@ var _等待帧: int = 0
 
 
 func _on_start() -> void:
-	_等待帧 = maxi(1, ctx.clock.frames_for(jump_interval))
+	if ctx != null and ctx.clock != null:
+		_等待帧 = maxi(1, ctx.clock.frames_for(jump_interval))
 
 
 func _tick(p_ctx: StageContext):
