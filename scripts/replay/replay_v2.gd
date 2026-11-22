@@ -16,6 +16,8 @@ const MAGIC := "TSR2"
 ## 离散命令位（与 PlayerInput.command_flags 对齐）。
 const COMMAND_BOMB := 1
 const COMMAND_MEMORY := 2
+const COMMAND_DIALOGUE_ADVANCE := 4
+const COMMAND_DIALOGUE_CLOSE := 8
 
 var tick_rate: int = 60
 var rng_seed: int = 0

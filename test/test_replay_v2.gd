@@ -126,3 +126,16 @@ func test_finish_does_not_overwrite_start_stage() -> void:
 	assert_eq(int(rec.metadata.get("start_stage_id", 0)), 1, "结束 stage 不得覆盖起始 stage")
 	assert_eq(int(rec.metadata.get("start_stage_no", 0)), 1)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_dialogue_advance_is_captured_as_command() -> void:
+	ReplayV2Session.cancel_recording()
+	ReplayV2Session.stop_playback()
+	assert_true(ReplayV2Session.start_recording({"difficulty": 1, "character": 0}))
+	ReplayV2Session.record_dialogue_advance()
+	ReplayV2Session.record_tick(0, 0, 7)
+	var path := ReplayV2Session.finish_recording({"result": "test"})
+	var rec := ReplayV2.new()
+	assert_true(rec.load_file(path))
+	assert_ne(rec.command_at(0) & ReplayV2.COMMAND_DIALOGUE_ADVANCE, 0, "按 Z 推进对话应进命令位")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

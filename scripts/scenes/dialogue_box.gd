@@ -1,3 +1,4 @@
+class_name DialogueBox
 extends CanvasLayer
 ## 气泡对话系统（步骤驱动版）—— 立绘 + 飘浮气泡
 ##
@@ -27,6 +28,9 @@ const DESIGN_SIZE := Vector2(1280.0, 960.0)
 
 @onready var _root: Control = $Control
 
+## 当前活跃的对话盒（回放推进命令需要找到它）。
+static var active: DialogueBox
+
 var _dialogue_runner: DialogueRunner
 var _portrait_map: Dictionary = {}  # char_name → {node, profile}
 var _cancel_held: float = 0.0
@@ -36,6 +40,7 @@ var _is_closing: bool = false
 # ═══ 生命周期 ═══
 
 func _ready() -> void:
+	active = self
 	visible = false
 	_root.modulate.a = 0.0
 	_fit_to_viewport()
@@ -51,10 +56,10 @@ func play_steps(steps: Array) -> void:
 	_dialogue_runner.state_changed.connect(_on_state_changed)
 	_dialogue_runner.event_fired.connect(_on_event_fired)
 	_dialogue_runner.finished.connect(_on_finished)
-	# 淡入完成后启动步骤（演出立绘在淡入后才开始出现，与旧行为一致）
+	# 步骤立刻开始；淡入只是表现，不能把“对话开始”挂在 Tween 回调上。
+	_dialogue_runner.start(steps)
 	var tw := create_tween()
 	tw.tween_property(_root, "modulate:a", 1.0, 0.3)
-	tw.tween_callback(func(): _dialogue_runner.start(steps))
 
 	if not GameManager.game_state_changed.is_connected(_on_game_state):
 		GameManager.game_state_changed.connect(_on_game_state)
@@ -65,7 +70,7 @@ func play_steps(steps: Array) -> void:
 func advance_line() -> void:
 	if _is_closing or not _is_input_ready or _dialogue_runner == null:
 		return
-	_advance()
+	_request_advance()
 
 
 ## 跳过整段对话（创作台 / 调试用）：淡出、发 finished、恢复宿主 runner。
@@ -77,6 +82,8 @@ func skip_all() -> void:
 
 
 func _exit_tree() -> void:
+	if active == self:
+		active = null
 	if GameManager.game_state_changed.is_connected(_on_game_state):
 		GameManager.game_state_changed.disconnect(_on_game_state)
 	if get_viewport() != null and get_viewport().size_changed.is_connected(_fit_to_viewport):
@@ -101,26 +108,38 @@ func _fit_to_viewport() -> void:
 
 
 func _process(delta: float) -> void:
+	if ReplayV2Session.is_playing():
+		return
 	if _is_closing or not _dialogue_runner:
 		return
 	# 暂停（暂停菜单）时冻结对话计时，恢复后从暂停处继续；
 	# 保留 PROCESS_MODE_ALWAYS 让淡出动画照常，仅停掉 _dialogue_runner.tick
 	if GameManager.current_state == GameManager.AppState.PAUSED:
 		return
-	# 步骤计时（WAIT / auto_advance）
-	_dialogue_runner.tick(delta)
 	if not _is_input_ready:
 		return
 	# 长按取消 → 关闭对话
 	if Input.is_action_pressed("ui_cancel"):
 		_cancel_held += delta
 		if _cancel_held >= cancel_hold_threshold:
-			_close()
+			_request_close()
 			return
 	else:
 		_cancel_held = 0.0
 
+func _physics_process(_delta: float) -> void:
+	if _is_closing or not _dialogue_runner:
+		return
+	if SimClock.is_frozen():
+		return
+	if GameManager.current_state == GameManager.AppState.PAUSED:
+		return
+	_dialogue_runner.tick(1.0 / float(Engine.physics_ticks_per_second))
+
+
 func _input(event: InputEvent) -> void:
+	if ReplayV2Session.is_playing():
+		return
 	if _is_closing or not _is_input_ready or not _dialogue_runner:
 		return
 	# 暂停时不处理输入
@@ -132,16 +151,44 @@ func _input(event: InputEvent) -> void:
 
 	if event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()
-		_advance()
+		_request_advance()
 
 	elif event.is_action_released("ui_cancel"):
 		# 短按取消 = 跳过本句
 		var line := _dialogue_runner.current_line()
 		if _cancel_held < cancel_hold_threshold and line and line.can_skip:
 			get_viewport().set_input_as_handled()
-			_advance()
+			_request_advance()
 
 # ═══ 推进 ═══
+
+func _request_advance() -> void:
+	if ReplayV2Session.is_playing():
+		return
+	if ReplayV2Session.is_recording():
+		ReplayV2Session.record_dialogue_advance()
+	_advance()
+
+
+func _request_close() -> void:
+	if ReplayV2Session.is_playing():
+		return
+	if ReplayV2Session.is_recording():
+		ReplayV2Session.record_dialogue_close()
+	_close()
+
+
+## 回放推进：在 SimClock prepare 阶段（hash 观测之前）直接推进，绕过输入冷却。
+func apply_replay_advance() -> void:
+	if not _is_closing and _dialogue_runner != null:
+		_dialogue_runner.advance()
+
+
+## 回放关闭对话。
+func apply_replay_close() -> void:
+	if not _is_closing and _dialogue_runner != null:
+		_close()
+
 
 func _advance() -> void:
 	if _dialogue_runner:
