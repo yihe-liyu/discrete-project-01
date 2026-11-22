@@ -17,9 +17,28 @@ func wait(seconds: float) -> float:
 	return seconds
 
 
-## 返回 count 个物理帧对应的秒数。
+## 返回 count 个物理帧对应的秒数（旧浮点路径用；新内容直接用 delay_frames）。
 func wait_frames(count: int) -> float:
 	return float(count) / Engine.physics_ticks_per_second
+
+
+## 秒数 → 整数物理帧。
+func frames_for(seconds: float) -> int:
+	if runner != null:
+		return runner.frames_for(seconds)
+	return maxi(0, roundi(seconds * Engine.physics_ticks_per_second))
+
+
+## 等固定物理帧数（新内容计时；不经过浮点秒）。
+func delay_frames(count: int) -> bool:
+	if runner == null or not runner.is_running:
+		return false
+	if count <= 0:
+		return true
+	var target := runner.content_ticks() + count
+	while runner.is_running and runner.content_ticks() < target:
+		await runner.ticked
+	return runner.is_running
 
 
 ## 等一个物理 tick。返回 false = runner 已停（调用方应退出）。
@@ -37,6 +56,8 @@ func delay(seconds: float) -> bool:
 		return false
 	if seconds <= 0.0:
 		return true
+	if runner.frame_timing:
+		return await delay_frames(runner.frames_for(seconds))
 	var target := runner.game_time() + seconds
 	while runner.is_running and runner.game_time() < target:
 		await runner.ticked

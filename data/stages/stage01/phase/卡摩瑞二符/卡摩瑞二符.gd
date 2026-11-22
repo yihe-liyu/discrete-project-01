@@ -19,9 +19,14 @@ var 开花弹速度: float = diff_pick([350.0, 400.0, 450.0, 500.0])
 ## 圈与圈之间的间隔（秒）。
 var 波内两次开花间隔: float = diff_pick([0.25, 0.2, 0.15, 0.1])
 
-## Easy / Normal 的波次计时。
+## Easy / Normal 的波次计时（旧浮点路径；旧录像回放用）。
 var 距下一波计时: float = 2.4
 var 波内距下次开花计时: float = 0.0
+## 整数帧路径（新录像）。
+var 距下一波帧: int = 0
+var 波内距下次开花帧: int = 0
+var 波间隔帧: int = 1
+var 波内开花间隔帧: int = 1
 var 波内剩余开花弹次数: int = 0
 ## 每一圈的整体旋转角，避免每圈从同一方向开始。
 var 随机角度: Vector2
@@ -37,6 +42,9 @@ var 金反射模板: EmitTemplate
 
 
 func _on_start() -> void:
+	波间隔帧 = maxi(1, ctx.clock.frames_for(波间隔))
+	波内开花间隔帧 = maxi(1, ctx.clock.frames_for(波内两次开花间隔))
+	距下一波帧 = maxi(1, ctx.clock.frames_for(2.4))
 	# 红反射弹：撞墙后按镜面方向反弹，速度极低，主要用来“封路”。
 	反射弹 = SpawnSpec.new().tex("鳞弹").color(Color.RED).blend(true).enemy()
 	反射弹.with_behavior(BulletBehaviors.accel_heading(100.0))
@@ -94,6 +102,25 @@ func _tick(p_ctx: StageContext) -> Variant:
 		return p_ctx.clock.wait(波内两次开花间隔)
 
 	# Easy / Normal：按波次走。先等波间隔，再在波内按间隔逐圈发射。
+	if frame_timing:
+		if 波内剩余开花弹次数 > 0:
+			波内距下次开花帧 += 1
+			if 波内距下次开花帧 >= 波内开花间隔帧:
+				波内距下次开花帧 = 0
+				波内剩余开花弹次数 -= 1
+				p_ctx.bullets.shoot_spread(
+					开花弹, 开花弹条数, TAU, 随机角度,
+					target.global_position,
+					AssetRegistry.sounds["shoot"])
+		else:
+			距下一波帧 -= 1
+			if 距下一波帧 <= 0:
+				距下一波帧 = 波间隔帧
+				波内距下次开花帧 = 0
+				波内剩余开花弹次数 = 开花弹次数
+				随机角度 = Vector2.DOWN.rotated(RNG.randf() * TAU)
+		return true
+
 	var dt := get_dt()
 	if 波内剩余开花弹次数 > 0:
 		波内距下次开花计时 += dt

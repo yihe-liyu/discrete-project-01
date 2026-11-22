@@ -13,9 +13,14 @@ var 开花弹次数: int = diff_pick([6, 10, 14, 18])
 ## 圈与圈之间的间隔（秒）；很小，观感上接近连续开花。
 var 波内两次开花间隔: float = 0.01
 
-## Easy / Normal 的波次计时。
+## Easy / Normal 的波次计时（旧浮点路径；旧录像回放用）。
 var 距下一波计时: float = 2.4
 var 波内距下次开花计时: float = 0.0
+## 整数帧路径（新录像）：首波 2.4s、后续 3.0s。
+var 距下一波帧: int = 0
+var 波内距下次开花帧: int = 0
+var 波间隔帧: int = 1
+var 波内开花间隔帧: int = 1
 var 波内剩余开花弹次数: int = 0
 ## 当前波已经发到第几圈。
 var 本波已发圈数: int = 0
@@ -32,6 +37,9 @@ var 回弹模板: EmitTemplate
 
 
 func _on_start() -> void:
+	波间隔帧 = maxi(1, ctx.clock.frames_for(波间隔))
+	波内开花间隔帧 = maxi(1, ctx.clock.frames_for(波内两次开花间隔))
+	距下一波帧 = maxi(1, ctx.clock.frames_for(2.4))
 	开花弹 = SpawnSpec.new().tex("米弹").color(Color.GOLD).blend(true).enemy()
 	反弹弹 = SpawnSpec.new().tex("棱弹").color(Color.AQUA).blend(true).enemy()
 	回弹模板 = EmitTemplate.new(&"卡摩瑞二非_rebound", 反弹弹)
@@ -44,8 +52,26 @@ func _tick(p_ctx: StageContext) -> Variant:
 	if not target:
 		return p_ctx.clock.wait(波间隔)
 
-	var 帧间隔 := get_dt()
+	if frame_timing:
+		if 波内剩余开花弹次数 > 0:
+			波内距下次开花帧 += 1
+			if 波内距下次开花帧 >= 波内开花间隔帧:
+				波内距下次开花帧 = 0
+				波内剩余开花弹次数 -= 1
+				发射一圈(p_ctx)
+		else:
+			距下一波帧 -= 1
+			if 距下一波帧 <= 0:
+				波次正负交替 = -波次正负交替
+				距下一波帧 = 波间隔帧
+				波内距下次开花帧 = 0
+				波内剩余开花弹次数 = 开花弹次数
+				本波已发圈数 = 0
+				随机角度 = Vector2.DOWN.rotated(RNG.randf() * TAU)
+				p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
+		return true
 
+	var 帧间隔 := get_dt()
 	if 波内剩余开花弹次数 > 0:
 		# 波内：按间隔逐圈发射。
 		波内距下次开花计时 += 帧间隔
@@ -64,7 +90,6 @@ func _tick(p_ctx: StageContext) -> Variant:
 			本波已发圈数 = 0
 			随机角度 = Vector2.DOWN.rotated(RNG.randf() * TAU)
 			p_ctx.audio.play_sfx(AssetRegistry.sounds["shoot"])
-
 	return true
 
 

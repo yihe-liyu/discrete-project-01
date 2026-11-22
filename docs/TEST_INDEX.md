@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：108 脚本 / **763 用例（761 通过 / 2 红：BossRegistry WIP + BGM）/ 6170 断言 / 52.4s** / 0 orphans / **0 pending**。
+**现状**：108 脚本 / **765 用例（763 通过 / 2 红：BossRegistry WIP + BGM）/ 6179 断言 / 52.4s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 55 | 451 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 55 | 453 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 17 | 117 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,9 +93,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（55 / 451）
+## C · 宿主 · 运行时系统（55 / 453）
 
-### C1 组合根 / 服务 / 时间线（17 / 76）
+### C1 组合根 / 服务 / 时间线（17 / 77）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -104,7 +104,7 @@
 | [test_emit_template](../test/test_emit_template.gd) | `EmitTemplate` / `EmitTemplateRegistry`：id、字段、参数上限、SpawnSpec 入口、同 id 幂等复用 | 6 | 0 |
 | [test_composition_root](../test/test_composition_root.gd) | 组合根冒烟：`GameScene` 应创建 Miss 圈 / 特效层并注入（都不再是 autoload） | 8 | 3 |
 | [test_stage_host](../test/test_stage_host.gd) | **舞台世界装配**（S4 唯一实现）：建/接分工 + 真游戏真的在用它 —— 注册表里有自机 / **运行时显式认领 `player`（B2）** / 内核后端拿到同一张注册表 / fx 挂舞台 / 异常路径只交注册表 | 9 | 0 |
-| [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop | 9 | 0 |
+| [test_timeline](../test/test_timeline.gd) | `Timeline` —— 事件触发顺序 / 重复 / wait 语义 / loop + **整数帧模式（0.1s = 6 tick）** | 10 | 0 |
 | [test_ctx_services](../test/test_ctx_services.gd) | `ctx.*` 服务纯逻辑：无树，校验查询 / 按难度取值 / 生成容错 + **敌人回收动词**：`despawn` 静默（**不发 `enemy_killed`** ⇒ 不算战果）/ 空与已释放**响亮**+false / 重复回收静默 false / **类型守卫：传非 Enemy（Boss 位）响亮报出它是什么** / `despawn_all` 只收杂兵跳过 Boss 并返回数量 + **击破特效：`despawn_clear` 恰好一次（位置/`death_effect` 都对）且仍不发 `enemy_killed`** + **`despawn_all` 每只各一次、假 Boss 不播** + 没配特效只回收不报错 + **`ctx.bullets` 绑定 stage 后会刷新 BulletManager**（自机射击 ctx 早于组合根注入） + **`ctx.player.get_memory` / 无自机 0** | 12 | 0 |
 | [test_stage_route](../test/test_stage_route.gd) | StageRoute：同一 StageData 多路线引用；空链校验；route_index 推进 / 末尾 / reset；记录主键；练习列表 route 优先 | 6 | 0 |
 | [test_bullet_wrap](../test/test_bullet_wrap.gd) | 弹幕边环绕：下→上、左→右；上下/左右/四边掩码进入 BulletType | 4 | 0 |
@@ -170,12 +170,12 @@
 | [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类 | 5 | 0 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
-### C7 存档 / 回放 / 随机（7 / 48）
+### C7 存档 / 回放 / 随机（7 / 49）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_replay_recorder](../test/test_replay_recorder.gd) | `ReplayRecorder` 录输入基础设施 + metadata / 离散事件 / 状态采样往返 | 7 | 0 |
-| [test_replay_session](../test/test_replay_session.gd) | `ReplaySession`：录制落盘 / 列表可见 / 切面 reload 不重置；回放恢复 seed、路线、输入掩码与 bomb 事件；定格期 `_process`/`_physics_process` 仍运行；**GameplayClock 冻结期回放帧仍推进（玩法停、时钟走）**；**新录制事件按帧 tick 排程，不被 Engine 空隙推迟**；**对话推进也记录制帧并按帧消费**；bomb 严格按录制帧消费；回放删除只允许目录内；菜单重建不累积节点 | 14 | 0 |
+| [test_replay_session](../test/test_replay_session.gd) | `ReplaySession`：录制落盘 / 列表可见 / 切面 reload 不重置；回放恢复 seed、路线、输入掩码与 bomb 事件；定格期 `_process`/`_physics_process` 仍运行；**GameplayClock 冻结期回放帧仍推进（玩法停、时钟走）**；**新录制事件按帧 tick 排程，不被 Engine 空隙推迟**；**对话推进也记录制帧并按帧消费**；**frame_content 新旧格式分流**；bomb 严格按录制帧消费；回放删除只允许目录内；菜单重建不累积节点 | 15 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 + **表现随机流不消耗 gameplay RNG** | 7 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |

@@ -26,10 +26,13 @@ signal ticked(delta: float)
 
 ## 是否还有任务在跑（含 async keepalive）；[method stop] 后为 false，[code]tick_manual[/code] 只在 true 时推进。
 var is_running: bool = false
+## 内容计时默认走整数物理帧；旧录像回放由 _ready 切成 false（浮点 dt 兼容）。
+var frame_timing: bool = true
 var _is_paused: bool = false
 var _tasks: Array[Task] = []
-var _clock: float = 0.0  # 游戏内时间（物理帧累积，暂停时冻结）
-var _last_dt: float = 0.0  # 当前帧物理步长（time_scale 生效；节点/无节点模式一致）
+var _clock: float = 0.0  # 游戏内时间（物理帧累积，暂停时冻结；旧浮点路径用）
+var _ticks: int = 0      # 内容物理帧计数（暂停/冻结时不加）
+var _last_dt: float = 0.0  # 当前帧物理步长（节点/无节点模式一致）
 ## async 模式没有 task，但仍要保持 runner 存活（否则空任务会立刻 finished）。
 var _async_keepalive: bool = false
 
@@ -45,15 +48,31 @@ func game_time() -> float:
 	return _clock
 
 
+## 内容物理帧计数（暂停 / 冻结时不加）。
+func content_ticks() -> int:
+	return _ticks
+
+
+## 秒数 → 整数物理帧（内容计时统一用这个换算）。
+func frames_for(seconds: float) -> int:
+	return maxi(0, roundi(seconds * Engine.physics_ticks_per_second))
+
+
 class Task extends RefCounted:
 	var callable: Callable
 	var wake_time: float = 0.0
+	var wake_tick: int = 0
+
+
+func _ready() -> void:
+	frame_timing = ReplaySession.uses_frame_content()
 
 
 ## 停旧任务、时钟归零，再启动 method（首帧立即执行）。
 func run(method: Callable):
 	stop()
 	_clock = 0.0
+	_ticks = 0
 	_start_task(method)
 
 ## 追加一个并行任务，不清旧任务。
@@ -63,7 +82,8 @@ func run_parallel(method: Callable):
 func _start_task(method: Callable):
 	var task := Task.new()
 	task.callable = method
-	task.wake_time = _clock  # 第一帧立即执行
+	task.wake_time = _clock  # 第一帧立即执行（旧浮点路径）
+	task.wake_tick = _ticks # 第一帧立即执行（整数帧路径）
 	_tasks.append(task)
 	is_running = true
 
@@ -86,6 +106,7 @@ func begin_async() -> void:
 	_tasks.clear()
 	_is_paused = false
 	_clock = 0.0
+	_ticks = 0
 	_async_keepalive = true
 	is_running = true
 
@@ -116,7 +137,11 @@ func _physics_process(_delta: float) -> void:
 		return
 	if _is_paused:
 		return  # 暂停时不累积时钟
-	_last_dt = get_physics_process_delta_time()  # 用引擎时钟（time_scale 生效，快进/慢动作正确）
+	if frame_timing:
+		_last_dt = 1.0 / Engine.physics_ticks_per_second
+	else:
+		_last_dt = get_physics_process_delta_time()  # 旧浮点路径：time_scale 生效
+	_ticks += 1
 	_clock += _last_dt
 	ticked.emit(_last_dt)
 	_advance_tasks()
@@ -130,6 +155,10 @@ func tick_manual(dt: float) -> bool:
 	if _is_paused:
 		return true
 	_last_dt = dt
+	if frame_timing:
+		_ticks += maxi(1, frames_for(dt))
+	else:
+		_ticks += 1
 	_clock += dt
 	ticked.emit(dt)
 	_advance_tasks()
@@ -143,14 +172,20 @@ func _advance_tasks() -> void:
 			_tasks.remove_at(i)
 			continue
 
-		if task.wake_time > _clock:
+		if frame_timing:
+			if task.wake_tick > _ticks:
+				continue
+		elif task.wake_time > _clock:
 			continue
 
 		var result = task.callable.call()
 
 		if typeof(result) == TYPE_FLOAT or typeof(result) == TYPE_INT:
 			if result > 0:
-				task.wake_time = _clock + result
+				if frame_timing:
+					task.wake_tick = _ticks + frames_for(result)
+				else:
+					task.wake_time = _clock + result
 			else:
 				_tasks.remove_at(i)
 		elif result == true:

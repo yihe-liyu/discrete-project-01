@@ -12,13 +12,19 @@ const 振幅: float = 200.0
 const 周期: float = 6.0
 
 var _计时: float = 0.0
+## 整数帧路径：用累计帧数驱动正弦，避免浮点时间累加。
+var _帧数: int = 0
 
 
 func _tick(_ctx: StageContext) -> Variant:
 	if not target:
 		return true
 
-	_计时 += get_dt()
-	target.global_position.x = 中心x + sin(_计时 * TAU / 周期) * 振幅
+	if frame_timing:
+		_帧数 += 1
+		target.global_position.x = 中心x + sin(float(_帧数) / Engine.physics_ticks_per_second * TAU / 周期) * 振幅
+	else:
+		_计时 += get_dt()
+		target.global_position.x = 中心x + sin(_计时 * TAU / 周期) * 振幅
 
 	return true

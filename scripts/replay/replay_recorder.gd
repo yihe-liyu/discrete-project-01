@@ -28,6 +28,9 @@ var clock_first: bool = false
 ## deathbomb 是否用 GameplayClock 冻结玩法（SceneTree 暂停）。旧录像没有这个字段，
 ## 回放必须继续用 Engine.time_scale=0，否则冻结期的协程相位会差一帧。
 var clock_freeze: bool = false
+## 内容计时是否走整数物理帧（CoroutineRunner / Timeline / ClockService）。
+## 旧录像没有这个字段：回放继续用浮点 dt，保持旧内容相位。
+var frame_content: bool = false
 var _capture_started := false
 ## 回放元数据（关卡 / 难度 / 角色 / 分数等；由录制方填写）
 var metadata: Dictionary = {}
@@ -68,6 +71,7 @@ func start() -> void:
 	start_engine_tick = -1
 	clock_first = true
 	clock_freeze = true
+	frame_content = true
 	_capture_started = false
 
 
@@ -151,6 +155,7 @@ func to_dict() -> Dictionary:
 		"start_engine_tick": start_engine_tick,
 		"clock_first": clock_first,
 		"clock_freeze": clock_freeze,
+		"frame_content": frame_content,
 		"frames_hex": frames.hex_encode(),
 		"metadata": metadata,
 		"events": events,
@@ -185,6 +190,7 @@ func load_dict(data: Dictionary) -> bool:
 	start_engine_tick = int(data.get("start_engine_tick", -1))
 	clock_first = bool(data.get("clock_first", false))
 	clock_freeze = bool(data.get("clock_freeze", false))
+	frame_content = bool(data.get("frame_content", false))
 	frames = (data.get("frames_hex", "") as String).hex_decode()
 	if frames.size() != duration_frames:
 		return false

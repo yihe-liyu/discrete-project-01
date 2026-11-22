@@ -16,6 +16,19 @@ func _make_timeline() -> Timeline:
 
 
 ## 基础：事件在设定时间点触发，按顺序
+## 帧模式：按 60Hz 换算，1 秒 = 60 tick；不受 tick(delta) 的浮点影响。
+func test_frame_timing_uses_integer_ticks():
+	var tl := Timeline.new()
+	tl.frame_timing = true
+	var fired: Array[int] = []
+	tl.at(0.1).do(func(): fired.append(1))
+	for i in 5:
+		tl.tick(0.0)
+	assert_eq(fired, [] as Array[int], "第 5 tick 还不该触发 0.1s 事件")
+	tl.tick(0.0)
+	assert_eq(fired, [1] as Array[int], "第 6 tick = 0.1s 触发")
+
+
 func test_events_fire_at_scheduled_time():
 	var timeline := _make_timeline()
 	var is_fired: Array = []

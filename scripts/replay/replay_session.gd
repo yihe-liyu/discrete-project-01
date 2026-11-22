@@ -64,6 +64,16 @@ static func uses_clock_freeze() -> bool:
 	return _playing and _recorder != null and _recorder.clock_freeze
 
 
+## 内容计时是否走整数物理帧。录制 / 普通游玩 = true；
+## 没有 frame_content 字段的旧录像 = false，继续用浮点 dt。
+static func uses_frame_content() -> bool:
+	if _active:
+		return true
+	if _playing and _recorder != null:
+		return _recorder.frame_content
+	return true
+
+
 ## 开一局：清空并开始采样。已在录制中（切面 reload）则保持原录制。
 static func start_run() -> bool:
 	if _active or _playing:

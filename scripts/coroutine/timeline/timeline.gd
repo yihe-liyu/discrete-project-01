@@ -31,11 +31,16 @@ class_name Timeline
 extends RefCounted
 
 var _events: Array[TimelineEvent] = []
-## 阶段序列（sequence_phases）：{getter, phases, gap, index, next_at}
+## 阶段序列（sequence_phases）：{getter, phases, gap, index, next_at, next_frame}
 var _sequences: Array[Dictionary] = []
+## 整数帧模式：true 时时间线以物理帧推进（新录像/普通游玩），false 保留旧浮点语义。
+var frame_timing: bool = false
+var _frames: int = 0
+var _frame_cursor: int = 0   # wait() 的整数帧参考点
+var _loop_start_frame: int = -1
 var _elapsed: float = 0.0
 var _loop_start: float = -1.0
-var _cursor: float = 0.0   # wait() 的参考点，phase_cleared 后更新
+var _cursor: float = 0.0   # 旧浮点 wait 参考点
 
 # builder state
 var _time: float = -1.0
@@ -93,6 +98,7 @@ func start_phase(boss_getter: Callable, data: PhaseData) -> Timeline:
 		# 击破后：记 _cursor + 武装 wait（Boss 战期间绝对时间事件照常触发）
 		boss.phase_cleared.connect(func(_captured: bool, _bonus: int):
 			_cursor = _elapsed
+			_frame_cursor = _frames
 			_arm_waits()
 		, CONNECT_ONE_SHOT)
 	)
@@ -113,9 +119,11 @@ func start_sequence_now(boss_getter: Callable, phases: Array[PhaseData], gap: fl
 func _start_sequence(boss_getter: Callable, phases: Array[PhaseData], gap: float) -> void:
 	if phases.is_empty():
 		_cursor = _elapsed
+		_frame_cursor = _frames
 		_arm_waits()
 		return
-	_sequences.append({getter = boss_getter, phases = phases, gap = gap, index = 0, next_at = _elapsed})
+	_sequences.append({getter = boss_getter, phases = phases, gap = gap, index = 0,
+		next_at = _elapsed, next_frame = _frames})
 
 
 ## 起序列里的下一张；非最后一张击破后设 next_at（tick 到点再进），最后一张击破后武装 wait。
@@ -133,9 +141,11 @@ func _advance_sequence(seq: Dictionary) -> void:
 	boss.phase_cleared.connect(func(_captured: bool, _bonus: int):
 		if is_last:
 			_cursor = _elapsed
+			_frame_cursor = _frames
 			_arm_waits()
 		else:
 			seq.next_at = _elapsed + seq.gap
+			seq.next_frame = _frames + _to_frames(seq.gap)
 	, CONNECT_ONE_SHOT)
 
 
@@ -151,6 +161,12 @@ func _arm_waits() -> void:
 func _add(t: float, cb: Callable, ev: float = -1.0, n: int = -1) -> void:
 	var event := TimelineEvent.new(t, cb, ev, n)
 	event.wait_offset = _wait_n
+	if frame_timing:
+		event.frame_time = _to_frames(t)
+		event.frame_repeat_every = _to_frames(ev) if ev >= 0.0 else -1
+		event.frame_wait_offset = _to_frames(_wait_n) if _wait_n >= 0.0 else -1
+		event.original_frame_time = event.frame_time
+		event.original_frame_repeat_every = event.frame_repeat_every
 	_wait_n = -1.0
 	_events.append(event)
 
@@ -160,9 +176,31 @@ func _add(t: float, cb: Callable, ev: float = -1.0, n: int = -1) -> void:
 ## 推进 delta 秒：触发到期事件、推进阶段序列、处理 loop。
 ## 返回是否仍需继续：loop 模式恒 true；否则还有未触发事件即 true。
 func tick(delta: float) -> bool:
-	_elapsed += delta
+	if frame_timing:
+		_frames += 1
+	else:
+		_elapsed += delta
 
 	for ev in _events:
+		if frame_timing:
+			if ev.is_fired and ev.frame_repeat_every < 0:
+				continue
+			var event_frame := ev.frame_time
+			if ev.frame_wait_offset >= 0:
+				if not ev.is_wait_armed:
+					continue
+				event_frame = _frame_cursor + ev.frame_wait_offset
+			if _frames >= event_frame:
+				ev.execute()
+				if ev.frame_repeat_every >= 0:
+					ev.frame_time += ev.frame_repeat_every
+					ev.fired_count += 1
+					if ev.repeat_times > 0 and ev.fired_count >= ev.repeat_times:
+						ev.is_fired = true
+						ev.frame_repeat_every = -1
+				else:
+					ev.is_fired = true
+			continue
 		if ev.is_fired and ev.repeat_every < 0:
 			continue
 		var event_time := ev.time
@@ -185,18 +223,24 @@ func tick(delta: float) -> bool:
 	var seq_i := 0
 	while seq_i < _sequences.size():
 		var seq: Dictionary = _sequences[seq_i]
-		if seq.index < seq.phases.size() and _elapsed >= seq.next_at:
+		var seq_due := _frames >= int(seq.get("next_frame", 0)) if frame_timing \
+			else _elapsed >= float(seq.next_at)
+		if seq.index < seq.phases.size() and seq_due:
 			_advance_sequence(seq)
 		if seq.index >= seq.phases.size():
 			_sequences.remove_at(seq_i)   # 最后一张已起手 → 出列
 		else:
 			seq_i += 1
 
-	if _loop_start >= 0 and _elapsed >= _loop_start and _all_onetime_fired():
+	if frame_timing:
+		if _loop_start_frame >= 0 and _frames >= _loop_start_frame and _all_onetime_fired():
+			_reset_onetime()
+			_frames = _loop_start_frame
+	elif _loop_start >= 0 and _elapsed >= _loop_start and _all_onetime_fired():
 		_reset_onetime()
 		_elapsed = _loop_start
 
-	if _loop_start >= 0:
+	if (_loop_start_frame >= 0 if frame_timing else _loop_start >= 0):
 		return true
 	for ev in _events:
 		if not ev.is_fired:
@@ -213,7 +257,10 @@ func _all_onetime_fired() -> bool:
 func _reset_onetime() -> void:
 	for ev in _events:
 		ev.is_fired = false
-		# 用 _loop_start 而非当前 _elapsed：大 delta 跨过循环点时不会把下一轮事件时间戳推远
+		# 用 loop_start 而非当前 elapsed：大 delta 跨过循环点时不会把下一轮时间戳推远
+		if frame_timing:
+			ev.frame_time = _loop_start_frame + ev.original_frame_time
+			ev.frame_repeat_every = ev.original_frame_repeat_every
 		ev.time = _loop_start + ev._original_time
 		ev.fired_count = 0
 		ev.repeat_every = ev._original_repeat_every
@@ -224,16 +271,25 @@ func _reset_onetime() -> void:
 ## 只重置时间与触发标记；wait 基准/武装状态和重复事件配置都不变。完整重播用 [method loop]。
 func reset() -> void:
 	_elapsed = 0.0
+	_frames = 0
+	_frame_cursor = 0
+	_loop_start = -1.0
+	_loop_start_frame = -1
 	_sequences.clear()
 	for ev in _events:
 		ev.is_fired = false
+		ev.frame_time = ev.original_frame_time
+		ev.frame_repeat_every = ev.original_frame_repeat_every
 
 ## 整段循环：所有事件都触发完（重复事件达到 times）后回到 loop_start，按原始时间戳重排，
 ## 并恢复每轮 every / times。loop_start = 所有事件“最后一次触发”的最大时刻
 ## （重复事件按 every × (times - 1) 算）；空时间线忽略。
 func loop() -> void:
 	if _events.is_empty(): return
-	_loop_start = _compute_loop_start()
+	if frame_timing:
+		_loop_start_frame = _compute_loop_start_frame()
+	else:
+		_loop_start = _compute_loop_start()
 
 
 ## 计算循环终点：取所有事件"最后一次触发"的最大时刻。
@@ -246,3 +302,19 @@ func _compute_loop_start() -> float:
 			last = ev._original_time + ev._original_repeat_every * float(ev._original_repeat_times - 1)
 		end_time = maxf(end_time, last)
 	return end_time
+
+
+## 整数帧模式的循环终点。
+func _compute_loop_start_frame() -> int:
+	var end_frame := 0
+	for ev in _events:
+		var last := ev.original_frame_time
+		if ev.original_frame_repeat_every > 0 and ev._original_repeat_times > 0:
+			last += ev.original_frame_repeat_every * (ev._original_repeat_times - 1)
+		end_frame = maxi(end_frame, last)
+	return end_frame
+
+
+## 秒 → 整数物理帧（内容时间统一换算）。
+func _to_frames(seconds: float) -> int:
+	return maxi(0, roundi(seconds * Engine.physics_ticks_per_second))

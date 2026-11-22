@@ -13,11 +13,23 @@ var top_min_y: float = 240.0     # y 下限（上方区域）
 var top_max_y: float = 320.0     # y 上限
 
 var _计时: float = 0.0
+## 整数帧路径的剩余等待帧。
+var _等待帧: int = 0
+
+
+func _on_start() -> void:
+	_等待帧 = maxi(1, ctx.clock.frames_for(jump_interval))
 
 
 func _tick(p_ctx: StageContext):
 	if not target:
 		return p_ctx.clock.wait(jump_interval)
+	if frame_timing:
+		_等待帧 -= 1
+		if _等待帧 <= 0:
+			_等待帧 = maxi(1, p_ctx.clock.frames_for(jump_interval))
+			_jump(p_ctx)
+		return true
 	_计时 += get_dt()
 	if _计时 >= jump_interval:
 		_计时 = 0.0

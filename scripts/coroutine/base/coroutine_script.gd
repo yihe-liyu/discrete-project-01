@@ -27,6 +27,7 @@ var _timeline: Timeline
 ## 创建 Timeline（纯排程器；动作由内容在 do(callable) 里自带环境）
 func start_timeline() -> Timeline:
 	_timeline = Timeline.new()
+	_timeline.frame_timing = frame_timing
 	return _timeline
 
 

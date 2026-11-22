@@ -22,6 +22,13 @@ var wait_offset: float = -1.0  # >=0 = 相对事件，运行时 time = cursor + 
 ## 阶段击破后是否已武装。
 var is_wait_armed: bool = false   # phase 结束后设 true
 
+## 整数帧模式字段（frame_timing=true 时使用）。
+var frame_time: int = 0
+var frame_repeat_every: int = -1
+var frame_wait_offset: int = -1
+var original_frame_time: int = 0
+var original_frame_repeat_every: int = -1
+
 func _init(p_time: float, p_cb: Callable, p_every: float = -1.0, p_times: int = -1) -> void:
 	time = p_time
 	_original_time = p_time
