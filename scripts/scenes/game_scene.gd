@@ -96,6 +96,11 @@ func _ready():
 		else:
 			SaveData.reset_all(_stage_runtime.entity_registry)
 			SaveData.apply_stage_practice_power(_stage_runtime.entity_registry)
+		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+		if ReplayV2Session.is_playing():
+			ReplayV2Session.apply_start_resources(res)
+		elif ReplayV2Session.is_recording():
+			ReplayV2Session.capture_start_resources(res)
 		_start_normal_game()
 
 

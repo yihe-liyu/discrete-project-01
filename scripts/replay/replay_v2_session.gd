@@ -9,7 +9,7 @@ extends RefCounted
 
 const DIR := "user://replays_v2"
 ## 模拟语义版本：玩法代码/顺序变了就升；不匹配的录像直接拒绝。
-const SIM_VERSION := "sim-v3"
+const SIM_VERSION := "sim-v4"
 
 static var _rec: ReplayV2
 static var _play: ReplayV2
@@ -21,6 +21,9 @@ static var _next_index: int = 0
 static var _current_index: int = -1
 ## 回放是否已经出现哈希分歧（测试 / 诊断用）。
 static var _diverged: bool = false
+## start_resources 只抓 / 只应用一次（跨面 reload 不能覆盖）。
+static var _start_resources_captured: bool = false
+static var _start_resources_applied: bool = false
 ## 调试：录制时保存人类可读快照，回放时逐 tick 比对（默认关，测试/排查用）。
 static var debug_capture: bool = false
 static var debug_snapshots: Array[String] = []
@@ -88,10 +91,40 @@ static func start_recording(meta: Dictionary) -> bool:
 	_rec.begin(Engine.physics_ticks_per_second, int(snap.get("seed", 0)), SIM_VERSION)
 	_rec.rng_state = int(snap.get("state", 0))
 	_rec.metadata = meta.duplicate(true)
+	_rec.start_resources = {}
+	_start_resources_captured = false
+	_start_resources_applied = false
 	debug_snapshots.clear()
 	_recording = true
 	_path = ""
 	return true
+
+
+## 录制起点自机资源（在自机 setup / 跨面继承完成之后调用）。
+static func capture_start_resources(res: PlayerResources) -> void:
+	if not _recording or _rec == null or res == null or _start_resources_captured:
+		return
+	_start_resources_captured = true
+	var snap := {}
+	for key in SaveData.RUN_STATE_KEYS:
+		snap[String(key)] = res.get(key)
+	_rec.start_resources = snap
+
+
+## 回放起点自机资源（在自机 setup 之后、关卡 tick 之前调用）。
+static func apply_start_resources(res: PlayerResources) -> void:
+	if not _playing or _play == null or res == null or _play.start_resources.is_empty() 			or _start_resources_applied:
+		return
+	_start_resources_applied = true
+	for key in SaveData.RUN_STATE_KEYS:
+		var k := String(key)
+		if not _play.start_resources.has(k):
+			continue
+		var v = _play.start_resources[k]
+		if key == &"memory_value":
+			res.set(key, float(v))
+		else:
+			res.set(key, int(v))
 
 
 ## 每 tick 录一条（GameScene 的 SimClock observer 调用）。
@@ -163,6 +196,7 @@ static func start_playback(path: String) -> bool:
 	_next_index = 0
 	_current_index = -1
 	_diverged = false
+	_start_resources_applied = false
 	return true
 
 

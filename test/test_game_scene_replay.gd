@@ -96,3 +96,45 @@ func test_bomb_command_is_recorded_and_replayed() -> void:
 	playback.queue_free()
 	await get_tree().process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## 跨面起点（Stage 2）必须把录制时的自机资源恢复回来，否则第一帧就 hash 不一致。
+func test_mid_route_start_restores_resources() -> void:
+	SaveData.selected_difficulty = 1
+	SaveData.selected_character = 0
+	assert_true(SaveData.begin_route_for_difficulty(1))
+	var route := SaveData.current_route()
+	assert_not_null(route)
+	assert_gt(route.stages.size(), 1, "测试路线至少要有两面")
+	SaveData.current_route_index = 1
+	SaveData.current_stage_id = route.stages[1].stage_id
+	var seed_res := PlayerResources.new()
+	seed_res.lives = 5
+	seed_res.bomb_count = 4
+	seed_res.power_raw = 200
+	seed_res.current_score = 123456
+	seed_res.graze_count = 77
+	SaveData.capture_run_state(seed_res)
+	SaveData.is_route_transition = true
+
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 30:
+		await get_tree().physics_frame
+	var path := ReplayV2Session.finish_recording({"result": "test"})
+	assert_ne(path, "", "跨面起点也应落盘")
+
+	scene.queue_free()
+	await get_tree().process_frame
+
+	assert_true(ReplayV2Session.start_playback(path), "跨面起点应能回放")
+	var playback: Node = GAME_SCENE.instantiate()
+	add_child_autofree(playback)
+	for _i in 20:
+		await get_tree().physics_frame
+	assert_true(ReplayV2Session.is_playing(), "跨面起点回放应还在进行")
+	assert_false(ReplayV2Session.has_diverged(), "跨面起点第一帧不应分歧")
+	ReplayV2Session.stop_playback()
+	playback.queue_free()
+	await get_tree().process_frame
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

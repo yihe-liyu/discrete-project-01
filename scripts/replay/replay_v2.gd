@@ -24,6 +24,8 @@ var rng_state: int = 0
 var sim_version: String = ""
 var content_hash: String = ""
 var metadata: Dictionary = {}
+## 录制起点的自机资源快照（跨面开局 / 中途起点必须恢复它，否则第一帧就不同）。
+var start_resources: Dictionary = {}
 ## 每 tick 的输入位掩码。
 var masks: PackedByteArray = PackedByteArray()
 ## 每 tick 的离散命令位标记。
@@ -39,6 +41,7 @@ func begin(p_tick_rate: int = 60, p_seed: int = 0, p_sim_version: String = "") -
 	sim_version = p_sim_version
 	content_hash = ""
 	metadata = {}
+	start_resources = {}
 	masks = PackedByteArray()
 	commands = PackedByteArray()
 	hashes.clear()
@@ -84,6 +87,7 @@ func to_dict() -> Dictionary:
 		"sim_version": sim_version,
 		"content_hash": content_hash,
 		"metadata": metadata,
+		"start_resources": start_resources,
 		"masks_hex": masks.hex_encode(),
 		"commands_hex": commands.hex_encode(),
 		"hashes": hashes,
@@ -104,6 +108,9 @@ func load_dict(data: Dictionary) -> bool:
 	metadata = data.get("metadata", {})
 	if metadata is not Dictionary:
 		metadata = {}
+	start_resources = data.get("start_resources", {})
+	if start_resources is not Dictionary:
+		start_resources = {}
 	masks = (str(data.get("masks_hex", "")) as String).hex_decode()
 	commands = (str(data.get("commands_hex", "")) as String).hex_decode()
 	hashes.clear()
