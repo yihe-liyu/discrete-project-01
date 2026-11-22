@@ -76,7 +76,7 @@ func test_bomb_command_is_recorded_and_replayed() -> void:
 	for _i in 20:
 		await get_tree().physics_frame
 	PlayerInput.queue_command(&"bomb")
-	for _i in 40:
+	for _i in 280:
 		await get_tree().physics_frame
 	var path := ReplayV2Session.finish_recording({"result": "test"})
 	assert_ne(path, "", "bomb 局应落盘")
@@ -87,7 +87,7 @@ func test_bomb_command_is_recorded_and_replayed() -> void:
 	assert_true(ReplayV2Session.start_playback(path), "bomb 局应能回放")
 	var playback: Node = GAME_SCENE.instantiate()
 	add_child_autofree(playback)
-	for _i in 50:
+	for _i in 300:
 		await get_tree().physics_frame
 	assert_true(ReplayV2Session.is_playing(), "bomb 回放应还在进行")
 	assert_false(ReplayV2Session.has_diverged(), "bomb 命令回放不应出现哈希分歧")

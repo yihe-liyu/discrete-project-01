@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：113 脚本 / **767 用例（765 通过 / 2 红：BossRegistry WIP + BGM）/ 6152 断言 / 68.5s** / 0 orphans / **0 pending**。
+**现状**：113 脚本 / **767 用例（765 通过 / 2 红：BossRegistry WIP + BGM）/ 6152 断言 / 78.5s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -179,7 +179,7 @@
 | [test_sim_clock](../test/test_sim_clock.gd) | `SimClock`：tick 冻结 owner / 帧数 / 嵌套恢复 / 到点自动恢复 / reset | 4 | 0 |
 | [test_sim_hash](../test/test_sim_hash.gd) | `SimHash`：位置量化 / tick 进哈希 / 同输入双跑 120 tick 逐 tick 一致 | 2 | 0 |
 | [test_replay_v2](../test/test_replay_v2.gd) | `ReplayV2`：输入 + 命令 + 哈希格式往返 / 旧 v1 拒绝 / sim_version 闸门 / 录制→落盘→回放逐 tick 一致 | 3 | 0 |
-| [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令录制→回放 | 3 | 0 |
+| [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 | 3 | 0 |
 | [test_replay_menu_v2](../test/test_replay_menu_v2.gd) | Replay 菜单：列出 v2 文件、显示分数、空目录不报错 | 1 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
