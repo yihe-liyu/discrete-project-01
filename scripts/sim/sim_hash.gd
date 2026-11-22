@@ -154,18 +154,27 @@ static func fields(registry: EntityRegistry, system: KernelNativeSystem, tick: i
 	out["player"] = ph
 	out["resources"] = res_hash
 
-	var bh := OFFSET
+	var boss_phase := OFFSET
+	var boss_hp := OFFSET
+	var boss_time := OFFSET
+	var boss_pos := OFFSET
 	var boss: Boss = registry.get_boss() if registry != null else null
 	if is_instance_valid(boss):
 		var phase: PhaseData = boss.current_phase()
-		bh = mix(bh, phase.uid if phase != null else -1)
-		bh = mix(bh, boss.hp)
-		bh = mix(bh, boss.get_elapsed_ticks())
-		bh = mix(bh, boss.get_open_reduce_ticks())
-		bh = mix_vec2(bh, boss.global_position)
+		boss_phase = mix(boss_phase, phase.uid if phase != null else -1)
+		boss_hp = mix(boss_hp, boss.hp)
+		boss_time = mix(boss_time, boss.get_elapsed_ticks())
+		boss_time = mix(boss_time, boss.get_open_reduce_ticks())
+		boss_pos = mix_vec2(boss_pos, boss.global_position)
 	else:
-		bh = mix(bh, -1)
-	out["boss"] = bh
+		boss_phase = mix(boss_phase, -1)
+		boss_hp = mix(boss_hp, -1)
+		boss_time = mix(boss_time, -1)
+		boss_pos = mix(boss_pos, -1)
+	out["boss_phase"] = boss_phase
+	out["boss_hp"] = boss_hp
+	out["boss_time"] = boss_time
+	out["boss_pos"] = boss_pos
 
 	var eh := OFFSET
 	var enemies: Array = registry.get_active_enemies() if registry != null else []
