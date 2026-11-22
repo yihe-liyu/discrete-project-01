@@ -88,7 +88,7 @@ func _ready():
 			# 先定路线 / 起始 stage，再抓 RNG 起点；播放端在场景之前恢复同一 state。
 			if not SaveData.is_stage_practice:
 				SaveData.ensure_route_for_difficulty(SaveData.selected_difficulty)
-			ReplayV2Session.start_recording(_replay_meta("recording"))
+			ReplayV2Session.start_recording(_replay_meta("recording", true))
 		_setup_player()          # 先绑定自机（资源恢复 / reset_* 经注册表取同一 PlayerResources）
 		if carry_run:
 			if not SaveData.apply_run_state(_stage_runtime.entity_registry.get_player_resources()):
@@ -472,21 +472,24 @@ func _on_replay_observe(tick: int) -> void:
 		_finish_playback()
 
 
-func _replay_meta(result: String) -> Dictionary:
+## [param include_start] 只在开录时 true：结束时的 stage 是“终点”，不能覆盖起点。
+func _replay_meta(result: String, include_start: bool = false) -> Dictionary:
 	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
-	return {
+	var meta := {
 		"result": result,
 		"difficulty": SaveData.selected_difficulty,
 		"character": SaveData.selected_character,
 		"route_id": String(SaveData.current_route_id),
-		"start_stage_id": SaveData.current_stage_id,
-		"start_stage_no": SaveData.current_route_index + 1,
 		"stage_id": SaveData.current_stage_id,
 		"stage_no": SaveData.current_route_index + 1,
 		"score": res.current_score if res != null else 0,
 		"lives": res.lives if res != null else 0,
 		"bombs": res.bomb_count if res != null else 0,
 	}
+	if include_start:
+		meta["start_stage_id"] = SaveData.current_stage_id
+		meta["start_stage_no"] = SaveData.current_route_index + 1
+	return meta
 
 
 func _advance_playback_stage() -> void:

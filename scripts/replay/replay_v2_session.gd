@@ -91,6 +91,10 @@ static func start_recording(meta: Dictionary) -> bool:
 	_rec.begin(Engine.physics_ticks_per_second, int(snap.get("seed", 0)), SIM_VERSION)
 	_rec.rng_state = int(snap.get("state", 0))
 	_rec.metadata = meta.duplicate(true)
+	if not _rec.metadata.has("start_stage_id"):
+		_rec.metadata["start_stage_id"] = SaveData.current_stage_id
+	if not _rec.metadata.has("start_stage_no"):
+		_rec.metadata["start_stage_no"] = SaveData.current_route_index + 1
 	_rec.start_resources = {}
 	_start_resources_captured = false
 	_start_resources_applied = false

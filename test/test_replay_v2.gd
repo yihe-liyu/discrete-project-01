@@ -110,3 +110,17 @@ func test_start_playback_rejects_other_sim_version() -> void:
 	assert_true(rec.save(path))
 	assert_false(ReplayV2Session.start_playback(path), "sim_version 不匹配必须拒绝")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_finish_does_not_overwrite_start_stage() -> void:
+	ReplayV2Session.cancel_recording()
+	assert_true(ReplayV2Session.start_recording({
+		"start_stage_id": 1, "start_stage_no": 1, "difficulty": 1, "character": 0,
+	}))
+	var path := ReplayV2Session.finish_recording({"result": "game_over", "stage_id": 2, "stage_no": 2})
+	assert_ne(path, "")
+	var rec := ReplayV2.new()
+	assert_true(rec.load_file(path))
+	assert_eq(int(rec.metadata.get("start_stage_id", 0)), 1, "结束 stage 不得覆盖起始 stage")
+	assert_eq(int(rec.metadata.get("start_stage_no", 0)), 1)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
