@@ -41,6 +41,21 @@ func spawn(pos: Vector2, type: int) -> Item:
 	return item
 
 
+## 当前活跃（可见且未释放）的道具；确定性哈希按类型 + 位置排序。
+func active_items() -> Array[Item]:
+	var out: Array[Item] = []
+	for child in get_children():
+		if child is Item and child.visible and not child.is_queued_for_deletion():
+			out.append(child)
+	out.sort_custom(func(a: Item, b: Item) -> bool:
+		if a.item_type != b.item_type:
+			return int(a.item_type) < int(b.item_type)
+		if not is_equal_approx(a.global_position.x, b.global_position.x):
+			return a.global_position.x < b.global_position.x
+		return a.global_position.y < b.global_position.y)
+	return out
+
+
 ## 回收 Item：隐藏 / 停物理，池未满回池，否则 queue_free；已在池中忽略。
 func recycle(item: Item) -> void:
 	if not is_instance_valid(item):

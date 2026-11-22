@@ -169,7 +169,10 @@ func _resolve_stage_data() -> StageData:
 ## [param tick] 传相对 tick；回放/录制必须用同一个相对序号，不能混入全局 SimClock.tick。
 func sim_hash(tick: int = -1) -> int:
 	var relative := tick if tick >= 0 else SimClock.tick
-	return SimHash.of(_stage_runtime.entity_registry, _bullet_manager.kernel_system(), relative)
+	var laser: LaserEngine = _bullet_manager.laser_engine()
+	var laser_list: Array = laser.get_active() if laser != null else []
+	return SimHash.of(_stage_runtime.entity_registry, _bullet_manager.kernel_system(), relative,
+		_item_pool, laser_list)
 
 
 func _load_background(scene: PackedScene) -> void:

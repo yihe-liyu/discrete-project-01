@@ -25,7 +25,8 @@ const PRIME := 16777619
 
 
 ## 当前 tick 的规范状态哈希。
-static func of(registry: EntityRegistry, system: KernelNativeSystem, tick: int) -> int:
+static func of(registry: EntityRegistry, system: KernelNativeSystem, tick: int,
+		items: ItemPool = null, lasers: Array = []) -> int:
 	var h := OFFSET
 	h = mix(h, tick)
 	h = mix(h, 1 if SimClock.is_frozen() else 0)
@@ -64,6 +65,32 @@ static func of(registry: EntityRegistry, system: KernelNativeSystem, tick: int) 
 		h = mix(h, boss.get_open_reduce_ticks())
 	else:
 		h = mix(h, -1)
+
+	var enemies: Array = registry.get_active_enemies() if registry != null else []
+	h = mix(h, enemies.size())
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+			continue
+		h = mix(h, enemy.hp)
+		h = mix_vec2(h, enemy.global_position)
+
+	if items != null:
+		var item_list := items.active_items()
+		h = mix(h, item_list.size())
+		for item in item_list:
+			h = mix(h, int(item.item_type))
+			h = mix_vec2(h, item.global_position)
+	else:
+		h = mix(h, -1)
+
+	h = mix(h, lasers.size())
+	for beam in lasers:
+		if beam == null or not is_instance_valid(beam):
+			continue
+		h = mix(h, int(beam.phase))
+		h = mix(h, roundi(float(beam.age) * POS_SCALE))
+		h = mix(h, roundi(float(beam.head_dist) * POS_SCALE))
+		h = mix(h, roundi(float(beam.tail_dist) * POS_SCALE))
 
 	if system != null:
 		var entries: Array[Dictionary] = []

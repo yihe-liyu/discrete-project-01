@@ -100,3 +100,13 @@ func _run_once(p_seed: int, recorder: ReplayV2, replay: ReplayV2) -> Array[int]:
 
 	PlayerInput.clear_override()
 	return hashes
+
+
+func test_start_playback_rejects_other_sim_version() -> void:
+	var rec := ReplayV2.new()
+	rec.begin(60, 111, "other-sim")
+	rec.capture_tick(0, 0, 0)
+	var path := "user://test_replay_v2_version.json"
+	assert_true(rec.save(path))
+	assert_false(ReplayV2Session.start_playback(path), "sim_version 不匹配必须拒绝")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

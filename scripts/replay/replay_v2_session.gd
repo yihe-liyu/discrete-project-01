@@ -8,6 +8,8 @@ class_name ReplayV2Session
 extends RefCounted
 
 const DIR := "user://replays_v2"
+## 模拟语义版本：玩法代码/顺序变了就升；不匹配的录像直接拒绝。
+const SIM_VERSION := "sim-v2"
 
 static var _rec: ReplayV2
 static var _play: ReplayV2
@@ -60,7 +62,7 @@ static func start_recording(meta: Dictionary) -> bool:
 		return false
 	_rec = ReplayV2.new()
 	var snap := RNG.snapshot_state()
-	_rec.begin(Engine.physics_ticks_per_second, int(snap.get("seed", 0)), "sim-v2")
+	_rec.begin(Engine.physics_ticks_per_second, int(snap.get("seed", 0)), SIM_VERSION)
 	_rec.rng_state = int(snap.get("state", 0))
 	_rec.metadata = meta.duplicate(true)
 	_recording = true
@@ -102,6 +104,11 @@ static func start_playback(path: String) -> bool:
 	var rec := ReplayV2.new()
 	if not rec.load_file(path):
 		push_warning("ReplayV2Session: 无法加载回放 " + path)
+		return false
+	if rec.sim_version != "" and rec.sim_version != SIM_VERSION:
+		push_warning("ReplayV2Session: 录像 sim_version=%s 与当前 %s 不匹配" % [
+			rec.sim_version, SIM_VERSION,
+		])
 		return false
 	var meta := rec.metadata
 	var diff := int(meta.get("difficulty", 1))

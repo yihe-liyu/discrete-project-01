@@ -335,6 +335,11 @@ func _on_rng_seed_changed(seed_value: int) -> void:
 		_kernel_bullet_host.system.set_seed(seed_value)
 
 
+## 激光引擎（诊断 / 状态哈希用；未装配 = null）。
+func laser_engine() -> LaserEngine:
+	return _laser_engine
+
+
 ## 当前内核弹池（未装配 = null）
 func kernel_system() -> KernelNativeSystem:
 	return _kernel_bullet_host.system if _kernel_bullet_host != null else null

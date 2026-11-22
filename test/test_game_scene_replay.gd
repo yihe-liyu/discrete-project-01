@@ -25,7 +25,7 @@ func after_each() -> void:
 func test_normal_run_records_ticks_and_saves_v2_file() -> void:
 	var scene: Node = GAME_SCENE.instantiate()
 	add_child_autofree(scene)
-	for _i in 6:
+	for _i in 200:
 		await get_tree().physics_frame
 
 	assert_true(ReplayV2Session.is_recording(), "普通局应自动开录")
@@ -43,7 +43,7 @@ func test_normal_run_records_ticks_and_saves_v2_file() -> void:
 func test_recorded_run_playback_matches_hashes() -> void:
 	var scene: Node = GAME_SCENE.instantiate()
 	add_child_autofree(scene)
-	for _i in 10:
+	for _i in 300:
 		await get_tree().physics_frame
 	var path := ReplayV2Session.finish_recording({"result": "test"})
 	assert_ne(path, "", "录制应落盘")
@@ -54,7 +54,7 @@ func test_recorded_run_playback_matches_hashes() -> void:
 	assert_true(ReplayV2Session.start_playback(path), "应能进入回放")
 	var playback: Node = GAME_SCENE.instantiate()
 	add_child_autofree(playback)
-	for _i in 6:
+	for _i in 200:
 		await get_tree().physics_frame
 	assert_true(ReplayV2Session.is_playing(), "回放应还在进行")
 	assert_false(ReplayV2Session.has_diverged(), "回放前几 tick 不应出现哈希分歧")
