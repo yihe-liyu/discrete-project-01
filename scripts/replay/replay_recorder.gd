@@ -5,8 +5,9 @@
 class_name ReplayRecorder
 extends RefCounted
 
-## 录制动作顺序（位掩码按此索引 —— 格式兼容性，勿改顺序）
-const ACTIONS := ["move_left", "move_right", "move_up", "move_down", "shoot", "focus", "memory_release"]
+## 录制动作顺序（位掩码按此索引 —— 格式兼容性，勿改顺序）。
+## 唯一来源是 [constant PlayerInput.ACTIONS]；录制只是它的消费者。
+const ACTIONS := PlayerInput.ACTIONS
 const FORMAT_VERSION := 1
 
 ## 每帧输入位掩码
@@ -41,12 +42,9 @@ func stop() -> void:
 
 
 ## 当前输入 → 位掩码（ACTIONS[i] 按下则第 i 位置 1）
+## 优先用 PlayerInput 的本物理 tick 锁存，保证录制与玩法读到同一份快照。
 func input_mask() -> int:
-	var mask := 0
-	for i in ACTIONS.size():
-		if Input.is_action_pressed(ACTIONS[i]):
-			mask |= 1 << i
-	return mask
+	return PlayerInput.input_mask()
 
 
 ## 某帧是否按下某动作（回放播放器用）

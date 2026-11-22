@@ -153,9 +153,9 @@ func _physics_process(delta):
 			is_invincible = false
 	_update_invincible_blink(delta)
 
-	input_vector.x = Input.get_axis("move_left", "move_right")
-	input_vector.y = Input.get_axis("move_up", "move_down")
-	is_focused = Input.is_action_pressed("focus")
+	input_vector.x = PlayerInput.get_axis("move_left", "move_right")
+	input_vector.y = PlayerInput.get_axis("move_up", "move_down")
+	is_focused = PlayerInput.is_action_pressed("focus")
 
 	update_hitbox_display()
 	update_animation()
