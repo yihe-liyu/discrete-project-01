@@ -199,14 +199,14 @@ func _process(_delta: float) -> void:
 			if ReplaySession.is_playing():
 				if _replay_deathbomb_end_frame >= 0 \
 						and ReplaySession.current_frame() >= _replay_deathbomb_end_frame:
-					_end_deathbomb(_replay_deathbomb_end_cancelled)
+					_end_deathbomb(_replay_deathbomb_end_cancelled, true)
 					return
 				if _replay_deathbomb_end_frame < 0 \
 						and GameplayClock.freeze_ticks() >= DEATHBOMB_FRAMES:
-					_end_deathbomb(false)
+					_end_deathbomb(false, true)
 					return
 			elif GameplayClock.freeze_ticks() >= DEATHBOMB_FRAMES:
-				_on_deathbomb_timeout()
+				_end_deathbomb(false, true)
 				return
 		else:
 			# legacy 旧录像：time_scale=0，物理帧仍走，按录制帧 / Engine 帧关窗。
@@ -725,7 +725,7 @@ func _run_deferred_miss_side_effects() -> void:
 
 
 ## 关窗（两种结局都走这里）：解开冻结、发结束信号，然后"抢命成功"或"结算 miss"二选一。
-func _end_deathbomb(p_cancelled: bool) -> void:
+func _end_deathbomb(p_cancelled: bool, p_immediate_unpause: bool = false) -> void:
 	# 回放有近距离录制 end 时，结局以录制为准（cancel / miss），
 	# 不因为帧计数提前走到这里就改成 miss。
 	if ReplaySession.is_playing() and _replay_deathbomb_end_frame >= 0:
@@ -739,7 +739,7 @@ func _end_deathbomb(p_cancelled: bool) -> void:
 	# 晚一 tick 解冻会让死亡炸弹后的第一轮弹幕整体晚一帧。
 	# legacy 旧录像仍按原样把 time_scale / 弹幕一起延后到物理帧结束。
 	if _deathbomb_uses_clock:
-		_unfreeze_deathbomb()
+		_unfreeze_deathbomb(p_immediate_unpause)
 		if defer_side_effects:
 			_deferred_resume_pending = true
 		else:
@@ -772,9 +772,9 @@ func _cancel_miss_by_deathbomb() -> void:
 
 ## 解开冻结：GameplayClock 没有其他 owner 时恢复 SceneTree，
 ## 并把窗口期临时 ALWAYS 的 process_mode 还回去。
-func _unfreeze_deathbomb() -> void:
+func _unfreeze_deathbomb(p_immediate_unpause: bool = false) -> void:
 	if _deathbomb_uses_clock:
-		GameplayClock.unfreeze(self)
+		GameplayClock.unfreeze(self, p_immediate_unpause)
 		if _player_shoot_script != null:
 			_player_shoot_script.process_mode = _deathbomb_saved_shoot_mode
 		process_mode = _deathbomb_saved_process_mode

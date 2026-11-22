@@ -768,16 +768,27 @@ static func _event_relative_engine_tick(e: Dictionary) -> int:
 	return int(e.get("engine_tick", 0)) - _recorder.start_engine_tick
 
 
-## 新录制用 Engine 相对 tick；换算成当前回放帧号。
+## 新录制（clock_freeze）用录制帧 tick 排程：录制中暂停 / 场景切换会让
+## Engine 帧号与已录帧数产生空隙，继续用 Engine tick 会把事件整体推迟。
+## 旧录像保持 Engine 相对 tick，避免改变已验证的旧时序。
+static func _uses_tick_events() -> bool:
+	return _recorder != null and _recorder.clock_freeze
+
+
+## 事件真正生效的回放帧号。
 static func _event_target_frame(e: Dictionary) -> int:
+	if _uses_tick_events():
+		return _event_tick(e)
 	if not _has_relative_engine_tick(e):
 		return _event_tick(e)
 	var current_rel := Engine.get_physics_frames() - _playback_start_engine_tick
 	return _frame_index + (_event_relative_engine_tick(e) - current_rel)
 
 
-## 事件是否已到点。新录制按录制内相对 Engine tick 比较（跨进程也成立）。
+## 事件是否已到点。新录制按帧 tick；旧录像按录制内相对 Engine tick 比较。
 static func _event_due(e: Dictionary) -> bool:
+	if _uses_tick_events():
+		return _event_tick(e) <= _frame_index
 	if _has_relative_engine_tick(e):
 		var current_rel := Engine.get_physics_frames() - _playback_start_engine_tick
 		return current_rel >= _event_relative_engine_tick(e)

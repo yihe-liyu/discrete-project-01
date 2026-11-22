@@ -82,15 +82,19 @@ func freeze(p_owner: Object) -> bool:
 
 
 ## 解冻；只有最后一个 owner 移除时才真正恢复 SceneTree。
-## 物理帧内解冻会在下一物理 tick 的最开头恢复，避免同一 tick 后半段节点突然执行。
-func unfreeze(p_owner: Object) -> bool:
+## 物理帧内解冻会在下一物理 tick 的最开头恢复，避免同一 tick 后半段节点突然执行；
+## [param immediate] 用于 _process 这类帧末收尾，立即恢复而不多等一 tick。
+func unfreeze(p_owner: Object, immediate: bool = false) -> bool:
 	if p_owner == null or not _freeze_owners.has(p_owner):
 		return false
 	_freeze_owners.erase(p_owner)
 	if _freeze_owners.is_empty():
 		_freeze_ticks = 0
 		if _paused_tree:
-			if Engine.is_in_physics_frame():
+			if immediate:
+				_paused_tree = false
+				_unpause_tree_if_clean()
+			elif Engine.is_in_physics_frame():
 				_unpause_pending = true
 			else:
 				_paused_tree = false

@@ -125,6 +125,33 @@ func test_freeze_keeps_replay_frames_running() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
+## 新录制按“录制帧 tick”排程，而不是 Engine 帧号：
+## 录制中暂停 / 场景切换会让 Engine 帧号与已录帧数拉开空隙，用 Engine 帧会把事件整体推迟。
+func test_clock_freeze_events_follow_recorded_tick_not_engine_gap() -> void:
+	var rec := ReplayRecorder.new()
+	rec.start()
+	rec.frames = PackedByteArray()
+	for i in 10:
+		rec.frames.append(0)
+	rec.duration_frames = 10
+	rec.start_engine_tick = Engine.get_physics_frames() - 500
+	rec.events = [{
+		"frame": 4,
+		"tick": 5,
+		"engine_tick": rec.start_engine_tick + 2000,
+		"action": "memory_release",
+		"after_sample": false,
+	}]
+	var path := "user://test_replay_tick_gap.json"
+	assert_true(rec.save(path), "写测试回放")
+	assert_true(ReplaySession.start_playback(path), "进入回放")
+	for i in 5:
+		assert_true(ReplaySession.advance_frame(), "推进第 %d 帧" % (i + 1))
+	assert_eq(ReplaySession.poll_events(), [&"memory_release"], "事件应按 tick=5 到点，不被 Engine 空隙推迟")
+	ReplaySession.stop_playback()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
 func test_replay_menu_builds_list() -> void:
 	var menu = load("res://scenes/ui/replay_menu.tscn").instantiate()
 	add_child_autofree(menu)
