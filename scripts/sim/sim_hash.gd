@@ -115,6 +115,108 @@ static func of(registry: EntityRegistry, system: KernelNativeSystem, tick: int,
 	return h
 
 
+## 分项状态哈希（诊断用）：每个子系统独立一个 32 位 hash。
+## 总 hash 的算法不变；分项只用于定位“首个不一致来自哪里”。
+static func fields(registry: EntityRegistry, system: KernelNativeSystem, tick: int,
+		items: ItemPool = null, lasers: Array = []) -> Dictionary:
+	var out: Dictionary = {}
+	out["tick"] = mix(mix(OFFSET, tick), 1 if SimClock.is_frozen() else 0)
+
+	var rng := RNG.snapshot_state()
+	var rh := OFFSET
+	rh = mix64(rh, int(str(rng.get("seed", "0"))))
+	rh = mix64(rh, int(str(rng.get("state", "0"))))
+	out["rng"] = rh
+
+	var ph := OFFSET
+	var res_hash := OFFSET
+	var player: Node2D = registry.player if registry != null else null
+	if is_instance_valid(player):
+		ph = mix_vec2(ph, player.global_position)
+		var actor := player as PlayerBase
+		var res: PlayerResources = actor.resources if actor != null else null
+		if res != null:
+			res_hash = mix(res_hash, res.current_score)
+			res_hash = mix(res_hash, res.lives)
+			res_hash = mix(res_hash, res.bomb_count)
+			res_hash = mix(res_hash, res.power_raw)
+			res_hash = mix(res_hash, res.graze_count)
+			res_hash = mix(res_hash, res.life_fragments)
+			res_hash = mix(res_hash, res.bomb_fragments)
+			res_hash = mix(res_hash, roundi(res.memory_value * POS_SCALE))
+		else:
+			res_hash = mix(res_hash, -1)
+		if actor is Player:
+			ph = mix(ph, 1 if (actor as Player).is_invincible else 0)
+	else:
+		ph = mix(ph, -1)
+		res_hash = mix(res_hash, -1)
+	out["player"] = ph
+	out["resources"] = res_hash
+
+	var bh := OFFSET
+	var boss: Boss = registry.get_boss() if registry != null else null
+	if is_instance_valid(boss):
+		var phase: PhaseData = boss.current_phase()
+		bh = mix(bh, phase.uid if phase != null else -1)
+		bh = mix(bh, boss.hp)
+		bh = mix(bh, boss.get_elapsed_ticks())
+		bh = mix(bh, boss.get_open_reduce_ticks())
+		bh = mix_vec2(bh, boss.global_position)
+	else:
+		bh = mix(bh, -1)
+	out["boss"] = bh
+
+	var eh := OFFSET
+	var enemies: Array = registry.get_active_enemies() if registry != null else []
+	eh = mix(eh, enemies.size())
+	for enemy in enemies:
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion():
+			eh = mix(eh, enemy.hp)
+			eh = mix_vec2(eh, enemy.global_position)
+	out["enemies"] = eh
+
+	var ih := OFFSET
+	if items != null:
+		var item_list := items.active_items()
+		ih = mix(ih, item_list.size())
+		for item in item_list:
+			ih = mix(ih, int(item.item_type))
+			ih = mix_vec2(ih, item.global_position)
+	else:
+		ih = mix(ih, -1)
+	out["items"] = ih
+
+	var lh := OFFSET
+	lh = mix(lh, lasers.size())
+	for beam in lasers:
+		if beam != null and is_instance_valid(beam):
+			lh = mix(lh, int(beam.phase))
+			lh = mix(lh, roundi(float(beam.age) * POS_SCALE))
+			lh = mix(lh, roundi(float(beam.head_dist) * POS_SCALE))
+			lh = mix(lh, roundi(float(beam.tail_dist) * POS_SCALE))
+	out["lasers"] = lh
+
+	var uh := OFFSET
+	if system != null:
+		var entries: Array[Dictionary] = []
+		for id in system.get_active_count():
+			var pos: Vector2 = system.get_position(id)
+			entries.append({"uid": system.get_uid(id), "type": system.get_type_index(id), "x": pos.x, "y": pos.y})
+		entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			return int(a["uid"]) < int(b["uid"]))
+		uh = mix(uh, entries.size())
+		for e in entries:
+			uh = mix(uh, int(e["uid"]))
+			uh = mix(uh, int(e["type"]))
+			uh = mix_vec2(uh, Vector2(float(e["x"]), float(e["y"])))
+	else:
+		uh = mix(uh, -1)
+	out["bullets"] = uh
+
+	return out
+
+
 ## 混入一个整数（低 32 位；负数按位模式处理）。
 static func mix(h: int, value: int) -> int:
 	h = (h ^ (value & MASK)) & MASK

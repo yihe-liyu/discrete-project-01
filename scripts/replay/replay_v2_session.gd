@@ -132,9 +132,10 @@ static func apply_start_resources(res: PlayerResources) -> void:
 
 
 ## 每 tick 录一条（GameScene 的 SimClock observer 调用）。
-static func record_tick(mask: int, command_flags: int, state_hash: int) -> void:
+static func record_tick(mask: int, command_flags: int, state_hash: int,
+		fields: Dictionary = {}) -> void:
 	if _recording and _rec != null:
-		_rec.capture_tick(mask, command_flags, state_hash)
+		_rec.capture_tick(mask, command_flags, state_hash, fields)
 
 
 ## 结束录制并落盘；返回路径（失败 / 没在录 = 空串）。
@@ -236,6 +237,25 @@ static func observe_tick(tick: int, state_hash: int) -> bool:
 		])
 		return false
 	return true
+
+
+## 分歧时报告首个不同的分项字段（需要录像有 field_hashes；旧文件会提示无数据）。
+static func report_fields(idx: int, live: Dictionary) -> void:
+	if _play == null or idx < 0 or idx >= _play.field_hashes.size():
+		return
+	var expected: Dictionary = _play.field_hashes[idx]
+	if expected.is_empty():
+		push_warning("ReplayV2 分歧 idx=%d：这份录像没有分项哈希（旧格式），无法定位字段" % idx)
+		return
+	for key in live:
+		if not expected.has(key):
+			continue
+		if int(expected[key]) != int(live[key]):
+			push_warning("ReplayV2 分歧字段 idx=%d field=%s exp=%d cur=%d" % [
+				idx, key, int(expected[key]), int(live[key]),
+			])
+			return
+	push_warning("ReplayV2 分歧 idx=%d：分项哈希全部相同（总 hash 碰撞或未覆盖状态）" % idx)
 
 
 ## 停止回放并清理注入。

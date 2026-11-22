@@ -81,3 +81,17 @@ func _run_once(p_seed: int) -> Array[int]:
 
 	PlayerInput.clear_override()
 	return hashes
+
+
+func test_fields_isolate_player_position_from_resources() -> void:
+	var reg := EntityRegistry.new()
+	var player := Node2D.new()
+	add_child_autofree(player)
+	reg.bind_player(player)
+	player.global_position = Vector2(100.0, 200.0)
+	var a := SimHash.fields(reg, null, 0)
+	player.global_position = Vector2(101.0, 200.0)
+	var b := SimHash.fields(reg, null, 0)
+	assert_ne(int(a["player"]), int(b["player"]), "位置变化应只影响 player 分项")
+	assert_eq(int(a["resources"]), int(b["resources"]), "资源分项不应被位置带偏")
+	assert_eq(int(a["rng"]), int(b["rng"]), "RNG 分项不应被位置带偏")

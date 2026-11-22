@@ -32,6 +32,8 @@ var masks: PackedByteArray = PackedByteArray()
 var commands: PackedByteArray = PackedByteArray()
 ## 每 tick 的规范状态哈希（SimHash）。
 var hashes: Array[int] = []
+## 每 tick 的分项哈希（诊断用；旧文件可为空）。
+var field_hashes: Array[Dictionary] = []
 
 
 ## 开一份新录制（清空缓冲）。
@@ -45,13 +47,16 @@ func begin(p_tick_rate: int = 60, p_seed: int = 0, p_sim_version: String = "") -
 	masks = PackedByteArray()
 	commands = PackedByteArray()
 	hashes.clear()
+	field_hashes.clear()
 
 
 ## 录一个 tick；mask / command_flags / state_hash 必须一一对应。
-func capture_tick(mask: int, command_flags: int, state_hash: int) -> void:
+func capture_tick(mask: int, command_flags: int, state_hash: int,
+		fields: Dictionary = {}) -> void:
 	masks.append(mask & 0xFF)
 	commands.append(command_flags & 0xFF)
 	hashes.append(state_hash)
+	field_hashes.append(fields.duplicate(true) if not fields.is_empty() else {})
 
 
 func tick_count() -> int:
@@ -76,6 +81,13 @@ func hash_at(p_tick: int) -> int:
 	return hashes[p_tick]
 
 
+## 某 tick 的分项哈希；无数据 = 空字典。
+func fields_at(p_tick: int) -> Dictionary:
+	if p_tick < 0 or p_tick >= field_hashes.size():
+		return {}
+	return field_hashes[p_tick]
+
+
 ## JSON 序列化；旧 v1 没有 magic/version，不会被误读。
 func to_dict() -> Dictionary:
 	return {
@@ -91,6 +103,7 @@ func to_dict() -> Dictionary:
 		"masks_hex": masks.hex_encode(),
 		"commands_hex": commands.hex_encode(),
 		"hashes": hashes,
+		"field_hashes": field_hashes,
 	}
 
 
@@ -121,6 +134,13 @@ func load_dict(data: Dictionary) -> bool:
 	if commands.size() != masks.size():
 		return false
 	if not hashes.is_empty() and hashes.size() != masks.size():
+		return false
+	field_hashes.clear()
+	var raw_fields = data.get("field_hashes", [])
+	if raw_fields is Array:
+		for f in raw_fields:
+			field_hashes.append(f if f is Dictionary else {})
+	if not field_hashes.is_empty() and field_hashes.size() != masks.size():
 		return false
 	return true
 

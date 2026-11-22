@@ -179,6 +179,15 @@ func sim_debug_state(tick: int = -1) -> String:
 		relative, _item_pool, laser_list)
 
 
+## 当前 tick 的分项状态哈希（诊断用；不改变玩法）。
+func sim_fields(tick: int = -1) -> Dictionary:
+	var relative := tick if tick >= 0 else SimClock.tick
+	var laser: LaserEngine = _bullet_manager.laser_engine()
+	var laser_list: Array = laser.get_active() if laser != null else []
+	return SimHash.fields(_stage_runtime.entity_registry, _bullet_manager.kernel_system(), relative,
+		_item_pool, laser_list)
+
+
 ## 当前 tick 的规范状态指纹（诊断 / 回放校验用；不改变玩法）。
 ## [param tick] 传相对 tick；回放/录制必须用同一个相对序号，不能混入全局 SimClock.tick。
 func sim_hash(tick: int = -1) -> int:
@@ -453,8 +462,9 @@ func _on_record_observe(_tick: int) -> void:
 		return
 	if ReplayV2Session.debug_capture:
 		ReplayV2Session.debug_snapshots.append(sim_debug_state(ReplayV2Session.current_tick()))
-	ReplayV2Session.record_tick(
-		PlayerInput.input_mask(), PlayerInput.command_flags(), sim_hash(ReplayV2Session.current_tick()))
+	var idx := ReplayV2Session.current_tick()
+	ReplayV2Session.record_tick(PlayerInput.input_mask(), PlayerInput.command_flags(),
+		sim_hash(idx), sim_fields(idx))
 
 
 func _on_replay_prepare(tick: int) -> void:
@@ -467,7 +477,10 @@ func _on_replay_observe(tick: int) -> void:
 	if ReplayV2Session.debug_capture:
 		ReplayV2Session.debug_compare(ReplayV2Session.current_tick(),
 			sim_debug_state(ReplayV2Session.current_tick()))
-	if not ReplayV2Session.observe_tick(tick, sim_hash(ReplayV2Session.current_tick())):
+	var idx := ReplayV2Session.current_tick()
+	if not ReplayV2Session.observe_tick(tick, sim_hash(idx)):
+		if not _ending:
+			ReplayV2Session.report_fields(idx, sim_fields(idx))
 		_ending = true
 		_finish_playback()
 

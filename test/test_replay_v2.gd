@@ -14,7 +14,7 @@ func after_each() -> void:
 func test_format_roundtrip_and_old_version_rejected() -> void:
 	var rec := ReplayV2.new()
 	rec.begin(60, 42, "test-sim")
-	rec.capture_tick(0b1000, ReplayV2.COMMAND_BOMB, 123)
+	rec.capture_tick(0b1000, ReplayV2.COMMAND_BOMB, 123, {"player": 111, "bullets": 222})
 	rec.capture_tick(0b0100, ReplayV2.COMMAND_MEMORY, 456)
 
 	var path := "user://test_replay_v2_format.json"
@@ -26,6 +26,8 @@ func test_format_roundtrip_and_old_version_rejected() -> void:
 	assert_eq(loaded.mask_at(0), 0b1000)
 	assert_eq(loaded.command_at(0), ReplayV2.COMMAND_BOMB)
 	assert_eq(loaded.hash_at(1), 456)
+	assert_eq(int(loaded.fields_at(0).get("player", 0)), 111, "分项哈希应往返")
+	assert_eq(int(loaded.fields_at(0).get("bullets", 0)), 222)
 	assert_false(ReplayV2.new().load_dict({"version": 1, "seed": "0", "duration": 0}),
 		"旧 v1 JSON 必须被拒绝")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
