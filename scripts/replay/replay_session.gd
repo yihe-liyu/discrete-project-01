@@ -56,6 +56,14 @@ static func uses_clock_first() -> bool:
 	return _playing and _recorder != null and _recorder.clock_first
 
 
+## deathbomb 是否走 GameplayClock 冻结。旧录像没有 clock_freeze 字段 → 继续走
+## Engine.time_scale=0 的 legacy 路径，避免旧录像在更新后出现新的时序分歧。
+static func uses_clock_freeze() -> bool:
+	if _active:
+		return true
+	return _playing and _recorder != null and _recorder.clock_freeze
+
+
 ## 开一局：清空并开始采样。已在录制中（切面 reload）则保持原录制。
 static func start_run() -> bool:
 	if _active or _playing:

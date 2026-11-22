@@ -5,6 +5,7 @@ func before_each() -> void:
 	ReplaySession.cancel_run()
 
 func after_each() -> void:
+	GameplayClock.reset()
 	ReplaySession.cancel_run()
 	ReplaySession.stop_playback()
 	SaveData.reset_session()
@@ -83,6 +84,43 @@ func test_engine_tick_events_are_relative_to_recording_start() -> void:
 	assert_true(ReplaySession.start_playback(path))
 	assert_true(ReplaySession.advance_frame())
 	assert_eq(ReplaySession.poll_events(), [], "相对第 5 tick 的事件不能在第一帧就触发")
+	ReplaySession.stop_playback()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## GameplayClock 冻结期：GameScene 被树暂停，但回放帧必须继续推进。
+## 这是 deathbomb 新时序的关键——时钟走、玩法停。
+func test_freeze_keeps_replay_frames_running() -> void:
+	var rec := ReplayRecorder.new()
+	rec.start()
+	rec.frames = PackedByteArray()
+	for i in 120:
+		rec.frames.append(0)
+	rec.duration_frames = 120
+	rec.metadata = {"difficulty": 1, "character": 0, "start_stage_id": 1}
+	var path := "user://test_replay_freeze_pump.json"
+	assert_true(rec.save(path), "写测试回放")
+	assert_true(ReplaySession.start_playback(path), "进入回放")
+
+	var scene: PackedScene = load("res://scenes/game_scene.tscn")
+	var inst: Node = scene.instantiate()
+	add_child_autofree(inst)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert_true(ReplaySession.is_playing(), "回放应仍在进行")
+	var before := ReplaySession.current_frame()
+	assert_gt(before, 0, "正常帧应推进回放")
+
+	GameplayClock.freeze(self)
+	assert_true(get_tree().paused, "冻结应暂停树")
+	for i in 5:
+		await get_tree().physics_frame
+	assert_true(GameplayClock.is_frozen(), "窗口仍冻结")
+	assert_gt(ReplaySession.current_frame(), before, "冻结期回放帧也必须推进")
+
+	GameplayClock.unfreeze(self)
+	await get_tree().process_frame
+	assert_false(get_tree().paused, "解冻应恢复树")
 	ReplaySession.stop_playback()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 

@@ -25,6 +25,9 @@ var start_engine_tick: int = -1
 ## 录制时 GameScene 是否以 -1000 priority 先推进回放/采样，再让 MarisaShoot(-100)
 ## 等负 priority 节点跑。旧录像没有这个字段，回放沿用旧时序。
 var clock_first: bool = false
+## deathbomb 是否用 GameplayClock 冻结玩法（SceneTree 暂停）。旧录像没有这个字段，
+## 回放必须继续用 Engine.time_scale=0，否则冻结期的协程相位会差一帧。
+var clock_freeze: bool = false
 var _capture_started := false
 ## 回放元数据（关卡 / 难度 / 角色 / 分数等；由录制方填写）
 var metadata: Dictionary = {}
@@ -64,6 +67,7 @@ func start() -> void:
 	duration_frames = 0
 	start_engine_tick = -1
 	clock_first = true
+	clock_freeze = true
 	_capture_started = false
 
 
@@ -123,12 +127,9 @@ func stop() -> void:
 
 
 ## 当前输入 → 位掩码（ACTIONS[i] 按下则第 i 位置 1）
+## 优先用 PlayerInput 的本物理 tick 锁存，保证录制与玩法读到同一份快照。
 func input_mask() -> int:
-	var mask := 0
-	for i in ACTIONS.size():
-		if Input.is_action_pressed(ACTIONS[i]):
-			mask |= 1 << i
-	return mask
+	return PlayerInput.input_mask()
 
 
 ## 某帧是否按下某动作（回放播放器用）
@@ -149,6 +150,7 @@ func to_dict() -> Dictionary:
 		"duration": duration_frames,
 		"start_engine_tick": start_engine_tick,
 		"clock_first": clock_first,
+		"clock_freeze": clock_freeze,
 		"frames_hex": frames.hex_encode(),
 		"metadata": metadata,
 		"events": events,
@@ -182,6 +184,7 @@ func load_dict(data: Dictionary) -> bool:
 	duration_frames = data.get("duration", 0)
 	start_engine_tick = int(data.get("start_engine_tick", -1))
 	clock_first = bool(data.get("clock_first", false))
+	clock_freeze = bool(data.get("clock_freeze", false))
 	frames = (data.get("frames_hex", "") as String).hex_decode()
 	if frames.size() != duration_frames:
 		return false

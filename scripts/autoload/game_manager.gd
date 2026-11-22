@@ -71,6 +71,12 @@ func is_paused() -> bool:
 	return current_state == AppState.PAUSED
 
 
+## 是否有暂停 / 结算等覆盖层打开。GameplayClock 解冻前查它：
+## deathbomb 窗口里按暂停时，树要保持暂停，不能替暂停菜单恢复。
+func has_open_overlay() -> bool:
+	return _menu_nav != null and _menu_nav.is_overlay_open()
+
+
 # ═══ 场景切换 ═══
 
 func change_scene(path: String, target_state: AppState = AppState.PLAYING):

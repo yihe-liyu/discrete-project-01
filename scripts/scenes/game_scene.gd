@@ -43,6 +43,9 @@ const PRACTICE_SFX_TRIM_DB := 0.0
 
 func _ready():
 	GameManager.set_state(GameManager.AppState.PLAYING)
+	# deathbomb 冻结期间 GameScene 自己被树暂停，但时钟仍会调这个驱动：
+	# 回放帧 / 录制采样必须在冻结帧里继续走，否则窗口前后的帧号对不上。
+	GameplayClock.set_freeze_driver(Callable(self, "_pump_frozen_tick"))
 
 	# R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
 	# 组合根装配：Miss 圈 / 特效层 / 关卡运行时（均在 game_scene.tscn 声明，R21），这里只注入。
@@ -117,6 +120,8 @@ func _start_normal_game() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	# 本 tick 的所有玩法读取都看同一份输入快照（包括 priority 为负的射击/内核节点）。
+	PlayerInput.latch()
 	if _ending:
 		return
 	if ReplaySession.is_playing():
@@ -148,7 +153,7 @@ func _capture_record_sample() -> void:
 		_stage_runtime.player.laser_anchor_snapshot() if _stage_runtime.player != null else [])
 
 
-## 回放帧推进。定格（time_scale=0）时 physics 可能不跑，由 _process 双驱动。
+## 回放帧推进。冻结期由 GameplayClock 的冻结驱动接管（见 _pump_frozen_tick）。
 func _playback_tick() -> void:
 	if _ending:
 		return
@@ -165,13 +170,33 @@ func _playback_tick() -> void:
 	_sample_pending = true
 
 
+## legacy 旧录像：deathbomb 仍用 Engine.time_scale=0；physics 可能不跑，由 _process 兜底。
+## 新录像走 GameplayClock（SceneTree 暂停 + _pump_frozen_tick），不会进这里。
 func _process(_delta: float) -> void:
-	# 只在定格时接管帧时钟；正常帧的采样固定在下一物理帧开头。
 	if not _ending and ReplaySession.is_playing() and Engine.time_scale == 0.0:
 		if _sample_pending:
 			flush_replay_sample()
 		if ReplaySession.begin_playback_tick():
 			_playback_tick()
+
+
+## 冻结帧驱动（GameplayClock 每 tick 调；GameScene 此时被树暂停）。
+## 回放继续推进帧，录制继续采样；玩法节点本身不动 —— 这就是「玩法停、时钟走」。
+func _pump_frozen_tick() -> void:
+	if _ending:
+		return
+	PlayerInput.latch()
+	if ReplaySession.is_playing():
+		if _sample_pending:
+			flush_replay_sample()
+		if ReplaySession.begin_playback_tick():
+			_playback_tick()
+		return
+	if ReplaySession.is_recording():
+		if _record_sample_pending:
+			_capture_record_sample()
+		ReplaySession.capture_frame()
+		_record_sample_pending = true
 
 
 ## 在下一物理帧开头调用：此时上一帧的 RNG / 位置 / 子弹已全部结束。
@@ -273,6 +298,8 @@ func _load_background(scene: PackedScene) -> void:
 
 
 func _exit_tree():
+	GameplayClock.set_freeze_driver(Callable())
+	PlayerInput.clear_latch()
 	if not _continuing_replay and not ReplaySession.consume_preserve_on_exit():
 		ReplaySession.cancel_run()
 		ReplaySession.stop_playback()

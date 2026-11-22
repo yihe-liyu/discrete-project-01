@@ -26,8 +26,11 @@ func _make_player() -> Player:
 
 
 func after_each() -> void:
-	# 安全阀：任何用例把"被弹炸弹"窗口留在半开状态，都不能污染后面的用例（time_scale 卡 0 会冻住整个套件）
+	# 安全阀：任何用例把"被弹炸弹"窗口留在半开状态，都不能污染后面的用例
+	# （GameplayClock 冻结会暂停整棵树；time_scale 也有旧的 Boss 定格用例在用）。
+	GameplayClock.reset()
 	Engine.time_scale = 1.0
+	PlayerInput.clear_latch()
 
 
 ## 直接把这次 miss 结算到底：**先清空雷**，不给被弹炸弹窗口机会。
@@ -229,6 +232,18 @@ func test_second_miss_repeats_teleport_and_respawn():
 	assert_eq(player.global_position, Player.MISS_RESPAWN_FROM, "第二次也先瞬移到框下（同一处）")
 	assert_eq(player._respawn_pos, Vector2(448, 840), "复位点不变")
 
+## 输入锁存：同一物理 tick 内所有玩法节点看同一份快照，帧中改键不影响本 tick。
+func test_player_input_latch_freezes_tick_snapshot():
+	PlayerInput.clear_latch()
+	Input.action_press("move_right")
+	PlayerInput.latch()
+	Input.action_release("move_right")
+	assert_true(PlayerInput.is_action_pressed("move_right"), "锁存后本 tick 仍看到按下")
+	assert_eq(PlayerInput.get_axis("move_left", "move_right"), 1.0, "锁存轴也来自同一快照")
+	PlayerInput.clear_latch()
+	assert_false(PlayerInput.is_action_pressed("move_right"), "解除锁存后回到实时 Input")
+
+
 func test_graze_radius_positive():
 	var player := _make_player()
 	assert_gt(player.graze_radius, 10.0, "擦弹半径应有效")
@@ -252,12 +267,33 @@ func test_deathbomb_window_freezes_before_any_miss_effect():
 
 	player.miss()
 	assert_true(player._is_deathbombing, "开窗：进入被弹炸弹窗口")
-	assert_eq(Engine.time_scale, 0.0, "定格：全局暂停几帧（time_scale = 0）")
+	assert_true(GameplayClock.is_frozen(), "定格：GameplayClock 冻结玩法")
+	assert_true(get_tree().paused, "冻结落到 SceneTree，玩法节点停步")
+	assert_eq(Engine.time_scale, 1.0, "不再靠 time_scale=0 定格表现层")
 	assert_eq(player.resources.lives, 3, "窗口里还没掉命")
 	assert_eq(player.resources.bomb_count, 3, "窗口里还没扣雷")
 	assert_eq(player.resources.power_raw, 300, "窗口里还没削火力")
 	assert_signal_not_emitted(GameEvents, "player_missed", "窗口里还不算 miss")
-	Engine.time_scale = 1.0   # 别把定格留给下一个用例（after_each 兜底）
+
+
+## 回归：窗口期树暂停，真实输入仍必须送到 Player（process_mode ALWAYS）。
+## 只直接调 _unhandled_input 会漏掉「暂停把输入也拦掉」这一类问题。
+func test_deathbomb_cancel_accepts_real_input_while_paused():
+	var player := _make_player()
+	_arm_bomb(player)
+	player.resources.lives = 2
+	player.resources.bomb_count = 3
+	player.miss()
+	assert_true(get_tree().paused, "窗口期树应暂停")
+	var ev := InputEventAction.new()
+	ev.action = "cancel&bomb"
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	Input.flush_buffered_events()
+	await get_tree().process_frame
+	assert_false(player._is_deathbombing, "暂停中的真实 bomb 输入应能关窗")
+	assert_eq(player.resources.bomb_count, 1, "真实输入同样只扣 2 雷")
+	assert_false(get_tree().paused, "关窗后树应恢复")
 
 
 ## 窗口里按 bomb → 抵消这次 miss：花 2 个雷、掉 0 命、炸弹照放、定格解开
@@ -273,7 +309,9 @@ func test_deathbomb_press_cancels_miss_and_costs_two_bombs():
 	assert_eq(player.resources.bomb_count, 1, "抵消 miss 花 2 个雷")
 	assert_eq(player.resources.lives, 3, "不掉命")
 	assert_false(player._is_deathbombing, "窗口关闭")
-	assert_eq(Engine.time_scale, 1.0, "定格解开")
+	assert_false(GameplayClock.is_frozen(), "定格解开")
+	assert_false(get_tree().paused, "树恢复运行")
+	assert_eq(Engine.time_scale, 1.0, "time_scale 始终不受影响")
 	assert_true(player.is_invincible, "炸弹的无敌照给")
 	assert_signal_emitted(GameEvents, "player_bomb", "照常放炸弹")
 	assert_signal_not_emitted(GameEvents, "player_missed", "没发生 miss")
@@ -327,8 +365,8 @@ func test_deathbomb_window_expiry_applies_miss():
 
 
 ## 回归（作者实测）：窗口里按暂停 → 既没有暂停菜单、也解不开暂停。
-## 病根 = 窗口收尾挂在被定格/暂停卡住的帧循环上 → `time_scale` 永远回不来。
-## 现在收尾走**真实时间**计时器，暂停中也照走完并还回 `time_scale`。
+## 现在收尾由 GameplayClock 的冻结帧计数驱动：树暂停时时钟仍走，窗口照常关，
+## 并且不会替暂停菜单恢复 SceneTree。
 func test_deathbomb_window_finishes_even_while_paused():
 	var player := _make_player()
 	_arm_bomb(player)
@@ -342,7 +380,7 @@ func test_deathbomb_window_finishes_even_while_paused():
 	get_tree().paused = false  # 先解开，别把暂停状态漏给下一个用例
 
 	assert_false(player._is_deathbombing, "暂停中也照走完窗口")
-	assert_eq(Engine.time_scale, 1.0, "定格必须还回去（否则暂停菜单被一起冻住）")
+	assert_false(GameplayClock.is_frozen(), "玩法冻结必须解开（否则暂停菜单被一起冻住）")
 	assert_eq(player.resources.lives, 2, "没按 bomb → miss 照常结算")
 
 

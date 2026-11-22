@@ -14,7 +14,7 @@
 ## [b]边界[/b][br]
 ## - 系统操作走 ctx 服务；ctx 为 null 时跳过，不回退全局。[br]
 ## - 伤害 / 擦弹由 KernelBulletPhysics 结算；本类负责移动 / 无敌 / 复位。[br]
-## - deathbomb 用真实时间计时，定格 / 暂停中也会到点。[br]
+## - deathbomb 由 GameplayClock 冻结玩法：窗口内玩法停步，但时钟仍走，暂停中也照常倒计时。[br]
 ## - Miss 复位移动必须最后做（演出用的是中弹位置）。
 class_name Player
 extends PlayerBase
@@ -66,21 +66,26 @@ var _respawn_elapsed: float = 0.0
 var _is_deathbombing: bool = false
 ## 定格期间是否由本窗口暂停了弹幕处理（退出时要恢复）。
 var _deathbomb_bullets_paused: bool = false
-## 回放关窗发生在物理帧内时，把「恢复弹幕 / 恢复 time_scale / 火力惩罚 / 清弹圈」
+## 回放关窗发生在物理帧内时，把「恢复弹幕 / 解冻 / 火力惩罚 / 清弹圈」
 ## 推迟到本帧物理结束：录制里这些是帧间事件，自机射击协程这一 tick 仍按旧火力
 ## 和旧子机数量打一轮；若提前扣火力，子机先消失，就会「缺少生成」。
 var _deferred_resume_pending: bool = false
 var _deferred_miss_pos: Vector2 = Vector2.ZERO
 var _deferred_miss_pending: bool = false
-## deathbomb 窗口的物理帧起点（回放/普通共用；回放按帧数自行关窗）。
-var _deathbomb_start_physics_frame: int = 0
 ## 回放中该窗口的录制 end 帧；-1 = 没有靠近的配对，走 24 帧。
 var _replay_deathbomb_end_frame: int = -1
 var _replay_deathbomb_end_cancelled: bool = false
-## 窗口代际：旧 timer 不能关新窗口。
-var _deathbomb_generation: int = 0
-## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
+## 开窗前的 process_mode；窗口期临时 ALWAYS，才能收到 bomb 输入并跑倒计时。
+var _deathbomb_saved_process_mode: Node.ProcessMode = Node.PROCESS_MODE_INHERIT
+## 射击脚本会继承 Player 的 ALWAYS，窗口期必须显式压回 PAUSABLE（否则冻结里继续开枪）。
+var _deathbomb_saved_shoot_mode: Node.ProcessMode = Node.PROCESS_MODE_INHERIT
+## 本次窗口走 GameplayClock（新录制 / 普通游玩）还是 legacy time_scale（旧录像）。
+## 旧录像的冻结期协程按 delta=0 继续步进，换成树暂停会差一帧，必须保留旧路径。
+var _deathbomb_uses_clock: bool = true
+## legacy 路径保存的 time_scale 与窗口起点。
 var _deathbomb_saved_time_scale: float = 1.0
+var _deathbomb_start_physics_frame: int = 0
+var _deathbomb_generation: int = 0
 ## 无敌闪烁相位累加器（秒）。
 var _blink_phase: float = 0.0
 
@@ -112,12 +117,12 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	# 定格安全阀：被弹炸弹窗口没走完就出树（切场景 / 测试回收）也绝不能把 time_scale 留在 0
+	# 冻结安全阀：被弹炸弹窗口没走完就出树（切场景 / 测试回收）也绝不能把树留在暂停
 	if _is_deathbombing or _deferred_resume_pending:
 		_is_deathbombing = false
 		_deferred_resume_pending = false
 		_resume_bullets_after_deathbomb()
-		_restore_time_scale()
+		_unfreeze_deathbomb()
 		GameEvents.deathbomb_ended.emit()
 	if GameEvents.enemy_killed.is_connected(_on_enemy_killed):
 		GameEvents.enemy_killed.disconnect(_on_enemy_killed)
@@ -167,8 +172,8 @@ func poll_replay_before_sample() -> void:
 					_end_deathbomb(false)
 
 
-## 回放离散动作：按录制帧号触发。普通帧在物理帧开头消费，
-## 定格（time_scale = 0）时物理帧不可靠，由 _process 兜底。
+## 回放离散动作：按录制帧号触发。普通帧在物理帧开头消费；
+## 冻结期 GameplayClock 仍走，由本节点的 _process（窗口期 ALWAYS）兜底。
 func _poll_replay_events(defer: bool = true) -> void:
 	if not ReplaySession.is_playing():
 		return
@@ -189,19 +194,34 @@ func _poll_replay_events(defer: bool = true) -> void:
 
 
 func _process(_delta: float) -> void:
-	if ReplaySession.is_playing() and _is_deathbombing:
-		if _replay_deathbomb_end_frame >= 0 \
-				and ReplaySession.current_frame() >= _replay_deathbomb_end_frame:
-			_end_deathbomb(_replay_deathbomb_end_cancelled)
-			return
-		if _replay_deathbomb_end_frame < 0 \
-				and Engine.get_physics_frames() - _deathbomb_start_physics_frame >= DEATHBOMB_FRAMES:
-			_end_deathbomb(false)
-			return
+	if _is_deathbombing:
+		if _deathbomb_uses_clock:
+			if ReplaySession.is_playing():
+				if _replay_deathbomb_end_frame >= 0 \
+						and ReplaySession.current_frame() >= _replay_deathbomb_end_frame:
+					_end_deathbomb(_replay_deathbomb_end_cancelled)
+					return
+				if _replay_deathbomb_end_frame < 0 \
+						and GameplayClock.freeze_ticks() >= DEATHBOMB_FRAMES:
+					_end_deathbomb(false)
+					return
+			elif GameplayClock.freeze_ticks() >= DEATHBOMB_FRAMES:
+				_on_deathbomb_timeout()
+				return
+		else:
+			# legacy 旧录像：time_scale=0，物理帧仍走，按录制帧 / Engine 帧关窗。
+			if _replay_deathbomb_end_frame >= 0 \
+					and ReplaySession.current_frame() >= _replay_deathbomb_end_frame:
+				_end_deathbomb(_replay_deathbomb_end_cancelled)
+				return
+			if _replay_deathbomb_end_frame < 0 \
+					and Engine.get_physics_frames() - _deathbomb_start_physics_frame >= DEATHBOMB_FRAMES:
+				_end_deathbomb(false)
+				return
 	if not ReplaySession.is_playing():
 		return
 	# 必须 drain 队列：旧 cancel/end 会堵住后面的 memory_release。
-	if Engine.time_scale <= 0.0:
+	if GameplayClock.is_frozen() or Engine.time_scale <= 0.0:
 		_poll_replay_events(true)
 	else:
 		_poll_replay_events(false)
@@ -230,6 +250,10 @@ func apply_player_data() -> void:
 		animation.play(IDLE)
 
 func _physics_process(delta):
+	# 冻结期间树已暂停；本节点因 ALWAYS 仍会被调用（要收 bomb 输入），
+	# 但玩法步进必须停，否则 deathbomb 窗口里自机会继续移动 / 回复。
+	if GameplayClock.is_frozen():
+		return
 	_poll_replay_events()
 	_update_respawn(delta)
 	# 记忆值自动恢复（原全局状态 _process，迁来）
@@ -514,7 +538,7 @@ const MISS_DEATH_INVINCIBLE_MARGIN: float = 1.0
 const INVINCIBLE_BLINK_HZ: float = 6.0
 ## 暗半周期的 alpha（0 = 全隐）；只动机体贴图，判定点 / 枪口不参与。
 const INVINCIBLE_BLINK_MIN_ALPHA: float = 0.2
-## deathbomb 窗口长度（物理帧）：被弹瞬间全局定格，等玩家按 bomb 抢命。
+## deathbomb 窗口长度（物理帧）：被弹瞬间冻结玩法，等玩家按 bomb 抢命。
 const DEATHBOMB_FRAMES: int = 24
 ## 开窗所需的最少雷数。
 const DEATHBOMB_MIN_BOMBS: int = 1
@@ -620,7 +644,7 @@ func _update_respawn(delta: float) -> void:
 # ═══ 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命 ═══
 
 ## 开窗：有雷（≥ DEATHBOMB_MIN_BOMBS）且机体配了 BombData 才开。
-## 开了就全局定格 DEATHBOMB_FRAMES 帧（Engine.time_scale = 0，保存 / 恢复倍率）。
+## 开了就由 GameplayClock 冻结玩法 DEATHBOMB_FRAMES 帧；需要继续的表现层自行标 ALWAYS。
 ## 返回 true = 本次 miss 的后果推迟到窗口结束再结算。
 func _begin_deathbomb_window() -> bool:
 	if DEATHBOMB_FRAMES <= 0 or _bomb_data() == null:
@@ -628,8 +652,7 @@ func _begin_deathbomb_window() -> bool:
 	if resources.bomb_count < DEATHBOMB_MIN_BOMBS:
 		return false
 	_is_deathbombing = true
-	_deathbomb_generation += 1
-	_deathbomb_start_physics_frame = Engine.get_physics_frames()
+	_deathbomb_uses_clock = not ReplaySession.is_playing() or ReplaySession.uses_clock_freeze()
 	_replay_deathbomb_end_frame = -1
 	_replay_deathbomb_end_cancelled = false
 	if ReplaySession.is_playing():
@@ -638,43 +661,52 @@ func _begin_deathbomb_window() -> bool:
 		_replay_deathbomb_end_frame = int(end.get("frame", -1))
 		_replay_deathbomb_end_cancelled = bool(end.get("cancelled", false))
 	ReplaySession.capture_event(&"deathbomb_start")
-	# time_scale=0 只把 delta 变 0，_physics_process 仍会跑；不暂停弹幕的话，
-	# 定格帧里仍会擦弹 / 清弹，正是回放 graze 分歧的来源。
+	# 树暂停后弹幕默认不会再跑；显式暂停内核物理，保证原生后端也不偷偷步进。
 	if ctx != null and ctx.bullets != null and ctx.bullets.bullet_manager != null:
 		ctx.bullets.bullet_manager.pause_processing()
 		_deathbomb_bullets_paused = true
-	_deathbomb_saved_time_scale = Engine.time_scale
-	Engine.time_scale = 0.0
+	if _deathbomb_uses_clock:
+		# 树暂停后本节点默认不再收输入 / 跑 _process；窗口期临时 ALWAYS，
+		# 由 _process 按 GameplayClock.freeze_ticks() 倒计时关窗（暂停菜单里也一样）。
+		_deathbomb_saved_process_mode = process_mode
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		if _player_shoot_script != null:
+			_deathbomb_saved_shoot_mode = _player_shoot_script.process_mode
+			_player_shoot_script.process_mode = Node.PROCESS_MODE_PAUSABLE
+		GameplayClock.freeze(self)
+	else:
+		# legacy：旧录像按录制时的全局 time_scale=0 回放，保持协程 dt=0 的相位。
+		_deathbomb_saved_time_scale = Engine.time_scale
+		Engine.time_scale = 0.0
+		_deathbomb_start_physics_frame = Engine.get_physics_frames()
+		_deathbomb_generation += 1
+		if _replay_deathbomb_end_frame < 0:
+			var wait_frames := DEATHBOMB_FRAMES + 8
+			var gen := _deathbomb_generation
+			var timer := get_tree().create_timer(wait_frames / 60.0, true, false, true)
+			timer.timeout.connect(func():
+				if gen == _deathbomb_generation:
+					_on_deathbomb_timeout()
+			)
 	GameEvents.deathbomb_started.emit()
-	# 普通游玩用真实时间 timer，暂停中也照走完；
-	# 回放由 _process 的物理帧计数关窗，另留更长 timer 只防永久冻住。
-	# 回放帧时钟现在会在定格期间继续走：有录制 end 就由 _process 按帧关窗。
-	# 只在没有录制 end 时用 timer 兜底，避免真实 timer 比帧早到。
-	if _replay_deathbomb_end_frame < 0:
-		var wait_frames := DEATHBOMB_FRAMES + (8 if ReplaySession.is_playing() else 0)
-		var gen := _deathbomb_generation
-		var timer := get_tree().create_timer(wait_frames / 60.0, true, false, true)
-		timer.timeout.connect(func():
-			if gen == _deathbomb_generation:
-				_on_deathbomb_timeout()
-		)
 	return true
 
 
-## 窗口到点（真实时间，定格 / 暂停中都会到）：还没按 bomb → 这次 miss 照常结算。
+## 窗口到点（新路径按 GameplayClock 冻结帧 / 旧录像按 time_scale=0 帧）：还没按 bomb → miss 结算。
 func _on_deathbomb_timeout() -> void:
 	if not _is_deathbombing:
-		return  # 已抢命成功 / 已出树 → 什么都不做（SceneTreeTimer 取消不掉，只能这样忽略）
+		return  # 已抢命成功 / 已出树 → 延迟回调可能晚到，忽略
 	_end_deathbomb(false)
 
 
-## 只延后「恢复弹幕 / time_scale」：deathbomb 抢命成功时没有 miss 副作用。
+## 只延后「恢复弹幕 / 解冻」：deathbomb 抢命成功时没有 miss 副作用。
 func _run_deferred_deathbomb_resume() -> void:
 	if not _deferred_resume_pending or _deferred_miss_pending:
 		return
 	_deferred_resume_pending = false
-	_restore_time_scale()
 	_resume_bullets_after_deathbomb()
+	if not _deathbomb_uses_clock:
+		_restore_legacy_time_scale()
 
 
 ## 回放关窗的帧间副作用：物理帧结束后再扣火力 / 起清弹圈。
@@ -684,31 +716,41 @@ func _run_deferred_miss_side_effects() -> void:
 	_deferred_miss_pending = false
 	if _deferred_resume_pending:
 		_deferred_resume_pending = false
-		_restore_time_scale()
 		_resume_bullets_after_deathbomb()
+		if not _deathbomb_uses_clock:
+			_restore_legacy_time_scale()
 	if resources != null:
 		resources.on_miss_power_penalty()
 	_death_clear(_deferred_miss_pos, 2048, 3.0)
 
 
-## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
+## 关窗（两种结局都走这里）：解开冻结、发结束信号，然后"抢命成功"或"结算 miss"二选一。
 func _end_deathbomb(p_cancelled: bool) -> void:
-	_deathbomb_generation += 1
 	# 回放有近距离录制 end 时，结局以录制为准（cancel / miss），
-	# 不因为 timer 或帧计数提前走到这里就改成 miss。
+	# 不因为帧计数提前走到这里就改成 miss。
 	if ReplaySession.is_playing() and _replay_deathbomb_end_frame >= 0:
 		p_cancelled = _replay_deathbomb_end_cancelled
 	_is_deathbombing = false
-	_deathbomb_start_physics_frame = 0
 	_replay_deathbomb_end_frame = -1
 	_replay_deathbomb_end_cancelled = false
 	ReplaySession.capture_event(&"deathbomb_end_cancel" if p_cancelled else &"deathbomb_end_miss")
 	var defer_side_effects := ReplaySession.is_playing() and Engine.is_in_physics_frame()
-	if defer_side_effects:
-		_deferred_resume_pending = true
+	# 解冻必须立刻做（帧内会推迟到帧末恢复树），不能跟弹幕/火力副作用一起 defer：
+	# 晚一 tick 解冻会让死亡炸弹后的第一轮弹幕整体晚一帧。
+	# legacy 旧录像仍按原样把 time_scale / 弹幕一起延后到物理帧结束。
+	if _deathbomb_uses_clock:
+		_unfreeze_deathbomb()
+		if defer_side_effects:
+			_deferred_resume_pending = true
+		else:
+			_resume_bullets_after_deathbomb()
 	else:
-		_resume_bullets_after_deathbomb()
-		_restore_time_scale()
+		_deathbomb_generation += 1
+		if defer_side_effects:
+			_deferred_resume_pending = true
+		else:
+			_resume_bullets_after_deathbomb()
+			_restore_legacy_time_scale()
 	GameEvents.deathbomb_ended.emit()
 	if p_cancelled:
 		if defer_side_effects:
@@ -728,8 +770,20 @@ func _cancel_miss_by_deathbomb() -> void:
 	_fire_bomb(bomb_data)
 
 
-## 解开定格：恢复开窗前的 time_scale（可能叠加在别的定格上）。
-func _restore_time_scale() -> void:
+## 解开冻结：GameplayClock 没有其他 owner 时恢复 SceneTree，
+## 并把窗口期临时 ALWAYS 的 process_mode 还回去。
+func _unfreeze_deathbomb() -> void:
+	if _deathbomb_uses_clock:
+		GameplayClock.unfreeze(self)
+		if _player_shoot_script != null:
+			_player_shoot_script.process_mode = _deathbomb_saved_shoot_mode
+		process_mode = _deathbomb_saved_process_mode
+	else:
+		_restore_legacy_time_scale()
+
+
+## legacy 旧录像：恢复开窗前的 time_scale（可能叠加在别的定格上）。
+func _restore_legacy_time_scale() -> void:
 	Engine.time_scale = _deathbomb_saved_time_scale
 
 
