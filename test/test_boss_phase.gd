@@ -55,9 +55,16 @@ func _make_phase(hp: int = 100, time_limit: float = 10.0, timeout_only: bool = f
 	return p
 
 
-## 辅助：跳过 HP 上涨 tween，直接进入可受击状态
+## 辅助：跳过 HP 上涨，直接进入可受击状态
 func _skip_hp_tween() -> void:
+	_boss._hp_ramp_active = false
 	_boss._is_invincible = false
+	_boss._open_reduce_ticks = 0   # 本组用例关心击破/奖励分，不掺开局减伤
+
+
+## 以物理 tick 推进 Boss 阶段计时（生产路径同样按 tick；测试不依赖渲染帧）。
+func _advance_seconds(seconds: float) -> void:
+	_boss.advance_ticks(maxi(1, roundi(seconds * float(Engine.physics_ticks_per_second))))
 
 
 ## 普通符卡：超时未击破 → captured=false
@@ -65,10 +72,24 @@ func test_normal_spell_timeout_is_not_captured():
 	var phase := _make_phase(100, 5.0)
 	watch_signals(_boss)
 	_boss.start_phase(phase)
-	_boss._process(5.0 + 0.01)  # 超过时限
+	_advance_seconds(5.01)  # 超过时限
 	assert_signal_emitted(_boss, "phase_cleared", "超时应触发 phase_cleared")
 	var params = get_signal_parameters(_boss, "phase_cleared", 0)
 	assert_eq(params[0], false, "普通符卡超时不应算捕获")
+
+
+## 真实路径：阶段时限由 _physics_process 的物理 tick 推进并收尾（不再靠 _process 渲染帧）。
+func test_phase_timeout_runs_on_physics_tick() -> void:
+	var boss := Boss.new()
+	add_child_autofree(boss)
+	boss.setup(BossData.new(), null)
+	boss._stage_id = 7
+	var fired := [false]
+	boss.phase_cleared.connect(func(_c: bool, _b: int) -> void: fired[0] = true, CONNECT_ONE_SHOT)
+	boss.start_phase(_make_phase(100, 0.1, false, 0))
+	for _i in 12:
+		await get_tree().physics_frame
+	assert_true(fired[0], "阶段时限应由物理 tick 推进并收尾")
 
 
 ## 时符：超时撑过去 → captured=true
@@ -76,7 +97,7 @@ func test_timeout_spell_timeout_is_captured():
 	var phase := _make_phase(100, 5.0, true)
 	watch_signals(_boss)
 	_boss.start_phase(phase)
-	_boss._process(5.0 + 0.01)
+	_advance_seconds(5.01)
 	assert_signal_emitted(_boss, "phase_cleared")
 	var params = get_signal_parameters(_boss, "phase_cleared", 0)
 	assert_eq(params[0], true, "时符撑到超时应算捕获")
@@ -122,7 +143,7 @@ func test_no_double_clear():
 	_skip_hp_tween()
 	_boss.take_damage(50)     # 击破
 	_boss.take_damage(50)     # 再来一下（应被 _is_cleared 保护挡住）
-	_boss._process(5.0 + 0.01)  # 超时（也应被挡住）
+	_advance_seconds(5.01)  # 超时（也应被挡住）
 	assert_signal_emit_count(_boss, "phase_cleared", 1, "phase_cleared 只能发出一次")
 
 
@@ -134,11 +155,11 @@ func test_bonus_decays_uniformly_to_30_percent_over_time_limit():
 	var start := _boss._bonus
 	assert_gt(start, 0, "符卡应有初始奖励分（非符才是 0）")
 
-	_boss._process(20.0)                            # 走一半时限 → 线性 → 初始的 65%
+	_advance_seconds(20.0)                            # 走一半时限 → 线性 → 初始的 65%
 	assert_almost_eq(float(_boss._bonus), float(start) * 0.65, float(start) * 0.02,
 		"半程 ≈ 初始的 65%%（线性）")
 
-	_boss._process(20.0)                            # 走满时限 → 30%
+	_advance_seconds(20.0)                            # 走满时限 → 30%
 	assert_almost_eq(float(_boss._bonus), float(SpellBonus.decay_floor(start)), float(start) * 0.02,
 		"满时限 ≈ 初始的 30%%")
 
@@ -150,7 +171,7 @@ func test_bonus_never_below_30_percent():
 	_boss.start_phase(phase)
 	var start := _boss._bonus
 	for i in 30:
-		_boss._process(1.0)
+		_advance_seconds(1.0)
 		assert_gte(_boss._bonus, SpellBonus.decay_floor(start), "第 %d 秒仍不低于 30%%" % (i + 1))
 
 
@@ -161,7 +182,7 @@ func test_timeout_only_spell_bonus_does_not_decay():
 	_boss.start_phase(phase)
 	var start := _boss._bonus
 	assert_gt(start, 0, "时符也是符卡 → 有初始奖励分")
-	_boss._process(30.0)
+	_advance_seconds(30.0)
 	assert_eq(_boss._bonus, start, "时符不掉奖励分")
 
 
@@ -170,7 +191,7 @@ func test_nonspell_bonus_is_zero():
 	var phase := _make_phase(100, 60.0, false, 0)
 	_boss.start_phase(phase)
 	assert_eq(_boss._bonus, 0, "非符奖励分 = 0")
-	_boss._process(10.0)
+	_advance_seconds(10.0)
 	assert_eq(_boss._bonus, 0, "非符不掉（本来就是 0）")
 
 
@@ -488,7 +509,7 @@ func test_bomb_fails_bonus_and_freezes_it():
 	var ticks := [0]
 	var cb := func(_b: int) -> void: ticks[0] += 1
 	GameEvents.phase_bonus_tick.connect(cb)
-	_boss._process(5.0)
+	_advance_seconds(5.0)
 	GameEvents.phase_bonus_tick.disconnect(cb)
 	assert_eq(_boss.current_bonus(), frozen, "作废后不再衰减（UI 的「失败」要定格）")
 	assert_eq(ticks[0], 0, "作废后不再发数字 tick（否则下一帧会覆盖「失败」）")
@@ -547,7 +568,7 @@ func test_spell_result_reports_capture_bonus_and_time() -> void:
 	var cb := func(captured: bool, bonus: int, elapsed: float, bonus_failed: bool) -> void:
 		got.append([captured, bonus, elapsed, bonus_failed])
 	GameEvents.spell_result.connect(cb)
-	_boss._process(1.5)                      # 攒一点用时
+	_advance_seconds(1.5)                      # 攒一点用时
 	_skip_hp_tween()
 	_boss.take_damage(100)                   # 打空 → 击破
 	GameEvents.spell_result.disconnect(cb)
@@ -582,7 +603,7 @@ func test_spell_result_not_emitted_for_nonspell() -> void:
 	var cb := func(_c: bool, _b: int, _e: float, _f: bool) -> void: count[0] += 1
 	GameEvents.spell_result.connect(cb)
 	_boss.start_phase(_make_phase(100, 5.0, false, 0))
-	_boss._process(5.0 + 0.01)               # 超时收尾
+	_advance_seconds(5.01)               # 超时收尾
 	GameEvents.spell_result.disconnect(cb)
 	assert_eq(count[0], 0, "非符不该发 spell_result")
 
@@ -596,17 +617,17 @@ func test_failed_bonus_still_times_out_and_clears_open_reduce():
 	_boss._stage_id = 7
 	var phase := _make_phase(1000, 1.0, false, 15)
 	_boss.start_phase(phase)
-	_boss._open_reduce_left = 0.5            # 开卡减伤还有 0.5s
+	_boss._open_reduce_ticks = 30            # 开卡减伤还有 0.5s（30 tick）
 	_boss._open_reduce_ratio = 0.5
 	watch_signals(_boss)
 
 	GameEvents.player_bomb.emit("测试 bomb")
 	assert_true(_boss.is_bonus_failed(), "作废了")
 
-	_boss._process(0.6)                      # 走掉减伤
-	assert_eq(_boss._open_reduce_left, 0.0, "作废后减伤倒计时仍要照常走完")
+	_advance_seconds(0.6)                      # 走掉减伤
+	assert_eq(_boss._open_reduce_ticks, 0, "作废后减伤倒计时仍要照常走完")
 
-	_boss._process(0.6)                      # 累计 1.2s > 时限 1.0s
+	_advance_seconds(0.6)                      # 累计 1.2s > 时限 1.0s
 	assert_signal_emitted(_boss, "phase_cleared", "作废后符卡仍应到点结束")
 	assert_true(_boss._is_cleared, "阶段应已收尾（clear_phase 只置标记，不清 _phase_data）")
 

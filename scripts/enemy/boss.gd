@@ -33,6 +33,8 @@ const DEFAULT_DEFEAT_SFX := &"boss_die"
 const CAPTURE_SFX := &"get_card"
 ## 全破定格默认时长（秒）；BossData.defeat_hitstop 可覆盖。
 const DEFAULT_DEFEAT_HITSTOP := 0.12
+## 开卡 HP 上涨时长（秒）—— 按物理 tick 换算，不跟渲染帧。
+const HP_RAMP_SECONDS := 1.0
 ## 全破清弹半径（像素）。
 const DEFEAT_CLEAR_RADIUS := 960.0
 ## 全破震屏强度。
@@ -94,11 +96,17 @@ var _pos_indicator: Sprite2D  # Boss 位置指示器（x 跟随 Boss，y 固定�
 var _bonus: int = 0
 ## 本阶段的初始奖励分（规则值）—— 衰减下限（30%）按它算，故要留住。
 var _bonus_initial: int = 0
-var _elapsed: float = 0.0
+## 本阶段已过的物理 tick（唯一权威；get_elapsed() 再换算成秒）。
+var _elapsed_ticks: int = 0
+## 开卡 HP 上涨：目标 / 总帧 / 已完成帧（全部按 tick）。
+var _hp_ramp_active: bool = false
+var _hp_ramp_target: int = 0
+var _hp_ramp_total_ticks: int = 0
+var _hp_ramp_done_ticks: int = 0
 var _is_invincible: bool = false
 var _is_phase_missed: bool = false   # 本阶段内玩家是否 miss 过（东方规则：miss 即失败尝试、miss 后击破不算收取）
 var _is_phase_bombed: bool = false   # 本阶段内玩家是否用过 bomb（同罪：bomb 即失败尝试）
-var _open_reduce_left: float = 0.0   # 开局减伤剩余时长（秒）
+var _open_reduce_ticks: int = 0      # 开局减伤剩余帧数
 var _open_reduce_ratio: float = 0.0  # 开局减伤比例（0~1）
 var _move_coroutine_runner: CoroutineRunner
 var _shoot_coroutine_runner: CoroutineRunner
@@ -129,8 +137,9 @@ func is_low_hp() -> bool:
 	return _phase_data.hp > 0 and float(_hp) < _phase_data.hp * 0.45
 ## 当前奖励分（未开战 / 非符 = 0）。
 func current_bonus() -> int: return _bonus
-## 本阶段已过的秒数。
-func get_elapsed() -> float: return _elapsed
+## 本阶段已过的秒数（由 tick 换算，不读 delta）。
+func get_elapsed() -> float:
+	return _ticks_to_seconds(_elapsed_ticks)
 ## 阶段身份（记录键）；未解析 = null。
 func get_phase_id() -> PhaseIdentity: return _phase_identity
 
@@ -256,7 +265,9 @@ func start_phase(data: PhaseData) -> void:
 	_is_phase_missed = false  # 每阶段独立判定 miss
 	_is_phase_bombed = false  # 每阶段独立判定 bomb
 	_phase_data = data
-	_elapsed = 0.0
+	_elapsed_ticks = 0
+	_hp_ramp_active = false
+	_hp_ramp_done_ticks = 0
 	# 奖励分走规则（SpellBonus，内容不再手填）：符卡 = (难度权重 + 面序号 − 1) × 50 万；非符 0
 	_bonus_initial = SpellBonus.initial(StageCatalog.stage_no_of(_stage_id), SaveData.selected_difficulty, data.uid != 0)
 	_bonus = _bonus_initial
@@ -264,7 +275,7 @@ func start_phase(data: PhaseData) -> void:
 	_set_hp(0)
 	# 开局减伤参数暂存，计时从"无敌解除"（涨血完，玩家能打伤）开始
 	_open_reduce_ratio = data.open_reduce_ratio
-	_open_reduce_left = 0.0
+	_open_reduce_ticks = 0
 
 	# 显示血条
 	_set_ring_visible(true)
@@ -281,34 +292,46 @@ func start_phase(data: PhaseData) -> void:
 	_declare_phase(data)
 
 
-## 宣言 + 涨血 + 启动本阶段 move/shoot（原 start_phase 的后半段）
+## 宣言 + 涨血 + 启动本阶段 move/shoot（原 start_phase 的后半段）。
+## HP 上涨按物理 tick 推进；不在树里（测试 / 工具）直接跳到完成态，避免等一个不会跑的动画。
 func _declare_phase(data: PhaseData) -> void:
 	if data.name != "":
 		GameEvents.phase_start.emit(data)
 
-	# HP 从 0 涨到满
-	var twn := create_tween().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	twn.tween_method(_set_hp, 0, data.hp, 1.0)
-	twn.tween_callback(func():
-		if data.is_timeout_only:
-			_is_invincible = true
-			_set_hp(999999)
-		else:
-			_is_invincible = false
-			# 玩家能打伤时才开始减伤计时（完整 open_reduce_time 秒）
-			_open_reduce_left = data.open_reduce_time if _open_reduce_ratio > 0.0 else 0.0
+	_hp_ramp_target = data.hp
+	_hp_ramp_done_ticks = 0
+	_hp_ramp_total_ticks = maxi(1, _seconds_to_ticks(HP_RAMP_SECONDS))
+	_hp_ramp_active = true
+	_set_hp(0)
+	if not is_inside_tree():
+		_hp_ramp_active = false
+		_finish_hp_ramp()
 
-		if data.move_script:
-			_move_coroutine_runner = data.move_script.new()
-			add_child(_move_coroutine_runner)
-			_apply_phase_params(_move_coroutine_runner, data.params)
-			_move_coroutine_runner.start(_stage_context, self)
-		if data.shoot_script:
-			_shoot_coroutine_runner = data.shoot_script.new()
-			add_child(_shoot_coroutine_runner)
-			_apply_phase_params(_shoot_coroutine_runner, data.params)
-			_shoot_coroutine_runner.start(_stage_context, self)
-	)
+
+## HP 上涨结束：解除无敌 / 启动减伤计时 / 起 move & shoot。
+func _finish_hp_ramp() -> void:
+	var data := _phase_data
+	if data == null or _is_cleared:
+		return
+	_set_hp(_hp_ramp_target)
+	if data.is_timeout_only:
+		_is_invincible = true
+		_set_hp(999999)
+	else:
+		_is_invincible = false
+		# 玩家能打伤时才开始减伤计时（完整 open_reduce_time）
+		_open_reduce_ticks = _seconds_to_ticks(data.open_reduce_time) if _open_reduce_ratio > 0.0 else 0
+
+	if data.move_script:
+		_move_coroutine_runner = data.move_script.new()
+		add_child(_move_coroutine_runner)
+		_apply_phase_params(_move_coroutine_runner, data.params)
+		_move_coroutine_runner.start(_stage_context, self)
+	if data.shoot_script:
+		_shoot_coroutine_runner = data.shoot_script.new()
+		add_child(_shoot_coroutine_runner)
+		_apply_phase_params(_shoot_coroutine_runner, data.params)
+		_shoot_coroutine_runner.start(_stage_context, self)
 
 
 ## 跑「发动前走位」脚本并等它结束。内容侧别写死循环——它不结束这张卡就不会宣言。
@@ -323,30 +346,69 @@ func _run_pre_move(data: PhaseData) -> void:
 		pre.queue_free()
 
 
-func _process(delta: float) -> void:
-	# Boss 位置指示器：x 始终跟随 Boss，y 固定游戏框底（在 phase 开始前也显示）
+func _ready() -> void:
+	# 阶段收尾/掉落要在本 tick 的碰撞之后跑：先让自机弹把伤害打进去，再判超时。
+	process_physics_priority = 100
+
+
+func _process(_delta: float) -> void:
+	# 只做表现：Boss 位置指示器。阶段计时 / 奖励分 / 减伤 / 时限全部走物理 tick。
 	if _pos_indicator and is_instance_valid(_pos_indicator):
 		_pos_indicator.global_position.x = global_position.x
 		_update_indicator_alpha()
-	if not _phase_data: return
-	_elapsed += delta
 
-	# 奖励分已作废（miss / bomb）→ 不再衰减、也不再发数字 tick：UI 的「失败」必须定格，
-	# 否则下一帧又被 phase_bonus_tick 的数字覆盖。
-	# 只跳过奖励分这一段：后面的开卡减伤倒计时 / 时限判定都还在本函数里，
-	#    早退会把它们一起掐掉（回归：miss 后符卡到点不结束、减伤永久挂着）。
-	if not is_bonus_failed():
-		if _bonus > 0:
-			# 衰减走规则：非时符在时限内均匀掉到初始的 30%；时符完全不掉（见 SpellBonus）
-			_bonus = SpellBonus.decayed(_bonus, _bonus_initial, _phase_data.time_limit, delta,
-				_phase_data.is_timeout_only)
-		GameEvents.phase_bonus_tick.emit(_bonus)
 
-	if _open_reduce_left > 0.0:
-		_open_reduce_left = maxf(_open_reduce_left - delta, 0.0)
+func _physics_process(_delta: float) -> void:
+	if SimClock.is_frozen():
+		return
+	advance_ticks(1)
 
-	if _elapsed >= _phase_data.time_limit:
-		clear_phase(_phase_data.is_timeout_only)
+
+## 手动推进 [param count] 个玩法 tick（测试 / 工具 / 未来 SimulationRoot 用）。
+## 生产路径由 _physics_process 每 tick 调一次；不读 delta。
+func advance_ticks(count: int = 1) -> void:
+	for _i in maxi(0, count):
+		if _phase_data == null or _is_cleared:
+			return
+		_elapsed_ticks += 1
+		_tick_bonus()
+		if _open_reduce_ticks > 0:
+			_open_reduce_ticks -= 1
+		_tick_hp_ramp()
+		if _elapsed_ticks >= _seconds_to_ticks(_phase_data.time_limit):
+			clear_phase(_phase_data.is_timeout_only)
+
+
+## 奖励分衰减：非时符在时限内均匀掉到初始的 30%；作废后停发数字 tick。
+func _tick_bonus() -> void:
+	if _phase_data == null or is_bonus_failed():
+		return
+	if _bonus > 0:
+		_bonus = SpellBonus.decayed(_bonus, _bonus_initial, _phase_data.time_limit,
+			_ticks_to_seconds(1), _phase_data.is_timeout_only)
+	GameEvents.phase_bonus_tick.emit(_bonus)
+
+
+## 开卡 HP 上涨：按 tick 线性插值；完成时解除无敌并起 move/shoot。
+func _tick_hp_ramp() -> void:
+	if not _hp_ramp_active:
+		return
+	_hp_ramp_done_ticks += 1
+	if _hp_ramp_done_ticks >= _hp_ramp_total_ticks:
+		_set_hp(_hp_ramp_target)
+		_hp_ramp_active = false
+		_finish_hp_ramp()
+	else:
+		_set_hp(roundi(float(_hp_ramp_target) * float(_hp_ramp_done_ticks)
+			/ float(_hp_ramp_total_ticks)))
+
+
+func _seconds_to_ticks(seconds: float) -> int:
+	return maxi(1, roundi(seconds * float(Engine.physics_ticks_per_second)))
+
+
+func _ticks_to_seconds(ticks: int) -> float:
+	return float(ticks) / float(Engine.physics_ticks_per_second)
 
 
 ## 小数伤害累积器（0.5×2 次 = 1 → 扣 1 血）
@@ -357,7 +419,7 @@ var _dmg_acc: float = 0.0
 func take_damage(damage: float) -> void:
 	if _is_invincible: return
 	if not _phase_data: return
-	if _open_reduce_left > 0.0 and _open_reduce_ratio > 0.0:
+	if _open_reduce_ticks > 0 and _open_reduce_ratio > 0.0:
 		damage *= 1.0 - _open_reduce_ratio  # 开局减伤
 	_dmg_acc += damage
 	var full: int = int(_dmg_acc)
@@ -414,6 +476,7 @@ func clear_phase(captured: bool) -> void:
 	if _is_cleared: return
 	_is_cleared = true
 	_is_invincible = true
+	_hp_ramp_active = false
 	if _move_coroutine_runner: _move_coroutine_runner.stop(); _move_coroutine_runner.queue_free(); _move_coroutine_runner = null
 	if _shoot_coroutine_runner: _shoot_coroutine_runner.stop(); _shoot_coroutine_runner.queue_free(); _shoot_coroutine_runner = null
 
@@ -422,7 +485,7 @@ func clear_phase(captured: bool) -> void:
 		if PracticeSession.is_practice_mode:
 			RecordService.record_phase_capture(_phase_identity, false, 0, 0.0)  # 练习收取
 		elif captured and not is_bonus_failed():
-			RecordService.record_phase_capture(_phase_identity, true, _bonus, _elapsed)  # 干净收取
+			RecordService.record_phase_capture(_phase_identity, true, _bonus, get_elapsed())  # 干净收取
 
 	# 正常流程收取一张符卡的回报音（规则见 should_play_capture_sfx）
 	if should_play_capture_sfx(captured, is_bonus_failed(), _phase_data.uid if _phase_data else 0,
@@ -432,7 +495,7 @@ func clear_phase(captured: bool) -> void:
 	GameEvents.phase_end.emit(captured, _bonus)
 	# 符卡结算（结算横幅的数据源）—— 只在符卡阶段发：非符没有"奖励分"这回事
 	if _phase_data and _phase_data.uid != 0:
-		GameEvents.spell_result.emit(captured, _bonus, _elapsed, is_bonus_failed())
+		GameEvents.spell_result.emit(captured, _bonus, get_elapsed(), is_bonus_failed())
 	# 奖励分：作废（miss / bomb）就一分不给 —— UI 那边数字位也已经换成「失败」
 	if captured and _bonus > 0 and not is_bonus_failed():
 		var entity_registry = _refs()
@@ -509,8 +572,8 @@ func die() -> void:
 
 
 func _die() -> void:
-	# 注意：不停 _process——指示器 x 跟随在其中，死后离场演出期间仍需跟随 Boss
-	# （阶段逻辑由 _process 开头的 if not _phase_data: return 自然跳过）
+	# 注意：不停 _process——指示器 x 跟随在其中，死后离场演出期间仍需跟随 Boss。
+	# 阶段计时/收尾已全部走 _physics_process，不再依赖 _process。
 	_phase_data = null
 	_set_ring_visible(false)
 	if PracticeSession.is_practice_mode and _phase_identity and not _is_cleared:

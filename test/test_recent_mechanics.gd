@@ -43,7 +43,7 @@ func test_open_reduce_defaults_are_sane():
 
 func _make_boss_with_reduce() -> Node:
 	var boss = load("res://scripts/enemy/boss.gd").new()
-	add_child_autofree(boss)  # 需要进树：涨血 tween / _process 才跑
+	add_child_autofree(boss)  # 需要进树：HP 上涨 / 阶段 tick 才跑
 	var phase := PhaseData.new()
 	phase.hp = 1000
 	phase.time_limit = 10.0
@@ -56,9 +56,9 @@ func _make_boss_with_reduce() -> Node:
 func test_open_reduce_timing_starts_after_invincible():
 	# 减伤计时从"无敌解除"（涨血完）开始：涨血中剩余=0，解除后=完整时长
 	var boss = _make_boss_with_reduce()
-	assert_eq(boss._open_reduce_left, 0.0, "涨血中（无敌期）还没开始计时")
-	await wait_seconds(1.3)  # 涨血 tween 1s 完成 → 无敌解除
-	assert_between(boss._open_reduce_left, 2.0, 3.0, "无敌解除时减伤满额开始")
+	assert_eq(boss._open_reduce_ticks, 0, "涨血中（无敌期）还没开始计时")
+	await wait_seconds(1.3)  # HP 上涨 1s（60 tick）完成 → 无敌解除
+	assert_between(boss._open_reduce_ticks, 120, 180, "无敌解除时减伤满额开始（3s = 180 tick）")
 	# 此时 hp 已涨满，减伤生效
 	boss.take_damage(100.0)
 	assert_between(boss.hp, 988, 992, "减伤中 100 伤只扣 ~10（90% 减免；float 容差）")
@@ -67,7 +67,7 @@ func test_open_reduce_timing_starts_after_invincible():
 func test_open_reduce_expires():
 	var boss = _make_boss_with_reduce()
 	await wait_seconds(4.5)  # 无敌 1s + 减伤 3s 完
-	assert_eq(boss._open_reduce_left, 0.0, "减伤耗尽")
+	assert_eq(boss._open_reduce_ticks, 0, "减伤耗尽")
 	boss.take_damage(100.0)
 	assert_between(boss.hp, 898, 902, "减伤结束后扣满 100（float 容差）")
 

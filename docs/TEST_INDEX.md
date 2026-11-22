@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：109 脚本 / **755 用例（753 通过 / 2 红：BossRegistry WIP + BGM）/ 6109 断言 / 53.1s** / 0 orphans / **0 pending**。
+**现状**：109 脚本 / **756 用例（754 通过 / 2 红：BossRegistry WIP + BGM）/ 6110 断言 / 53.3s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 56 | 443 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 56 | 444 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 17 | 117 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,7 +93,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（56 / 443）
+## C · 宿主 · 运行时系统（56 / 444）
 
 ### C1 组合根 / 服务 / 时间线（17 / 76）
 
@@ -138,11 +138,11 @@
 | [test_laser](../test/test_laser.gd) | Laser 2.0：骨架采样 + 生长/持续/收缩状态机 + 判定/擦弹 | 23 | 20 |
 | [test_marisa_laser](../test/test_marisa_laser.gd) | 魔理沙分段激光：切片 + 偏移无缝 + 编译加载 + **SpawnSpec.kind → BulletType.kind** + 自机 MULTIPLY 染色 | 4 | 4 |
 
-### C4 Boss 战（4 / 34）
+### C4 Boss 战（4 / 35）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_boss_phase](../test/test_boss_phase.gd) | 符卡判定：捕获 / 超时 / 时符 / 防双清 / 掉落表 + **收取回报音真值表**（只正常流程干净收取符卡才播）+ **结算信号 `spell_result`**（符卡才发；带击破/用时/作废） | 34 | 20 |
+| [test_boss_phase](../test/test_boss_phase.gd) | 符卡判定：捕获 / 超时 / 时符 / 防双清 / 掉落表 + **收取回报音真值表**（只正常流程干净收取符卡才播）+ **结算信号 `spell_result`**（符卡才发；带击破/用时/作废） | 35 | 20 |
 | [test_spell_bonus](../test/test_spell_bonus.gd) | 符卡奖励分规则：初始值 = 难度权重×面序号×50万（EX 权重 2）、非符 0；时限内均匀衰减到 30%、时符不衰减 | 10 | 0 |
 | [test_boss_catalog](../test/test_boss_catalog.gd) | Boss 谱（花名册）+ 符卡集合派生 | 8 | 0 |
 | [test_boss_encapsulation](../test/test_boss_encapsulation.gd) | 债 E：Boss 封装 —— hp/`boss_data`/`hitbox_radius` 只读 + `hp_changed` 信号 | 3 | 6 |
