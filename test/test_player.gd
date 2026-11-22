@@ -26,7 +26,10 @@ func _make_player() -> Player:
 
 
 func after_each() -> void:
-	# 安全阀：任何用例把"被弹炸弹"窗口留在半开状态，都不能污染后面的用例（time_scale 卡 0 会冻住整个套件）
+	# 安全阀：任何用例把"被弹炸弹"窗口留在半开状态，都不能污染后面的用例
+	# （冻结 / 手写 paused 都会冻住整个套件）。
+	SimClock.reset()
+	get_tree().paused = false
 	Engine.time_scale = 1.0
 
 
@@ -252,12 +255,12 @@ func test_deathbomb_window_freezes_before_any_miss_effect():
 
 	player.miss()
 	assert_true(player._is_deathbombing, "开窗：进入被弹炸弹窗口")
-	assert_eq(Engine.time_scale, 0.0, "定格：全局暂停几帧（time_scale = 0）")
+	assert_true(SimClock.is_frozen(), "定格：玩法树暂停，tick 时钟继续走")
 	assert_eq(player.resources.lives, 3, "窗口里还没掉命")
 	assert_eq(player.resources.bomb_count, 3, "窗口里还没扣雷")
 	assert_eq(player.resources.power_raw, 300, "窗口里还没削火力")
 	assert_signal_not_emitted(GameEvents, "player_missed", "窗口里还不算 miss")
-	Engine.time_scale = 1.0   # 别把定格留给下一个用例（after_each 兜底）
+	SimClock.reset()   # 别把冻结留给下一个用例（after_each 兜底）
 
 
 ## 窗口里按 bomb → 抵消这次 miss：花 2 个雷、掉 0 命、炸弹照放、定格解开
@@ -273,7 +276,7 @@ func test_deathbomb_press_cancels_miss_and_costs_two_bombs():
 	assert_eq(player.resources.bomb_count, 1, "抵消 miss 花 2 个雷")
 	assert_eq(player.resources.lives, 3, "不掉命")
 	assert_false(player._is_deathbombing, "窗口关闭")
-	assert_eq(Engine.time_scale, 1.0, "定格解开")
+	assert_false(SimClock.is_frozen(), "定格解开")
 	assert_true(player.is_invincible, "炸弹的无敌照给")
 	assert_signal_emitted(GameEvents, "player_bomb", "照常放炸弹")
 	assert_signal_not_emitted(GameEvents, "player_missed", "没发生 miss")
@@ -303,7 +306,7 @@ func test_no_deathbomb_window_without_bombs():
 	player.miss()
 	assert_false(player._is_deathbombing, "没雷不开窗")
 	assert_eq(player.resources.lives, 2, "直接掉命")
-	assert_eq(Engine.time_scale, 1.0, "不定格")
+	assert_false(SimClock.is_frozen(), "不定格")
 
 
 ## 窗口到点没按 bomb → 这次 miss 照常结算（掉命、**走 miss 的雷惩罚**（扣 2 ⇒ 本例抬到下限 3）、定格解开）
@@ -321,14 +324,14 @@ func test_deathbomb_window_expiry_applies_miss():
 	# 3−2=1 < 下限 3 ⇒ 抬到 3 ⇒ 观感是"没扣"（口径如此）
 	assert_eq(player.resources.bomb_count, PlayerResources.MISS_BOMB_FLOOR,
 			"没按 bomb → 不算被弹炸弹；miss 的雷惩罚扣完不足下限 ⇒ 仍是 3")
-	assert_eq(Engine.time_scale, 1.0, "定格解开")
+	assert_false(SimClock.is_frozen(), "定格解开")
 	assert_signal_emitted(GameEvents, "player_missed", "这才是真的 miss")
 	assert_signal_emitted(GameEvents, "deathbomb_ended", "窗口结束信号（滤镜渐隐靠它）")
 
 
 ## 回归（作者实测）：窗口里按暂停 → 既没有暂停菜单、也解不开暂停。
-## 病根 = 窗口收尾挂在被定格/暂停卡住的帧循环上 → `time_scale` 永远回不来。
-## 现在收尾走**真实时间**计时器，暂停中也照走完并还回 `time_scale`。
+## 病根 = 窗口收尾挂在被定格/暂停卡住的帧循环上 → 冻结永远解不开。
+## 现在收尾走 SimClock 的冻结帧，暂停中也照走完并还回玩法树。
 func test_deathbomb_window_finishes_even_while_paused():
 	var player := _make_player()
 	_arm_bomb(player)
@@ -342,7 +345,7 @@ func test_deathbomb_window_finishes_even_while_paused():
 	get_tree().paused = false  # 先解开，别把暂停状态漏给下一个用例
 
 	assert_false(player._is_deathbombing, "暂停中也照走完窗口")
-	assert_eq(Engine.time_scale, 1.0, "定格必须还回去（否则暂停菜单被一起冻住）")
+	assert_false(SimClock.is_frozen(), "冻结必须还回去（否则暂停菜单被一起冻住）")
 	assert_eq(player.resources.lives, 2, "没按 bomb → miss 照常结算")
 
 

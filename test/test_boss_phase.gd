@@ -38,6 +38,13 @@ func before_each():
 	# 副作用由 run_tests.sh 兜底隔离：XDG_DATA_HOME 重定向 user:// + spell_records.tres 备份还原。
 
 
+func after_each() -> void:
+	# 全破定格会暂停玩法树；任何用例失败都不能把暂停漏给下一个用例。
+	SimClock.reset()
+	get_tree().paused = false
+	Engine.time_scale = 1.0
+
+
 func _make_phase(hp: int = 100, time_limit: float = 10.0, timeout_only: bool = false, uid: int = 0) -> PhaseData:
 	var p := PhaseData.new()
 	p.name = "测试符卡" if not timeout_only else ""
@@ -386,30 +393,25 @@ func test_without_pre_move_declares_immediately():
 
 # ═══════════ 全破演出（play_defeat） ═══════════
 
-## 全破定格必须**保存原 time_scale 再恢复**，不能硬写 1.0 ——
-## 调试工具会用高 time_scale 快进，硬写会把调用方拉回常速。
+## 全破定格走 SimClock 的物理帧冻结，不压 Engine.time_scale。
 ## 无 ctx 时演出其余部分全走守卫（静默跳过），所以本用例只锁定格这条不变量。
-func test_play_defeat_hitstop_saves_and_restores_time_scale():
-	add_child(_boss)                     # create_tween / 计时器需要入树
-	var original := Engine.time_scale
-	Engine.time_scale = 4.0              # 模拟调试快进
+func test_play_defeat_hitstop_uses_tick_freeze():
+	add_child(_boss)                     # create_tween / 冻结 owner 需要入树
 	_boss.play_defeat()
-	assert_almost_eq(Engine.time_scale, 4.0 * Boss.DEFEAT_HITSTOP_SCALE, 0.001,
-		"定格应把时间倍率压低（保存原值 × 倍率）")
-	_boss._restore_time_scale()          # 等价于定格计时器到点
-	assert_almost_eq(Engine.time_scale, 4.0, 0.001, "必须恢复**原值** 4.0，而不是硬写 1.0")
-	Engine.time_scale = original
+	assert_true(SimClock.is_frozen(), "全破应进入 tick 冻结")
+	assert_gt(SimClock.frames_left(_boss), 0, "冻结帧数应大于 0")
+	SimClock.unfreeze(_boss)             # 等价于定格到点
+	assert_false(SimClock.is_frozen(), "解冻后玩法树应恢复")
 
 
-## 定格途中 Boss 被回收（关卡结束/切场景）→ _exit_tree 兜底恢复，绝不把游戏留在慢动作
-func test_play_defeat_exit_tree_restores_time_scale():
+## 定格途中 Boss 被回收（关卡结束/切场景）→ _exit_tree 兜底解冻，绝不把玩法树留在暂停
+func test_play_defeat_exit_tree_unfreezes():
 	var boss := Boss.new()
 	add_child_autofree(boss)
-	Engine.time_scale = 1.0
 	boss.play_defeat()
-	assert_lt(Engine.time_scale, 1.0, "已进入定格")
+	assert_true(SimClock.is_frozen(), "已进入定格")
 	boss._exit_tree()
-	assert_almost_eq(Engine.time_scale, 1.0, 0.001, "出树兜底恢复")
+	assert_false(SimClock.is_frozen(), "出树兜底解冻")
 
 
 ## 记录被加进层的反色圈（只关心"加了几发、圆心/半径"）
@@ -446,7 +448,7 @@ func test_play_defeat_spawns_miss_style_inverted_rings():
 	assert_eq(expected_centers, 5, "五发圆心 = Boss 位置 + 十字偏移（与 miss 同）")
 	for radius in layer.radii:
 		assert_almost_eq(radius, Boss.DEFEAT_RING_RADIUS, 0.001, "六发同半径（1280 满屏）")
-	Engine.time_scale = 1.0
+	SimClock.reset()
 	rt.free()
 
 

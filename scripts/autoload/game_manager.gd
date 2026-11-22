@@ -71,6 +71,12 @@ func is_paused() -> bool:
 	return current_state == AppState.PAUSED
 
 
+## 是否有暂停 / Game Over / 结算等覆盖层打开。
+## 只读；覆盖层的 push/pop 仍只走 MenuNav。
+func has_open_overlay() -> bool:
+	return _menu_nav.is_overlay_open()
+
+
 # ═══ 场景切换 ═══
 
 func change_scene(path: String, target_state: AppState = AppState.PLAYING):

@@ -14,7 +14,7 @@
 ## [b]边界[/b][br]
 ## - 系统操作走 ctx 服务；ctx 为 null 时跳过，不回退全局。[br]
 ## - 伤害 / 擦弹由 KernelBulletPhysics 结算；本类负责移动 / 无敌 / 复位。[br]
-## - deathbomb 用真实时间计时，定格 / 暂停中也会到点。[br]
+## - deathbomb 按物理帧计时；SimClock 在冻结 / 暂停中继续走。[br]
 ## - Miss 复位移动必须最后做（演出用的是中弹位置）。
 class_name Player
 extends PlayerBase
@@ -61,8 +61,8 @@ var _respawn_pos: Vector2 = MISS_RESPAWN_POS
 var _is_respawning: bool = false
 ## deathbomb 窗口开着（刚被弹、还没死，等玩家按 bomb）。
 var _is_deathbombing: bool = false
-## 定格前的 Engine.time_scale（保存 / 恢复倍率，别写死 1.0）。
-var _deathbomb_saved_time_scale: float = 1.0
+## 开窗前的 process_mode（窗口里临时 ALWAYS，收 bomb / 走帧）。
+var _deathbomb_saved_process_mode: Node.ProcessMode = Node.PROCESS_MODE_INHERIT
 ## 无敌闪烁相位累加器（秒）。
 var _blink_phase: float = 0.0
 
@@ -94,10 +94,11 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	# 定格安全阀：被弹炸弹窗口没走完就出树（切场景 / 测试回收）也绝不能把 time_scale 留在 0
+	# 冻结安全阀：窗口没走完就出树（切场景 / 测试回收）也绝不能把玩法树留在暂停
 	if _is_deathbombing:
 		_is_deathbombing = false
-		_restore_time_scale()
+		process_mode = _deathbomb_saved_process_mode
+		SimClock.unfreeze(self)
 		GameEvents.deathbomb_ended.emit()
 	if GameEvents.enemy_killed.is_connected(_on_enemy_killed):
 		GameEvents.enemy_killed.disconnect(_on_enemy_killed)
@@ -144,6 +145,11 @@ func apply_player_data() -> void:
 		animation.play(IDLE)
 
 func _physics_process(delta):
+	# 冻结期：玩法停步，但 deathbomb 窗口仍要按 tick 关窗。
+	if SimClock.is_frozen():
+		if _is_deathbombing and SimClock.frames_left(self) <= 0:
+			_end_deathbomb(false)
+		return
 	# 记忆值自动恢复（原全局状态 _process，迁来）
 	resources.regen(delta)
 	# 无敌倒计时（替代 await，不挂起调用链）
@@ -505,7 +511,7 @@ func _move_to_respawn() -> void:
 # ═══ 被弹炸弹（deathbomb）：被弹瞬间定格几帧，按 bomb 抢命 ═══
 
 ## 开窗：有雷（≥ DEATHBOMB_MIN_BOMBS）且机体配了 BombData 才开。
-## 开了就全局定格 DEATHBOMB_FRAMES 帧（Engine.time_scale = 0，保存 / 恢复倍率）。
+## 开了就由 SimClock 冻结 DEATHBOMB_FRAMES 个物理 tick；窗口里自机保持 ALWAYS 以收 bomb。
 ## 返回 true = 本次 miss 的后果推迟到窗口结束再结算。
 func _begin_deathbomb_window() -> bool:
 	if DEATHBOMB_FRAMES <= 0 or _bomb_data() == null:
@@ -513,27 +519,22 @@ func _begin_deathbomb_window() -> bool:
 	if resources.bomb_count < DEATHBOMB_MIN_BOMBS:
 		return false
 	_is_deathbombing = true
-	_deathbomb_saved_time_scale = Engine.time_scale
-	Engine.time_scale = 0.0
+	_deathbomb_saved_process_mode = process_mode
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	if not SimClock.freeze(self, DEATHBOMB_FRAMES, false):
+		# 已有同 owner 的冻结（异常）：不叠窗，直接按普通 miss 结算，避免卡死。
+		_is_deathbombing = false
+		process_mode = _deathbomb_saved_process_mode
+		return false
 	GameEvents.deathbomb_started.emit()
-	# 收尾用真实时间计时（process_always + ignore_time_scale）：定格 / 暂停中也照样到点，
-	# 否则窗口永远走不完，time_scale 卡在 0，暂停菜单会被一起冻住。
-	var timer := get_tree().create_timer(DEATHBOMB_FRAMES / 60.0, true, false, true)
-	timer.timeout.connect(_on_deathbomb_timeout)
 	return true
 
 
-## 窗口到点（真实时间，定格 / 暂停中都会到）：还没按 bomb → 这次 miss 照常结算。
-func _on_deathbomb_timeout() -> void:
-	if not _is_deathbombing:
-		return  # 已抢命成功 / 已出树 → 什么都不做（SceneTreeTimer 取消不掉，只能这样忽略）
-	_end_deathbomb(false)
-
-
-## 关窗（两种结局都走这里）：解开定格、发结束信号，然后"抢命成功"或"结算 miss"二选一。
+## 关窗（两种结局都走这里）：解开冻结、发结束信号，然后"抢命成功"或"结算 miss"二选一。
 func _end_deathbomb(p_cancelled: bool) -> void:
 	_is_deathbombing = false
-	_restore_time_scale()
+	process_mode = _deathbomb_saved_process_mode
+	SimClock.unfreeze(self)
 	GameEvents.deathbomb_ended.emit()
 	if p_cancelled:
 		_cancel_miss_by_deathbomb()
@@ -549,11 +550,6 @@ func _cancel_miss_by_deathbomb() -> void:
 		return
 	resources.use_bombs(DEATHBOMB_COST)
 	_fire_bomb(bomb_data)
-
-
-## 解开定格：恢复开窗前的 time_scale（可能叠加在别的定格上）。
-func _restore_time_scale() -> void:
-	Engine.time_scale = _deathbomb_saved_time_scale
 
 
 # ═══ 系统操作服务（统一走 ctx 服务；ctx 为 null 时跳过，不回退全局） ═══

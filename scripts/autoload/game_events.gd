@@ -48,7 +48,7 @@ signal screen_shake_sustain(amount: float)
 signal field_filter(color: Color)
 
 ## 被弹炸弹（deathbomb）窗口开 / 关 —— FieldFilterLayer 订阅，做"框内整体渐显红滤镜"。
-## 窗口期间全局定格（[code]Engine.time_scale = 0[/code]），所以订阅方的动画要走 [code]ignore_time_scale[/code]。
+## 窗口期间玩法树由 [code]SimClock[/code] 暂停（冻结帧），订阅方的动画要走 [code]TWEEN_PAUSE_PROCESS[/code]。
 @warning_ignore("unused_signal")
 signal deathbomb_started()
 @warning_ignore("unused_signal")

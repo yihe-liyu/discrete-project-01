@@ -1,6 +1,15 @@
 extends GutTest
 ## ReplayRecorder 录输入基础设施测试
 
+func before_each() -> void:
+	PlayerInput.clear_latch()
+
+
+func after_each() -> void:
+	PlayerInput.clear_latch()
+	for action in PlayerInput.ACTIONS:
+		Input.action_release(action)
+
 func test_start_records_seed():
 	var rec := ReplayRecorder.new()
 	rec.start()
@@ -26,6 +35,7 @@ func test_capture_ignored_when_not_recording():
 func test_input_mask_reflects_actions():
 	Input.action_press("shoot")
 	Input.action_press("focus")
+	PlayerInput.latch()
 	var rec := ReplayRecorder.new()
 	var mask := rec.input_mask()
 	Input.action_release("shoot")
@@ -39,8 +49,10 @@ func test_is_action_pressed_at():
 	var rec := ReplayRecorder.new()
 	rec.start()
 	Input.action_press("shoot")
+	PlayerInput.latch()
 	rec.capture()  # 帧 0：shoot 按下
 	Input.action_release("shoot")
+	PlayerInput.latch()
 	rec.capture()  # 帧 1：无输入
 	rec.stop()
 	assert_true(rec.is_action_pressed_at(0, "shoot"), "帧 0 应按下 shoot")
@@ -51,8 +63,10 @@ func test_save_load_roundtrip():
 	var rec := ReplayRecorder.new()
 	rec.start()
 	Input.action_press("shoot")
+	PlayerInput.latch()
 	rec.capture()
 	Input.action_press("focus")
+	PlayerInput.latch()
 	rec.capture()
 	rec.capture()
 	rec.stop()

@@ -37,8 +37,8 @@ const PRACTICE_SFX_TRIM_DB := 0.0
 
 
 func _ready():
-	# 先于所有玩法节点锁存本 tick 输入（射击协程 / 内核 / 碰撞都读同一份快照）。
-	process_physics_priority = -1000
+	# 上一局若留下冻结（异常退出 / 测试），新一局必须从干净状态开始。
+	SimClock.reset()
 	GameManager.set_state(GameManager.AppState.PLAYING)
 
 	# R21：弹幕世界在 game_scene.tscn 的 World 下声明；这里只把它交给关卡运行时
@@ -90,11 +90,6 @@ func _ready():
 			SaveData.reset_all(_stage_runtime.entity_registry)
 			SaveData.apply_stage_practice_power(_stage_runtime.entity_registry)
 		_start_normal_game()
-
-
-func _physics_process(_delta: float) -> void:
-	# 每个玩法物理 tick 只读一次真实 Input；本 tick 内所有玩法节点读锁存快照。
-	PlayerInput.latch()
 
 
 func _start_normal_game() -> void:
@@ -170,8 +165,9 @@ func _load_background(scene: PackedScene) -> void:
 
 
 func _exit_tree():
-	# 离开游戏场景：清掉输入锁存，菜单不会被上一局按键卡住。
+	# 离开游戏场景：清掉输入锁存 / 兜底解冻，菜单不会被上一局状态卡住。
 	PlayerInput.clear_latch()
+	SimClock.reset()
 	# 断开 autoload 信号连接（防悬空连接：接收者 free 后连接仍在发出者）
 	if GameEvents.player_death.is_connected(_on_player_death):
 		GameEvents.player_death.disconnect(_on_player_death)

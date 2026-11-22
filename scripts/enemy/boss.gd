@@ -33,8 +33,6 @@ const DEFAULT_DEFEAT_SFX := &"boss_die"
 const CAPTURE_SFX := &"get_card"
 ## 全破定格默认时长（秒）；BossData.defeat_hitstop 可覆盖。
 const DEFAULT_DEFEAT_HITSTOP := 0.12
-## 定格时的 time_scale 倍率（只压时间，不冻结；真实时间到点恢复）。
-const DEFEAT_HITSTOP_SCALE := 0.05
 ## 全破清弹半径（像素）。
 const DEFEAT_CLEAR_RADIUS := 960.0
 ## 全破震屏强度。
@@ -105,9 +103,6 @@ var _open_reduce_ratio: float = 0.0  # 开局减伤比例（0~1）
 var _move_coroutine_runner: CoroutineRunner
 var _shoot_coroutine_runner: CoroutineRunner
 var _stage_id: int
-## 全破定格：是否正压着时间倍率 + 压之前的原值（恢复用；见 play_defeat）
-var _time_scaled: bool = false
-var _saved_time_scale: float = 1.0
 var _phase_identity: PhaseIdentity
 var _is_exit_controlled: bool = false
 var _is_cleared: bool = false
@@ -464,14 +459,9 @@ func play_defeat() -> void:
 			sfx_key = _boss_data.defeat_sfx
 		hitstop = _boss_data.defeat_hitstop
 
-	# ① 定格：只压时间倍率（保存原值再恢复 —— 工作台 12x 快进时不能被我们拉回 1.0）
+	# ① 定格：按物理帧冻结玩法（SimClock），不压 Engine.time_scale、不用真实时间 Timer。
 	if hitstop > 0.0 and is_inside_tree():
-		_saved_time_scale = Engine.time_scale
-		_time_scaled = true
-		Engine.time_scale = _saved_time_scale * DEFEAT_HITSTOP_SCALE
-		# 真实时间计时（ignore_time_scale=true）→ 自己的恢复不受定格影响
-		get_tree().create_timer(hitstop, true, false, true).timeout.connect(
-			_restore_time_scale, CONNECT_ONE_SHOT)
+		SimClock.freeze(self, maxi(1, ceili(hitstop * 60.0)))
 
 	# ② 清弹（比阶段击破扫得更大）+ 反色圈（与自机 miss 同参数）+ 全破爆点
 	if _stage_context:
@@ -508,16 +498,9 @@ func _flash_and_fade_out() -> void:
 	tw.tween_property(self, "modulate", Color(1.0, 1.0, 1.0, 0.0), 0.45)
 
 
-## 恢复定格前的时间倍率（幂等）
-func _restore_time_scale() -> void:
-	if _time_scaled:
-		_time_scaled = false
-		Engine.time_scale = _saved_time_scale
-
-
-## 定格途中被拆（关卡结束 / 切场景 / Boss 回收）→ 绝不能把整个游戏留在慢动作里
+## 定格途中被拆（关卡结束 / 切场景 / Boss 回收）→ 绝不能把玩法树留在暂停。
 func _exit_tree() -> void:
-	_restore_time_scale()
+	SimClock.unfreeze(self)
 
 
 ## 外部受控死亡：清阶段、隐藏血条、注销实体、发 boss_defeated；非 exitControlled 时 queue_free。

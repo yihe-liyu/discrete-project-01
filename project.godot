@@ -26,6 +26,7 @@ GameEvents="*res://scripts/autoload/game_events.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 RNG="*res://scripts/autoload/rng.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
+SimClock="*res://scripts/autoload/sim_clock.gd"
 
 [debug]
 
