@@ -29,6 +29,8 @@ func after_each() -> void:
 	# 安全阀：任何用例把"被弹炸弹"窗口留在半开状态，都不能污染后面的用例
 	# （冻结 / 手写 paused 都会冻住整个套件）。
 	SimClock.reset()
+	PlayerInput.clear_latch()
+	PlayerInput.clear_override()
 	get_tree().paused = false
 	Engine.time_scale = 1.0
 
@@ -46,6 +48,12 @@ func _bomb_event() -> InputEventAction:
 	ev.action = "cancel&bomb"
 	ev.pressed = true
 	return ev
+
+
+## 模拟一个物理 tick：锁存 -> 消费命令（真实路径由 SimClock/Player._physics_process 做）。
+func _flush_commands(player: Player) -> void:
+	PlayerInput.latch()
+	player.process_input_commands()
 
 func test_player_data_applied():
 	var player := _make_player()
@@ -175,6 +183,7 @@ func test_deathbomb_cancel_applies_no_bomb_penalty():
 	player.resources.bomb_count = 4
 	player.miss()
 	player._unhandled_input(_bomb_event())
+	_flush_commands(player)
 	assert_eq(player.resources.bomb_count, 4 - Player.DEATHBOMB_COST, "只付被弹炸弹的代价，不再叠加 miss 的雷惩罚")
 
 
@@ -273,6 +282,7 @@ func test_deathbomb_press_cancels_miss_and_costs_two_bombs():
 
 	player.miss()
 	player._unhandled_input(_bomb_event())
+	_flush_commands(player)
 	assert_eq(player.resources.bomb_count, 1, "抵消 miss 花 2 个雷")
 	assert_eq(player.resources.lives, 3, "不掉命")
 	assert_false(player._is_deathbombing, "窗口关闭")
@@ -292,6 +302,7 @@ func test_deathbomb_with_single_bomb_costs_one():
 	player.miss()
 	assert_true(player._is_deathbombing, "只有 1 个雷也开窗")
 	player._unhandled_input(_bomb_event())
+	_flush_commands(player)
 	assert_eq(player.resources.bomb_count, 0, "只剩 1 个 → 只扣 1 个")
 	assert_eq(player.resources.lives, 3, "不掉命")
 

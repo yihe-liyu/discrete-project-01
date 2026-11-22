@@ -80,3 +80,12 @@ func test_override_mask_bypasses_real_input() -> void:
 	PlayerInput.clear_override()
 	PlayerInput.latch()
 	assert_false(PlayerInput.is_action_pressed(&"shoot"), "关闭注入后应回退真实输入")
+
+
+func test_commands_move_to_tick_and_are_taken_once() -> void:
+	PlayerInput.queue_command(&"bomb")
+	PlayerInput.latch()
+	assert_eq(PlayerInput.peek_commands(), [&"bomb"], "帧间命令应在下一个 tick 锁存")
+	assert_eq(PlayerInput.command_flags(), 1, "bomb 应映射到 COMMAND_BOMB 位")
+	assert_eq(PlayerInput.take_commands(), [&"bomb"], "消费本 tick 命令")
+	assert_eq(PlayerInput.take_commands(), [], "命令只能消费一次")

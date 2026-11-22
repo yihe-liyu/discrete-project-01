@@ -108,18 +108,30 @@ func _on_enemy_killed(score: int, _position: Vector2) -> void:
 	resources.add_score(score)
 
 
-## R4：离散动作（解放记忆 / 炸弹）走事件，不在物理帧轮询
+## R4：离散动作（解放记忆 / 炸弹）走事件；只入队，由下一个物理 tick 统一消费。
 func _unhandled_input(event: InputEvent) -> void:
+	if PlayerInput.is_override_active():
+		return  # 回放时真实键盘不得穿透
 	if event.is_action_pressed("memory_release"):
-		_memory_release()
+		PlayerInput.queue_command(&"memory_release")
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cancel&bomb"):
-		if _is_deathbombing:
-			# 抢在被弹炸弹窗口关掉之前按下 bomb → 抵消这次 miss（只花雷，不掉命）
-			_end_deathbomb(true)
-		else:
-			_bomb()
+		PlayerInput.queue_command(&"bomb")
 		get_viewport().set_input_as_handled()
+
+
+## 消费本 tick 锁存的离散命令（物理 tick 开头、冻结判断之前）。
+func process_input_commands() -> void:
+	for cmd in PlayerInput.take_commands():
+		match cmd:
+			&"memory_release":
+				_memory_release()
+			&"bomb":
+				if _is_deathbombing:
+					# 抢在被弹炸弹窗口关掉之前按下 bomb → 抵消这次 miss（只花雷，不掉命）
+					_end_deathbomb(true)
+				else:
+					_bomb()
 
 ## 注入/切换机体：应用数值 + (重)装配射击。同数据且已装配 → 跳过（幂等，避免组合根重复初始化）。
 func setup_character(data: PlayerData) -> void:
@@ -145,6 +157,11 @@ func apply_player_data() -> void:
 		animation.play(IDLE)
 
 func _physics_process(delta):
+	# 先消费本 tick 的离散命令：deathbomb 取消要在冻结判断之前。
+	process_input_commands()
+	# 刚关窗 / 正常暂停：本 tick 不再跑玩法。
+	if get_tree().paused and not SimClock.is_frozen():
+		return
 	# 冻结期：玩法停步，但 deathbomb 窗口仍要按 tick 关窗。
 	if SimClock.is_frozen():
 		if _is_deathbombing and SimClock.frames_left(self) <= 0:
