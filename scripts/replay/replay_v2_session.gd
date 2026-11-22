@@ -119,6 +119,7 @@ static func start_playback(path: String) -> bool:
 	SaveData.selected_character = int(meta.get("character", 0))
 	SaveData.is_stage_practice = false
 	SaveData.is_restarting = false
+	SaveData.is_route_transition = false
 	if not SaveData.begin_route_for_difficulty(diff):
 		return false
 	var start_stage := int(meta.get("start_stage_id", 1))
