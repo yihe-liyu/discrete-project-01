@@ -2,7 +2,7 @@
 
 > **本文回答**：replay 依赖哪些状态、每 tick 按什么顺序推进、哪些东西会破坏一致性、当前实现到哪、出现分歧怎么定位。
 > **不回答**：具体内容怎么写（→ [CONTENT_GUIDE](../CONTENT_GUIDE.md)）、通用架构（→ [ARCHITECTURE](ARCHITECTURE.md)）、测试文件清单（→ [TEST_INDEX](TEST_INDEX.md)）。
-> **状态**：现行实现为 **Replay V2 / `sim-v9`**；`sim-v8` 的 Boss 入场差拍已定位并修复，`sim-v9` 已通过 5760 tick 的 Stage 1 战前对话 / Boss 入场端到端验证，见 §9。
+> **状态**：现行实现为 **Replay V2 / `sim-v9`**；`sim-v8` 的 Boss 入场差拍已定位并修复。`sim-v9` 已通过 **10,843 tick、Stage 1 → Stage 2 Game Over 的完整 run 回放，零分歧**，见 §9。
 
 ## 0. 定义
 
@@ -182,8 +182,11 @@ cur boss pos=(1000.000,500.000)
 - 修复：`TickMover` 不再自动 `_physics_process`，改为注册到 `SimClock`，由 `SimClock` 在 observer 之后、gameplay 之前统一 `tick_mover()`；`SimClock.reset()` 清空列表。
 - 回归：`test_tick_mover` 覆盖“在 `tick_prepare` 中新增 mover 也必须推进”。
 - `SIM_VERSION` 升到 `sim-v9`；旧的 `sim-v8` 录像会被拒绝。
-- **验证**：用 Stage 1 录制 + 回放 5760 tick（覆盖战前对话、`boss_enter`、Boss 入场），逐 tick 总/分项哈希零分歧；该验证是 192s 的临时端到端测试，不放进常驻 GUT，常驻回归是 `test_tick_mover`。
-- 仍未验证：完整 Stage 1 → Boss 战 → 通关/Game Over 的整局长局；`content_hash` / headless 快进。
+- **验证**：
+  - 临时端到端：Stage 1 录制 + 回放 5760 tick（覆盖战前对话、`boss_enter`、Boss 入场），零分歧；192s，不放进常驻 GUT。
+  - **真实完整 run（2026-11-23 18:45）**：`sim-v9`，10,843 tick，Stage 1 Lunatic → Stage 2 Game Over，逐 tick 总/分项哈希零分歧；日志无任何 `分歧`。
+  - 常驻回归：`test_tick_mover`（prepare 中新挂 mover + 冻结不推进）+ `test_game_scene_replay`。
+- 仍未做：`content_hash`、headless 快进、跨平台逐位一致性。
 
 ## 10. 完成判据
 

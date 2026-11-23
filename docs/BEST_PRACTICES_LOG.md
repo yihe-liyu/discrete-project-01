@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 67 条（本文件留最近 67 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 68 条（本文件留最近 68 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-23 — Replay sim-v9 完整 run 零分歧
 - 2026-11-23 — Replay sim-v9 Stage 1 对话/入场验证
 - 2026-11-23 — TickMover 统一由 SimClock 推进
 - 2026-11-23 — Replay 模型重建 + 工程文档重整
@@ -97,6 +98,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-23 — Replay sim-v9 完整 run 零分歧
+
+- **结果**：真实 `sim-v9` 录像 10,843 tick，Stage 1 Lunatic → Stage 2 Game Over，回放逐 tick 总/分项哈希零分歧；Godot 日志无 `分歧` 行。
+- **覆盖**：战前对话、`boss_enter`、Boss 入场、Stage 1 收尾/切面、Stage 2 段。
+- **意义**：`idx≈5747 field=boss_pos` 的差拍消失；TickMover 收归 SimClock 的修复在真实长局成立。
+- **仍未做**：`content_hash`、headless 快进、跨平台逐位一致性；常驻端到端仍是 192s 的临时验证，不放进 GUT。
 
 ### 2026-11-23 — Replay sim-v9 Stage 1 对话/入场验证
 
