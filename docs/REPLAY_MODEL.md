@@ -82,13 +82,15 @@ tick_rate = 60
 seed / rng_state        宿主 RNG 起点
 sim_version             模拟语义版本（当前 sim-v9）
 content_hash            data/** 的 SHA-256 内容指纹（空 = 旧文件 / 未计算）
-metadata                difficulty / character / route_id / start_stage_id/no / result / score / ...
+metadata                difficulty / character / route_id / start_stage_id/no / result / score / name / ...
 start_resources         录制起点的自机资源快照（跨面 / 中途起点）
 masks_hex              每 tick 1 字节输入 mask
 commands_hex           每 tick 1 字节离散命令位
 hashes                 每 tick 总 SimHash（32 位）
 field_hashes           每 tick 分项哈希（诊断；旧文件可为空）
 ```
+
+`metadata.name` 是可选的单条回放名字，只影响 Replay 页展示；改名只写 metadata，不改模拟数据 / `content_hash`。
 
 命令位：
 
@@ -137,7 +139,7 @@ enemies / items / lasers / bullets
 ## 6. 必须保持的不变量
 
 1. **时间**：玩法状态只按 `SimClock.DT` 推进；不读引擎 `delta`。
-2. **顺序**：同一 tick 的所有状态变更，由固定优先级 + 树序决定；不依赖渲染帧。
+2. **顺序**：同一 tick 的所有状态变更，由固定优先级 + 树序决定；不依赖渲染帧。Replay 页固定 25 行槽位，`No.01–25` 后接单条名字、录制时间、机体、难度、面数、完成度；`F2` 改名。
 3. **输入**：每 tick 只 latch 一次；玩法不直接读 `Input`。
 4. **事件**：对话推进 / 关闭、Boss 生成 / 阶段切换、stage 结束都在 tick 边界；不在 Tween/Timer 回调里改模拟。
 5. **RNG**：gameplay 只走 `RNG`（宿主）/内核 RNG；纯表现走 `RNG.fx_*`；不把表现随机混进 gameplay 流。

@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：115 脚本 / **769 用例（767 通过 / 2 红：BossRegistry WIP + BGM）/ 6172 断言 / 76.2s** / 0 orphans / **0 pending**。
+**现状**：115 脚本 / **770 用例（768 通过 / 2 红：BossRegistry WIP + BGM）/ 6183 断言 / 76.2s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 62 | 457 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 62 | 458 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 17 | 117 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,7 +93,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（62 / 457）
+## C · 宿主 · 运行时系统（62 / 458）
 
 ### C1 组合根 / 服务 / 时间线（19 / 79）
 
@@ -172,7 +172,7 @@
 | [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类 | 5 | 0 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
-### C7 存档 / 回放 / 随机（13 / 53）
+### C7 存档 / 回放 / 随机（14 / 54）
 
 > 现行 replay = **Replay**（输入 + 命令 + 总/分项哈希；严格播放）。新回放工作看 [REPLAY_MODEL](REPLAY_MODEL.md)。
 
@@ -183,7 +183,7 @@
 | [test_sim_hash](../test/test_sim_hash.gd) | `SimHash`：位置量化 / tick 进哈希 / 分项哈希隔离 / boss 位置进总哈希 / 同输入双跑 120 tick 逐 tick 一致 | 4 | 0 |
 | [test_replay](../test/test_replay.gd) | `Replay`：输入 + 命令 + 总/分项哈希格式往返 / 旧格式拒绝 / 兼容性闸门 / 结束 stage 不覆盖起始 stage / 对话推进命令 / 录制→落盘→回放逐 tick 一致 / 600 tick 最小 microbench（不含 GameScene） | 6 | 0 |
 | [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 / 跨面起点资源恢复 | 4 | 0 |
-| [test_replay_menu](../test/test_replay_menu.gd) | Replay 菜单：列出录像文件、显示分数、空目录不报错 | 1 | 0 |
+| [test_replay_menu](../test/test_replay_menu.gd) | Replay 菜单：25 行槽位 / 名字 / 日期 / 机体 / 难度 / 面数 / 改名持久化 / 空目录 | 2 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |

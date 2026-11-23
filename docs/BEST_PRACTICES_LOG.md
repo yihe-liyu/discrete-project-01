@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 71 条（本文件留最近 71 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 72 条（本文件留最近 72 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-23 — Replay 页 25 行槽位 + 单条改名
 - 2026-11-23 — Replay 专用显式 step driver 试验（未采用）
 - 2026-11-23 — TimeScheduler + 最小 600 tick 快进
 - 2026-11-23 — 命名债清零（19 → 0）
@@ -101,6 +102,12 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-23 — Replay 页 25 行槽位 + 单条改名
+
+- **目标**：Replay 页按参考图做成固定 25 行：`No.01–25`、名字、录制时间、机体、难度、面数、完成度；空槽位占位。
+- **改法**：`ReplayMenu` 重建为 25 行 HBox 列布局；`metadata.name` 作为单条名字；`F2` 打开 LineEdit，Enter 保存，Esc 取消；`ReplaySession.rename_replay` 只改 metadata，不动模拟数据 / content_hash。
+- **验收**：`test_replay_menu` 2/2（列内容 + 改名持久化）；全量 GUT 770（768 通过 / 2 内容 WIP 红）。
 
 ### 2026-11-23 — Replay 专用显式 step driver 试验（未采用）
 

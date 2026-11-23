@@ -304,6 +304,15 @@ static func stop_playback() -> void:
 	PlayerInput.clear_latch()
 
 
+## 给单条回放改名（只改 metadata.name，不动模拟数据 / 内容指纹）。
+static func rename_replay(path: String, display_name: String) -> bool:
+	var rec := Replay.new()
+	if not rec.load_file(path):
+		return false
+	rec.metadata["name"] = display_name.strip_edges()
+	return rec.save(path)
+
+
 ## 已存回放列表（新 → 旧）；坏文件跳过。
 static func list_replays() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []

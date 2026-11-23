@@ -1,9 +1,9 @@
 extends GutTest
-## Replay 菜单：列出 Replay 文件并生成可选项。
+## Replay 菜单：25 行槽位、单条名字 / 日期 / 机体 / 难度 / 面数展示与改名。
 
 const MENU = preload("res://scenes/ui/replay_menu.tscn")
 
-var _path := ReplaySession.DIR + "/test_menu_v2.json"
+var _path := ReplaySession.DIR + "/test_menu.json"
 
 
 func before_each() -> void:
@@ -18,17 +18,42 @@ func after_each() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_path))
 
 
-func test_lists_v2_entry() -> void:
+func test_lists_replay_with_columns() -> void:
 	var rec := Replay.new()
 	rec.begin(60, 123, ReplaySession.SIM_VERSION)
-	rec.metadata = {"difficulty": 1, "character": 0, "start_stage_no": 1, "score": 4321}
+	rec.metadata = {
+		"name": "TESTNAME", "difficulty": 1, "character": 0,
+		"start_stage_no": 1, "stage_no": 2, "result": "game_over",
+		"recorded_at": "2026-11-26T20:21:00", "score": 4321,
+	}
 	rec.capture_tick(0, 0, 0)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ReplaySession.DIR))
-	assert_true(rec.save(_path), "应先写出一份 v2 回放")
+	assert_true(rec.save(_path), "应先写出一份 replay")
 
 	var menu: Node = MENU.instantiate()
 	add_child_autofree(menu)
 	menu.on_enter()
 	assert_not_null(menu.get_node_or_null("ReplayBox"), "回放页应生成列表容器")
-	assert_eq(menu._rows.size(), 1, "应列出刚写的 v2 回放")
-	assert_true(str(menu._rows[0].text).contains("4321"), "行内应显示分数")
+	assert_eq(menu._entries.size(), 1, "应列出刚写的 replay")
+	assert_eq(menu._grid_rows.size(), 25, "页面固定 25 行槽位")
+	assert_eq(menu._rows.size(), 1, "只有一条真实回放")
+	var text := str(menu._row_text(0))
+	assert_true(text.contains("No. 01"), "应显示编号")
+	assert_true(text.contains("TESTNAME"), "应显示单条名字")
+	assert_true(text.contains("26/11/26 20:21"), "应显示录制时间")
+	assert_true(text.contains("ReimuB"), "应显示机体")
+	assert_true(text.contains("Normal"), "应显示难度")
+	assert_true(text.contains("St2"), "应显示面数")
+
+
+func test_rename_replay_persists_name() -> void:
+	var rec := Replay.new()
+	rec.begin(60, 123, ReplaySession.SIM_VERSION)
+	rec.metadata = {"name": "OLD", "difficulty": 1, "character": 0, "stage_no": 1}
+	rec.capture_tick(0, 0, 0)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ReplaySession.DIR))
+	assert_true(rec.save(_path))
+	assert_true(ReplaySession.rename_replay(_path, "NEW NAME"))
+	var loaded := Replay.new()
+	assert_true(loaded.load_file(_path))
+	assert_eq(str(loaded.metadata.get("name", "")), "NEW NAME")
