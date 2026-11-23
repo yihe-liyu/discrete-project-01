@@ -9,7 +9,7 @@ extends RefCounted
 
 const DIR := "user://replays_v2"
 ## 模拟语义版本：玩法代码/顺序变了就升；不匹配的录像直接拒绝。
-const SIM_VERSION := "sim-v7"
+const SIM_VERSION := "sim-v8"
 
 static var _rec: ReplayV2
 static var _play: ReplayV2
@@ -27,8 +27,9 @@ static var _start_resources_applied: bool = false
 ## 对话推进 / 关闭：帧间事件，归到下一个 tick。
 static var _pending_dialogue_advance: bool = false
 static var _pending_dialogue_close: bool = false
-## 调试：录制时保存人类可读快照，回放时逐 tick 比对（默认关，测试/排查用）。
-static var debug_capture: bool = false
+## 调试：录制时保存人类可读快照，回放时逐 tick 比对。
+## 开发期默认开（replay 未完全稳定前）；正式收尾前改回 false。
+static var debug_capture: bool = true
 static var debug_snapshots: Array[String] = []
 
 
@@ -122,7 +123,8 @@ static func capture_start_resources(res: PlayerResources) -> void:
 
 ## 回放起点自机资源（在自机 setup 之后、关卡 tick 之前调用）。
 static func apply_start_resources(res: PlayerResources) -> void:
-	if not _playing or _play == null or res == null or _play.start_resources.is_empty() 			or _start_resources_applied:
+	if not _playing or _play == null or res == null or _play.start_resources.is_empty() \
+			or _start_resources_applied:
 		return
 	_start_resources_applied = true
 	for key in SaveData.RUN_STATE_KEYS:

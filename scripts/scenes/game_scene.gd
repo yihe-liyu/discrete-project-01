@@ -120,7 +120,7 @@ func _start_normal_game() -> void:
 	if ReplayV2Session.is_playing():
 		SimClock.set_tick_hooks(_on_replay_prepare, _on_replay_observe)
 	elif not SaveData.is_stage_practice and not PracticeSession.is_practice_mode:
-		SimClock.set_tick_hooks(Callable(), _on_record_observe)
+		SimClock.set_tick_hooks(_on_record_prepare, _on_record_observe)
 
 
 func _start_practice_game() -> void:
@@ -460,6 +460,13 @@ func _on_practice_cleared(_boss: Node) -> void:
 	PracticeSession.restore_menu_on_enter = true
 	GameManager.pending_page_path = "res://scenes/ui/spell_practice_menu.tscn"
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+
+
+func _on_record_prepare(_tick: int) -> void:
+	if not ReplayV2Session.is_recording():
+		return
+	if DialogueBox.active != null:
+		DialogueBox.active.flush_pending_dialogue()
 
 
 func _on_record_observe(_tick: int) -> void:

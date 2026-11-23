@@ -95,3 +95,15 @@ func test_fields_isolate_player_position_from_resources() -> void:
 	assert_ne(int(a["player"]), int(b["player"]), "位置变化应只影响 player 分项")
 	assert_eq(int(a["resources"]), int(b["resources"]), "资源分项不应被位置带偏")
 	assert_eq(int(a["rng"]), int(b["rng"]), "RNG 分项不应被位置带偏")
+
+
+## Boss 位置必须进总哈希：boss 位置是内核生成子弹的原点，漏进哈希会让 boss 漂移被静默漏检。
+func test_boss_position_is_in_total_hash() -> void:
+	var reg := EntityRegistry.new()
+	var boss := Boss.new()
+	reg.register_enemy(boss)
+	boss.global_position = Vector2(100.0, 200.0)
+	var a := SimHash.of(reg, null, 0)
+	boss.global_position = Vector2(101.0, 200.0)
+	assert_ne(SimHash.of(reg, null, 0), a, "boss 位置必须进总哈希")
+	boss.free()

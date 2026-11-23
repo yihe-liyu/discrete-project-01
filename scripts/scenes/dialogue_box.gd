@@ -37,6 +37,10 @@ var _cancel_held: float = 0.0
 var _is_input_ready: bool = false
 var _input_cooldown_ticks: int = 0
 var _is_closing: bool = false
+## 录制：Z/X 推进先记 pending，到 tick_prepare（hash 观测前）再真正执行，
+## 让对话事件的触发点与回放 prepare_tick 对齐（否则 boss 进场 TickMover 差一拍）。
+var _pending_local_advance: bool = false
+var _pending_local_close: bool = false
 
 # ═══ 生命周期 ═══
 
@@ -174,7 +178,9 @@ func _request_advance() -> void:
 		return
 	if ReplayV2Session.is_recording():
 		ReplayV2Session.record_dialogue_advance()
-	_advance()
+		_pending_local_advance = true
+	else:
+		_advance()
 
 
 func _request_close() -> void:
@@ -182,7 +188,9 @@ func _request_close() -> void:
 		return
 	if ReplayV2Session.is_recording():
 		ReplayV2Session.record_dialogue_close()
-	_close()
+		_pending_local_close = true
+	else:
+		_close()
 
 
 ## 回放推进：在 SimClock prepare 阶段（hash 观测之前）直接推进，绕过输入冷却。
@@ -194,6 +202,17 @@ func apply_replay_advance() -> void:
 ## 回放关闭对话。
 func apply_replay_close() -> void:
 	if not _is_closing and _dialogue_runner != null:
+		_close()
+
+
+## 录制 prepare 阶段（tick_prepare，hash 观测之前）真正执行挂起的推进/关闭，
+## 与回放 prepare_tick 对齐：对话事件在同一物理 tick、同一观测点触发。
+func flush_pending_dialogue() -> void:
+	if _pending_local_advance:
+		_pending_local_advance = false
+		_advance()
+	if _pending_local_close:
+		_pending_local_close = false
 		_close()
 
 

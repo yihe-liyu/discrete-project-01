@@ -10,8 +10,8 @@
 ## - 不遍历 Dictionary、不对 float 直接哈希。[br]
 ## [br]
 ## [b]边界[/b][br]
-## - 当前覆盖：tick / 冻结态 / RNG seed+state / 自机位置与资源 / Boss 阶段状态 /
-##   活跃弹 uid+type+量化位置。道具、激光、敌机列表暂未纳入，后续按需扩展。[br]
+## - 当前覆盖：tick / 冻结态 / RNG seed+state / 自机位置与资源 / Boss 阶段状态与位置 /
+##   敌机 hp+位置 / 道具类型+位置 / 激光相位+距离 / 活跃弹 uid+type+量化位置。[br]
 ## - 32 位哈希有碰撞概率；用于逐 tick 报警足够，不能当证明。
 class_name SimHash
 extends RefCounted
@@ -63,6 +63,7 @@ static func of(registry: EntityRegistry, system: KernelNativeSystem, tick: int,
 		h = mix(h, boss.hp)
 		h = mix(h, boss.get_elapsed_ticks())
 		h = mix(h, boss.get_open_reduce_ticks())
+		h = mix_vec2(h, boss.global_position)
 	else:
 		h = mix(h, -1)
 
