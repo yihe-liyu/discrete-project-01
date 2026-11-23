@@ -210,7 +210,7 @@ SimClock._physics_process
 
 | 债 | 影响 | 方向 |
 |---|---|---|
-| 没有单一 `Simulation.step` | gameplay 仍是节点 `_physics_process`；顺序靠优先级 + 树序 | 显式 `FrameOrder` / 手动 step，才能 headless 快进 |
+| 没有单一 `Simulation.step` | gameplay 仍是节点 `_physics_process`；顺序靠优先级 + 树序。`TimeScheduler` 只解决“每帧几个固定 tick”，尚未驱动 GameScene | 显式 `FrameOrder` / 手动 step，才能完整 GameScene headless 快进 |
 | `0` 档顺序隐式 | 新节点插队可能改变模拟 | 组合根统一赋优先级 |
 | ~~`content_hash` 为空~~ | 已由 `ContentFingerprint` 对 `data/**` 做 SHA-256，回放 / 菜单按指纹拒绝 | 保持；美术 / 音频二进制未纳入 |
 | `SimHash` 32 位 | 碰撞概率 + 覆盖字段需维护 | 诊断用足够；需要更强校验再升 64 位 |

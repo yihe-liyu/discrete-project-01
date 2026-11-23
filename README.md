@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-766%20tests%20/%20114%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-769%20tests%20/%20115%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -39,7 +39,7 @@
 | 打磨/QoL | ██████████████ 70% |
 
 - **已完成**：原生弹幕内核、Stage 1 道中 + Boss、难度路线、符卡 / 关卡练习、对话、Bomb、Replay 的录制/严格播放；Stage 1 → Stage 2 完整 run 已零分歧。
-- **进行中**：Stage 2 / 3B 内容；`content_hash` 已接入，headless 快进 / 跨平台一致性仍在收尾。
+- **进行中**：Stage 2 / 3B 内容；`content_hash` 已接入，`TimeScheduler` + 最小 600 tick 快进已落地，完整 GameScene headless / 跨平台一致性仍在收尾。
 - **未完成**：Stage 3A / 4 / 5 / 6 的完整内容、`content_hash`、headless 快进验证、完整 run 结算 / Continue。
 
 状态与缺口的权威口径在 [BASELINE](docs/BEST_PRACTICES_BASELINE.md) 的 S 表 + [REPLAY_MODEL](docs/REPLAY_MODEL.md)；本页只做入口摘要。

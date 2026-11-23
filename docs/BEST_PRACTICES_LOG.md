@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 69 条（本文件留最近 69 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 70 条（本文件留最近 70 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-23 — TimeScheduler + 最小 600 tick 快进
 - 2026-11-23 — 命名债清零（19 → 0）
 - 2026-11-23 — Replay sim-v9 完整 run 零分歧
 - 2026-11-23 — Replay sim-v9 Stage 1 对话/入场验证
@@ -99,6 +100,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-23 — TimeScheduler + 最小 600 tick 快进
+
+- **目标**：引入固定 DT 的 tick 调度器，证明 600 tick 可在 5s 内跑完，不碰 `Engine.time_scale`。
+- **改法**：`TimeScheduler` 只把真实时间换成“本帧执行几个 `SimClock.DT` tick”，支持倍率、慢放、单帧补 tick 上限和 `alpha`；`test_replay` 加 600 tick 最小 harness 基准。
+- **结果**：600 tick 无头最小 harness 实测 <0.5s（GUT 用例通过）；完整 GameScene 的手动 step 仍未接。
+- **验收**：`test_time_scheduler` 2/2、`test_replay` 6/6；全量 GUT 769（767 通过 / 2 内容 WIP 红）。
 
 ### 2026-11-23 — 命名债清零（19 → 0）
 

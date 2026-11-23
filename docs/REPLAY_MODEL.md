@@ -187,13 +187,14 @@ cur boss pos=(1000.000,500.000)
   - **真实完整 run（2026-11-23 18:45）**：`sim-v9`，10,843 tick，Stage 1 Lunatic → Stage 2 Game Over，逐 tick 总/分项哈希零分歧；日志无任何 `分歧`。
   - 常驻回归：`test_tick_mover`（prepare 中新挂 mover + 冻结不推进）+ `test_game_scene_replay`。
 - 内容闸门：新录制写 `content_hash = ContentFingerprint.compute()`（`data/**` 源文件 SHA-256）；回放 / 菜单会拒绝内容指纹不匹配的旧录像。
-- 仍未做：headless 快进、跨平台逐位一致性。
+- 调度器：`TimeScheduler` 已落地（固定 DT、倍率、单帧补 tick 上限），最小 600 tick 用例通过；完整 GameScene 快进仍待显式 step。
+- 仍未做：完整 GameScene 的 headless 快进、跨平台逐位一致性。
 
 ## 10. 完成判据
 
 - 同一份录像完整回放 Stage 1 → Boss → 通关 / Game Over，零 `分歧`。
 - 同一输入跑两次（录制 + 回放）逐 tick 总 hash + 分项 hash 一致。
-- 600 tick 能在 headless 手动 step 下 < 5s 跑完（P1；当前仍按真实 60Hz）。
+- 600 tick 能在 headless 手动 step 下 < 5s 跑完：最小 harness 已实测通过（`test_replay` 的 600 tick 用例）；完整 GameScene 仍需显式 step driver。
 - `content_hash` 非空；内容变更能拒绝旧 replay（已落地，`ContentFingerprint`）。
 - 玩法目录的 `Input` / `create_tween` / `create_timer` / `time_scale` 由 lint 禁止（当前靠人工审计）。
 
