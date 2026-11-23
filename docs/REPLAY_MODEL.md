@@ -2,7 +2,7 @@
 
 > **本文回答**：replay 依赖哪些状态、每 tick 按什么顺序推进、哪些东西会破坏一致性、当前实现到哪、出现分歧怎么定位。
 > **不回答**：具体内容怎么写（→ [CONTENT_GUIDE](../CONTENT_GUIDE.md)）、通用架构（→ [ARCHITECTURE](ARCHITECTURE.md)）、测试文件清单（→ [TEST_INDEX](TEST_INDEX.md)）。
-> **状态**：现行实现为 **Replay**（兼容性标记 `sim-v9`）；`sim-v8` 的 Boss 入场差拍已定位并修复。`sim-v9` 已通过 **10,843 tick、Stage 1 → Stage 2 Game Over 的完整 run 回放，零分歧**，见 §9。
+> **状态**：现行实现为 **Replay**（兼容性标记 `sim-v10`）；`sim-v9` 的 10,843 tick 完整 run 是修复 bomb 编队前的历史记录，`sim-v10` 会拒绝旧录像，待重录回归。
 
 ## 0. 定义
 
@@ -80,7 +80,7 @@ magic = "TSR2"
 version = 2
 tick_rate = 60
 seed / rng_state        宿主 RNG 起点
-sim_version             模拟语义版本（当前 sim-v9）
+sim_version             模拟语义版本（当前 sim-v10）
 content_hash            data/** 的 SHA-256 内容指纹（空 = 旧文件 / 未计算）
 metadata                difficulty / character / route_id / start_stage_id/no / result / score / name / drop_rate / ...
 start_resources         录制起点的自机资源快照（跨面 / 中途起点）

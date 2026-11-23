@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-770%20tests%20/%20115%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-771%20tests%20/%20115%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -161,7 +161,7 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 - **UI**: NavPage + MenuNav 页面栈（场景化 Overlay/PageHost）
 - **数据**: .tres Resource 文件（EnemyData 构造链模板 / SpellRecordBook / MusicRegistry）
 - **常量**: GameConfig（东方框边界）/ LayerConfig（z_index）
-- **Replay**: Replay（每 tick 输入 mask + 离散命令 + 总/分项状态哈希；严格播放，不做 force 修正）；当前语义版本 `sim-v9`；sim-v8 的 Boss 入场差拍已修复，sim-v9 已通过 10,843 tick 的 Stage 1 → Stage 2 Game Over 完整 run 回放（零分歧）
+- **Replay**: Replay（每 tick 输入 mask + 离散命令 + 总/分项状态哈希；严格播放，不做 force 修正）；当前语义版本 `sim-v10`；sim-v9 的 10,843 tick 完整 run 是修复 bomb 编队前的记录，v10 因语义变更会拒绝它，待重录回归
 
 ---
 

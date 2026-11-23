@@ -332,12 +332,18 @@ func _fire_bomb(bomb_data: BombData) -> void:
 
 
 ## 每物理 tick 推进 bomb 编队；不用 Tween，避免帧边界造成回放错位。
+## 第 i 颗相对第一颗的初始角度补偿：必须用实际 tick 间隔，不能用未取整的 interval。
+func _bomb_spawn_delay(i: int) -> float:
+	return float(i * _bomb_spawn_interval) * SimClock.DT
+
+
 func _tick_bomb_spawns() -> void:
 	if _bomb_spawn_index >= _bomb_spawn_count:
 		return
 	if _bomb_spawn_wait > 0:
 		_bomb_spawn_wait -= 1
-		return
+		if _bomb_spawn_wait > 0:
+			return
 	_spawn_bomb_bullet(_bomb_spawn_index, _bomb_spawn_hue)
 	_bomb_spawn_index += 1
 	_bomb_spawn_wait = _bomb_spawn_interval
@@ -352,7 +358,7 @@ func _spawn_bomb_bullet(i: int, base_hue: float) -> void:
 	var tint := bomb_data.tint_for(i, base_hue)
 	_play_sfx(AssetRegistry.sounds["shoot"])
 	if ctx:
-		ctx.bullets.shoot_bomb(bomb_data, global_position, dir, tint, float(i) * bomb_data.interval)
+		ctx.bullets.shoot_bomb(bomb_data, global_position, dir, tint, _bomb_spawn_delay(i))
 
 
 # ═══ 释放记忆（C 键） ═══

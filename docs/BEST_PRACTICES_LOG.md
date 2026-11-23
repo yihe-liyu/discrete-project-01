@@ -103,6 +103,13 @@
 
 ## 记录
 
+### 2026-11-23 — 灵梦 bomb 环角度修正（sim-v9 → sim-v10）
+
+- **现象**：灵梦 bomb 的 8 颗弹不再均匀围成圆。
+- **根因**：bomb 编队改成 tick 调度后，`_tick_bomb_spawns()` 每颗实际间隔多 1 tick，而 `spawn_delay` 仍按 `i * interval` 补偿角度，导致每颗角度补偿逐颗漂移。
+- **修复**：倒计时归零的同一 tick 出弹，实际间隔严格等于 `_bomb_spawn_interval`；`spawn_delay` 改用实际 tick 间隔 `i * interval_ticks * DT`。
+- **版本**：模拟语义变更，`SIM_VERSION` sim-v9 → sim-v10；旧 sim-v9 录像拒绝，待重录完整 run。
+
 ### 2026-11-23 — Replay 页 25 行槽位 + 单条改名
 
 - **目标**：Replay 页按参考图做 25 个槽位：`No.01–25`、名字、录制时间、机体、难度、完整面数、处理落率；空槽位占位。

@@ -1,4 +1,16 @@
 extends GutTest
+
+## 只测 bomb 编队调度，不打开真实 Player 场景。
+class SpyPlayer extends Player:
+	var events: Array[int] = []
+	var now: int = 0
+
+	func _spawn_bomb_bullet(_i: int, _hue: float) -> void:
+		events.append(now)
+
+	func step() -> void:
+		now += 1
+		_tick_bomb_spawns()
 ## BombData 家族：基类（外观 / 编队 / 无敌）+ 子类。
 ## RingBombData → KernelBomb（环绕炸）；MistBombData → KernelMistBomb（分阶段展开）。
 ##
@@ -56,3 +68,17 @@ func test_tint_for_keeps_texture_by_default() -> void:
 	assert_eq(ring.count, 8, "环状炸默认 8 颗")
 	assert_eq(ring.tint_for(0, 0.0), Color.from_hsv(0.0, 1.0, 1.0), "第 0 颗 = 起始色相")
 	assert_eq(ring.tint_for(4, 0.0), Color.from_hsv(0.5, 1.0, 1.0), "i/count 均匀铺满色环")
+
+
+func test_ring_bomb_spawn_interval_matches_angle_compensation() -> void:
+	var p := SpyPlayer.new()
+	p._bomb_spawn_count = 8
+	p._bomb_spawn_index = 0
+	p._bomb_spawn_interval = 9
+	p._bomb_spawn_wait = 1
+	for _i in 100:
+		p.step()
+	assert_eq(p.events, [1, 10, 19, 28, 37, 46, 55, 64], "实际出弹间隔应严格等于 interval_ticks")
+	assert_almost_eq(p._bomb_spawn_delay(1), 9.0 * SimClock.DT, 0.0001, "角度补偿用实际 tick 间隔")
+	assert_almost_eq(p._bomb_spawn_delay(4), 36.0 * SimClock.DT, 0.0001, "逐颗补偿不漂移")
+	p.free()

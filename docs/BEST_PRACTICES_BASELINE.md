@@ -28,7 +28,7 @@
 | S7 | 难度曲线 | 🚧 | R17 R8 | 曲线靠调校；同种子端到端验证待补 |
 | S8 | 反馈与演出 | ✔ | R2 R7 R20 | — |
 | S9 | 性能（几千发弹下的余量） | 🚧 | R10 R19 | MultiMesh 同步每帧分组/拼 key 有分配；满载 60fps 待实机确认 |
-| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | Replay 已接通录制/严格播放；sim-v8 的“对话 → Boss 入场”差拍已修复，sim-v9 已通过 10,843 tick 的 Stage 1 → Stage 2 Game Over 完整 run 回放（零分歧）；`content_hash` 已落地（`ContentFingerprint`）；`TimeScheduler` + 最小 600 tick 快进已落地，完整 GameScene headless 快进未做（见 [REPLAY_MODEL](REPLAY_MODEL.md)） |
+| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | Replay 已接通录制/严格播放；sim-v8 的“对话 → Boss 入场”差拍已修复，sim-v9 历史完整 run 零分歧；sim-v10 因 bomb 编队角度修正拒绝 sim-v9，待重录；`content_hash` 已落地（`ContentFingerprint`）；`TimeScheduler` + 最小 600 tick 快进已落地，完整 GameScene headless 快进未做（见 [REPLAY_MODEL](REPLAY_MODEL.md)） |
 | S11 | 场景流程与演出 | ✔ | R1 R20 R21 | — |
 | S12 | 玩家体验与可访问 | ✔ | R4 R6 R7 R20 | — |
 | S13 | 素材与图集 | ✔ | R12 R17 | —（`laser` 按拍板留独立 PNG） |
@@ -153,7 +153,7 @@
 - preset/builder 不覆写显式开关（`.enemy()` 别设 `is_spawn_fog`）。
 - Godot 的 `erase_section` / `remove_*` 对不存在目标会 `ERR_FAIL`：先 `has_section` / `file_exists` 守卫。
 - 存档写盘走 `SaveManager` 的 tmp → `.bak` → 提交，不要直接 `ConfigFile.save` 正式档；`ConfigFile.load` 对垃圾文件也可能返回 OK（无任何段）⇒ 必须检查已知段，别把空档当好档。
-- 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（预算 327；当前 315）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
+- 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（预算 327；当前 321）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
 - 内容层 `data/**` 不自己 `get_parent()` / `create_tween()`：移动走 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path`，Logo 走 `ctx.stage.show_logo`（`check_structure` ⑤ 会红）。
 - 玩法层不读引擎 `delta` / 不建 `Timer` / 不用 `Tween` 改模拟状态；纯表现才可以用。回放不变量见 [REPLAY_MODEL](REPLAY_MODEL.md)。
 - `SpawnSpec` 按引用共享：pattern 的 `template` 不要复制（否则弹型缓存分裂，且 behavior/阵营改动不可见）；要变体就复制字段后重建。

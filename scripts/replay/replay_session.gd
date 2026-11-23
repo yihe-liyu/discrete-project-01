@@ -9,7 +9,7 @@ extends RefCounted
 
 const DIR := "user://replays_v2"
 ## 模拟语义版本：玩法代码/顺序变了就升；不匹配的录像直接拒绝。
-const SIM_VERSION := "sim-v9"
+const SIM_VERSION := "sim-v10"
 
 static var _replay: Replay
 static var _recording: bool = false

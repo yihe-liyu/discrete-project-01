@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：115 脚本 / **770 用例（768 通过 / 2 红：BossRegistry WIP + BGM）/ 6187 断言 / 76.2s** / 0 orphans / **0 pending**。
+**现状**：115 脚本 / **771 用例（769 通过 / 2 红：BossRegistry WIP + BGM）/ 6190 断言 / 76.2s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 62 | 458 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 62 | 459 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 17 | 117 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,7 +93,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（62 / 458）
+## C · 宿主 · 运行时系统（62 / 459）
 
 ### C1 组合根 / 服务 / 时间线（19 / 79）
 
@@ -164,12 +164,12 @@
 | [test_field_filter_layer](../test/test_field_filter_layer.gd) | 场地颜色滤镜：透明色不播；有色时铺满游戏框、从框中心扩圆 + **被弹炸弹窗口的框内整体渐显红滤镜**（定格中也得走 → `ignore_time_scale`；窗口关则渐隐收起） | 5 | 0 |
 | [test_fog_texture](../test/test_fog_texture.gd) | 雾纹理无缝性：`fract(q)` 平铺采样 noise | 1 | 1 |
 
-### C6 Bomb / 机制（3 / 17）
+### C6 Bomb / 机制（4 / 18）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
 | [test_recent_mechanics](../test/test_recent_mechanics.gd) | `out_grace` 真链路（`grace()` → `BulletType` → 原生行）/ `open_reduce`（开局减伤）/ `boss_name`（记录补全） | 7 | 6 |
-| [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类 | 5 | 0 |
+| [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类；bomb tick 编队间隔 / 角度补偿 | 6 | 6 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
 ### C7 存档 / 回放 / 随机（14 / 54）
