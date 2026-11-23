@@ -28,8 +28,13 @@ static func attach(target: Node) -> TickMover:
 
 
 func _ready() -> void:
-	# 玩法移动要早于碰撞/射击（默认 0）结算。
-	process_physics_priority = -50
+	# 由 SimClock 统一推进；节点自身不自动步进（物理回调中新增节点会错过本帧注册）。
+	set_physics_process(false)
+	SimClock.register_mover(self)
+
+
+func _exit_tree() -> void:
+	SimClock.unregister_mover(self)
 
 
 func set_ease(ease_type: int) -> TickMover:
@@ -77,7 +82,12 @@ func tween_callback(callback: Callable) -> TickMover:
 	return self
 
 
+## 仅供测试/手动推进；生产路径由 SimClock 调 tick_mover()。
 func _physics_process(_delta: float) -> void:
+	tick_mover()
+
+
+func tick_mover() -> void:
 	if _index >= _segments.size():
 		_finish()
 		return

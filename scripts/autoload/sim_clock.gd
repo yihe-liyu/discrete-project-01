@@ -22,6 +22,8 @@ var tick: int = 0
 ## tick 钩子：prepare 在 latch 前（回放注入输入），observer 在 latch 后（录制/校验状态）。
 var tick_prepare: Callable = Callable()
 var tick_observer: Callable = Callable()
+## 显式 tick 化的移动器：由 SimClock 统一推进，避免“物理回调中新增节点错过本帧注册”。
+var _movers: Array[Node] = []
 
 ## owner -> {left: int, auto: bool}
 var _freezes: Dictionary = {}
@@ -59,9 +61,32 @@ func _physics_process(_delta: float) -> void:
 	PlayerInput.latch()
 	if tick_observer.is_valid():
 		tick_observer.call(tick)
+	if not is_frozen():
+		_tick_movers()  # 冻结期间玩法树暂停；mover 也不能偷偷前进
 	if _freezes.is_empty():
 		return
 	_advance_freezes()
+
+
+## 注册一个 TickMover（由 TickMover._ready 调用）。
+func register_mover(mover: Node) -> void:
+	if mover != null and not _movers.has(mover):
+		_movers.append(mover)
+
+
+## 注销 TickMover（由 TickMover._exit_tree 调用）。
+func unregister_mover(mover: Node) -> void:
+	_movers.erase(mover)
+
+
+func _tick_movers() -> void:
+	if _movers.is_empty():
+		return
+	for mover in _movers.duplicate():
+		if not is_instance_valid(mover):
+			_movers.erase(mover)
+			continue
+		mover.tick_mover()
 
 
 ## 冻结玩法 [param frames] 个物理 tick。返回 true = 新增了一个 owner。
@@ -119,6 +144,7 @@ func clear_tick_hooks() -> void:
 ## 测试 / 场景回收兜底：清空所有冻结并恢复树（覆盖层打开时交给菜单恢复）。
 func reset() -> void:
 	_freezes.clear()
+	_movers.clear()
 	_unpause_pending = false
 	tick_prepare = Callable()
 	tick_observer = Callable()

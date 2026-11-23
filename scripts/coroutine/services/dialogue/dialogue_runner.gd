@@ -63,6 +63,11 @@ func current_line() -> DialogueLine:
 	return _dialogue_line
 
 
+## 当前步骤下标（诊断用；-1 = 尚未开始）。
+func current_index() -> int:
+	return _idx
+
+
 ## 步骤是否已跑完。
 func is_finished() -> bool:
 	return _idx >= _steps.size()

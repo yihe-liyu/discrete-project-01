@@ -220,6 +220,19 @@ func _advance() -> void:
 	if _dialogue_runner:
 		_dialogue_runner.advance()
 
+
+## 诊断：当前对话 runner 的可读状态（回放分歧时打印）。
+func debug_state() -> String:
+	if _dialogue_runner == null:
+		return "dialogue=none"
+	var line := _dialogue_runner.current_line()
+	var text := ""
+	if line != null and not line.bubbles.is_empty():
+		text = line.bubbles[0].text
+	return "dialogue idx=%d waiting_line=%s waiting_time=%s input_ready=%s closing=%s line=%s" % [
+		_dialogue_runner.current_index(), str(_dialogue_runner.is_waiting_line),
+		str(_dialogue_runner.is_waiting_time), str(_is_input_ready), str(_is_closing), text]
+
 # ═══ Runner 回调 ═══
 
 func _on_line_shown(line: DialogueLine, speakers: Array, state: StageState) -> void:
