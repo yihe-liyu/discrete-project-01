@@ -1,7 +1,7 @@
 # ReplayMenu.gd — 回放列表 / 选择播放 / 单条改名（Replay）
 extends BasePage
 
-const PAGE_SIZE: int = 10
+const PAGE_SIZE: int = 18
 const TOTAL_SLOTS: int = 25
 const FONT_SIZE: int = 19
 const COL_NO := 115
@@ -64,7 +64,7 @@ func _build_page() -> void:
 	var box := VBoxContainer.new()
 	box.name = "ReplayBox"
 	box.position = Vector2(25, 210)
-	box.size = Vector2(1230, 350)
+	box.size = Vector2(1230, 610)
 	box.add_theme_constant_override("separation", 3)
 	add_child(box)
 	_box = box
@@ -216,8 +216,8 @@ func _add_hint() -> void:
 	_clear_hint()
 	_page_hint = Label.new()
 	_page_hint.name = "PageHint"
-	_page_hint.position = Vector2(25, 610)
-	_page_hint.size = Vector2(1230, 34)
+	_page_hint.position = Vector2(25, 825)
+	_page_hint.size = Vector2(1230, 32)
 	_page_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_page_hint.add_theme_font_size_override("font_size", 20)
 	_page_hint.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
@@ -227,8 +227,8 @@ func _add_hint() -> void:
 
 	_hint = Label.new()
 	_hint.name = "HintLabel"
-	_hint.position = Vector2(25, 900)
-	_hint.size = Vector2(1230, 34)
+	_hint.position = Vector2(25, 910)
+	_hint.size = Vector2(1230, 30)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.add_theme_font_size_override("font_size", 14)
 	_hint.add_theme_color_override("font_outline_color", Color.BLACK)

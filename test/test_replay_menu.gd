@@ -35,7 +35,7 @@ func test_lists_replay_with_columns() -> void:
 	menu.on_enter()
 	assert_not_null(menu.get_node_or_null("ReplayBox"), "回放页应生成列表容器")
 	assert_eq(menu._entries.size(), 1, "应列出刚写的 replay")
-	assert_eq(menu._grid_rows.size(), 10, "每页固定 10 行")
+	assert_eq(menu._grid_rows.size(), 18, "每页固定 18 行")
 	assert_eq(menu._rows.size(), 1, "只有一条真实回放")
 	var text := str(menu._row_text(0))
 	assert_true(text.contains("Ｎｏ．　０１"), "应显示全角编号")
@@ -47,10 +47,9 @@ func test_lists_replay_with_columns() -> void:
 	assert_true(text.contains("０．０％"), "应显示处理落率")
 
 	menu._turn_page(1)
-	assert_eq(menu._page_offset, 10, "PageDown 应翻到第 11–20 槽")
-	assert_true(str(menu._grid_rows[0].get_child(0).text).contains("Ｎｏ．　１１"), "第二页从 No.11 开始")
-	menu._turn_page(1)
-	assert_eq(menu._grid_rows.size(), 5, "最后一页只剩 No.21–25 五行")
+	assert_eq(menu._page_offset, 18, "PageDown 应翻到第 19–25 槽")
+	assert_true(str(menu._grid_rows[0].get_child(0).text).contains("Ｎｏ．　１９"), "第二页从 No.19 开始")
+	assert_eq(menu._grid_rows.size(), 7, "最后一页只剩 No.19–25 七行")
 
 
 func test_rename_replay_persists_name() -> void:

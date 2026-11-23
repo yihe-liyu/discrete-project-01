@@ -113,7 +113,7 @@
 ### 2026-11-23 — Replay 页 25 行槽位 + 单条改名
 
 - **目标**：Replay 页按参考图做 25 个槽位：`No.01–25`、名字、录制时间、机体、难度、完整面数、处理落率；空槽位占位。
-- **改法**：10 行/页、PageUp/PageDown 翻页；全角列；机体去掉 B（`Reimu` / `Marisa`）；面数写 `Stage N`；百分比改为处理落率 `drop_rate`；`metadata.name` 作为单条名字，`F2` 改名只写 metadata。
+- **改法**：18 行/页、PageUp/PageDown 翻页；全角列；机体去掉 B（`Reimu` / `Marisa`）；面数写 `Stage N`；百分比改为处理落率 `drop_rate`；`metadata.name` 作为单条名字，`F2` 改名只写 metadata。
 - **验收**：`test_replay_menu` 2/2（分页/列内容/改名）；全量 GUT 770（768 通过 / 2 内容 WIP 红）。
 - **性能修正**：上下选择原来每次 `_show_replays()` 重扫所有 replay JSON + 重建 10 行；现拆成 `_reload_entries()`（仅进场/删除/改名）与 `_build_page()`（仅换页），同页上下只 `_refresh_selection()`。
 
