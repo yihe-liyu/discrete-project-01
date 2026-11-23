@@ -187,7 +187,8 @@ cur boss pos=(1000.000,500.000)
   - **真实完整 run（2026-11-23 18:45）**：`sim-v9`，10,843 tick，Stage 1 Lunatic → Stage 2 Game Over，逐 tick 总/分项哈希零分歧；日志无任何 `分歧`。
   - 常驻回归：`test_tick_mover`（prepare 中新挂 mover + 冻结不推进）+ `test_game_scene_replay`。
 - 内容闸门：新录制写 `content_hash = ContentFingerprint.compute()`（`data/**` 源文件 SHA-256）；回放 / 菜单会拒绝内容指纹不匹配的旧录像。
-- 调度器：`TimeScheduler` 已落地（固定 DT、倍率、单帧补 tick 上限），最小 600 tick 用例通过；完整 GameScene 快进仍待显式 step。
+- 调度器：`TimeScheduler` 已落地（固定 DT、倍率、单帧补 tick 上限），最小 600 tick 用例通过。
+- **已尝试但不采用**：replay 专用 `ReplayDriver` 手动接管 GameScene 节点。它能在 1s 内跑 600 tick，但与 live 的节点顺序 / 新节点入树时序不一致，首个分歧出现在 `bullets`/`items`（约 idx 61–273），不是可接受的快进。结论：不能靠“driver 自己维护节点顺序”复制 live；必须先有共享的 `Simulation.step` / `FrameOrder`。
 - 仍未做：完整 GameScene 的 headless 快进、跨平台逐位一致性。
 
 ## 10. 完成判据

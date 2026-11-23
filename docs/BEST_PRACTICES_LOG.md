@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 70 条（本文件留最近 70 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 71 条（本文件留最近 71 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-23 — Replay 专用显式 step driver 试验（未采用）
 - 2026-11-23 — TimeScheduler + 最小 600 tick 快进
 - 2026-11-23 — 命名债清零（19 → 0）
 - 2026-11-23 — Replay sim-v9 完整 run 零分歧
@@ -100,6 +101,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-23 — Replay 专用显式 step driver 试验（未采用）
+
+- **目标**：用 `ReplayDriver` 手动接管 GameScene，600 tick <5s。
+- **结果**：速度达标（600 tick <1s），但状态不忠实：首个分歧 `bullets` / `items`（idx 61–273），原因是 driver 自维护节点顺序、新节点入树时序与 live SceneTree 不一致。
+- **决定**：不提交坏 driver，不保留第二套模拟顺序；后续必须走共享 `Simulation.step` / `FrameOrder`，live 与 replay 同一张顺序表。
+- **保留**：`TimeScheduler` + 最小 600 tick harness（`test_replay`）；完整 GameScene 快进暂缓。
 
 ### 2026-11-23 — TimeScheduler + 最小 600 tick 快进
 
