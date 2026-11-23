@@ -144,7 +144,7 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 | Shift | 低速移动 |
 | Esc | 暂停 |
 | 方向键 / WASD | 移动 |
-| Replay 页：↑↓ / Z/Enter / F2 / Delete / Esc | 选择 / 播放 / 改名 / 删除 / 返回 |
+| Replay 页：↑↓ / PageUp/PageDown / Z/Enter / F2 / Delete / Esc | 选择 / 翻页 / 播放 / 改名 / 删除 / 返回 |
 
 > 输入映射在 `project.godot` 的 `[input]` 节（可改键，勿在代码里注入）
 

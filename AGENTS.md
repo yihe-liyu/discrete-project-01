@@ -22,7 +22,7 @@ Godot 4.7 + GDScript + 原生 GDExtension 的东方 STG。先读：
 - 文档注释不用 Markdown 粗体、反引号或内部版本号；长教程只留 `docs/` 链接。
 - 新增 `class_name` 后跑 `godot --headless --import`；`.uid` 文件入库。
 - 改测试后同步 `docs/TEST_INDEX.md` + README 徽章（`check_docs` 会校验）。
-- 白盒访问预算 **327**（当前 310），只减不增；GDScript 警告视为错误。
+- 白盒访问预算 **327**（当前 315），只减不增；GDScript 警告视为错误。
 - **不要提交** `.godot/`、`user://`、临时截图/日志。
 - 原生改动只在 `gdextension/`；C++ 改动要重建，原生指纹必须匹配。
 - 默认只本地提交，**不要自动 push**。
