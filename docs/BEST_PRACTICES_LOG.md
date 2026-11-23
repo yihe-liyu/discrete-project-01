@@ -106,7 +106,8 @@
 
 - **目标**：用 `ReplayDriver` 手动接管 GameScene，600 tick <5s。
 - **结果**：速度达标（600 tick <1s），但状态不忠实：首个分歧 `bullets` / `items`（idx 61–273），原因是 driver 自维护节点顺序、新节点入树时序与 live SceneTree 不一致。
-- **决定**：不提交坏 driver，不保留第二套模拟顺序；后续必须走共享 `Simulation.step` / `FrameOrder`，live 与 replay 同一张顺序表。
+- **进一步**：让 live 和 driver 共用 `SimulationStep` 后，前 500 tick 可过，但 `idx≈548` 又出现 `enemies` 分歧；根因是手动调用在 SceneTree 物理回调外，`add_child` 的 ready/入树时序不同。
+- **决定**：不提交坏 driver，不保留第二套模拟顺序；后续必须把 step 内核真正放进可控的物理回调 / 单一 Simulation 内核。
 - **保留**：`TimeScheduler` + 最小 600 tick harness（`test_replay`）；完整 GameScene 快进暂缓。
 
 ### 2026-11-23 — TimeScheduler + 最小 600 tick 快进

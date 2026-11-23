@@ -188,7 +188,10 @@ cur boss pos=(1000.000,500.000)
   - 常驻回归：`test_tick_mover`（prepare 中新挂 mover + 冻结不推进）+ `test_game_scene_replay`。
 - 内容闸门：新录制写 `content_hash = ContentFingerprint.compute()`（`data/**` 源文件 SHA-256）；回放 / 菜单会拒绝内容指纹不匹配的旧录像。
 - 调度器：`TimeScheduler` 已落地（固定 DT、倍率、单帧补 tick 上限），最小 600 tick 用例通过。
-- **已尝试但不采用**：replay 专用 `ReplayDriver` 手动接管 GameScene 节点。它能在 1s 内跑 600 tick，但与 live 的节点顺序 / 新节点入树时序不一致，首个分歧出现在 `bullets`/`items`（约 idx 61–273），不是可接受的快进。结论：不能靠“driver 自己维护节点顺序”复制 live；必须先有共享的 `Simulation.step` / `FrameOrder`。
+- **已尝试但不采用**：
+  - replay 专用 `ReplayDriver` 手动接管 GameScene 节点：1s 内跑 600 tick，但与 live 顺序 / 新节点入树时序不一致，首个分歧 `bullets`/`items`（idx 61–273）。
+  - 进一步让 live 和 driver 共用 `SimulationStep` 表：前 500 tick 可过，但 `idx≈548` 出现 `enemies` 分歧。根因是手动调用发生在 SceneTree 物理回调外，`add_child` 的 ready / 入树时序与 live 不同；这不是调度器能补的。
+- **结论**：不能靠“driver 自己维护节点顺序”或“在回调外手动 add_child”复制 live；必须先把 step 内核真正搬进可控制的物理回调 / 单一 Simulation 内核，再谈完整 GameScene 快进。
 - 仍未做：完整 GameScene 的 headless 快进、跨平台逐位一致性。
 
 ## 10. 完成判据
