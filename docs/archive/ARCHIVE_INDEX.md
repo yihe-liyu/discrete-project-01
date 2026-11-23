@@ -24,6 +24,8 @@
 | [DIALOGUE.md](DIALOGUE.md) | 对白全集（**剧本原稿**，2026-08 已代码化）—— 已实现的面以 `data/dialogue/stage/*.gd` 为准 | 🕰 原稿（非权威） | `CONTENT_GUIDE.md`（附录 D） |
 | [BASELINE_EVIDENCE.md](BASELINE_EVIDENCE.md) | 基线证据附录（逐条 `[x]` 出处、决策旁注、K0 实测审计）—— 规则/状态仍看 `BEST_PRACTICES_BASELINE.md` | 🕰 附录（只增不改） | `BEST_PRACTICES_BASELINE.md` |
 | [GDEXTENSION_KERNEL_DESIGN.md](GDEXTENSION_KERNEL_DESIGN.md) | 原生内核北极星设计（已落地；§5 通用 VM 已作废）—— 设计动机与当时取舍 | 🕰 设计原稿 | `ARCHITECTURE.md` §7、`DANMAKU_API.md` §11 |
+| [CONTENT_PIPELINE_AUDIT.md](CONTENT_PIPELINE_AUDIT.md) | 2026-10-17 内容创作流程审查：自由度 / 触点 / 反馈延迟 / 静默失败；创作台已退役，现状段作废 | 🕰 历史快照 | `docs/INDEX.md` §3、`CONTENT_AUTHORING_CONTRACT.md` |
+| [DANMAKU_GAP_AUDIT.md](DANMAKU_GAP_AUDIT.md) | 2026-11-12 弹幕表现力审计：碰撞/擦弹/pattern/确定性回放差距；引用 lifecycle/pattern 已删除，回放结论已过时 | 🕰 历史快照 | `docs/INDEX.md` §3、`docs/archive/` |
 | [merged/START_HERE.md](merged/START_HERE.md) | 2026-10-17 的一页入口原稿；内容已并入 `README.md` | 📦 已并入 | `README.md` |
 | [merged/LIFECYCLE_MODEL.md](merged/LIFECYCLE_MODEL.md) | 生命周期模型原稿；全文在本归档，`docs/DANMAKU_API.md` 附录 A 为速查 | 📦 已并入 | `docs/DANMAKU_API.md` 附录 A |
 | [merged/BULLET_PIPELINE.md](merged/BULLET_PIPELINE.md) | 一颗弹的完整路径原稿；全文在本归档，`docs/DANMAKU_API.md` 附录 B 为速查 | 📦 已并入 | `docs/DANMAKU_API.md` 附录 B |

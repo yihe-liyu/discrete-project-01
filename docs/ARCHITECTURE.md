@@ -1,235 +1,224 @@
-# ARCHITECTURE —— 项目架构总纲
+# ARCHITECTURE —— 当前架构模型
 
-> 本文是项目的**架构单一真源**：告诉你“这是什么、分几层、每层放什么、每个系统归谁管、改/加东西该去哪”。
-> 用途：让架构“看得见、可照做、防止回头路”。改/加任何东西前，先对一下本文。
-> 子系统详细见 `CONTENT_GUIDE.md`（根目录，附录 D：对话系统）+ `docs/archive/DIALOGUE.md`（剧本）、`docs/archive/BACKGROUND_VISUAL_PLAN.md`；架构改进路线（对象自治/身份归位/命令化）见已归档的 `docs/archive/STAGE_FLOW_PLAN.md`。
-
----
+> **本文回答**：系统分几层、谁负责什么、一个物理 tick 里按什么顺序发生、状态归谁、哪些边界不能破、代码在哪。
+> **不回答**：怎么加一张卡（→ [CONTENT_GUIDE](../CONTENT_GUIDE.md)）、每个测试保护什么（→ [TEST_INDEX](TEST_INDEX.md)）、
+> replay 为什么可能不一致（→ [REPLAY_MODEL](REPLAY_MODEL.md)）、历史决策（→ [BEST_PRACTICES_LOG](BEST_PRACTICES_LOG.md)）。
 
 ## 0. 一句话
 
-**内容 = 数据（resources），领域 = 纯逻辑（服务），运行时 = 薄节点（只演），表现 = UI（订阅信号）。**
-**每一份“知识”有且只有一个 owner；系统之间走服务（ctx.*）或信号，绝不伸手进别人状态。**
+**内容 = 数据 / 代码资源，领域 = 服务，运行时 = 薄节点，表现 = 订阅信号；玩法只有一个 tick 权威，所有跨对象操作走服务或事件。**
 
----
+## 1. 分层
 
-## 1. 五层模型（“什么”放哪）
-
-| 层 | 放什么 | 例子 | 关键约束 |
+| 层 | 放什么 | 典型文件 | 约束 |
 |---|---|---|---|
-| **内容/数据层** | 资源（.tres/.gd 数据） | `BossData``PhaseData``EnemyData``StageData``BackgroundEnvPreset``DecorLayer` | **类型化、可校验、可序列化**；内容=数据，不写死在行为脚本里 |
-| **领域逻辑层** | 纯逻辑（不含场景 node） | `BossCatalog`(身份)`RecordService`(记录)`StageObjects`(命名引用)`ctx.*`(服务) | 每个知识点**一个 owner**；不碰 Godot 场景树 |
-| **运行时/节点层** | 场景 node（薄 host） | `Boss``Enemy``Player``Bullet` | **只“演”**：持有运行时状态 + 发信号；**不自己算跨对象知识** |
-| **表现层** | UI | `boss_ui``dialogue_box` | **订阅信号**，不轮询、不伸手 |
-| **(性能层)** | 性能关键路径 | `bullet_multi_mesh``spatial_hash` | 单独放，别跟业务混 |
+| **内容 / 数据** | `.tres` + `data/**/*.gd` 内容脚本 | `data/stages/**`、`data/boss_scripts/**`、`data/dialogue/**` | code-first；内容不 `get_parent()`、不 `create_tween()`、不直接读 `Input` |
+| **领域 / 服务** | 无场景节点的规则、目录、记录、服务 | `scripts/data/**`、`scripts/coroutine/services/**`、`scripts/stage/**` | 一知识一 owner；不持有场景树 |
+| **运行时 / 节点** | 持有运行时状态、接收 tick、发信号 | `GameScene`、`StageRuntime`、`Player`、`Enemy`、`Boss`、`BulletManager`、`ItemPool` | 只“演”和“推进”；不自己算跨对象身份 / 记录 |
+| **表现 / UI** | HUD、菜单、对话框、背景、特效 | `scripts/scenes/**`、`scripts/background/**`、`scripts/effect/**` | 订阅信号；纯表现可 `_process` / Tween / Timer |
+| **内核** | 原生弹幕存储、积分、behavior、宽相 | `gdextension/src/**`、`scripts/kernel_bridge/**` | `DanmakuStore` 是弹幕权威；GDScript 只读快照 / 发命令 |
 
-**跨层铁律**：上面的层（领域/运行时）**知道**下面的层（内容/数据），但下面的层**不知道**上面。UI 只订阅，不驱动。
+## 2. 组合根与运行时图
 
----
-
-## 2. 系统地图 + 所有权
-
-### 2.0 关键知识点 → owner（一人一份，只此一处）
-
-| 知识 | owner | 位置 |
-|---|---|---|
-| 阶段身份（phase_index/第N张/boss_index） | **BossCatalog.resolve_identity** | `scripts/data/boss_catalog.gd` |
-| 记录（attempts/captures/成绩） | **RecordService** | `scripts/coroutine/services/record_service.gd` |
-| 运行对象引用（名字→对象） | **StageObjects** | `scripts/coroutine/services/stage_objects.gd`（由 `StageContext.objects` 持有，非 autoload） |
-| 状态变化通知（显示名/HP/阶段） | **信号**（可观察属性） | 各节点 |
-| 参数（阶段/敌人调参） | **typed**（待修：现为 `params` 反射 = C4） | `phase_data.gd``enemy_data.gd` |
-
-### 2.1 主要子系统（责任 / intent 接口 / 文件）
-
-| 系统 | 责任 | 对外接口（intent） | 主要文件 |
-|---|---|---|---|
-| **Boss/敌人** | 演一段阶段 / 生成敌人 | `start_phase(phase)` / `hud`（`BossHud`：名字文字 + 名字/进度点显隐） / `current_phase` / `ctx.enemies.spawn(data)` | `scripts/enemy/boss.gd` / `boss_hud.gd` / `enemy.gd` |
-| **子弹/激光** | 生成/物理/清理大量弹 | `ctx.bullets.shoot_spread(...)` / `death_clear` | `scripts/bullet/*` / `laser/*` · **内核** `gdextension/src/danmaku_store.*` |
-| **玩家** | 移动/射击/僚机/道具 | `ctx.player` / `ctx.effects` | `scripts/player/player.gd` / `coroutine/player/*` |
-| **对话** | 纯逻辑步骤 + 渲染 | `ctx.play_dialogue_steps(steps)` / `d.event(...)` | `scripts/coroutine/services/dialogue/*` |
-| **记录** | 持久化符卡簿 | `RecordService.record_phase_*` | `scripts/data/spell_*.gd` |
-| **背景** | 环境/装饰/相机/太阳/雾 | `StageBackground`（相机/太阳/雾命令，待接 `ctx.background`） | `scripts/background/*` |
-| **时间线/关卡** | 编排“何时做什么” | `timeline.at()` / `do(callable)` / `start_phase` | `scripts/coroutine/timeline/*` / `stage_manager.gd` |
-
----
-
-
-### 2.1.5 弹幕链路（端到端 · 追一条弹）
-
-```
-内容面 = data/bullets/<key>.tres（BulletDef：外观/碰撞/朝向）+ 发射脚本里的 SpawnSpec.with_behavior(...)
-  └─ BehaviorSpec（C++ pack id + float 参数；内容直接挂）
-       └─ KernelBulletHost.prepare_shot()        ← 弹型 / 锚点 / 行为装配
-            └─ KernelNativeSystem.spawn()           ← 原生 DanmakuStore.spawn + set_hitbox + set_behavior
-                 └─ [每物理帧] DanmakuStore.integrate() + behavior_tick()    ← 积分 + 行为，全原生
-                      └─ KernelNativeSystem._pull_snapshot()                 ← 原生 → GDScript 只读快照
-                           ├─ 渲染：BulletMultiMesh._sync_native() → DanmakuRenderBridge → MultiMesh
-                           └─ 判定：KernelBulletPhysics → system.query_circle / hit_test（原生宽相网格）
+```text
+project.godot
+  autoload: GameEvents / GameManager / RNG / AudioManager / SimClock
+        │
+        ▼
+MainMenu / 菜单栈 ──change_scene──▶ GameScene（组合根）
+        │
+        ├─ SubViewport / World
+        │    ├─ StageRuntime（关卡生命周期）
+        │    ├─ BulletManager（弹幕世界 + 宿主碰撞）
+        │    ├─ ItemPool / FxPool / MissCircleLayer / Telegraph
+        │    └─ Player / Enemy / Boss（运行时节点）
+        ├─ GameUI（HUD）
+        └─ 3D 背景（StageBackground）
+        │
+        └─ StageHost.wire_world / wire_player：唯一接线入口
+                 │
+                 ▼
+        StageRuntime.load_stage(data)
+          ├─ CoroutineScript（关卡脚本，Timeline 编排）
+          ├─ StageContext（ctx.* 服务门面）
+          └─ EntityRegistry（自机 / 敌机 / Boss）
 ```
 
-- **权威存储** = 原生 `DanmakuStore`（`gdextension/src/danmaku_store.{h,cpp}`）；GDScript 只是每帧只读快照。
-- **行为** = `BehaviorSpec`（`behaviors_core` 注册的 C++ pack）→ 原生 `behavior_tick`；不再有 lifecycle DSL / packed program。
-- **事件**（发射 / 音效 / 激光 / 消散）→ `KernelNativeSystem._drain_events` → `KernelBulletHost` / `AudioManager`。
-- 改哪看哪：behavior 列表 → `docs/DANMAKU_API.md` §3；参数表 → `CONTENT_GUIDE.md`「弹幕行为」；执行/判定 → `gdextension/src/`。
+### 2.1 关键对象
 
-### 2.2 使用层（接口）—— 动词，不是协程/Timeline
-
-> **接口 = 一组"意图动词"，各归其主，且时序无关。** 协程 / Timeline **不是接口**，是接口下方的**运行时原语**（行为的引擎 / 编排的引擎）。"使用层"是**基建层**与**内容层**之间的缝：内容只写左边，基建在右边，缝上就是动词。
-
-### 动词三族 + 时序 + 原语
-
-| 类别 | 形态 | 例子 | 归属 |
-|---|---|---|---|
-| **服务动词**（原子，单子系统） | `ctx.<域>.verb()` | `ctx.bullets.shoot_spread(...)` `ctx.enemies.spawn(data)` `ctx.audio.play_bgm` `ctx.clock.wait_frames` `ctx.boss.current/exists` `ctx.diff.at_least/pick` | `StageContext` 下各服务 |
-| **场景动词**（宏观，跨子系统，一意图） | `dir.verb()` | `dir.boss("boss_mid", data, from, to)` `dir.on(event, handler)` `dir.dialogue(steps)` | `StageDirector` `BossHandle` |
-| **名词构建词** | `Data.builder()` | `ctx.enemies.spawn(EnemyData.new().with_script().pos().param())` | 各 `*Data` |
-| **时序粘合剂** | `timeline.at()/wait()/every()` | `timeline.at(35).do(func(): dir.boss(...))` | `Timeline` |
-| **原语** | 协程 / 事件 | `CoroutineScript` `TimelineEvent` | `coroutine/*` |
-
-### 关键惯例
-
-- **动词时序无关**：`dir.boss("x").phase(0)` 必须能不靠 timeline 单独跑（符卡练习用）。"能不能无 timeline 调用"是检查法。
-- **内容只碰动词**：内容文件不再 import `StageRuntime/GameState/StageObjects/BulletManager/AudioManager`，不再 `create_tween`。一旦不得不在内容里写 `.do(func(): <机制>)`，说明还缺一个动词（判据）。
-- **一知识一 owner**：`dir.boss` 内部才 `spawn_boss + register + hide_name + tween`；`BossHandle.retreat` 内部才 `set_exit_controlled + die + tween`。内容只看到"进 Boss / 揭名 / 退场"。
-- **响亮**：动词缺 Boss/阶段越界等 → `push_warning`/`push_error`，绝不静默。
-- **Timeline 是纯排程器（零服务层依赖）**：只认识 `float`（每帧 delta）+ `Callable`（动作）+ 一条流程锚 `start_phase`；动作一律 `do(func(): ctx.*)`，不为任何底层方法配包装。`Timeline.new()` 无参、可脱树单测。
-
-### 已落地（D Part 1）
-
-`StageDirector`（`scripts/coroutine/director/stage_director.gd`）+ `BossHandle`（`…/boss_handle.gd`）：`dir.boss/dialogue/bgm/on/dispose` + 句柄 `reveal/hide_name/enter/phase/retreat`。`stage01.gd` 的 Boss 段与 `_on_dialogue_event` 大 match 已改为动词 + 事件路由。`Timeline.start_phase(boss_getter, data)` 接口未变（有测试锁定）。
-
-**服务动词补齐（b）**：`ctx.boss`（`BossService`：`current/exists`）+ `ctx.diff`（`DifficultyService`：`picked/pick/pick_from/at_least`）。内容里的 `GameState.get_boss()`、`GameState.selected_difficulty`、`AudioManager.play_sfx` 改用 `ctx.*`（仅改关卡/行为/玩家协程内容；UI/菜单/工具属表现/基建层仍可直接摸全局）。两个服务用 **preload const（无 class_name）**，避免 headless 全局类缓存问题（同 `ParamValidator`）。
-
-## 3. 接口契约原则（好/坏接口的判据）
-
-> **好的接口：调用方只说“我要什么”，不碰“怎么实现”。**（intent 层，而非 how 层）
-
-- `ctx.audio.play_bgm(bgm)` ✅ 说“放这首歌”。
-- `spawn_boss + register + set_name + create_tween 飞入` ❌ 调用方得懂“进场怎么做” → 应收成 `spawn_boss("boss_final", BossEntry.from(...).hidden())`。
-- `params` 反射（`if k in script: script.set(...)`）❌ 调用方得知道“键名”，打错静默 → 应收成 **typed**。
-
-**修接口 = 从“怎么操作零件”升到“声明我要什么”。** 每写一个接口，问：调用方这句是在说**要什么**还是在说**怎么做**？——在“怎么做”，就往里再收一层。
-
----
-
-## 4. 边界铁律（“绝不”清单）
-
-1. **内容=数据**——别在关卡/行为脚本里 `ctx.enemies.spawn(EnemyData.new()...)` 现场捏内容；内容做成资源，脚本只引用。
-2. **一知识一 owner**——身份问 `BossCatalog`、记录走 `RecordService`、引用走 `StageObjects`、状态走信号；**绝不自己算**。
-3. **系统走服务（ctx.*），不摸全局**——别 `GameState.record_*``BulletManager.` 到处摸；删 `else Global` 双路。
-4. **节点只演、只发信号**——`Boss` 不算身份/记录，`hp``boss_data` 不该裸暴露。
-5. **UI 订阅，不轮询**——`boss_ui` 不再每帧拉 `hud.get_name()`。
-6. **参数 typed、可校验**——别用 `params` 反射。
-7. **关卡脚本偏“声明式”**——编排用命令/事件，别自己包 `_on_dialogue_event` 大 match + 手工 spawn+tween。
-
----
-
-## 5. 架构债 / 待修清单（按优先级）
-
-| # | 债 | 层 | 该修成 | 优先级 |
-|---|---|---|---|---|
-| A | ~~`params` 反射（C4）~~ | 内容/参数 | ✅ 已修到「校验+响亮」（`ParamValidator`）；「全 typed 资源」未做 | 已做（2026） |
-| B | ~~双路 `if ctx else Global`~~ | 领域/接口 | ✅ 已修：系统操作统一走 `ctx.*`，删除 else-Global 回退 | 已做（2026） |
-| C | 调用方拼内容（`ctx.enemies.spawn(EnemyData.new()...)`） | 内容/接口 | C1 ✅ **EnemyData 可序列化**（`behavior_script`/`params` `@export` + `validate()`）；C2 内容→原型（`.tres` 或命名 const）未做 | 中 |
-| D | 关卡脚本胖（大 match + 手工 spawn/tween） | 编排/接口 | D1 ✅ 事件派发 + 场景动词（`StageDirector`/`BossHandle`）；D2 命令化/数据化 未做 | 中 |
-| E | ~~Boss 公开可变（`hp`/`boss_data`/`hitbox_radius`）~~ | 运行时/封装 | ✅ 已做：只读 getter + `_set_hp` 唯一改写 + `hp_changed` 信号（血条订阅，不轮询） | 已做（2026） |
-| F | 时间分片/暂停缝（C6） | 运行时/时间 | 统一时间所有权 | 低（系统性） |
-
----
-
-## 6. 操作指南《如何新增 X》
-
-> **完整流程见 `CONTENT_GUIDE.md`（根目录，单源）。** 下面是浓缩原则。
-
-> 做内容前先问：**这是系统能力（全关卡可复用）还是这关内容（只这关）？**
-
-### 新增 Boss
-- 内容：`data/stages/<面>/boss/*.tres` 建 `BossData`（名字/视觉/阶段）+ `PhaseData` 资源；**新 Boss 必须加入 `data/registry/boss_registry.tres`**（注册表非空时 `BossCatalog` 只读注册表，不会自动扫描新文件）。
-- 身份/记录：**不用碰**——`resolve_identity` / `RecordService` 自动生效。
-- 运行时：`boss.gd` 如需新“演”逻辑，加方法；**别在 Boss 里写身份/记录**。
-- 引用：关卡 spawn 后 `StageObjects.register("boss_xxx", b, Boss)` 用名字引用。
-- 绝不：在 Boss 里 `record_*`、算 `phase_index`。
-
-### 新增符卡/阶段
-- `PhaseData` 资源 + 子弹/移动脚本；**参数用 typed**（别裸 `params`）。
-- 阶段身份由 `BossCatalog` 规范序自动编号；**别手写 index/第N张**。
-
-### 新增敌人
-- `EnemyData` 资源 + 行为脚本；**别在关卡脚本现场捏 `ctx.enemies.spawn(EnemyData.new()...)`**，做成资源引用。
-
-### 新增自机 bomb
-- 数据是 **`BombData` 家族**：基类 `BombData`（外观 / 编队 / 无敌）+ 子类 `RingBombData`（环绕炸）/ `MistBombData`（分阶段展开）；`.tres` 例：`data/player_data/reimu_bomb.tres` / `marisa_bomb.tres`，经 `PlayerData.bomb` 挂到角色。
-- **宿主实体按数据实际类型分派**（`KernelBulletHost.spawn_bomb`）：`MistBombData` → `KernelMistBomb`；其余/基类 → `KernelBomb`。**调参别写回引擎代码**。
-- 加新 bomb = 一个 `XxxBombData extends BombData` + 一个 `KernelXxxBomb extends BombEntity` + `spawn_bomb` 一条分派；不需要动内核。
-
-### 新增弹幕行为（native behavior pack）
-- **先用现成 behavior**：`SpawnSpec.with_behavior(BulletBehaviors.xxx)`，不要为新组合造原语。
-- **要新运动数学**才加 C++ pack：`gdextension/src/behaviors_core/` 新建 `xxx.cpp`（`REGISTER_BEHAVIOR`）→ `registry.cpp` 注册 → `BulletBehaviors` 加具名构造器 → 重建扩展。
-- 权威参数表见 `docs/DANMAKU_API.md` §3 与 `CONTENT_GUIDE.md`「弹幕行为」。
-
-### 新增关卡
-- `StageData` + 关卡脚本（`CoroutineScript`）；内容=数据；boss 用槽位；记录走服务；编排声明式。
-- **新面必须加入 `data/registry/stage_registry.tres`**（`StageCatalog.all()` 在注册表非空时只读注册表；不登记 = 关卡练习菜单看不到）。
-
-### 新增“系统能力”（新动作）
-- 给**系统**加方法（如 `Boss.start_phase`），或给 `StageObjects` / 服务加操作；**别在关卡脚本里临时实现**。
-- 然后 `cmd(slot, action, args)` / `_stage_events.on(name, handler)` 调用它。
-
----
-
-## 7. 索引 / 该读哪些
-
-- **总纲（本文）**：分层/系统地图/所有权/边界/债/操作指南。
-- **内核迁移（历史，已完成）**：`docs/archive/NEW_KERNEL_REFACTOR_PLAN.md`（Strangler→融合 M1–M3）。
-- **弹幕内核（现状 ✅）**：原生 GDExtension `DanmakuStore` 为**唯一存储**（L3.5-4e/4f，`KernelNativeSystem` 桥接）；设计见 `docs/archive/GDEXTENSION_KERNEL_DESIGN.md`，接入/拆除见 `docs/archive/N2_NATIVE_INTEGRATION_PLAN.md`；冻结参照 `test/reference/`。
-- **弹幕表现力审计（2026-11，AI 生成待复核）**：`docs/DANMAKU_GAP_AUDIT.md`（碰撞扫掠 / 擦弹判定 / pattern 组合 / 确定性回放 / 工作流的差距与优先级；带 `文件:行号` 证据，代码变更后可能失效）。
-- **路线**：`docs/archive/STAGE_FLOW_PLAN.md`（(b) 规划：对象自治/身份归位/命令化 + 七步；Step 1 / 3 / 4 已完成）。
-- **对话**：`CONTENT_GUIDE.md`（根目录，附录 D：当前系统）+ `docs/archive/DIALOGUE.md`（剧本归档）。
-- **符卡**：`docs/archive/SPELL_SYSTEM_TARGET.md`（目标蓝图，核心已由 `boss_catalog.gd` 落地）。
-- **背景**：`docs/archive/BACKGROUND_VISUAL_PLAN.md`（已冻结）。
-
-## 8. 命名约定 · 禁令 · 现状（并入自 SPEC §14/§15/§17）
-
-> **权威顺序**：机械校验 `./tools/check_naming.sh`（0 违规 = 达标）> 基线 `BEST_PRACTICES_BASELINE.md`
-> 「命名边界契约」/ R15（严格版：私有字段 `_`+类型 snake、一个私有名只归一个类型、`p_` 前缀仅用于形参遮蔽、
-> 单字母三例外、中文只进内容槽）> 本节（**入门摘要**，冲突时以上面两处为准）。**状态类信息**（待补 / 债务 / 缺什么）
-> 的权威在基线 S 表与「🔴 待改进」，本节 §8.3 只是给架构读者的粗粒度印象。
-
-### 8.1 命名约定
-| 类别 | 约定 | 例 |
+| 对象 | 责任 | 不负责 |
 |---|---|---|
-| 类名 | PascalCase | `SpawnSpec` |
-| 文件名 | snake_case | `bullet_data.gd` |
-| 私有成员 | `_` 前缀 | `_pool` |
-| 公共成员 | 无前缀 | `active_bullets` |
-| 信号 | snake_case | `stage_cleared` |
-| 信号回调 | `_on_`+信号名 | `_on_enemy_killed` |
-| @export | snake_case + 注释 | `@export var focus_speed: int ## 低速速度` |
-| 常量 | UPPER_SNAKE | `POOL_SIZE` |
-| 枚举 | PascalCase | `Type.POWER` |
+| `GameScene` | 装配、开局资源、录制/回放钩子、结算与场景切换 | 阶段内部规则 |
+| `StageRuntime` | `load_stage` / `spawn_*` / `finish_stage` / `stop_stage`；关卡脚本生命周期 | 具体弹幕 / 阶段数值 |
+| `StageContext` | `ctx.clock / bullets / player / enemies / boss / items / audio / effects / dialogue / objects / background / telegraph` 懒加载门面 | 自己保存游戏状态 |
+| `CoroutineScript` / `CoroutineRunner` | 每 tick 推进任务；`Timeline` 只排“何时” | 识别游戏机制 |
+| `StageDirector` / `BossHandle` | 内容层场景动词：`boss / dialogue / bgm / on`、`enter / phase / retreat / defeat` | 直接操作节点内部 |
+| `EntityRegistry` | 自机 / 敌机 / Boss 的单一活动列表 | 记录 / 身份计算 |
+| `StageCatalog` / `StageRouteCatalog` / `BossCatalog` | 关卡、路线、Boss / 阶段身份的只读目录 | 运行时推进 / 记录写入 |
+| `SaveData` / `SaveManager` | 会话状态（路线 / 当前 stage / 开局资源）与 `user://` 存档 | 关卡内部规则 |
+| `BulletManager` | 弹幕门面、激光/清弹/宿主碰撞 | 持有弹幕权威数据（在原生 store） |
+| `ReplayV2Session` | 录制 / 回放会话、输入注入、哈希校验 | 保存逐帧游戏状态 |
 
-**避讳**：`range`→`patrol_range`、`dir`→`direction`（避免遮蔽内置）。
+## 3. 一个物理 tick 的顺序
 
-### 8.2 禁止操作（SPEC §15.4）
-- ❌ 直接 `randf()/randi()`（走 RNG）
-- ❌ 直接写 `GameState.current_score/lives/power_raw`
-- ❌ 协程/碰撞回调内 `await`
-- ❌ `ctx.active()==false` 时调 StageContext 方法
-- ❌ 直接 instantiate 子弹（走 BulletManager）
-- ❌ 外部调 `Enemy/Boss.die()`
-- ❌ 场景切换期间读 `current_scene` 子节点
-- ❌ 直接改 `.uid` 文件（Godot 维护）
+`SimClock` 是玩法时间的唯一权威（`scripts/autoload/sim_clock.gd`，优先级 `-10000`）：
 
-### 8.3 现状 / 待补 / 债务（**粗粒度摘要**；逐条权威 = 基线 S 表 + 「🔴 待改进」）
-- ✅ 已实现：引擎核心/Autoload、弹幕（原生权威）、敌人 Boss、玩家与 Bomb（`BombData`/`RingBombData`/`MistBombData` + `PlayerResources.use_bomb`）、协程框架、道具、特效、背景、音频、UI/菜单、对话、记忆释放、数据类、Stage 1。
-- ⏳ 待补：Stage 2~6 内容（面脚本 / Boss / 符卡脚本）、Boss 战多面、部分美术占位、各页面 F6 逐页核验。
-- 🐛 债务：`DifficultyScreen`(287) 与基类 `NavPage`(353) 同名函数 **12/23**（`navigate` / `_nav_directional` / `refresh_colors` / `accept_current` …）→ 抽差分化；创作台 / 工作台已退役（2026-10-24）；`spell_practice_menu.gd` 仍是上帝对象（R18/R19）。
-- 🚧 缺：Replay（只录不放）、Continue / 完整 run 结算（已有关卡 Result 覆盖层）。
+```text
+SimClock._physics_process
+  1. 处理上一 tick 的延迟解冻 / 重新压住暂停
+  2. 若暂停菜单暂停（非玩法冻结）→ 本 tick 不推进
+  3. tick_prepare(next)      ← 回放注入 mask/命令；录制 flush 对话等帧间事件
+  4. tick += 1
+  5. PlayerInput.latch()     ← 本 tick 唯一输入快照
+  6. tick_observer(tick)     ← 录制 / 回放哈希校验（在 gameplay 之前）
+  7. 冻结 owner 倒计时
+```
 
-> 曾经登记的「`PauseMenu`/`GameOverMenu` 的 `_on_leave` 重复」已随基类收口消失（全项目已无 `_on_leave`）；「Bomb 释放未接」也已落地 —— 修完即删，别留在本文。
+之后按 `process_physics_priority` 从小到大：
 
-> 完整/原始的命名与文件树见已归档的 `docs/archive/SPEC.md`（未来不再逐系统维护，交给 ARCHITECTURE + 子系统文档）。
+| 优先级 | 谁 | 做什么 |
+|---:|---|---|
+| `-10000` | `SimClock` | 建立 tick 边界、锁输入、录制/回放钩子 |
+| `-100` | `MarisaShoot`（射击协程） | 同步激光锚点；再让 `CoroutineRunner` 推进射击状态机 |
+| `-50` | `TickMover` | Boss / 敌人 / 复位的 tick 化移动 |
+| `-10` | `KernelNativeSystem` | 原生积分 + `behavior_tick` + 拉只读快照 |
+| `-4` | `KernelBulletHost` | 延后动作 flush + 激光渐隐 |
+| `0` | `BulletManager` / `Player` / `Enemy` / `CoroutineRunner` / 多数节点 | 宿主碰撞、移动、发弹、时间线/协程推进 |
+| `100` | `Boss` | 阶段计时、HP 缓降、奖励分 tick |
 
----
+> **债务**：`0` 这一档目前靠场景树顺序，而不是显式的 `FrameOrder`。这段顺序在录制/回放中稳定，但“新增节点插在哪”仍是隐式知识；目标是由组合根显式赋优先级。
 
-*本文是“应当怎样”的契约；与现状不符处即架构债（见 §5），逐项修平。*
+### 3.1 一次 run 的生命周期
+
+```text
+菜单选难度/角色
+  → SaveData.selected_* / selected_route
+  → GameScene._ready
+      ├─ SimClock.reset / GameManager.PLAYING
+      ├─ StageHost.wire_world / wire_player / wire_registry
+      ├─ 普通局：ensure_route → start_recording（抓 seed/state）
+      ├─ _setup_player → 开局资源（reset / 跨面继承）→ capture_start_resources
+      └─ StageRuntime.load_stage
+            ├─ StageData.validate
+            ├─ new CoroutineScript → StageContext → start(ctx)
+            ├─ StageDirector / BossHandle / Timeline
+            ├─ 背景脚本启动
+            └─ stage_started
+
+每 tick：SimClock → gameplay（见 §3）
+
+关卡收尾：
+  StageDirector.finish_stage → StageRuntime._on_stage_finished
+    → 高分写入 → stage_cleared / all_enemies_defeated
+    → GameScene 结算：继续下一面（capture_run_state + advance_route + reload）
+      或结束（finish_recording + 回主菜单）
+玩家死亡：
+  Player.miss → GameEvents.player_death → GameScene 延迟 → Game Over / finish_recording
+```
+
+### 3.2 实体生命周期（简）
+
+- **敌人**：`StageRuntime.spawn_enemy_data` → 实例化 + 注入 `ctx`/params + `add_enemy_to_scene` → `Enemy._ready` 注册 → 行为 `CoroutineScript.start` → `die()`（掉落 / 特效 / 计分）或 `despawn()`（静默回收）。
+- **Boss**：`StageRuntime.spawn_boss` → `add_enemy_to_scene` → `Boss.setup/start_boss`（注册）→ `start_phase`（宣言 / HP 缓降 / 移动 / 射击）→ `clear_phase`（奖励 / 掉落 / 信号）→ `die` / `retreat` / `defeat`。
+- **道具**：`ItemPool.spawn` → `Item` 下落 / 吸附 → 收集或出屏回收；跨面资源由 `PlayerResources` 持有。
+- **弹幕**：`BulletManager` 门面 → `KernelBulletHost` 写原生 `DanmakuStore` → 每 tick 原生积分 → `KernelBulletPhysics` 判定；GDScript 只读快照。
+
+### 3.3 冻结与暂停
+
+- 玩法冻结只走 `SimClock.freeze(owner, frames, auto_unfreeze)`；冻结期间 `SceneTree.paused = true`，`SimClock` 继续走 tick 倒计时。
+- 不压 `Engine.time_scale`，不用真实时间 `Timer` / Tween 做玩法时间。
+- 暂停菜单自己暂停树；`SimClock` 只在“自己暂停的”情况下负责恢复，且覆盖层打开时不抢恢复。
+- 纯表现层可以继续 `_process` / Tween；它不能写模拟状态。
+
+## 4. 状态所有权
+
+| 状态 | 唯一 owner | 写入方式 |
+|---|---|---|
+| 当前 tick / 冻结 | `SimClock` | 每物理 tick 唯一入口 |
+| 本 tick 输入 mask / 命令 | `PlayerInput` | `latch()` 一次；玩法只读 |
+| 路线 / 当前 stage / 会话 | `SaveData` | 菜单 / `GameScene`；`reset_session()` 统一复位 |
+| 关卡 / 路线 / Boss 目录 | `StageCatalog` / `StageRouteCatalog` / `BossCatalog` | 只读；注册表 + 资源扫描 |
+| 自机资源 | `PlayerResources` | `Player` / 道具 / Boss 奖励通过明确 API |
+| 自机位置 / bomb / miss | `Player` | `_physics_process`（固定 `SimClock.DT`） |
+| 弹幕行数据 | `KernelNativeSystem` / `DanmakuStore` | 原生积分；GDScript 只读快照 |
+| 激光 | `LaserEngine` | `step(SimClock.DT)` 唯一驱动 |
+| 道具 | `ItemPool` | `spawn` / `recycle`；`Item` 自身推进 |
+| Boss 阶段 / HP / 计时 | `Boss` | `start_phase` / `advance_ticks` / `clear_phase` |
+| 敌机列表 | `EntityRegistry` | `register_enemy` / `unregister_enemy` |
+| 命名对象引用 | `StageObjects` | `register` / `resolve`（per-run） |
+| 阶段身份 / 记录 | `BossCatalog` / `RecordService` | 只读 / 明确记录 API |
+| 对话状态 | `DialogueBox` / `DialogueRunner` | 固定 tick 推进 + 回放命令 |
+| 回放会话 | `ReplayV2Session` | 录制 / 回放 / 停止 |
+
+## 5. 事件模型
+
+- **输入**：`PlayerInput.ACTIONS` 固定顺序；每 tick 一次 `latch()`；离散命令（bomb / memory / 对话推进 / 关闭）在 tick 边界消费。
+- **对话**：`DialogueRunner` 固定 tick 推进；行间 `EVENT` 在 `advance` 时触发；`StageDirector.on(key, handler)` 路由到内容 handler；`boss_enter / boss_fight / stage_end` 是内容事件，不是硬编码分支。
+- **时间线**：`Timeline.at/wait/every` 只排“何时”；执行 `Callable`；阶段序列通过 `Boss.phase_cleared` 推进。
+- **信号**：`GameEvents`（Boss 生成/击破、阶段开始/结束、玩家死亡/炸弹等）供表现与组合根订阅；模拟状态不依赖 UI 订阅顺序。
+- **场景切换**：`GameManager.change_scene` / `reload_current_scene`；切面前由 `SaveData.capture_run_state` 保存跨面资源；录制/回放通过 `_continuing_replay` 跨 scene 保留。
+
+## 6. 边界铁律
+
+1. **玩法只用 `SimClock.DT`**：不读 `delta`、不 `create_tween()`、不 `Timer`、不 `Engine.time_scale`、不直接 `Input`（走 `PlayerInput`）。
+2. **纯表现不写模拟状态**：背景、UI、震屏、命中特效、死亡特效可以 `_process` / Tween；不能改 HP / 分数 / 生成弹幕。
+3. **一知识一 owner**：身份问 `BossCatalog`、记录问 `RecordService`、命名引用问 `StageObjects`、活动实体问 `EntityRegistry`。
+4. **内容只碰动词**：`timeline.*` / `_dir.*` / `ctx.*`；不 import `StageRuntime`、不手拼 `BulletManager`、不 `get_parent()`。
+5. **依赖向下注入**：`GameScene` / `StageHost` 注入；禁止全树搜、`get_node("..")`。
+6. **回放只注入输入/命令，不改状态**：没有 force despawn / graze / RNG resync；哈希不一致 = 模拟有问题。
+
+完整红线 / 命名 / 会话规则见 [BASELINE](BEST_PRACTICES_BASELINE.md)。
+
+## 7. 代码地图
+
+| 目录 | 内容 |
+|---|---|
+| `scripts/autoload/` | `GameEvents`、`GameManager`、`RNG`、`AudioManager`、`SimClock` |
+| `scripts/scenes/` | `GameScene`、菜单、UI、对话框、HUD |
+| `scripts/stage/` | `StageRuntime`、`EntityRegistry`、`StageHost`、`StageData` 装配 |
+| `scripts/coroutine/` | `CoroutineRunner/Script`、`Timeline`、`StageDirector`、`BossHandle`、`TickMover`、`ctx.*` 服务 |
+| `scripts/player/` | `Player`、`PlayerInput`、`PlayerResources`、射击协程 |
+| `scripts/enemy/` | `Boss`、`Enemy`、HUD/视觉 |
+| `scripts/bullet/` | `BulletManager`、MultiMesh、清弹 |
+| `scripts/laser/` | `LaserEngine`、`LaserBeam`、`LaserSkeleton` |
+| `scripts/item/` | `ItemPool`、`Item` |
+| `scripts/kernel_bridge/` | 原生 store 的 GDScript 桥、宿主碰撞、bomb |
+| `scripts/sim/` | `SimHash`（总 / 分项状态哈希） |
+| `scripts/replay/` | `ReplayV2`、`ReplayV2Session`（v1 `ReplayRecorder` 仅历史） |
+| `scripts/data/` | 数据类、目录、存档、难度、身份 |
+| `data/` | 内容：stage / boss / phase / dialogue / bullets / routes / registry |
+| `scenes/` | 运行时场景与 UI 场景 |
+| `gdextension/src/` | 原生 `DanmakuStore` / behavior / 宽相 |
+| `test/` | GUT + 夹具 + 原生 parity |
+| `tools/` | 门禁、bench、内容 manifest / preflight |
+
+## 8. 改东西去哪
+
+| 要改 | 落点 |
+|---|---|
+| 阶段数值 / 弹幕脚本 | `data/stages/<面>/phase/**` + `PhaseData.tres` / `BossData.tres` |
+| 关卡节奏 / 敌人 / Boss 事件 | `data/stages/<面>/stage_data/*.gd` + `Timeline` + `StageDirector` |
+| 对话台词 / 事件 | `data/dialogue/stage/*.gd` + `_dir.on(...)` |
+| 新弹幕运动 | `SpawnSpec.with_behavior(BulletBehaviors.xxx)`；新数学才加 C++ pack |
+| 新全局系统能力 | 加服务 / 节点 API，再让内容通过动词调用 |
+| 新内容注册 | `data/registry/stage_registry.tres` / `boss_registry.tres` |
+| 改 tick / 回放 | 先读 [REPLAY_MODEL](REPLAY_MODEL.md)，改完必须跑回放测试 + 升 `SIM_VERSION` |
+
+## 9. 当前结构债（2026-11-23）
+
+| 债 | 影响 | 方向 |
+|---|---|---|
+| 没有单一 `Simulation.step` | gameplay 仍是节点 `_physics_process`；顺序靠优先级 + 树序 | 显式 `FrameOrder` / 手动 step，才能 headless 快进 |
+| `0` 档顺序隐式 | 新节点插队可能改变模拟 | 组合根统一赋优先级 |
+| `content_hash` 为空 | 内容变了仍可能通过 `sim_version` | 内容 manifest / build stamp 写进 header |
+| `SimHash` 32 位 | 碰撞概率 + 覆盖字段需维护 | 诊断用足够；需要更强校验再升 64 位 |
+| 回放长局未收口 | 当前在对话 → Boss 入场出现 `boss_pos` 分歧 | 见 [REPLAY_MODEL](REPLAY_MODEL.md) 的“已知问题” |
+| 内容完成度 | Stage 2/3B 仍在制作 | 不把空目录当“已完成” |
+
+## 10. 接下来读什么
+
+- 回放 / 确定性： [REPLAY_MODEL](REPLAY_MODEL.md)
+- 硬规则 / 命名 / 注入： [BASELINE](BEST_PRACTICES_BASELINE.md)
+- 测试地图： [TEST_INDEX](TEST_INDEX.md)
+- 内容怎么加： [CONTENT_GUIDE](../CONTENT_GUIDE.md) + [CONTENT_AUTHORING_CONTRACT](CONTENT_AUTHORING_CONTRACT.md)
+- 弹幕 / 内核： [DANMAKU_API](DANMAKU_API.md) + [NATIVE_BEHAVIOR_PACK](NATIVE_BEHAVIOR_PACK.md)

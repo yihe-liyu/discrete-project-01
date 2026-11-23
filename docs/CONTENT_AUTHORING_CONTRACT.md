@@ -1,7 +1,8 @@
 # 内容作者契约
 
 > 目的：加一张卡 / 一波敌人 / 一段对话时，只碰该碰的地方。
-> 本文是**规范**，不是教程；操作细节见 [CONTENT_GUIDE](../CONTENT_GUIDE.md)，摩擦清单见 [CONTENT_PIPELINE_AUDIT](CONTENT_PIPELINE_AUDIT.md)。
+> 本文是**规范**，不是教程；操作细节见 [CONTENT_GUIDE](../CONTENT_GUIDE.md)。
+> 历史摩擦清单见 [archive/CONTENT_PIPELINE_AUDIT](archive/CONTENT_PIPELINE_AUDIT.md)（2026-10 快照，不代表现状）。
 
 ## 0. 一句话
 
@@ -36,7 +37,7 @@
 | 3 | 每个难度一份 `.tres`，共用行为脚本、只改数值 | 同目录 |
 | 4 | 按顺序挂进 `BossData.phases_easy/normal/hard/lunatic/extra` | `data/stages/<面>/boss/<Boss>.tres` |
 | 5 | 新 Boss 登记注册表；新面再登记 `StageData` | `data/registry/` |
-| 6 | 舞台在正确时刻 `boss()` + 开打 | `data/stages/<面>/stage_script/<面>.gd` |
+| 6 | 舞台在正确时刻 `boss()` + 开打 | `data/stages/<面>/stage_data/<面>.gd` |
 | 7 | 跑 `PhaseData.validate()` / `BossData.validate()`、`content_preflight`、符卡练习或整关 | — |
 
 **必填**：`name`（非符空串）、`uid`（符卡全作唯一；非符 `0`）、`hp`、`time_limit`、`shoot_script`（纯演出/纯走位阶段可空）。
@@ -70,7 +71,8 @@
 
 - Boss / Stage 仍靠手写注册表，漏登记只在 preflight / 菜单暴露。
 - `params` 的未知键会报，但 **move / shoot 同名合法键仍会静默互改**。
-- `CONTENT_GUIDE` 的部分路径示例已漂移（如 `spell03/`、`non01/`），**实际内容目录为准**；遇到不一致先改文档，别照着旧路径建新内容。
+- 内容完成度：Stage 1 可玩；Stage 2 / 3B 制作中；Stage 3A / 4 / 5 / 6 不完整。空目录不代表已完成。
+- `CONTENT_GUIDE` 的路径示例若与 `data/stages/` 实际目录不一致，以实际目录为准，并顺手修文档。
 
 ## 8. 下一步
 

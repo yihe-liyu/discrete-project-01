@@ -1,12 +1,14 @@
 # 🛠️ 东方星 STG 引擎 — 内容制作流程
 
-> 版本：2026-10 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `SpawnSpec.with_behavior(...)`，原生执行**；创作台 / 工作台 UI 已退役，反馈走游戏内练习 + 无头检查）
+> 版本：2026-11 · **原生内核版**（关卡/Boss/弹幕全在 Godot 里写代码；**弹幕飞行规律挂 `SpawnSpec.with_behavior(...)`，原生执行**；创作台 / 工作台 UI 已退役，反馈走游戏内练习 + 无头检查）
+>
+> 当前内容状态：**Stage 1 可玩**；Stage 2 / 3B 内容制作中；Stage 3A / 4 / 5 / 6 仍不完整。路径以 `data/stages/` 实际目录为准。
 
 ---
 
 ## 0. 快速上手（加一个弹幕波次 / 一张符卡）
 
-1. 在 Godot 编辑器里打开 `data/stages/stage01/stage_script/stage01.gd`（Timeline 编排）
+1. 在 Godot 编辑器里打开 `data/stages/stage01/stage_data/stage01.gd`（Timeline 编排）
 2. 加 `timeline.at(时刻).do(func(): ctx.enemies.spawn(EnemyData.new().with_script(...).pos(...)))`
    或经 `_dir.boss(key, data, from, to)` 进 Boss（场景动词），阶段用 `timeline.start_phase(...)`（时轴驱动）或 `handle.phase(n)`（事件驱动）
 3. 跑起来看手感：主菜单 → **Spell Practice**（单张符卡最快）或 **Start** 整关；没有单独的预览沙盒
@@ -14,8 +16,8 @@
 5. **改某颗弹的飞行规律** → 见「六 · 弹幕行为」（`SpawnSpec.with_behavior(BulletBehaviors.xxx)`）
 
 > 创作台 / 工作台**已退役**（2026-10-24）：不再有 F6 内容编辑器，也不再有预览 UI。
-> 流程层面的自由度 / 触点 / 摩擦与下一步，见 [内容创作流程审查](docs/CONTENT_PIPELINE_AUDIT.md)。
 > 分层规范（谁拥有什么 / 加一张卡的最小路径）：[内容作者契约](docs/CONTENT_AUTHORING_CONTRACT.md)。
+> 2026-10 的内容流程审查已归档为 [archive/CONTENT_PIPELINE_AUDIT.md](docs/archive/CONTENT_PIPELINE_AUDIT.md)，其中的“现状”不再代表今天。
 > 数据（关卡/Boss/阶段）全部以代码 + .tres 形式存在，由 AI/人直接写；工具只读、不写回 `data/**`。
 
 ---
@@ -36,7 +38,7 @@
 
 ## 二、关卡编排（stage01.gd，Timeline API）
 
-位置：`data/stages/stage01/stage_script/stage01.gd`（`extends CoroutineScript`）
+位置：`data/stages/stage01/stage_data/stage01.gd`（`extends CoroutineScript`）
 
 ```gdscript
 const ENEMY01 = preload("res://data/stages/stage01/enemy/enemy01.gd")
@@ -137,7 +139,7 @@ timeline.wait(4.5).do(func(): _dir.dialogue(STAGE01_REIMU.战斗后()))         
 >   `defeat_sfx`（音效 key，空 = `boss_die`）· `defeat_hitstop`（定格秒数，默认 0.12，0 = 不定格）。
 > - **别用 `timeline.at(绝对秒)` 接全破** —— 玩家打得快/慢，绝对秒对不上；用 `wait`（从最后一张击破算起）。
 > - 道中 Boss 只要 `defeat()`，**不要** `finish_stage()`（关卡还要继续）。
-> - 全破演出是表现层（一场只播一次），不占逐弹预算；定格只压时间倍率、到点恢复原值。
+> - 全破演出是表现层（一场只播一次），不占逐弹预算；定格走 `SimClock.freeze(owner, frames)`，不压 `Engine.time_scale`。
 
 ---
 
@@ -362,7 +364,7 @@ func _fire(ctx):
 ```
 敌人行为   data/stages/<stage>/enemy/     *.gd（关卡脚本 preload 即用）
 Boss 阶段  data/stages/<stage>/phase/*/   每阶段一个目录：*.tres + *_{move,shoot}.gd（.tres 显式引用）
-关卡专属   data/stages/<stage>/           stage_script/ + phase/ + enemy/ + background/ + stage_data/
+关卡专属   data/stages/<stage>/           stage_data/ + phase/ + enemy/ + background/
 ```
 
 > 弹丸行为**不再单列目录**：`data/**/*_bullet.gd` 已删，飞行规律直接挂在发射脚本的 `SpawnSpec` 上（见「弹幕行为」）。
@@ -389,7 +391,7 @@ func _on_start() -> void:
 ### 注释与命名（给人看，不再有自动索引）
 
 文件头注释仍建议写清「这张卡/这个行为做什么」；`@name` / `@desc` / `@role` 注解随创作台退役，**不再被任何工具消费**。
-命名约定（`*_move.gd` / `*_shoot.gd` / `enemy/` / `stage_script/`）仍用于人类阅读与按路径查文件，但不再驱动目录 UI。
+命名约定（`*_move.gd` / `*_shoot.gd` / `enemy/` / `stage_data/`）仍用于人类阅读与按路径查文件，但不再驱动目录 UI。
 
 ### 弹幕行为（native behavior）
 
@@ -499,14 +501,14 @@ pack 里直接写 `if` / `for`，用 `behavior::accelerate` / `heading` / `emit`
   `line()` 延续上一说话者、`say(profile, text)` 换人；`d.event(key)` 是行间事件，时机精确；
   `enter()` 返回 `ActorHandle`（`h.line/move/flip/dim/portrait/bubble/exit`，可链式）。
   台词住在 `data/dialogue/stage/<面>_dialogue.gd`（`static` 构建函数，战前/战后各一支），
-  由 `data/stages/<面>/stage_script/*.gd` 在时间线里调用。
+  由 `data/stages/<面>/stage_data/*.gd` 在时间线里调用。
   参考：本文附录 D、剧本原稿 `docs/archive/DIALOGUE.md`（已实现的面以代码为准）
 
 ---
 
 ## 十、已知边界
 
-- 运行时保存 .tres 依赖 res:// 可写（开发模式）；导出包只读，符卡簿保存会失败（待数据迁移方案）
+- 运行时存档写 `user://`（`user://save_data.cfg` / `user://spell_records.tres`）；不写 `res://`
 - **弹丸协程脚本**（gravity_bullet.gd 等，被行为脚本 preload）与所有脚本改动都需**重启游戏 / 场景**生效
 - 敌人/Boss 脚本零注册：preload/直接引用即用
 

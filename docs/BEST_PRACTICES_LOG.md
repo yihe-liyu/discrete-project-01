@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 64 条（本文件留最近 64 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 65 条（本文件留最近 65 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-23 — Replay 模型重建 + 工程文档重整
 - 2026-10-21 — BulletData 注释补齐
 - 2026-10-21 — BulletMultiMesh（DanmakuRenderBridge 的 GD 包装）注释
 - 2026-10-21 — DanmakuStore 公开方法/字段注释补齐
@@ -94,6 +95,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-23 — Replay 模型重建 + 工程文档重整
+
+- **目标**：把“哪里会影响 replay”从口头经验变成可查的结构模型，并重整当前在用的工程文档。
+- **为什么**：之前靠症状猜 Tween / RNG / 对话，缺少状态所有权、tick 顺序和失败分类；文档里也有“回放播放器待接入”“Timer 做周期逻辑”等过期口径。
+- **新落点**：`docs/INDEX.md`（文档单一真源）、`docs/ARCHITECTURE.md`（运行时图 / tick 顺序 / 所有权）、`docs/REPLAY_MODEL.md`（回放边界 / 格式 / 失败分类 / 已知 `boss_pos` 分歧）；README / BASELINE / CONTENT_GUIDE / TEST_INDEX 同步；两份过期审计移入 `docs/archive/`。
+- **未解决**：Replay V2 长局仍在“对话 → Boss 入场”处差拍；`content_hash` / headless 快进未做。
+- **验收**：`tools/check_docs.py`、活跃文档相对链接检查、全量 GUT 772（770 通过 / 2 个内容 WIP 红）。
 
 ### 2026-10-21 — BulletData 注释补齐
 

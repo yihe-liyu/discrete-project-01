@@ -28,7 +28,7 @@
 | S7 | 难度曲线 | 🚧 | R17 R8 | 曲线靠调校；同种子端到端验证待补 |
 | S8 | 反馈与演出 | ✔ | R2 R7 R20 | — |
 | S9 | 性能（几千发弹下的余量） | 🚧 | R10 R19 | MultiMesh 同步每帧分组/拼 key 有分配；满载 60fps 待实机确认 |
-| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | 回放**播放器**待接入 |
+| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | Replay V2 已接通录制/严格播放；长局仍在收口“对话 → Boss 入场”差拍，`content_hash` / headless 快进未做（见 [REPLAY_MODEL](REPLAY_MODEL.md)） |
 | S11 | 场景流程与演出 | ✔ | R1 R20 R21 | — |
 | S12 | 玩家体验与可访问 | ✔ | R4 R6 R7 R20 | — |
 | S13 | 素材与图集 | ✔ | R12 R17 | —（`laser` 按拍板留独立 PNG） |
@@ -49,7 +49,7 @@
 | R10 | 能轻则轻：`Object < RefCounted < Resource < Node` |
 | R11 | 先设属性再 `add_child`；顺序：初始值 → `_init` → 导出值 |
 | R12 | 常量导入用 `preload`；可变的用 `@export`/`load`；禁止 `@export=preload` |
-| R13 | 周期性逻辑用 `Timer`；运动学/时间步稳定用 `_physics_process` |
+| R13 | 玩法时间只用 `SimClock` tick（固定 `SimClock.DT`）；周期逻辑/移动/计时不得用 `Timer` / `Tween` / `delta` / `time_scale`；UI/菜单/纯表现可用 Timer/Tween |
 | R14 | 运行时存档走 `user://`，不写 `res://` |
 | R15 | 命名：文件/目录 snake_case，节点 PascalCase；标识符 ASCII，中文只进内容槽 |
 | R16 | 大二进制用 Git LFS；`.gitignore` 忽略 `.godot/` 与 `user://` 类存档 |
@@ -70,7 +70,7 @@
 | `-4` | `KernelBulletHost` | 延后动作 flush（emit/call 队列）+ 激光整批渐隐 |
 | `0` | `BulletManager` / World / 敌机 / 自机 / 子机 | 碰撞（`KernelBulletPhysics`）+ 移动、发弹 |
 
-> 目标形态：由组合根按 `FrameOrder` 统一赋值，不在 `.tscn` 里散写数字。
+> 目标形态：由组合根按 `FrameOrder` 统一赋值，不在 `.tscn` 里散写数字。当前 `0` 档仍靠树序，是已知结构债。
 
 **渲染层次**（`z_index`，越小越底；常量由 `LayerConfig` 单一来源给）：
 
@@ -113,7 +113,7 @@
 > 缩写白名单（封闭）：`ctx` + 循环索引 `i`/`j`/`k`。`refs`/`world`/`bullets`/`sys`/`bm`/`bg`/`nav`/`tl` 都算违规。
 > `ctx.*` 门面用域名词（`ctx.bullets`→`BulletService`），不跟类型名、不加 `_service`；门面动词封闭清单：`active`/`current`/`exists`/`picked`/`at_least`。
 > 形参遮蔽成员加 `p_`（`p_ctx`）；真的不用 → `_`；禁止叠加 `_p_`。单字母只许循环索引 / 单行临时量 / 热路径数学临时量。
-> **校验**：`bash tools/check_naming.sh`（`verify.sh` 已 `--fail`，当前 0 条）；公开字段与局部缩写仍需人工守。
+> **校验**：`bash tools/check_naming.sh`（`verify.sh` 已 `--fail`）。2026-11-23 当前 **19 条**历史违规（内容 WIP + `ReplayV2Session._rec/_play` 等私有字段命名）；只减不增，随内容/回放收口清零。公开字段与局部缩写仍需人工守。
 
 ## 注入与会话
 
@@ -153,8 +153,9 @@
 - preset/builder 不覆写显式开关（`.enemy()` 别设 `is_spawn_fog`）。
 - Godot 的 `erase_section` / `remove_*` 对不存在目标会 `ERR_FAIL`：先 `has_section` / `file_exists` 守卫。
 - 存档写盘走 `SaveManager` 的 tmp → `.bak` → 提交，不要直接 `ConfigFile.save` 正式档；`ConfigFile.load` 对垃圾文件也可能返回 OK（无任何段）⇒ 必须检查已知段，别把空档当好档。
-- 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（现 327）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
+- 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（预算 327；当前 310）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
 - 内容层 `data/**` 不自己 `get_parent()` / `create_tween()`：移动走 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path`，Logo 走 `ctx.stage.show_logo`（`check_structure` ⑤ 会红）。
+- 玩法层不读引擎 `delta` / 不建 `Timer` / 不用 `Tween` 改模拟状态；纯表现才可以用。回放不变量见 [REPLAY_MODEL](REPLAY_MODEL.md)。
 - `SpawnSpec` 按引用共享：pattern 的 `template` 不要复制（否则弹型缓存分裂，且 behavior/阵营改动不可见）；要变体就复制字段后重建。
 - 测试用夹具，别拿真实内容当断言标准；内容只做“不数数量、不写死路径”的结构冒烟。
 
@@ -169,6 +170,7 @@
 - **内容协程 async（实验）**：`extends AsyncCoroutineScript` + `run_async(ctx)`；只 `await ctx.clock.delay/next_tick`（跟 `CoroutineRunner` 时钟）；不要用 `Timer`/`SceneTreeTimer` 做内容时间。旧 `_tick` 返回秒数风格保留。
 - **API 文档**：核心 `class_name` 用 `##`（`[codeblock]` / `[code]` / `[method]`）写“描述 + 模型 + 用法 + 边界”；长教程留在 `docs/`，代码只放链接。试点：`SpawnSpec` / `NativeBehaviorContext`。
 - **文档注释风格**：不写内部版本号（V18/DSL7）和 `**` 强调；用平实中文、`[code]`/`[codeblock]`；长文留 `docs/`。
+- **回放 / 确定性**：只存输入 + 命令 + 起点状态；严格比对总/分项哈希；不做 force 修正。语义变更必须升 `SIM_VERSION`。详见 [REPLAY_MODEL](REPLAY_MODEL.md)。
 - **Marisa 激光锚点**：激光段 anchor 到子机节点；子机重建 / cleanup 前必须 `ctx.bullets.clear_laser_bullets()`，否则旧段 anchor id 失效（退回自机 + `push_error`）。激光段用 `SpawnSpec.kind = BulletType.Kind.LASER` 标记，`MarisaLaserFade` 才能整批淡出。
 
 ## 🔴 待改进（达标后清空）

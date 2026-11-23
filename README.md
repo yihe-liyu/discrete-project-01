@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-771%20tests%20/%20113%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-772%20tests%20/%20113%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -32,47 +32,35 @@
 | 类别 | 进度 |
 |------|------|
 | 引擎 | ████████████████████ 95% |
-| 关卡（6 面） | ████ 20%（仅 Stage 1 可玩，设计已完整） |
+| 关卡（6 面） | ████ 20%（Stage 1 可玩；Stage 2/3B 内容在制作中） |
 | 美术 | ██████ 30% |
 | 音效 | ██████ 30% |
 | 叙事 | ██████████ 50% |
 | 打磨/QoL | ██████████████ 70% |
 
-已知待做：Stage 2~6 内容（面脚本 / Boss / 符卡）、Replay 播放器、完整 run 结算 / Continue。
-待办逐条清单在 [docs/BEST_PRACTICES_BASELINE.md](docs/BEST_PRACTICES_BASELINE.md) 的「🔴 待改进」与本地 `TODO_TEMP.md`。
+- **已完成**：原生弹幕内核、Stage 1 道中 + Boss、难度路线、符卡 / 关卡练习、对话、Bomb、Replay V2 的录制/严格播放骨架。
+- **进行中**：Stage 2 / 3B 内容；Replay V2 的端到端确定性（当前仍会在“对话结束 → Boss 入场”处出现 `boss_pos` 分歧，见 [REPLAY_MODEL](docs/REPLAY_MODEL.md) 的“已知问题”）。
+- **未完成**：Stage 3A / 4 / 5 / 6 的完整内容、`content_hash`、headless 快进验证、完整 run 结算 / Continue。
+
+状态与缺口的权威口径在 [BASELINE](docs/BEST_PRACTICES_BASELINE.md) 的 S 表 + [REPLAY_MODEL](docs/REPLAY_MODEL.md)；本页只做入口摘要。
 
 ---
 
-## 📖 文档（9 份主文档）
+## 📖 文档入口
 
-> 日常只需要 2 份：**[CONTENT_GUIDE](CONTENT_GUIDE.md)**（写内容）+ **[TEST_INDEX](docs/TEST_INDEX.md)**（改哪里看哪条）。
-> 其余是按需查的契约/参考和不必通读的历史；`docs/archive/` 是历史，不是待读清单。
-
-| 层 | 文档 | 什么时候看 |
-|---|---|---|
-| **日常** | [CONTENT_GUIDE](CONTENT_GUIDE.md) · [TEST_INDEX](docs/TEST_INDEX.md) | 每次动手前 |
-| **契约 / 参考** | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [DANMAKU_API](docs/DANMAKU_API.md)（behavior / 发射 API **速查**） · [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) | 改对应系统 / 做内容工具时 |
-| **历史 / 附录** | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md)（只看索引） · [archive](docs/archive/ARCHIVE_INDEX.md) | 查“为什么/当时怎么想” |
-
-### 我在做什么？看哪份？
+> **先看 [docs/INDEX.md](docs/INDEX.md)**：它只回答“哪个问题看哪份、谁是权威、是否还有效”。
+> 日常最短路径：写内容看 [CONTENT_GUIDE](CONTENT_GUIDE.md)，改玩法/回放看 [ARCHITECTURE](docs/ARCHITECTURE.md) + [REPLAY_MODEL](docs/REPLAY_MODEL.md)，改代码前扫 [BASELINE](docs/BEST_PRACTICES_BASELINE.md)。
 
 | 任务 | 打开 | 提醒 |
 |---|---|---|
 | 跑游戏 / 跑测试 | 本页 · [TEST_INDEX](docs/TEST_INDEX.md) | `./tools/verify.sh` 是总门禁 |
 | 加一个波次 / 一张符卡 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §0 / §四 / §六 | 改完用符卡练习看手感；先跑 `tools/check_content.sh` |
-| 加敌人 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §三 | `EnemyData` 构造链 + 行为脚本 + `AssetRegistry` |
-| 加一面 / 新 Boss | [CONTENT_GUIDE](CONTENT_GUIDE.md) §四 / §八 · [ARCHITECTURE](docs/ARCHITECTURE.md) §6 | **必须进 `stage_registry.tres` / `boss_registry.tres`** |
-| 改某颗弹的飞行规律 | [DANMAKU_API](docs/DANMAKU_API.md) · [CONTENT_GUIDE](CONTENT_GUIDE.md) §六 | 直接拼原语；`until` 顺序有坑 |
-| 写对话 | [CONTENT_GUIDE](CONTENT_GUIDE.md) 附录 D | `--list` / `--dry` / `--shot` |
-| 改背景 | [archive/BACKGROUND_VISUAL_PLAN.md](docs/archive/BACKGROUND_VISUAL_PLAN.md)（已冻结） · [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) §2.5 | 现役 3D 背景；别重开视觉线 |
-| 改引擎 / 内核 | [ARCHITECTURE](docs/ARCHITECTURE.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) · [archive/GDEXTENSION_KERNEL_DESIGN.md](docs/archive/GDEXTENSION_KERNEL_DESIGN.md) | 改 C++ 必须重编扩展 |
-| 优化内容流程 / 做工具 | [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md) · [内容作者契约](docs/CONTENT_AUTHORING_CONTRACT.md) | 先看「建议顺序」，别先造编辑器 |
-| 查“为什么当初这么改” | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md) 索引 → [archive](docs/archive/ARCHIVE_INDEX.md) | 正文只留最近十余条 |
-
-> **分工（同一信息只写一处）**：规则/状态 = [BASELINE](docs/BEST_PRACTICES_BASELINE.md)；架构 = [ARCHITECTURE](docs/ARCHITECTURE.md)；
-> 弹幕参考 = [DANMAKU_API](docs/DANMAKU_API.md)（behavior / 发射 API 速查）；内容 = [CONTENT_GUIDE](CONTENT_GUIDE.md)（含对话附录）；内容管线 = [CONTENT_PIPELINE_AUDIT](docs/CONTENT_PIPELINE_AUDIT.md)；
-> 测试 = [TEST_INDEX](docs/TEST_INDEX.md)；历史 = [LOG](docs/BEST_PRACTICES_LOG.md) + [archive](docs/archive/ARCHIVE_INDEX.md)。
-> 原始设定资料 = `docs/reference/*.txt`；`TODO_TEMP.md` 是作者本地临时待办（不进 Git）。
+| 加敌人 / 新 Boss / 新面 | [CONTENT_GUIDE](CONTENT_GUIDE.md) §三 / §四 / §八 · [CONTENT_AUTHORING_CONTRACT](docs/CONTENT_AUTHORING_CONTRACT.md) | **必须进 `stage_registry.tres` / `boss_registry.tres`** |
+| 改弹幕飞行 / behavior | [DANMAKU_API](docs/DANMAKU_API.md) · [NATIVE_BEHAVIOR_PACK](docs/NATIVE_BEHAVIOR_PACK.md) | 先拼现成 behavior；新增 pack 才动 C++ |
+| 写对话 | [CONTENT_GUIDE](CONTENT_GUIDE.md) 附录 D | 事件驱动收尾，不要用 `wait(秒)` 猜台词 |
+| 改背景 / 路径预览 | [BACKGROUND_TEMPLATE](docs/BACKGROUND_TEMPLATE.md) · [TELEGRAPH_PREVIEW](docs/TELEGRAPH_PREVIEW.md) | 背景视觉线已冻结；只做结构/接口 |
+| 改引擎 / tick / 回放 | [ARCHITECTURE](docs/ARCHITECTURE.md) · [REPLAY_MODEL](docs/REPLAY_MODEL.md) · [BASELINE](docs/BEST_PRACTICES_BASELINE.md) | 先看 tick 顺序与 replay 不变量 |
+| 查“为什么当初这么改” | [BEST_PRACTICES_LOG](docs/BEST_PRACTICES_LOG.md) 索引 → [archive](docs/archive/ARCHIVE_INDEX.md) | 历史只解释过去，不定义现在 |
 
 ---
 
@@ -91,8 +79,8 @@
 ### 跑测试（重构/改动后的安全带）
 
 ```bash
-./test/run_tests_sharded.sh        # 全量并行（默认 min(nproc,8) 片，~15s；覆盖 = 全量）
-./test/run_tests.sh                # 全量串行（排查顺序/共享状态用，~54s）
+./test/run_tests_sharded.sh        # 全量并行（默认 min(nproc,8) 片；覆盖 = 全量）
+./test/run_tests.sh                # 全量串行（排查顺序/共享状态用，~76s）
 ./test/run_tests.sh -gtest=res://test/test_x.gd   # 单文件
 ```
 
@@ -102,7 +90,7 @@
 ### 一键验证（文档哨兵 + 语法 + 命名 + 结构 / 内容 + 启动 + 测试 + 所有权）
 
 ```bash
-./tools/verify.sh            # 全量（默认并行分片，~18s）
+./tools/verify.sh            # 全量（默认并行分片）
 ./tools/verify.sh --fast     # 快速冒烟（~8s，不全量；提交前记得跑全量）
 ./tools/verify.sh --serial   # 全量串行（排查用）
 ```
@@ -110,6 +98,10 @@
 > 第 1 步是**文档哨兵**（`tools/check_docs.py`）：TEST_INDEX 的测试清单 / 抬头数字 / **各层小节小计** /
 > README 徽章 / `DANMAKU_API` 的弹型与音效 key 表 / README 链接 / 滚动日志，全部对着代码与数据机械核对
 > —— 文档数字再也不会静默腐烂。
+>
+> **当前门禁状态（2026-11-23）**：`check_naming` 仍有 19 条历史违规（内容 WIP + `ReplayV2Session` 私有字段），
+> 因此 `verify.sh` 目前会在第 3 步停住；`check_docs` / `check_syntax` / `check_structure` / 启动 / GUT 本身可过。
+> 这不影响本文的文档口径，但不要把 `verify.sh` 绿当作当前事实；命名债在 [BASELINE](docs/BEST_PRACTICES_BASELINE.md) 记录。
 >
 > 第 4 步是**结构契约**（`tools/check_structure.sh`）：**测试白盒预算只减不增** ·
 > 第 4 步同时跑**内容契约**（`tools/check_content.sh`）：Stage / Boss 注册表、脚本 / 背景 / BGM 引用、
@@ -168,7 +160,7 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 - **UI**: NavPage + MenuNav 页面栈（场景化 Overlay/PageHost）
 - **数据**: .tres Resource 文件（EnemyData 构造链模板 / SpellRecordBook / MusicRegistry）
 - **常量**: GameConfig（东方框边界）/ LayerConfig（z_index）
-- **Replay**: ReplayRecorder 已就绪（RNG 种子 + 输入录制），回放播放器待接入
+- **Replay**: ReplayV2（每 tick 输入 mask + 离散命令 + 总/分项状态哈希；严格播放，不做 force 修正）；当前语义版本 `sim-v8`，端到端确定性仍在收敛
 
 ---
 
@@ -186,9 +178,10 @@ UI / 菜单 ◀── 信号 GameEvents    ◀── 存档 SaveData（纯 stati
 ```
 
 - 依赖单向：父级/组合根向下注入（R2）；数据类不持有场景，实体经 `ctx.*` 服务访问系统
-- autoload 只剩 4 个真全局：`GameEvents / GameManager / RNG / AudioManager`；场景 `_exit_tree` 统一断开信号
-- 协程约定：游戏逻辑用 CoroutineScript + Timeline（可暂停/可复现），UI 用 await
-- 测试保护：核心数学（碰撞/掉落/符卡判定/时间线/RNG）有回归测试
+- autoload 只剩 5 个真全局：`GameEvents / GameManager / RNG / AudioManager / SimClock`；场景 `_exit_tree` 统一断开信号
+- 时间：玩法统一 `SimClock.DT = 1/60`；协程用 `CoroutineRunner` + `Timeline`，UI 才用 `await` / Tween / Timer
+- 回放：`GameScene` 在 tick 钩子里注入输入/命令、比对状态哈希；回放不保存游戏状态
+- 测试保护：核心数学（碰撞/掉落/符卡判定/时间线/RNG）+ Replay 格式/逐 tick 哈希有回归测试
 
 ---
 

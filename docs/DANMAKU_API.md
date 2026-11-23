@@ -336,12 +336,12 @@ spec.blend(false)   # rgb = 贴图 × tint（自机弹保原色）
 
 ```
 data/stages/<stage>/
-  stage_script/*.gd                关卡编排（Timeline）
+  stage_data/*.gd                关卡编排（Timeline）
   enemy/*.gd                       敌人行为（CoroutineScript）
   phase/<阶段名>/*.tres             PhaseData（一个 .tres = 一个阶段）
   phase/<阶段名>/<阶段名>.gd         Boss 弹幕脚本
   phase/<阶段名>/<阶段名>移动.gd     Boss 移动脚本
-  background/ stage_data/
+  background/
 ```
 
 > 阶段脚本的角色靠 `PhaseData.shoot_script` / `move_script` **引用反推**；新建脚本接进 .tres 前显示「未分类」是正确结果。
@@ -363,7 +363,7 @@ data/stages/<stage>/
 ### 8.3 注释（不再自动索引）
 
 文件头注释仍建议写清「这张卡做什么」；`@name` / `@desc` / `@role` 随创作台退役，不再被工具消费。
-命名约定（`*_move.gd` / `*_shoot.gd` / `enemy/` / `stage_script/`）只用于人类阅读。
+命名约定（`*_move.gd` / `*_shoot.gd` / `enemy/` / `stage_data/`）只用于人类阅读。
 
 ## 9. 陷阱清单（必读）
 
