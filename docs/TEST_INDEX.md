@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：114 脚本 / **773 用例（771 通过 / 2 红：BossRegistry WIP + BGM）/ 6178 断言 / 76.3s** / 0 orphans / **0 pending**。
+**现状**：114 脚本 / **766 用例（764 通过 / 2 红：BossRegistry WIP + BGM）/ 6163 断言 / 76.2s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 61 | 461 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 61 | 454 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 17 | 117 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,7 +93,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（61 / 461）
+## C · 宿主 · 运行时系统（61 / 454）
 
 ### C1 组合根 / 服务 / 时间线（18 / 77）
 
@@ -171,25 +171,24 @@
 | [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类 | 5 | 0 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
-### C7 存档 / 回放 / 随机（12 / 59）
+### C7 存档 / 回放 / 随机（12 / 52）
 
-> 现行 replay = **ReplayV2**（输入 + 命令 + 总/分项哈希；严格播放）。`ReplayRecorder` 是 v1 历史基础设施，
-> 只保留兼容测试，不再接生产；新回放工作看 [REPLAY_MODEL](REPLAY_MODEL.md)。
+> 现行 replay = **Replay**（输入 + 命令 + 总/分项哈希；严格播放）。新回放工作看 [REPLAY_MODEL](REPLAY_MODEL.md)。
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
-| [test_replay_recorder](../test/test_replay_recorder.gd) | `ReplayRecorder`（v1，历史）录输入基础设施 | 7 | 0 |
-| [test_player_input](../test/test_player_input.gd) | `PlayerInput`：每物理 tick 单次锁存；玩法 / 录制共用同一快照；动作表唯一来源；test/回放输入注入；离散命令下 tick 消费 | 7 | 0 |
+| [test_player_input](../test/test_player_input.gd) | `PlayerInput`：每物理 tick 单次锁存；玩法共用同一快照；动作表唯一来源；test/回放输入注入；离散命令下 tick 消费 | 6 | 0 |
 | [test_sim_clock](../test/test_sim_clock.gd) | `SimClock`：tick 冻结 owner / 帧数 / 嵌套恢复 / 到点自动恢复 / reset | 4 | 0 |
 | [test_sim_hash](../test/test_sim_hash.gd) | `SimHash`：位置量化 / tick 进哈希 / 分项哈希隔离 / boss 位置进总哈希 / 同输入双跑 120 tick 逐 tick 一致 | 4 | 0 |
-| [test_replay_v2](../test/test_replay_v2.gd) | `ReplayV2`：输入 + 命令 + 总/分项哈希格式往返 / 旧 v1 拒绝 / sim_version 闸门 / 结束 stage 不覆盖起始 stage / 对话推进命令 / 录制→落盘→回放逐 tick 一致 | 5 | 0 |
+| [test_replay](../test/test_replay.gd) | `Replay`：输入 + 命令 + 总/分项哈希格式往返 / 旧格式拒绝 / 兼容性闸门 / 结束 stage 不覆盖起始 stage / 对话推进命令 / 录制→落盘→回放逐 tick 一致 | 5 | 0 |
 | [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 / 跨面起点资源恢复 | 4 | 0 |
-| [test_replay_menu_v2](../test/test_replay_menu_v2.gd) | Replay 菜单：列出 v2 文件、显示分数、空目录不报错 | 1 | 0 |
+| [test_replay_menu](../test/test_replay_menu.gd) | Replay 菜单：列出录像文件、显示分数、空目录不报错 | 1 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |
 | [test_enemy_data_serializable](../test/test_enemy_data_serializable.gd) | 债 C 第一步：`EnemyData` 可序列化 + `validate()` | 3 | 0 |
 | [test_run_state](../test/test_run_state.gd) | 路线切面：自机资源快照跨场景继承 / 高分 key 0 / 单关高分隔离 / `reset_all` 清快照 / `load_stage` 不再重置资源 | 5 | 0 |
+| [test_content_fingerprint](../test/test_content_fingerprint.gd) | `ContentFingerprint`：`data/**` 内容 SHA-256 稳定、长度固定（Replay content_hash 闸门） | 1 | 0 |
 
 ### C8 对话逻辑 / 内容目录（3 / 34）
 

@@ -17,7 +17,7 @@ Godot 4.7 + GDScript + 原生 GDExtension 的东方 STG。先读：
 - 改代码前先读相关文件；保持现有中文命名/注释风格。
 - 改内容后至少跑对应符卡练习 / 整关冒烟；GUT 不验手感。
 - 玩法时间只用 `SimClock` tick；玩法层不读 `delta`、不建 `Timer`、不用 `Tween` 改模拟状态。
-- 改模拟语义 / tick 顺序 / RNG / 起点状态 → 升 `ReplayV2Session.SIM_VERSION`，并更新 `docs/REPLAY_MODEL.md`。
+- 改模拟语义 / tick 顺序 / RNG / 起点状态 → 升 `ReplaySession.SIM_VERSION`，并更新 `docs/REPLAY_MODEL.md`。
 - 公开 API 用 Godot 文档注释（`##`）+ BBCode（`b` / `br` / `code` / `codeblock` / `method` / `member` / `signal` / `constant` / `enum`）；私有实现用 `#`。
 - 文档注释不用 Markdown 粗体、反引号或内部版本号；长教程只留 `docs/` 链接。
 - 新增 `class_name` 后跑 `godot --headless --import`；`.uid` 文件入库。

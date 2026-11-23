@@ -28,7 +28,7 @@
 | S7 | 难度曲线 | 🚧 | R17 R8 | 曲线靠调校；同种子端到端验证待补 |
 | S8 | 反馈与演出 | ✔ | R2 R7 R20 | — |
 | S9 | 性能（几千发弹下的余量） | 🚧 | R10 R19 | MultiMesh 同步每帧分组/拼 key 有分配；满载 60fps 待实机确认 |
-| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | Replay V2 已接通录制/严格播放；sim-v8 的“对话 → Boss 入场”差拍已修复，sim-v9 已通过 10,843 tick 的 Stage 1 → Stage 2 Game Over 完整 run 回放（零分歧）；`content_hash` / headless 快进未做（见 [REPLAY_MODEL](REPLAY_MODEL.md)） |
+| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | Replay 已接通录制/严格播放；sim-v8 的“对话 → Boss 入场”差拍已修复，sim-v9 已通过 10,843 tick 的 Stage 1 → Stage 2 Game Over 完整 run 回放（零分歧）；`content_hash` 已落地（`ContentFingerprint`）；headless 快进未做（见 [REPLAY_MODEL](REPLAY_MODEL.md)） |
 | S11 | 场景流程与演出 | ✔ | R1 R20 R21 | — |
 | S12 | 玩家体验与可访问 | ✔ | R4 R6 R7 R20 | — |
 | S13 | 素材与图集 | ✔ | R12 R17 | —（`laser` 按拍板留独立 PNG） |
@@ -113,7 +113,7 @@
 > 缩写白名单（封闭）：`ctx` + 循环索引 `i`/`j`/`k`。`refs`/`world`/`bullets`/`sys`/`bm`/`bg`/`nav`/`tl` 都算违规。
 > `ctx.*` 门面用域名词（`ctx.bullets`→`BulletService`），不跟类型名、不加 `_service`；门面动词封闭清单：`active`/`current`/`exists`/`picked`/`at_least`。
 > 形参遮蔽成员加 `p_`（`p_ctx`）；真的不用 → `_`；禁止叠加 `_p_`。单字母只许循环索引 / 单行临时量 / 热路径数学临时量。
-> **校验**：`bash tools/check_naming.sh`（`verify.sh` 已 `--fail`）。2026-11-23 当前 **19 条**历史违规（内容 WIP + `ReplayV2Session._rec/_play` 等私有字段命名）；只减不增，随内容/回放收口清零。公开字段与局部缩写仍需人工守。
+> **校验**：`bash tools/check_naming.sh`（`verify.sh` 已 `--fail`）。2026-11-23 当前 **19 条**历史违规（内容 WIP + `ReplaySession._rec/_play` 等私有字段命名）；只减不增，随内容/回放收口清零。公开字段与局部缩写仍需人工守。
 
 ## 注入与会话
 

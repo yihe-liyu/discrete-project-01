@@ -3,7 +3,7 @@
 > 东方同人 STG 引擎 · Godot 4.7 · Discrete Project 第一作
 
 [![Godot](https://img.shields.io/badge/Godot-4.7-%23478cbf)](https://godotengine.org)
-[![Tests](https://img.shields.io/badge/GUT-773%20tests%20/%20114%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
+[![Tests](https://img.shields.io/badge/GUT-766%20tests%20/%20114%20scripts-green)]()<!-- 手动徽章：数字口径见 docs/TEST_INDEX.md（改测试后同步这里） -->
 [![CI](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml/badge.svg)](https://github.com/yihe-liyu/1st-touhou-star/actions/workflows/verify.yml)
 [![License](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
 
@@ -38,8 +38,8 @@
 | 叙事 | ██████████ 50% |
 | 打磨/QoL | ██████████████ 70% |
 
-- **已完成**：原生弹幕内核、Stage 1 道中 + Boss、难度路线、符卡 / 关卡练习、对话、Bomb、Replay V2 的录制/严格播放骨架。
-- **进行中**：Stage 2 / 3B 内容；Replay V2 的端到端确定性（当前仍会在“对话结束 → Boss 入场”处出现 `boss_pos` 分歧，见 [REPLAY_MODEL](docs/REPLAY_MODEL.md) 的“已知问题”）。
+- **已完成**：原生弹幕内核、Stage 1 道中 + Boss、难度路线、符卡 / 关卡练习、对话、Bomb、Replay 的录制/严格播放；Stage 1 → Stage 2 完整 run 已零分歧。
+- **进行中**：Stage 2 / 3B 内容；`content_hash` 已接入，headless 快进 / 跨平台一致性仍在收尾。
 - **未完成**：Stage 3A / 4 / 5 / 6 的完整内容、`content_hash`、headless 快进验证、完整 run 结算 / Continue。
 
 状态与缺口的权威口径在 [BASELINE](docs/BEST_PRACTICES_BASELINE.md) 的 S 表 + [REPLAY_MODEL](docs/REPLAY_MODEL.md)；本页只做入口摘要。
@@ -99,7 +99,7 @@
 > README 徽章 / `DANMAKU_API` 的弹型与音效 key 表 / README 链接 / 滚动日志，全部对着代码与数据机械核对
 > —— 文档数字再也不会静默腐烂。
 >
-> **当前门禁状态（2026-11-23）**：`check_naming` 仍有 19 条历史违规（内容 WIP + `ReplayV2Session` 私有字段），
+> **当前门禁状态（2026-11-23）**：`check_naming` 仍有 19 条历史违规（内容 WIP + `ReplaySession` 私有字段），
 > 因此 `verify.sh` 目前会在第 3 步停住；`check_docs` / `check_syntax` / `check_structure` / 启动 / GUT 本身可过。
 > 这不影响本文的文档口径，但不要把 `verify.sh` 绿当作当前事实；命名债在 [BASELINE](docs/BEST_PRACTICES_BASELINE.md) 记录。
 >
@@ -160,7 +160,7 @@ grep -rn "关键词" --include="*.gd" scripts/ data/
 - **UI**: NavPage + MenuNav 页面栈（场景化 Overlay/PageHost）
 - **数据**: .tres Resource 文件（EnemyData 构造链模板 / SpellRecordBook / MusicRegistry）
 - **常量**: GameConfig（东方框边界）/ LayerConfig（z_index）
-- **Replay**: ReplayV2（每 tick 输入 mask + 离散命令 + 总/分项状态哈希；严格播放，不做 force 修正）；当前语义版本 `sim-v9`；sim-v8 的 Boss 入场差拍已修复，sim-v9 已通过 10,843 tick 的 Stage 1 → Stage 2 Game Over 完整 run 回放（零分歧）
+- **Replay**: Replay（每 tick 输入 mask + 离散命令 + 总/分项状态哈希；严格播放，不做 force 修正）；当前语义版本 `sim-v9`；sim-v8 的 Boss 入场差拍已修复，sim-v9 已通过 10,843 tick 的 Stage 1 → Stage 2 Game Over 完整 run 回放（零分歧）
 
 ---
 

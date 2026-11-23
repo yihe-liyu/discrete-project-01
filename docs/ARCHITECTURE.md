@@ -57,7 +57,7 @@ MainMenu / 菜单栈 ──change_scene──▶ GameScene（组合根）
 | `StageCatalog` / `StageRouteCatalog` / `BossCatalog` | 关卡、路线、Boss / 阶段身份的只读目录 | 运行时推进 / 记录写入 |
 | `SaveData` / `SaveManager` | 会话状态（路线 / 当前 stage / 开局资源）与 `user://` 存档 | 关卡内部规则 |
 | `BulletManager` | 弹幕门面、激光/清弹/宿主碰撞 | 持有弹幕权威数据（在原生 store） |
-| `ReplayV2Session` | 录制 / 回放会话、输入注入、哈希校验 | 保存逐帧游戏状态 |
+| `ReplaySession` | 录制 / 回放会话、输入注入、哈希校验 | 保存逐帧游戏状态 |
 
 ## 3. 一个物理 tick 的顺序
 
@@ -150,7 +150,7 @@ SimClock._physics_process
 | 命名对象引用 | `StageObjects` | `register` / `resolve`（per-run） |
 | 阶段身份 / 记录 | `BossCatalog` / `RecordService` | 只读 / 明确记录 API |
 | 对话状态 | `DialogueBox` / `DialogueRunner` | 固定 tick 推进 + 回放命令 |
-| 回放会话 | `ReplayV2Session` | 录制 / 回放 / 停止 |
+| 回放会话 | `ReplaySession` | 录制 / 回放 / 停止 |
 
 ## 5. 事件模型
 
@@ -186,7 +186,7 @@ SimClock._physics_process
 | `scripts/item/` | `ItemPool`、`Item` |
 | `scripts/kernel_bridge/` | 原生 store 的 GDScript 桥、宿主碰撞、bomb |
 | `scripts/sim/` | `SimHash`（总 / 分项状态哈希） |
-| `scripts/replay/` | `ReplayV2`、`ReplayV2Session`（v1 `ReplayRecorder` 仅历史） |
+| `scripts/replay/` | `Replay`（格式/序列化）、`ReplaySession`（会话 / 输入注入 / 哈希校验） |
 | `scripts/data/` | 数据类、目录、存档、难度、身份 |
 | `data/` | 内容：stage / boss / phase / dialogue / bullets / routes / registry |
 | `scenes/` | 运行时场景与 UI 场景 |
@@ -212,7 +212,7 @@ SimClock._physics_process
 |---|---|---|
 | 没有单一 `Simulation.step` | gameplay 仍是节点 `_physics_process`；顺序靠优先级 + 树序 | 显式 `FrameOrder` / 手动 step，才能 headless 快进 |
 | `0` 档顺序隐式 | 新节点插队可能改变模拟 | 组合根统一赋优先级 |
-| `content_hash` 为空 | 内容变了仍可能通过 `sim_version` | 内容 manifest / build stamp 写进 header |
+| ~~`content_hash` 为空~~ | 已由 `ContentFingerprint` 对 `data/**` 做 SHA-256，回放 / 菜单按指纹拒绝 | 保持；美术 / 音频二进制未纳入 |
 | `SimHash` 32 位 | 碰撞概率 + 覆盖字段需维护 | 诊断用足够；需要更强校验再升 64 位 |
 | 回放长局未收口 | 当前在对话 → Boss 入场出现 `boss_pos` 分歧 | 见 [REPLAY_MODEL](REPLAY_MODEL.md) 的“已知问题” |
 | 内容完成度 | Stage 2/3B 仍在制作 | 不把空目录当“已完成” |
