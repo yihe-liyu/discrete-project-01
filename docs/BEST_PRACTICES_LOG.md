@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 66 条（本文件留最近 66 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 67 条（本文件留最近 67 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-23 — Replay sim-v9 Stage 1 对话/入场验证
 - 2026-11-23 — TickMover 统一由 SimClock 推进
 - 2026-11-23 — Replay 模型重建 + 工程文档重整
 - 2026-10-21 — BulletData 注释补齐
@@ -96,6 +97,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-23 — Replay sim-v9 Stage 1 对话/入场验证
+
+- **目标**：确认 TickMover 收归 SimClock 后，Stage 1 战前对话 → Boss 入场不再出现 `boss_pos` 差拍。
+- **做法**：临时端到端测试录制 Stage 1 5760 tick（战前对话自动推进、Boss 入场），再从头回放；逐 tick 总/分项哈希比对。
+- **结果**：零分歧，`idx≈5747` 的 `boss_pos` 不再出现；测试耗时 192s，因此不放进常驻 GUT，常驻回归是 `test_tick_mover`。
+- **未覆盖**：完整 Stage 1 → Boss 战 → 通关/Game Over 长局；`content_hash` / headless 快进。
 
 ### 2026-11-23 — TickMover 统一由 SimClock 推进
 
