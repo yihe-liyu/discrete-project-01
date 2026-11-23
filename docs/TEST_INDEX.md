@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：113 脚本 / **772 用例（770 通过 / 2 红：BossRegistry WIP + BGM）/ 6175 断言 / 76.1s** / 0 orphans / **0 pending**。
+**现状**：114 脚本 / **773 用例（771 通过 / 2 红：BossRegistry WIP + BGM）/ 6178 断言 / 76.3s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 60 | 460 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 61 | 461 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 17 | 117 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,9 +93,9 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（60 / 460）
+## C · 宿主 · 运行时系统（61 / 461）
 
-### C1 组合根 / 服务 / 时间线（17 / 76）
+### C1 组合根 / 服务 / 时间线（18 / 77）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -120,6 +120,7 @@
 | [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：13 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
 | [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环（Dialogue / Item / Player / Boss / Enemy 五个服务都有回归） + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 8 | 0 |
 | [test_timeline_phase_unfreeze](../test/test_timeline_phase_unfreeze.gd) | B 方案回归：Boss 阶段战斗不再冻结时间轴 | 1 | 0 |
+| [test_tick_mover](../test/test_tick_mover.gd) | `TickMover`：在 `tick_prepare` 中新增的 mover 由 `SimClock` 统一推进（物理回调注册空档回归） | 1 | 0 |
 
 ### C2 自机 / 道具 / 资源（5 / 63）
 

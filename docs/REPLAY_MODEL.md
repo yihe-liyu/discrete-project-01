@@ -2,7 +2,7 @@
 
 > **本文回答**：replay 依赖哪些状态、每 tick 按什么顺序推进、哪些东西会破坏一致性、当前实现到哪、出现分歧怎么定位。
 > **不回答**：具体内容怎么写（→ [CONTENT_GUIDE](../CONTENT_GUIDE.md)）、通用架构（→ [ARCHITECTURE](ARCHITECTURE.md)）、测试文件清单（→ [TEST_INDEX](TEST_INDEX.md)）。
-> **状态**：现行实现为 **Replay V2 / `sim-v8`**；端到端长局仍在收口，已知问题见 §9。
+> **状态**：现行实现为 **Replay V2 / `sim-v9`**；`sim-v8` 的 Boss 入场差拍已定位并修复，`sim-v9` 待完整新录像验证，见 §9。
 
 ## 0. 定义
 
@@ -62,7 +62,8 @@ tick N 开始
     └─ 回放：拿同一 tick 的 hash 对比；不一致 → 报字段并结束
   冻结倒计时（不改变本 tick 的 hash 时点）
   ---- 以下为 gameplay ----
-  MarisaShoot -100 → TickMover -50 → KernelNativeSystem -10 → KernelBulletHost -4
+  SimClock 内部 TickMover 列表（observer 之后）→ MarisaShoot -100
+  → KernelNativeSystem -10 → KernelBulletHost -4
   → BulletManager / Player / Enemy / CoroutineRunner (default 0) → Boss 100
 tick N 结束
 ```
@@ -79,7 +80,7 @@ magic = "TSR2"
 version = 2
 tick_rate = 60
 seed / rng_state        宿主 RNG 起点
-sim_version             模拟语义版本（当前 sim-v8）
+sim_version             模拟语义版本（当前 sim-v9）
 content_hash            预留；当前为空
 metadata                difficulty / character / route_id / start_stage_id/no / result / score / ...
 start_resources         录制起点的自机资源快照（跨面 / 中途起点）
@@ -166,22 +167,21 @@ enemies / items / lasers / bullets
 6. **最小修复**：只改根因；改完升 `SIM_VERSION`，重录一次作为回归 fixture。
 7. **回归**：`test_game_scene_replay`（录制/回放、bomb、跨面）+ `test_replay_v2` + `test_sim_hash`。
 
-## 9. 已知问题（2026-11-23）
+## 9. 已定位问题与修复（2026-11-23）
 
-最新 `sim-v8` 长局（Stage 1 Lunatic，8390 tick）回放日志：
+`sim-v8` 的 Stage 1 长局在 `idx=5747` 出现 `field=boss_pos`：
 
 ```text
-ReplayV2 分歧 tick=14621 idx=5747
-  exp boss pos=(987.801,494.475)
-  cur boss pos=(1000.000,500.000)
-ReplayV2 分歧字段 idx=5747 field=boss_pos
+exp boss pos=(987.801,494.475)
+cur boss pos=(1000.000,500.000)
 ```
 
-- 录制里 Boss 已从出生点 `(1000,500)` 开始入场；回放仍停在出生点。
-- `boss_phase / boss_hp / boss_time` 相同，`player / bullets / enemies / items / lasers / rng` 相同（按日志的首个差异看）。
-- 位置在 Stage 1 战前对话结束附近；`boss_enter` 事件 / `BossHandle.enter` 的 TickMover 启动 tick 仍差拍。
-- 这不是移动数学或 RNG 问题；是**对话事件 → 场景动词 → 入场移动**的 tick 对齐问题。
-- 工作区里曾尝试 `flush_pending_dialogue`（录制端在 `tick_prepare` 执行推进），但最新日志仍复现；说明还需要把“对话 runner 的步骤/事件”也纳入可观测状态，而不是继续猜。
+- 录制里 Boss 已开始入场，回放仍停在出生点；`boss_phase / hp / time` 与其它分项相同。
+- 追踪到 `boss_enter` 在 `tick_prepare` 中触发，`BossHandle.enter` 创建的 `TickMover` 节点明明在树里、`can_process=true`，但它的 `_physics_process` 从未被 Godot 调用（`frame=0`）。
+- 根因不在移动数学、RNG 或对话事件本身，而在**在物理回调中新增节点后，节点自动步进的注册空档**。
+- 修复：`TickMover` 不再自动 `_physics_process`，改为注册到 `SimClock`，由 `SimClock` 在 observer 之后、gameplay 之前统一 `tick_mover()`；`SimClock.reset()` 清空列表。
+- 回归：`test_tick_mover` 覆盖“在 `tick_prepare` 中新增 mover 也必须推进”。
+- `SIM_VERSION` 升到 `sim-v9`；旧的 `sim-v8` 录像会被拒绝。**待用一份新的 sim-v9 长局录像做端到端验证**。
 
 ## 10. 完成判据
 

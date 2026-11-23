@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 65 条（本文件留最近 65 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 66 条（本文件留最近 66 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-23 — TickMover 统一由 SimClock 推进
 - 2026-11-23 — Replay 模型重建 + 工程文档重整
 - 2026-10-21 — BulletData 注释补齐
 - 2026-10-21 — BulletMultiMesh（DanmakuRenderBridge 的 GD 包装）注释
@@ -95,6 +96,14 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-23 — TickMover 统一由 SimClock 推进
+
+- **目标**：修复 `tick_prepare` 中新建的 `TickMover` 不进入 `_physics_process`，导致 Boss 入场晚拍。
+- **证据**：sim-v8 回放 `idx=5747 field=boss_pos`；live mover `inside=true / process=true / can=true` 但 `frame=0`，从未被 Godot 调用。
+- **改法**：`SimClock` 持有 mover 列表，observer 之后统一 `tick_mover()`；`TickMover` 关闭自动物理步进；`SimClock.reset()` 清空列表；新增 `test_tick_mover` 回归。
+- **版本**：`SIM_VERSION` sim-v8 → sim-v9；旧录像拒绝，待新录像验证。
+- **验收**：全量 GUT 773（771 通过 / 2 内容 WIP 红）；`test_tick_mover` / `test_game_scene_replay` / `test_boss_phase` 通过。
 
 ### 2026-11-23 — Replay 模型重建 + 工程文档重整
 

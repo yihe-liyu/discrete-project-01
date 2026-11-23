@@ -71,21 +71,23 @@ SimClock._physics_process
   4. tick += 1
   5. PlayerInput.latch()     ← 本 tick 唯一输入快照
   6. tick_observer(tick)     ← 录制 / 回放哈希校验（在 gameplay 之前）
-  7. 冻结 owner 倒计时
+  7. SimClock 内部 TickMover 列表 → tick_mover()
+  8. 冻结 owner 倒计时
 ```
 
 之后按 `process_physics_priority` 从小到大：
 
 | 优先级 | 谁 | 做什么 |
 |---:|---|---|
-| `-10000` | `SimClock` | 建立 tick 边界、锁输入、录制/回放钩子 |
+| `-10000` | `SimClock` | 建立 tick 边界、锁输入、录制/回放钩子；observer 之后推进 `TickMover` 列表 |
 | `-100` | `MarisaShoot`（射击协程） | 同步激光锚点；再让 `CoroutineRunner` 推进射击状态机 |
-| `-50` | `TickMover` | Boss / 敌人 / 复位的 tick 化移动 |
 | `-10` | `KernelNativeSystem` | 原生积分 + `behavior_tick` + 拉只读快照 |
 | `-4` | `KernelBulletHost` | 延后动作 flush + 激光渐隐 |
 | `0` | `BulletManager` / `Player` / `Enemy` / `CoroutineRunner` / 多数节点 | 宿主碰撞、移动、发弹、时间线/协程推进 |
 | `100` | `Boss` | 阶段计时、HP 缓降、奖励分 tick |
 
+> **移动顺序**：`TickMover` 不再靠节点自动 `_physics_process`；它注册到 `SimClock`，在 observer 之后、gameplay 之前统一推进。这样在 `tick_prepare` 里新增的 mover 也不会错过本帧的物理注册。
+>
 > **债务**：`0` 这一档目前靠场景树顺序，而不是显式的 `FrameOrder`。这段顺序在录制/回放中稳定，但“新增节点插在哪”仍是隐式知识；目标是由组合根显式赋优先级。
 
 ### 3.1 一次 run 的生命周期

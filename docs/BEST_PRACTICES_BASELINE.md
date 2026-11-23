@@ -28,7 +28,7 @@
 | S7 | 难度曲线 | 🚧 | R17 R8 | 曲线靠调校；同种子端到端验证待补 |
 | S8 | 反馈与演出 | ✔ | R2 R7 R20 | — |
 | S9 | 性能（几千发弹下的余量） | 🚧 | R10 R19 | MultiMesh 同步每帧分组/拼 key 有分配；满载 60fps 待实机确认 |
-| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | Replay V2 已接通录制/严格播放；长局仍在收口“对话 → Boss 入场”差拍，`content_hash` / headless 快进未做（见 [REPLAY_MODEL](REPLAY_MODEL.md)） |
+| S10 | 可复现与回放 | 🚧 | R10 R13 R17 | Replay V2 已接通录制/严格播放；sim-v8 的“对话 → Boss 入场”差拍已定位并修复（sim-v9 待新录像验证）；`content_hash` / headless 快进未做（见 [REPLAY_MODEL](REPLAY_MODEL.md)） |
 | S11 | 场景流程与演出 | ✔ | R1 R20 R21 | — |
 | S12 | 玩家体验与可访问 | ✔ | R4 R6 R7 R20 | — |
 | S13 | 素材与图集 | ✔ | R12 R17 | —（`laser` 按拍板留独立 PNG） |
