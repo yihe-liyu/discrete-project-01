@@ -26,8 +26,9 @@
 
 ## 索引
 
-> 共 68 条（本文件留最近 68 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 69 条（本文件留最近 69 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-23 — 命名债清零（19 → 0）
 - 2026-11-23 — Replay sim-v9 完整 run 零分歧
 - 2026-11-23 — Replay sim-v9 Stage 1 对话/入场验证
 - 2026-11-23 — TickMover 统一由 SimClock 推进
@@ -98,6 +99,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-23 — 命名债清零（19 → 0）
+
+- **目标**：清掉 `check_naming` 的 19 条历史违规，并把 replay 的版本化命名收干净。
+- **改法**：内容脚本的多个 `SpawnSpec` 字段改为语义化公开字段（`plain_spawn_spec` / `heavy_spawn_spec` / `radial_spawn_spec` …）；`EmitTemplate` 字段改 `top_emit_template`；`SpawnSpec._cached_type` → `_bullet_type`；`ReplaySession._rec/_play` 合并为 `_replay`。
+- **顺带**：`ReplayV2` → `Replay`、`ReplayV2Session` → `ReplaySession`；删除未使用的 v1 `ReplayRecorder` 及测试。
+- **验收**：`check_naming` 0 条；全量 GUT 766（764 通过 / 2 内容 WIP 红）；`test_replay` / `test_replay_menu` / `test_content_fingerprint` / `test_game_scene_replay` 通过。
 
 ### 2026-11-23 — Replay sim-v9 完整 run 零分歧
 

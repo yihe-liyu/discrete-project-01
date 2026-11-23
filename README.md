@@ -99,9 +99,9 @@
 > README 徽章 / `DANMAKU_API` 的弹型与音效 key 表 / README 链接 / 滚动日志，全部对着代码与数据机械核对
 > —— 文档数字再也不会静默腐烂。
 >
-> **当前门禁状态（2026-11-23）**：`check_naming` 仍有 19 条历史违规（内容 WIP + `ReplaySession` 私有字段），
-> 因此 `verify.sh` 目前会在第 3 步停住；`check_docs` / `check_syntax` / `check_structure` / 启动 / GUT 本身可过。
-> 这不影响本文的文档口径，但不要把 `verify.sh` 绿当作当前事实；命名债在 [BASELINE](docs/BEST_PRACTICES_BASELINE.md) 记录。
+> **当前门禁状态（2026-11-23）**：`check_naming` 已清零；`check_docs` / `check_syntax` / `check_structure` / 启动可过。
+> `verify.sh` 仍会停在第 4 步内容契约：Stage 02/06 内容 WIP（空 Boss / 缺失 BGM）；GUT 另有 2 个同类红。
+> 这些是内容完成度问题，不是回放/命名问题；提交前仍以 `verify.sh` 实际输出为准。
 >
 > 第 4 步是**结构契约**（`tools/check_structure.sh`）：**测试白盒预算只减不增** ·
 > 第 4 步同时跑**内容契约**（`tools/check_content.sh`）：Stage / Boss 注册表、脚本 / 背景 / BGM 引用、
