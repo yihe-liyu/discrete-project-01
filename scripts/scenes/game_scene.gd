@@ -84,11 +84,11 @@ func _ready():
 		SaveData.is_restarting = false
 		var carry_run := SaveData.is_route_transition
 		SaveData.is_route_transition = false
-		if not ReplayV2Session.is_playing() and not ReplayV2Session.is_recording():
+		if not ReplaySession.is_playing() and not ReplaySession.is_recording():
 			# 先定路线 / 起始 stage，再抓 RNG 起点；播放端在场景之前恢复同一 state。
 			if not SaveData.is_stage_practice:
 				SaveData.ensure_route_for_difficulty(SaveData.selected_difficulty)
-			ReplayV2Session.start_recording(_replay_meta("recording", true))
+			ReplaySession.start_recording(_replay_meta("recording", true))
 		_setup_player()          # 先绑定自机（资源恢复 / reset_* 经注册表取同一 PlayerResources）
 		if carry_run:
 			if not SaveData.apply_run_state(_stage_runtime.entity_registry.get_player_resources()):
@@ -97,10 +97,10 @@ func _ready():
 			SaveData.reset_all(_stage_runtime.entity_registry)
 			SaveData.apply_stage_practice_power(_stage_runtime.entity_registry)
 		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
-		if ReplayV2Session.is_playing():
-			ReplayV2Session.apply_start_resources(res)
-		elif ReplayV2Session.is_recording():
-			ReplayV2Session.capture_start_resources(res)
+		if ReplaySession.is_playing():
+			ReplaySession.apply_start_resources(res)
+		elif ReplaySession.is_recording():
+			ReplaySession.capture_start_resources(res)
 		_start_normal_game()
 
 
@@ -117,7 +117,7 @@ func _start_normal_game() -> void:
 	_load_background(data.background_scene)
 	_stage_runtime.load_stage(data)
 	# 录制 / 回放的 tick 钩子必须在关卡装好之后挂：observer 要读得到 entity registry。
-	if ReplayV2Session.is_playing():
+	if ReplaySession.is_playing():
 		SimClock.set_tick_hooks(_on_replay_prepare, _on_replay_observe)
 	elif not SaveData.is_stage_practice and not PracticeSession.is_practice_mode:
 		SimClock.set_tick_hooks(_on_record_prepare, _on_record_observe)
@@ -170,7 +170,7 @@ func _resolve_stage_data() -> StageData:
 	return null
 
 
-## 调试用的人类可读状态快照（只在 ReplayV2Session.debug_capture 时生成）。
+## 调试用的人类可读状态快照（只在 ReplaySession.debug_capture 时生成）。
 func sim_debug_state(tick: int = -1) -> String:
 	var relative := tick if tick >= 0 else SimClock.tick
 	var laser: LaserEngine = _bullet_manager.laser_engine()
@@ -213,10 +213,10 @@ func _exit_tree():
 	# 离开游戏场景：清掉输入锁存 / 注入 / 钩子 / 兜底解冻，菜单不会被上一局状态卡住。
 	SimClock.clear_tick_hooks()
 	if not _continuing_replay:
-		if ReplayV2Session.is_recording():
-			ReplayV2Session.cancel_recording()
-		if ReplayV2Session.is_playing():
-			ReplayV2Session.stop_playback()
+		if ReplaySession.is_recording():
+			ReplaySession.cancel_recording()
+		if ReplaySession.is_playing():
+			ReplaySession.stop_playback()
 	PlayerInput.clear_latch()
 	PlayerInput.clear_override()
 	SimClock.reset()
@@ -350,7 +350,7 @@ func _resolve_spell_background() -> PackedScene:
 func _on_player_death():
 	if _ending:
 		return
-	if ReplayV2Session.is_playing():
+	if ReplaySession.is_playing():
 		_ending = true
 		_finish_playback()
 		return
@@ -368,8 +368,8 @@ func _on_player_death():
 		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
 		if res != null:
 			SaveData.save_high_score(0, res.current_score)
-	if ReplayV2Session.is_recording():
-		ReplayV2Session.finish_recording(_replay_meta("game_over"))
+	if ReplaySession.is_recording():
+		ReplaySession.finish_recording(_replay_meta("game_over"))
 	_ending = true
 	var menu: Control = GAME_OVER_MENU.instantiate()
 	menu.title_text = "Game Over"
@@ -393,7 +393,7 @@ func _on_stage_cleared():
 	if _ending:
 		return
 	_ending = true
-	if ReplayV2Session.is_playing():
+	if ReplaySession.is_playing():
 		_advance_playback_stage()
 		return
 	if SaveData.is_stage_practice:
@@ -438,8 +438,8 @@ func _on_stage_result_action(result: Dictionary, menu: BasePage) -> void:
 			SaveData.is_route_transition = true
 			GameManager.reload_current_scene()
 			return
-	if ReplayV2Session.is_recording():
-		ReplayV2Session.finish_recording(_replay_meta("cleared"))
+	if ReplaySession.is_recording():
+		ReplaySession.finish_recording(_replay_meta("cleared"))
 	SaveData.reset_session()
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
@@ -463,36 +463,36 @@ func _on_practice_cleared(_boss: Node) -> void:
 
 
 func _on_record_prepare(_tick: int) -> void:
-	if not ReplayV2Session.is_recording():
+	if not ReplaySession.is_recording():
 		return
 	if DialogueBox.active != null:
 		DialogueBox.active.flush_pending_dialogue()
 
 
 func _on_record_observe(_tick: int) -> void:
-	if not ReplayV2Session.is_recording():
+	if not ReplaySession.is_recording():
 		return
-	if ReplayV2Session.debug_capture:
-		ReplayV2Session.debug_snapshots.append(sim_debug_state(ReplayV2Session.current_tick()))
-	var idx := ReplayV2Session.current_tick()
-	ReplayV2Session.record_tick(PlayerInput.input_mask(), PlayerInput.command_flags(),
+	if ReplaySession.debug_capture:
+		ReplaySession.debug_snapshots.append(sim_debug_state(ReplaySession.current_tick()))
+	var idx := ReplaySession.current_tick()
+	ReplaySession.record_tick(PlayerInput.input_mask(), PlayerInput.command_flags(),
 		sim_hash(idx), sim_fields(idx))
 
 
 func _on_replay_prepare(tick: int) -> void:
-	ReplayV2Session.prepare_tick(tick)
+	ReplaySession.prepare_tick(tick)
 
 
 func _on_replay_observe(tick: int) -> void:
 	if _ending:
 		return
-	if ReplayV2Session.debug_capture:
-		ReplayV2Session.debug_compare(ReplayV2Session.current_tick(),
-			sim_debug_state(ReplayV2Session.current_tick()))
-	var idx := ReplayV2Session.current_tick()
-	if not ReplayV2Session.observe_tick(tick, sim_hash(idx)):
+	if ReplaySession.debug_capture:
+		ReplaySession.debug_compare(ReplaySession.current_tick(),
+			sim_debug_state(ReplaySession.current_tick()))
+	var idx := ReplaySession.current_tick()
+	if not ReplaySession.observe_tick(tick, sim_hash(idx)):
 		if not _ending:
-			ReplayV2Session.report_fields(idx, sim_fields(idx))
+			ReplaySession.report_fields(idx, sim_fields(idx))
 		_ending = true
 		_finish_playback()
 
@@ -530,7 +530,7 @@ func _advance_playback_stage() -> void:
 
 
 func _finish_playback() -> void:
-	ReplayV2Session.stop_playback()
+	ReplaySession.stop_playback()
 	SimClock.clear_tick_hooks()
 	SaveData.reset_session()
 	GameManager.pending_page_path = "res://scenes/ui/replay_menu.tscn"

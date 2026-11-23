@@ -1,14 +1,14 @@
 ## 薄回放格式 v2 —— 只存每 tick 输入 + 离散命令 + 状态哈希。
 ##
-## [b]和旧 ReplayRecorder 的区别[/b][br]
+## [b]边界[/b][br]
 ## - 不存逐帧位置 / 弹幕 / RNG trace，不靠 force despawn / graze 修正。[br]
 ## - 回放必须重跑同一套确定性模拟；哈希对不上就是模拟出了问题。[br]
-## - 旧 v1 JSON 不兼容：v2 自带 magic + 版本，加载时直接拒绝。[br]
+## - 旧格式不兼容：自带 magic + 格式版本，加载时直接拒绝。[br]
 ## [br]
 ## [b]格式[/b][br]
 ## header：tick_rate / seed / sim_version / content_hash / metadata；[br]
 ## body：每 tick 1 字节 mask + 1 字节 command flags + 一个 32 位状态哈希。[br]
-class_name ReplayV2
+class_name Replay
 extends RefCounted
 
 const FORMAT_VERSION := 2
@@ -151,7 +151,7 @@ func load_dict(data: Dictionary) -> bool:
 func save(path: String) -> bool:
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		push_error("ReplayV2: 无法写入 " + path)
+		push_error("Replay: 无法写入 " + path)
 		return false
 	file.store_string(JSON.stringify(to_dict()))
 	return true

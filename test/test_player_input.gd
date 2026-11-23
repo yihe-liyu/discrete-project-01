@@ -44,7 +44,6 @@ func test_input_mask_uses_canonical_action_order() -> void:
 	assert_eq(PlayerInput.input_mask() & (1 << shoot_idx), 1 << shoot_idx)
 	assert_eq(PlayerInput.input_mask() & (1 << focus_idx), 1 << focus_idx)
 	assert_eq(PlayerInput.input_mask() & (1 << move_idx), 0)
-	assert_eq(ReplayRecorder.ACTIONS, PlayerInput.ACTIONS, "录制与输入必须共用同一动作表")
 
 
 func test_clear_latch_falls_back_to_real_input() -> void:
@@ -55,19 +54,6 @@ func test_clear_latch_falls_back_to_real_input() -> void:
 
 	assert_false(PlayerInput.has_latch())
 	assert_false(PlayerInput.is_action_pressed(&"shoot"), "清掉锁存后应回退到真实 Input")
-
-
-func test_replay_recorder_reads_the_latched_mask() -> void:
-	Input.action_press("shoot")
-	PlayerInput.latch()
-	Input.action_release("shoot")
-
-	var rec := ReplayRecorder.new()
-	rec.start()
-	rec.capture()
-	rec.stop()
-	assert_true(rec.is_action_pressed_at(0, "shoot"),
-		"录制必须与玩法读同一份锁存，而不是重新读 Input")
 
 
 func test_override_mask_bypasses_real_input() -> void:

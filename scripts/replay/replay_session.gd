@@ -1,18 +1,18 @@
-## ReplayV2 的跨场景持有者：录制 / 回放 / 列表 / 删除。
+## Replay 的跨场景持有者：录制 / 回放 / 列表 / 删除。
 ##
 ## [b]边界[/b][br]
 ## - 只保存输入 + 命令 + 哈希；不保存游戏状态，不做 force 修正。[br]
 ## - 回放从录像的起始 stage / 难度 / 角色开始；跨 stage 由 GameScene 重载后继续。[br]
 ## - 旧 v1 文件不列出、不加载。
-class_name ReplayV2Session
+class_name ReplaySession
 extends RefCounted
 
 const DIR := "user://replays_v2"
 ## 模拟语义版本：玩法代码/顺序变了就升；不匹配的录像直接拒绝。
 const SIM_VERSION := "sim-v9"
 
-static var _rec: ReplayV2
-static var _play: ReplayV2
+static var _rec: Replay
+static var _play: Replay
 static var _recording: bool = false
 static var _playing: bool = false
 static var _path: String = ""
@@ -55,7 +55,7 @@ static func debug_compare(idx: int, live: String) -> void:
 	debug_capture = false
 	var exp_lines := expected.split("\n")
 	var cur_lines := live.split("\n")
-	push_warning("ReplayV2 状态分歧 idx=%d" % idx)
+	push_warning("Replay 状态分歧 idx=%d" % idx)
 	for i in maxi(exp_lines.size(), cur_lines.size()):
 		var a := exp_lines[i] if i < exp_lines.size() else "<missing>"
 		var b := cur_lines[i] if i < cur_lines.size() else "<missing>"
@@ -90,9 +90,10 @@ static func current_tick() -> int:
 static func start_recording(meta: Dictionary) -> bool:
 	if _recording or _playing:
 		return false
-	_rec = ReplayV2.new()
+	_rec = Replay.new()
 	var snap := RNG.snapshot_state()
 	_rec.begin(Engine.physics_ticks_per_second, int(snap.get("seed", 0)), SIM_VERSION)
+	_rec.content_hash = ContentFingerprint.compute()
 	_rec.rng_state = int(snap.get("state", 0))
 	_rec.metadata = meta.duplicate(true)
 	if not _rec.metadata.has("start_stage_id"):
@@ -144,9 +145,9 @@ static func record_tick(mask: int, command_flags: int, state_hash: int,
 	if _recording and _rec != null:
 		var flags := command_flags
 		if _pending_dialogue_advance:
-			flags |= ReplayV2.COMMAND_DIALOGUE_ADVANCE
+			flags |= Replay.COMMAND_DIALOGUE_ADVANCE
 		if _pending_dialogue_close:
-			flags |= ReplayV2.COMMAND_DIALOGUE_CLOSE
+			flags |= Replay.COMMAND_DIALOGUE_CLOSE
 		_pending_dialogue_advance = false
 		_pending_dialogue_close = false
 		_rec.capture_tick(mask, flags, state_hash, fields)
@@ -189,14 +190,17 @@ static func cancel_recording() -> void:
 
 ## 从文件进入回放：装载难度 / 角色 / 路线 / 起始 stage / seed。
 static func start_playback(path: String) -> bool:
-	var rec := ReplayV2.new()
+	var rec := Replay.new()
 	if not rec.load_file(path):
-		push_warning("ReplayV2Session: 无法加载回放 " + path)
+		push_warning("ReplaySession: 无法加载回放 " + path)
 		return false
 	if rec.sim_version != "" and rec.sim_version != SIM_VERSION:
-		push_warning("ReplayV2Session: 录像 sim_version=%s 与当前 %s 不匹配" % [
+		push_warning("ReplaySession: 录像兼容版本 %s 与当前 %s 不匹配" % [
 			rec.sim_version, SIM_VERSION,
 		])
+		return false
+	if rec.content_hash != "" and rec.content_hash != ContentFingerprint.compute():
+		push_warning("ReplaySession: 内容指纹不匹配（录像 %s）" % rec.content_hash)
 		return false
 	var meta := rec.metadata
 	var diff := int(meta.get("difficulty", 1))
@@ -245,14 +249,14 @@ static func prepare_tick(_tick: int) -> void:
 	_next_index += 1
 	PlayerInput.set_override_mask(_play.mask_at(_current_index))
 	var flags := _play.command_at(_current_index)
-	if flags & ReplayV2.COMMAND_BOMB:
+	if flags & Replay.COMMAND_BOMB:
 		PlayerInput.queue_command(&"bomb")
-	if flags & ReplayV2.COMMAND_MEMORY:
+	if flags & Replay.COMMAND_MEMORY:
 		PlayerInput.queue_command(&"memory_release")
-	if flags & ReplayV2.COMMAND_DIALOGUE_ADVANCE:
+	if flags & Replay.COMMAND_DIALOGUE_ADVANCE:
 		if DialogueBox.active != null:
 			DialogueBox.active.apply_replay_advance()
-	if flags & ReplayV2.COMMAND_DIALOGUE_CLOSE:
+	if flags & Replay.COMMAND_DIALOGUE_CLOSE:
 		if DialogueBox.active != null:
 			DialogueBox.active.apply_replay_close()
 
@@ -266,7 +270,7 @@ static func observe_tick(tick: int, state_hash: int) -> bool:
 		return false
 	if not _play.hashes.is_empty() and _play.hash_at(_current_index) != state_hash:
 		_diverged = true
-		push_warning("ReplayV2 分歧 tick=%d idx=%d cur=%d exp=%d" % [
+		push_warning("Replay 分歧 tick=%d idx=%d cur=%d exp=%d" % [
 			tick, _current_index, state_hash, _play.hash_at(_current_index),
 		])
 		return false
@@ -279,17 +283,17 @@ static func report_fields(idx: int, live: Dictionary) -> void:
 		return
 	var expected: Dictionary = _play.field_hashes[idx]
 	if expected.is_empty():
-		push_warning("ReplayV2 分歧 idx=%d：这份录像没有分项哈希（旧格式），无法定位字段" % idx)
+		push_warning("Replay 分歧 idx=%d：这份录像没有分项哈希（旧格式），无法定位字段" % idx)
 		return
 	for key in live:
 		if not expected.has(key):
 			continue
 		if int(expected[key]) != int(live[key]):
-			push_warning("ReplayV2 分歧字段 idx=%d field=%s exp=%d cur=%d" % [
+			push_warning("Replay 分歧字段 idx=%d field=%s exp=%d cur=%d" % [
 				idx, key, int(expected[key]), int(live[key]),
 			])
 			return
-	push_warning("ReplayV2 分歧 idx=%d：分项哈希全部相同（总 hash 碰撞或未覆盖状态）" % idx)
+	push_warning("Replay 分歧 idx=%d：分项哈希全部相同（总 hash 碰撞或未覆盖状态）" % idx)
 
 
 ## 停止回放并清理注入。
@@ -309,15 +313,18 @@ static func list_replays() -> Array[Dictionary]:
 	var dir := DirAccess.open(DIR)
 	if dir == null:
 		return out
+	var current_content := ContentFingerprint.compute()
 	for file in dir.get_files():
 		if not file.ends_with(".json"):
 			continue
 		var file_path := "%s/%s" % [DIR, file]
-		var rec := ReplayV2.new()
+		var rec := Replay.new()
 		if not rec.load_file(file_path):
 			continue
 		if rec.sim_version != "" and rec.sim_version != SIM_VERSION:
 			continue  # 不兼容版本不显示，避免玩家点了才失败
+		if rec.content_hash != "" and rec.content_hash != current_content:
+			continue  # 内容变了，旧录像不显示
 		out.append({
 			"path": file_path,
 			"name": file.get_basename(),
@@ -332,6 +339,6 @@ static func list_replays() -> Array[Dictionary]:
 ## 删除一份 v2 回放；只允许删 DIR 下文件。
 static func delete_replay(path: String) -> bool:
 	if not path.begins_with(DIR + "/"):
-		push_warning("ReplayV2Session.delete_replay: 拒绝删除目录外文件 " + path)
+		push_warning("ReplaySession.delete_replay: 拒绝删除目录外文件 " + path)
 		return false
 	return DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK

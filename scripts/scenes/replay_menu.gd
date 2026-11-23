@@ -1,4 +1,4 @@
-# ReplayMenu.gd — 回放列表 / 选择播放（ReplayV2）
+# ReplayMenu.gd — 回放列表 / 选择播放（Replay）
 extends BasePage
 
 var _entries: Array[Dictionary] = []
@@ -23,7 +23,7 @@ func on_enter() -> void:
 
 ## 列表：一条 v2 回放一行；空列表给明确提示。
 func _show_replays() -> void:
-	_entries = ReplayV2Session.list_replays()
+	_entries = ReplaySession.list_replays()
 	_selected = 0
 	_delete_armed = false
 	_rows.clear()
@@ -110,7 +110,7 @@ func _play_selected() -> void:
 	var path := str(_entries[_selected].get("path", ""))
 	if path == "":
 		return
-	if not ReplayV2Session.start_playback(path):
+	if not ReplaySession.start_playback(path):
 		push_warning("ReplayMenu: 无法开始回放 " + path)
 		return
 	GameManager.change_scene("res://scenes/game_scene.tscn")
@@ -125,7 +125,7 @@ func _delete_selected() -> void:
 		return
 	var path := str(_entries[_selected].get("path", ""))
 	_delete_armed = false
-	if not ReplayV2Session.delete_replay(path):
+	if not ReplaySession.delete_replay(path):
 		push_warning("ReplayMenu: 删除回放失败 " + path)
 		_refresh_selection()
 		return

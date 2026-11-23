@@ -115,7 +115,7 @@ func _fit_to_viewport() -> void:
 
 
 func _process(delta: float) -> void:
-	if ReplayV2Session.is_playing():
+	if ReplaySession.is_playing():
 		return
 	if _is_closing or not _dialogue_runner:
 		return
@@ -149,7 +149,7 @@ func _physics_process(_delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if ReplayV2Session.is_playing():
+	if ReplaySession.is_playing():
 		return
 	if _is_closing or not _is_input_ready or not _dialogue_runner:
 		return
@@ -174,20 +174,20 @@ func _input(event: InputEvent) -> void:
 # ═══ 推进 ═══
 
 func _request_advance() -> void:
-	if ReplayV2Session.is_playing():
+	if ReplaySession.is_playing():
 		return
-	if ReplayV2Session.is_recording():
-		ReplayV2Session.record_dialogue_advance()
+	if ReplaySession.is_recording():
+		ReplaySession.record_dialogue_advance()
 		_pending_local_advance = true
 	else:
 		_advance()
 
 
 func _request_close() -> void:
-	if ReplayV2Session.is_playing():
+	if ReplaySession.is_playing():
 		return
-	if ReplayV2Session.is_recording():
-		ReplayV2Session.record_dialogue_close()
+	if ReplaySession.is_recording():
+		ReplaySession.record_dialogue_close()
 		_pending_local_close = true
 	else:
 		_close()

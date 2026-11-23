@@ -75,7 +75,7 @@ static func take_commands() -> Array[StringName]:
 	return out
 
 
-## 本 tick 命令的位标记（录制用；与 ReplayV2 的 COMMAND_* 对齐）。
+## 本 tick 命令的位标记（录制用；与 Replay 的 COMMAND_* 对齐）。
 static func command_flags() -> int:
 	var flags := 0
 	for cmd in _tick_commands:

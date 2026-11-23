@@ -1,14 +1,14 @@
 extends GutTest
-## GameScene 接入：普通局自动开录，tick 钩子写入 ReplayV2，能落盘并读回。
+## GameScene 接入：普通局自动开录，tick 钩子写入 Replay，能落盘并读回。
 
 const GAME_SCENE = preload("res://scenes/game_scene.tscn")
 
 
 func before_each() -> void:
-	ReplayV2Session.cancel_recording()
-	ReplayV2Session.stop_playback()
-	ReplayV2Session.debug_capture = false
-	ReplayV2Session.debug_snapshots.clear()
+	ReplaySession.cancel_recording()
+	ReplaySession.stop_playback()
+	ReplaySession.debug_capture = false
+	ReplaySession.debug_snapshots.clear()
 	SimClock.reset()
 	PlayerInput.clear_latch()
 	PlayerInput.clear_override()
@@ -18,10 +18,10 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	ReplayV2Session.cancel_recording()
-	ReplayV2Session.stop_playback()
-	ReplayV2Session.debug_capture = false
-	ReplayV2Session.debug_snapshots.clear()
+	ReplaySession.cancel_recording()
+	ReplaySession.stop_playback()
+	ReplaySession.debug_capture = false
+	ReplaySession.debug_snapshots.clear()
 	SimClock.reset()
 	SaveData.reset_session()
 
@@ -32,13 +32,13 @@ func test_normal_run_records_ticks_and_saves_v2_file() -> void:
 	for _i in 200:
 		await get_tree().physics_frame
 
-	assert_true(ReplayV2Session.is_recording(), "普通局应自动开录")
-	assert_gt(ReplayV2Session.replay_tick_count(), 0, "应已录到 tick")
+	assert_true(ReplaySession.is_recording(), "普通局应自动开录")
+	assert_gt(ReplaySession.replay_tick_count(), 0, "应已录到 tick")
 
-	var path := ReplayV2Session.finish_recording({"result": "test"})
+	var path := ReplaySession.finish_recording({"result": "test"})
 	assert_ne(path, "", "结束录制应落盘")
 	assert_true(FileAccess.file_exists(path), "回放文件应存在")
-	var rec := ReplayV2.new()
+	var rec := Replay.new()
 	assert_true(rec.load_file(path), "新文件应能被 v2 读取")
 	assert_gt(rec.tick_count(), 0, "回放应至少有一个 tick")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
@@ -49,28 +49,28 @@ func test_recorded_run_playback_matches_hashes() -> void:
 	add_child_autofree(scene)
 	for _i in 300:
 		await get_tree().physics_frame
-	var path := ReplayV2Session.finish_recording({"result": "test"})
+	var path := ReplaySession.finish_recording({"result": "test"})
 	assert_ne(path, "", "录制应落盘")
 
 	scene.queue_free()
 	await get_tree().process_frame
 
-	assert_true(ReplayV2Session.start_playback(path), "应能进入回放")
+	assert_true(ReplaySession.start_playback(path), "应能进入回放")
 	var playback: Node = GAME_SCENE.instantiate()
 	add_child_autofree(playback)
 	for _i in 200:
 		await get_tree().physics_frame
-	assert_true(ReplayV2Session.is_playing(), "回放应还在进行")
-	assert_false(ReplayV2Session.has_diverged(), "回放前几 tick 不应出现哈希分歧")
-	ReplayV2Session.stop_playback()
-	ReplayV2Session.debug_capture = false
+	assert_true(ReplaySession.is_playing(), "回放应还在进行")
+	assert_false(ReplaySession.has_diverged(), "回放前几 tick 不应出现哈希分歧")
+	ReplaySession.stop_playback()
+	ReplaySession.debug_capture = false
 	playback.queue_free()
 	await get_tree().process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
 func test_bomb_command_is_recorded_and_replayed() -> void:
-	ReplayV2Session.debug_capture = true
+	ReplaySession.debug_capture = true
 	var scene: Node = GAME_SCENE.instantiate()
 	add_child_autofree(scene)
 	for _i in 20:
@@ -78,21 +78,21 @@ func test_bomb_command_is_recorded_and_replayed() -> void:
 	PlayerInput.queue_command(&"bomb")
 	for _i in 280:
 		await get_tree().physics_frame
-	var path := ReplayV2Session.finish_recording({"result": "test"})
+	var path := ReplaySession.finish_recording({"result": "test"})
 	assert_ne(path, "", "bomb 局应落盘")
 
 	scene.queue_free()
 	await get_tree().process_frame
 
-	assert_true(ReplayV2Session.start_playback(path), "bomb 局应能回放")
+	assert_true(ReplaySession.start_playback(path), "bomb 局应能回放")
 	var playback: Node = GAME_SCENE.instantiate()
 	add_child_autofree(playback)
 	for _i in 300:
 		await get_tree().physics_frame
-	assert_true(ReplayV2Session.is_playing(), "bomb 回放应还在进行")
-	assert_false(ReplayV2Session.has_diverged(), "bomb 命令回放不应出现哈希分歧")
-	ReplayV2Session.stop_playback()
-	ReplayV2Session.debug_capture = false
+	assert_true(ReplaySession.is_playing(), "bomb 回放应还在进行")
+	assert_false(ReplaySession.has_diverged(), "bomb 命令回放不应出现哈希分歧")
+	ReplaySession.stop_playback()
+	ReplaySession.debug_capture = false
 	playback.queue_free()
 	await get_tree().process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
@@ -121,20 +121,20 @@ func test_mid_route_start_restores_resources() -> void:
 	add_child_autofree(scene)
 	for _i in 30:
 		await get_tree().physics_frame
-	var path := ReplayV2Session.finish_recording({"result": "test"})
+	var path := ReplaySession.finish_recording({"result": "test"})
 	assert_ne(path, "", "跨面起点也应落盘")
 
 	scene.queue_free()
 	await get_tree().process_frame
 
-	assert_true(ReplayV2Session.start_playback(path), "跨面起点应能回放")
+	assert_true(ReplaySession.start_playback(path), "跨面起点应能回放")
 	var playback: Node = GAME_SCENE.instantiate()
 	add_child_autofree(playback)
 	for _i in 20:
 		await get_tree().physics_frame
-	assert_true(ReplayV2Session.is_playing(), "跨面起点回放应还在进行")
-	assert_false(ReplayV2Session.has_diverged(), "跨面起点第一帧不应分歧")
-	ReplayV2Session.stop_playback()
+	assert_true(ReplaySession.is_playing(), "跨面起点回放应还在进行")
+	assert_false(ReplaySession.has_diverged(), "跨面起点第一帧不应分歧")
+	ReplaySession.stop_playback()
 	playback.queue_free()
 	await get_tree().process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
