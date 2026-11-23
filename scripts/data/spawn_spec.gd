@@ -45,62 +45,62 @@ var spawn_fog: int = -1
 var spawn_fx: EffectType
 
 var child: SpawnSpec
-var _cached_type: BulletType
+var _bullet_type: BulletType
 
 
 func tex(key: String) -> SpawnSpec:
 	bullet_def = BulletCatalog.find(key)
 	# 弹型 id 与图集 shape key 不保证同名（自机弹尤其如此）；必须走 BulletDef.texture_key。
 	texture = BulletShapes.atlas_texture(bullet_def.texture_key) if bullet_def != null else null
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func color(c: Color) -> SpawnSpec:
 	tint = c
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func blend(on: bool = true) -> SpawnSpec:
 	use_blend = on
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func enemy() -> SpawnSpec:
 	faction = Faction.ENEMY
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func player() -> SpawnSpec:
 	faction = Faction.PLAYER
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func speed(v: float) -> SpawnSpec:
 	velocity.y = v
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func direction(x: float, y: float) -> SpawnSpec:
 	velocity = Vector2(x, y)
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func grace(v: float) -> SpawnSpec:
 	out_grace = v
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func wrap_edges(mask: int) -> SpawnSpec:
 	wrap_mask = mask
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
@@ -121,7 +121,7 @@ func hitbox_circle(radius: float, offset: Vector2 = Vector2.ZERO) -> SpawnSpec:
 	hitbox_radius = radius
 	hitbox_offset = offset
 	hitbox_size = Vector2.ZERO
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
@@ -129,40 +129,40 @@ func hitbox_rect(size: Vector2, offset: Vector2 = Vector2.ZERO) -> SpawnSpec:
 	hitbox_shape = HitboxShape.RECTANGLE
 	hitbox_size = size
 	hitbox_offset = offset
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func facing(follow: bool = true, offset: float = 0.0) -> SpawnSpec:
 	follow_dir_override = 1 if follow else 0
 	dir_offset_override = offset
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func no_spawn_fog() -> SpawnSpec:
 	spawn_fog = 0
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func with_spawn_fog(effect: EffectType = null) -> SpawnSpec:
 	spawn_fog = 1
 	spawn_fx = effect
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 func with_behavior(spec: BehaviorSpec) -> SpawnSpec:
 	behavior = spec
-	_cached_type = null
+	_bullet_type = null
 	return self
 
 
 ## 直接构造成内核类型。
 func to_bullet_type() -> BulletType:
-	if _cached_type != null:
-		return _cached_type
+	if _bullet_type != null:
+		return _bullet_type
 	var bt := BulletType.new()
 	bt.kind = kind
 	bt.faction = BulletType.Faction.ENEMY if faction == Faction.ENEMY else BulletType.Faction.PLAYER
@@ -190,5 +190,5 @@ func to_bullet_type() -> BulletType:
 		bt.follow_dir = follow_dir_override != 0
 	if not is_nan(dir_offset_override):
 		bt.dir_offset = dir_offset_override
-	_cached_type = bt
+	_bullet_type = bt
 	return bt

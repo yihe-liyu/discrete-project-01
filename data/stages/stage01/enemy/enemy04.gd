@@ -7,10 +7,10 @@ extends CoroutineScript
 var move_speed: float = 120.0
 
 ## 复用弹型实例（M2）。
-var _radial_bullet_data: SpawnSpec
+var radial_spawn_spec: SpawnSpec
 ## 换向替换弹（米弹/FUCHSIA）：共享实例（static）。
-static var _radial_spawn_bullet_data: SpawnSpec
-var _top_template: EmitTemplate
+static var radial_burst_spawn_spec: SpawnSpec
+var top_emit_template: EmitTemplate
 
 
 ## 一次性初始化：ctx / target 已就绪，且 Enemy 已入树。
@@ -19,11 +19,11 @@ func _on_start() -> void:
 		return
 
 	# 弹幕：复用弹型实例。
-	if _radial_bullet_data == null:
-		if _radial_spawn_bullet_data == null:
-			_radial_spawn_bullet_data = SpawnSpec.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA)
-		_radial_bullet_data = SpawnSpec.new().enemy().blend(true).tex("棱弹").color(Color.FUCHSIA)
-		_top_template = EmitTemplate.new(&"stage01_enemy04_top", _radial_spawn_bullet_data)
+	if radial_spawn_spec == null:
+		if radial_burst_spawn_spec == null:
+			radial_burst_spawn_spec = SpawnSpec.new().enemy().blend(true).tex("米弹").color(Color.FUCHSIA)
+		radial_spawn_spec = SpawnSpec.new().enemy().blend(true).tex("棱弹").color(Color.FUCHSIA)
+		top_emit_template = EmitTemplate.new(&"stage01_enemy04_top", radial_burst_spawn_spec)
 
 	var timeline := start_timeline()
 
@@ -34,9 +34,9 @@ func _on_start() -> void:
 		var 发射方向 := Vector2.ONE.rotated(RNG.randf_range(-PI, PI))
 		var 每圈弹数: int = diff_pick([15, 20, 20, 30])
 		for i in diff_pick([1, 1, 2, 2]):
-			_radial_bullet_data.velocity = Vector2(0, 50 + i * 50)
+			radial_spawn_spec.velocity = Vector2(0, 50 + i * 50)
 			ctx.bullets.shoot_spread(
-				_radial_bullet_data, 每圈弹数,
+				radial_spawn_spec, 每圈弹数,
 				TAU, 发射方向,
 				target.global_position, AssetRegistry.sounds["shoot"])
 			# 下一层错开半格，避免两层完全重叠。
@@ -49,17 +49,17 @@ func _on_start() -> void:
 
 ## 移动：匀速下移直到离开屏幕（弹幕 timeline 并行推进，发完后移动不中断）。
 func _ensure_top_behavior(p_ctx: StageContext) -> bool:
-	if _radial_bullet_data == null or _top_template == null:
+	if radial_spawn_spec == null or top_emit_template == null:
 		return false
 	# 无 stage / 无弹幕管理器 = 彩排或移动测试：发射整体静默 no-op。
 	if p_ctx.bullets.bullet_manager == null:
 		return true
-	if not p_ctx.bullets.register_emit_template(_top_template):
+	if not p_ctx.bullets.register_emit_template(top_emit_template):
 		push_error("[enemy04] top 模板注册失败")
 		return false
-	if _radial_bullet_data.behavior == null:
-		_radial_bullet_data.with_behavior(
-			BulletBehaviors.top_emit(_top_template, 150.0, PI, 0.0))
+	if radial_spawn_spec.behavior == null:
+		radial_spawn_spec.with_behavior(
+			BulletBehaviors.top_emit(top_emit_template, 150.0, PI, 0.0))
 	return true
 
 

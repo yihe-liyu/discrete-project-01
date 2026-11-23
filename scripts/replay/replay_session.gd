@@ -11,8 +11,7 @@ const DIR := "user://replays_v2"
 ## 模拟语义版本：玩法代码/顺序变了就升；不匹配的录像直接拒绝。
 const SIM_VERSION := "sim-v9"
 
-static var _rec: Replay
-static var _play: Replay
+static var _replay: Replay
 static var _recording: bool = false
 static var _playing: bool = false
 static var _path: String = ""
@@ -70,10 +69,8 @@ static func current_path() -> String:
 
 
 static func replay_tick_count() -> int:
-	if _play != null:
-		return _play.tick_count()
-	if _rec != null:
-		return _rec.tick_count()
+	if _replay != null:
+		return _replay.tick_count()
 	return 0
 
 
@@ -81,8 +78,8 @@ static func replay_tick_count() -> int:
 static func current_tick() -> int:
 	if _playing:
 		return _current_index
-	if _recording and _rec != null:
-		return _rec.tick_count()
+	if _recording and _replay != null:
+		return _replay.tick_count()
 	return 0
 
 
@@ -90,17 +87,17 @@ static func current_tick() -> int:
 static func start_recording(meta: Dictionary) -> bool:
 	if _recording or _playing:
 		return false
-	_rec = Replay.new()
+	_replay = Replay.new()
 	var snap := RNG.snapshot_state()
-	_rec.begin(Engine.physics_ticks_per_second, int(snap.get("seed", 0)), SIM_VERSION)
-	_rec.content_hash = ContentFingerprint.compute()
-	_rec.rng_state = int(snap.get("state", 0))
-	_rec.metadata = meta.duplicate(true)
-	if not _rec.metadata.has("start_stage_id"):
-		_rec.metadata["start_stage_id"] = SaveData.current_stage_id
-	if not _rec.metadata.has("start_stage_no"):
-		_rec.metadata["start_stage_no"] = SaveData.current_route_index + 1
-	_rec.start_resources = {}
+	_replay.begin(Engine.physics_ticks_per_second, int(snap.get("seed", 0)), SIM_VERSION)
+	_replay.content_hash = ContentFingerprint.compute()
+	_replay.rng_state = int(snap.get("state", 0))
+	_replay.metadata = meta.duplicate(true)
+	if not _replay.metadata.has("start_stage_id"):
+		_replay.metadata["start_stage_id"] = SaveData.current_stage_id
+	if not _replay.metadata.has("start_stage_no"):
+		_replay.metadata["start_stage_no"] = SaveData.current_route_index + 1
+	_replay.start_resources = {}
 	_start_resources_captured = false
 	_start_resources_applied = false
 	_pending_dialogue_advance = false
@@ -113,26 +110,26 @@ static func start_recording(meta: Dictionary) -> bool:
 
 ## 录制起点自机资源（在自机 setup / 跨面继承完成之后调用）。
 static func capture_start_resources(res: PlayerResources) -> void:
-	if not _recording or _rec == null or res == null or _start_resources_captured:
+	if not _recording or _replay == null or res == null or _start_resources_captured:
 		return
 	_start_resources_captured = true
 	var snap := {}
 	for key in SaveData.RUN_STATE_KEYS:
 		snap[String(key)] = res.get(key)
-	_rec.start_resources = snap
+	_replay.start_resources = snap
 
 
 ## 回放起点自机资源（在自机 setup 之后、关卡 tick 之前调用）。
 static func apply_start_resources(res: PlayerResources) -> void:
-	if not _playing or _play == null or res == null or _play.start_resources.is_empty() \
+	if not _playing or _replay == null or res == null or _replay.start_resources.is_empty() \
 			or _start_resources_applied:
 		return
 	_start_resources_applied = true
 	for key in SaveData.RUN_STATE_KEYS:
 		var k := String(key)
-		if not _play.start_resources.has(k):
+		if not _replay.start_resources.has(k):
 			continue
-		var v = _play.start_resources[k]
+		var v = _replay.start_resources[k]
 		if key == &"memory_value":
 			res.set(key, float(v))
 		else:
@@ -142,7 +139,7 @@ static func apply_start_resources(res: PlayerResources) -> void:
 ## 每 tick 录一条（GameScene 的 SimClock observer 调用）。
 static func record_tick(mask: int, command_flags: int, state_hash: int,
 		fields: Dictionary = {}) -> void:
-	if _recording and _rec != null:
+	if _recording and _replay != null:
 		var flags := command_flags
 		if _pending_dialogue_advance:
 			flags |= Replay.COMMAND_DIALOGUE_ADVANCE
@@ -150,7 +147,7 @@ static func record_tick(mask: int, command_flags: int, state_hash: int,
 			flags |= Replay.COMMAND_DIALOGUE_CLOSE
 		_pending_dialogue_advance = false
 		_pending_dialogue_close = false
-		_rec.capture_tick(mask, flags, state_hash, fields)
+		_replay.capture_tick(mask, flags, state_hash, fields)
 
 
 ## 录制：本帧玩家推进了一句对话；归到下一个 tick。
@@ -167,25 +164,25 @@ static func record_dialogue_close() -> void:
 
 ## 结束录制并落盘；返回路径（失败 / 没在录 = 空串）。
 static func finish_recording(meta: Dictionary = {}) -> String:
-	if not _recording or _rec == null:
+	if not _recording or _replay == null:
 		return ""
-	_rec.metadata.merge(meta.duplicate(true), true)
-	_rec.metadata["recorded_at"] = Time.get_datetime_string_from_system()
-	_rec.sim_version = SIM_VERSION
+	_replay.metadata.merge(meta.duplicate(true), true)
+	_replay.metadata["recorded_at"] = Time.get_datetime_string_from_system()
+	_replay.sim_version = SIM_VERSION
 	var dir := ProjectSettings.globalize_path(DIR)
 	DirAccess.make_dir_recursive_absolute(dir)
 	var stamp := Time.get_datetime_string_from_system().replace(":", "-")
 	var path := "%s/%s_%d.json" % [DIR, stamp, Time.get_ticks_msec()]
-	var ok := _rec.save(path)
+	var ok := _replay.save(path)
 	_recording = false
-	_rec = null
+	_replay = null
 	return path if ok else ""
 
 
 ## 放弃当前录制（不落盘）。
 static func cancel_recording() -> void:
 	_recording = false
-	_rec = null
+	_replay = null
 
 
 ## 从文件进入回放：装载难度 / 角色 / 路线 / 起始 stage / seed。
@@ -225,7 +222,7 @@ static func start_playback(path: String) -> bool:
 	RNG.set_seed(rec.rng_seed)
 	if rec.rng_state != 0:
 		RNG.restore_state({"seed": rec.rng_seed, "state": rec.rng_state})
-	_play = rec
+	_replay = rec
 	_playing = true
 	_path = path
 	_next_index = 0
@@ -239,16 +236,16 @@ static func start_playback(path: String) -> bool:
 
 ## 回放：在 SimClock latch 前注入本 tick 的 mask / 命令。
 static func prepare_tick(_tick: int) -> void:
-	if not _playing or _play == null:
+	if not _playing or _replay == null:
 		return
-	if _next_index >= _play.tick_count():
+	if _next_index >= _replay.tick_count():
 		_current_index = -1
 		PlayerInput.set_override_mask(0)
 		return
 	_current_index = _next_index
 	_next_index += 1
-	PlayerInput.set_override_mask(_play.mask_at(_current_index))
-	var flags := _play.command_at(_current_index)
+	PlayerInput.set_override_mask(_replay.mask_at(_current_index))
+	var flags := _replay.command_at(_current_index)
 	if flags & Replay.COMMAND_BOMB:
 		PlayerInput.queue_command(&"bomb")
 	if flags & Replay.COMMAND_MEMORY:
@@ -264,14 +261,14 @@ static func prepare_tick(_tick: int) -> void:
 ## 回放：在 SimClock observer 里比对本 tick 的哈希。
 ## 返回 false = 已放完 或 出现分歧。
 static func observe_tick(tick: int, state_hash: int) -> bool:
-	if not _playing or _play == null:
+	if not _playing or _replay == null:
 		return true
-	if _current_index < 0 or _current_index >= _play.tick_count():
+	if _current_index < 0 or _current_index >= _replay.tick_count():
 		return false
-	if not _play.hashes.is_empty() and _play.hash_at(_current_index) != state_hash:
+	if not _replay.hashes.is_empty() and _replay.hash_at(_current_index) != state_hash:
 		_diverged = true
 		push_warning("Replay 分歧 tick=%d idx=%d cur=%d exp=%d" % [
-			tick, _current_index, state_hash, _play.hash_at(_current_index),
+			tick, _current_index, state_hash, _replay.hash_at(_current_index),
 		])
 		return false
 	return true
@@ -279,9 +276,9 @@ static func observe_tick(tick: int, state_hash: int) -> bool:
 
 ## 分歧时报告首个不同的分项字段（需要录像有 field_hashes；旧文件会提示无数据）。
 static func report_fields(idx: int, live: Dictionary) -> void:
-	if _play == null or idx < 0 or idx >= _play.field_hashes.size():
+	if _replay == null or idx < 0 or idx >= _replay.field_hashes.size():
 		return
-	var expected: Dictionary = _play.field_hashes[idx]
+	var expected: Dictionary = _replay.field_hashes[idx]
 	if expected.is_empty():
 		push_warning("Replay 分歧 idx=%d：这份录像没有分项哈希（旧格式），无法定位字段" % idx)
 		return
@@ -299,7 +296,7 @@ static func report_fields(idx: int, live: Dictionary) -> void:
 ## 停止回放并清理注入。
 static func stop_playback() -> void:
 	_playing = false
-	_play = null
+	_replay = null
 	_path = ""
 	_next_index = 0
 	_current_index = -1

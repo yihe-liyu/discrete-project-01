@@ -42,7 +42,7 @@ func test_moves_down_until_offscreen() -> void:
 	assert_gt(tgt.global_position.y, GameConfig.VIEW_HEIGHT + 32.0, "结束时应在屏幕之外（下缘 + 32px）")
 
 
-func test_two_instances_share_top_template() -> void:
+func test_two_instances_sharetop_emit_template() -> void:
 	var bm := BulletManager.new()
 	add_child_autofree(bm)
 	await get_tree().process_frame
@@ -70,5 +70,5 @@ func test_two_instances_share_top_template() -> void:
 	b.target = tb
 	b._on_start()
 	assert_true(b._ensure_top_behavior(ctx), "第二只 enemy04 应复用已注册模板")
-	assert_eq(b._top_template.numeric_id, a._top_template.numeric_id,
+	assert_eq(b.top_emit_template.numeric_id, a.top_emit_template.numeric_id,
 		"多只 enemy04 的 top_emit 模板 numeric_id 必须一致")

@@ -34,8 +34,8 @@ var _segments: int = -1                   # 段数缓存（由图集自动算）
 var _segment_textures: Array[AtlasTexture] = []  # 切片缓存（省每段 new）
 
 ## 复用弹型实例（内核弹型缓存在 SpawnSpec 实例上，禁止每发 new）
-var _main_bullet: SpawnSpec
-var _focus_bullet: SpawnSpec
+var main_spawn_spec: SpawnSpec
+var focus_spawn_spec: SpawnSpec
 var _laser_bullets: Array[SpawnSpec] = []
 ## 子机的稳定锚点：不直接引用会被重建/释放的 Option 节点。
 ## 每帧把锚点移到对应子机的 global_position；激光锚点 id 永远有效。
@@ -91,27 +91,27 @@ func _cleanup_options() -> void:
 
 
 func _main_shoot(_ctx: StageContext, player: Player) -> float:
-	if _main_bullet == null:
-		_main_bullet = SpawnSpec.new().tex("marisa_main").blend(false).speed(4000).player()
-		_main_bullet.color(Color(1, 1, 1, 0.5))
-		_main_bullet.damage = 6
-		_main_bullet.hit_effect = preload("res://scenes/effect/hit_effect_marisa.tscn")
-	ctx.bullets.shoot_spread(_main_bullet, 1, 0.0, Vector2.UP, player.global_position + Vector2(-15, 0))
-	ctx.bullets.shoot_spread(_main_bullet, 1, 0.0, Vector2.UP, player.global_position + Vector2(15, 0))
+	if main_spawn_spec == null:
+		main_spawn_spec = SpawnSpec.new().tex("marisa_main").blend(false).speed(4000).player()
+		main_spawn_spec.color(Color(1, 1, 1, 0.5))
+		main_spawn_spec.damage = 6
+		main_spawn_spec.hit_effect = preload("res://scenes/effect/hit_effect_marisa.tscn")
+	ctx.bullets.shoot_spread(main_spawn_spec, 1, 0.0, Vector2.UP, player.global_position + Vector2(-15, 0))
+	ctx.bullets.shoot_spread(main_spawn_spec, 1, 0.0, Vector2.UP, player.global_position + Vector2(15, 0))
 	return ctx.clock.wait_frames(MAIN_INTERVAL)
 
 
 func _option_shoot(_ctx: StageContext, _count: int) -> float:
 	if PlayerInput.is_action_pressed("focus"):
 		# focus：竖直向上匀加速星弹（初速 + 加速度，每秒加速 —— 数值可调）
-		if _focus_bullet == null:
-			_focus_bullet = SpawnSpec.new().tex("marisa_opt2").blend(false).speed(1500).with_behavior(
+		if focus_spawn_spec == null:
+			focus_spawn_spec = SpawnSpec.new().tex("marisa_opt2").blend(false).speed(1500).with_behavior(
 				BulletBehaviors.accel(Vector2(0, -5000))).player()
-			_focus_bullet.color(Color(1, 1, 1, 0.5))
-			_focus_bullet.damage = 4
-			_focus_bullet.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
-			_focus_bullet.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option02.tscn")
-		_shoot_options(ctx, _focus_bullet, 1, 0.0, Vector2.UP, Vector2.ZERO)
+			focus_spawn_spec.color(Color(1, 1, 1, 0.5))
+			focus_spawn_spec.damage = 4
+			focus_spawn_spec.hit_sfx = "marisa_damage"  # focus 弹命中用专属音效
+			focus_spawn_spec.hit_effect = preload("res://scenes/effect/hit_effect_marisa_option02.tscn")
+		_shoot_options(ctx, focus_spawn_spec, 1, 0.0, Vector2.UP, Vector2.ZERO)
 		ctx.audio.play_sfx(AssetRegistry.sounds["msl"])
 		return ctx.clock.wait_frames(5)
 	else:
