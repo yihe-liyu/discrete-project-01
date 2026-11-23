@@ -198,7 +198,7 @@ cur boss pos=(1000.000,500.000)
 
 - 同一份录像完整回放 Stage 1 → Boss → 通关 / Game Over，零 `分歧`。
 - 同一输入跑两次（录制 + 回放）逐 tick 总 hash + 分项 hash 一致。
-- 600 tick 能在 headless 手动 step 下 < 5s 跑完：最小 harness 已实测通过（`test_replay` 的 600 tick 用例）；完整 GameScene 仍需显式 step driver。
+- 600 tick 最小 microbench <5s 已通过（`test_replay`，仅 Player + 弹幕，不含 GameScene）；完整 GameScene 仍需 Simulation 内核。
 - `content_hash` 非空；内容变更能拒绝旧 replay（已落地，`ContentFingerprint`）。
 - 玩法目录的 `Input` / `create_tween` / `create_timer` / `time_scale` 由 lint 禁止（当前靠人工审计）。
 

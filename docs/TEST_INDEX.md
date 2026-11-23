@@ -181,7 +181,7 @@
 | [test_player_input](../test/test_player_input.gd) | `PlayerInput`：每物理 tick 单次锁存；玩法共用同一快照；动作表唯一来源；test/回放输入注入；离散命令下 tick 消费 | 6 | 0 |
 | [test_sim_clock](../test/test_sim_clock.gd) | `SimClock`：tick 冻结 owner / 帧数 / 嵌套恢复 / 到点自动恢复 / reset | 4 | 0 |
 | [test_sim_hash](../test/test_sim_hash.gd) | `SimHash`：位置量化 / tick 进哈希 / 分项哈希隔离 / boss 位置进总哈希 / 同输入双跑 120 tick 逐 tick 一致 | 4 | 0 |
-| [test_replay](../test/test_replay.gd) | `Replay`：输入 + 命令 + 总/分项哈希格式往返 / 旧格式拒绝 / 兼容性闸门 / 结束 stage 不覆盖起始 stage / 对话推进命令 / 录制→落盘→回放逐 tick 一致 / 600 tick 无头快进 <5s | 6 | 0 |
+| [test_replay](../test/test_replay.gd) | `Replay`：输入 + 命令 + 总/分项哈希格式往返 / 旧格式拒绝 / 兼容性闸门 / 结束 stage 不覆盖起始 stage / 对话推进命令 / 录制→落盘→回放逐 tick 一致 / 600 tick 最小 microbench（不含 GameScene） | 6 | 0 |
 | [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 / 跨面起点资源恢复 | 4 | 0 |
 | [test_replay_menu](../test/test_replay_menu.gd) | Replay 菜单：列出录像文件、显示分数、空目录不报错 | 1 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |

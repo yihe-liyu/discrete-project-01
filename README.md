@@ -39,7 +39,7 @@
 | 打磨/QoL | ██████████████ 70% |
 
 - **已完成**：原生弹幕内核、Stage 1 道中 + Boss、难度路线、符卡 / 关卡练习、对话、Bomb、Replay 的录制/严格播放；Stage 1 → Stage 2 完整 run 已零分歧。
-- **进行中**：Stage 2 / 3B 内容；`content_hash` 已接入，`TimeScheduler` + 最小 600 tick 快进已落地，完整 GameScene headless / 跨平台一致性仍在收尾。
+- **进行中**：Stage 2 / 3B 内容；`content_hash` 已接入，`TimeScheduler` + 600 tick 最小 microbench 已落地；完整 GameScene headless / 跨平台一致性等 Simulation 内核。
 - **未完成**：Stage 3A / 4 / 5 / 6 的完整内容、`content_hash`、headless 快进验证、完整 run 结算 / Continue。
 
 状态与缺口的权威口径在 [BASELINE](docs/BEST_PRACTICES_BASELINE.md) 的 S 表 + [REPLAY_MODEL](docs/REPLAY_MODEL.md)；本页只做入口摘要。

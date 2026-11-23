@@ -106,12 +106,12 @@ func _run_once(p_seed: int, recorder: Replay, replay: Replay, ticks: int = 120) 
 	return hashes
 
 
-func test_600_ticks_fast_forward_under_5s() -> void:
+func test_600_ticks_minimal_microbench() -> void:
 	var started := Time.get_ticks_msec()
 	var hashes := _run_once(12345, null, null, 600)
 	var elapsed := Time.get_ticks_msec() - started
 	assert_eq(hashes.size(), 600)
-	assert_lt(elapsed, 5000, "600 tick 的无头最小回放应在 5s 内完成（实测 %d ms）" % elapsed)
+	assert_lt(elapsed, 5000, "600 tick 最小 microbench 应在 5s 内完成（实测 %d ms；不覆盖 GameScene）" % elapsed)
 
 
 func test_start_playback_rejects_other_sim_version() -> void:
