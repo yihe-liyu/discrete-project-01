@@ -38,12 +38,22 @@ func on_enter() -> void:
 	_show_replays()
 
 
+## 重新扫盘 + 重建当前页；只在进场/删除/改名后调用。
 func _show_replays() -> void:
+	_reload_entries()
+	_build_page()
+
+
+## 只重读 replay 文件列表；上下选择/翻页不应走这里。
+func _reload_entries() -> void:
 	_entries = ReplaySession.list_replays()
 	_selected_slot = clampi(_selected_slot, 0, TOTAL_SLOTS - 1)
 	_page_offset = clampi(_page_offset, 0, _last_page_offset())
-	if not _slot_on_page(_selected_slot):
-		_page_offset = floori(float(_selected_slot) / PAGE_SIZE) * PAGE_SIZE
+
+
+## 用缓存的 _entries 重建当前页；不扫盘。
+func _build_page() -> void:
+	_ensure_page_for_selection()
 	_delete_armed = false
 	_rows.clear()
 	_grid_rows.clear()
@@ -148,6 +158,12 @@ func _slot_on_page(slot: int) -> bool:
 	return slot >= _page_offset and slot < _page_offset + PAGE_SIZE
 
 
+func _ensure_page_for_selection() -> void:
+	if not _slot_on_page(_selected_slot):
+		_page_offset = floori(float(_selected_slot) / PAGE_SIZE) * PAGE_SIZE
+	_page_offset = clampi(_page_offset, 0, _last_page_offset())
+
+
 func _refresh_selection() -> void:
 	for row in _grid_rows:
 		var slot := int(row.get_meta("slot", -1))
@@ -250,9 +266,9 @@ func _delete_selected() -> void:
 		_refresh_selection()
 		return
 	var keep := _selected_slot
-	_show_replays()
+	_reload_entries()
 	_selected_slot = mini(keep, maxi(0, _entries.size() - 1))
-	_show_replays()
+	_build_page()
 
 
 func _begin_rename() -> void:
@@ -318,9 +334,12 @@ func _last_page_offset() -> int:
 
 
 func _turn_page(dir: int) -> void:
+	var old_offset := _page_offset
 	_page_offset = clampi(_page_offset + dir * PAGE_SIZE, 0, _last_page_offset())
+	if _page_offset == old_offset:
+		return
 	_selected_slot = _page_offset
-	_show_replays()
+	_build_page()
 
 
 func _move_slot(dir: int) -> void:
@@ -335,7 +354,9 @@ func _move_slot(dir: int) -> void:
 			break
 	if not _slot_on_page(_selected_slot):
 		_page_offset = floori(float(_selected_slot) / PAGE_SIZE) * PAGE_SIZE
-	_show_replays()
+		_build_page()
+	else:
+		_refresh_selection()
 
 
 func _input(event: InputEvent) -> void:
