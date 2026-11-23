@@ -57,7 +57,7 @@ func test_record_then_replay_has_same_hash_per_tick() -> void:
 
 
 ## 录制：recorder != null；回放：replay != null。两者都为空时按脚本生成输入。
-func _run_once(p_seed: int, recorder: Replay, replay: Replay) -> Array[int]:
+func _run_once(p_seed: int, recorder: Replay, replay: Replay, ticks: int = 120) -> Array[int]:
 	RNG.set_seed(p_seed)
 
 	var host := KernelBulletHost.new()
@@ -79,7 +79,7 @@ func _run_once(p_seed: int, recorder: Replay, replay: Replay) -> Array[int]:
 	var move_right := 1 << PlayerInput.ACTIONS.find("move_right")
 	var shoot := 1 << PlayerInput.ACTIONS.find("shoot")
 	var hashes: Array[int] = []
-	for tick in 120:
+	for tick in ticks:
 		var mask := replay.mask_at(tick) if replay != null else 0
 		if replay == null:
 			if tick < 80:
@@ -104,6 +104,14 @@ func _run_once(p_seed: int, recorder: Replay, replay: Replay) -> Array[int]:
 
 	PlayerInput.clear_override()
 	return hashes
+
+
+func test_600_ticks_fast_forward_under_5s() -> void:
+	var started := Time.get_ticks_msec()
+	var hashes := _run_once(12345, null, null, 600)
+	var elapsed := Time.get_ticks_msec() - started
+	assert_eq(hashes.size(), 600)
+	assert_lt(elapsed, 5000, "600 tick 的无头最小回放应在 5s 内完成（实测 %d ms）" % elapsed)
 
 
 func test_start_playback_rejects_other_sim_version() -> void:
