@@ -307,7 +307,7 @@ func _begin_rename() -> void:
 	_rename_edit.name = "RenameEdit"
 	_rename_edit.position = Vector2(390, 410)
 	_rename_edit.size = Vector2(500, 44)
-	_rename_edit.max_length = 12
+	_rename_edit.max_length = 8
 	_rename_edit.placeholder_text = "输入回放名字"
 	_rename_edit.text = str(meta.get("name", ""))
 	_rename_edit.add_theme_font_size_override("font_size", 20)

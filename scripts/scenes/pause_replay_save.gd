@@ -3,7 +3,7 @@ extends BasePage
 
 const SLOT_COUNT := 25
 const SLOT_LIST_PATH := "SlotList"
-const NAME_MAX := 12
+const NAME_MAX := 8
 const COLS := [90, 180, 130, 95, 120, 120]
 
 var _slots: Array[Dictionary] = []
