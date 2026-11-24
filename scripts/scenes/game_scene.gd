@@ -549,7 +549,7 @@ func _add_blur() -> void:
 	_blur_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://gdshader/pause_blur.gdshader")
-	mat.set_shader_parameter("darken", 0.35)
+	mat.set_shader_parameter("darken", 0.08)
 	mat.set_shader_parameter("rect_min", Vector2(container.position) / vs)
 	mat.set_shader_parameter("rect_max", Vector2(container.position + container.size) / vs)
 	_blur_rect.material = mat
