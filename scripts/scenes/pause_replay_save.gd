@@ -145,7 +145,7 @@ func _back_to_slots() -> void:
 
 func _update_hint() -> void:
 	if _name_mode:
-		_hint.text = "输入名字（%d/%d 字）· Enter 保存 · Esc 返回选槽" % [
+		_hint.text = "已输入 %d 字（最多 %d 字）· Enter 保存 · Esc 返回选槽" % [
 			_name_edit.text.length(), NAME_MAX]
 	else:
 		_hint.text = "↑↓ 选择槽位 · Z/Enter 命名（最多 %d 字）· Esc 返回" % NAME_MAX
