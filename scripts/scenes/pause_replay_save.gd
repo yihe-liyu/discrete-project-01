@@ -3,6 +3,7 @@ extends BasePage
 
 const SLOT_COUNT := 25
 const SLOT_LIST_PATH := "SlotList"
+const NAME_MAX := 12
 const COLS := [90, 180, 130, 95, 120, 120]
 
 var _slots: Array[Dictionary] = []
@@ -21,6 +22,8 @@ func _ready() -> void:
 	_title = $"Title"
 	_name_edit.text_submitted.connect(_on_name_submitted)
 	_name_edit.gui_input.connect(_on_name_gui)
+	_name_edit.text_changed.connect(_on_name_changed)
+	_name_edit.max_length = NAME_MAX
 	_name_edit.editable = false
 
 
@@ -141,8 +144,16 @@ func _back_to_slots() -> void:
 
 
 func _update_hint() -> void:
-	_hint.text = "输入名字 · Enter 保存 · Esc 返回选槽" if _name_mode \
-		else "↑↓ 选择槽位 · Z/Enter 命名 · Esc 返回"
+	if _name_mode:
+		_hint.text = "输入名字（%d/%d 字）· Enter 保存 · Esc 返回选槽" % [
+			_name_edit.text.length(), NAME_MAX]
+	else:
+		_hint.text = "↑↓ 选择槽位 · Z/Enter 命名（最多 %d 字）· Esc 返回" % NAME_MAX
+
+
+func _on_name_changed(_text: String) -> void:
+	if _name_mode:
+		_update_hint()
 
 
 func _on_name_gui(event: InputEvent) -> void:
