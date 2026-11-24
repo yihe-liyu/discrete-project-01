@@ -6,6 +6,7 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 const STAGE_RESULT_MENU = preload("res://scenes/ui/stage_result_menu.tscn")
 
 var _blur_rect: ColorRect
+var _blur_tween: Tween
 var _background_instance: Node  # StageBackground 或测试 Node3D
 ## 当前 Boss（符卡背景取它的 [code]BossData.spell_background[/code]）；由 boss_spawned/defeated 维护
 var _current_boss: Boss
@@ -72,6 +73,7 @@ func _ready():
 	GameEvents.phase_start.connect(_on_phase_start)
 	GameEvents.phase_end.connect(_on_phase_end)
 	GameEvents.player_bomb.connect(_on_player_bomb)
+	GameEvents.pause_exit_started.connect(_on_pause_exit_started)
 
 	if PracticeSession.is_practice_mode:
 		SaveData.is_restarting = false
@@ -239,6 +241,8 @@ func _exit_tree():
 		GameEvents.phase_end.disconnect(_on_phase_end)
 	if GameEvents.player_bomb.is_connected(_on_player_bomb):
 		GameEvents.player_bomb.disconnect(_on_player_bomb)
+	if GameEvents.pause_exit_started.is_connected(_on_pause_exit_started):
+		GameEvents.pause_exit_started.disconnect(_on_pause_exit_started)
 
 	_stage_runtime.miss_layer = null  # 解除注入（节点随本场景释放）
 	_bullet_manager.clear_all()       # 内含 fx_pool.clear_pool()
@@ -306,6 +310,11 @@ func _on_phase_end(_captured: bool, _bonus: int) -> void:
 
 
 ## 自机用 Bomb：立绘左下 → 右上扫场（与 Boss 的符卡立绘镜像）
+func _on_pause_exit_started() -> void:
+	# 退场动画一开始就淡出模糊；tree 仍 paused，等动画结束才真正 resume。
+	_remove_blur()
+
+
 func _on_player_bomb(_spell_name: String) -> void:
 	_player_portrait.sweep_from_bottom_left(_resolve_player_portrait())
 
@@ -547,6 +556,7 @@ func _add_blur() -> void:
 	_blur_rect.position = container.position
 	_blur_rect.size = container.size
 	_blur_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_blur_rect.modulate.a = 0.0
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://gdshader/pause_blur.gdshader")
 	mat.set_shader_parameter("darken", 0.08)
@@ -558,12 +568,26 @@ func _add_blur() -> void:
 	blur_layer.name = "BlurLayer"
 	blur_layer.add_child(_blur_rect)
 	add_child(blur_layer)
+	_blur_tween = create_tween()
+	_blur_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_blur_tween.tween_property(_blur_rect, "modulate:a", 1.0, 0.45)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func _remove_blur() -> void:
 	if not _blur_rect: return
-	var layer := _blur_rect.get_parent()
-	_blur_rect.queue_free()
+	if _blur_tween and _blur_tween.is_valid():
+		_blur_tween.kill()
+	var rect := _blur_rect
+	var layer := rect.get_parent()
 	_blur_rect = null
-	if layer and layer.name == "BlurLayer":
-		layer.queue_free()
+	_blur_tween = create_tween()
+	_blur_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_blur_tween.tween_property(rect, "modulate:a", 0.0, 0.35)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	_blur_tween.tween_callback(func():
+		if is_instance_valid(rect):
+			rect.queue_free()
+		if is_instance_valid(layer) and layer.name == "BlurLayer":
+			layer.queue_free()
+	)

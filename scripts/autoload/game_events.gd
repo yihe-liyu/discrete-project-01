@@ -43,6 +43,10 @@ signal screen_shake(amount: float)
 @warning_ignore("unused_signal")
 signal screen_shake_sustain(amount: float)
 
+## 暂停退场动画开始（tree 仍 paused）——GameScene 在这里开始模糊淡出。
+@warning_ignore("unused_signal")
+signal pause_exit_started()
+
 ## 自机 Bomb 的场地颜色滤镜（a <= 0 = 不启用）——FieldFilterLayer 订阅。
 @warning_ignore("unused_signal")
 signal field_filter(color: Color)

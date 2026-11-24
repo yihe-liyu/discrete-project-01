@@ -74,6 +74,7 @@ func _begin_resume() -> void:
 	_resuming = true
 	_is_nav_enabled = false
 	_stop_pulse()
+	GameEvents.pause_exit_started.emit()
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "modulate:a", 0.0, EXIT_DURATION)
