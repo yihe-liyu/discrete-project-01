@@ -48,12 +48,22 @@ func _on_item_selected(index: int) -> void:
 			_save_replay_and_quit()
 		3:
 			var manual: BasePage = load("res://scenes/ui/pause_manual_menu.tscn").instantiate()
-			GameManager.push_overlay_menu(manual)
+			# 说明页放到 GameUI(32) 下面：Front 灰框线自然盖在上面，不需要再画假边框。
+			visible = false
+			_is_nav_enabled = false
+			manual.back.connect(_on_manual_closed, CONNECT_ONE_SHOT)
+			GameManager.push_overlay_menu(manual, 30)
 		4:
 			# 重开是硬切：淡出会让旧曲继续响 0.6s，新场景再起同一首时听感就是"先放一会再重播"。
 			AudioManager.stop_bgm(0.0)
 			SaveData.is_restarting = true
 			GameManager.reload_current_scene()
+
+
+func _on_manual_closed() -> void:
+	visible = true
+	_is_nav_enabled = true
+	refresh_colors()
 
 
 func _save_replay_and_quit() -> void:

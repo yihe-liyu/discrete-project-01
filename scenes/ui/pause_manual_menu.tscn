@@ -3,14 +3,6 @@
 [ext_resource type="Script" uid="uid://cuaok88trvnfy" path="res://scripts/scenes/pause_manual_menu.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/Textures/title/manual.png" id="2_title"]
 
-[sub_resource type="StyleBoxFlat" id="FrameBorderStyle"]
-bg_color = Color(0, 0, 0, 0)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.55, 0.55, 0.55, 0.9)
-
 [node name="PauseManualMenu" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -24,10 +16,10 @@ script = ExtResource("1_script")
 [node name="Overlay" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 0
-offset_left = 54.0
-offset_top = 22.0
-offset_right = 842.0
-offset_bottom = 938.0
+offset_left = 48.0
+offset_top = 16.0
+offset_right = 848.0
+offset_bottom = 944.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
@@ -76,15 +68,3 @@ theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 16
 text = "1 / 6"
 horizontal_alignment = 1
-
-[node name="FrameBorder" type="Panel" parent="."]
-layout_mode = 1
-anchors_preset = 0
-offset_left = 48.0
-offset_top = 16.0
-offset_right = 848.0
-offset_bottom = 944.0
-grow_horizontal = 0
-grow_vertical = 0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("FrameBorderStyle")

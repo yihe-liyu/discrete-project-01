@@ -151,13 +151,13 @@ func is_page_open() -> bool:
 # ═══ 覆盖层（暂停 / Game Over / 通关） ═══
 
 ## 加载并推入覆盖层：挂 CanvasLayer(64)、暂停 tree、发 pause_requested、on_enter。
-func push_overlay(page_path: String) -> BasePage:
+func push_overlay(page_path: String, layer: int = 64) -> BasePage:
 	var page: BasePage = _load_page(page_path)
 	_overlay_stack.append(page)
 	page.process_mode = Node.PROCESS_MODE_ALWAYS
 
 	var wrapper: CanvasLayer = CanvasLayer.new()
-	wrapper.layer = 64
+	wrapper.layer = layer
 	wrapper.process_mode = Node.PROCESS_MODE_ALWAYS
 	wrapper.add_child(page)
 	page.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -175,12 +175,12 @@ func push_overlay(page_path: String) -> BasePage:
 
 
 ## 接受已实例化的覆盖层（兼容旧 API），行为同 push_overlay。
-func add_overlay_instance(page: BasePage) -> void:
+func add_overlay_instance(page: BasePage, layer: int = 64) -> void:
 	_overlay_stack.append(page)
 	page.process_mode = Node.PROCESS_MODE_ALWAYS
 
 	var wrapper: CanvasLayer = CanvasLayer.new()
-	wrapper.layer = 64
+	wrapper.layer = layer
 	wrapper.process_mode = Node.PROCESS_MODE_ALWAYS
 	wrapper.add_child(page)
 	page.set_anchors_preset(Control.PRESET_FULL_RECT)
