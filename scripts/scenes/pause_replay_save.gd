@@ -1,10 +1,11 @@
-# PauseReplaySave.gd — 暂停菜单里的保存录像页：在游戏框内选 25 个槽位并命名。
+# PauseReplaySave.gd — 暂停菜单里的保存录像页：固定 25 槽位 + 命名。
 extends BasePage
 
 const SLOT_COUNT := 25
 const SLOT_LIST_PATH := "SlotList"
+const COLS := [72, 230, 160, 78, 82, 96]
 
-var _entries: Array[Dictionary] = []
+var _slots: Array[Dictionary] = []
 var _rows: Array[HBoxContainer] = []
 var _selected: int = 0
 var _name_mode: bool = false
@@ -24,7 +25,7 @@ func _ready() -> void:
 
 
 func on_enter() -> void:
-	_entries = ReplaySession.list_replays()
+	_slots = ReplaySession.slot_entries()
 	_selected = 0
 	_build_slots()
 	_name_mode = false
@@ -52,28 +53,19 @@ func _build_slots() -> void:
 	_rows.clear()
 	for i in SLOT_COUNT:
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		var no := Label.new()
-		no.custom_minimum_size = Vector2(86, 0)
-		no.add_theme_font_size_override("font_size", 17)
-		no.add_theme_color_override("font_outline_color", Color.BLACK)
-		no.add_theme_constant_override("outline_size", 3)
-		no.text = "No. %02d" % (i + 1)
-		row.add_child(no)
-		var name_label := Label.new()
-		name_label.custom_minimum_size = Vector2(360, 0)
-		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		name_label.clip_text = true
-		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		name_label.add_theme_font_size_override("font_size", 17)
-		name_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		name_label.add_theme_constant_override("outline_size", 3)
-		row.add_child(name_label)
-		var date_label := Label.new()
-		date_label.custom_minimum_size = Vector2(200, 0)
-		date_label.add_theme_font_size_override("font_size", 15)
-		date_label.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
-		row.add_child(date_label)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 6)
+		row.custom_minimum_size = Vector2(0, 23)
+		for width in COLS:
+			var cell := Label.new()
+			cell.custom_minimum_size = Vector2(width, 23)
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cell.clip_text = true
+			cell.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			cell.add_theme_font_size_override("font_size", 15)
+			cell.add_theme_color_override("font_outline_color", Color.BLACK)
+			cell.add_theme_constant_override("outline_size", 3)
+			row.add_child(cell)
 		list.add_child(row)
 		_rows.append(row)
 	_refresh_slots()
@@ -82,19 +74,31 @@ func _build_slots() -> void:
 func _refresh_slots() -> void:
 	for i in _rows.size():
 		var row := _rows[i]
-		var filled := i < _entries.size()
-		var meta: Dictionary = _entries[i].get("metadata", {}) if filled else {}
-		var display_name := str(meta.get("name", "")) if filled else ""
-		var date := str(meta.get("recorded_at", "")) if filled else ""
+		var filled := i < _slots.size() and not _slots[i].is_empty()
+		var meta: Dictionary = _slots[i].get("metadata", {}) if filled else {}
+		var display_name := str(meta.get("name", "")).strip_edges() if filled else ""
 		if display_name == "":
-			display_name = "--------" if not filled else "（未命名）"
+			display_name = "（未命名）" if filled else "--------"
+		var date := str(meta.get("recorded_at", "")) if filled else ""
 		if date.length() >= 16:
-			date = "%s/%s/%s %s" % [date.substr(2, 2), date.substr(5, 2), date.substr(8, 2), date.substr(11, 5)]
+			date = "%s/%s/%s" % [date.substr(2, 2), date.substr(5, 2), date.substr(8, 2)]
 		else:
 			date = ""
-		(row.get_child(1) as Label).text = display_name
-		(row.get_child(2) as Label).text = date
-		var color := Color(1, 1, 1) if i == _selected else (Color(0.72, 0.72, 0.72) if filled else Color(0.38, 0.38, 0.38))
+		var char_name := "--"
+		var diff_name := "--"
+		var stage_name := "--"
+		if filled:
+			char_name = "Reimu" if int(meta.get("character", 0)) == 0 else "Marisa"
+			var diff := int(meta.get("difficulty", 1))
+			diff_name = Difficulty.display_name(diff) if Difficulty.is_valid(diff) else "?"
+			stage_name = "Stage %d" % int(meta.get("stage_no", meta.get("start_stage_no", 1)))
+		var values := [
+			"No. %02d" % (i + 1), display_name, date, char_name, diff_name, stage_name,
+		]
+		for c in mini(row.get_child_count(), values.size()):
+			(row.get_child(c) as Label).text = str(values[c])
+		var color := Color(1, 1, 1) if i == _selected else (
+			Color(0.72, 0.72, 0.72) if filled else Color(0.38, 0.38, 0.38))
 		for child in row.get_children():
 			(child as Label).add_theme_color_override("font_color", color)
 
@@ -103,7 +107,7 @@ func _begin_name() -> void:
 	_name_mode = true
 	_name_edit.editable = true
 	_name_edit.visible = true
-	var meta: Dictionary = _entries[_selected].get("metadata", {}) if _selected < _entries.size() else {}
+	var meta: Dictionary = _slots[_selected].get("metadata", {}) if _selected < _slots.size() and not _slots[_selected].is_empty() else {}
 	var existing := str(meta.get("name", "")).strip_edges()
 	_name_edit.text = existing if existing != "" else "新录像"
 	_name_edit.grab_focus()
@@ -119,10 +123,8 @@ func _back_to_slots() -> void:
 
 
 func _update_hint() -> void:
-	if _name_mode:
-		_hint.text = "输入名字 · Enter 保存 · Esc 返回选槽"
-	else:
-		_hint.text = "↑↓ 选择槽位 · Z/Enter 命名 · Esc 返回"
+	_hint.text = "输入名字 · Enter 保存 · Esc 返回选槽" if _name_mode \
+		else "↑↓ 选择槽位 · Z/Enter 命名 · Esc 返回"
 
 
 func _on_name_gui(event: InputEvent) -> void:
@@ -141,8 +143,8 @@ func _save_now() -> void:
 		_update_hint()
 		return
 	var path: String
-	if _selected < _entries.size():
-		path = str(_entries[_selected].get("path", ""))
+	if _selected < _slots.size() and not _slots[_selected].is_empty():
+		path = str(_slots[_selected].get("path", ""))
 	else:
 		path = "%s/slot_%02d.json" % [ReplaySession.DIR, _selected + 1]
 	var saved := ReplaySession.finish_recording(

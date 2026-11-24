@@ -164,3 +164,20 @@ func test_finish_recording_can_target_slot_and_name() -> void:
 	assert_eq(str(rec.metadata.get("name", "")), "测试录像", "名字应写入 metadata")
 	assert_eq(int(rec.metadata.get("slot", 0)), 7, "槽位号应写入 metadata")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_slot_entries_keep_fixed_slot_numbers() -> void:
+	var path_a := ReplaySession.DIR + "/slot_fixed_a.json"
+	var path_b := ReplaySession.DIR + "/slot_fixed_b.json"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ReplaySession.DIR))
+	for pair in [[path_a, 22], [path_b, 23]]:
+		var rec := Replay.new()
+		rec.begin(60, 1, ReplaySession.SIM_VERSION)
+		rec.metadata = {"slot": pair[1], "name": "fixed"}
+		rec.capture_tick(0, 0, 0)
+		assert_true(rec.save(pair[0]))
+	var slots := ReplaySession.slot_entries()
+	assert_eq(str(slots[21].get("path", "")), path_a, "槽位 22 应保持原位")
+	assert_eq(str(slots[22].get("path", "")), path_b, "槽位 23 应保持原位")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path_a))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path_b))

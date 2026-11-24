@@ -347,6 +347,37 @@ static func list_replays() -> Array[Dictionary]:
 	return out
 
 
+## 保存页专用：固定 25 槽位。已有 slot 的保持原位；没有 slot 的旧文件按当前顺序
+## 首次分配一个空槽并写回 metadata.slot，之后不再随删除/排序移位。
+static func slot_entries() -> Array[Dictionary]:
+	var slots: Array[Dictionary] = []
+	slots.resize(25)
+	var entries := list_replays()
+	var unassigned: Array[Dictionary] = []
+	for entry in entries:
+		var meta: Dictionary = entry.get("metadata", {})
+		var slot := int(meta.get("slot", 0))
+		if slot >= 1 and slot <= 25 and slots[slot - 1].is_empty():
+			slots[slot - 1] = entry
+		else:
+			unassigned.append(entry)
+	var next_free := 0
+	for entry in unassigned:
+		while next_free < 25 and not slots[next_free].is_empty():
+			next_free += 1
+		if next_free >= 25:
+			break
+		var slot := next_free + 1
+		var rec := Replay.new()
+		if rec.load_file(str(entry.get("path", ""))):
+			rec.metadata["slot"] = slot
+			rec.save(str(entry.get("path", "")))
+			entry["metadata"] = rec.metadata
+		slots[next_free] = entry
+		next_free += 1
+	return slots
+
+
 ## 删除一份 v2 回放；只允许删 DIR 下文件。
 static func delete_replay(path: String) -> bool:
 	if not path.begins_with(DIR + "/"):
