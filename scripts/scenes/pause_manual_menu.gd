@@ -29,7 +29,6 @@ func on_enter() -> void:
 	tw.tween_property(_texture_rect, "modulate:a", 1.0, 0.2)
 	tw.tween_property(_page_label, "modulate:a", 1.0, 0.2)
 	tw.tween_callback(func(): _input_ready = true)
-	AudioManager.play_ui_sfx("confirm")
 
 
 func on_leave() -> void:
