@@ -153,7 +153,7 @@
 - preset/builder 不覆写显式开关（`.enemy()` 别设 `is_spawn_fog`）。
 - Godot 的 `erase_section` / `remove_*` 对不存在目标会 `ERR_FAIL`：先 `has_section` / `file_exists` 守卫。
 - 存档写盘走 `SaveManager` 的 tmp → `.bak` → 提交，不要直接 `ConfigFile.save` 正式档；`ConfigFile.load` 对垃圾文件也可能返回 OK（无任何段）⇒ 必须检查已知段，别把空档当好档。
-- 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（预算 327；当前 321）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
+- 重构成果靠机械护栏：`tools/check_structure.sh` 看住测试白盒预算只减不增（预算 327；当前 327）/ 唯一来源常量 / 舞台接线唯一 / 跨语言常量 / **内容层不直连**；护栏要先证明会红。
 - 内容层 `data/**` 不自己 `get_parent()` / `create_tween()`：移动走 `ctx.enemies.move_to` / `ctx.boss.move_to`/`move_path`，Logo 走 `ctx.stage.show_logo`（`check_structure` ⑤ 会红）。
 - 玩法层不读引擎 `delta` / 不建 `Timer` / 不用 `Tween` 改模拟状态；纯表现才可以用。回放不变量见 [REPLAY_MODEL](REPLAY_MODEL.md)。
 - `SpawnSpec` 按引用共享：pattern 的 `template` 不要复制（否则弹型缓存分裂，且 behavior/阵营改动不可见）；要变体就复制字段后重建。

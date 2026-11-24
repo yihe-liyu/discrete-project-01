@@ -27,3 +27,15 @@ func test_save_replay_locked_when_not_recording() -> void:
 	add_child_autofree(menu)
 	menu.on_enter()
 	assert_true(menu._is_save_locked(), "非录制状态不能保存录像")
+
+
+func test_confirm_defaults_to_no_and_can_cancel() -> void:
+	var menu: Node = MENU.instantiate()
+	add_child_autofree(menu)
+	menu.on_enter()
+	menu._open_confirm(0)
+	assert_true(menu._confirm_open, "确认面板应打开")
+	assert_eq(menu._confirm_index, 1, "默认选中「算了」")
+	assert_true(menu._confirm_root.visible, "确认面板应可见")
+	menu._close_confirm()
+	assert_false(menu._confirm_open, "取消后确认面板应关闭")

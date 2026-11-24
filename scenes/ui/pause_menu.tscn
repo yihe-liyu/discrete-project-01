@@ -170,3 +170,90 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
 theme_override_font_sizes/font_size = 14
 text = "Give up and Retry"
+
+[node name="ConfirmRoot" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 0
+offset_left = 450.0
+offset_top = 150.0
+offset_right = 830.0
+offset_bottom = 620.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="ConfirmRoot"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 380.0
+offset_bottom = 58.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 36
+text = "真的要这样吗？"
+
+[node name="Sub" type="Label" parent="ConfirmRoot"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 0.0
+offset_top = 58.0
+offset_right = 380.0
+offset_bottom = 84.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 16
+text = "Really?"
+
+[node name="Options" type="VBoxContainer" parent="ConfirmRoot"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 0.0
+offset_top = 140.0
+offset_right = 380.0
+offset_bottom = 360.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/separation = 18
+
+[node name="Yes" type="VBoxContainer" parent="ConfirmRoot/Options"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="ConfirmRoot/Options/Yes"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "好的"
+
+[node name="Sub" type="Label" parent="ConfirmRoot/Options/Yes"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "Yes Yes Yes"
+
+[node name="No" type="VBoxContainer" parent="ConfirmRoot/Options"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="ConfirmRoot/Options/No"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "算了"
+
+[node name="Sub" type="Label" parent="ConfirmRoot/Options/No"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "No No"
