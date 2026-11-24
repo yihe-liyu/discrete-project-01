@@ -34,7 +34,7 @@ func test_lists_replay_with_columns() -> void:
 	add_child_autofree(menu)
 	menu.on_enter()
 	assert_not_null(menu.get_node_or_null("ReplayBox"), "回放页应生成列表容器")
-	assert_eq(menu._entries.size(), 1, "应列出刚写的 replay")
+	assert_eq(menu._entries.size(), 25, "固定 25 槽位")
 	assert_eq(menu._grid_rows.size(), 18, "每页固定 18 行")
 	assert_eq(menu._rows.size(), 1, "只有一条真实回放")
 	var text := str(menu._row_text(0))

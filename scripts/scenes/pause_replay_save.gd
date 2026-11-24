@@ -3,7 +3,7 @@ extends BasePage
 
 const SLOT_COUNT := 25
 const SLOT_LIST_PATH := "SlotList"
-const COLS := [100, 190, 140, 100, 90, 120]
+const COLS := [90, 180, 130, 95, 120, 120]
 
 var _slots: Array[Dictionary] = []
 var _rows: Array[HBoxContainer] = []
@@ -105,7 +105,11 @@ func _refresh_slots() -> void:
 			char_name = "Reimu" if int(meta.get("character", 0)) == 0 else "Marisa"
 			var diff := int(meta.get("difficulty", 1))
 			diff_name = Difficulty.display_name(diff) if Difficulty.is_valid(diff) else "?"
-			stage_name = "Stage %d" % int(meta.get("stage_no", meta.get("start_stage_no", 1)))
+			var stage_id := int(meta.get("stage_id", 0))
+			if stage_id > 0:
+				stage_name = StageCatalog.display_name_of(stage_id)
+			else:
+				stage_name = "Stage %d" % int(meta.get("stage_no", meta.get("start_stage_no", 1)))
 		var values := [
 			"No. %02d" % (i + 1), display_name, date, char_name, diff_name, stage_name,
 		]

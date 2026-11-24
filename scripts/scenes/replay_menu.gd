@@ -46,9 +46,30 @@ func _show_replays() -> void:
 
 ## 只重读 replay 文件列表；上下选择/翻页不应走这里。
 func _reload_entries() -> void:
-	_entries = ReplaySession.list_replays()
+	_entries = ReplaySession.slot_entries()
 	_selected_slot = clampi(_selected_slot, 0, TOTAL_SLOTS - 1)
+	if not _is_filled(_selected_slot):
+		_selected_slot = _first_filled_from(0)
 	_page_offset = clampi(_page_offset, 0, _last_page_offset())
+
+
+func _is_filled(slot: int) -> bool:
+	return slot >= 0 and slot < TOTAL_SLOTS and not _entries[slot].is_empty()
+
+
+func _has_any() -> bool:
+	for i in TOTAL_SLOTS:
+		if _is_filled(i):
+			return true
+	return false
+
+
+func _first_filled_from(start: int) -> int:
+	for i in TOTAL_SLOTS:
+		var slot := wrapi(start + i, 0, TOTAL_SLOTS)
+		if _is_filled(slot):
+			return slot
+	return 0
 
 
 ## 用缓存的 _entries 重建当前页；不扫盘。
@@ -77,7 +98,7 @@ func _build_page() -> void:
 		box.add_child(row)
 		_grid_rows.append(row)
 		row.set_meta("slot", slot)
-		if slot < _entries.size():
+		if _is_filled(slot):
 			_fill_row(row, _entries[slot], slot)
 			_rows.append(row)
 		else:
@@ -111,14 +132,19 @@ func _fill_row(row: HBoxContainer, entry: Dictionary, slot: int) -> void:
 	var char_name := "Reimu" if int(meta.get("character", 0)) == 0 else "Marisa"
 	var diff := int(meta.get("difficulty", 1))
 	var diff_name := Difficulty.display_name(diff) if Difficulty.is_valid(diff) else "?"
-	var stage := int(meta.get("stage_no", meta.get("start_stage_no", 1)))
+	var stage_id := int(meta.get("stage_id", 0))
+	var stage_name: String
+	if stage_id > 0:
+		stage_name = StageCatalog.display_name_of(stage_id)
+	else:
+		stage_name = "Stage %d" % int(meta.get("stage_no", meta.get("start_stage_no", 1)))
 	_set_row_text(row, [
 		_fw("No. %02d" % (slot + 1)),
 		_fw(display_name),
 		_fw(_format_date(str(meta.get("recorded_at", "")))),
 		_fw(char_name),
 		_fw(diff_name),
-		_fw("Stage %d" % stage),
+		_fw(stage_name),
 		_fw(_format_rate(meta)),
 	])
 
@@ -167,7 +193,7 @@ func _ensure_page_for_selection() -> void:
 func _refresh_selection() -> void:
 	for row in _grid_rows:
 		var slot := int(row.get_meta("slot", -1))
-		var filled := slot >= 0 and slot < _entries.size()
+		var filled := _is_filled(slot)
 		var selected := filled and slot == _selected_slot
 		var color := Color(1.0, 0.86, 0.35) if selected else (
 			Color(0.78, 0.78, 0.78) if filled else Color(0.36, 0.36, 0.36))
@@ -233,7 +259,7 @@ func _add_hint() -> void:
 	_hint.add_theme_font_size_override("font_size", 14)
 	_hint.add_theme_color_override("font_outline_color", Color.BLACK)
 	_hint.add_theme_constant_override("outline_size", 3)
-	if _entries.is_empty():
+	if not _has_any():
 		_hint.text = "暂无回放。完整打完一局（通关或 Game Over）后会自动生成。"
 	else:
 		_hint.text = "↑↓ 选择 · PageUp/PageDown 翻页 · Z/Enter 播放 · F2 改名 · Delete 删除 · Esc 返回"
@@ -241,7 +267,7 @@ func _add_hint() -> void:
 
 
 func _play_selected() -> void:
-	if _selected_slot < 0 or _selected_slot >= _entries.size():
+	if not _is_filled(_selected_slot):
 		return
 	var path := str(_entries[_selected_slot].get("path", ""))
 	if path == "":
@@ -253,7 +279,7 @@ func _play_selected() -> void:
 
 
 func _delete_selected() -> void:
-	if _selected_slot < 0 or _selected_slot >= _entries.size():
+	if not _is_filled(_selected_slot):
 		return
 	if not _delete_armed:
 		_delete_armed = true
@@ -267,12 +293,12 @@ func _delete_selected() -> void:
 		return
 	var keep := _selected_slot
 	_reload_entries()
-	_selected_slot = mini(keep, maxi(0, _entries.size() - 1))
+	_selected_slot = _first_filled_from(keep)
 	_build_page()
 
 
 func _begin_rename() -> void:
-	if _selected_slot < 0 or _selected_slot >= _entries.size():
+	if not _is_filled(_selected_slot):
 		return
 	_cancel_rename()
 	_rename_index = _selected_slot
@@ -301,7 +327,7 @@ func _on_rename_gui(event: InputEvent) -> void:
 
 
 func _commit_rename(text: String) -> void:
-	if _rename_index < 0 or _rename_index >= _entries.size():
+	if _rename_index < 0 or _rename_index >= TOTAL_SLOTS or not _is_filled(_rename_index):
 		_cancel_rename()
 		return
 	var path := str(_entries[_rename_index].get("path", ""))
@@ -343,13 +369,13 @@ func _turn_page(dir: int) -> void:
 
 
 func _move_slot(dir: int) -> void:
-	if _entries.is_empty():
+	if not _has_any():
 		return
 	# 空槽位不可选：上下移动只在真实回放之间跳。
 	var slot := _selected_slot
 	for _i in TOTAL_SLOTS:
 		slot = wrapi(slot + dir, 0, TOTAL_SLOTS)
-		if slot < _entries.size():
+		if _is_filled(slot):
 			_selected_slot = slot
 			break
 	if not _slot_on_page(_selected_slot):

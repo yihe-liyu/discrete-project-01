@@ -183,7 +183,7 @@
 | [test_sim_hash](../test/test_sim_hash.gd) | `SimHash`：位置量化 / tick 进哈希 / 分项哈希隔离 / boss 位置进总哈希 / 同输入双跑 120 tick 逐 tick 一致 | 4 | 0 |
 | [test_replay](../test/test_replay.gd) | `Replay`：输入 + 命令 + 总/分项哈希格式往返 / 旧格式拒绝 / 兼容性闸门 / 结束 stage 不覆盖起始 stage / 对话推进命令 / 录制→落盘→回放逐 tick 一致 / 600 tick 最小 microbench（不含 GameScene）/ 指定槽位路径 + 名字保存 / 固定槽位不随删除移位 | 8 | 0 |
 | [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 / 跨面起点资源恢复 | 4 | 0 |
-| [test_replay_menu](../test/test_replay_menu.gd) | Replay 菜单：25 槽位分页（18/页）/ 全角列 / 名字 / 日期 / 机体 / 难度 / 完整面数 / 处理落率 / 改名持久化 / 末页 5 行 | 2 | 0 |
+| [test_replay_menu](../test/test_replay_menu.gd) | Replay 菜单：25 固定槽位分页（18/页，按 metadata.slot 不移位）/ 全角列 / 名字 / 日期 / 机体 / 难度 / 完整面数 / 处理落率 / 改名持久化 / 末页 5 行 | 2 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |
 | [test_spell_book_debug](../test/test_spell_book_debug.gd) | 调试：一键解锁所有符卡练习（符卡 + 非符） | 4 | 0 |

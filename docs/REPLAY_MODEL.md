@@ -139,7 +139,7 @@ enemies / items / lasers / bullets
 ## 6. 必须保持的不变量
 
 1. **时间**：玩法状态只按 `SimClock.DT` 推进；不读引擎 `delta`。
-2. **顺序**：同一 tick 的所有状态变更，由固定优先级 + 树序决定；不依赖渲染帧。Replay 页 25 个槽位分页（18 行/页，PageUp/PageDown），全角列显示 `No.01–25`、单条名字、录制时间、机体、难度、完整面数、处理落率；`F2` 改名。上下选择只刷新高亮，不重扫 replay 文件；换页才重建当前页。暂停保存走框内 25 槽保存页：先选槽位，再输入名字，`finish_recording` 直接把当前录制写到该槽位；槽位由 `metadata.slot` 固定，已有录像不会因删除向低序号移位，旧文件首次打开时补写槽位。
+2. **顺序**：同一 tick 的所有状态变更，由固定优先级 + 树序决定；不依赖渲染帧。Replay 页 25 个固定槽位分页（18 行/页，PageUp/PageDown；按 `metadata.slot`，删除不向低序号移位），全角列显示 `No.01–25`、单条名字、录制时间、机体、难度、完整面数、处理落率；`F2` 改名。上下选择只刷新高亮，不重扫 replay 文件；换页才重建当前页。暂停保存走框内 25 槽保存页：先选槽位，再输入名字，`finish_recording` 直接把当前录制写到该槽位；槽位由 `metadata.slot` 固定，已有录像不会因删除向低序号移位，旧文件首次打开时补写槽位。保存页同样显示编号 / 名字 / 日期 / 机体 / 难度 / 面数，Stage 走 `StageCatalog.display_name_of(stage_id)` 以支持 3A/3B。
 3. **输入**：每 tick 只 latch 一次；玩法不直接读 `Input`。
 4. **事件**：对话推进 / 关闭、Boss 生成 / 阶段切换、stage 结束都在 tick 边界；不在 Tween/Timer 回调里改模拟。
 5. **RNG**：gameplay 只走 `RNG`（宿主）/内核 RNG；纯表现走 `RNG.fx_*`；不把表现随机混进 gameplay 流。
