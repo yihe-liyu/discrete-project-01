@@ -107,7 +107,7 @@
 
 ### 2026-11-24 — 暂停页参考图 + 框内模糊 + 动画同步
 
-- **暂停动画**：入场 `entrance_duration=0.55` / stagger 0.07；tree 在 `push_overlay` 里先 paused，再播动画，所以游戏冻结与动画同时开始。
+- **暂停动画**：入场 `entrance_duration=0.55` / stagger 0.07；tree 在 `push_overlay` 里先 paused，再播动画，所以游戏冻结与动画同时开始。入场 Tween / 脉冲 / 颜色 Tween 统一 `TWEEN_PAUSE_PROCESS`；锁在 `super.on_enter()` 前设置，避免 `refresh_colors()` 把淡入覆盖成瞬间。
 - **恢复动画**：`_begin_resume()` 先播 0.5s 退场（tree 仍 paused），tween 结束后才 `GameManager.resume_game()`；实际验证 0.3s 仍 paused、0.65s 已恢复。
 - **模糊淡入淡出**：暂停时 blur 层 `amount 0 → 1` 用 0.9s（Sine InOut）；退场开始时发 `pause_exit_started`，blur 在暂停中 `1 → 0` 用 0.5s，再解除暂停。之前 0.55s CubicOut 前 0.2s 就冲到 0.87，视觉上像瞬间完成，所以改成线性感更强的 Sine InOut。
 

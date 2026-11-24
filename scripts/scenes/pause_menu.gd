@@ -11,21 +11,25 @@ var _exit_done: bool = false
 
 
 func on_enter() -> void:
+	# 先落锁再让 NavPage 收集/播入场；入场后再 refresh_colors 会把淡入直接覆盖掉。
+	_apply_locks()
 	super.on_enter()  # NavPage 入场动画
 
 	# 暗色遮罩淡入（Overlay 只占游戏框，右侧状态栏不被压暗）
 	_fade_overlay_in(0.45)
-
-	_apply_locks()
-	refresh_colors()
 	AudioManager.play_sfx(AssetRegistry.sounds["pause"])
 
 
 func _apply_locks() -> void:
-	var resume := _container.get_node_or_null("Resume") if _container else null
+	var list: Node = _container
+	if list == null:
+		list = get_node_or_null(container_path)
+	if list == null:
+		return
+	var resume := list.get_node_or_null("Resume")
 	if resume and is_game_over_mode:
 		resume.set_meta("is_locked", true)
-	var save := _container.get_node_or_null("SaveReplay") if _container else null
+	var save := list.get_node_or_null("SaveReplay")
 	if save:
 		save.set_meta("is_locked", Callable(self, "_is_save_locked"))
 
@@ -76,6 +80,7 @@ func _begin_resume() -> void:
 	_stop_pulse()
 	GameEvents.pause_exit_started.emit()
 	var tw := create_tween().set_parallel(true)
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "modulate:a", 0.0, EXIT_DURATION)
 	if _container:

@@ -108,6 +108,7 @@ func _fade_overlay_in(duration: float = OVERLAY_FADE_IN) -> void:
 	_overlay.modulate.a = 0.0
 	_overlay.visible = true
 	var tween := _overlay.create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(_overlay, "modulate:a", 1.0, duration)
 
@@ -117,6 +118,7 @@ func _fade_overlay_out(duration: float = OVERLAY_FADE_OUT) -> Tween:
 	if not _overlay:
 		return null
 	var tween := _overlay.create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(_overlay, "modulate:a", 0.0, duration)
 	return tween

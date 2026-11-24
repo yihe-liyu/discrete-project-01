@@ -153,6 +153,7 @@ func _play_entrance() -> void:
 		return
 
 	_entrance_tween = create_tween().set_parallel(true)
+	_entrance_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	for i in _nav_items.size():
 		var item := _nav_items[i]
 		var col: Color
@@ -282,6 +283,7 @@ func _start_pulse(item: Control) -> void:
 		1.0
 	)
 	_pulse_tween = create_tween().set_loops()
+	_pulse_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	_pulse_tween.set_trans(Tween.TRANS_SINE)
 	_pulse_tween.tween_property(item, "modulate", highlight_color, 0.3)
 	_pulse_tween.tween_property(item, "modulate", dimmed, 0.3)
@@ -302,6 +304,7 @@ func _set_color(item: Control, color: Color, instant: bool = true) -> void:
 		item.modulate = color
 		return
 	var tw := item.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(item, "modulate", color, 0.12)
 
