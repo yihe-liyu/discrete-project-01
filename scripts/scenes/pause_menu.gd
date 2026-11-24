@@ -17,6 +17,7 @@ var _confirm_options: VBoxContainer
 var _confirm_action: int = -1
 var _confirm_index: int = 1
 var _confirm_open: bool = false
+var _confirm_closing: bool = false
 var _confirm_tween: Tween
 
 
@@ -105,6 +106,7 @@ func _open_confirm(action: int) -> void:
 		return
 	_confirm_action = action
 	_confirm_open = true
+	_confirm_closing = false
 	_confirm_index = 1
 	_is_nav_enabled = false
 	_stop_pulse()
@@ -124,10 +126,27 @@ func _open_confirm(action: int) -> void:
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
-func _close_confirm() -> void:
-	if not _confirm_open:
+## 确认面板退场：先淡出，再隐藏并恢复暂停菜单。
+func _fade_out_confirm() -> void:
+	if _confirm_root == null:
 		return
+	if _confirm_tween and _confirm_tween.is_valid():
+		_confirm_tween.kill()
+	_confirm_tween = create_tween()
+	_confirm_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_confirm_tween.tween_property(_confirm_root, "modulate:a", 0.0, 0.2)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	await _confirm_tween.finished
+
+
+func _close_confirm() -> void:
+	if not _confirm_open or _confirm_closing:
+		return
+	_confirm_closing = true
+	_is_nav_enabled = false
+	await _fade_out_confirm()
 	_confirm_open = false
+	_confirm_closing = false
 	_confirm_action = -1
 	if _confirm_root:
 		_confirm_root.visible = false
@@ -176,14 +195,23 @@ func _confirm_input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _confirm_open:
+		if _confirm_closing:
+			return
 		_confirm_input(event)
 		return
 	super._unhandled_input(event)
 
 
 func _confirm_yes() -> void:
+	if _confirm_closing:
+		return
 	var action := _confirm_action
+	_confirm_closing = true
+	_is_nav_enabled = false
+	await _fade_out_confirm()
 	_confirm_open = false
+	_confirm_closing = false
+	_confirm_action = -1
 	if _confirm_root:
 		_confirm_root.visible = false
 	match action:

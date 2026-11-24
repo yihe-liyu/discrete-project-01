@@ -37,5 +37,5 @@ func test_confirm_defaults_to_no_and_can_cancel() -> void:
 	assert_true(menu._confirm_open, "确认面板应打开")
 	assert_eq(menu._confirm_index, 1, "默认选中「算了」")
 	assert_true(menu._confirm_root.visible, "确认面板应可见")
-	menu._close_confirm()
+	await menu._close_confirm()
 	assert_false(menu._confirm_open, "取消后确认面板应关闭")
