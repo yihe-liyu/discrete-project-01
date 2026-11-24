@@ -4,6 +4,7 @@ uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 
 uniform float blur_strength : hint_range(0, 8) = 3.0;
 uniform float darken : hint_range(0, 1) = 0.55;
+uniform float amount : hint_range(0, 1) = 1.0;
 uniform vec2 rect_min = vec2(0.0);
 uniform vec2 rect_max = vec2(1.0);
 
@@ -23,5 +24,6 @@ void fragment() {
 	float in_rect = step(rect_min.x, SCREEN_UV.x) * step(rect_min.y, SCREEN_UV.y)
 	              * step(SCREEN_UV.x, rect_max.x) * step(SCREEN_UV.y, rect_max.y);
 	vec4 original = texture(SCREEN_TEXTURE, SCREEN_UV);
-	COLOR = mix(original, vec4(color.rgb * (1.0 - darken), 1.0), in_rect);
+	vec4 filtered = vec4(color.rgb * (1.0 - darken), 1.0);
+	COLOR = mix(original, filtered, in_rect * amount);
 }

@@ -6,6 +6,8 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 const STAGE_RESULT_MENU = preload("res://scenes/ui/stage_result_menu.tscn")
 
 var _blur_rect: ColorRect
+var _blur_material: ShaderMaterial
+var _blur_amount: float = 0.0
 var _blur_tween: Tween
 var _background_instance: Node  # StageBackground 或测试 Node3D
 ## 当前 Boss（符卡背景取它的 [code]BossData.spell_background[/code]）；由 boss_spawned/defeated 维护
@@ -556,13 +558,15 @@ func _add_blur() -> void:
 	_blur_rect.position = container.position
 	_blur_rect.size = container.size
 	_blur_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_blur_rect.modulate.a = 0.0
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://gdshader/pause_blur.gdshader")
 	mat.set_shader_parameter("darken", 0.08)
+	mat.set_shader_parameter("amount", 0.0)
 	mat.set_shader_parameter("rect_min", Vector2(container.position) / vs)
 	mat.set_shader_parameter("rect_max", Vector2(container.position + container.size) / vs)
 	_blur_rect.material = mat
+	_blur_material = mat
+	_blur_amount = 0.0
 	var blur_layer := CanvasLayer.new()
 	blur_layer.layer = 15
 	blur_layer.name = "BlurLayer"
@@ -570,8 +574,14 @@ func _add_blur() -> void:
 	add_child(blur_layer)
 	_blur_tween = create_tween()
 	_blur_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	_blur_tween.tween_property(_blur_rect, "modulate:a", 1.0, 0.45)\
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_blur_tween.tween_method(_set_blur_amount, 0.0, 1.0, 0.9)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _set_blur_amount(value: float) -> void:
+	_blur_amount = clampf(value, 0.0, 1.0)
+	if is_instance_valid(_blur_material):
+		_blur_material.set_shader_parameter("amount", _blur_amount)
 
 
 func _remove_blur() -> void:
@@ -583,9 +593,10 @@ func _remove_blur() -> void:
 	_blur_rect = null
 	_blur_tween = create_tween()
 	_blur_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	_blur_tween.tween_property(rect, "modulate:a", 0.0, 0.35)\
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	_blur_tween.tween_method(_set_blur_amount, _blur_amount, 0.0, 0.5)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_blur_tween.tween_callback(func():
+		_blur_material = null
 		if is_instance_valid(rect):
 			rect.queue_free()
 		if is_instance_valid(layer) and layer.name == "BlurLayer":
