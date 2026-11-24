@@ -3,7 +3,7 @@ extends BasePage
 
 const SLOT_COUNT := 25
 const SLOT_LIST_PATH := "SlotList"
-const COLS := [72, 230, 160, 78, 82, 96]
+const COLS := [100, 190, 140, 100, 90, 120]
 
 var _slots: Array[Dictionary] = []
 var _rows: Array[HBoxContainer] = []
@@ -54,7 +54,7 @@ func _build_slots() -> void:
 	for i in SLOT_COUNT:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_theme_constant_override("separation", 6)
+		row.add_theme_constant_override("separation", 4)
 		row.custom_minimum_size = Vector2(0, 23)
 		for width in COLS:
 			var cell := Label.new()
@@ -71,6 +71,20 @@ func _build_slots() -> void:
 	_refresh_slots()
 
 
+## ASCII → 全角；中文 / 假名保持原样。
+func _fw(text: String) -> String:
+	var out := ""
+	for i in text.length():
+		var c := text.unicode_at(i)
+		if c == 32:
+			out += "　"
+		elif c >= 33 and c <= 126:
+			out += String.chr(c + 0xFEE0)
+		else:
+			out += text[i]
+	return out
+
+
 func _refresh_slots() -> void:
 	for i in _rows.size():
 		var row := _rows[i]
@@ -83,10 +97,10 @@ func _refresh_slots() -> void:
 		if date.length() >= 16:
 			date = "%s/%s/%s" % [date.substr(2, 2), date.substr(5, 2), date.substr(8, 2)]
 		else:
-			date = ""
-		var char_name := "--"
-		var diff_name := "--"
-		var stage_name := "--"
+			date = "--/--/--"
+		var char_name := "------"
+		var diff_name := "-----"
+		var stage_name := "St-"
 		if filled:
 			char_name = "Reimu" if int(meta.get("character", 0)) == 0 else "Marisa"
 			var diff := int(meta.get("difficulty", 1))
@@ -96,7 +110,7 @@ func _refresh_slots() -> void:
 			"No. %02d" % (i + 1), display_name, date, char_name, diff_name, stage_name,
 		]
 		for c in mini(row.get_child_count(), values.size()):
-			(row.get_child(c) as Label).text = str(values[c])
+			(row.get_child(c) as Label).text = _fw(str(values[c]))
 		var color := Color(1, 1, 1) if i == _selected else (
 			Color(0.72, 0.72, 0.72) if filled else Color(0.38, 0.38, 0.38))
 		for child in row.get_children():
