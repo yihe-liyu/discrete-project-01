@@ -163,16 +163,21 @@ static func record_dialogue_close() -> void:
 
 
 ## 结束录制并落盘；返回路径（失败 / 没在录 = 空串）。
-static func finish_recording(meta: Dictionary = {}) -> String:
+## target_path 为空 = 旧行为（时间戳文件名）；保存页传入槽位路径。
+## display_name 非空 = 写入 metadata.name。
+static func finish_recording(meta: Dictionary = {}, target_path: String = "", display_name: String = "") -> String:
 	if not _recording or _replay == null:
 		return ""
 	_replay.metadata.merge(meta.duplicate(true), true)
+	if display_name.strip_edges() != "":
+		_replay.metadata["name"] = display_name.strip_edges()
 	_replay.metadata["recorded_at"] = Time.get_datetime_string_from_system()
 	_replay.sim_version = SIM_VERSION
-	var dir := ProjectSettings.globalize_path(DIR)
-	DirAccess.make_dir_recursive_absolute(dir)
-	var stamp := Time.get_datetime_string_from_system().replace(":", "-")
-	var path := "%s/%s_%d.json" % [DIR, stamp, Time.get_ticks_msec()]
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(DIR))
+	var path := target_path
+	if path == "":
+		var stamp := Time.get_datetime_string_from_system().replace(":", "-")
+		path = "%s/%s_%d.json" % [DIR, stamp, Time.get_ticks_msec()]
 	var ok := _replay.save(path)
 	_recording = false
 	_replay = null

@@ -149,3 +149,18 @@ func test_dialogue_advance_is_captured_as_command() -> void:
 	assert_true(rec.load_file(path))
 	assert_ne(rec.command_at(0) & Replay.COMMAND_DIALOGUE_ADVANCE, 0, "按 Z 推进对话应进命令位")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_finish_recording_can_target_slot_and_name() -> void:
+	ReplaySession.cancel_recording()
+	ReplaySession.stop_playback()
+	assert_true(ReplaySession.start_recording({"result": "save"}))
+	ReplaySession.record_tick(0, 0, 1)
+	var path := ReplaySession.DIR + "/slot_test.json"
+	var saved := ReplaySession.finish_recording({"slot": 7}, path, "测试录像")
+	assert_eq(saved, path, "保存页应能指定槽位路径")
+	var rec := Replay.new()
+	assert_true(rec.load_file(path))
+	assert_eq(str(rec.metadata.get("name", "")), "测试录像", "名字应写入 metadata")
+	assert_eq(int(rec.metadata.get("slot", 0)), 7, "槽位号应写入 metadata")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

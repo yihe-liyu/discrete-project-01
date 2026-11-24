@@ -219,7 +219,7 @@ func _confirm_yes() -> void:
 			GameManager.change_scene.call_deferred(
 				"res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 		CONFIRM_SAVE:
-			_save_replay_and_quit()
+			_open_save_page()
 		CONFIRM_RESTART:
 			# 重开是硬切：淡出会让旧曲继续响 0.6s，新场景再起同一首时听感就是"先放一会再重播"。
 			AudioManager.stop_bgm(0.0)
@@ -227,17 +227,32 @@ func _confirm_yes() -> void:
 			GameManager.reload_current_scene()
 
 
-func _on_manual_closed() -> void:
+func _open_save_page() -> void:
+	if not ReplaySession.is_recording():
+		return
+	var page: BasePage = load("res://scenes/ui/pause_replay_save.tscn").instantiate()
+	visible = false
+	_is_nav_enabled = false
+	page.back.connect(_on_save_page_closed, CONNECT_ONE_SHOT)
+	GameManager.push_overlay_menu(page, 30)
+
+
+func _restore_pause_menu() -> void:
 	visible = true
+	for path in ["Panel", "Title", "Subtitle"]:
+		var n := get_node_or_null(path)
+		if n:
+			n.modulate.a = 1.0
 	_is_nav_enabled = true
 	refresh_colors()
 
 
-func _save_replay_and_quit() -> void:
-	if ReplaySession.is_recording():
-		ReplaySession.finish_recording({"result": "quit"})
-	GameManager.change_scene.call_deferred(
-		"res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+func _on_manual_closed() -> void:
+	_restore_pause_menu()
+
+
+func _on_save_page_closed() -> void:
+	_restore_pause_menu()
 
 
 func _on_cancel() -> void:
