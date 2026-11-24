@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：116 脚本 / **773 用例（771 通过 / 2 红：BossRegistry WIP + BGM）/ 6198 断言 / 76.6s** / 0 orphans / **0 pending**。
+**现状**：116 脚本 / **773 用例（771 通过 / 2 红：BossRegistry WIP + BGM）/ 6202 断言 / 76.4s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -117,7 +117,7 @@
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
 | [test_content_manifest](../test/test_content_manifest.gd) | `ContentManifest`：Stage / Boss / Phase / Variant 去重索引、难度变体来源、Boss 槽引用一致性 | 3 | 0 |
 | [test_difficulty](../test/test_difficulty.gd) | 难度维度契约：0..4 / 展示名；`diff_pick` / `diff_get` 的非法难度、空数组、Extra 用 4 项数组会响亮报错并回落最后一项 | 6 | 0 |
-| [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：13 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
+| [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：14 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
 | [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环（Dialogue / Item / Player / Boss / Enemy 五个服务都有回归） + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 8 | 0 |
 | [test_time_scheduler](../test/test_time_scheduler.gd) | `TimeScheduler`：固定 DT 的倍率/慢放/单帧补 tick 上限；只改每帧 tick 数，不改每 tick 的 `1/60` | 2 | 0 |
 | [test_timeline_phase_unfreeze](../test/test_timeline_phase_unfreeze.gd) | B 方案回归：Boss 阶段战斗不再冻结时间轴 | 1 | 0 |

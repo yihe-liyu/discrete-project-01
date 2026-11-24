@@ -13,6 +13,7 @@ const PAGE_SCENES := [
 	"res://scenes/ui/music_room_menu.tscn",
 	"res://scenes/ui/player_data_menu.tscn",
 	"res://scenes/ui/pause_menu.tscn",
+	"res://scenes/ui/pause_manual_menu.tscn",
 	"res://scenes/ui/game_over_menu.tscn",
 	"res://scenes/ui/stage_result_menu.tscn",
 	"res://scenes/ui/replay_menu.tscn",

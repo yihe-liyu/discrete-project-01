@@ -47,7 +47,7 @@ func _on_item_selected(index: int) -> void:
 		2:
 			_save_replay_and_quit()
 		3:
-			var manual: BasePage = load("res://scenes/ui/manual_menu.tscn").instantiate()
+			var manual: BasePage = load("res://scenes/ui/pause_manual_menu.tscn").instantiate()
 			GameManager.push_overlay_menu(manual)
 		4:
 			# 重开是硬切：淡出会让旧曲继续响 0.6s，新场景再起同一首时听感就是"先放一会再重播"。

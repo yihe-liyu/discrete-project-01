@@ -111,6 +111,7 @@
 - **改法**：`PauseMenu` 重建为框内 Panel + 中文主标签 + 英文副标签；`Overlay` 只覆盖游戏框；`SaveReplay` 非录制时锁定；`Manual` 以覆盖层打开手动说明。
 - **模糊**：`GameScene._add_blur()` 的 `ColorRect` 从全屏改为只覆盖 `SubViewportContainer` 框；暂停时 SubViewport 改为 `UPDATE_ONCE` 保住冻结画面。后续把 `darken` 调到 0.08、框内遮罩 / 面板调透，保留冻结画面可见度。
 - **修正**：`操作说明` 改用 `GameManager.push_overlay_menu(manual)`；此前误调不存在的 `push_overlay(path)`。
+- **框内说明页**：新增 `pause_manual_menu`，只占游戏框，复用 help01–06，↑↓ 翻页 / Esc 返回；不再用全屏 `manual_menu`。
 - **验收**：`test_pause_menu` 2/2；`test_page_smoke` / `test_menu_nav` 通过；全量 GUT 773（771 通过 / 2 内容 WIP 红）。
 
 ### 2026-11-23 — 灵梦 bomb 环角度修正（sim-v9 → sim-v10）
