@@ -7,19 +7,16 @@ const HELP_PATH := "res://assets/Textures/help/help%02d.png"
 var _pages: Array[Texture2D] = []
 var _current: int = 0
 var _texture_rect: TextureRect
-var _page_label: Label
 var _input_ready: bool = false
 
 
 func _ready() -> void:
 	super._ready()
 	_texture_rect = $"TextureRect"
-	_page_label = $"PageLabel"
 	for i in PAGE_COUNT:
 		_pages.append(load(HELP_PATH % (i + 1)))
 	_texture_rect.texture = _pages[0]
 	_texture_rect.modulate.a = 0.0
-	_page_label.modulate.a = 0.0
 
 
 func on_enter() -> void:
@@ -27,7 +24,6 @@ func on_enter() -> void:
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_texture_rect, "modulate:a", 1.0, 0.2)
-	tw.tween_property(_page_label, "modulate:a", 1.0, 0.2)
 	tw.tween_callback(func(): _input_ready = true)
 
 
@@ -38,7 +34,6 @@ func on_leave() -> void:
 	if is_instance_valid(_overlay):
 		tw.tween_property(_overlay, "modulate:a", 0.0, 0.15)
 	tw.tween_property(_texture_rect, "modulate:a", 0.0, 0.15)
-	tw.tween_property(_page_label, "modulate:a", 0.0, 0.15)
 	tw.tween_callback(queue_free)
 
 
@@ -75,4 +70,3 @@ func _switch_to(tex: Texture2D) -> void:
 	tw.tween_property(_texture_rect, "modulate:a", 0.0, 0.06)
 	tw.tween_callback(func(): _texture_rect.texture = tex)
 	tw.tween_property(_texture_rect, "modulate:a", 1.0, 0.1)
-	_page_label.text = "%d / %d" % [_current + 1, PAGE_COUNT]
