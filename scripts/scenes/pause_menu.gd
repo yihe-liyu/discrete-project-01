@@ -4,13 +4,17 @@ extends NavPage
 
 ## true 表示 GameOver 模式（禁用「继续」）
 var is_game_over_mode: bool = false
+## 退场动画时长：动画播完前 tree 保持 paused，播完才真正 resume。
+const EXIT_DURATION := 0.5
+var _resuming: bool = false
+var _exit_done: bool = false
 
 
 func on_enter() -> void:
 	super.on_enter()  # NavPage 入场动画
 
 	# 暗色遮罩淡入（Overlay 只占游戏框，右侧状态栏不被压暗）
-	_fade_overlay_in(0.3)
+	_fade_overlay_in(0.45)
 
 	_apply_locks()
 	refresh_colors()
@@ -33,6 +37,9 @@ func _is_save_locked() -> bool:
 func on_leave() -> void:
 	_is_nav_enabled = false
 	_stop_pulse()
+	if _exit_done:
+		queue_free()
+		return
 	_overlay_leave(_container)
 
 
@@ -40,7 +47,7 @@ func _on_item_selected(index: int) -> void:
 	match index:
 		0:
 			if not is_game_over_mode:
-				GameManager.resume_game()
+				_begin_resume()
 		1:
 			GameManager.change_scene.call_deferred(
 				"res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
@@ -60,6 +67,23 @@ func _on_item_selected(index: int) -> void:
 			GameManager.reload_current_scene()
 
 
+## 恢复：先播完退场动画（tree 仍 paused），再让 GameManager 真正恢复。
+func _begin_resume() -> void:
+	if _resuming or is_game_over_mode:
+		return
+	_resuming = true
+	_is_nav_enabled = false
+	_stop_pulse()
+	var tw := create_tween().set_parallel(true)
+	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(self, "modulate:a", 0.0, EXIT_DURATION)
+	if _container:
+		tw.tween_property(_container, "scale", Vector2(0.96, 0.96), EXIT_DURATION)
+	await tw.finished
+	_exit_done = true
+	GameManager.resume_game()
+
+
 func _on_manual_closed() -> void:
 	visible = true
 	_is_nav_enabled = true
@@ -75,4 +99,4 @@ func _save_replay_and_quit() -> void:
 
 func _on_cancel() -> void:
 	if not is_game_over_mode:
-		GameManager.resume_game()
+		_begin_resume()

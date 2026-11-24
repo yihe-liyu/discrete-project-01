@@ -105,7 +105,11 @@
 
 ## 记录
 
-### 2026-11-24 — 暂停页参考图 + 框内模糊
+### 2026-11-24 — 暂停页参考图 + 框内模糊 + 动画同步
+
+- **暂停动画**：入场 `entrance_duration=0.55` / stagger 0.07；tree 在 `push_overlay` 里先 paused，再播动画，所以游戏冻结与动画同时开始。
+- **恢复动画**：`_begin_resume()` 先播 0.5s 退场（tree 仍 paused），tween 结束后才 `GameManager.resume_game()`；实际验证 0.3s 仍 paused、0.65s 已恢复。
+
 
 - **目标**：暂停页按参考图做左侧框内面板：`游戏暂停 / Pause Menu` + 5 个操作项（解除暂停 / 返回标题 / 保存录像后结束 / 操作说明 / 从头重开）；右侧状态栏保持可见。
 - **改法**：`PauseMenu` 重建为框内 Panel + 中文主标签 + 英文副标签；`Overlay` 只覆盖游戏框；`SaveReplay` 非录制时锁定；`Manual` 以覆盖层打开手动说明。
