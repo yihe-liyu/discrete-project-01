@@ -151,20 +151,25 @@ func _refresh_confirm() -> void:
 
 func _confirm_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_up"):
+		sfx_nav()
 		_confirm_index = wrapi(_confirm_index - 1, 0, 2)
 		_refresh_confirm()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_down"):
+		sfx_nav()
 		_confirm_index = wrapi(_confirm_index + 1, 0, 2)
 		_refresh_confirm()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()
 		if _confirm_index == 0:
+			sfx_confirm()
 			_confirm_yes()
 		else:
+			sfx_back()
 			_close_confirm()
 	elif event.is_action_pressed("ui_cancel"):
+		sfx_back()
 		get_viewport().set_input_as_handled()
 		_close_confirm()
 
