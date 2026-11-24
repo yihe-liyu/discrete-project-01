@@ -9,16 +9,25 @@ var is_game_over_mode: bool = false
 func on_enter() -> void:
 	super.on_enter()  # NavPage 入场动画
 
-	# 暗色遮罩淡入
+	# 暗色遮罩淡入（Overlay 只占游戏框，右侧状态栏不被压暗）
 	_fade_overlay_in(0.3)
 
-	if is_game_over_mode:
-		var resume := _container.get_node_or_null("ResumeLabel")
-		if resume:
-			resume.set_meta("is_locked", true)
-			refresh_colors()
-
+	_apply_locks()
+	refresh_colors()
 	AudioManager.play_sfx(AssetRegistry.sounds["pause"])
+
+
+func _apply_locks() -> void:
+	var resume := _container.get_node_or_null("Resume") if _container else null
+	if resume and is_game_over_mode:
+		resume.set_meta("is_locked", true)
+	var save := _container.get_node_or_null("SaveReplay") if _container else null
+	if save:
+		save.set_meta("is_locked", Callable(self, "_is_save_locked"))
+
+
+func _is_save_locked() -> bool:
+	return not ReplaySession.is_recording()
 
 
 func on_leave() -> void:
@@ -33,17 +42,24 @@ func _on_item_selected(index: int) -> void:
 			if not is_game_over_mode:
 				GameManager.resume_game()
 		1:
+			GameManager.change_scene.call_deferred(
+				"res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+		2:
+			_save_replay_and_quit()
+		3:
+			GameManager.push_overlay("res://scenes/ui/manual_menu.tscn")
+		4:
 			# 重开是硬切：淡出会让旧曲继续响 0.6s，新场景再起同一首时听感就是"先放一会再重播"。
 			AudioManager.stop_bgm(0.0)
 			SaveData.is_restarting = true
 			GameManager.reload_current_scene()
-		2:
-			# 符卡练习里"返回"→ 回**符卡练习菜单**（并还原到离开时那一级），而不是主菜单根
-			# （逐面练习 is_practice_mode 为 false，仍走主菜单 ✓）
-			if PracticeSession.is_practice_mode:
-				PracticeSession.restore_menu_on_enter = true
-				GameManager.pending_page_path = "res://scenes/ui/spell_practice_menu.tscn"
-			GameManager.change_scene.call_deferred("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+
+
+func _save_replay_and_quit() -> void:
+	if ReplaySession.is_recording():
+		ReplaySession.finish_recording({"result": "quit"})
+	GameManager.change_scene.call_deferred(
+		"res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 
 func _on_cancel() -> void:

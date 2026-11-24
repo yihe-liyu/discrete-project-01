@@ -4,50 +4,168 @@
 
 [node name="PauseMenu" type="Control"]
 layout_mode = 3
-script = ExtResource("1_script")
-container_path = NodePath("Container")
-entrance_stagger = 0.08
-
-[node name="Overlay" type="ColorRect" parent="."]
-layout_mode = 1
-visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.45)
+mouse_filter = 2
+script = ExtResource("1_script")
+container_path = NodePath("Panel/MenuList")
+entrance_stagger = 0.06
+highlight_color = Color(1, 0.42, 0.35, 1)
+normal_color = Color(0.62, 0.62, 0.62, 1)
+locked_color = Color(0.25, 0.25, 0.25, 1)
 
-[node name="Container" type="VBoxContainer" parent="."]
+[node name="Overlay" type="ColorRect" parent="."]
 layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 179.0
-offset_top = -410.0
-offset_right = 499.0
-offset_bottom = -250.0
+anchors_preset = 0
+offset_left = 48.0
+offset_top = 16.0
+offset_right = 848.0
+offset_bottom = 944.0
+grow_horizontal = 0
 grow_vertical = 0
-theme_override_constants/separation = 16
-alignment = 1
+mouse_filter = 2
+color = Color(0.02, 0.05, 0.08, 0.2)
 
-[node name="ResumeLabel" type="Label" parent="Container"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "Resume"
-horizontal_alignment = 1
+[node name="Panel" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 70.0
+offset_top = 92.0
+offset_right = 660.0
+offset_bottom = 852.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0.02, 0.1, 0.14, 0.4)
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 112.0
+offset_top = 142.0
+offset_right = 620.0
+offset_bottom = 208.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 44
+text = "游戏暂停"
 vertical_alignment = 1
 
-[node name="RestartLabel" type="Label" parent="Container"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "Restart"
-horizontal_alignment = 1
-vertical_alignment = 1
+[node name="Subtitle" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 116.0
+offset_top = 208.0
+offset_right = 500.0
+offset_bottom = 238.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.35, 0.9, 0.65, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 18
+text = "Pause Menu"
 
-[node name="TitleLabel" type="Label" parent="Container"]
+[node name="MenuList" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 46.0
+offset_top = 208.0
+offset_right = 550.0
+offset_bottom = 608.0
+grow_horizontal = 2
+theme_override_constants/separation = 12
+
+[node name="Resume" type="VBoxContainer" parent="Panel/MenuList"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Panel/MenuList/Resume"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.75, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "解除游戏暂停"
+
+[node name="Sub" type="Label" parent="Panel/MenuList/Resume"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.55, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "Return to Game"
+
+[node name="TitleMenu" type="VBoxContainer" parent="Panel/MenuList"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Panel/MenuList/TitleMenu"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.75, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "返回标题菜单"
+
+[node name="Sub" type="Label" parent="Panel/MenuList/TitleMenu"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.55, 0.55, 1)
+theme_override_font_sizes/font_size = 14
 text = "Return to Title"
-horizontal_alignment = 1
-vertical_alignment = 1
+
+[node name="SaveReplay" type="VBoxContainer" parent="Panel/MenuList"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Panel/MenuList/SaveReplay"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.75, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "保存录像后结束游戏"
+
+[node name="Sub" type="Label" parent="Panel/MenuList/SaveReplay"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.55, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "Save Replay and Return to Title"
+
+[node name="Manual" type="VBoxContainer" parent="Panel/MenuList"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Panel/MenuList/Manual"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.75, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "操作说明"
+
+[node name="Sub" type="Label" parent="Panel/MenuList/Manual"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.55, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "Manual"
+
+[node name="Restart" type="VBoxContainer" parent="Panel/MenuList"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Panel/MenuList/Restart"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.75, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "从头重新开始"
+
+[node name="Sub" type="Label" parent="Panel/MenuList/Restart"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.55, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "Give up and Retry"

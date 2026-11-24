@@ -385,7 +385,8 @@ func _on_game_state_changed(_old: int, new: int) -> void:
 	# 不停的话 3D 背景照旧每帧跑整条管线（llvmpipe 实测：暂停时**省 ≈8.7 ms/帧**），而玩家只看得到模糊层。
 	# 副作用（作者 2026-10-02 拍板接受）：雾现在用 ScreenFogFX 的本地 time（随 delta 推进），
 	# 暂停时 ScreenFogFX._process 也停 ⇒ 整张背景**冻住**，恢复不跳。
-	_sub_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED \
+	# 暂停时只再更新一帧，保住“冻结画面”；持续更新会白烧背景管线。
+	_sub_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE \
 		if new == GameManager.AppState.PAUSED else SubViewport.UPDATE_ALWAYS
 
 
@@ -542,10 +543,13 @@ func _add_blur() -> void:
 	var container := %SubViewportContainer
 	var vs := get_viewport().get_visible_rect().size
 	_blur_rect = ColorRect.new()
-	_blur_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# 只盖游戏框；右侧状态栏 / 框外区域完全不压暗，也不做模糊。
+	_blur_rect.position = container.position
+	_blur_rect.size = container.size
 	_blur_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://gdshader/pause_blur.gdshader")
+	mat.set_shader_parameter("darken", 0.35)
 	mat.set_shader_parameter("rect_min", Vector2(container.position) / vs)
 	mat.set_shader_parameter("rect_max", Vector2(container.position + container.size) / vs)
 	_blur_rect.material = mat

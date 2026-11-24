@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：115 脚本 / **771 用例（769 通过 / 2 红：BossRegistry WIP + BGM）/ 6190 断言 / 76.2s** / 0 orphans / **0 pending**。
+**现状**：116 脚本 / **773 用例（771 通过 / 2 红：BossRegistry WIP + BGM）/ 6198 断言 / 76.6s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -28,7 +28,7 @@
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
 | **C 宿主 · 运行时系统** | 62 | 459 | `scripts/**` 的实体/系统/服务 |
-| **D UI / 菜单** | 17 | 117 | `scenes/ui/**` 与 HUD |
+| **D UI / 菜单** | 18 | 119 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
 | **G 性能基准** | 2 | 3 | 混在门禁里跑 |
@@ -199,7 +199,7 @@
 | [test_dialogue_steps](../test/test_dialogue_steps.gd) | 对话系统：`StageState` / `DialogueSteps` DSL / `DialogueRunner`（纯逻辑，不进树） | 28 | 0 |
 | [test_stage_catalog](../test/test_stage_catalog.gd) | `StageCatalog`：注册表优先 → **嵌套目录扫描兜底** + 显示名回落 + `playable()` 过滤 + **`known()` 覆盖 3B/EX（无 `create_script`，预检用）** | 5 | 0 |
 
-## D · UI / 菜单（17 / 117）
+## D · UI / 菜单（18 / 119）
 
 | 文件 | 保护什么 | 用例 | 白盒 |
 |---|---|---|---|
@@ -218,6 +218,7 @@
 | [test_option_menu](../test/test_option_menu.gd) | 选项菜单「清空数据」：无 `def` 崩溃回归 + 二次确认 | 2 | 14 |
 | [test_dialogue_pause](../test/test_dialogue_pause.gd) | 暂停菜单期间对话 WAIT/auto_advance 计时应冻结 | 1 | 8 |
 | [test_menu_nav](../test/test_menu_nav.gd) | `MenuNav` 子页面容器注入契约（R2：不再字符串搜 `PageHost`） + **B4：覆盖层暂停/恢复走显式信号（不再 `set_state.call_deferred` 动态方法名）** + **B5：暂停菜单路径唯一来源常量** | 5 | 0 |
+| [test_pause_menu](../test/test_pause_menu.gd) | 暂停页 5 个操作项（继续 / 返回标题 / 保存录像 / 操作说明 / 重开）；非录制时保存项锁定 | 2 | 1 |
 | [test_game_over_menu](../test/test_game_over_menu.gd) | **GameOverMenu 标题不再静默 no-op**：本引擎不解析节点类型 `@export`（`.tscn` 的 `title_label = NodePath(...)` 被丢弃）⇒ 入树一帧后按路径/类型兜底解析出 `title_label` + `set_title()` 真把文字写进那个 `Label` | 2 | 0 |
 | [test_stage_result_menu](../test/test_stage_result_menu.gd) | 关卡结算覆盖层：标题 / Stage / 六项统计填充；All Clear 移除 Continue；Continue / Return 动作字典 | 4 | 0 |
 

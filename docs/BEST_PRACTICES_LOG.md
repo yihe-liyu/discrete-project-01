@@ -26,8 +26,10 @@
 
 ## 索引
 
-> 共 72 条（本文件留最近 72 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
+> 共 74 条（本文件留最近 74 条，其余在 `docs/archive/`；本段由 `tools/log_archive.py` 生成，手改会被覆盖）。
 
+- 2026-11-24 — 暂停页参考图 + 框内模糊
+- 2026-11-23 — 灵梦 bomb 环角度修正（sim-v9 → sim-v10）
 - 2026-11-23 — Replay 页 25 行槽位 + 单条改名
 - 2026-11-23 — Replay 专用显式 step driver 试验（未采用）
 - 2026-11-23 — TimeScheduler + 最小 600 tick 快进
@@ -102,6 +104,13 @@
 - 2026-10-04 — 废止「记得调用才显示」：背景演出层改**宿主自动接线**（练习模式也开黑雾）
 
 ## 记录
+
+### 2026-11-24 — 暂停页参考图 + 框内模糊
+
+- **目标**：暂停页按参考图做左侧框内面板：`游戏暂停 / Pause Menu` + 5 个操作项（解除暂停 / 返回标题 / 保存录像后结束 / 操作说明 / 从头重开）；右侧状态栏保持可见。
+- **改法**：`PauseMenu` 重建为框内 Panel + 中文主标签 + 英文副标签；`Overlay` 只覆盖游戏框；`SaveReplay` 非录制时锁定；`Manual` 以覆盖层打开手动说明。
+- **模糊**：`GameScene._add_blur()` 的 `ColorRect` 从全屏改为只覆盖 `SubViewportContainer` 框；暂停时 SubViewport 改为 `UPDATE_ONCE` 保住冻结画面。
+- **验收**：`test_pause_menu` 2/2；`test_page_smoke` / `test_menu_nav` 通过；全量 GUT 773（771 通过 / 2 内容 WIP 红）。
 
 ### 2026-11-23 — 灵梦 bomb 环角度修正（sim-v9 → sim-v10）
 
