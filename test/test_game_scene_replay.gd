@@ -138,3 +138,70 @@ func test_mid_route_start_restores_resources() -> void:
 	playback.queue_free()
 	await get_tree().process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## 单关练习：录制应带 practice_mode=stage；回放必须恢复单关练习态。
+func test_stage_practice_records_and_plays_back() -> void:
+	SaveData.is_stage_practice = true
+	SaveData.current_stage_id = 1
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 120:
+		await get_tree().physics_frame
+	assert_true(ReplaySession.is_recording(), "单关练习也应开录")
+	var path := ReplaySession.finish_recording({"result": "test"})
+	var rec := Replay.new()
+	assert_true(rec.load_file(path))
+	assert_eq(str(rec.metadata.get("practice_mode", "")), "stage", "应记录单关练习模式")
+	scene.queue_free()
+	await get_tree().process_frame
+
+	assert_true(ReplaySession.start_playback(path), "单关练习录像应能回放")
+	assert_true(ReplaySession.is_practice_playback(), "回放应标记为练习")
+	assert_true(SaveData.is_stage_practice, "回放应恢复单关练习标志")
+	var playback: Node = GAME_SCENE.instantiate()
+	add_child_autofree(playback)
+	for _i in 60:
+		await get_tree().physics_frame
+	assert_false(ReplaySession.has_diverged(), "单关练习前 60 tick 不应分歧")
+	ReplaySession.stop_playback()
+	playback.queue_free()
+	await get_tree().process_frame
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## 符卡练习：录制 / 回放都必须恢复同一个 phase。
+func test_spell_practice_records_and_plays_back() -> void:
+	SaveData.selected_difficulty = 1
+	SaveData.selected_character = 0
+	var phase := BossCatalog.phase_at(1, 0, 1)
+	var boss := BossCatalog.boss_of_phase(1, 0)
+	assert_not_null(phase)
+	assert_not_null(boss)
+	PracticeSession.start(phase, boss.visual, boss.boss_name, 1, 0, boss.spell_background,
+		BossCatalog.practice_bgm_key(boss, 1))
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 120:
+		await get_tree().physics_frame
+	assert_true(ReplaySession.is_recording(), "符卡练习也应开录")
+	var path := ReplaySession.finish_recording({"result": "test"})
+	var rec := Replay.new()
+	assert_true(rec.load_file(path))
+	assert_eq(str(rec.metadata.get("practice_mode", "")), "spell", "应记录符卡练习模式")
+	assert_eq(int(rec.metadata.get("practice_phase_index", -1)), 0)
+	scene.queue_free()
+	await get_tree().process_frame
+
+	assert_true(ReplaySession.start_playback(path), "符卡练习录像应能回放")
+	assert_true(ReplaySession.is_practice_playback(), "回放应标记为符卡练习")
+	assert_true(PracticeSession.is_practice_mode, "回放应恢复符卡练习载荷")
+	var playback: Node = GAME_SCENE.instantiate()
+	add_child_autofree(playback)
+	for _i in 60:
+		await get_tree().physics_frame
+	assert_false(ReplaySession.has_diverged(), "符卡练习前 60 tick 不应分歧")
+	ReplaySession.stop_playback()
+	playback.queue_free()
+	await get_tree().process_frame
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

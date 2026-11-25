@@ -14,6 +14,7 @@ const SIM_VERSION := "sim-v10"
 static var _replay: Replay
 static var _recording: bool = false
 static var _playing: bool = false
+static var _practice_mode: String = ""
 static var _path: String = ""
 ## 回放：下一个要消费的录像下标 / 当前 tick 已准备的下标（-1 = 已放完）。
 static var _next_index: int = 0
@@ -38,6 +39,15 @@ static func is_recording() -> bool:
 
 static func is_playing() -> bool:
 	return _playing
+
+
+## 当前回放是否是练习（stage / spell）；普通路线为空串。
+static func practice_playback_mode() -> String:
+	return _practice_mode
+
+
+static func is_practice_playback() -> bool:
+	return _playing and _practice_mode != ""
 
 
 static func has_diverged() -> bool:
@@ -93,6 +103,7 @@ static func start_recording(meta: Dictionary) -> bool:
 	_replay.content_hash = ContentFingerprint.compute()
 	_replay.rng_state = int(snap.get("state", 0))
 	_replay.metadata = meta.duplicate(true)
+	_practice_mode = ""
 	if not _replay.metadata.has("start_stage_id"):
 		_replay.metadata["start_stage_id"] = SaveData.current_stage_id
 	if not _replay.metadata.has("start_stage_no"):
@@ -211,19 +222,36 @@ static func start_playback(path: String) -> bool:
 	SaveData.reset_session()
 	SaveData.selected_difficulty = diff
 	SaveData.selected_character = int(meta.get("character", 0))
-	SaveData.is_stage_practice = false
 	SaveData.is_restarting = false
 	SaveData.is_route_transition = false
-	if not SaveData.begin_route_for_difficulty(diff):
-		return false
-	var start_stage := int(meta.get("start_stage_id", 1))
-	var route := SaveData.current_route()
-	if route != null:
-		for i in route.stages.size():
-			if route.stages[i] != null and route.stages[i].stage_id == start_stage:
-				SaveData.current_route_index = i
-				SaveData.current_stage_id = start_stage
-				break
+	_practice_mode = str(meta.get("practice_mode", ""))
+	var practice_stage := int(meta.get("practice_stage_id", 0))
+	if _practice_mode == "spell":
+		var phase_index := int(meta.get("practice_phase_index", 0))
+		var phase := BossCatalog.phase_at(practice_stage, phase_index, diff)
+		var boss := BossCatalog.boss_of_phase(practice_stage, phase_index)
+		if phase == null or boss == null:
+			push_warning("ReplaySession: 符卡练习录像缺少阶段配置")
+			_practice_mode = ""
+			return false
+		var boss_label := boss.boss_name if boss.boss_name != "" else phase.name
+		PracticeSession.start(phase, boss.visual, boss_label, practice_stage, phase_index,
+			boss.spell_background, BossCatalog.practice_bgm_key(boss, practice_stage))
+	elif _practice_mode == "stage":
+		SaveData.is_stage_practice = true
+		SaveData.current_stage_id = practice_stage if practice_stage > 0 else int(meta.get("start_stage_id", 1))
+		SaveData.current_route_index = 0
+	else:
+		if not SaveData.begin_route_for_difficulty(diff):
+			return false
+		var start_stage := int(meta.get("start_stage_id", 1))
+		var route := SaveData.current_route()
+		if route != null:
+			for i in route.stages.size():
+				if route.stages[i] != null and route.stages[i].stage_id == start_stage:
+					SaveData.current_route_index = i
+					SaveData.current_stage_id = start_stage
+					break
 	RNG.set_seed(rec.rng_seed)
 	if rec.rng_state != 0:
 		RNG.restore_state({"seed": rec.rng_seed, "state": rec.rng_state})
@@ -301,6 +329,7 @@ static func report_fields(idx: int, live: Dictionary) -> void:
 ## 停止回放并清理注入。
 static func stop_playback() -> void:
 	_playing = false
+	_practice_mode = ""
 	_replay = null
 	_path = ""
 	_next_index = 0

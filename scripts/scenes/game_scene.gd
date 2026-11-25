@@ -81,6 +81,13 @@ func _ready():
 		SaveData.is_restarting = false
 		_setup_player()          # 先绑定自机（reset_* 经注册表取同一 PlayerResources）
 		SaveData.reset_practice(_stage_runtime.entity_registry)
+		var practice_res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+		if not ReplaySession.is_playing() and not ReplaySession.is_recording():
+			ReplaySession.start_recording(_replay_meta("recording", true))
+		if ReplaySession.is_playing():
+			ReplaySession.apply_start_resources(practice_res)
+		elif ReplaySession.is_recording():
+			ReplaySession.capture_start_resources(practice_res)
 		_start_practice_game()
 	else:
 		if PracticeSession.phase != null:
@@ -123,7 +130,7 @@ func _start_normal_game() -> void:
 	# 录制 / 回放的 tick 钩子必须在关卡装好之后挂：observer 要读得到 entity registry。
 	if ReplaySession.is_playing():
 		SimClock.set_tick_hooks(_on_replay_prepare, _on_replay_observe)
-	elif not SaveData.is_stage_practice and not PracticeSession.is_practice_mode:
+	elif ReplaySession.is_recording() and not PracticeSession.is_practice_mode:
 		SimClock.set_tick_hooks(_on_record_prepare, _on_record_observe)
 
 
@@ -165,6 +172,10 @@ func _start_practice_game() -> void:
 		player.bind_ctx(boss.ctx)
 	boss.phase_cleared.connect(func(_c: bool, _b: int): boss.die())
 	GameEvents.boss_defeated.connect(_on_practice_cleared)
+	if ReplaySession.is_playing():
+		SimClock.set_tick_hooks(_on_replay_prepare, _on_replay_observe)
+	elif ReplaySession.is_recording():
+		SimClock.set_tick_hooks(_on_record_prepare, _on_record_observe)
 
 
 func _resolve_stage_data() -> StageData:
@@ -406,9 +417,14 @@ func _on_stage_cleared():
 		return
 	_ending = true
 	if ReplaySession.is_playing():
-		_advance_playback_stage()
+		if ReplaySession.is_practice_playback():
+			_finish_playback()
+		else:
+			_advance_playback_stage()
 		return
 	if SaveData.is_stage_practice:
+		if ReplaySession.is_recording():
+			ReplaySession.finish_recording(_replay_meta("cleared"))
 		SaveData.is_stage_practice = false
 		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 	elif not PracticeSession.is_practice_mode:
@@ -466,6 +482,11 @@ func _on_practice_cleared(_boss: Node) -> void:
 			runner.stop()
 			runner.queue_free()
 	GameEvents.boss_defeated.disconnect(_on_practice_cleared)
+	if ReplaySession.is_playing():
+		_finish_playback()
+		return
+	if ReplaySession.is_recording():
+		ReplaySession.finish_recording(_replay_meta("cleared"))
 	PracticeSession.finish()
 	# 返回**符卡练习菜单**（而不是主菜单）：到菜单后自动压回练习页，
 	# 层级/选中项由该页从 PracticeSession.return_menu_state 还原
@@ -512,20 +533,34 @@ func _on_replay_observe(tick: int) -> void:
 ## [param include_start] 只在开录时 true：结束时的 stage 是“终点”，不能覆盖起点。
 func _replay_meta(result: String, include_start: bool = false) -> Dictionary:
 	var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
+	var practice_stage := 0
+	if SaveData.is_stage_practice:
+		practice_stage = SaveData.current_stage_id
+	elif PracticeSession.is_practice_mode:
+		practice_stage = PracticeSession.stage_id
+	var stage_id := practice_stage if practice_stage > 0 else SaveData.current_stage_id
+	var stage_no := StageCatalog.stage_no_of(stage_id) if stage_id > 0 else 0
 	var meta := {
 		"result": result,
 		"difficulty": SaveData.selected_difficulty,
 		"character": SaveData.selected_character,
 		"route_id": String(SaveData.current_route_id),
-		"stage_id": SaveData.current_stage_id,
-		"stage_no": SaveData.current_route_index + 1,
+		"stage_id": stage_id,
+		"stage_no": stage_no,
 		"score": res.current_score if res != null else 0,
 		"lives": res.lives if res != null else 0,
 		"bombs": res.bomb_count if res != null else 0,
 	}
+	if SaveData.is_stage_practice:
+		meta["practice_mode"] = "stage"
+		meta["practice_stage_id"] = stage_id
+	elif PracticeSession.is_practice_mode:
+		meta["practice_mode"] = "spell"
+		meta["practice_stage_id"] = stage_id
+		meta["practice_phase_index"] = PracticeSession.phase_index
 	if include_start:
-		meta["start_stage_id"] = SaveData.current_stage_id
-		meta["start_stage_no"] = SaveData.current_route_index + 1
+		meta["start_stage_id"] = stage_id
+		meta["start_stage_no"] = stage_no
 	return meta
 
 
