@@ -9,9 +9,6 @@ var _can_save: bool = true
 ## 在 push 之前调用：填标题 / 卡名 / 统计；没有录像时锁定保存项。
 func configure(data: Dictionary) -> void:
 	_can_save = bool(data.get("can_save", true))
-	var title := get_node_or_null("Title") as Label
-	if title:
-		title.text = "符卡练习完成"
 	if not _can_save:
 		var save := get_node_or_null("Options/Save")
 		if save:
