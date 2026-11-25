@@ -128,6 +128,14 @@ func _setup_front_crossfade() -> void:
 	move_child(_front_next, _front.get_index() + 1)
 
 
+## 统一 HUD 显隐：Memory 是嵌套 CanvasLayer，必须单独同步，否则外层隐藏后它还会留在主菜单。
+func set_hud_visible(value: bool) -> void:
+	visible = value
+	var memory := get_node_or_null("Memory")
+	if memory is CanvasLayer:
+		(memory as CanvasLayer).visible = value
+
+
 ## 按“面数”选框：Stage 4/5/6 使用 false_front_2，EX（stage_no=7）使用 true_front，其余 false_front。
 static func frame_texture_for_stage(stage_no: int) -> Texture2D:
 	if stage_no == 7:

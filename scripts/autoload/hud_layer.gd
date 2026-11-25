@@ -17,10 +17,10 @@ func get_game_ui() -> GameUI:
 		if _game_ui == null:
 			return null
 		add_child(_game_ui)
-	_game_ui.visible = true
+	_game_ui.set_hud_visible(true)
 	return _game_ui
 
 
 func _on_scene_entered(path: String) -> void:
 	if is_instance_valid(_game_ui):
-		_game_ui.visible = path.ends_with("game_scene.tscn")
+		_game_ui.set_hud_visible(path.ends_with("game_scene.tscn"))

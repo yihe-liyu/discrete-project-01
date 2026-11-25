@@ -387,6 +387,10 @@ func test_hud_survives_game_scene_rebuild() -> void:
 	assert_eq(HudLayer.get_game_ui(), hud, "切场景后 HUD 实例应保持不变")
 	assert_true(hud.is_inside_tree(), "持久 HUD 应仍在树里")
 	assert_true(hud.visible, "游戏场景里 HUD 应可见")
+	hud.set_hud_visible(false)
+	assert_false((hud.get_node("Memory") as CanvasLayer).visible, "隐藏 HUD 时嵌套 Memory 层也必须隐藏")
+	hud.set_hud_visible(true)
+	assert_true((hud.get_node("Memory") as CanvasLayer).visible, "恢复 HUD 时嵌套 Memory 层也要恢复")
 	second.queue_free()
 	await get_tree().process_frame
 
