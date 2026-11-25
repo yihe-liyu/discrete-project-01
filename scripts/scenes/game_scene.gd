@@ -467,12 +467,11 @@ func _show_stage_result() -> void:
 	}
 	var menu: StageResultMenu = STAGE_RESULT_MENU.instantiate() as StageResultMenu
 	menu.configure(data)
-	menu.finished.connect(_on_stage_result_action.bind(menu), CONNECT_ONE_SHOT)
+	menu.finished.connect(_on_stage_result_action.bind(menu))
 	GameManager.push_overlay_menu(menu)
 
 
-func _on_stage_result_action(result: Dictionary, menu: BasePage) -> void:
-	GameManager.pop_overlay_menu(menu)
+func _on_stage_result_action(result: Dictionary, _menu: BasePage) -> void:
 	if result.get("action") == "continue":
 		# 路线切面继承上一面的自机资源；高分由 StageRuntime 按整条 run 累计写入 key 0。
 		SaveData.capture_run_state(_stage_runtime.entity_registry.get_player_resources())
@@ -574,9 +573,17 @@ func _on_practice_fail_action(result: Dictionary, menu: BasePage) -> void:
 func _open_practice_fail_save(menu: BasePage) -> void:
 	var page: BasePage = REPLAY_SAVE_MENU.instantiate()
 	menu.visible = false
+	if menu is NavPage:
+		(menu as NavPage).set_navigation_enabled(false)
 	page.saved.connect(_on_practice_fail_save_saved.bind(page), CONNECT_ONE_SHOT)
-	page.back.connect(func(): menu.visible = true, CONNECT_ONE_SHOT)
+	page.back.connect(_restore_practice_menu.bind(menu), CONNECT_ONE_SHOT)
 	GameManager.push_overlay_menu(page)
+
+
+func _restore_practice_menu(menu: BasePage) -> void:
+	menu.visible = true
+	if menu is NavPage:
+		(menu as NavPage).set_navigation_enabled(true)
 
 
 func _on_practice_fail_save_saved(_path: String, _page: BasePage) -> void:
@@ -609,8 +616,10 @@ func _on_practice_result_action(result: Dictionary, menu: BasePage) -> void:
 func _open_practice_save_page(result_menu: BasePage) -> void:
 	var page: BasePage = REPLAY_SAVE_MENU.instantiate()
 	result_menu.visible = false
+	if result_menu is NavPage:
+		(result_menu as NavPage).set_navigation_enabled(false)
 	page.saved.connect(_on_practice_save_saved.bind(page), CONNECT_ONE_SHOT)
-	page.back.connect(func(): result_menu.visible = true, CONNECT_ONE_SHOT)
+	page.back.connect(_restore_practice_menu.bind(result_menu), CONNECT_ONE_SHOT)
 	GameManager.push_overlay_menu(page)
 
 

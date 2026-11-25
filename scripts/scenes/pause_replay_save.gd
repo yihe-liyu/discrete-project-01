@@ -183,6 +183,7 @@ func _save_now() -> void:
 		{"result": "save", "slot": _selected + 1}, path, display_name)
 	if saved_path == "":
 		_hint.text = "保存失败"
+		sfx_back()
 		return
 	sfx_confirm()
 	saved.emit(saved_path)

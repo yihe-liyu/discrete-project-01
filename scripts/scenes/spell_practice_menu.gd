@@ -18,6 +18,8 @@ var _phase_index: int = 0
 var _diff_index: int = 0
 var _char_index: int = 0
 var _is_input_ready: bool = false
+## 确认动画 / 0.24s 延迟回调期间丢弃重复确认，避免连按跳级。
+var _is_confirming: bool = false
 
 const CHAR_NAMES = SpellRecord.CHAR_NAMES
 
@@ -43,6 +45,7 @@ func _ready() -> void:
 # ═══ 生命周期 ═══
 
 func on_enter() -> void:
+	_is_confirming = false
 	modulate.a = 0.0
 	# 人物**起点** = 上次选的那个人物（与 `player_data_menu` 同口径）
 	_char_index = clampi(SaveData.selected_character, 0, CHAR_NAMES.size() - 1)
@@ -259,12 +262,17 @@ func _input(event: InputEvent) -> void:
 		_highlight()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_accept"):
+		get_viewport().set_input_as_handled()
+		if _is_confirming:
+			return
 		sfx_confirm()
 		if _section == Section.DIFF:
 			_start_practice()
 		else:
-			_flash_then(func(): _do_accept_transition())
-		get_viewport().set_input_as_handled()
+			_is_confirming = true
+			_flash_then(func():
+				_is_confirming = false
+				_do_accept_transition())
 
 
 func _flash_then(on_done: Callable) -> void:

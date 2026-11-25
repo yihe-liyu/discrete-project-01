@@ -24,6 +24,7 @@ var _hint: Label
 var _page_hint: Label
 var _rename_edit: LineEdit
 var _rename_index: int = -1
+var _is_leaving: bool = false
 
 
 func on_enter() -> void:
@@ -275,6 +276,7 @@ func _play_selected() -> void:
 	if not ReplaySession.start_playback(path):
 		push_warning("ReplayMenu: 无法开始回放 " + path)
 		return
+	sfx_confirm()
 	GameManager.change_scene("res://scenes/game_scene.tscn")
 
 
@@ -283,14 +285,17 @@ func _delete_selected() -> void:
 		return
 	if not _delete_armed:
 		_delete_armed = true
+		sfx_confirm()
 		_refresh_selection()
 		return
 	var path := str(_entries[_selected_slot].get("path", ""))
 	_delete_armed = false
 	if not ReplaySession.delete_replay(path):
 		push_warning("ReplayMenu: 删除回放失败 " + path)
+		sfx_back()
 		_refresh_selection()
 		return
+	sfx_confirm()
 	var keep := _selected_slot
 	_reload_entries()
 	_selected_slot = _first_filled_from(keep)
@@ -301,6 +306,7 @@ func _begin_rename() -> void:
 	if not _is_filled(_selected_slot):
 		return
 	_cancel_rename()
+	sfx_confirm()
 	_rename_index = _selected_slot
 	var meta: Dictionary = _entries[_selected_slot].get("metadata", {})
 	_rename_edit = LineEdit.new()
@@ -323,6 +329,7 @@ func _begin_rename() -> void:
 func _on_rename_gui(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
+		sfx_back()
 		_cancel_rename()
 
 
@@ -331,8 +338,12 @@ func _commit_rename(text: String) -> void:
 		_cancel_rename()
 		return
 	var path := str(_entries[_rename_index].get("path", ""))
-	if not ReplaySession.rename_replay(path, text):
+	var did_rename := ReplaySession.rename_replay(path, text)
+	if not did_rename:
 		push_warning("ReplayMenu: 回放改名失败 " + path)
+		sfx_back()
+	else:
+		sfx_confirm()
 	var keep := _rename_index
 	_cancel_rename()
 	_selected_slot = keep
@@ -347,12 +358,21 @@ func _cancel_rename() -> void:
 
 
 func on_leave() -> void:
+	_is_leaving = true
 	_cancel_rename()
 	var tw := create_tween().set_parallel(true)
 	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property($"Overlay", "modulate:a", 0.0, 0.5)
 	tw.tween_property($"TitleTexture", "modulate:a", 0.0, 0.5)
 	tw.tween_callback(queue_free)
+
+
+func _first_filled_on_page() -> int:
+	for i in PAGE_SIZE:
+		var slot := _page_offset + i
+		if slot < TOTAL_SLOTS and _is_filled(slot):
+			return slot
+	return -1
 
 
 func _last_page_offset() -> int:
@@ -364,7 +384,10 @@ func _turn_page(dir: int) -> void:
 	_page_offset = clampi(_page_offset + dir * PAGE_SIZE, 0, _last_page_offset())
 	if _page_offset == old_offset:
 		return
-	_selected_slot = _page_offset
+	sfx_nav()
+	_selected_slot = _first_filled_on_page()
+	if _selected_slot < 0:
+		_selected_slot = _page_offset
 	_build_page()
 
 
@@ -372,12 +395,16 @@ func _move_slot(dir: int) -> void:
 	if not _has_any():
 		return
 	# 空槽位不可选：上下移动只在真实回放之间跳。
+	var old_slot := _selected_slot
 	var slot := _selected_slot
 	for _i in TOTAL_SLOTS:
 		slot = wrapi(slot + dir, 0, TOTAL_SLOTS)
 		if _is_filled(slot):
 			_selected_slot = slot
 			break
+	if _selected_slot == old_slot:
+		return
+	sfx_nav()
 	if not _slot_on_page(_selected_slot):
 		_page_offset = floori(float(_selected_slot) / PAGE_SIZE) * PAGE_SIZE
 		_build_page()
@@ -386,6 +413,8 @@ func _move_slot(dir: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if _is_leaving:
+		return
 	if is_instance_valid(_rename_edit):
 		if event.is_action_pressed("ui_cancel"):
 			get_viewport().set_input_as_handled()

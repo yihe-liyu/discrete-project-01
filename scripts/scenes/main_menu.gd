@@ -82,7 +82,7 @@ func _open_page(path: String) -> void:
 func _on_cancel() -> void:
 	var last_idx := _nav_items.size() - 1
 	if _nav_index < last_idx:
-		sfx_nav()
+		# NavPage 的 _nav_cancel 已经播过 back；这里只移动，不再补 nav，避免双音效。
 		_select(last_idx)
 	else:
 		get_tree().quit()

@@ -367,6 +367,11 @@ func _nav_move(delta: int) -> void:
 func _on_item_selected(_index: int) -> void:
 	pass
 
+## 显式开关导航（覆盖层被保存页/说明页盖住时用；不要直接碰私有 _is_nav_enabled）。
+func set_navigation_enabled(value: bool) -> void:
+	_is_nav_enabled = value
+
+
 ## 子类覆写：取消行为；默认 go_back()。
 func _on_cancel() -> void:
 	go_back()

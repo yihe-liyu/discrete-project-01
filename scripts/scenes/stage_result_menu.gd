@@ -53,9 +53,13 @@ func on_leave() -> void:
 	_overlay_leave(_container)
 
 
+## X / Esc 等同“返回”，不能让默认 go_back() 直接 pop 掉结算层恢复游戏。
+func _on_cancel() -> void:
+	finished.emit({"action": "return"})
+
+
 func _on_item_selected(index: int) -> void:
-	# 不调 done()：GameScene 收到 finished 后会 pop_overlay_menu()，
-	# 那才是覆盖层唯一的 on_leave 入口，避免退场动画跑两次。
+	# 不调 done()：GameScene 收到 finished 后由 change_scene 统一清理覆盖层。
 	if _has_next:
 		match index:
 			0: finished.emit({"action": "continue"})

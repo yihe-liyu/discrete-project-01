@@ -118,6 +118,7 @@
 - **练习失败页/保存页回归**：结果页/失败页/回放结束页的 X 必须重定向到“返回”选项；`NavPage._on_cancel` 默认 `go_back()` 会直接 pop overlay 并恢复游戏，是“失败页按 X 继续游戏”的真正来源。结果页/失败页的 `finished` 不能再 `CONNECT_ONE_SHOT`（保存页 X 返回后要能再次进入保存）；返回/重试不再先 `pop_overlay`，直接切场景，避免恢复一帧继续游戏。
 - **练习失败页**：练习模式死亡 / 符卡超时不再走普通 Game Over，改为 `PracticeFailMenu`：返回标题菜单 / 保存游戏录像（同一 25 槽保存页）/ 从头重新开始；录像保留到用户选择。
 - **回放结束页**：回放自然播完 / 中途结束后不再直接切场景，改为 `ReplayEndMenu`（暂停页同款）：返回标题菜单 / 再次播放录像；再次播放会重开同一路径。
+- **菜单审计修复**：隐藏的结果/失败页打开保存页时显式关导航（防 ←/→ 泄漏到下层）；符卡练习加 `_is_confirming` 防连按跳级；回放页退场锁输入、翻页选本页首个非空槽、单条回放不再空响；主菜单 X 不再重复播 nav；关卡结算 X 走 return 且 finished 不再 ONE_SHOT；保存/改名失败改播 back。
 - **保存页音效**：选槽 ↑↓、确认进命名、命名 X 回选槽、选槽 X 返回、保存成功都走 `sfx_requested`（nav/confirm/back），不再静音。
 - **保存页复用**：`pause_replay_save` 改为只负责 25 槽选位 + 命名并 `saved(path)` 信号；暂停页保存后回主菜单，符卡练习结果页保存同样打开该页、保存后回练习菜单。（暂停页同款：只占游戏框、右侧 UI 可见、框内模糊；保存选项走同一 25 槽+命名页；标题 44px + 绿色副标题 + 中文主项/英文副项 + 黑白色阶 + 4px 间距，与暂停页统一；结束页不显示标题 / 副标题 / 卡名 / Boss / 难度 / 自机，只保留三个选项并整体下移）：保存录像并返回 / 再来一次 / 返回练习菜单；只有选保存才 `finish_recording`，返回/重试都 `cancel_recording`。
 - **练习 replay**：单关练习 / 符卡练习现在也录制；metadata 带 `practice_mode`（stage/spell）、`practice_stage_id`、`practice_phase_index`；回放前恢复 `SaveData.is_stage_practice` / `PracticeSession`，练习通关或死亡后回到对应菜单。
