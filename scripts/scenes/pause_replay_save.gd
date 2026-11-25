@@ -1,6 +1,8 @@
 # PauseReplaySave.gd — 暂停菜单里的保存录像页：固定 25 槽位 + 命名。
 extends BasePage
 
+signal saved(path: String)
+
 const SLOT_COUNT := 25
 const SLOT_LIST_PATH := "SlotList"
 const NAME_MAX := 8
@@ -176,14 +178,13 @@ func _save_now() -> void:
 		path = str(_slots[_selected].get("path", ""))
 	else:
 		path = "%s/slot_%02d.json" % [ReplaySession.DIR, _selected + 1]
-	var saved := ReplaySession.finish_recording(
+	var saved_path := ReplaySession.finish_recording(
 		{"result": "save", "slot": _selected + 1}, path, display_name)
-	if saved == "":
+	if saved_path == "":
 		_hint.text = "保存失败"
 		return
 	AudioManager.play_ui_sfx("confirm")
-	GameManager.change_scene.call_deferred(
-		"res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+	saved.emit(saved_path)
 
 
 func _unhandled_input(event: InputEvent) -> void:

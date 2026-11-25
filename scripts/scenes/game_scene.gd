@@ -5,6 +5,7 @@ extends Node
 const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 const STAGE_RESULT_MENU = preload("res://scenes/ui/stage_result_menu.tscn")
 const SPELL_RESULT_MENU = preload("res://scenes/ui/spell_practice_result_menu.tscn")
+const REPLAY_SAVE_MENU = preload("res://scenes/ui/pause_replay_save.tscn")
 
 var _blur_rect: ColorRect
 var _blur_material: ShaderMaterial
@@ -525,12 +526,12 @@ func _wait_practice_defeat() -> void:
 
 
 func _on_practice_result_action(result: Dictionary, menu: BasePage) -> void:
+	var action := str(result.get("action", "return"))
+	if action == "save" and ReplaySession.is_recording():
+		_open_practice_save_page(menu)
+		return
 	GameManager.pop_overlay_menu(menu)
-	match str(result.get("action", "return")):
-		"save":
-			if ReplaySession.is_recording():
-				ReplaySession.finish_recording(_replay_meta("cleared"))
-			_return_to_practice_menu()
+	match action:
 		"retry":
 			if ReplaySession.is_recording():
 				ReplaySession.cancel_recording()
@@ -539,6 +540,21 @@ func _on_practice_result_action(result: Dictionary, menu: BasePage) -> void:
 			if ReplaySession.is_recording():
 				ReplaySession.cancel_recording()
 			_return_to_practice_menu()
+
+
+## 练习结果页的“保存录像”：复用暂停页的 25 槽 + 命名保存页。
+func _open_practice_save_page(result_menu: BasePage) -> void:
+	var page: BasePage = REPLAY_SAVE_MENU.instantiate()
+	result_menu.visible = false
+	page.saved.connect(_on_practice_save_saved.bind(page), CONNECT_ONE_SHOT)
+	page.back.connect(func(): result_menu.visible = true, CONNECT_ONE_SHOT)
+	GameManager.push_overlay_menu(page)
+
+
+func _on_practice_save_saved(_path: String, page: BasePage) -> void:
+	if is_instance_valid(page):
+		GameManager.pop_overlay_menu(page)
+	_return_to_practice_menu()
 
 
 ## 返回符卡练习菜单，并还原离开时的层级/选中项。

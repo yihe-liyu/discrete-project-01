@@ -233,8 +233,16 @@ func _open_save_page() -> void:
 	var page: BasePage = load("res://scenes/ui/pause_replay_save.tscn").instantiate()
 	visible = false
 	_is_nav_enabled = false
+	page.saved.connect(_on_pause_save_saved.bind(page), CONNECT_ONE_SHOT)
 	page.back.connect(_on_save_page_closed, CONNECT_ONE_SHOT)
 	GameManager.push_overlay_menu(page, 30)
+
+
+func _on_pause_save_saved(_path: String, page: BasePage) -> void:
+	if is_instance_valid(page):
+		GameManager.pop_overlay_menu(page)
+	GameManager.change_scene.call_deferred(
+		"res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 
 func _restore_pause_menu() -> void:
