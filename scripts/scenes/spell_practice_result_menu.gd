@@ -23,7 +23,7 @@ func configure(data: Dictionary) -> void:
 			"Character  %s" % str(data.get("character", "")),
 		])
 	if not _can_save:
-		var save := get_node_or_null("Options/SaveLabel")
+		var save := get_node_or_null("Options/Save")
 		if save:
 			save.set_meta("is_locked", true)
 
