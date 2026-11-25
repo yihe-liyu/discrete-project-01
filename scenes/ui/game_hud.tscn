@@ -1,0 +1,165 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/scenes/game_ui.gd" id="1_n5j44"]
+[ext_resource type="Texture2D" path="res://assets/Textures/front/front02.png" id="2_x6mpk"]
+[ext_resource type="Texture2D" path="res://assets/Textures/front/false_front.png" id="3_ehshv"]
+[ext_resource type="Shader" path="res://gdshader/water_flow.gdshader" id="4_4qk33"]
+[ext_resource type="Script" path="res://scripts/components/rect_outline.gd" id="5_tldsg"]
+[ext_resource type="Texture2D" path="res://assets/Textures/title/title.png" id="6_sd8kv"]
+[ext_resource type="Script" path="res://scripts/debug/debug_drawer.gd" id="7_1ryph"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mwyo0"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 256, 112, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s76x2"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 288, 176, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_77hjl"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 320, 128, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6aqbo"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 352, 176, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ro0ie"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 384, 144, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_b5spy"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 256, 104, 32)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mw25s"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 0, 128, 32)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_utbpp"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 32, 128, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tcjrq"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 64, 128, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rvs2r"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 96, 128, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ldkr4"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 192, 128, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5ay1a"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 160, 128, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tqxxy"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 128, 128, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_liy57"]
+atlas = ExtResource("2_x6mpk")
+region = Rect2(64, 224, 128, 32)
+
+[sub_resource type="ShaderMaterial" id="RectOutlineMat"]
+shader = ExtResource("4_4qk33")
+shader_parameter/alpha_mult = 1.0
+shader_parameter/border_color = Color(1, 1, 1, 0.5)
+shader_parameter/border_width = 3.0
+shader_parameter/rect_size = Vector2(384, 256)
+shader_parameter/shader_time = 0.0
+shader_parameter/memory = 50.0
+shader_parameter/wave_angle = 4.5230002148425
+shader_parameter/wave_scale = 1.0
+shader_parameter/foam_amount = 0.15
+shader_parameter/foam_color = Color(0.7, 0.8, 0.88, 1)
+shader_parameter/foam_speed = 1.5
+shader_parameter/foam_detail = 100.0
+
+[node name="GameUI" type="CanvasLayer" unique_id=323031526]
+layer = 32
+script = ExtResource("1_n5j44")
+difficulty_textures = Array[Texture2D]([SubResource("AtlasTexture_mwyo0"), SubResource("AtlasTexture_s76x2"), SubResource("AtlasTexture_77hjl"), SubResource("AtlasTexture_6aqbo"), SubResource("AtlasTexture_ro0ie")])
+
+[node name="Front" type="Sprite2D" parent="." unique_id=1281612929]
+z_index = 128
+texture = ExtResource("3_ehshv")
+offset = Vector2(640, 480)
+
+[node name="Difficulty" type="Sprite2D" parent="." unique_id=1428832846]
+z_index = 128
+position = Vector2(1056, 64)
+texture = SubResource("AtlasTexture_b5spy")
+
+[node name="HighScore" type="Sprite2D" parent="." unique_id=446842019]
+z_index = 128
+position = Vector2(920, 104)
+texture = SubResource("AtlasTexture_mw25s")
+
+[node name="Score" type="Sprite2D" parent="." unique_id=157173611]
+z_index = 128
+position = Vector2(920, 160)
+texture = SubResource("AtlasTexture_utbpp")
+
+[node name="Player" type="Sprite2D" parent="." unique_id=255440264]
+z_index = 128
+position = Vector2(920, 232)
+texture = SubResource("AtlasTexture_tcjrq")
+
+[node name="Bomb" type="Sprite2D" parent="." unique_id=435967303]
+z_index = 128
+position = Vector2(920, 304)
+texture = SubResource("AtlasTexture_rvs2r")
+
+[node name="Power" type="Sprite2D" parent="." unique_id=1557163412]
+z_index = 128
+position = Vector2(920, 376)
+texture = SubResource("AtlasTexture_ldkr4")
+
+[node name="Point" type="Sprite2D" parent="." unique_id=1844546404]
+z_index = 128
+position = Vector2(920, 432)
+texture = SubResource("AtlasTexture_5ay1a")
+
+[node name="Graze" type="Sprite2D" parent="." unique_id=773842415]
+z_index = 128
+position = Vector2(920, 488)
+texture = SubResource("AtlasTexture_tqxxy")
+
+[node name="MemoryValue" type="Sprite2D" parent="." unique_id=1289444788]
+z_index = 128
+position = Vector2(920, 608)
+texture = SubResource("AtlasTexture_liy57")
+
+[node name="Memory" type="CanvasLayer" parent="." unique_id=1250550718]
+layer = 32
+
+[node name="OutlineRect" type="ColorRect" parent="Memory" unique_id=1632815897]
+material = SubResource("RectOutlineMat")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 984.0
+offset_top = 536.0
+offset_right = -152.0
+offset_bottom = -280.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.5, 0.5, 0.5, 1)
+script = ExtResource("5_tldsg")
+
+[node name="Title" type="Sprite2D" parent="." unique_id=1384045485]
+z_index = 128
+position = Vector2(1056, 791.99994)
+scale = Vector2(0.69, 0.69)
+texture = ExtResource("6_sd8kv")
+
+[node name="Debug" type="Node2D" parent="." unique_id=711685194]
+z_index = 127
+script = ExtResource("7_1ryph")
