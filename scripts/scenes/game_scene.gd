@@ -4,6 +4,7 @@ extends Node
 
 const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 const STAGE_RESULT_MENU = preload("res://scenes/ui/stage_result_menu.tscn")
+const SPELL_RESULT_MENU = preload("res://scenes/ui/spell_practice_result_menu.tscn")
 
 var _blur_rect: ColorRect
 var _blur_material: ShaderMaterial
@@ -486,10 +487,41 @@ func _on_practice_cleared(_boss: Node) -> void:
 		_finish_playback()
 		return
 	if ReplaySession.is_recording():
-		ReplaySession.finish_recording(_replay_meta("cleared"))
+		var data := {
+			"can_save": true,
+			"card_name": PracticeSession.phase.name if PracticeSession.phase else "",
+			"boss_name": PracticeSession.boss_name,
+			"difficulty": Difficulty.display_name(SaveData.selected_difficulty),
+			"character": "灵梦" if SaveData.selected_character == 0 else "魔理沙",
+		}
+		var menu: SpellPracticeResultMenu = SPELL_RESULT_MENU.instantiate() as SpellPracticeResultMenu
+		menu.configure(data)
+		menu.finished.connect(_on_practice_result_action.bind(menu), CONNECT_ONE_SHOT)
+		GameManager.push_overlay_menu(menu)
+		return
+	_return_to_practice_menu()
+
+
+func _on_practice_result_action(result: Dictionary, menu: BasePage) -> void:
+	GameManager.pop_overlay_menu(menu)
+	match str(result.get("action", "return")):
+		"save":
+			if ReplaySession.is_recording():
+				ReplaySession.finish_recording(_replay_meta("cleared"))
+			_return_to_practice_menu()
+		"retry":
+			if ReplaySession.is_recording():
+				ReplaySession.cancel_recording()
+			GameManager.reload_current_scene()
+		_:
+			if ReplaySession.is_recording():
+				ReplaySession.cancel_recording()
+			_return_to_practice_menu()
+
+
+## 返回符卡练习菜单，并还原离开时的层级/选中项。
+func _return_to_practice_menu() -> void:
 	PracticeSession.finish()
-	# 返回**符卡练习菜单**（而不是主菜单）：到菜单后自动压回练习页，
-	# 层级/选中项由该页从 PracticeSession.return_menu_state 还原
 	PracticeSession.restore_menu_on_enter = true
 	GameManager.pending_page_path = "res://scenes/ui/spell_practice_menu.tscn"
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)

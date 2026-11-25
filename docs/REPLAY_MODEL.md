@@ -15,6 +15,7 @@ Replay = **同 seed + 同逐 tick 输入/命令 + 同内容 + 同模拟语义** 
 ## 1. 非目标
 
 - 不保证跨 `SIM_VERSION` / 跨内容版本的回放；语义变了就拒绝。
+- 符卡练习结束后由结果页决定是否落盘；不再自动保存。
 - 练习 replay：`metadata.practice_mode = "stage" | "spell"`，`practice_stage_id` / `practice_phase_index` 用于回放时恢复单关练习或符卡练习；普通路线不带这些字段。
 - 不保证跨平台逐位一致（暂未验证 ARM64 / 不同 GPU / 不同浮点环境）。
 - 不保证 UI / 特效 / 音频逐帧一致；只保证模拟状态。

@@ -15,6 +15,7 @@ const PAGE_SCENES := [
 	"res://scenes/ui/pause_menu.tscn",
 	"res://scenes/ui/pause_manual_menu.tscn",
 	"res://scenes/ui/pause_replay_save.tscn",
+	"res://scenes/ui/spell_practice_result_menu.tscn",
 	"res://scenes/ui/game_over_menu.tscn",
 	"res://scenes/ui/stage_result_menu.tscn",
 	"res://scenes/ui/replay_menu.tscn",
