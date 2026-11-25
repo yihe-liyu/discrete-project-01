@@ -118,7 +118,7 @@
 - **练习失败页/保存页回归**：结果页/失败页/回放结束页的 X 必须重定向到“返回”选项；`NavPage._on_cancel` 默认 `go_back()` 会直接 pop overlay 并恢复游戏，是“失败页按 X 继续游戏”的真正来源。结果页/失败页的 `finished` 不能再 `CONNECT_ONE_SHOT`（保存页 X 返回后要能再次进入保存）；返回/重试不再先 `pop_overlay`，直接切场景，避免恢复一帧继续游戏。
 - **练习失败页**：练习模式死亡 / 符卡超时不再走普通 Game Over，改为 `PracticeFailMenu`：返回标题菜单 / 保存游戏录像（同一 25 槽保存页）/ 从头重新开始；录像保留到用户选择。
 - **回放结束页**：回放自然播完 / 中途结束后不再直接切场景，改为 `ReplayEndMenu`（暂停页同款）：返回标题菜单 / 再次播放录像；再次播放会重开同一路径。
-- **游戏框按面切换**：`GameUI.set_stage_frame(stage_no)` 统一映射；Stage 4/5/6 使用 `false_front_2.png`，EX 使用 `true_front.png`，其余使用 `false_front.png`；普通关卡、符卡练习、录像回放都按当前面数走同一映射；路线切面时 HUD 跳过入场动画、框也立即到位，避免切关时整块 HUD 重新加载的观感。`GameUI` 新增 `set_frame_texture(texture, fade_time=0.25)` / `get_frame_texture()`；运行时自动建 `FrontNext` 第二 Sprite，夹在 `Front` 与 HUD 之间，新框淡入结束后写回 `Front`，暂停中也能继续。
+- **游戏框按面切换**：`GameUI.set_stage_frame(stage_no)` 统一映射；Stage 4/5/6 使用 `false_front_2.png`，EX 使用 `true_front.png`，其余使用 `false_front.png`；普通关卡、符卡练习、录像回放都按当前面数走同一映射；路线切面时 HUD 跳过入场动画，避免切关时整块 HUD 重新加载的观感；游戏框仍保留 0.35s 交叉淡入。`GameUI` 新增 `set_frame_texture(texture, fade_time=0.25)` / `get_frame_texture()`；运行时自动建 `FrontNext` 第二 Sprite，夹在 `Front` 与 HUD 之间，新框淡入结束后写回 `Front`，暂停中也能继续。
 - **主菜单返回后标题消失**：`_deactivate_title` 的 0.12s 延迟 hide 没保存/取消；返回时 `_activate_title` 先 show，旧回调后 hide。标题列/Logo tween 改为共用 `_title_tween`，每次切换先 kill 旧的。
 - **菜单审计修复**：隐藏的结果/失败页打开保存页时显式关导航（防 ←/→ 泄漏到下层）；符卡练习加 `_is_confirming` 防连按跳级；回放页退场锁输入、翻页选本页首个非空槽、单条回放不再空响；主菜单 X 不再重复播 nav；关卡结算 X 走 return 且 finished 不再 ONE_SHOT；保存/改名失败改播 back。
 - **保存页音效**：选槽 ↑↓、确认进命名、命名 X 回选槽、选槽 X 返回、保存成功都走 `sfx_requested`（nav/confirm/back），不再静音。
