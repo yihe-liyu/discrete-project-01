@@ -6,6 +6,7 @@ const GAME_OVER_MENU = preload("res://scenes/ui/game_over_menu.tscn")
 const STAGE_RESULT_MENU = preload("res://scenes/ui/stage_result_menu.tscn")
 const SPELL_RESULT_MENU = preload("res://scenes/ui/spell_practice_result_menu.tscn")
 const REPLAY_SAVE_MENU = preload("res://scenes/ui/pause_replay_save.tscn")
+const REPLAY_END_MENU = preload("res://scenes/ui/replay_end_menu.tscn")
 
 var _blur_rect: ColorRect
 var _blur_material: ShaderMaterial
@@ -18,6 +19,8 @@ var _current_boss: Boss
 ## 而结算菜单挂在 autoload 的菜单栈上（切场景后仍在）——不加闸门就会「主菜单 + Game Over」叠一起。
 ## 规则：谁先到谁生效，其余一律放弃。
 var _ending: bool = false
+## 回放结束页是否已经弹出，避免重复 push。
+var _replay_end_pending: bool = false
 ## 路线切面 reload 时保留录制 / 回放会话；新场景实例默认 false。
 var _continuing_replay: bool = false
 ## 符卡练习的 SE 额外压低（dB）。当前 0.0 = 关闭 ——
@@ -647,10 +650,24 @@ func _advance_playback_stage() -> void:
 
 
 func _finish_playback() -> void:
+	if _replay_end_pending:
+		return
+	_replay_end_pending = true
+	var path := ReplaySession.current_path()
+	var menu: ReplayEndMenu = REPLAY_END_MENU.instantiate() as ReplayEndMenu
+	menu.finished.connect(_on_replay_end_action.bind(menu, path), CONNECT_ONE_SHOT)
+	GameManager.push_overlay_menu(menu)
+
+
+func _on_replay_end_action(result: Dictionary, menu: BasePage, path: String) -> void:
+	GameManager.pop_overlay_menu(menu)
 	ReplaySession.stop_playback()
 	SimClock.clear_tick_hooks()
+	if str(result.get("action", "return")) == "again" and path != "":
+		if ReplaySession.start_playback(path):
+			GameManager.reload_current_scene()
+			return
 	SaveData.reset_session()
-	GameManager.pending_page_path = "res://scenes/ui/replay_menu.tscn"
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 

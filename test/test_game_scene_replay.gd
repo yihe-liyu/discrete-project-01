@@ -237,3 +237,33 @@ func test_spell_practice_boss_defeat_waits_for_effect_then_result() -> void:
 	get_tree().paused = false
 	GameManager.current_state = GameManager.AppState.MENU
 	SimClock.reset()
+
+
+## 回放自然播完后应停在结束页，而不是直接切场景。
+func test_replay_natural_end_shows_end_page() -> void:
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 10:
+		await get_tree().physics_frame
+	var path := ReplaySession.finish_recording({"result": "test"})
+	assert_ne(path, "")
+	scene.queue_free()
+	await get_tree().process_frame
+	assert_true(ReplaySession.start_playback(path))
+	var playback: Node = GAME_SCENE.instantiate()
+	add_child_autofree(playback)
+	for _i in 30:
+		await get_tree().physics_frame
+	assert_true(ReplaySession.is_playing(), "结束页出现前录像会话不应被清")
+	assert_true(GameManager.has_open_overlay(), "回放播完应弹出结束页")
+	for child in get_tree().root.get_children():
+		if child is CanvasLayer and child.layer == 64:
+			for page in child.get_children():
+				if page is BasePage:
+					GameManager.pop_overlay_menu(page)
+	get_tree().paused = false
+	GameManager.current_state = GameManager.AppState.MENU
+	ReplaySession.stop_playback()
+	playback.queue_free()
+	await get_tree().process_frame
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

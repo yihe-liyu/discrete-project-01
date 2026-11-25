@@ -1,0 +1,109 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://cr7bw5ddkt2mc" path="res://scripts/scenes/replay_end_menu.gd" id="1_script"]
+
+[node name="ReplayEndMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+container_path = NodePath("Options")
+entrance_duration = 0.55
+entrance_stagger = 0.07
+highlight_color = Color(1, 1, 1, 1)
+normal_color = Color(0.52, 0.52, 0.52, 1)
+locked_color = Color(0.2, 0.2, 0.2, 1)
+
+[node name="Overlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 48.0
+offset_top = 16.0
+offset_right = 848.0
+offset_bottom = 944.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0.02, 0.05, 0.08, 0.03)
+
+[node name="SmallTitle" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 116.0
+offset_top = 178.0
+offset_right = 500.0
+offset_bottom = 208.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.35, 0.9, 0.65, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 18
+text = "Pause Menu"
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 112.0
+offset_top = 220.0
+offset_right = 620.0
+offset_bottom = 286.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 44
+text = "播放完毕"
+vertical_alignment = 1
+
+[node name="Options" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 116.0
+offset_top = 410.0
+offset_right = 620.0
+offset_bottom = 650.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/separation = 4
+
+[node name="Return" type="VBoxContainer" parent="Options"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Options/Return"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "返回标题菜单"
+
+[node name="Sub" type="Label" parent="Options/Return"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "Return to Title"
+
+[node name="Again" type="VBoxContainer" parent="Options"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Options/Again"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "再次播放录像"
+
+[node name="Sub" type="Label" parent="Options/Again"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "Replay Again"
