@@ -24,6 +24,8 @@ var _ending: bool = false
 var _replay_end_pending: bool = false
 ## 路线切面 reload 时保留录制 / 回放会话；新场景实例默认 false。
 var _continuing_replay: bool = false
+## 本场景是否由路线切面而来；切面时 HUD / 框都直接到位，不播“重新加载”动画。
+var _stage_transition: bool = false
 ## 符卡练习的 SE 额外压低（dB）。当前 0.0 = 关闭 ——
 ## 真凶已修（[code]lc.sfx()[/code] 的 db 默认 0.0 = 满音量，比正常大 15 dB），所以这条补偿先撤掉。
 ## 若还是嫌大，从这里往负调（-3 → -6 → -9）；旋钮保留着，改一个数即可。
@@ -100,6 +102,7 @@ func _ready():
 			push_warning("GameScene: practice_phase 已设置但 is_practice_mode=false —— 练习标志被提前清除，误走普通关卡")
 		SaveData.is_restarting = false
 		var carry_run := SaveData.is_route_transition
+		_stage_transition = carry_run
 		SaveData.is_route_transition = false
 		if not ReplaySession.is_playing() and not ReplaySession.is_recording():
 			# 先定路线 / 起始 stage，再抓 RNG 起点；播放端在场景之前恢复同一 state。
@@ -131,7 +134,7 @@ func _start_normal_game() -> void:
 	if not data:
 		push_error("GameScene: 找不到关卡 stage_id=%d difficulty=%d" % [SaveData.current_stage_id, SaveData.selected_difficulty])
 		return
-	_game_ui.set_stage_frame(data.stage_no)
+	_game_ui.set_stage_frame(data.stage_no, 0.0 if _stage_transition else 0.35)
 	_load_background(data.background_scene)
 	_stage_runtime.load_stage(data)
 	# 录制 / 回放的 tick 钩子必须在关卡装好之后挂：observer 要读得到 entity registry。

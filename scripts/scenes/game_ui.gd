@@ -102,8 +102,12 @@ func _ready() -> void:
 	_memory_num.char_count    = 14
 	_memory_num.z_index       = LayerConfig.UI_TOP
 
-	# 依次播放入场动画
-	_play_entry_animation()
+	# 路线切面 / 回放切面会整场景重建 HUD；不要再播一遍入场动画，
+	# 直接显示最终状态，避免“切关后 HUD 重新加载”的观感。
+	if SaveData.is_route_transition:
+		_show_entry_immediately()
+	else:
+		_play_entry_animation()
 
 
 ## 建交叉淡入用的第二张游戏框：放在 Front 后面、HUD 前面，保证淡入期间不会盖住 HUD 文字。
@@ -172,6 +176,39 @@ func set_frame_texture(texture: Texture2D, fade_time: float = 0.25) -> void:
 ## 当前游戏框纹理（读取用；切换请走 set_frame_texture）。
 func get_frame_texture() -> Texture2D:
 	return _front.texture if _front else null
+
+
+## 跳过入场：把所有元素直接置到最终状态（切面时用）。
+func _show_entry_immediately() -> void:
+	var title := $"Title"
+	var title_mat := ShaderMaterial.new()
+	title_mat.shader = preload("res://gdshader/logo_entrance.gdshader")
+	title_mat.set_shader_parameter("progress", 1.0)
+	title_mat.set_shader_parameter("alpha_mult", 1.0)
+	title.material = title_mat
+	title.modulate.a = 1.0
+
+	var diff := $"Difficulty"
+	diff.position = Vector2(1056, 64)
+	diff.scale = Vector2(1, 1)
+	diff.modulate.a = 1.0
+
+	for node: Node in _entry_queue:
+		if node is UISeparator:
+			node.progress = 1.0
+			node.modulate.a = 1.0
+		elif node.name in ["MemoryValue", "MemoryNumber"]:
+			node.modulate.a = 1.0
+		elif node == _memory_rect:
+			if node.material is ShaderMaterial:
+				node.material = node.material.duplicate()
+				node.material.set_shader_parameter("alpha_mult", 1.0)
+			node.modulate.a = 1.0
+		elif node.has_meta("is_fragment"):
+			node.modulate.a = 1.0
+		elif node.name not in ["Title", "Difficulty"]:
+			node.modulate.a = 1.0
+	entry_finished.emit()
 
 
 ## 将所有 HUD 元素依次从右侧滑入
