@@ -32,9 +32,15 @@ var _bomb_fragments: Array[Sprite2D] = []
 ## 记录所有入场元素，按顺序播放
 var _entry_queue: Array[Node] = []
 
+## 游戏框（Front）的交叉淡入层：新框在上面淡入，结束后写回 _front 再隐藏。
+@onready var _front: Sprite2D = $"Front"
+var _front_next: Sprite2D
+var _front_tween: Tween
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS  # 暂停时水面动画不冻
+	_setup_front_crossfade()
 	var tex := preload("res://assets/Textures/ascii/ascii.png")
 
 	# Title Logo → 先入队但单独处理
@@ -95,6 +101,62 @@ func _ready() -> void:
 
 	# 依次播放入场动画
 	_play_entry_animation()
+
+
+## 建交叉淡入用的第二张游戏框：放在 Front 后面、HUD 前面，保证淡入期间不会盖住 HUD 文字。
+func _setup_front_crossfade() -> void:
+	_front_next = Sprite2D.new()
+	_front_next.name = "FrontNext"
+	_front_next.z_index = _front.z_index
+	_front_next.centered = _front.centered
+	_front_next.offset = _front.offset
+	_front_next.position = _front.position
+	_front_next.scale = _front.scale
+	_front_next.flip_h = _front.flip_h
+	_front_next.flip_v = _front.flip_v
+	_front_next.visible = false
+	_front_next.modulate.a = 0.0
+	add_child(_front_next)
+	# Front 是当前框；FrontNext 紧随其后，再后面才是各 HUD 节点。
+	move_child(_front_next, _front.get_index() + 1)
+
+
+## 运行时换游戏框：新纹理淡入，淡入结束再写回 Front。
+## [param fade_time] <= 0 时立即切换；动画可在暂停中继续。
+func set_frame_texture(texture: Texture2D, fade_time: float = 0.25) -> void:
+	if texture == null:
+		return
+	if _front_next == null:
+		_setup_front_crossfade()
+	if _front_tween:
+		_front_tween.kill()
+		_front_tween = null
+	# 若上一次淡入还在中途，先把它的目标提交，避免连续换框时闪回旧图。
+	if _front_next.visible:
+		_front.texture = _front_next.texture
+		_front_next.visible = false
+		_front_next.modulate.a = 0.0
+	if texture == _front.texture:
+		return
+	if fade_time <= 0.0:
+		_front.texture = texture
+		return
+	_front_next.texture = texture
+	_front_next.modulate.a = 0.0
+	_front_next.visible = true
+	_front_tween = create_tween()
+	_front_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_front_tween.tween_property(_front_next, "modulate:a", 1.0, fade_time)
+	_front_tween.tween_callback(func():
+		_front.texture = texture
+		_front.modulate.a = 1.0
+		_front_next.visible = false
+		_front_next.modulate.a = 0.0)
+
+
+## 当前游戏框纹理（读取用；切换请走 set_frame_texture）。
+func get_frame_texture() -> Texture2D:
+	return _front.texture if _front else null
 
 
 ## 将所有 HUD 元素依次从右侧滑入
