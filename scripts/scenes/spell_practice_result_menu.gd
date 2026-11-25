@@ -9,13 +9,13 @@ var _can_save: bool = true
 ## 在 push 之前调用：填标题 / 卡名 / 统计；没有录像时锁定保存项。
 func configure(data: Dictionary) -> void:
 	_can_save = bool(data.get("can_save", true))
-	var title := get_node_or_null("Panel/Frame/TitleLabel") as Label
+	var title := get_node_or_null("Title") as Label
 	if title:
-		title.text = "SPELL PRACTICE CLEAR"
-	var card := get_node_or_null("Panel/Frame/CardLabel") as Label
+		title.text = "符卡练习完成"
+	var card := get_node_or_null("Card") as Label
 	if card:
 		card.text = str(data.get("card_name", ""))
-	var stats := get_node_or_null("Panel/Frame/StatsLabel") as Label
+	var stats := get_node_or_null("Stats") as Label
 	if stats:
 		stats.text = "\n".join([
 			"Boss      %s" % str(data.get("boss_name", "")),
@@ -23,7 +23,7 @@ func configure(data: Dictionary) -> void:
 			"Character  %s" % str(data.get("character", "")),
 		])
 	if not _can_save:
-		var save := get_node_or_null("Panel/Frame/Container/SaveLabel")
+		var save := get_node_or_null("Options/SaveLabel")
 		if save:
 			save.set_meta("is_locked", true)
 

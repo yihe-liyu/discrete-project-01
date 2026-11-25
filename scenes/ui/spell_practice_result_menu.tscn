@@ -9,97 +9,103 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1_script")
-container_path = NodePath("Panel/Frame/Container")
+container_path = NodePath("Options")
 entrance_stagger = 0.08
 
 [node name="Overlay" type="ColorRect" parent="."]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 0.55)
-
-[node name="Panel" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 0)
+anchors_preset = 0
+offset_left = 48.0
+offset_top = 16.0
+offset_right = 848.0
+offset_bottom = 944.0
+grow_horizontal = 0
+grow_vertical = 0
 mouse_filter = 2
+color = Color(0.02, 0.05, 0.08, 0.03)
 
-[node name="Frame" type="Control" parent="Panel"]
+[node name="Title" type="Label" parent="."]
 layout_mode = 1
-offset_left = 64.0
-offset_top = 32.0
+anchors_preset = 0
+offset_left = 112.0
+offset_top = 180.0
 offset_right = 832.0
-offset_bottom = 928.0
-mouse_filter = 2
-
-[node name="TitleLabel" type="Label" parent="Panel/Frame"]
-layout_mode = 1
-anchor_top = 0.1
-anchor_right = 1.0
-anchor_bottom = 0.2
-theme_override_font_sizes/font_size = 34
-text = "SPELL PRACTICE CLEAR"
-horizontal_alignment = 1
+offset_bottom = 246.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 40
+text = "符卡练习完成"
 vertical_alignment = 1
 
-[node name="CardLabel" type="Label" parent="Panel/Frame"]
+[node name="Card" type="Label" parent="."]
 layout_mode = 1
-anchor_top = 0.2
-anchor_right = 1.0
-anchor_bottom = 0.28
-theme_override_font_sizes/font_size = 24
-text = "Spell Card"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="StatsLabel" type="Label" parent="Panel/Frame"]
-layout_mode = 1
-anchor_top = 0.32
-anchor_right = 1.0
-anchor_bottom = 0.58
+anchors_preset = 0
+offset_left = 116.0
+offset_top = 252.0
+offset_right = 832.0
+offset_bottom = 286.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 20
-text = "Boss"
-horizontal_alignment = 1
-vertical_alignment = 1
+text = "Spell Card"
 
-[node name="Container" type="VBoxContainer" parent="Panel/Frame"]
+[node name="Stats" type="Label" parent="."]
 layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 224.0
-offset_top = -280.0
-offset_right = 544.0
-offset_bottom = -100.0
+anchors_preset = 0
+offset_left = 116.0
+offset_top = 300.0
+offset_right = 832.0
+offset_bottom = 390.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.72, 0.72, 0.72, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 18
+text = "Boss"
+
+[node name="Options" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 116.0
+offset_top = 440.0
+offset_right = 620.0
+offset_bottom = 680.0
+grow_horizontal = 0
 grow_vertical = 0
 theme_override_constants/separation = 16
-alignment = 1
 
-[node name="SaveLabel" type="Label" parent="Panel/Frame/Container"]
+[node name="SaveLabel" type="Label" parent="Options"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 28
 text = "保存录像并返回"
-horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="RetryLabel" type="Label" parent="Panel/Frame/Container"]
+[node name="RetryLabel" type="Label" parent="Options"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 28
 text = "再来一次"
-horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ReturnLabel" type="Label" parent="Panel/Frame/Container"]
+[node name="ReturnLabel" type="Label" parent="Options"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 28
 text = "返回练习菜单"
-horizontal_alignment = 1
 vertical_alignment = 1
