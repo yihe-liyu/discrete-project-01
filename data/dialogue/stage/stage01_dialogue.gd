@@ -43,6 +43,8 @@ static func 灵梦战斗后() -> DialogueSteps:
 	卡摩瑞.portrait("战败").line("……")
 	对话.exit(KA)
 	灵梦.portrait("笑").line("哦？有新的线索出现了～")
+	对话.exit(REIMU)
+	对话.wait(1.0)
 	对话.event("stage_end")  # 行间事件：最后一句读完 → 这关结束（关卡脚本 finish_stage）
 	return 对话
 
@@ -90,5 +92,8 @@ static func 魔理沙战斗后() -> DialogueSteps:
 	魔理沙.portrait("叹气").line("怎么都看不出来啊。")
 	卡摩瑞.portrait("战败").line("……")
 	魔理沙.portrait("震惊").line("抱歉啊，我看到有新的线索了，我得先走了！")
+	对话.exit(MARISA)
+	对话.exit(KA)
+	对话.wait(1.0)
 	对话.event("stage_end")
 	return 对话

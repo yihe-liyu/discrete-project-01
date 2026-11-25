@@ -8,7 +8,7 @@ const ENEMY04 = preload("res://data/stages/stage01/enemy/enemy04.gd")
 
 const FLY_AWAY = preload("res://data/stages/stage01/enemy/fly_away.gd")
 
-const STAGE01_REIMU = preload("res://data/dialogue/stage/stage01_dialogue.gd")
+const STAGE01_DIA = preload("res://data/dialogue/stage/stage01_dialogue.gd")
 
 ## 最终 Boss（战前对话中进场）：对话事件回调（_on_dialogue_event）用到——用 StageObjects 按名取，不闭包捕获
 var 道中卡摩瑞: BossData = BossCatalog.boss(1, 0)
@@ -164,9 +164,9 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	# 战前对话（独立构建脚本 data/dialogue/stage/stage01_dialogue.gd）
 	timeline.at(93).do(func():
 		if SaveData.selected_character == 0:
-			_stage_director.dialogue(STAGE01_REIMU.灵梦战斗前())
+			_stage_director.dialogue(STAGE01_DIA.灵梦战斗前())
 		else:
-			_stage_director.dialogue(STAGE01_REIMU.魔理沙战斗前())
+			_stage_director.dialogue(STAGE01_DIA.魔理沙战斗前())
 	)
 
 	# 对话事件路由（取代大 match）：战前对话触发进 Boss / 揭名 / 切歌 / 开战；战后对话触发收尾
@@ -200,7 +200,7 @@ func _on_display_name() -> void:
 
 func _on_bgm_switch() -> void:
 	# 战前对话最后一句 → 切卡摩瑞主题曲（洞窟蝙蝠），说完即开打
-	_stage_director.bgm("music_3")
+	_stage_director.bgm("stage1_boss")
 
 func _on_boss_fight() -> void:
 	# 最后一句说完 → 最终 Boss 开战：按难度取阶段表连打。
@@ -220,9 +220,9 @@ func _on_boss_fight() -> void:
 	_timeline.wait(2.0).do(func(): 关底卡摩瑞句柄.defeat())
 	_timeline.wait(4.5).do(func():
 			if SaveData.selected_character == 0:
-				_stage_director.dialogue(STAGE01_REIMU.灵梦战斗后())
+				_stage_director.dialogue(STAGE01_DIA.灵梦战斗后())
 			else:
-				_stage_director.dialogue(STAGE01_REIMU.魔理沙战斗后()))
+				_stage_director.dialogue(STAGE01_DIA.魔理沙战斗后()))
 
 
 ## 战后对话收尾（[code]stage_end[/code] 行间事件）：这关到此为止 → 走完整 stage_cleared

@@ -50,6 +50,17 @@ bgm_key = "music_4"
 is_unlocked = true
 metadata/_custom_type_script = "uid://be08pe8s61ass"
 
+[sub_resource type="Resource" id="Resource_dc8qr"]
+script = ExtResource("1")
+music_id = 6
+title = "温延的东方之血"
+comment = "温延的东方之血
+３Ａ面道中的音乐
+改自《东方永夜抄》的三面道中音乐——《怀念的东方之血》"
+bgm_key = "music_6"
+is_unlocked = true
+metadata/_custom_type_script = "uid://be08pe8s61ass"
+
 [sub_resource type="Resource" id="MusicRecord_03"]
 script = ExtResource("1")
 music_id = 7
@@ -125,6 +136,20 @@ bgm_key = "music_18"
 is_unlocked = true
 metadata/_custom_type_script = "uid://be08pe8s61ass"
 
+[sub_resource type="Resource" id="Resource_xp1ib"]
+script = ExtResource("1")
+music_id = 19
+title = "记忆记忆不说话"
+comment = "记忆记忆不说话
+结局的音乐
+有了那么多人在的世界，却始终没有记忆自己的记忆。
+尽管那样才是对的，但我还是试图做出一种第三人称的感觉。
+虚无主义是每个人都要经历的甚至可能反复的阶段，但却会是难忘且隐蔽的一段人生。
+失去人生目标的时候，或许就是感觉上最接近记忆体的时候吧。"
+bgm_key = "music_19"
+is_unlocked = true
+metadata/_custom_type_script = "uid://be08pe8s61ass"
+
 [resource]
 script = ExtResource("2")
-records = Array[ExtResource("1")]([SubResource("MusicRecord_01"), SubResource("MusicRecord_02"), SubResource("Resource_n7uf7"), SubResource("Resource_6bqoe"), SubResource("MusicRecord_03"), SubResource("Resource_lemic"), SubResource("MusicRecord_04"), SubResource("Resource_p7x6n"), SubResource("Resource_mnbxo"), SubResource("Resource_immyd")])
+records = Array[ExtResource("1")]([SubResource("MusicRecord_01"), SubResource("MusicRecord_02"), SubResource("Resource_n7uf7"), SubResource("Resource_6bqoe"), SubResource("Resource_dc8qr"), SubResource("MusicRecord_03"), SubResource("Resource_lemic"), SubResource("MusicRecord_04"), SubResource("Resource_p7x6n"), SubResource("Resource_mnbxo"), SubResource("Resource_immyd"), SubResource("Resource_xp1ib")])

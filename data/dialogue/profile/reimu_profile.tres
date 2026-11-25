@@ -5,15 +5,19 @@
 [ext_resource type="Texture2D" uid="uid://donm503f5kxc1" path="res://assets/Textures/character/reimu/reimu5.png" id="2_vrb1n"]
 [ext_resource type="Texture2D" uid="uid://b5fmo5dudgydl" path="res://assets/Textures/character/reimu/reimu4.png" id="3_vrb1n"]
 [ext_resource type="Texture2D" uid="uid://bhccrfu5y5unh" path="res://assets/Textures/character/reimu/reimu2.png" id="4_d6s24"]
+[ext_resource type="Texture2D" uid="uid://csykevp0yvkwi" path="res://assets/Textures/character/reimu/reimu6.png" id="5_85itq"]
+[ext_resource type="Texture2D" uid="uid://355dputtc2w7" path="res://assets/Textures/character/reimu/reimu3.png" id="6_oi102"]
 
 [resource]
 script = ExtResource("2_g4tib")
 char_name = "灵梦"
 portraits = {
 "叹气": ExtResource("3_vrb1n"),
+"生气": ExtResource("6_oi102"),
 "疑惑": ExtResource("2_vrb1n"),
 "笑": ExtResource("4_d6s24"),
-"通常": ExtResource("1_mru0b")
+"通常": ExtResource("1_mru0b"),
+"震惊": ExtResource("5_85itq")
 }
 default_bubble_offset = Vector2(-150, 250)
 metadata/_custom_type_script = "uid://bx50hqvly0v0c"

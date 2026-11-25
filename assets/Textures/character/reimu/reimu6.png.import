@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dr8bdyhgpsg70"
-path="res://.godot/imported/灵梦6.svg-b3c1e72a0a268131a3b7e2a677e937c0.ctex"
+uid="uid://csykevp0yvkwi"
+path="res://.godot/imported/reimu6.png-86d357fae9cabf3418406edc2fe50f74.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/Textures/character/reimu/灵梦6.svg"
-dest_files=["res://.godot/imported/灵梦6.svg-b3c1e72a0a268131a3b7e2a677e937c0.ctex"]
+source_file="res://assets/Textures/character/reimu/reimu6.png"
+dest_files=["res://.godot/imported/reimu6.png-86d357fae9cabf3418406edc2fe50f74.ctex"]
 
 [params]
 
@@ -38,6 +38,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false

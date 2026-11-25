@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bgkt7okare6ka"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_k5qir"]
+[ext_resource type="Script" uid="uid://5udbssa5ux36" path="res://data/stages/stage03B/phase/哆来咪三非/哆来咪三非.gd" id="2_aj45w"]
+
+[resource]
+script = ExtResource("1_k5qir")
+shoot_script = ExtResource("2_aj45w")
+metadata/_custom_type_script = "uid://70htyyc4o2hu"
