@@ -61,43 +61,13 @@ theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 18
 text = "Spell Practice Clear"
 
-[node name="Card" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 0
-offset_left = 116.0
-offset_top = 336.0
-offset_right = 832.0
-offset_bottom = 366.0
-grow_horizontal = 0
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 20
-text = "Spell Card"
-
-[node name="Stats" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 0
-offset_left = 116.0
-offset_top = 372.0
-offset_right = 832.0
-offset_bottom = 442.0
-grow_horizontal = 0
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 16
-text = "Boss"
-
 [node name="Options" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 0
 offset_left = 116.0
-offset_top = 468.0
+offset_top = 410.0
 offset_right = 620.0
-offset_bottom = 700.0
+offset_bottom = 650.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_override_constants/separation = 4

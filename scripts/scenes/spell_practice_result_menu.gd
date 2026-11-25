@@ -12,16 +12,6 @@ func configure(data: Dictionary) -> void:
 	var title := get_node_or_null("Title") as Label
 	if title:
 		title.text = "符卡练习完成"
-	var card := get_node_or_null("Card") as Label
-	if card:
-		card.text = str(data.get("card_name", ""))
-	var stats := get_node_or_null("Stats") as Label
-	if stats:
-		stats.text = "\n".join([
-			"Boss      %s" % str(data.get("boss_name", "")),
-			"Difficulty %s" % str(data.get("difficulty", "")),
-			"Character  %s" % str(data.get("character", "")),
-		])
 	if not _can_save:
 		var save := get_node_or_null("Options/Save")
 		if save:
