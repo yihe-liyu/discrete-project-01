@@ -8,6 +8,7 @@ var is_game_over_mode: bool = false
 const EXIT_DURATION := 0.5
 var _resuming: bool = false
 var _exit_done: bool = false
+var _resume_tween: Tween
 ## 危险操作的二级确认（结束 / 保存后结束 / 重开）。
 const CONFIRM_TITLE := 0
 const CONFIRM_SAVE := 1
@@ -56,6 +57,9 @@ func _is_save_locked() -> bool:
 func on_leave() -> void:
 	_is_nav_enabled = false
 	_stop_pulse()
+	if _resume_tween and _resume_tween.is_valid():
+		_resume_tween.kill()
+		_resume_tween = null
 	if _exit_done:
 		queue_free()
 		return
@@ -90,14 +94,23 @@ func _begin_resume() -> void:
 	_is_nav_enabled = false
 	_stop_pulse()
 	GameEvents.pause_exit_started.emit()
-	var tw := create_tween().set_parallel(true)
-	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(self, "modulate:a", 0.0, EXIT_DURATION)
+	_resume_tween = create_tween().set_parallel(true)
+	_resume_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_resume_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_resume_tween.tween_property(self, "modulate:a", 0.0, EXIT_DURATION)
 	if _container:
-		tw.tween_property(_container, "scale", Vector2(0.96, 0.96), EXIT_DURATION)
-	await tw.finished
+		_resume_tween.tween_property(_container, "scale", Vector2(0.96, 0.96), EXIT_DURATION)
+	_resume_tween.finished.connect(_finish_resume, CONNECT_ONE_SHOT)
+
+
+## 退场动画中再按一次 Esc：跳过剩余 0.5s，立刻恢复游戏。
+func _finish_resume() -> void:
+	if _exit_done:
+		return
 	_exit_done = true
+	if _resume_tween and _resume_tween.is_valid():
+		_resume_tween.kill()
+	_resume_tween = null
 	GameManager.resume_game()
 
 
@@ -199,6 +212,20 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		_confirm_input(event)
 		return
+	# 入场动画期间导航尚未启用，但 Esc 仍应能立即开始恢复。
+	# 退场动画期间再按一次 Esc，则跳过剩余动画立即完成恢复。
+	if event.is_action_pressed("ui_cancel") and not is_game_over_mode:
+		if _resuming:
+			sfx_back()
+			get_viewport().set_input_as_handled()
+			_finish_resume()
+			return
+		if not _is_nav_enabled:
+			sfx_back()
+			get_viewport().set_input_as_handled()
+			skip_entrance()
+			_begin_resume()
+			return
 	super._unhandled_input(event)
 
 
