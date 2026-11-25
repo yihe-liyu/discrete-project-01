@@ -131,6 +131,7 @@ func _start_normal_game() -> void:
 	if not data:
 		push_error("GameScene: 找不到关卡 stage_id=%d difficulty=%d" % [SaveData.current_stage_id, SaveData.selected_difficulty])
 		return
+	_game_ui.set_stage_frame(data.stage_no)
 	_load_background(data.background_scene)
 	_stage_runtime.load_stage(data)
 	# 录制 / 回放的 tick 钩子必须在关卡装好之后挂：observer 要读得到 entity registry。
@@ -143,6 +144,7 @@ func _start_normal_game() -> void:
 func _start_practice_game() -> void:
 	# 符卡练习：作者反馈 SE（尤其弹幕 kira）在练习里明显偏大。
 	# 这里是**场景级**压低 —— 正常流程的混音一个数都不动。
+	_game_ui.set_stage_frame(StageCatalog.stage_no_of(PracticeSession.stage_id))
 	AudioManager.sfx_trim_db = PRACTICE_SFX_TRIM_DB
 	_load_background(PracticeSession.background)
 	# 符卡练习不走 load_stage()，但背景的入场协程仍要启动（Stage03B 的黑场恢复等）。

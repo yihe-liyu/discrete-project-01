@@ -22,6 +22,8 @@ var _memory_num: Node2D
 var _memory_rect: ColorRect
 var _shader_time: float = 0.0
 
+const FRAME_DEFAULT := preload("res://assets/Textures/front/false_front.png")
+const FRAME_LATE := preload("res://assets/Textures/front/false_front_2.png")
 const _LIFE_TEX := preload("res://assets/Textures/front/life.png")
 const _SPELL_TEX := preload("res://assets/Textures/front/spell.png")
 
@@ -119,6 +121,16 @@ func _setup_front_crossfade() -> void:
 	add_child(_front_next)
 	# Front 是当前框；FrontNext 紧随其后，再后面才是各 HUD 节点。
 	move_child(_front_next, _front.get_index() + 1)
+
+
+## 按“面数”选框：Stage 4/5/6 使用 false_front_2，其余 false_front。
+static func frame_texture_for_stage(stage_no: int) -> Texture2D:
+	return FRAME_LATE if stage_no >= 4 and stage_no <= 6 else FRAME_DEFAULT
+
+
+## 按面数切框（同一套 crossfade）。
+func set_stage_frame(stage_no: int, fade_time: float = 0.35) -> void:
+	set_frame_texture(frame_texture_for_stage(stage_no), fade_time)
 
 
 ## 运行时换游戏框：新纹理淡入，淡入结束再写回 Front。
