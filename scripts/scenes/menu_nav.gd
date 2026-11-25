@@ -36,6 +36,8 @@ var _parent: Node                     # GameManager
 var _host: Control                    # 子页面容器（MainMenu 注入 %PageHost；R2：不再场景搜索）
 var _page_stack: Array[BasePage] = []  # 普通页面栈
 var _overlay_stack: Array[BasePage] = []  # 覆盖层栈
+## 覆盖层 pop 后让 wrapper 多活一会儿，等页面自己的 on_leave 淡出播完。
+const OVERLAY_RELEASE_DELAY := 0.25
 
 
 # ═══ 初始化 ═══
@@ -203,10 +205,8 @@ func pop_overlay() -> void:
 	if is_instance_valid(page):
 		page.on_leave()
 
-	# 清理 wrapper
-	var wrapper := page.get_parent()
-	if wrapper and wrapper is CanvasLayer:
-		wrapper.queue_free()
+	# 清理 wrapper：延迟到页面 on_leave 的淡出之后，避免退场动画被同帧删掉。
+	_release_wrapper_later(page.get_parent())
 
 	# 恢复游戏
 	if _overlay_stack.is_empty():
@@ -220,10 +220,8 @@ func pop_specific_overlay(page: BasePage) -> void:
 	_disconnect_signals(page)
 	if is_instance_valid(page):
 		page.on_leave()
-	# 清理 wrapper
-	var wrapper := page.get_parent()
-	if wrapper and wrapper is CanvasLayer:
-		wrapper.queue_free()
+	# 清理 wrapper：延迟到页面 on_leave 的淡出之后。
+	_release_wrapper_later(page.get_parent())
 	if _overlay_stack.is_empty():
 		_parent.get_tree().paused = false
 		resume_requested.emit()
@@ -240,6 +238,19 @@ func get_overlay_top() -> BasePage:
 
 
 # ═══ 内部 ═══
+
+func _release_wrapper_later(wrapper: Node) -> void:
+	if not is_instance_valid(wrapper):
+		return
+	var tree: SceneTree = _parent.get_tree()
+	if tree == null:
+		wrapper.queue_free()
+		return
+	var timer := tree.create_timer(OVERLAY_RELEASE_DELAY, true)
+	timer.timeout.connect(func():
+		if is_instance_valid(wrapper):
+			wrapper.queue_free())
+
 
 func _load_page(path: String) -> BasePage:
 	return load(path).instantiate() as BasePage

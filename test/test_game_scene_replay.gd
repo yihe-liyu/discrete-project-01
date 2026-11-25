@@ -389,3 +389,30 @@ func test_hud_survives_game_scene_rebuild() -> void:
 	assert_true(hud.visible, "游戏场景里 HUD 应可见")
 	second.queue_free()
 	await get_tree().process_frame
+
+
+## 单关练习通关应弹结束页，不能自动保存后直接回主菜单。
+func test_stage_practice_clear_shows_result_page() -> void:
+	SaveData.selected_difficulty = 1
+	SaveData.selected_character = 0
+	SaveData.is_stage_practice = true
+	SaveData.current_stage_id = 1
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 10:
+		await get_tree().physics_frame
+	var runtime = scene.get_node("%StageRuntime")
+	runtime.stage_cleared.emit()
+	await get_tree().process_frame
+	assert_true(GameManager.has_open_overlay(), "单关练习通关应弹结束页")
+	assert_true(ReplaySession.is_recording(), "结束页出现前不应自动保存")
+	for child in get_tree().root.get_children():
+		if child is CanvasLayer and child.layer == 64:
+			for page in child.get_children():
+				if page is BasePage:
+					GameManager.pop_overlay_menu(page)
+	get_tree().paused = false
+	GameManager.current_state = GameManager.AppState.MENU
+	ReplaySession.cancel_recording()
+	SaveData.reset_session()
+	SimClock.reset()

@@ -7,6 +7,7 @@ const STAGE_RESULT_MENU = preload("res://scenes/ui/stage_result_menu.tscn")
 const SPELL_RESULT_MENU = preload("res://scenes/ui/spell_practice_result_menu.tscn")
 const REPLAY_SAVE_MENU = preload("res://scenes/ui/pause_replay_save.tscn")
 const REPLAY_END_MENU = preload("res://scenes/ui/replay_end_menu.tscn")
+const STAGE_PRACTICE_RESULT_MENU = preload("res://scenes/ui/stage_practice_result_menu.tscn")
 const PRACTICE_FAIL_MENU = preload("res://scenes/ui/practice_fail_menu.tscn")
 
 var _blur_rect: ColorRect
@@ -442,9 +443,12 @@ func _on_stage_cleared():
 		return
 	if SaveData.is_stage_practice:
 		if ReplaySession.is_recording():
-			ReplaySession.finish_recording(_replay_meta("cleared"))
-		SaveData.is_stage_practice = false
-		GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
+			var menu: StagePracticeResultMenu = STAGE_PRACTICE_RESULT_MENU.instantiate() as StagePracticeResultMenu
+			menu.configure({"can_save": true})
+			menu.finished.connect(_on_stage_practice_result_action.bind(menu))
+			GameManager.push_overlay_menu(menu)
+			return
+		_return_to_title_after_practice()
 	elif not PracticeSession.is_practice_mode:
 		_show_stage_result()
 
@@ -538,6 +542,35 @@ func _wait_practice_defeat() -> void:
 	var start := SimClock.tick
 	while is_inside_tree() and SimClock.tick - start < 100:
 		await get_tree().physics_frame
+
+
+func _on_stage_practice_result_action(result: Dictionary, menu: BasePage) -> void:
+	var action := str(result.get("action", "return"))
+	if action == "save" and ReplaySession.is_recording():
+		_open_stage_practice_save(menu)
+		return
+	if action == "retry":
+		if ReplaySession.is_recording():
+			ReplaySession.cancel_recording()
+		GameManager.reload_current_scene()
+		return
+	if ReplaySession.is_recording():
+		ReplaySession.cancel_recording()
+	_return_to_title_after_practice()
+
+
+func _open_stage_practice_save(menu: BasePage) -> void:
+	var page: BasePage = REPLAY_SAVE_MENU.instantiate()
+	menu.visible = false
+	if menu is NavPage:
+		(menu as NavPage).set_navigation_enabled(false)
+	page.saved.connect(_on_stage_practice_save_saved.bind(page), CONNECT_ONE_SHOT)
+	page.back.connect(_restore_practice_menu.bind(menu), CONNECT_ONE_SHOT)
+	GameManager.push_overlay_menu(page)
+
+
+func _on_stage_practice_save_saved(_path: String, _page: BasePage) -> void:
+	_return_to_title_after_practice()
 
 
 func _on_practice_failed() -> void:

@@ -18,6 +18,7 @@ const PAGE_SCENES := [
 	"res://scenes/ui/spell_practice_result_menu.tscn",
 	"res://scenes/ui/replay_end_menu.tscn",
 	"res://scenes/ui/practice_fail_menu.tscn",
+	"res://scenes/ui/stage_practice_result_menu.tscn",
 	"res://scenes/ui/game_over_menu.tscn",
 	"res://scenes/ui/stage_result_menu.tscn",
 	"res://scenes/ui/replay_menu.tscn",

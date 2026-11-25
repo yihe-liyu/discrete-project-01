@@ -120,6 +120,7 @@
 - **回放结束页**：回放自然播完 / 中途结束后不再直接切场景，改为 `ReplayEndMenu`（暂停页同款）：返回标题菜单 / 再次播放录像；再次播放会重开同一路径。
 - **持久 HUD**：新增 `HudLayer` autoload + 独立 `scenes/ui/game_hud.tscn`。HUD 不再作为 `game_scene.tscn` 子节点，切面只复用 autoload 里同一份实例；`GameManager.scene_entered` 控制游戏内显示 / 菜单隐藏。`GameUI._process` 增加 resources 空守卫。
 - **游戏框按面切换**：`GameUI.set_stage_frame(stage_no)` 统一映射；Stage 4/5/6 使用 `false_front_2.png`，EX 使用 `true_front.png`，其余使用 `false_front.png`；普通关卡、符卡练习、录像回放都按当前面数走同一映射；路线切面时 HUD 跳过入场动画，避免切关时整块 HUD 重新加载的观感；游戏框仍保留 0.35s 交叉淡入。`GameUI` 新增 `set_frame_texture(texture, fade_time=0.25)` / `get_frame_texture()`；运行时自动建 `FrontNext` 第二 Sprite，夹在 `Front` 与 HUD 之间，新框淡入结束后写回 `Front`，暂停中也能继续。
+- **菜单收尾**：设置页仅在值真正变化时播导航音；MenuNav 覆盖层 pop 后延迟 0.25s 释放 wrapper，保存页/说明页的退场淡出可见；单关练习通关新增结束页（保存录像 / 再来一次 / 返回标题），不再自动保存直接回主菜单。
 - **暂停恢复手感**：暂停页入场动画期间 Esc 不再被吞，直接开始恢复；退场 0.5s 动画中再按一次 Esc 立即完成恢复（`_finish_resume` + `_resume_tween`），不再等满 0.5s。
 - **主菜单返回后标题消失**：`_deactivate_title` 的 0.12s 延迟 hide 没保存/取消；返回时 `_activate_title` 先 show，旧回调后 hide。标题列/Logo tween 改为共用 `_title_tween`，每次切换先 kill 旧的。
 - **菜单审计修复**：隐藏的结果/失败页打开保存页时显式关导航（防 ←/→ 泄漏到下层）；符卡练习加 `_is_confirming` 防连按跳级；回放页退场锁输入、翻页选本页首个非空槽、单条回放不再空响；主菜单 X 不再重复播 nav；关卡结算 X 走 return 且 finished 不再 ONE_SHOT；保存/改名失败改播 back。

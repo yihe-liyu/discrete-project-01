@@ -1,0 +1,96 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://d2a5l8qg8yl24" path="res://scripts/scenes/stage_practice_result_menu.gd" id="1_script"]
+
+[node name="StagePracticeResultMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+container_path = NodePath("Options")
+entrance_duration = 0.55
+entrance_stagger = 0.07
+highlight_color = Color(1, 1, 1, 1)
+normal_color = Color(0.52, 0.52, 0.52, 1)
+locked_color = Color(0.2, 0.2, 0.2, 1)
+
+[node name="Overlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 48.0
+offset_top = 16.0
+offset_right = 848.0
+offset_bottom = 944.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0.02, 0.05, 0.08, 0.03)
+
+[node name="Options" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 116.0
+offset_top = 540.0
+offset_right = 620.0
+offset_bottom = 780.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/separation = 4
+
+[node name="Save" type="VBoxContainer" parent="Options"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Options/Save"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "保存录像并返回"
+
+[node name="Sub" type="Label" parent="Options/Save"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "Save Replay and Return"
+
+[node name="Retry" type="VBoxContainer" parent="Options"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Options/Retry"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "再来一次"
+
+[node name="Sub" type="Label" parent="Options/Retry"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "Retry"
+
+[node name="Return" type="VBoxContainer" parent="Options"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Main" type="Label" parent="Options/Return"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+text = "返回标题菜单"
+
+[node name="Sub" type="Label" parent="Options/Return"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "Return to Title"

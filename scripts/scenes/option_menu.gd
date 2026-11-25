@@ -116,13 +116,13 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_left"):
 		get_viewport().set_input_as_handled()
 		_cancel_confirm()
-		_adjust(-1)
-		sfx_nav()
+		if _adjust(-1):
+			sfx_nav()
 	elif event.is_action_pressed("ui_right"):
 		get_viewport().set_input_as_handled()
 		_cancel_confirm()
-		_adjust(1)
-		sfx_nav()
+		if _adjust(1):
+			sfx_nav()
 	elif event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()
 		if ITEMS[_nav_index]["type"] == "action":
@@ -131,24 +131,30 @@ func _input(event: InputEvent) -> void:
 			_toggle()
 
 
-func _adjust(dir: int) -> void:
+## 调整当前项；返回 true = 值真的变了（无效项 / 到边界不发声）。
+func _adjust(dir: int) -> bool:
 	var item := ITEMS[_nav_index]
+	var changed := false
 	if item["type"] == "range":
 		var cur: float = float(SaveData.save_mgr.get_setting(item["key"], item["def"]))
 		var value := clampf(cur + dir * item["step"], item["min"], item["max"])
-		SaveData.save_mgr.set_setting(item["key"], value)
-		_apply_setting(item["key"], value)
+		changed = not is_equal_approx(value, cur)
+		if changed:
+			SaveData.save_mgr.set_setting(item["key"], value)
+			_apply_setting(item["key"], value)
 	elif item["type"] == "choice":
 		var choices: Array = item["choices"]
 		var idx: int = choices.find(SaveData.save_mgr.get_setting(item["key"], item["def"]))
 		if idx < 0:
 			idx = 0
 		var v2: int = choices[wrapi(idx + dir, 0, choices.size())]
-		SaveData.save_mgr.set_setting(item["key"], v2)
-		_apply_setting(item["key"], v2)
-	else:
-		return
-	_refresh_values()
+		changed = v2 != int(SaveData.save_mgr.get_setting(item["key"], item["def"]))
+		if changed:
+			SaveData.save_mgr.set_setting(item["key"], v2)
+			_apply_setting(item["key"], v2)
+	if changed:
+		_refresh_values()
+	return changed
 
 
 func _toggle() -> void:
