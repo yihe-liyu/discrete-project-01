@@ -443,6 +443,8 @@ func _make_number_sprite(p_name: String, pos: Vector2, tex: Texture2D = null, dc
 
 
 func _process(_delta: float) -> void:
+	if resources == null:
+		return
 	_hi_score_num.value = SaveData.get_high_score(0)
 	_score_num.value    = resources.current_score
 	_max_point_num.value= resources.max_point

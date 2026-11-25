@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：116 脚本 / **783 用例（781 通过 / 2 红：BossRegistry WIP + BGM）/ 6265 断言 / 93.7s** / 0 orphans / **0 pending**。
+**现状**：116 脚本 / **784 用例（783 通过 / 1 红：BGM 内容缺失）/ 6085 断言 / 94.0s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 62 | 468 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 62 | 469 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 18 | 120 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,7 +93,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（62 / 468）
+## C · 宿主 · 运行时系统（62 / 469）
 
 ### C1 组合根 / 服务 / 时间线（19 / 79）
 
@@ -172,7 +172,7 @@
 | [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类；bomb tick 编队间隔 / 角度补偿 | 6 | 6 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
-### C7 存档 / 回放 / 随机（18 / 63）
+### C7 存档 / 回放 / 随机（18 / 64）
 
 > 现行 replay = **Replay**（输入 + 命令 + 总/分项哈希；严格播放）。新回放工作看 [REPLAY_MODEL](REPLAY_MODEL.md)。
 
@@ -182,7 +182,7 @@
 | [test_sim_clock](../test/test_sim_clock.gd) | `SimClock`：tick 冻结 owner / 帧数 / 嵌套恢复 / 到点自动恢复 / reset | 4 | 0 |
 | [test_sim_hash](../test/test_sim_hash.gd) | `SimHash`：位置量化 / tick 进哈希 / 分项哈希隔离 / boss 位置进总哈希 / 同输入双跑 120 tick 逐 tick 一致 | 4 | 0 |
 | [test_replay](../test/test_replay.gd) | `Replay`：输入 + 命令 + 总/分项哈希格式往返 / 旧格式拒绝 / 兼容性闸门 / 结束 stage 不覆盖起始 stage / 对话推进命令 / 录制→落盘→回放逐 tick 一致 / 600 tick 最小 microbench（不含 GameScene）/ 指定槽位路径 + 名字保存 / 固定槽位不随删除移位 | 8 | 0 |
-| [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 / 跨面起点资源恢复 / **单关练习 + 符卡练习录制→回放恢复练习态** / 符卡练习 Boss 全破演出后才出结果页 / 回放自然播完停在结束页 / 练习失败弹失败页 / 保存页 X 返回可重开 / 失败页返回直接回标题 | 11 | 0 |
+| [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 / 跨面起点资源恢复 / **单关练习 + 符卡练习录制→回放恢复练习态** / 符卡练习 Boss 全破演出后才出结果页 / 回放自然播完停在结束页 / 练习失败弹失败页 / 保存页 X 返回可重开 / 失败页返回直接回标题 / 切场景 HUD 实例保持 | 12 | 0 |
 | [test_replay_menu](../test/test_replay_menu.gd) | Replay 菜单：25 固定槽位分页（18/页，按 metadata.slot 不移位）/ 全角列 / 名字 / 日期 / 机体 / 难度 / 完整面数 / 处理落率 / 改名持久化 / 末页 5 行 | 2 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |

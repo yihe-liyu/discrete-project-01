@@ -368,3 +368,24 @@ func test_practice_fail_return_goes_to_title() -> void:
 	await get_tree().create_timer(1.20, true).timeout
 	assert_eq(GameManager.current_state, GameManager.AppState.MENU, "应回到标题菜单状态")
 	assert_true(GameManager.current_scene_path.ends_with("main_menu.tscn"), "应切回标题场景")
+
+
+## 切场景后 HUD 应复用同一个实例，而不是跟着 GameScene 重建。
+func test_hud_survives_game_scene_rebuild() -> void:
+	var first: Node = GAME_SCENE.instantiate()
+	add_child_autofree(first)
+	for _i in 10:
+		await get_tree().physics_frame
+	var hud: GameUI = HudLayer.get_game_ui()
+	assert_not_null(hud, "进游戏后应收养 HUD")
+	first.queue_free()
+	await get_tree().process_frame
+	var second: Node = GAME_SCENE.instantiate()
+	add_child_autofree(second)
+	for _i in 10:
+		await get_tree().physics_frame
+	assert_eq(HudLayer.get_game_ui(), hud, "切场景后 HUD 实例应保持不变")
+	assert_true(hud.is_inside_tree(), "持久 HUD 应仍在树里")
+	assert_true(hud.visible, "游戏场景里 HUD 应可见")
+	second.queue_free()
+	await get_tree().process_frame

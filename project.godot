@@ -24,6 +24,7 @@ buses/default_bus_layout="uid://bs70o52h3qhwu"
 
 GameEvents="*res://scripts/autoload/game_events.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
+HudLayer="*res://scripts/autoload/hud_layer.gd"
 RNG="*res://scripts/autoload/rng.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 SimClock="*res://scripts/autoload/sim_clock.gd"
