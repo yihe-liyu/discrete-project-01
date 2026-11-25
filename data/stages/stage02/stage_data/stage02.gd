@@ -5,6 +5,11 @@ const ENEMY01 = preload("res://data/stages/stage02/enemy/enemy01.gd")
 const ENEMY02 = preload("res://data/stages/stage02/enemy/enemy02.gd")
 const ENEMY03 = preload("res://data/stages/stage02/enemy/enemy03.gd")
 
+const STAGE02_DIA = preload("res://data/dialogue/stage/stage02_dialogue.gd")
+
+var 关底峰星恒: BossData = BossCatalog.boss(2, 0)
+var 关底峰星恒句柄: BossHandle
+
 var _stage_director: StageDirector
 
 var 无主弹幕: SpawnSpec
@@ -17,6 +22,8 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 	if p_target: target = p_target
 
 	_stage_director = StageDirector.new(ctx)
+	# 先建命名句柄：boss_enter 之前的 display_name / boss_fight 事件也要能解析它。
+	关底峰星恒句柄 = BossHandle.new("boss_final", 关底峰星恒, "？？？", ctx.objects)
 
 	var timeline: Timeline = start_timeline()
 	var 标题纹理: Texture2D = preload("res://assets/Textures/front/logo/logo2.png")
@@ -334,9 +341,62 @@ func start(p_ctx: StageContext, p_target: Node2D = null):
 			.param("时间", 5)
 		)
 	)
+	
+	timeline.at(130).do(func():
+		if SaveData.selected_character == 0:
+			_stage_director.dialogue(STAGE02_DIA.灵梦战斗前())
+		#else:
+			#_stage_director.dialogue(STAGE02_DIA.魔理沙战斗前())
+	)
+	
+	_stage_director.on("boss_enter", _on_boss_enter)
+	_stage_director.on("display_name", _on_display_name)
+	_stage_director.on("bgm_switch", _on_bgm_switch)
+	_stage_director.on("boss_fight", _on_boss_fight)
+	_stage_director.on("stage_end", _on_stage_end)
 
 	super.start(ctx, target)
 
+func _on_boss_enter() -> void:
+	_stage_director.boss("boss_final", 关底峰星恒,
+		Vector2(1000, 500), Vector2(GameConfig.FIELD_CENTER_X, 250))
+	关底峰星恒句柄.show_name()
+
+func _on_display_name() -> void:
+	关底峰星恒句柄.set_name("峰星恒")
+
+func _on_bgm_switch() -> void:
+	_stage_director.bgm("music_3")
+
+func _on_boss_fight() -> void:
+	var 最终Boss: Boss = 关底峰星恒句柄.resolve()
+	if 最终Boss == null:
+		push_warning("stage02: boss_fight 时最终 Boss 不在场上（boss_enter 没跑？）")
+		return
+	if 最终Boss.current_phase() != null:
+		return
+	关底峰星恒句柄.show_phase_dots()
+	_timeline.start_sequence_now(
+		func(): return 关底峰星恒句柄.resolve(),
+		关底峰星恒.phases_for_difficulty(SaveData.selected_difficulty),
+		1.0)
+	
+	_timeline.wait(2.0).do(func(): 关底峰星恒句柄.defeat())
+	_timeline.wait(4.5).do(func():
+		if SaveData.selected_character == 0:
+			if ctx.player.get_memory() >= 50:
+				_stage_director.dialogue(STAGE02_DIA.灵梦战斗后_高记忆值())
+			else :
+				_stage_director.dialogue(STAGE02_DIA.灵梦战斗后_低记忆值())
+		#else:
+			#if ctx.player.get_memory() >= 50:
+				#_stage_director.dialogue(STAGE02_DIA.魔理沙战斗后_高记忆值())
+			#else :
+				#_stage_director.dialogue(STAGE02_DIA.魔理沙战斗后_低记忆值())
+	)
+
+func _on_stage_end() -> void:
+	_stage_director.finish_stage()
 
 ## 信号生命周期约定：场景 _exit_tree 统一断开 autoload 连接
 func _exit_tree() -> void:

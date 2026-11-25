@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bt5wfjd3fftol"]
+
+[ext_resource type="Script" uid="uid://dxinay88uun0c" path="res://data/stages/stage03B/phase/哆来咪四符/哆来咪四符.gd" id="2_ivskf"]
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="3_0bw1q"]
+
+[resource]
+script = ExtResource("3_0bw1q")
+name = "量变「旧梦之死」"
+uid = 59
+hp = 4500
+shoot_script = ExtResource("2_ivskf")

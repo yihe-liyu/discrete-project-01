@@ -1,22 +1,38 @@
 [gd_resource type="Resource" script_class="BossData" format=3 uid="uid://bdrun4vtsmvba"]
 
 [ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_rooi5"]
+[ext_resource type="Resource" uid="uid://duw5cum04wvb5" path="res://data/stages/stage03B/phase/哆来咪一非/哆来咪一非.tres" id="2_67q5h"]
+[ext_resource type="Resource" uid="uid://3emomyx7kya8" path="res://data/stages/stage03B/phase/哆来咪一符/符卡045.tres" id="2_aog4y"]
 [ext_resource type="Resource" uid="uid://b5s10bfw3s86a" path="res://data/stages/stage03B/phase/哆来咪三符/符卡053.tres" id="2_feed6"]
 [ext_resource type="Script" uid="uid://be7pe6gf4etpl" path="res://scripts/data/boss_data.gd" id="2_gdoqd"]
 [ext_resource type="Resource" uid="uid://cumk8u5otxocy" path="res://data/stages/stage03B/phase/哆来咪三符/符卡055.tres" id="3_8ac4r"]
+[ext_resource type="Resource" uid="uid://b0d2r4s13sklb" path="res://data/stages/stage03B/phase/哆来咪二符/符卡049.tres" id="3_dusa8"]
 [ext_resource type="PackedScene" uid="uid://cp4ehhqxgt7x4" path="res://data/enemy_visual/boss/stage01/kamorui.tscn" id="3_gdoqd"]
 [ext_resource type="Resource" uid="uid://bdwv3xpxkygbb" path="res://data/stages/stage03B/phase/哆来咪三符/符卡056.tres" id="4_2wcjb"]
+[ext_resource type="Resource" uid="uid://b475r1vseijpb" path="res://data/stages/stage03B/phase/哆来咪二非/哆来咪二非.tres" id="4_ctxho"]
+[ext_resource type="Resource" uid="uid://dwndeu4n7a507" path="res://data/stages/stage03B/phase/哆来咪一符/符卡047.tres" id="4_mgm70"]
 [ext_resource type="Resource" uid="uid://bnhkuxbs53yl6" path="res://data/stages/stage03B/phase/哆来咪三符/符卡054.tres" id="5_xv4fe"]
+[ext_resource type="Resource" uid="uid://bdviknho2epuw" path="res://data/stages/stage03B/phase/哆来咪二符/符卡051.tres" id="6_67q5h"]
+[ext_resource type="Resource" uid="uid://bgkt7okare6ka" path="res://data/stages/stage03B/phase/哆来咪三非/哆来咪三非.tres" id="6_aaf7d"]
+[ext_resource type="Resource" uid="uid://cgdoyxvarm3gh" path="res://data/stages/stage03B/phase/哆来咪一符/符卡048.tres" id="6_qk5c4"]
+[ext_resource type="Resource" uid="uid://c5bc5aglcgxno" path="res://data/stages/stage03B/phase/哆来咪一符/符卡046.tres" id="8_88sgj"]
+[ext_resource type="Resource" uid="uid://oqkxgf53lkha" path="res://data/stages/stage03B/phase/哆来咪四非/哆来咪四非.tres" id="8_erj6i"]
+[ext_resource type="Resource" uid="uid://bu12puc5mbad7" path="res://data/stages/stage03B/phase/哆来咪二符/符卡052.tres" id="9_ctxho"]
+[ext_resource type="Resource" uid="uid://di46usknqgsmn" path="res://data/stages/stage03B/phase/哆来咪四符/符卡057.tres" id="9_t1frn"]
+[ext_resource type="Resource" uid="uid://dekk8l14krrxf" path="res://data/stages/stage03B/phase/哆来咪二符/符卡050.tres" id="12_aaf7d"]
+[ext_resource type="Resource" uid="uid://bt5wfjd3fftol" path="res://data/stages/stage03B/phase/哆来咪四符/符卡059.tres" id="13_lcxsq"]
+[ext_resource type="Resource" uid="uid://8ja1ungde8n0" path="res://data/stages/stage03B/phase/哆来咪四符/符卡060.tres" id="17_jwwg7"]
+[ext_resource type="Resource" uid="uid://ivsww41qbo14" path="res://data/stages/stage03B/phase/哆来咪四符/符卡058.tres" id="21_qlqjg"]
 
 [resource]
 script = ExtResource("2_gdoqd")
 boss_name = "哆来咪"
 section_label = "关底"
 visual = ExtResource("3_gdoqd")
-phases_easy = Array[ExtResource("1_rooi5")]([ExtResource("2_feed6")])
-phases_normal = Array[ExtResource("1_rooi5")]([ExtResource("5_xv4fe")])
-phases_hard = Array[ExtResource("1_rooi5")]([ExtResource("3_8ac4r")])
-phases_lunatic = Array[ExtResource("1_rooi5")]([ExtResource("4_2wcjb")])
+phases_easy = Array[ExtResource("1_rooi5")]([ExtResource("2_67q5h"), ExtResource("2_aog4y"), ExtResource("4_ctxho"), ExtResource("3_dusa8"), ExtResource("6_aaf7d"), ExtResource("2_feed6"), ExtResource("8_erj6i"), ExtResource("9_t1frn")])
+phases_normal = Array[ExtResource("1_rooi5")]([ExtResource("2_67q5h"), ExtResource("8_88sgj"), ExtResource("4_ctxho"), ExtResource("12_aaf7d"), ExtResource("6_aaf7d"), ExtResource("5_xv4fe"), ExtResource("8_erj6i"), ExtResource("21_qlqjg")])
+phases_hard = Array[ExtResource("1_rooi5")]([ExtResource("2_67q5h"), ExtResource("4_mgm70"), ExtResource("4_ctxho"), ExtResource("6_67q5h"), ExtResource("6_aaf7d"), ExtResource("3_8ac4r"), ExtResource("8_erj6i"), ExtResource("13_lcxsq")])
+phases_lunatic = Array[ExtResource("1_rooi5")]([ExtResource("2_67q5h"), ExtResource("6_qk5c4"), ExtResource("4_ctxho"), ExtResource("9_ctxho"), ExtResource("6_aaf7d"), ExtResource("4_2wcjb"), ExtResource("8_erj6i"), ExtResource("17_jwwg7")])
 stage_id = 4
 order = 1
 metadata/_custom_type_script = "uid://be7pe6gf4etpl"

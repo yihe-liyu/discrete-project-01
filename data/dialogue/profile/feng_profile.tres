@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CharacterProfile" format=3 uid="uid://c4acba44kssyd"]
+
+[ext_resource type="Script" uid="uid://bx50hqvly0v0c" path="res://scripts/data/character_profile.gd" id="1_dc8qr"]
+[ext_resource type="Texture2D" uid="uid://0jd4pvu6yokg" path="res://assets/Textures/character/fengxingheng/fengxingheng1.png" id="1_em0eo"]
+[ext_resource type="Texture2D" uid="uid://cupvbt2du67ng" path="res://assets/Textures/character/fengxingheng/fengxingheng2.png" id="2_yhekw"]
+[ext_resource type="Texture2D" uid="uid://chfhyvvb5cjfe" path="res://assets/Textures/character/fengxingheng/fengxingheng3.png" id="3_o0m80"]
+[ext_resource type="Texture2D" uid="uid://dha20labimi0r" path="res://assets/Textures/character/fengxingheng/fengxingheng4.png" id="4_yhekw"]
+
+[resource]
+script = ExtResource("1_dc8qr")
+char_name = "峰星恒"
+portraits = {
+"尴尬": ExtResource("3_o0m80"),
+"战败": ExtResource("4_yhekw"),
+"笑": ExtResource("2_yhekw"),
+"通常": ExtResource("1_em0eo")
+}
+default_bubble_offset = Vector2(-650, 250)
+metadata/_custom_type_script = "uid://bx50hqvly0v0c"

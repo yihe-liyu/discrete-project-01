@@ -1,0 +1,59 @@
+[gd_scene format=3 uid="uid://bx0ksoevx5flb"]
+
+[ext_resource type="Texture2D" uid="uid://domruurqjc5gg" path="res://assets/Textures/character/kamorui/point01.png" id="1_mprwf"]
+[ext_resource type="Texture2D" uid="uid://0mfiictawetd" path="res://assets/Textures/character/kamorui/point02.png" id="2_rj1vc"]
+[ext_resource type="Texture2D" uid="uid://bmbvgqb3xj3g1" path="res://assets/Textures/character/kamorui/point03.png" id="3_bq26p"]
+[ext_resource type="Texture2D" uid="uid://bsvin8ace1rcl" path="res://assets/Textures/character/kamorui/point04.png" id="4_owtsb"]
+[ext_resource type="Texture2D" uid="uid://pljg2i2qgm56" path="res://assets/Textures/character/kamorui/point_r11.png" id="5_m2nxs"]
+[ext_resource type="Texture2D" uid="uid://knwfcnj1b6aw" path="res://assets/Textures/character/kamorui/point_r12.png" id="6_x1fns"]
+[ext_resource type="Texture2D" uid="uid://c0hywferpx0hl" path="res://assets/Textures/character/kamorui/point_r01.png" id="7_4v1sd"]
+[ext_resource type="Texture2D" uid="uid://ckj0man4kajs0" path="res://assets/Textures/character/kamorui/point_r02.png" id="8_8f88t"]
+[ext_resource type="Script" uid="uid://byoi5ui6mxm6i" path="res://scripts/enemy/enemy_visual.gd" id="9_7xtab"]
+
+[sub_resource type="SpriteFrames" id="frames"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_mprwf")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_rj1vc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_bq26p")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_owtsb")
+}],
+"loop": 1,
+"name": &"idle",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_m2nxs")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_x1fns")
+}],
+"loop": 1,
+"name": &"right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("7_4v1sd")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_8f88t")
+}],
+"loop": 0,
+"name": &"righting",
+"speed": 8.0
+}]
+
+[node name="Root" type="AnimatedSprite2D" unique_id=1835439820]
+sprite_frames = SubResource("frames")
+animation = &"idle"
+autoplay = "idle"
+script = ExtResource("9_7xtab")

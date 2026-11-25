@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://bu12puc5mbad7"]
+
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="1_xymx1"]
+[ext_resource type="Script" uid="uid://c7884q0y8nkyg" path="res://data/stages/stage03B/phase/哆来咪二符/哆来咪二符.gd" id="2_wusbk"]
+
+[resource]
+script = ExtResource("1_xymx1")
+name = "络梦「环网汲梦」"
+uid = 52
+hp = 4500
+shoot_script = ExtResource("2_wusbk")
+metadata/_custom_type_script = "uid://70htyyc4o2hu"

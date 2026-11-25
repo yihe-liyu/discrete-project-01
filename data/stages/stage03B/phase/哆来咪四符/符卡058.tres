@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhaseData" format=3 uid="uid://ivsww41qbo14"]
+
+[ext_resource type="Script" uid="uid://dxinay88uun0c" path="res://data/stages/stage03B/phase/哆来咪四符/哆来咪四符.gd" id="2_ogh8y"]
+[ext_resource type="Script" uid="uid://70htyyc4o2hu" path="res://scripts/data/phase_data.gd" id="3_hxo07"]
+
+[resource]
+script = ExtResource("3_hxo07")
+name = "变符「梦貘食梦」"
+uid = 58
+hp = 4500
+shoot_script = ExtResource("2_ogh8y")
