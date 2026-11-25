@@ -24,6 +24,7 @@ var _shader_time: float = 0.0
 
 const FRAME_DEFAULT := preload("res://assets/Textures/front/false_front.png")
 const FRAME_LATE := preload("res://assets/Textures/front/false_front_2.png")
+const FRAME_EX := preload("res://assets/Textures/front/true_front.png")
 const _LIFE_TEX := preload("res://assets/Textures/front/life.png")
 const _SPELL_TEX := preload("res://assets/Textures/front/spell.png")
 
@@ -123,8 +124,10 @@ func _setup_front_crossfade() -> void:
 	move_child(_front_next, _front.get_index() + 1)
 
 
-## 按“面数”选框：Stage 4/5/6 使用 false_front_2，其余 false_front。
+## 按“面数”选框：Stage 4/5/6 使用 false_front_2，EX（stage_no=7）使用 true_front，其余 false_front。
 static func frame_texture_for_stage(stage_no: int) -> Texture2D:
+	if stage_no == 7:
+		return FRAME_EX
 	return FRAME_LATE if stage_no >= 4 and stage_no <= 6 else FRAME_DEFAULT
 
 
