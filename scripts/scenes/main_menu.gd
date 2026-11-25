@@ -11,6 +11,9 @@ extends NavPage
 
 
 var _logo_tween: Tween
+## 标题列 / Logo 淡入淡出共用一个 tween：新的 deactivate/activate 必须先 kill 旧的，
+## 否则旧的 0.12s 延迟 hide 会在 activate 之后触发，把整个标题列藏掉。
+var _title_tween: Tween
 
 
 func _ready() -> void:
@@ -150,29 +153,35 @@ func _deactivate_title() -> void:
 	_is_nav_enabled = false
 	_stop_pulse()
 	refresh_colors()
+	if _title_tween:
+		_title_tween.kill()
+		_title_tween = null
 
 	# 与 MenuNav 黑场同步渐隐（0.12s）
-	var tween := create_tween().set_parallel(true)
-	tween.tween_property(_container, "modulate:a", 0.0, 0.12)
-	tween.tween_property(_logo.material, "shader_parameter/alpha_mult", 0.0, 0.12)
-	tween.tween_property(_particles, "modulate:a", 0.5, 0.12)
-	tween.tween_callback(_container.hide).set_delay(0.12)
-	tween.tween_callback(_logo.hide).set_delay(0.12)
+	_title_tween = create_tween().set_parallel(true)
+	_title_tween.tween_property(_container, "modulate:a", 0.0, 0.12)
+	_title_tween.tween_property(_logo.material, "shader_parameter/alpha_mult", 0.0, 0.12)
+	_title_tween.tween_property(_particles, "modulate:a", 0.5, 0.12)
+	_title_tween.tween_callback(_container.hide).set_delay(0.12)
+	_title_tween.tween_callback(_logo.hide).set_delay(0.12)
 
 
 func _activate_title() -> void:
 	if not is_instance_valid(self) or not is_instance_valid(_container):
 		return
+	if _title_tween:
+		_title_tween.kill()
+		_title_tween = null
 	_container.show()
 	_logo.show()
 	_container.modulate.a = 0.0
 	_logo.material.set_shader_parameter("alpha_mult", 0.0)
 
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_container, "modulate:a", 1.0, 0.25)
-	tw.tween_property(_logo.material, "shader_parameter/alpha_mult", 1.0, 0.25)
-	tw.tween_property(_particles, "modulate:a", 0.0, 0.25)
-	tw.tween_callback(func():
+	_title_tween = create_tween().set_parallel(true)
+	_title_tween.tween_property(_container, "modulate:a", 1.0, 0.25)
+	_title_tween.tween_property(_logo.material, "shader_parameter/alpha_mult", 1.0, 0.25)
+	_title_tween.tween_property(_particles, "modulate:a", 0.0, 0.25)
+	_title_tween.tween_callback(func():
 		_refresh_spell_lock()   # 清空数据后回主菜单应立刻重新锁上符卡练习
 		refresh_colors()
 		_is_nav_enabled = true
