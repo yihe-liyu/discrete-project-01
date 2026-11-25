@@ -34,7 +34,9 @@ func _on_start() -> void:
 		var 激光 := LaserPresets.straight(Vector2.ZERO, Vector2(0, 1500))
 		激光模板 = LaserTemplate.new(&"哆来咪道中一符_laser", 激光, Color.GOLD, {
 			"grow": true,
-			"grow_speed": 重力加速度 * 3,
+			# LaserBeam 现在每 tick 只 step 一次；旧双步进时代的 ×3 实际是 ×6，
+			# 这里补回 ×6，恢复这张卡原来的激光生长速度。
+			"grow_speed": 重力加速度 * 6,
 			"tail": 激光长度,
 			"additive": true,
 			"core_color": Color(1.0, 1.0, 0.9),

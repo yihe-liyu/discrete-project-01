@@ -105,6 +105,13 @@
 
 ## 记录
 
+### 2026-11-25 — 哆来咪道中一符激光速度回调
+
+- **现象**：符卡 041–044 的收尾激光比之前明显慢。
+- **根因**：`LaserBeam` 以前每物理帧被 `LaserEngine.step` 和自身 `_physics_process` 各推进一次；tick 修复后只走一次，内容里的 `grow_speed = 重力加速度 × 3` 实际只剩旧手感的一半。
+- **修复**：该 LaserTemplate 改为 `重力加速度 × 6`，恢复旧速度；全局扫描后只有这一处内容使用 `grow_speed`。
+- **影响**：内容行为变化，`content_hash` 会改变，旧录像按内容门禁拒绝。
+
 ### 2026-11-24 — 暂停页参考图 + 框内模糊 + 动画同步
 
 - **练习 replay**：单关练习 / 符卡练习现在也录制；metadata 带 `practice_mode`（stage/spell）、`practice_stage_id`、`practice_phase_index`；回放前恢复 `SaveData.is_stage_practice` / `PracticeSession`，练习通关或死亡后回到对应菜单。
