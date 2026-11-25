@@ -28,6 +28,11 @@ func on_leave() -> void:
 	_overlay_leave(_container)
 
 
+## X / Esc 不是关闭 overlay，而是走“返回”选项，避免恢复游戏。
+func _on_cancel() -> void:
+	finished.emit({"action": "return"})
+
+
 func _on_item_selected(index: int) -> void:
 	match index:
 		0:
