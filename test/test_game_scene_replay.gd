@@ -205,3 +205,35 @@ func test_spell_practice_records_and_plays_back() -> void:
 	playback.queue_free()
 	await get_tree().process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## 符卡练习 Boss 击破：先播正常流程的全破演出，再弹结果页；结果页前不能自动落盘。
+func test_spell_practice_boss_defeat_waits_for_effect_then_result() -> void:
+	SaveData.selected_difficulty = 1
+	SaveData.selected_character = 0
+	var phase := BossCatalog.phase_at(1, 0, 1)
+	var boss_data := BossCatalog.boss_of_phase(1, 0)
+	PracticeSession.start(phase, boss_data.visual, boss_data.boss_name, 1, 0,
+		boss_data.spell_background, BossCatalog.practice_bgm_key(boss_data, 1))
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 20:
+		await get_tree().physics_frame
+	var runtime = scene.get_node("%StageRuntime")
+	var enemies: Array = runtime.entity_registry.get_active_enemies()
+	assert_gt(enemies.size(), 0, "练习 Boss 应已生成")
+	var boss = enemies[0]
+	boss.phase_cleared.emit(true, 0)
+	assert_true(ReplaySession.is_recording(), "击破后结果页出现前不应自动落盘")
+	for _i in 140:
+		await get_tree().physics_frame
+	assert_true(GameManager.has_open_overlay(), "演出结束后应弹出结果页")
+	assert_true(ReplaySession.is_recording(), "结果页不能自动结束录像")
+	for child in get_tree().root.get_children():
+		if child is CanvasLayer and child.layer == 64:
+			for page in child.get_children():
+				if page is BasePage:
+					GameManager.pop_overlay_menu(page)
+	get_tree().paused = false
+	GameManager.current_state = GameManager.AppState.MENU
+	SimClock.reset()

@@ -171,7 +171,7 @@ func _start_practice_game() -> void:
 	var player := %Player
 	if player:
 		player.bind_ctx(boss.ctx)
-	boss.phase_cleared.connect(func(_c: bool, _b: int): boss.die())
+	boss.phase_cleared.connect(func(_c: bool, _b: int): _defeat_practice_boss(boss))
 	GameEvents.boss_defeated.connect(_on_practice_cleared)
 	if ReplaySession.is_playing():
 		SimClock.set_tick_hooks(_on_replay_prepare, _on_replay_observe)
@@ -473,6 +473,20 @@ func _on_stage_result_action(result: Dictionary, menu: BasePage) -> void:
 	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 
+## 符卡练习 Boss 被击破：复用正常流程的 play_defeat + 受控退场，播完再弹结果页。
+func _defeat_practice_boss(boss: Boss) -> void:
+	if boss == null or not is_instance_valid(boss):
+		return
+	boss.set_exit_controlled()
+	boss.play_defeat()
+	boss.die()
+	var mover := TickMover.attach(boss)
+	mover.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	mover.tween_property(boss, "global_position",
+		Vector2(GameConfig.FIELD_CENTER_X, -150.0), 1.4)
+	mover.tween_callback(boss.queue_free)
+
+
 func _on_practice_cleared(_boss: Node) -> void:
 	if _ending:
 		return
@@ -487,6 +501,8 @@ func _on_practice_cleared(_boss: Node) -> void:
 		_finish_playback()
 		return
 	if ReplaySession.is_recording():
+		# 等 Boss 全破演出 / 退场走完（含 hitstop）再出结果页。
+		await _wait_practice_defeat()
 		var data := {
 			"can_save": true,
 			"card_name": PracticeSession.phase.name if PracticeSession.phase else "",
@@ -500,6 +516,12 @@ func _on_practice_cleared(_boss: Node) -> void:
 		GameManager.push_overlay_menu(menu)
 		return
 	_return_to_practice_menu()
+
+
+func _wait_practice_defeat() -> void:
+	var start := SimClock.tick
+	while is_inside_tree() and SimClock.tick - start < 100:
+		await get_tree().physics_frame
 
 
 func _on_practice_result_action(result: Dictionary, menu: BasePage) -> void:
