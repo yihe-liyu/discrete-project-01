@@ -19,7 +19,7 @@
 ./tools/verify.sh --fast                             # 快速冒烟（~8s，不全量）
 ```
 
-**现状**：116 脚本 / **780 用例（778 通过 / 2 红：BossRegistry WIP + BGM）/ 6252 断言 / 85.9s** / 0 orphans / **0 pending**。
+**现状**：116 脚本 / **781 用例（779 通过 / 2 红：BossRegistry WIP + BGM）/ 6258 断言 / 88.1s** / 0 orphans / **0 pending**。
 
 ## 分层
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | **A 元守卫 · 工程契约** | 11 | 63 | 跨层的红线/约定，不属任何功能 |
 | **B 内核 · 原生 C++ + 桥接** | 17 | 94 | `gdextension/` + `kernel_bridge/`，含 **parity 套件** |
-| **C 宿主 · 运行时系统** | 62 | 465 | `scripts/**` 的实体/系统/服务 |
+| **C 宿主 · 运行时系统** | 62 | 466 | `scripts/**` 的实体/系统/服务 |
 | **D UI / 菜单** | 18 | 120 | `scenes/ui/**` 与 HUD |
 | **E 内容** | 4 | 26 | `data/**` 的形状与合法性 |
 | **F 工具 · 无头工具** | 2 | 9 | 运行时记录 / 内容源码扫描（创作台 UI 已退役） |
@@ -93,7 +93,7 @@
 > GUT 对 pending **不返回非 0**，所以这条「静默跳过」通道已由 `test/run_tests.sh` 的守卫堵住
 > —— 详见「已知的坑」第 1 条。
 
-## C · 宿主 · 运行时系统（62 / 465）
+## C · 宿主 · 运行时系统（62 / 466）
 
 ### C1 组合根 / 服务 / 时间线（19 / 79）
 
@@ -117,7 +117,7 @@
 | [test_timeline_sequence](../test/test_timeline_sequence.gd) | `Timeline.sequence_phases`：按序连打阶段（击破→gap→下一张） | 3 | 0 |
 | [test_content_manifest](../test/test_content_manifest.gd) | `ContentManifest`：Stage / Boss / Phase / Variant 去重索引、难度变体来源、Boss 槽引用一致性 | 3 | 0 |
 | [test_difficulty](../test/test_difficulty.gd) | 难度维度契约：0..4 / 展示名；`diff_pick` / `diff_get` 的非法难度、空数组、Extra 用 4 项数组会响亮报错并回落最后一项 | 6 | 0 |
-| [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：17 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
+| [test_page_smoke](../test/test_page_smoke.gd) | 逐页 F6 冒烟：18 个页面场景各自实例化入树、跑一帧，且不 push_error / engine error | 1 | 0 |
 | [test_stage_context_lifecycle](../test/test_stage_context_lifecycle.gd) | `StageContext` 服务弱引用 ctx 后不形成 RefCounted 环（Dialogue / Item / Player / Boss / Enemy 五个服务都有回归） + **B3：`ctx.decor` 取背景声明的 `DecorManager`（不按名字找 / 不动态建）** + **R2：对话框挂注入的 StageRuntime，不再摸 `current_scene`** | 8 | 0 |
 | [test_time_scheduler](../test/test_time_scheduler.gd) | `TimeScheduler`：固定 DT 的倍率/慢放/单帧补 tick 上限；只改每帧 tick 数，不改每 tick 的 `1/60` | 2 | 0 |
 | [test_timeline_phase_unfreeze](../test/test_timeline_phase_unfreeze.gd) | B 方案回归：Boss 阶段战斗不再冻结时间轴 | 1 | 0 |
@@ -172,7 +172,7 @@
 | [test_bomb_data](../test/test_bomb_data.gd) | `BombData` 家族：基类（外观/编队/无敌）+ 子类；bomb tick 编队间隔 / 角度补偿 | 6 | 6 |
 | [test_mist_bomb](../test/test_mist_bomb.gd) | `KernelMistBomb`：分阶段展开 + 跟随自机 + 椭圆持续伤害/清弹 | 5 | 9 |
 
-### C7 存档 / 回放 / 随机（18 / 60）
+### C7 存档 / 回放 / 随机（18 / 61）
 
 > 现行 replay = **Replay**（输入 + 命令 + 总/分项哈希；严格播放）。新回放工作看 [REPLAY_MODEL](REPLAY_MODEL.md)。
 
@@ -182,7 +182,7 @@
 | [test_sim_clock](../test/test_sim_clock.gd) | `SimClock`：tick 冻结 owner / 帧数 / 嵌套恢复 / 到点自动恢复 / reset | 4 | 0 |
 | [test_sim_hash](../test/test_sim_hash.gd) | `SimHash`：位置量化 / tick 进哈希 / 分项哈希隔离 / boss 位置进总哈希 / 同输入双跑 120 tick 逐 tick 一致 | 4 | 0 |
 | [test_replay](../test/test_replay.gd) | `Replay`：输入 + 命令 + 总/分项哈希格式往返 / 旧格式拒绝 / 兼容性闸门 / 结束 stage 不覆盖起始 stage / 对话推进命令 / 录制→落盘→回放逐 tick 一致 / 600 tick 最小 microbench（不含 GameScene）/ 指定槽位路径 + 名字保存 / 固定槽位不随删除移位 | 8 | 0 |
-| [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 / 跨面起点资源恢复 / **单关练习 + 符卡练习录制→回放恢复练习态** / 符卡练习 Boss 全破演出后才出结果页 / 回放自然播完停在结束页 | 8 | 0 |
+| [test_game_scene_replay](../test/test_game_scene_replay.gd) | GameScene 接入：普通局自动开录 / 落盘可读 / 真实场景录制 300 tick、回放前 200 tick 哈希一致 / bomb 命令 300 tick 录制→回放 / 跨面起点资源恢复 / **单关练习 + 符卡练习录制→回放恢复练习态** / 符卡练习 Boss 全破演出后才出结果页 / 回放自然播完停在结束页 / 练习失败弹失败页 | 9 | 0 |
 | [test_replay_menu](../test/test_replay_menu.gd) | Replay 菜单：25 固定槽位分页（18/页，按 metadata.slot 不移位）/ 全角列 / 名字 / 日期 / 机体 / 难度 / 完整面数 / 处理落率 / 改名持久化 / 末页 5 行 | 2 | 0 |
 | [test_rng_seed](../test/test_rng_seed.gd) | RNG 可复现性 —— Replay 系统的基础保证 + 状态快照恢复 | 6 | 0 |
 | [test_clear_data](../test/test_clear_data.gd) | 「清空数据」+ SaveManager 可靠性：清空保留设置、**版本号 / 原子写 / .bak 回退 / 读档校验** | 9 | 0 |

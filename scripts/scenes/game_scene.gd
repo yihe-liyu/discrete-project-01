@@ -7,6 +7,7 @@ const STAGE_RESULT_MENU = preload("res://scenes/ui/stage_result_menu.tscn")
 const SPELL_RESULT_MENU = preload("res://scenes/ui/spell_practice_result_menu.tscn")
 const REPLAY_SAVE_MENU = preload("res://scenes/ui/pause_replay_save.tscn")
 const REPLAY_END_MENU = preload("res://scenes/ui/replay_end_menu.tscn")
+const PRACTICE_FAIL_MENU = preload("res://scenes/ui/practice_fail_menu.tscn")
 
 var _blur_rect: ColorRect
 var _blur_material: ShaderMaterial
@@ -175,7 +176,12 @@ func _start_practice_game() -> void:
 	var player := %Player
 	if player:
 		player.bind_ctx(boss.ctx)
-	boss.phase_cleared.connect(func(_c: bool, _b: int): _defeat_practice_boss(boss))
+	boss.phase_cleared.connect(func(captured: bool, _b: int):
+		if captured:
+			_defeat_practice_boss(boss)
+		else:
+			_on_practice_failed()
+	)
 	GameEvents.boss_defeated.connect(_on_practice_cleared)
 	if ReplaySession.is_playing():
 		SimClock.set_tick_hooks(_on_replay_prepare, _on_replay_observe)
@@ -390,6 +396,11 @@ func _on_player_death():
 	# 这段窗口里可能已被击破/通关结算过（那时主菜单已经出来了）→ 不能再叠一个 Game Over
 	if _ending or not is_inside_tree():
 		return
+	# 练习模式失败 → 练习失败页（保存录像 / 重试 / 回标题），不走普通 Game Over。
+	if SaveData.is_stage_practice or PracticeSession.is_practice_mode:
+		_ending = true
+		_show_practice_fail_menu()
+		return
 	# Game Over 也是一次 run 的结束：整条 run 的累计分同样要参与高分。
 	if not SaveData.is_stage_practice and not PracticeSession.is_practice_mode:
 		var res: PlayerResources = _stage_runtime.entity_registry.get_player_resources()
@@ -526,6 +537,59 @@ func _wait_practice_defeat() -> void:
 	var start := SimClock.tick
 	while is_inside_tree() and SimClock.tick - start < 100:
 		await get_tree().physics_frame
+
+
+func _on_practice_failed() -> void:
+	if _ending:
+		return
+	_ending = true
+	if ReplaySession.is_playing():
+		_finish_playback()
+		return
+	_show_practice_fail_menu()
+
+
+func _show_practice_fail_menu() -> void:
+	var menu: PracticeFailMenu = PRACTICE_FAIL_MENU.instantiate() as PracticeFailMenu
+	menu.configure({"can_save": ReplaySession.is_recording()})
+	menu.finished.connect(_on_practice_fail_action.bind(menu), CONNECT_ONE_SHOT)
+	GameManager.push_overlay_menu(menu)
+
+
+func _on_practice_fail_action(result: Dictionary, menu: BasePage) -> void:
+	var action := str(result.get("action", "return"))
+	if action == "save" and ReplaySession.is_recording():
+		_open_practice_fail_save(menu)
+		return
+	GameManager.pop_overlay_menu(menu)
+	if action == "retry":
+		if ReplaySession.is_recording():
+			ReplaySession.cancel_recording()
+		GameManager.reload_current_scene()
+		return
+	if ReplaySession.is_recording():
+		ReplaySession.cancel_recording()
+	_return_to_title_after_practice()
+
+
+func _open_practice_fail_save(menu: BasePage) -> void:
+	var page: BasePage = REPLAY_SAVE_MENU.instantiate()
+	menu.visible = false
+	page.saved.connect(_on_practice_fail_save_saved.bind(page), CONNECT_ONE_SHOT)
+	page.back.connect(func(): menu.visible = true, CONNECT_ONE_SHOT)
+	GameManager.push_overlay_menu(page)
+
+
+func _on_practice_fail_save_saved(_path: String, page: BasePage) -> void:
+	if is_instance_valid(page):
+		GameManager.pop_overlay_menu(page)
+	_return_to_title_after_practice()
+
+
+func _return_to_title_after_practice() -> void:
+	PracticeSession.finish()
+	SaveData.reset_session()
+	GameManager.change_scene("res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
 
 func _on_practice_result_action(result: Dictionary, menu: BasePage) -> void:

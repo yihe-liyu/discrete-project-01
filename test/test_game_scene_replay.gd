@@ -267,3 +267,31 @@ func test_replay_natural_end_shows_end_page() -> void:
 	playback.queue_free()
 	await get_tree().process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## 练习模式失败（死亡）应弹出练习失败页，而不是普通 Game Over；录像保留到用户选择。
+func test_practice_failure_shows_fail_menu() -> void:
+	SaveData.selected_difficulty = 1
+	SaveData.selected_character = 0
+	var phase := BossCatalog.phase_at(1, 0, 1)
+	var boss_data := BossCatalog.boss_of_phase(1, 0)
+	PracticeSession.start(phase, boss_data.visual, boss_data.boss_name, 1, 0,
+		boss_data.spell_background, BossCatalog.practice_bgm_key(boss_data, 1))
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 10:
+		await get_tree().physics_frame
+	GameEvents.player_death.emit()
+	for _i in 120:
+		await get_tree().physics_frame
+	assert_true(GameManager.has_open_overlay(), "练习失败应弹失败页")
+	assert_true(ReplaySession.is_recording(), "失败页出现时录像不应被自动结束")
+	for child in get_tree().root.get_children():
+		if child is CanvasLayer and child.layer == 64:
+			for page in child.get_children():
+				if page is BasePage:
+					GameManager.pop_overlay_menu(page)
+	get_tree().paused = false
+	GameManager.current_state = GameManager.AppState.MENU
+	ReplaySession.cancel_recording()
+	SimClock.reset()
