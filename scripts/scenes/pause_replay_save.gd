@@ -139,6 +139,7 @@ func _begin_name() -> void:
 
 
 func _back_to_slots() -> void:
+	sfx_back()
 	_name_mode = false
 	_name_edit.editable = false
 	_name_edit.release_focus()
@@ -183,7 +184,7 @@ func _save_now() -> void:
 	if saved_path == "":
 		_hint.text = "保存失败"
 		return
-	AudioManager.play_ui_sfx("confirm")
+	sfx_confirm()
 	saved.emit(saved_path)
 
 
@@ -195,15 +196,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("ui_up"):
 		_selected = wrapi(_selected - 1, 0, SLOT_COUNT)
+		sfx_nav()
 		_refresh_slots()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_down"):
 		_selected = wrapi(_selected + 1, 0, SLOT_COUNT)
+		sfx_nav()
 		_refresh_slots()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()
+		sfx_confirm()
 		_begin_name()
 	elif event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
+		sfx_back()
 		go_back()
