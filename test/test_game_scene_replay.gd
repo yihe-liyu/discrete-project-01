@@ -295,3 +295,76 @@ func test_practice_failure_shows_fail_menu() -> void:
 	GameManager.current_state = GameManager.AppState.MENU
 	ReplaySession.cancel_recording()
 	SimClock.reset()
+
+
+func _overlay_page_named(node_name: String) -> Node:
+	for child in get_tree().root.get_children():
+		if child is CanvasLayer and child.layer == 64:
+			for page in child.get_children():
+				if page.name == node_name:
+					return page
+	return null
+
+
+## 失败页 → 保存页 → X 返回后必须能再次进入保存页。
+func test_practice_fail_save_cancel_can_reopen() -> void:
+	SaveData.selected_difficulty = 1
+	SaveData.selected_character = 0
+	var phase := BossCatalog.phase_at(1, 0, 1)
+	var boss_data := BossCatalog.boss_of_phase(1, 0)
+	PracticeSession.start(phase, boss_data.visual, boss_data.boss_name, 1, 0,
+		boss_data.spell_background, BossCatalog.practice_bgm_key(boss_data, 1))
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 10:
+		await get_tree().physics_frame
+	GameEvents.player_death.emit()
+	for _i in 120:
+		await get_tree().physics_frame
+	var fail_page: Node = _overlay_page_named("PracticeFailMenu")
+	assert_not_null(fail_page, "失败页应打开")
+	fail_page.finished.emit({"action": "save"})
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var save_page: Node = _overlay_page_named("PauseReplaySave")
+	assert_not_null(save_page, "保存页应打开")
+	save_page.go_back()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_true(fail_page.visible, "X 返回后失败页应恢复可见")
+	fail_page.finished.emit({"action": "save"})
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_not_null(_overlay_page_named("PauseReplaySave"), "返回后应能再次进入保存页")
+	for child in get_tree().root.get_children():
+		if child is CanvasLayer and child.layer == 64:
+			for page in child.get_children():
+				if page is BasePage:
+					GameManager.pop_overlay_menu(page)
+	get_tree().paused = false
+	GameManager.current_state = GameManager.AppState.MENU
+	ReplaySession.cancel_recording()
+	SimClock.reset()
+
+
+## 失败页按“返回标题菜单”必须切回标题，不能先恢复游戏继续跑。
+func test_practice_fail_return_goes_to_title() -> void:
+	SaveData.selected_difficulty = 1
+	SaveData.selected_character = 0
+	var phase := BossCatalog.phase_at(1, 0, 1)
+	var boss_data := BossCatalog.boss_of_phase(1, 0)
+	PracticeSession.start(phase, boss_data.visual, boss_data.boss_name, 1, 0,
+		boss_data.spell_background, BossCatalog.practice_bgm_key(boss_data, 1))
+	var scene: Node = GAME_SCENE.instantiate()
+	add_child_autofree(scene)
+	for _i in 10:
+		await get_tree().physics_frame
+	GameEvents.player_death.emit()
+	for _i in 120:
+		await get_tree().physics_frame
+	var fail_page: Node = _overlay_page_named("PracticeFailMenu")
+	assert_not_null(fail_page)
+	fail_page.finished.emit({"action": "return"})
+	await get_tree().create_timer(1.20, true).timeout
+	assert_eq(GameManager.current_state, GameManager.AppState.MENU, "应回到标题菜单状态")
+	assert_true(GameManager.current_scene_path.ends_with("main_menu.tscn"), "应切回标题场景")

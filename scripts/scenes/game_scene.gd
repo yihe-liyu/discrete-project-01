@@ -527,7 +527,7 @@ func _on_practice_cleared(_boss: Node) -> void:
 		}
 		var menu: SpellPracticeResultMenu = SPELL_RESULT_MENU.instantiate() as SpellPracticeResultMenu
 		menu.configure(data)
-		menu.finished.connect(_on_practice_result_action.bind(menu), CONNECT_ONE_SHOT)
+		menu.finished.connect(_on_practice_result_action.bind(menu))
 		GameManager.push_overlay_menu(menu)
 		return
 	_return_to_practice_menu()
@@ -552,7 +552,7 @@ func _on_practice_failed() -> void:
 func _show_practice_fail_menu() -> void:
 	var menu: PracticeFailMenu = PRACTICE_FAIL_MENU.instantiate() as PracticeFailMenu
 	menu.configure({"can_save": ReplaySession.is_recording()})
-	menu.finished.connect(_on_practice_fail_action.bind(menu), CONNECT_ONE_SHOT)
+	menu.finished.connect(_on_practice_fail_action.bind(menu))
 	GameManager.push_overlay_menu(menu)
 
 
@@ -561,7 +561,6 @@ func _on_practice_fail_action(result: Dictionary, menu: BasePage) -> void:
 	if action == "save" and ReplaySession.is_recording():
 		_open_practice_fail_save(menu)
 		return
-	GameManager.pop_overlay_menu(menu)
 	if action == "retry":
 		if ReplaySession.is_recording():
 			ReplaySession.cancel_recording()
@@ -580,9 +579,7 @@ func _open_practice_fail_save(menu: BasePage) -> void:
 	GameManager.push_overlay_menu(page)
 
 
-func _on_practice_fail_save_saved(_path: String, page: BasePage) -> void:
-	if is_instance_valid(page):
-		GameManager.pop_overlay_menu(page)
+func _on_practice_fail_save_saved(_path: String, _page: BasePage) -> void:
 	_return_to_title_after_practice()
 
 
@@ -597,7 +594,6 @@ func _on_practice_result_action(result: Dictionary, menu: BasePage) -> void:
 	if action == "save" and ReplaySession.is_recording():
 		_open_practice_save_page(menu)
 		return
-	GameManager.pop_overlay_menu(menu)
 	match action:
 		"retry":
 			if ReplaySession.is_recording():
@@ -618,9 +614,7 @@ func _open_practice_save_page(result_menu: BasePage) -> void:
 	GameManager.push_overlay_menu(page)
 
 
-func _on_practice_save_saved(_path: String, page: BasePage) -> void:
-	if is_instance_valid(page):
-		GameManager.pop_overlay_menu(page)
+func _on_practice_save_saved(_path: String, _page: BasePage) -> void:
 	_return_to_practice_menu()
 
 
@@ -723,8 +717,7 @@ func _finish_playback() -> void:
 	GameManager.push_overlay_menu(menu)
 
 
-func _on_replay_end_action(result: Dictionary, menu: BasePage, path: String) -> void:
-	GameManager.pop_overlay_menu(menu)
+func _on_replay_end_action(result: Dictionary, _menu: BasePage, path: String) -> void:
 	ReplaySession.stop_playback()
 	SimClock.clear_tick_hooks()
 	if str(result.get("action", "return")) == "again" and path != "":

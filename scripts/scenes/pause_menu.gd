@@ -238,9 +238,7 @@ func _open_save_page() -> void:
 	GameManager.push_overlay_menu(page, 30)
 
 
-func _on_pause_save_saved(_path: String, page: BasePage) -> void:
-	if is_instance_valid(page):
-		GameManager.pop_overlay_menu(page)
+func _on_pause_save_saved(_path: String, _page: BasePage) -> void:
 	GameManager.change_scene.call_deferred(
 		"res://scenes/ui/main_menu.tscn", GameManager.AppState.MENU)
 
