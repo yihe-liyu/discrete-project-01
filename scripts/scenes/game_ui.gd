@@ -136,9 +136,14 @@ var _hud_alpha_base: Dictionary = {}
 func set_hud_alpha(mult: float) -> void:
 	if _hud_alpha_base.is_empty():
 		_cache_hud_alpha(self)
-	for node in _hud_alpha_base:
+	for node in _hud_alpha_base.keys():
+		# 先判 Object 是否还活着，再做类型转换；否则会触发 “Trying to cast a freed object”。
+		if not is_instance_valid(node):
+			_hud_alpha_base.erase(node)
+			continue
 		var item := node as CanvasItem
-		if not is_instance_valid(item):
+		if item == null:
+			_hud_alpha_base.erase(node)
 			continue
 		var base: Color = _hud_alpha_base[node]
 		item.modulate = Color(base.r, base.g, base.b, base.a * mult)
@@ -148,6 +153,8 @@ func set_hud_alpha(mult: float) -> void:
 
 func _cache_hud_alpha(node: Node) -> void:
 	for child in node.get_children():
+		if not is_instance_valid(child):
+			continue
 		if child is CanvasItem:
 			_hud_alpha_base[child] = (child as CanvasItem).modulate
 		_cache_hud_alpha(child)
