@@ -137,6 +137,9 @@ var _hud_alpha_base: Dictionary = {}
 
 ## 让整个 HUD 以统一 alpha 淡入淡出（包含嵌套 Memory 层）。
 func set_hud_alpha(mult: float) -> void:
+	# 闪烁 tween 会每帧重写 REPLAY 标 alpha，必须让位给统一 HUD 淡出。
+	if mult < 0.999:
+		_stop_replay_mark_flicker()
 	if _hud_alpha_base.is_empty():
 		_cache_hud_alpha(self)
 	for node in _hud_alpha_base.keys():
@@ -165,6 +168,8 @@ func _cache_hud_alpha(node: Node) -> void:
 
 ## 统一 HUD 显隐：Memory 是嵌套 CanvasLayer，必须单独同步，否则外层隐藏后它还会留在主菜单。
 func set_hud_visible(value: bool) -> void:
+	if not value:
+		_stop_replay_mark_flicker()
 	visible = value
 	var memory := get_node_or_null("Memory")
 	if memory is CanvasLayer:
@@ -181,6 +186,12 @@ static func frame_texture_for_stage(stage_no: int) -> Texture2D:
 ## 按面数切框（同一套 crossfade）。
 func set_stage_frame(stage_no: int, fade_time: float = 0.35) -> void:
 	set_frame_texture(frame_texture_for_stage(stage_no), fade_time)
+
+
+func _stop_replay_mark_flicker() -> void:
+	if _replay_mark_tween and _replay_mark_tween.is_valid():
+		_replay_mark_tween.kill()
+	_replay_mark_tween = null
 
 
 ## 回放时在游戏框正中心显示 REPLAY 标；非回放隐藏。

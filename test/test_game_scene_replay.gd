@@ -402,6 +402,9 @@ func test_hud_survives_game_scene_rebuild() -> void:
 	var mark := hud.get_node("ReplayMark") as Sprite2D
 	assert_true(mark.visible, "回放时 REPLAY 标应显示")
 	assert_eq(mark.position, Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_CENTER_Y), "REPLAY 标应在场地中心")
+	hud.set_hud_alpha(0.0)
+	assert_lt(mark.modulate.a, 0.01, "HUD 淡出时 REPLAY 标也必须一起淡出")
+	hud.set_hud_alpha(1.0)
 	hud.set_replay_marker(false)
 	assert_false(mark.visible, "非回放时 REPLAY 标应隐藏")
 	second.queue_free()
