@@ -767,6 +767,9 @@ func _on_replay_end_action(result: Dictionary, _menu: BasePage, path: String) ->
 	SimClock.clear_tick_hooks()
 	if str(result.get("action", "return")) == "again" and path != "":
 		if ReplaySession.start_playback(path):
+			# 旧 GameScene 的 _exit_tree 会 stop_playback；必须标记为继续回放，
+			# 否则新场景会退回普通流程，从 Stage 1 重开。
+			_continuing_replay = true
 			GameManager.reload_current_scene()
 			return
 	SaveData.reset_session()
