@@ -51,8 +51,6 @@ offset_right = 620.0
 offset_bottom = 286.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 44
 text = "游戏暂停"
 vertical_alignment = 1
@@ -66,8 +64,6 @@ offset_right = 500.0
 offset_bottom = 316.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(0.35, 0.9, 0.65, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 18
 text = "Pause Menu"
 
@@ -88,8 +84,6 @@ theme_override_constants/separation = 0
 [node name="Main" type="Label" parent="Panel/MenuList/Resume"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
 text = "解除游戏暂停"
 
@@ -106,8 +100,6 @@ theme_override_constants/separation = 0
 [node name="Main" type="Label" parent="Panel/MenuList/TitleMenu"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
 text = "返回标题菜单"
 
@@ -124,8 +116,6 @@ theme_override_constants/separation = 0
 [node name="Main" type="Label" parent="Panel/MenuList/SaveReplay"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
 text = "保存录像后结束游戏"
 
@@ -142,8 +132,6 @@ theme_override_constants/separation = 0
 [node name="Main" type="Label" parent="Panel/MenuList/Manual"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
 text = "操作说明"
 
@@ -160,8 +148,6 @@ theme_override_constants/separation = 0
 [node name="Main" type="Label" parent="Panel/MenuList/Restart"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
 text = "从头重新开始"
 
@@ -193,8 +179,6 @@ offset_bottom = 58.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 36
 text = "真的要这样吗？"
 
@@ -229,8 +213,6 @@ theme_override_constants/separation = 0
 [node name="Main" type="Label" parent="ConfirmRoot/Options/Yes"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
 text = "好的"
 
@@ -247,8 +229,6 @@ theme_override_constants/separation = 0
 [node name="Main" type="Label" parent="ConfirmRoot/Options/No"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
 text = "算了"
 

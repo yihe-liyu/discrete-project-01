@@ -122,6 +122,7 @@
 - **游戏框按面切换**：`GameUI.set_stage_frame(stage_no)` 统一映射；Stage 4/5/6 使用 `false_front_2.png`，EX 使用 `true_front.png`，其余使用 `false_front.png`；普通关卡、符卡练习、录像回放都按当前面数走同一映射；路线切面时 HUD 跳过入场动画，避免切关时整块 HUD 重新加载的观感；游戏框仍保留 0.35s 交叉淡入。`GameUI` 新增 `set_frame_texture(texture, fade_time=0.25)` / `get_frame_texture()`；运行时自动建 `FrontNext` 第二 Sprite，夹在 `Front` 与 HUD 之间，新框淡入结束后写回 `Front`，暂停中也能继续。
 - **回主菜单黑场残留框**：`HudLayer` 连 `GameManager.scene_left`，离开 `game_scene` 时让 HUD 做 0.4s alpha 淡出（与黑场同步），而不是瞬间隐藏；`scene_entered` 再恢复/隐藏。`GameUI.set_hud_alpha()` 统一缓存各 CanvasItem 基准 alpha，包含嵌套 Memory。
 - **主菜单残留记忆值**：持久 HUD 的 `Memory` 是嵌套 CanvasLayer，只隐藏外层 GameUI 不会隐藏它；新增 `GameUI.set_hud_visible()` 同时同步 Memory 层，回归测试覆盖。
+- **暂停页字体**：去掉暂停菜单所有 Label 的黑色描边（标题/副标题/选项/确认面板），文字直接压在框内模糊画面上。
 - **菜单收尾**：设置页仅在值真正变化时播导航音；MenuNav 覆盖层 pop 后延迟 0.25s 释放 wrapper，保存页/说明页的退场淡出可见；单关练习通关新增结束页（保存录像 / 再来一次 / 返回标题），不再自动保存直接回主菜单。
 - **暂停恢复手感**：暂停页入场动画期间 Esc 不再被吞，直接开始恢复；退场 0.5s 动画中再按一次 Esc 立即完成恢复（`_finish_resume` + `_resume_tween`），不再等满 0.5s。
 - **主菜单返回后标题消失**：`_deactivate_title` 的 0.12s 延迟 hide 没保存/取消；返回时 `_activate_title` 先 show，旧回调后 hide。标题列/Logo tween 改为共用 `_title_tween`，每次切换先 kill 旧的。
