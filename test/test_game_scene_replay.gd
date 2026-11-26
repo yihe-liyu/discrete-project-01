@@ -392,9 +392,12 @@ func test_hud_survives_game_scene_rebuild() -> void:
 	hud.set_hud_visible(true)
 	assert_true((hud.get_node("Memory") as CanvasLayer).visible, "恢复 HUD 时嵌套 Memory 层也要恢复")
 	GameManager.scene_left.emit("res://scenes/game_scene.tscn")
-	assert_false(hud.visible, "离开游戏场景时 HUD 应先隐藏")
+	await get_tree().create_timer(0.45, true).timeout
+	var front := hud.get_node("Front") as CanvasItem
+	assert_lt(front.modulate.a, 0.01, "离开游戏场景时 HUD 应淡出")
 	GameManager.scene_entered.emit("res://scenes/game_scene.tscn")
 	assert_true(hud.visible, "进入游戏场景时 HUD 应恢复")
+	assert_almost_eq(front.modulate.a, 1.0, 0.01, "进入游戏场景时 HUD alpha 应恢复")
 	second.queue_free()
 	await get_tree().process_frame
 

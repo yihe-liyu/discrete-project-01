@@ -128,6 +128,31 @@ func _setup_front_crossfade() -> void:
 	move_child(_front_next, _front.get_index() + 1)
 
 
+## HUD 全部 CanvasItem 的基准 modulate 缓存：淡出时不能破坏各元素原本的颜色/透明度。
+var _hud_alpha_base: Dictionary = {}
+
+
+## 让整个 HUD 以统一 alpha 淡入淡出（包含嵌套 Memory 层）。
+func set_hud_alpha(mult: float) -> void:
+	if _hud_alpha_base.is_empty():
+		_cache_hud_alpha(self)
+	for node in _hud_alpha_base:
+		var item := node as CanvasItem
+		if not is_instance_valid(item):
+			continue
+		var base: Color = _hud_alpha_base[node]
+		item.modulate = Color(base.r, base.g, base.b, base.a * mult)
+	if is_equal_approx(mult, 1.0):
+		_hud_alpha_base.clear()
+
+
+func _cache_hud_alpha(node: Node) -> void:
+	for child in node.get_children():
+		if child is CanvasItem:
+			_hud_alpha_base[child] = (child as CanvasItem).modulate
+		_cache_hud_alpha(child)
+
+
 ## 统一 HUD 显隐：Memory 是嵌套 CanvasLayer，必须单独同步，否则外层隐藏后它还会留在主菜单。
 func set_hud_visible(value: bool) -> void:
 	visible = value
