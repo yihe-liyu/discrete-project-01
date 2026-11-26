@@ -279,7 +279,8 @@ func _exit_tree():
 	_stage_runtime.fx_pool = null
 	_stage_runtime.ui_layer = null
 	_stage_runtime.player = null      # 解除自机注入（节点随本场景释放）
-	if PracticeSession.is_practice_mode:
+	# 重播 / 切面时旧场景退出不能清掉刚重建的练习载荷。
+	if PracticeSession.is_practice_mode and not _continuing_replay:
 		PracticeSession.finish()
 	if _background_instance and is_instance_valid(_background_instance):
 		_background_instance.queue_free()

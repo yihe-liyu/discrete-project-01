@@ -122,7 +122,7 @@
 - **游戏框按面切换**：`GameUI.set_stage_frame(stage_no)` 统一映射；Stage 4/5/6 使用 `false_front_2.png`，EX 使用 `true_front.png`，其余使用 `false_front.png`；普通关卡、符卡练习、录像回放都按当前面数走同一映射；路线切面时 HUD 跳过入场动画，避免切关时整块 HUD 重新加载的观感；游戏框仍保留 0.35s 交叉淡入。`GameUI` 新增 `set_frame_texture(texture, fade_time=0.25)` / `get_frame_texture()`；运行时自动建 `FrontNext` 第二 Sprite，夹在 `Front` 与 HUD 之间，新框淡入结束后写回 `Front`，暂停中也能继续。
 - **回主菜单黑场残留框**：`HudLayer` 连 `GameManager.scene_left`，离开 `game_scene` 时让 HUD 做 0.4s alpha 淡出（与黑场同步），而不是瞬间隐藏；`scene_entered` 再恢复/隐藏。`GameUI.set_hud_alpha()` 统一缓存各 CanvasItem 基准 alpha，包含嵌套 Memory。
 - **主菜单残留记忆值**：持久 HUD 的 `Memory` 是嵌套 CanvasLayer，只隐藏外层 GameUI 不会隐藏它；新增 `GameUI.set_hud_visible()` 同时同步 Memory 层，回归测试覆盖。
-- **再次播放录像**：回放结束页重播前设置 `_continuing_replay = true`，避免旧 GameScene `_exit_tree` 把刚启动的 ReplaySession stop 掉，导致新场景退回普通流程从 Stage 1 重开。
+- **再次播放录像**：回放结束页重播前设置 `_continuing_replay = true`，避免旧 GameScene `_exit_tree` 把刚启动的 ReplaySession stop 掉；同时 `_exit_tree` 不再在继续回放时 `PracticeSession.finish()`，否则符卡练习录像会被清空、新场景退回普通 Stage 1。
 - **回放水印**：GameUI 从 `front02.png` 的 `(64,416,156,32)` 切出 REPLAY 标，放在场地中心（448,480），仅 `ReplaySession.is_playing()` 时显示；alpha 在 0.10–0.24 间 1.2s 呼吸。
 - **HUD 淡出 freed object**：`set_hud_alpha` 原来先 `as CanvasItem` 再判有效，节点被场景释放时会报 cast freed object；改为先 `is_instance_valid` 并从缓存剔除，再转换。
 - **暂停页字体**：去掉暂停菜单所有 Label 的黑色描边（标题/副标题/选项/确认面板），文字直接压在框内模糊画面上。
