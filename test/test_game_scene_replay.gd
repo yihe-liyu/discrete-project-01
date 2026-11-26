@@ -398,6 +398,12 @@ func test_hud_survives_game_scene_rebuild() -> void:
 	GameManager.scene_entered.emit("res://scenes/game_scene.tscn")
 	assert_true(hud.visible, "进入游戏场景时 HUD 应恢复")
 	assert_almost_eq(front.modulate.a, 1.0, 0.01, "进入游戏场景时 HUD alpha 应恢复")
+	hud.set_replay_marker(true)
+	var mark := hud.get_node("ReplayMark") as Sprite2D
+	assert_true(mark.visible, "回放时 REPLAY 标应显示")
+	assert_eq(mark.position, Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_CENTER_Y), "REPLAY 标应在场地中心")
+	hud.set_replay_marker(false)
+	assert_false(mark.visible, "非回放时 REPLAY 标应隐藏")
 	second.queue_free()
 	await get_tree().process_frame
 

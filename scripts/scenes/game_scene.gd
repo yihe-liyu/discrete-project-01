@@ -61,6 +61,7 @@ func _ready():
 	_stage_runtime.item_pool = _item_pool
 	_stage_runtime.telegraph = _telegraph_path
 	_stage_runtime.ui_layer = _game_ui     # Boss 位置指示器所属 HUD 层
+	_game_ui.set_replay_marker(ReplaySession.is_playing())
 
 	_bullet_manager.inject_fx_pool(_fx_pool)
 	# 与工作台/组合台**同一条接线**（StageHost）：fx_parent / 运行时认领 / 共享子弹 ctx

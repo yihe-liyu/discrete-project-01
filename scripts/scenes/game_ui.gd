@@ -39,11 +39,14 @@ var _entry_queue: Array[Node] = []
 @onready var _front: Sprite2D = $"Front"
 var _front_next: Sprite2D
 var _front_tween: Tween
+var _replay_mark: Sprite2D
+var _replay_mark_tween: Tween
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS  # 暂停时水面动画不冻
 	_setup_front_crossfade()
+	_setup_replay_marker()
 	var tex := preload("res://assets/Textures/ascii/ascii.png")
 
 	# Title Logo → 先入队但单独处理
@@ -178,6 +181,41 @@ static func frame_texture_for_stage(stage_no: int) -> Texture2D:
 ## 按面数切框（同一套 crossfade）。
 func set_stage_frame(stage_no: int, fade_time: float = 0.35) -> void:
 	set_frame_texture(frame_texture_for_stage(stage_no), fade_time)
+
+
+## 回放时在游戏框正中心显示 REPLAY 标；非回放隐藏。
+func set_replay_marker(active: bool) -> void:
+	if _replay_mark == null:
+		_setup_replay_marker()
+	if _replay_mark_tween and _replay_mark_tween.is_valid():
+		_replay_mark_tween.kill()
+		_replay_mark_tween = null
+	if not active:
+		_replay_mark.visible = false
+		_replay_mark.modulate.a = 0.0
+		return
+	_replay_mark.visible = true
+	_replay_mark.modulate.a = 0.12
+	_replay_mark_tween = create_tween().set_loops()
+	_replay_mark_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_replay_mark_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_replay_mark_tween.tween_property(_replay_mark, "modulate:a", 0.24, 1.2)
+	_replay_mark_tween.tween_property(_replay_mark, "modulate:a", 0.10, 1.2)
+
+
+## 从 front02 图集里切出底部的 REPLAY 标，放在场地正中心。
+func _setup_replay_marker() -> void:
+	_replay_mark = Sprite2D.new()
+	_replay_mark.name = "ReplayMark"
+	var at := AtlasTexture.new()
+	at.atlas = preload("res://assets/Textures/front/front02.png")
+	at.region = Rect2(64, 416, 156, 32)
+	_replay_mark.texture = at
+	_replay_mark.position = Vector2(GameConfig.FIELD_CENTER_X, GameConfig.FIELD_CENTER_Y)
+	_replay_mark.z_index = LayerConfig.UI_TOP - 1
+	_replay_mark.visible = false
+	_replay_mark.modulate.a = 0.0
+	add_child(_replay_mark)
 
 
 ## 运行时换游戏框：新纹理淡入，淡入结束再写回 Front。
