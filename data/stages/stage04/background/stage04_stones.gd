@@ -23,7 +23,6 @@ const PALETTE := [
 
 var _mm: MultiMesh
 var _rng: RandomNumberGenerator
-var _is_wall: PackedByteArray
 
 
 func _ready() -> void:
@@ -42,10 +41,8 @@ func _ready() -> void:
 	mm.mesh = sphere
 	mm.instance_count = count
 	_mm = mm
-	_is_wall.resize(count)
 
 	for i in count:
-		_is_wall[i] = 1 if i % 3 == 0 else 0
 		_scatter(i, true)
 
 	var mat := ShaderMaterial.new()
@@ -70,20 +67,15 @@ func _process(delta: float) -> void:
 
 ## 生成一块石头；initial 为 true 时分布在整段谷道，false 时只落回远端。
 func _scatter(i: int, initial: bool) -> void:
-	var on_wall := _is_wall[i] == 1
 	var side := -1.0 if _rng.randf() < 0.5 else 1.0
 	var z := -_rng.randf_range(z_near, z_far) if initial else -_rng.randf_range(z_far * 0.82, z_far)
 	var x: float
 	var y: float
 	var s: float
-	if on_wall:
-		x = side * _rng.randf_range(valley_half_width * 0.55, valley_half_width * 0.95)
-		y = _rng.randf_range(15.0, 260.0)
-		s = _rng.randf_range(2.0, 7.0)
-	else:
-		x = side * _rng.randf_range(valley_half_width * 0.38, valley_half_width * 0.94)
-		y = _rng.randf_range(0.0, 2.0)
-		s = _rng.randf_range(2.0, 9.0)
+	# 暂时只放地面：山壁石块需要贴山壁高度场，先不凭空放。
+	x = side * _rng.randf_range(valley_half_width * 0.38, valley_half_width * 0.94)
+	y = 0.4
+	s = _rng.randf_range(2.0, 9.0)
 	var rot := Basis(Vector3.UP, _rng.randf_range(0.0, TAU))
 	rot = rot.scaled(Vector3(s, s * _rng.randf_range(0.6, 1.15), s))
 	_mm.set_instance_transform(i, Transform3D(rot, Vector3(x, y, z)))
