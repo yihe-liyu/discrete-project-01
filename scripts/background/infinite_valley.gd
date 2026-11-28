@@ -83,6 +83,11 @@ func _build_chunk(chunk: Node3D) -> void:
 		_add_forest_line(chunk, 1.0)
 
 
+## 给谷口收束墙复用同一份山壁材质。
+func get_wall_material() -> ShaderMaterial:
+	return _material
+
+
 func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()

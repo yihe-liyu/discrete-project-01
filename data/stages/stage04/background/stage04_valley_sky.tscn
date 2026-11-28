@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://data/stages/stage04/background/stage04_decor.gd" id="4_decor"]
 
 [ext_resource type="Shader" path="res://gdshader/stage04_sky_dome.gdshader" id="6_sky"]
+[ext_resource type="Script" path="res://data/stages/stage04/background/stage04_back_wall.gd" id="10_backwall"]
 
 [ext_resource type="Shader" path="res://gdshader/stage04_ground.gdshader" id="8_ground"]
 
@@ -144,6 +145,9 @@ shadow_enabled = false
 
 [node name="Stones" type="Node3D" parent="."]
 script = ExtResource("9_stones")
+
+[node name="BackWall" type="MeshInstance3D" parent="."]
+script = ExtResource("10_backwall")
 
 [node name="Decor" type="Node" parent="."]
 script = ExtResource("4_decor")
