@@ -14,8 +14,9 @@ void fragment() {
 	vec3 n = normalize(NORMAL);
 	vec3 light_dir = normalize(vec3(0.35, 0.85, 0.25));
 	float facet = 0.42 + 0.58 * max(dot(n, light_dir), 0.0);
-	vec3 col = v_color * facet;
-	ALBEDO = col;
-	EMISSION = col * (0.04 + 0.10 * facet);
+	vec3 col = v_color * (1.15 + 0.45 * facet);
+	ALBEDO = col * 1.35;
+	// 少量自发光，让石头在雾里也有一点可读的亮部。
+	EMISSION = col * (0.12 + 0.10 * facet);
 	ROUGHNESS = 0.95;
 }
