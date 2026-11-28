@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, shadows_disabled;
 
+uniform float brightness = 1.0;
+
 global uniform vec3 stage04_sky_light = vec3(0.62, 0.76, 0.9);
 
 varying vec3 v_color;

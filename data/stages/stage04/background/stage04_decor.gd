@@ -1,6 +1,13 @@
 extends CoroutineScript
 ## Stage04 背景演出：把天空 shader 的颜色写进全局 shader 参数，供山壁/地面/石头共用。
 
+@export_group("亮度")
+## 环境 Sky 环境光强度。
+@export_range(0.0, 2.0, 0.01) var ambient_light_energy: float = 0.65
+@export_range(0.2, 2.0, 0.01) var wall_brightness: float = 1.15
+@export_range(0.2, 2.0, 0.01) var ground_brightness: float = 1.10
+@export_range(0.2, 2.0, 0.01) var rock_brightness: float = 1.0
+
 @export_group("前进速度")
 ## 山谷 / 地面 / 彩石统一前进速度。改这里三处一起变。
 @export var forward_speed: float = 80.0
@@ -24,6 +31,7 @@ func _on_start() -> void:
 	if ctx == null or ctx.background == null:
 		return
 	_apply_motion()
+	apply_brightness()
 	var bg: StageBackground = ctx.background
 	var we := bg.world_environment
 	if we == null or we.environment == null or we.environment.sky == null:
@@ -39,6 +47,27 @@ func _on_start() -> void:
 		RenderingServer.global_shader_parameter_set(
 			"stage04_sky_light", Vector3(sky.r, sky.g, sky.b))
 	_apply_dusk_sky_params()
+
+
+## 统一亮度入口：Inspector 或代码调完参数后可再次调用。
+func apply_brightness() -> void:
+	if ctx == null or ctx.background == null:
+		return
+	var bg: StageBackground = ctx.background
+	if bg.world_environment and bg.world_environment.environment:
+		bg.world_environment.environment.ambient_light_energy = ambient_light_energy
+
+	var valley := bg.get_node_or_null("Valley")
+	if valley and valley.has_method("set_wall_brightness"):
+		valley.set_wall_brightness(wall_brightness)
+
+	var ground := bg.get_node_or_null("Ground") as MeshInstance3D
+	if ground and ground.material_override is ShaderMaterial:
+		(ground.material_override as ShaderMaterial).set_shader_parameter("brightness", ground_brightness)
+
+	var stones := bg.get_node_or_null("Stones")
+	if stones and stones.has_method("set_brightness"):
+		stones.set_brightness(rock_brightness)
 
 
 func _apply_motion() -> void:

@@ -93,6 +93,12 @@ func _process(delta: float) -> void:
 		chunk.visible = chunk.position.z > -camera_z - 3600.0
 
 
+## 供 Stage04 亮度接口调整山壁材质。
+func set_wall_brightness(value: float) -> void:
+	if _material:
+		_material.set_shader_parameter("brightness", value)
+
+
 ## Stage04 统一速度入口：设置前进速度，并按“速度 × 时长”重建连续山壁长度。
 func configure_motion(speed: float, run_seconds: float, margin: float = 1600.0) -> void:
 	forward_speed = speed

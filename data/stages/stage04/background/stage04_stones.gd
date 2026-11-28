@@ -31,6 +31,7 @@ const PALETTE := [
 var _mm: MultiMesh
 var _rng: RandomNumberGenerator
 var _valley: Node
+var _material: ShaderMaterial
 var _kind: PackedByteArray
 var _wall_side: PackedFloat32Array
 var _wall_t: PackedFloat32Array
@@ -69,10 +70,17 @@ func _ready() -> void:
 
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://gdshader/stage04_rock.gdshader")
+	_material = mat
 	var instance := MultiMeshInstance3D.new()
 	instance.multimesh = mm
 	instance.material_override = mat
 	add_child(instance)
+
+
+## 供 Stage04 亮度接口调整彩石材质。
+func set_brightness(value: float) -> void:
+	if _material:
+		_material.set_shader_parameter("brightness", value)
 
 
 ## 低模岩块：从 SphereMesh 取三角面，全部拆成独立面并生成面法线，得到硬朗的岩石切面。

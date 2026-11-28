@@ -8,6 +8,7 @@ uniform vec3 stone_color : source_color = vec3(0.3, 0.42, 0.43);
 uniform vec3 sky_color : source_color = vec3(0.66, 0.76, 0.86);
 // 与 InfiniteValley 的 forward_speed 对齐：地面纹理向镜头流动
 uniform float scroll_speed = 80.0;
+uniform float brightness = 1.0;
 
 varying vec3 v_world;
 
@@ -57,8 +58,8 @@ void fragment() {
 	float fleck = step(0.88, noise(p * 0.65 + 11.0));
 	col += vec3(0.035, 0.05, 0.06) * fleck;
 
-	ALBEDO = col;
-	EMISSION = col * 0.12;
+	ALBEDO = col * brightness;
+	EMISSION = col * 0.12 * brightness;
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.1;
 }

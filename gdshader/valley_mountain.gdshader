@@ -16,6 +16,7 @@ uniform float ambient_lift : hint_range(0.0, 0.5) = 0.07;
 uniform sampler2D rock_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform float triplanar_scale = 0.012;
 uniform float triplanar_sharpness = 5.0;
+uniform float brightness = 1.0;
 
 varying vec3 v_color;
 
@@ -71,8 +72,8 @@ void fragment() {
 	vec3 sky_light = stage04_sky_light;
 	// 天空色乘法染色：保留山壁本身明暗，只改变色彩倾向。
 	final_color *= mix(vec3(1.0), sky_light * 1.55, 0.10 + sky_lift * 0.12);
-	ALBEDO = final_color * 2.4;
-	EMISSION = final_color * (0.30 + 0.85 * sky_lift);
+	ALBEDO = final_color * 2.4 * brightness;
+	EMISSION = final_color * (0.30 + 0.85 * sky_lift) * brightness;
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.08;
 }
