@@ -1,6 +1,13 @@
 extends CoroutineScript
 ## Stage04 背景演出：把天空 shader 的颜色写进全局 shader 参数，供山壁/地面/石头共用。
 
+@export_group("前进速度")
+## 山谷 / 地面 / 彩石统一前进速度。改这里三处一起变。
+@export var forward_speed: float = 80.0
+## 预计一局时长（秒）；连续山壁长度 = speed × duration + margin。
+@export var run_duration_seconds: float = 480.0
+@export var continuous_length_margin: float = 1600.0
+
 @export_group("黄昏天空")
 ## 屏幕纵向 0=地平线，1=画面顶部。
 @export_range(0.0, 1.0, 0.01) var dusk_gradient_start: float = 0.12
@@ -16,6 +23,7 @@ extends CoroutineScript
 func _on_start() -> void:
 	if ctx == null or ctx.background == null:
 		return
+	_apply_motion()
 	var bg: StageBackground = ctx.background
 	var we := bg.world_environment
 	if we == null or we.environment == null or we.environment.sky == null:
@@ -31,6 +39,20 @@ func _on_start() -> void:
 		RenderingServer.global_shader_parameter_set(
 			"stage04_sky_light", Vector3(sky.r, sky.g, sky.b))
 	_apply_dusk_sky_params()
+
+
+func _apply_motion() -> void:
+	var valley := ctx.background.get_node_or_null("Valley")
+	if valley and valley.has_method("configure_motion"):
+		valley.configure_motion(forward_speed, run_duration_seconds, continuous_length_margin)
+
+	var stones := ctx.background.get_node_or_null("Stones")
+	if stones:
+		stones.scroll_speed = forward_speed
+
+	var ground := ctx.background.get_node_or_null("Ground") as MeshInstance3D
+	if ground and ground.material_override is ShaderMaterial:
+		(ground.material_override as ShaderMaterial).set_shader_parameter("scroll_speed", forward_speed)
 
 
 ## 方便运行时/Inspector 调分界线，不需要手动改 shader 参数名。

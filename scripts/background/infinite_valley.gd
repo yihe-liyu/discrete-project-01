@@ -93,6 +93,28 @@ func _process(delta: float) -> void:
 		chunk.visible = chunk.position.z > -camera_z - 3600.0
 
 
+## Stage04 统一速度入口：设置前进速度，并按“速度 × 时长”重建连续山壁长度。
+func configure_motion(speed: float, run_seconds: float, margin: float = 1600.0) -> void:
+	forward_speed = speed
+	if not continuous_walls:
+		return
+	var target := maxf(4000.0, speed * run_seconds + margin)
+	if absf(target - continuous_length) < 1.0:
+		return
+	continuous_length = target
+	_rebuild_continuous_walls()
+
+
+func _rebuild_continuous_walls() -> void:
+	if _wall_root and is_instance_valid(_wall_root):
+		_wall_root.queue_free()
+	_wall_root = Node3D.new()
+	_wall_root.name = "ContinuousWalls"
+	add_child(_wall_root)
+	_add_continuous_wall(_wall_root, -1.0, LEFT_H)
+	_add_continuous_wall(_wall_root, 1.0, RIGHT_H)
+
+
 func _build_chunk(chunk: Node3D) -> void:
 	for child in chunk.get_children():
 		child.queue_free()
