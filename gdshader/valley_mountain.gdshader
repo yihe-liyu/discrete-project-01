@@ -62,8 +62,9 @@ void fragment() {
 	vec3 tz = texture(rock_tex, v_world_pos.xy * triplanar_scale).rgb;
 	vec3 rock_detail = tx * weights.x + ty * weights.y + tz * weights.z;
 	float rock_lum = dot(rock_detail, vec3(0.299, 0.587, 0.114));
-	final_color *= 0.72 + 0.56 * rock_lum;
-	final_color = mix(final_color, final_color * rock_detail * 1.4, 0.18);
+	// 纹理压浅：整体提亮，细节只保留很轻的明暗变化。
+	final_color *= 0.90 + 0.20 * rock_lum;
+	final_color = mix(final_color, final_color * rock_detail * 1.22, 0.08);
 
 	final_color = mix(final_color, haze_color, haze * 0.3);
 	ALBEDO = final_color * 2.4;
