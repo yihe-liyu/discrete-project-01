@@ -101,7 +101,8 @@ func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
 			var h := _terrain_height(x, z_world) * float(profile[p]) * wall_height
 			verts.append(Vector3(x, h, local_z))
 			uvs.append(Vector2(clampf(h / wall_height, 0.0, 1.0), t))
-			normals.append(_normal_at(x, z_world, float(profile[p])))
+			# 山壁法线稳定朝谷内：不再按高度噪声单独算，避免长条三角面被光切成宽条纹。
+			normals.append(Vector3(-side, 0.18, 0.0).normalized())
 
 	for i in z_segments:
 		var a := i * cols
