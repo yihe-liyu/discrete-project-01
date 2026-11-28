@@ -12,7 +12,6 @@
 
 [ext_resource type="Shader" path="res://gdshader/stage04_sky_dome.gdshader" id="6_sky"]
 
-[ext_resource type="Shader" path="res://gdshader/stage04_end_fog.gdshader" id="7_fog"]
 
 
 
@@ -21,6 +20,7 @@ radius = 4000.0
 height = 4000.0
 radial_segments = 64
 rings = 24
+
 
 
 
@@ -35,13 +35,6 @@ shader = ExtResource("6_sky")
 
 
 
-[sub_resource type="QuadMesh" id="EndFogMesh"]
-size = Vector2(2400, 1400)
-
-
-[sub_resource type="ShaderMaterial" id="EndFogMat"]
-shader = ExtResource("7_fog")
-
 
 
 
@@ -55,11 +48,13 @@ camera_home_fov = 58.0
 
 
 
+
 [node name="SkyDome" type="MeshInstance3D" parent="."]
 mesh = SubResource("SkyDomeMesh")
 material_override = SubResource("SkyDomeMat")
 extra_cull_margin = 4000.0
 cast_shadow = 0
+
 
 
 
@@ -86,19 +81,14 @@ peak_color = Color(0.42, 0.55, 0.56, 1)
 
 
 
-[node name="EndFog" type="MeshInstance3D" parent="."]
-position = Vector3(0, 300, -2600)
-mesh = SubResource("EndFogMesh")
-material_override = SubResource("EndFogMat")
-cast_shadow = 0
-extra_cull_margin = 2000.0
-
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-38, -28, 0)
 light_color = Color(0.78, 0.86, 0.95, 1)
 light_energy = 1.15
 shadow_enabled = false
+
+
 
 
 
