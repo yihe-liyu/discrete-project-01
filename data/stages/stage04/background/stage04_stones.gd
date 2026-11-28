@@ -34,7 +34,7 @@ var _wall_t: PackedFloat32Array
 func _ready() -> void:
 	_rng = RandomNumberGenerator.new()
 	_rng.seed = rng_seed
-	_valley = get_parent().get_node_or_null("Valley")
+	_valley = get_node_or_null(^"../Valley")
 
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D

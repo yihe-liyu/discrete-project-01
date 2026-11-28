@@ -94,12 +94,24 @@ func change_scene(path: String, target_state: AppState = AppState.PLAYING):
 
 	var new_path: String = await _scene_transition.change_scene(
 		path, current_scene_path, scene_left.emit,
-		_pause_world, _clear_world, _resume_world)
+		_pause_world, _clear_world, _resume_world, _prewarm_scene_for(path))
 	previous_scene_path = current_scene_path
 	current_scene_path = new_path
 
 	set_state(target_state)
 	scene_entered.emit(current_scene_path)
+
+
+## 只对当前目标为 Stage4 的进入做预热；预热只做一次，后续切场直接跳过。
+func _prewarm_scene_for(path: String) -> PackedScene:
+	if path != "res://scenes/game_scene.tscn":
+		return null
+	var bg := StageCatalog.background(SaveData.current_stage_id)
+	if bg == null:
+		return null
+	if bg.resource_path.begins_with("res://data/stages/stage04/"):
+		return bg
+	return null
 
 
 # ═══ 当前世界登记（取代跨场景读 BulletManager.current）═══
