@@ -11,7 +11,12 @@ extends Node3D
 ## 石头越过镜头多远后回收到远处
 @export var recycle_z: float = 45.0
 ## 贴壁石头占比
-@export var wall_ratio: float = 0.32
+@export var wall_ratio: float = 0.28
+## 成簇散布：一部分石头围绕这些簇中心生成，避免完全均匀随机。
+@export var cluster_count: int = 16
+@export var cluster_spread: float = 120.0
+## 贴壁石头往山体里嵌入的比例（相对石头半径）
+@export var wall_embed_ratio: float = 0.32
 
 const PALETTE := [
 	Color(0.18, 0.34, 0.4),
@@ -29,6 +34,10 @@ var _valley: Node
 var _kind: PackedByteArray
 var _wall_side: PackedFloat32Array
 var _wall_t: PackedFloat32Array
+var _cluster_z: PackedFloat32Array
+var _cluster_x: PackedFloat32Array
+var _cluster_side: PackedFloat32Array
+var _cluster_t: PackedFloat32Array
 
 
 func _ready() -> void:
@@ -45,6 +54,15 @@ func _ready() -> void:
 	_kind.resize(count)
 	_wall_side.resize(count)
 	_wall_t.resize(count)
+	_cluster_z.resize(cluster_count)
+	_cluster_x.resize(cluster_count)
+	_cluster_side.resize(cluster_count)
+	_cluster_t.resize(cluster_count)
+	for c in cluster_count:
+		_cluster_z[c] = -_rng.randf_range(z_near, z_far)
+		_cluster_x[c] = _rng.randf_range(0.34, 0.94)
+		_cluster_side[c] = -1.0 if _rng.randf() < 0.5 else 1.0
+		_cluster_t[c] = _rng.randf_range(0.03, 0.18)
 
 	for i in count:
 		_scatter(i, true)
@@ -100,7 +118,9 @@ func _process(delta: float) -> void:
 		var xf := _mm.get_instance_transform(i)
 		xf.origin.z += scroll_speed * delta
 		if _kind[i] == 1 and _valley:
-			xf.origin = _valley.sample_wall(xf.origin.z, _wall_side[i], _wall_t[i])["position"]
+			var hit: Dictionary = _valley.sample_wall(xf.origin.z, _wall_side[i], _wall_t[i])
+			var embed := xf.basis.get_scale().x * wall_embed_ratio
+			xf.origin = hit["position"] - (hit["normal"] as Vector3) * embed
 		if xf.origin.z > recycle_z:
 			_scatter(i, false)
 		else:
@@ -109,26 +129,38 @@ func _process(delta: float) -> void:
 
 ## 生成一块石头；initial 为 true 时分布在整段谷道，false 时只落回远端。
 func _scatter(i: int, initial: bool) -> void:
+	# 只有初始分布和回收后的远端分布；回收时不能突然出现在镜头前。
 	var z := -_rng.randf_range(z_near, z_far) if initial else -_rng.randf_range(z_far * 0.82, z_far)
 	var side := -1.0 if _rng.randf() < 0.5 else 1.0
 	var xf: Transform3D
 	var s: float
 
+	# 75% 的石头围绕一个簇中心，剩下 25% 保持松散分布。
+	var clustered := initial and _rng.randf() < 0.75
+	var cluster := _rng.randi_range(0, cluster_count - 1) if clustered else -1
+	if cluster >= 0:
+		z = _cluster_z[cluster] + _rng.randf_range(-cluster_spread, cluster_spread)
+		side = _cluster_side[cluster]
+
 	if _valley and _rng.randf() < wall_ratio:
-		# 贴壁：t 靠近 0 的低处，位置由山壁高度场精确给出。
-		var t := _rng.randf_range(0.025, 0.16)
-		var p: Vector3 = _valley.sample_wall(z, side, t)["position"]
+		# 贴壁：t 靠近 0 的低处，位置由山壁高度场精确给出，并往山体里嵌一点。
+		var t := (_cluster_t[cluster] + _rng.randf_range(-0.02, 0.04)) if cluster >= 0 else _rng.randf_range(0.025, 0.16)
+		t = clampf(t, 0.015, 0.22)
+		var hit: Dictionary = _valley.sample_wall(z, side, t)
 		s = _rng.randf_range(1.4, 4.6)
+		var embed := s * wall_embed_ratio
 		var rot := Basis(Vector3.UP, _rng.randf_range(0.0, TAU))
 		rot = rot.scaled(Vector3(s, s * _rng.randf_range(0.7, 1.1), s))
-		xf = Transform3D(rot, p)
+		xf = Transform3D(rot, hit["position"] - (hit["normal"] as Vector3) * embed)
 		_kind[i] = 1
 		_wall_side[i] = side
 		_wall_t[i] = t
 	else:
 		var landmark := _rng.randf() < 0.08
 		var large := landmark or _rng.randf() < 0.22
-		var x := side * _rng.randf_range(valley_half_width * 0.34, valley_half_width * 0.98)
+		var x_norm := (_cluster_x[cluster] + _rng.randf_range(-0.06, 0.06)) if cluster >= 0 else _rng.randf_range(0.34, 0.98)
+		x_norm = clampf(x_norm, 0.3, 0.99)
+		var x := side * valley_half_width * x_norm
 		var y := 0.3 if large else 0.4
 		s = _rng.randf_range(12.0, 22.0) if landmark else (_rng.randf_range(6.0, 13.0) if large else _rng.randf_range(2.0, 6.5))
 		var rot := Basis(Vector3.UP, _rng.randf_range(0.0, TAU))
