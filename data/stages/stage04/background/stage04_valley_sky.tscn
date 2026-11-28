@@ -108,6 +108,8 @@ forward_speed = 80.0
 camera_z = 30.0
 build_floor = false
 build_forest = false
+continuous_walls = true
+continuous_length = 40000.0
 base_color = Color(0.12, 0.2, 0.2, 1)
 peak_color = Color(0.42, 0.55, 0.56, 1)
 

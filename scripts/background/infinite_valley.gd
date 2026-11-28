@@ -24,13 +24,21 @@ extends Node3D
 ## 是否生成山脚森林剪影（Stage04 原型关闭：会形成黑色条纹）
 @export var build_forest: bool = true
 ## 相邻 chunk 山壁重叠的 z 段数：独立 mesh 共享边界会出现发丝裂缝，重叠可盖住。
+## 连续山壁模式（Stage04）不走 chunk，这里只留给旧模式。
 @export var wall_overlap_segments: int = 2
+## 整段连续山壁模式：没有 chunk 边界，不会有接缝。Stage04 使用。
+@export var continuous_walls: bool = false
+## 连续山壁总长度（世界单位）；80 速度下 40000 = 约 8 分钟。
+@export var continuous_length: float = 40000.0
+## 连续山壁近端起始 z（放在镜头后方，保证画面里始终有墙）。
+@export var continuous_start_z: float = 2000.0
 
 const SIDE_T := [0.0, 0.18, 0.38, 0.62, 0.82, 1.0]
 const LEFT_H := [0.0, 0.14, 0.34, 0.6, 0.84, 1.0]
 const RIGHT_H := [0.0, 0.1, 0.3, 0.55, 0.8, 1.0]
 
 var _chunks: Array[Node3D] = []
+var _wall_root: Node3D
 var _noise: FastNoiseLite
 var _material: ShaderMaterial
 var _z_step: float
@@ -47,6 +55,14 @@ func _ready() -> void:
 	_material.shader = preload("res://gdshader/valley_mountain.gdshader")
 	_material.set_shader_parameter("rock_tex", _make_rock_texture())
 
+	if continuous_walls:
+		_wall_root = Node3D.new()
+		_wall_root.name = "ContinuousWalls"
+		add_child(_wall_root)
+		_add_continuous_wall(_wall_root, -1.0, LEFT_H)
+		_add_continuous_wall(_wall_root, 1.0, RIGHT_H)
+		return
+
 	for i in chunk_count:
 		var chunk := Node3D.new()
 		chunk.position.z = -chunk_length * i
@@ -59,6 +75,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if continuous_walls:
+		if _wall_root:
+			_wall_root.position.z += forward_speed * delta
+		return
 	for chunk in _chunks:
 		chunk.position.z += forward_speed * delta
 
@@ -83,6 +103,40 @@ func _build_chunk(chunk: Node3D) -> void:
 	if build_forest:
 		_add_forest_line(chunk, -1.0)
 		_add_forest_line(chunk, 1.0)
+
+
+## 一张连续山壁：顶点跨整段长度，沿 Z 没有 chunk 分界。
+func _add_continuous_wall(root: Node3D, side: float, profile: Array) -> void:
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var indices := PackedInt32Array()
+	var cols := SIDE_T.size()
+	var total := int(ceil(continuous_length / _z_step))
+	for i in total + 1:
+		var local_z := continuous_start_z - i * _z_step
+		var center := _center_at(local_z)
+		var half := _half_width_at(local_z)
+		for p in cols:
+			var t: float = SIDE_T[p]
+			var x := center + side * lerpf(half, width * 0.5, t)
+			var h := _terrain_height(x, local_z) * float(profile[p]) * wall_height
+			verts.append(Vector3(x, h, local_z))
+			uvs.append(Vector2(clampf(h / wall_height, 0.0, 1.0), t))
+			normals.append(Vector3(-side, 0.18, 0.0).normalized())
+	for i in total:
+		var a := i * cols
+		var b := (i + 1) * cols
+		for p in cols - 1:
+			if side < 0.0:
+				indices.append_array([a + p, b + p, a + p + 1, a + p + 1, b + p, b + p + 1])
+			else:
+				indices.append_array([a + p, a + p + 1, b + p, a + p + 1, b + p + 1, b + p])
+	var instance := MeshInstance3D.new()
+	instance.name = "LeftWall" if side < 0.0 else "RightWall"
+	instance.mesh = _make_mesh(verts, normals, uvs, indices)
+	instance.material_override = _material
+	root.add_child(instance)
 
 
 func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
@@ -253,10 +307,12 @@ func sample_wall(z_world: float, side: float, t: float) -> Dictionary:
 	var tc := clampf(t, 0.0, 1.0)
 	var profile: Array = LEFT_H if side < 0.0 else RIGHT_H
 	var prof := _profile_at(profile, tc)
-	var center := _center_at(z_world)
-	var half := _half_width_at(z_world)
+	# 连续山壁整体在移动；采样要换回它的局部 z 再算高度。
+	var local_z := z_world - (_wall_root.position.z if _wall_root else 0.0)
+	var center := _center_at(local_z)
+	var half := _half_width_at(local_z)
 	var x := center + side * lerpf(half, width * 0.5, tc)
-	var y := _terrain_height(x, z_world) * prof * wall_height
+	var y := _terrain_height(x, local_z) * prof * wall_height
 	return {
 		"position": Vector3(x, y, z_world),
 		"normal": Vector3(-side, 0.28, 0.0).normalized(),
