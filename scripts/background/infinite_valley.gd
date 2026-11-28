@@ -23,6 +23,8 @@ extends Node3D
 @export var build_floor: bool = true
 ## 是否生成山脚森林剪影（Stage04 原型关闭：会形成黑色条纹）
 @export var build_forest: bool = true
+## 相邻 chunk 山壁重叠的 z 段数：独立 mesh 共享边界会出现发丝裂缝，重叠可盖住。
+@export var wall_overlap_segments: int = 2
 
 const SIDE_T := [0.0, 0.18, 0.38, 0.62, 0.82, 1.0]
 const LEFT_H := [0.0, 0.14, 0.34, 0.6, 0.84, 1.0]
@@ -91,7 +93,8 @@ func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
 	var base_z := chunk.position.z
 	var cols := SIDE_T.size()
 
-	for i in z_segments + 1:
+	var overlap := maxi(wall_overlap_segments, 0)
+	for i in range(-overlap, z_segments + overlap + 1):
 		var local_z := -i * _z_step
 		var z_world := base_z + local_z
 		var center := _center_at(z_world)
@@ -105,7 +108,9 @@ func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
 			# 山壁法线稳定朝谷内：不再按高度噪声单独算，避免长条三角面被光切成宽条纹。
 			normals.append(Vector3(-side, 0.18, 0.0).normalized())
 
-	for i in z_segments:
+	# 顶点行从 -overlap 开始，索引也按重叠后的行号走；两端额外覆盖相邻块。
+	for ii in range(-overlap, z_segments + overlap):
+		var i := ii + overlap
 		var a := i * cols
 		var b := (i + 1) * cols
 		for p in cols - 1:
