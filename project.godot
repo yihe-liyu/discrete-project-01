@@ -31,11 +31,6 @@ SimClock="*res://scripts/autoload/sim_clock.gd"
 
 [shader_globals]
 
-stage04_sky_light={
-"type": "vec3",
-"value": Vector3(0.62, 0.76, 0.9)
-}
-
 stage04_atmosphere_color={
 "type": "vec3",
 "value": Vector3(0.68, 0.55, 0.56)

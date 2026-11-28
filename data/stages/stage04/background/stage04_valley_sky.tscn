@@ -15,7 +15,6 @@
 [ext_resource type="Shader" path="res://gdshader/stage04_ground.gdshader" id="8_ground"]
 
 [ext_resource type="Script" path="res://data/stages/stage04/background/stage04_stones.gd" id="9_stones"]
-[ext_resource type="PackedScene" path="res://data/stages/stage04/background/stage04_mouth_mist.tscn" id="11_mist"]
 
 
 
@@ -147,8 +146,6 @@ shadow_enabled = false
 
 [node name="Stones" type="Node3D" parent="."]
 script = ExtResource("9_stones")
-
-[node name="MouthMist" parent="." instance=ExtResource("11_mist")]
 
 [node name="Decor" type="Node" parent="."]
 script = ExtResource("4_decor")

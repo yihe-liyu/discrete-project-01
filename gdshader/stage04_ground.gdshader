@@ -3,7 +3,6 @@ render_mode unshaded, cull_disabled, shadows_disabled;
 
 #include "res://gdshader/stage04_atmosphere.gdshaderinc"
 
-global uniform vec3 stage04_sky_light = vec3(0.62, 0.76, 0.9);
 
 uniform vec3 deep_color : source_color = vec3(0.13, 0.21, 0.23);
 uniform vec3 stone_color : source_color = vec3(0.3, 0.42, 0.43);
@@ -54,7 +53,6 @@ void fragment() {
 	vec3 view_dir = normalize(CAMERA_POSITION_WORLD - v_world);
 	float grazing = pow(1.0 - clamp(abs(view_dir.y), 0.0, 1.0), 2.0);
 	col = mix(col, sky_color, grazing * 0.28);
-	col *= mix(vec3(1.0), stage04_sky_light * 1.45, 0.06 + grazing * 0.10);
 
 	// 少量矿物斑点，近处可见、远处被雾吃掉
 	float fleck = step(0.88, noise(p * 0.65 + 11.0));

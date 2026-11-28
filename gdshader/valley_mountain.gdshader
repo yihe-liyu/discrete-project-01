@@ -4,7 +4,6 @@ render_mode cull_disabled;
 #include "res://gdshader/stage04_atmosphere.gdshaderinc"
 
 // 由 stage04_decor 从天空 shader 读取并写入。
-global uniform vec3 stage04_sky_light = vec3(0.62, 0.76, 0.9);
 
 uniform vec3 low_color : source_color = vec3(0.08, 0.17, 0.13);
 uniform vec3 rock_color : source_color = vec3(0.18, 0.3, 0.25);
@@ -70,10 +69,6 @@ void fragment() {
 	final_color *= 0.90 + 0.20 * rock_lum;
 	final_color = mix(final_color, final_color * rock_detail * 1.22, 0.08);
 
-	// 顶部优先接收天空光，越靠谷顶越蓝；谷底仍保留暗部。
-	vec3 sky_light = stage04_sky_light;
-	// 天空色乘法染色：保留山壁本身明暗，只改变色彩倾向。
-	final_color *= mix(vec3(1.0), sky_light * 1.55, 0.10 + sky_lift * 0.12);
 	float atmo = atmosphere_factor(length(VERTEX));
 	ALBEDO = mix(final_color * 2.4 * brightness, stage04_atmosphere_color, atmo);
 	EMISSION = mix(final_color * (0.30 + 0.85 * sky_lift) * brightness,

@@ -17,7 +17,7 @@ extends CoroutineScript
 @export_range(0.0, 1.0, 0.01) var atmosphere_strength: float = 0.9
 ## 分界线下降后，大气色从玫瑰色褪到的冷色。
 @export var atmosphere_descent_color: Color = Color(0.46, 0.52, 0.66)
-@export_range(0.0, 1.0, 0.01) var atmosphere_descent_strength: float = 0.55
+@export_range(0.0, 1.0, 0.01) var atmosphere_descent_strength: float = 0.15
 
 @export_group("前进速度")
 ## 山谷 / 地面 / 彩石统一前进速度。改这里三处一起变。
@@ -56,20 +56,6 @@ func _on_start() -> void:
 	_apply_motion()
 	apply_brightness()
 	apply_atmosphere()
-	var bg: StageBackground = ctx.background
-	var we := bg.world_environment
-	if we == null or we.environment == null or we.environment.sky == null:
-		return
-	var mat := we.environment.sky.sky_material
-	if mat is ShaderMaterial:
-		var sm := mat as ShaderMaterial
-		var top: Color = sm.get_shader_parameter("sky_top")
-		var horizon: Color = sm.get_shader_parameter("sky_horizon")
-		var tint_a: Color = sm.get_shader_parameter("tint_a")
-		var tint_b: Color = sm.get_shader_parameter("tint_b")
-		var sky := tint_a.lerp(tint_b, 0.45) if tint_a != null and tint_b != null else top.lerp(horizon, 0.55)
-		RenderingServer.global_shader_parameter_set(
-			"stage04_sky_light", Vector3(sky.r, sky.g, sky.b))
 	_apply_dusk_sky_params()
 	_dusk_elapsed = 0.0
 	_dusk_active = dusk_descent_enabled and dusk_descent_duration > 0.01
