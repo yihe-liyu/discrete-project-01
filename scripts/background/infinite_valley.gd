@@ -142,7 +142,8 @@ func _add_continuous_wall(root: Node3D, side: float, profile: Array) -> void:
 		for p in cols:
 			var t: float = SIDE_T[p]
 			var x := center + side * lerpf(half, width * 0.5, t)
-			var h := _terrain_height(x, local_z) * float(profile[p]) * wall_height
+			var hn := _ridge_height(local_z) if t >= 0.999 else _terrain_height(x, local_z)
+			var h := hn * float(profile[p]) * wall_height
 			verts.append(Vector3(x, h, local_z))
 			uvs.append(Vector2(clampf(h / wall_height, 0.0, 1.0), t))
 			normals.append(Vector3(-side, 0.18, 0.0).normalized())
@@ -178,7 +179,8 @@ func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
 		for p in cols:
 			var t: float = SIDE_T[p]
 			var x := center + side * lerpf(half, width * 0.5, t)
-			var h := _terrain_height(x, z_world) * float(profile[p]) * wall_height
+			var hn := _ridge_height(z_world) if t >= 0.999 else _terrain_height(x, z_world)
+			var h := hn * float(profile[p]) * wall_height
 			verts.append(Vector3(x, h, local_z))
 			uvs.append(Vector2(clampf(h / wall_height, 0.0, 1.0), t))
 			# 山壁法线稳定朝谷内：不再按高度噪声单独算，避免长条三角面被光切成宽条纹。
@@ -378,9 +380,16 @@ func _half_width_at(z: float, side: float) -> float:
 
 func _terrain_height(x: float, z: float) -> float:
 	var large := (_noise.get_noise_2d(x * 0.35, z) + 1.0) * 0.5
-	# 降低高频细节，避免山嘴变成一排尖锐三角
-	var detail := (_noise.get_noise_2d(x * 1.4, z * 1.4) + 1.0) * 0.5
-	return 0.52 + 0.34 * large + 0.1 * detail
+	# 比之前更平滑的细节：保留岩壁起伏，但不制造一排尖锐三角。
+	var detail := (_noise.get_noise_2d(x * 0.75, z * 0.75) + 1.0) * 0.5
+	return 0.52 + 0.38 * large + 0.035 * detail
+
+
+## 山顶脊线单独用低频噪声，避免和山脚宽度/岩壁细节一起形成锯齿尖刺。
+func _ridge_height(z: float) -> float:
+	var a := (_noise.get_noise_2d(9.0, z * 0.12) + 1.0) * 0.5
+	var b := (_noise.get_noise_2d(37.0, z * 0.30) + 1.0) * 0.5
+	return 0.56 + 0.24 * a + 0.08 * b
 
 
 func _normal_at(x: float, z: float, profile_h: float) -> Vector3:

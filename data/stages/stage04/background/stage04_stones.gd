@@ -62,7 +62,7 @@ func _ready() -> void:
 		_cluster_z[c] = -_rng.randf_range(z_near, z_far)
 		_cluster_x[c] = _rng.randf_range(0.34, 0.94)
 		_cluster_side[c] = -1.0 if _rng.randf() < 0.5 else 1.0
-		_cluster_t[c] = _rng.randf_range(0.03, 0.18)
+		_cluster_t[c] = _rng.randf_range(0.04, 0.34)
 
 	for i in count:
 		_scatter(i, true)
@@ -144,8 +144,8 @@ func _scatter(i: int, initial: bool) -> void:
 
 	if _valley and _rng.randf() < wall_ratio:
 		# 贴壁：t 靠近 0 的低处，位置由山壁高度场精确给出，并往山体里嵌一点。
-		var t := (_cluster_t[cluster] + _rng.randf_range(-0.02, 0.04)) if cluster >= 0 else _rng.randf_range(0.025, 0.16)
-		t = clampf(t, 0.015, 0.22)
+		var t := (_cluster_t[cluster] + _rng.randf_range(-0.04, 0.06)) if cluster >= 0 else _rng.randf_range(0.03, 0.36)
+		t = clampf(t, 0.015, 0.42)
 		var hit: Dictionary = _valley.sample_wall(z, side, t)
 		s = _rng.randf_range(1.4, 4.6)
 		var embed := s * wall_embed_ratio
