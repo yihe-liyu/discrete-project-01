@@ -7,6 +7,8 @@ uniform vec3 sky_color : source_color = vec3(0.66, 0.76, 0.86);
 uniform vec3 haze_color : source_color = vec3(0.58, 0.68, 0.79);
 uniform float haze_start = 700.0;
 uniform float haze_end = 3200.0;
+// 与 InfiniteValley 的 forward_speed 对齐：地面纹理向镜头流动
+uniform float scroll_speed = 80.0;
 
 varying vec3 v_world;
 
@@ -38,7 +40,7 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 p = v_world.xz;
+	vec2 p = vec2(v_world.x, v_world.z - TIME * scroll_speed);
 	float broad = fbm(p * 0.018);
 	float detail = fbm(p * 0.11 + 7.0);
 	float stone = smoothstep(0.2, 0.8, broad * 0.7 + detail * 0.3);
