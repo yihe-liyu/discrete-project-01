@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode cull_disabled;
 
+#include "res://gdshader/stage04_atmosphere.gdshaderinc"
+
 // 由 stage04_decor 从天空 shader 读取并写入。
 global uniform vec3 stage04_sky_light = vec3(0.62, 0.76, 0.9);
 
@@ -72,8 +74,10 @@ void fragment() {
 	vec3 sky_light = stage04_sky_light;
 	// 天空色乘法染色：保留山壁本身明暗，只改变色彩倾向。
 	final_color *= mix(vec3(1.0), sky_light * 1.55, 0.10 + sky_lift * 0.12);
-	ALBEDO = final_color * 2.4 * brightness;
-	EMISSION = final_color * (0.30 + 0.85 * sky_lift) * brightness;
+	float atmo = atmosphere_factor(length(VERTEX));
+	ALBEDO = mix(final_color * 2.4 * brightness, atmosphere_color, atmo);
+	EMISSION = mix(final_color * (0.30 + 0.85 * sky_lift) * brightness,
+		atmosphere_color * 0.28, atmo);
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.08;
 }

@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, shadows_disabled;
 
+#include "res://gdshader/stage04_atmosphere.gdshaderinc"
+
 global uniform vec3 stage04_sky_light = vec3(0.62, 0.76, 0.9);
 
 uniform vec3 deep_color : source_color = vec3(0.13, 0.21, 0.23);
@@ -58,8 +60,9 @@ void fragment() {
 	float fleck = step(0.88, noise(p * 0.65 + 11.0));
 	col += vec3(0.035, 0.05, 0.06) * fleck;
 
-	ALBEDO = col * brightness;
-	EMISSION = col * 0.12 * brightness;
+	float atmo = atmosphere_factor(length(VERTEX));
+	ALBEDO = mix(col * brightness, atmosphere_color, atmo);
+	EMISSION = mix(col * 0.12 * brightness, atmosphere_color * 0.04, atmo);
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.1;
 }
