@@ -1,0 +1,92 @@
+[gd_scene load_steps=11 format=3]
+
+
+
+[ext_resource type="PackedScene" path="res://scenes/background/background_base.tscn" id="1_base"]
+
+[ext_resource type="Resource" path="res://data/stages/stage04/background/stage04_env.tres" id="2_env"]
+
+[ext_resource type="Script" path="res://scripts/background/infinite_valley.gd" id="3_valley"]
+
+[ext_resource type="Script" path="res://data/stages/stage04/background/stage04_decor.gd" id="4_decor"]
+
+[ext_resource type="Script" path="res://scripts/background/far_ridge.gd" id="5_far"]
+
+[ext_resource type="Shader" path="res://gdshader/stage04_sky_dome.gdshader" id="6_sky"]
+
+
+
+[sub_resource type="SphereMesh" id="SkyDomeMesh"]
+radius = 4000.0
+height = 4000.0
+radial_segments = 64
+rings = 24
+
+
+
+[sub_resource type="ShaderMaterial" id="SkyDomeMat"]
+shader = ExtResource("6_sky")
+
+
+
+
+
+
+
+[node name="Stage04ValleySky" instance=ExtResource("1_base")]
+env_preset = ExtResource("2_env")
+override_camera_home = true
+camera_home_position = Vector3(0, 300, 25)
+camera_home_rotation_degrees = Vector3(-16, 0, 0)
+camera_home_fov = 58.0
+
+
+
+[node name="SkyDome" type="MeshInstance3D" parent="."]
+mesh = SubResource("SkyDomeMesh")
+material_override = SubResource("SkyDomeMat")
+extra_cull_margin = 4000.0
+cast_shadow = 0
+
+
+
+[node name="Valley" type="Node3D" parent="."]
+script = ExtResource("3_valley")
+chunk_length = 1200.0
+chunk_count = 4
+width = 850.0
+valley_half_width = 65.0
+wall_height = 560.0
+z_segments = 96
+noise_seed = 41
+noise_frequency = 0.008
+forward_speed = 80.0
+camera_z = 30.0
+base_color = Color(0.12, 0.2, 0.2, 1)
+peak_color = Color(0.42, 0.55, 0.56, 1)
+
+
+
+[node name="FarRidge" type="MeshInstance3D" parent="."]
+script = ExtResource("5_far")
+width = 6000.0
+height = 360.0
+z_center = -3000.0
+segments = 160
+noise_seed = 71
+noise_frequency = 0.0018
+bottom_color = Color(0.42, 0.55, 0.68, 1)
+top_color = Color(0.78, 0.86, 0.92, 1)
+
+
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-38, -28, 0)
+light_color = Color(0.78, 0.86, 0.95, 1)
+light_energy = 1.15
+shadow_enabled = false
+
+
+
+[node name="Decor" type="Node" parent="."]
+script = ExtResource("4_decor")

@@ -7,6 +7,11 @@ uniform vec3 ridge_near : source_color = vec3(0.26, 0.34, 0.42);
 uniform vec3 ridge_far : source_color = vec3(0.48, 0.58, 0.68);
 uniform vec3 snow_color : source_color = vec3(0.86, 0.92, 0.97);
 uniform vec3 cloud_color : source_color = vec3(0.94, 0.96, 0.98);
+// 微弱泛彩：只在地平线上方形成极低饱和的色带
+uniform vec3 tint_a : source_color = vec3(0.55, 0.78, 0.82);
+uniform vec3 tint_b : source_color = vec3(0.78, 0.66, 0.88);
+uniform vec3 tint_c : source_color = vec3(0.92, 0.82, 0.62);
+uniform float iridescence : hint_range(0.0, 1.0) = 0.30;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -44,6 +49,17 @@ void sky() {
 	float h_near = ridge_height(az, 31.0, 3.4, 0.075);
 
 	vec3 col = mix(sky_horizon, sky_top, smoothstep(0.0, 0.75, elev));
+
+	// 地平线附近的极淡彩带，慢速漂移；不是极光，只是空气里的一层颜色。
+	float band = exp(-pow((elev - 0.16) / 0.30, 2.0));
+	float warp = fbm(az * 1.6 + TIME * 0.012 + elev * 1.3);
+	float warp2 = fbm(az * 3.1 - TIME * 0.008 + 4.0);
+	vec3 iri = mix(tint_a, tint_b, smoothstep(0.25, 0.75, warp));
+	iri = mix(iri, tint_c, smoothstep(0.55, 0.95, warp2) * 0.45);
+	col = mix(col, iri, band * iridescence * (0.35 + 0.65 * warp));
+	// 高一点的地方只留一层极淡的冷紫，保持天空不是纯灰
+	float high_band = smoothstep(0.22, 0.58, elev) * (1.0 - smoothstep(0.78, 1.0, elev));
+	col = mix(col, mix(tint_b, tint_a, 0.55), high_band * 0.12);
 
 	// 远景山脊；越靠上越接近雪线
 	if (elev < h_far) {
