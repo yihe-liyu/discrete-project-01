@@ -15,6 +15,9 @@ extends CoroutineScript
 @export_range(0.0, 8000.0, 10.0) var atmosphere_start: float = 600.0
 @export_range(1000.0, 8000.0, 10.0) var atmosphere_end: float = 4500.0
 @export_range(0.0, 1.0, 0.01) var atmosphere_strength: float = 0.9
+## 分界线下降后，大气色从玫瑰色褪到的冷色。
+@export var atmosphere_descent_color: Color = Color(0.46, 0.52, 0.66)
+@export_range(0.0, 1.0, 0.01) var atmosphere_descent_strength: float = 0.55
 
 @export_group("前进速度")
 ## 山谷 / 地面 / 彩石统一前进速度。改这里三处一起变。
@@ -87,6 +90,13 @@ func _tick(_ctx: StageContext) -> Variant:
 		lerpf(dusk_high_gradient_end, dusk_gradient_end, eased),
 		lerpf(dusk_high_band_center, dusk_band_center, eased),
 		dusk_band_width, dusk_color_layer_strength, dusk_color_layer_scale)
+	# 泛红同步褪去：山壁/地面/彩石的大气色从玫瑰色过渡到冷蓝灰。
+	var atmo := atmosphere_color.lerp(atmosphere_descent_color, eased)
+	RenderingServer.global_shader_parameter_set(
+		"stage04_atmosphere_color", Vector3(atmo.r, atmo.g, atmo.b))
+	RenderingServer.global_shader_parameter_set(
+		"stage04_atmosphere_strength",
+		lerpf(atmosphere_strength, atmosphere_descent_strength, eased))
 	if t >= 1.0:
 		_dusk_active = false
 	return true
