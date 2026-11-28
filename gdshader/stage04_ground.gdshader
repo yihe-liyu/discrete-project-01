@@ -4,11 +4,10 @@ render_mode unshaded, cull_disabled, shadows_disabled;
 uniform vec3 deep_color : source_color = vec3(0.13, 0.21, 0.23);
 uniform vec3 stone_color : source_color = vec3(0.3, 0.42, 0.43);
 uniform vec3 sky_color : source_color = vec3(0.66, 0.76, 0.86);
-uniform vec3 haze_color : source_color = vec3(0.58, 0.68, 0.79);
-uniform float haze_start = 700.0;
-uniform float haze_end = 3200.0;
 // 与 InfiniteValley 的 forward_speed 对齐：地面纹理向镜头流动
 uniform float scroll_speed = 80.0;
+
+#include "res://gdshader/stage04_fog.gdshaderinc"
 
 varying vec3 v_world;
 
@@ -47,7 +46,7 @@ void fragment() {
 	vec3 col = mix(deep_color, stone_color, stone);
 
 	// 远处融进雾色
-	float haze = smoothstep(haze_start, haze_end, -v_world.z);
+	float haze = stage04_haze(v_world.z);
 	col = mix(col, haze_color, haze * 0.72);
 
 	// 掠射角把天空颜色带进来，像潮湿石面/薄雾的反光
