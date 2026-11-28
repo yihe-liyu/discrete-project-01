@@ -29,6 +29,13 @@ RNG="*res://scripts/autoload/rng.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 SimClock="*res://scripts/autoload/sim_clock.gd"
 
+[shader_globals]
+
+stage04_sky_light={
+"type": "vec3",
+"value": Vector3(0.62, 0.76, 0.9)
+}
+
 [debug]
 
 gdscript/warnings/unassigned_variable=2

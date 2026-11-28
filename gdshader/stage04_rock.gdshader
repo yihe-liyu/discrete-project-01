@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, shadows_disabled;
 
+global uniform vec3 stage04_sky_light = vec3(0.62, 0.76, 0.9);
+
 varying vec3 v_color;
 varying vec3 v_world;
 
@@ -15,6 +17,7 @@ void fragment() {
 	vec3 light_dir = normalize(vec3(0.35, 0.85, 0.25));
 	float facet = 0.42 + 0.58 * max(dot(n, light_dir), 0.0);
 	vec3 col = v_color * (1.15 + 0.45 * facet);
+	col *= mix(vec3(1.0), stage04_sky_light * 1.45, 0.10);
 	ALBEDO = col * 1.35;
 	// 少量自发光，让石头在雾里也有一点可读的亮部。
 	EMISSION = col * (0.12 + 0.10 * facet);

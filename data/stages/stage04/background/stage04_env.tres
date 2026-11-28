@@ -6,7 +6,7 @@
 
 [sub_resource type="Sky" id="Sky_stage04"]
 sky_material = ExtResource("2_sky")
-radiance_size = 0
+radiance_size = 3
 
 [sub_resource type="Environment" id="Environment_stage04"]
 background_mode = 2
@@ -23,9 +23,10 @@ fog_height = 60.0
 fog_height_density = 0.0
 fog_sky_affect = 0.0
 fog_aerial_perspective = 0.1
-ambient_light_source = 2
+ambient_light_source = 3
 ambient_light_color = Color(0.46, 0.56, 0.64, 1)
-ambient_light_energy = 0.2
+ambient_light_sky_contribution = 1.0
+ambient_light_energy = 0.3
 
 [resource]
 script = ExtResource("1")
