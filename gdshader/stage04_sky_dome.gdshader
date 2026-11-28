@@ -1,15 +1,15 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 
-uniform vec3 sky_top : source_color = vec3(0.34, 0.46, 0.64);
-uniform vec3 sky_horizon : source_color = vec3(0.76, 0.84, 0.9);
-uniform vec3 tint_a : source_color = vec3(0.48, 0.74, 0.8);
-uniform vec3 tint_b : source_color = vec3(0.7, 0.58, 0.84);
-uniform vec3 tint_c : source_color = vec3(0.9, 0.78, 0.56);
-uniform float iridescence : hint_range(0.0, 1.0) = 0.32;
+uniform vec3 sky_top : source_color = vec3(0.16, 0.20, 0.38);
+uniform vec3 sky_horizon : source_color = vec3(0.98, 0.58, 0.35);
+uniform vec3 tint_a : source_color = vec3(0.94, 0.48, 0.44);
+uniform vec3 tint_b : source_color = vec3(0.48, 0.32, 0.62);
+uniform vec3 tint_c : source_color = vec3(1.0, 0.72, 0.34);
+uniform float iridescence : hint_range(0.0, 1.0) = 0.42;
 uniform vec3 sun_direction = vec3(0.0, 0.12, -1.0);
-uniform vec3 sun_color : source_color = vec3(1.0, 0.86, 0.64);
-uniform float sun_glow : hint_range(0.0, 1.0) = 0.22;
+uniform vec3 sun_color : source_color = vec3(1.0, 0.52, 0.20);
+uniform float sun_glow : hint_range(0.0, 1.0) = 0.55;
 
 varying vec3 v_world;
 
@@ -41,17 +41,17 @@ void vertex() {
 }
 
 void fragment() {
-	// 相机在球心附近，可见天空的 UV.y 约 0.52–0.72；彩带就压在这个区间。
-	float h = clamp(UV.y, 0.0, 1.0);
-	vec3 col = mix(sky_horizon, sky_top, smoothstep(0.20, 0.56, h));
+	// 天空只做屏幕纵向渐变：顶部靛蓝、靠近地平线橙红，保证黄昏分层可见。
+	float h = clamp(1.0 - SCREEN_UV.y, 0.0, 1.0);
+	vec3 col = mix(sky_horizon, sky_top, smoothstep(0.12, 0.82, h));
 
-	// 只用竖直色带：不要 atan/UV.x，避免天空出现一条竖向接缝。
-	float band = smoothstep(0.24, 0.32, h) * (1.0 - smoothstep(0.46, 0.64, h));
+	// 地平线附近的暖色彩带 + 高空冷紫。
+	float band = exp(-pow((h - 0.30) / 0.24, 2.0));
 	float drift = 0.5 + 0.5 * sin(h * 9.0 + TIME * 0.020);
 	vec3 iri = mix(tint_a, tint_b, drift);
-	iri = mix(iri, tint_c, smoothstep(0.48, 0.62, h) * 0.25);
+	iri = mix(iri, tint_c, smoothstep(0.18, 0.45, h) * 0.45);
 	col = mix(col, iri, band * iridescence);
-	col = mix(col, mix(tint_b, tint_a, 0.5), smoothstep(0.40, 0.58, h) * 0.08);
+	col = mix(col, tint_b, smoothstep(0.55, 0.9, h) * 0.10);
 
 	ALBEDO = col;
 }

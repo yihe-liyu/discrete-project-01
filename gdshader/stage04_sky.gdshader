@@ -1,17 +1,17 @@
 shader_type sky;
 render_mode use_debanding;
 
-uniform vec3 sky_top : source_color = vec3(0.52, 0.68, 0.8);
-uniform vec3 sky_horizon : source_color = vec3(0.78, 0.86, 0.9);
-uniform vec3 ridge_near : source_color = vec3(0.26, 0.34, 0.42);
-uniform vec3 ridge_far : source_color = vec3(0.48, 0.58, 0.68);
-uniform vec3 snow_color : source_color = vec3(0.86, 0.92, 0.97);
-uniform vec3 cloud_color : source_color = vec3(0.94, 0.96, 0.98);
+uniform vec3 sky_top : source_color = vec3(0.16, 0.20, 0.38);
+uniform vec3 sky_horizon : source_color = vec3(0.98, 0.58, 0.35);
+uniform vec3 ridge_near : source_color = vec3(0.18, 0.15, 0.23);
+uniform vec3 ridge_far : source_color = vec3(0.38, 0.28, 0.4);
+uniform vec3 snow_color : source_color = vec3(0.96, 0.78, 0.68);
+uniform vec3 cloud_color : source_color = vec3(1.0, 0.8, 0.66);
 // 微弱泛彩：只在地平线上方形成极低饱和的色带
-uniform vec3 tint_a : source_color = vec3(0.55, 0.78, 0.82);
-uniform vec3 tint_b : source_color = vec3(0.78, 0.66, 0.88);
-uniform vec3 tint_c : source_color = vec3(0.92, 0.82, 0.62);
-uniform float iridescence : hint_range(0.0, 1.0) = 0.30;
+uniform vec3 tint_a : source_color = vec3(0.94, 0.48, 0.44);
+uniform vec3 tint_b : source_color = vec3(0.48, 0.32, 0.62);
+uniform vec3 tint_c : source_color = vec3(1.0, 0.72, 0.34);
+uniform float iridescence : hint_range(0.0, 1.0) = 0.42;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
