@@ -7,8 +7,6 @@ uniform vec3 sky_color : source_color = vec3(0.66, 0.76, 0.86);
 // 与 InfiniteValley 的 forward_speed 对齐：地面纹理向镜头流动
 uniform float scroll_speed = 80.0;
 
-#include "res://gdshader/stage04_fog.gdshaderinc"
-
 varying vec3 v_world;
 
 float hash(vec2 p) {
@@ -46,8 +44,6 @@ void fragment() {
 	vec3 col = mix(deep_color, stone_color, stone);
 
 	// 远处融进雾色
-	float haze = stage04_haze(v_world.z);
-	col = mix(col, haze_color, haze * 0.72);
 
 	// 掠射角把天空颜色带进来，像潮湿石面/薄雾的反光
 	vec3 view_dir = normalize(CAMERA_POSITION_WORLD - v_world);
@@ -56,7 +52,7 @@ void fragment() {
 
 	// 少量矿物斑点，近处可见、远处被雾吃掉
 	float fleck = step(0.88, noise(p * 0.65 + 11.0));
-	col += vec3(0.035, 0.05, 0.06) * fleck * (1.0 - haze);
+	col += vec3(0.035, 0.05, 0.06) * fleck;
 
 	ALBEDO = col;
 	EMISSION = col * 0.12;

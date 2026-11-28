@@ -5,7 +5,6 @@ uniform vec3 low_color : source_color = vec3(0.08, 0.17, 0.13);
 uniform vec3 rock_color : source_color = vec3(0.18, 0.3, 0.25);
 uniform vec3 high_color : source_color = vec3(0.3, 0.42, 0.4);
 uniform vec3 snow_color : source_color = vec3(0.92, 0.96, 1.0);
-#include "res://gdshader/stage04_fog.gdshaderinc"
 uniform vec3 sun_color : source_color = vec3(1.15, 1.02, 0.82);
 uniform vec3 shade_color : source_color = vec3(0.28, 0.34, 0.46);
 // 基础自发光：山谷背面/补光不足时也保留轮廓，不靠环境光硬撑。
@@ -41,7 +40,6 @@ void vertex() {
 }
 
 void fragment() {
-	float haze = stage04_haze(v_world_pos.z);
 	// 天光按屏幕纵向渐变：不跟 6 列山壁三角面的插值走，避免长条亮暗带。
 	float sky_lift = 1.0 - smoothstep(0.06, 0.94, SCREEN_UV.y);
 	vec3 base = mix(low_color, rock_color, 0.55);
@@ -66,9 +64,8 @@ void fragment() {
 	final_color *= 0.90 + 0.20 * rock_lum;
 	final_color = mix(final_color, final_color * rock_detail * 1.22, 0.08);
 
-	final_color = mix(final_color, haze_color, haze * 0.3);
 	ALBEDO = final_color * 2.4;
-	EMISSION = final_color * (0.30 + 0.85 * sky_lift) + haze_color * haze * 0.18;
+	EMISSION = final_color * (0.30 + 0.85 * sky_lift);
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.08;
 }
