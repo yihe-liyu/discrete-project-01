@@ -10,6 +10,12 @@ uniform float iridescence : hint_range(0.0, 1.0) = 0.42;
 uniform vec3 sun_direction = vec3(0.0, 0.12, -1.0);
 uniform vec3 sun_color : source_color = vec3(1.0, 0.52, 0.20);
 uniform float sun_glow : hint_range(0.0, 1.0) = 0.55;
+// 黄昏颜色分界：屏幕纵向 0=地平线，1=画面顶部。
+uniform float dusk_gradient_start : hint_range(0.0, 1.0) = 0.12;
+uniform float dusk_gradient_end : hint_range(0.0, 1.0) = 0.82;
+// 暖色彩带中心 / 宽度；想让橙色带更高就调大 center。
+uniform float dusk_band_center : hint_range(0.0, 1.0) = 0.30;
+uniform float dusk_band_width : hint_range(0.01, 0.6) = 0.24;
 
 varying vec3 v_world;
 
@@ -43,10 +49,10 @@ void vertex() {
 void fragment() {
 	// 天空只做屏幕纵向渐变：顶部靛蓝、靠近地平线橙红，保证黄昏分层可见。
 	float h = clamp(1.0 - SCREEN_UV.y, 0.0, 1.0);
-	vec3 col = mix(sky_horizon, sky_top, smoothstep(0.12, 0.82, h));
+	vec3 col = mix(sky_horizon, sky_top, smoothstep(dusk_gradient_start, dusk_gradient_end, h));
 
 	// 地平线附近的暖色彩带 + 高空冷紫。
-	float band = exp(-pow((h - 0.30) / 0.24, 2.0));
+	float band = exp(-pow((h - dusk_band_center) / dusk_band_width, 2.0));
 	float drift = 0.5 + 0.5 * sin(h * 9.0 + TIME * 0.020);
 	vec3 iri = mix(tint_a, tint_b, drift);
 	iri = mix(iri, tint_c, smoothstep(0.18, 0.45, h) * 0.45);

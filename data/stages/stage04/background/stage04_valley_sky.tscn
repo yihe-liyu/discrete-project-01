@@ -32,6 +32,10 @@ rings = 24
 
 [sub_resource type="ShaderMaterial" id="SkyDomeMat"]
 shader = ExtResource("6_sky")
+shader_parameter/dusk_gradient_start = 0.12
+shader_parameter/dusk_gradient_end = 0.82
+shader_parameter/dusk_band_center = 0.3
+shader_parameter/dusk_band_width = 0.24
 
 
 
