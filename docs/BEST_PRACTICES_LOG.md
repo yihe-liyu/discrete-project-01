@@ -124,7 +124,7 @@
 - **主菜单残留记忆值**：持久 HUD 的 `Memory` 是嵌套 CanvasLayer，只隐藏外层 GameUI 不会隐藏它；新增 `GameUI.set_hud_visible()` 同时同步 Memory 层，回归测试覆盖。
 - **再次播放录像**：回放结束页重播前设置 `_continuing_replay = true`，避免旧 GameScene `_exit_tree` 把刚启动的 ReplaySession stop 掉；同时 `_exit_tree` 不再在继续回放时 `PracticeSession.finish()`，否则符卡练习录像会被清空、新场景退回普通 Stage 1。
 - **回放水印渐隐**：REPLAY 标的呼吸 tween 会每帧重写 alpha，HUD 统一淡出/隐藏时先停掉它；回归测试覆盖 `set_hud_alpha(0)` 时标也归零。
-- **Stage4 山谷背景原型**：新增 `stage04_valley_sky.tscn`（无限山谷 + 暗色远山 + SkyDome 微彩天空），Stage04 暂时切到该背景；天空用 unshaded 天穹材质绕开 SubViewport 环境 sky 不生效的问题。按作者反馈移除谷底/森林线、天空改竖直色带避免接缝；随后移除 FarRidge，改为 Environment 深度雾 + 山壁距离渐隐，让谷道尽头自然融进雾色；谷口不再放生硬雾墙或远山。
+- **Stage4 山谷背景原型**：新增 `stage04_valley_sky.tscn`（无限山谷 + 暗色远山 + SkyDome 微彩天空），Stage04 暂时切到该背景；天空用 unshaded 天穹材质绕开 SubViewport 环境 sky 不生效的问题。按作者反馈移除谷底/森林线、天空改竖直色带避免接缝；随后移除 FarRidge，改为天空漫射光 + 山壁距离渐隐，让谷道尽头留空；山壁按高度接收冷色天光，避免整片死黑。注意 shader 注释必须用 `//`，误用 `##` 会导致整片山谷编译失败不渲染。
 - **回放水印**：GameUI 从 `front02.png` 的 `(64,416,156,32)` 切出 REPLAY 标，放在场地中心（448,480），仅 `ReplaySession.is_playing()` 时显示；alpha 在 0.10–0.24 间 1.2s 呼吸。
 - **HUD 淡出 freed object**：`set_hud_alpha` 原来先 `as CanvasItem` 再判有效，节点被场景释放时会报 cast freed object；改为先 `is_instance_valid` 并从缓存剔除，再转换。
 - **暂停页字体**：去掉暂停菜单所有 Label 的黑色描边（标题/副标题/选项/确认面板），文字直接压在框内模糊画面上。
