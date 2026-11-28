@@ -16,7 +16,7 @@ extends Node3D
 @export var camera_z: float = 30.0
 ## 中心线摆动；会自动夹在谷宽内，保证镜头始终在山谷里
 @export var meander: float = 40.0
-@export var width_variation: float = 0.28
+@export var width_variation: float = 0.42
 ## 近景树线高度（世界单位）
 @export var tree_height: float = 90.0
 ## 是否生成谷底（Stage04 原型关闭：谷底网格太抽象）
@@ -138,7 +138,7 @@ func _add_continuous_wall(root: Node3D, side: float, profile: Array) -> void:
 	for i in total + 1:
 		var local_z := continuous_start_z - i * _z_step
 		var center := _center_at(local_z)
-		var half := _half_width_at(local_z)
+		var half := _half_width_at(local_z, side)
 		for p in cols:
 			var t: float = SIDE_T[p]
 			var x := center + side * lerpf(half, width * 0.5, t)
@@ -174,7 +174,7 @@ func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
 		var local_z := -i * _z_step
 		var z_world := base_z + local_z
 		var center := _center_at(z_world)
-		var half := _half_width_at(z_world)
+		var half := _half_width_at(z_world, side)
 		for p in cols:
 			var t: float = SIDE_T[p]
 			var x := center + side * lerpf(half, width * 0.5, t)
@@ -215,7 +215,7 @@ func _add_forest_line(chunk: Node3D, side: float) -> void:
 		var local_z := -i * _z_step
 		var z_world := base_z + local_z
 		var center := _center_at(z_world)
-		var half := _half_width_at(z_world)
+		var half := _half_width_at(z_world, side)
 		var x := center + side * (half - 1.0)
 		var n1 := (_noise.get_noise_2d(x * 2.2, z_world * 0.9) + 1.0) * 0.5
 		var n2 := (_noise.get_noise_2d(x * 5.1, z_world * 2.1) + 1.0) * 0.5
@@ -254,10 +254,11 @@ func _add_floor(chunk: Node3D) -> void:
 		var local_z := -i * _z_step
 		var z_world := base_z + local_z
 		var center := _center_at(z_world)
-		var half := _half_width_at(z_world)
+		var left_half := _half_width_at(z_world, -1.0)
+		var right_half := _half_width_at(z_world, 1.0)
 		for p in COLS:
 			var t := float(p) / float(COLS - 1)
-			var x := center - half + 2.0 * half * t
+			var x := lerpf(center - left_half, center + right_half, t)
 			var edge := absf(t - 0.5) * 2.0
 			var y := (1.0 - edge) * _floor_height(x, z_world)
 			verts.append(Vector3(x, y, local_z))
@@ -332,7 +333,7 @@ func sample_wall(z_world: float, side: float, t: float) -> Dictionary:
 	# 连续山壁整体在移动；采样要换回它的局部 z 再算高度。
 	var local_z := z_world - (_wall_root.position.z if _wall_root else 0.0)
 	var center := _center_at(local_z)
-	var half := _half_width_at(local_z)
+	var half := _half_width_at(local_z, side)
 	var x := center + side * lerpf(half, width * 0.5, tc)
 	var y := _terrain_height(x, local_z) * prof * wall_height
 	return {
@@ -353,16 +354,26 @@ func _profile_at(profile: Array, t: float) -> float:
 
 
 func _center_at(z: float) -> float:
-	var half := _half_width_at(z)
-	var raw := meander * _noise.get_noise_2d(17.0, z * 0.65)
-	# 镜头在 x=0；中心线必须给内侧至少留 40 距离，避免山壁穿过镜头。
-	var limit := maxf(0.0, half - 40.0)
+	var left_half := _half_width_at(z, -1.0)
+	var right_half := _half_width_at(z, 1.0)
+	var raw := meander * (
+		_noise.get_noise_2d(17.0, z * 0.17) * 0.62
+		+ _noise.get_noise_2d(43.0, z * 0.53) * 0.28
+		+ _noise.get_noise_2d(89.0, z * 1.31) * 0.10
+	)
+	# 镜头在 x=0；中心线必须给两侧都至少留 40 距离，避免山壁穿过镜头。
+	var limit := maxf(0.0, minf(left_half, right_half) - 40.0)
 	return clampf(raw, -limit, limit)
 
 
-func _half_width_at(z: float) -> float:
-	var n := (_noise.get_noise_2d(-31.0, z * 0.45) + 1.0) * 0.5
-	return valley_half_width * (1.0 + width_variation * (n - 0.5) * 2.0)
+## 山脚宽度：多尺度噪声 + 左右独立种子，保留条状谷道但边缘不再重复。
+func _half_width_at(z: float, side: float) -> float:
+	var seed_off := side * 19.0
+	var broad := _noise.get_noise_2d(-31.0 + seed_off, z * 0.16)
+	var mid := _noise.get_noise_2d(-77.0 + seed_off, z * 0.48)
+	var fine := _noise.get_noise_2d(-151.0 + seed_off, z * 1.37)
+	var n := broad * 0.55 + mid * 0.32 + fine * 0.13
+	return valley_half_width * (1.0 + width_variation * 1.45 * n)
 
 
 func _terrain_height(x: float, z: float) -> float:
