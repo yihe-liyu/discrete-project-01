@@ -57,11 +57,13 @@ float fbm2(vec2 p) {
 }
 
 vec3 memory_palette(float hue) {
+	// 闭合调色板：末尾回到蓝色，fract 回绕时不会出现品红→蓝硬切。
 	if (hue < 0.2)      return mix(vec3(0.20, 0.30, 1.00), vec3(0.10, 0.60, 0.90), hue / 0.2);
 	else if (hue < 0.4) return mix(vec3(0.10, 0.60, 0.90), vec3(0.15, 0.75, 0.70), (hue - 0.2) / 0.2);
 	else if (hue < 0.6) return mix(vec3(0.15, 0.75, 0.70), vec3(0.60, 0.65, 0.25), (hue - 0.4) / 0.2);
 	else if (hue < 0.8) return mix(vec3(0.60, 0.65, 0.25), vec3(0.85, 0.40, 0.30), (hue - 0.6) / 0.2);
-	else                return mix(vec3(0.85, 0.40, 0.30), vec3(0.70, 0.20, 0.55), (hue - 0.8) / 0.2);
+	else if (hue < 0.92) return mix(vec3(0.85, 0.40, 0.30), vec3(0.70, 0.20, 0.55), (hue - 0.8) / 0.12);
+	else                return mix(vec3(0.70, 0.20, 0.55), vec3(0.20, 0.30, 1.00), (hue - 0.92) / 0.08);
 }
 
 
@@ -87,9 +89,11 @@ void fragment() {
 	float n1 = fbm2(layer_uv + vec2(TIME * 0.012, TIME * 0.006));
 	float n2 = fbm2(layer_uv * 1.9 + vec2(-TIME * 0.008, TIME * 0.010) + 11.0);
 	float hue = fract(n1 * 1.25 + n2 * 0.75 + TIME * 0.012);
-	float mask = smoothstep(0.42, 0.70, n1 * 0.65 + n2 * 0.35);
+	float mask = smoothstep(0.32, 0.82, n1 * 0.65 + n2 * 0.35);
 	mask *= smoothstep(0.08, 0.30, h) * (1.0 - smoothstep(0.72, 0.96, h));
 	col = mix(col, memory_palette(hue), mask * color_layer_strength);
+	// 轻微静态抖动，避免暗部渐变色带。
+	col += (hash(FRAGCOORD.xy + 17.0) - 0.5) / 255.0;
 
 	ALBEDO = col;
 }
