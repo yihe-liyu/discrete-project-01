@@ -10,6 +10,10 @@ uniform vec3 sun_color : source_color = vec3(1.15, 1.02, 0.82);
 uniform vec3 shade_color : source_color = vec3(0.28, 0.34, 0.46);
 // 基础自发光：山谷背面/补光不足时也保留轮廓，不靠环境光硬撑。
 uniform float ambient_lift : hint_range(0.0, 0.5) = 0.07;
+// 程序化岩壁贴图：由 InfiniteValley 生成，三轴投影避免 UV 拉伸。
+uniform sampler2D rock_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform float triplanar_scale = 0.012;
+uniform float triplanar_sharpness = 5.0;
 
 varying vec3 v_color;
 
@@ -48,6 +52,19 @@ void fragment() {
 	float strata = sin(v_world_pos.y * 0.012 + fbm(v_world_pos.xz * 0.01) * 3.0);
 	base *= 0.94 + 0.06 * strata;
 	vec3 final_color = mix(base, high_color, sky_lift * 0.45);
+
+	// triplanar：法线越接近某轴，越信任该轴的投影；不依赖 mesh UV。
+	vec3 wn = normalize(v_normal_world);
+	vec3 weights = pow(abs(wn), vec3(triplanar_sharpness));
+	weights /= max(weights.x + weights.y + weights.z, 0.0001);
+	vec3 tx = texture(rock_tex, v_world_pos.zy * triplanar_scale).rgb;
+	vec3 ty = texture(rock_tex, v_world_pos.xz * triplanar_scale).rgb;
+	vec3 tz = texture(rock_tex, v_world_pos.xy * triplanar_scale).rgb;
+	vec3 rock_detail = tx * weights.x + ty * weights.y + tz * weights.z;
+	float rock_lum = dot(rock_detail, vec3(0.299, 0.587, 0.114));
+	final_color *= 0.72 + 0.56 * rock_lum;
+	final_color = mix(final_color, final_color * rock_detail * 1.4, 0.18);
+
 	final_color = mix(final_color, haze_color, haze * 0.3);
 	ALBEDO = final_color * 2.4;
 	EMISSION = final_color * (0.30 + 0.85 * sky_lift) + haze_color * haze * 0.18;

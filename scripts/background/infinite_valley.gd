@@ -43,6 +43,7 @@ func _ready() -> void:
 
 	_material = ShaderMaterial.new()
 	_material.shader = preload("res://gdshader/valley_mountain.gdshader")
+	_material.set_shader_parameter("rock_tex", _make_rock_texture())
 
 	for i in chunk_count:
 		var chunk := Node3D.new()
@@ -211,6 +212,61 @@ func _make_mesh(verts: PackedVector3Array, normals: PackedVector3Array,
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
+
+
+## 生成山壁 triplanar 用的岩石噪声纹理（不依赖外部贴图）。
+func _make_rock_texture() -> NoiseTexture2D:
+	var noise := FastNoiseLite.new()
+	noise.seed = noise_seed + 977
+	noise.frequency = 0.012
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+	noise.fractal_octaves = 4
+	noise.fractal_gain = 0.55
+
+	var ramp := Gradient.new()
+	ramp.colors = PackedColorArray([
+		Color(0.12, 0.16, 0.18),
+		Color(0.3, 0.38, 0.38),
+		Color(0.55, 0.62, 0.6),
+		Color(0.78, 0.84, 0.8),
+	])
+	ramp.offsets = PackedFloat32Array([0.0, 0.42, 0.72, 1.0])
+
+	var tex := NoiseTexture2D.new()
+	tex.width = 512
+	tex.height = 512
+	tex.seamless = true
+	tex.generate_mipmaps = true
+	tex.noise = noise
+	tex.color_ramp = ramp
+	return tex
+
+
+## 采山壁表面：z 世界坐标、side ±1、t 0..1（0=谷底内缘，1=外侧山顶）。
+## 石头放置必须走这里，不能再随机 y。
+func sample_wall(z_world: float, side: float, t: float) -> Dictionary:
+	var tc := clampf(t, 0.0, 1.0)
+	var profile: Array = LEFT_H if side < 0.0 else RIGHT_H
+	var prof := _profile_at(profile, tc)
+	var center := _center_at(z_world)
+	var half := _half_width_at(z_world)
+	var x := center + side * lerpf(half, width * 0.5, tc)
+	var y := _terrain_height(x, z_world) * prof * wall_height
+	return {
+		"position": Vector3(x, y, z_world),
+		"normal": Vector3(-side, 0.28, 0.0).normalized(),
+	}
+
+
+func _profile_at(profile: Array, t: float) -> float:
+	var tc := clampf(t, 0.0, 1.0)
+	for i in SIDE_T.size() - 1:
+		var a: float = SIDE_T[i]
+		var b: float = SIDE_T[i + 1]
+		if tc <= b:
+			var k := (tc - a) / maxf(b - a, 0.0001)
+			return lerpf(float(profile[i]), float(profile[i + 1]), k)
+	return float(profile[profile.size() - 1])
 
 
 func _center_at(z: float) -> float:
