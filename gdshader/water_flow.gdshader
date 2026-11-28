@@ -95,7 +95,9 @@ void fragment() {
 	else if (hue < 0.4) col = mix(vec3(0.10,0.60,0.90), vec3(0.15,0.75,0.70), (hue-0.2)/0.2);
 	else if (hue < 0.6) col = mix(vec3(0.15,0.75,0.70), vec3(0.60,0.65,0.25), (hue-0.4)/0.2);
 	else if (hue < 0.8) col = mix(vec3(0.60,0.65,0.25), vec3(0.85,0.40,0.30), (hue-0.6)/0.2);
-	else                 col = mix(vec3(0.85,0.40,0.30), vec3(0.70,0.20,0.55), (hue-0.8)/0.2);
+	else if (hue < 0.9) col = mix(vec3(0.85,0.40,0.30), vec3(0.70,0.20,0.55), (hue-0.8)/0.1);
+	// 闭合调色板：品红回到蓝色，避免 fract 回绕时硬切。
+	else                 col = mix(vec3(0.70,0.20,0.55), vec3(0.20,0.30,1.00), (hue-0.9)/0.1);
 	
 	// 波谷暗、波峰亮
 	float depth_shade = mix(0.5, 1.2, crest);
