@@ -23,6 +23,15 @@ extends CoroutineScript
 @export var run_duration_seconds: float = 480.0
 @export var continuous_length_margin: float = 1600.0
 
+@export_group("黄昏上升/下降")
+## 道中开始时天空颜色分界线在高位，随后下降到下方终值。
+@export var dusk_descent_enabled: bool = true
+@export_range(1.0, 600.0, 1.0) var dusk_descent_duration: float = 90.0
+## 高位起点：屏幕纵向 0=地平线，1=顶部。
+@export_range(0.0, 1.0, 0.01) var dusk_high_gradient_start: float = 0.58
+@export_range(0.0, 1.0, 0.01) var dusk_high_gradient_end: float = 0.96
+@export_range(0.0, 1.0, 0.01) var dusk_high_band_center: float = 0.68
+
 @export_group("黄昏天空")
 ## 屏幕纵向 0=地平线，1=画面顶部。
 @export_range(0.0, 1.0, 0.01) var dusk_gradient_start: float = 0.12
@@ -33,6 +42,9 @@ extends CoroutineScript
 ## 类似记忆值水面的彩色流动层强度。
 @export_range(0.0, 0.6, 0.01) var dusk_color_layer_strength: float = 0.48
 @export_range(0.5, 8.0, 0.1) var dusk_color_layer_scale: float = 3.2
+
+var _dusk_elapsed: float = 0.0
+var _dusk_active: bool = false
 
 
 func _on_start() -> void:
@@ -56,6 +68,28 @@ func _on_start() -> void:
 		RenderingServer.global_shader_parameter_set(
 			"stage04_sky_light", Vector3(sky.r, sky.g, sky.b))
 	_apply_dusk_sky_params()
+	_dusk_elapsed = 0.0
+	_dusk_active = dusk_descent_enabled and dusk_descent_duration > 0.01
+	if _dusk_active:
+		_apply_dusk_values(dusk_high_gradient_start, dusk_high_gradient_end,
+			dusk_high_band_center, dusk_band_width,
+			dusk_color_layer_strength, dusk_color_layer_scale)
+
+
+func _tick(_ctx: StageContext) -> Variant:
+	if not _dusk_active:
+		return true
+	_dusk_elapsed += get_dt()
+	var t := clampf(_dusk_elapsed / dusk_descent_duration, 0.0, 1.0)
+	var eased := t * t * (3.0 - 2.0 * t)
+	_apply_dusk_values(
+		lerpf(dusk_high_gradient_start, dusk_gradient_start, eased),
+		lerpf(dusk_high_gradient_end, dusk_gradient_end, eased),
+		lerpf(dusk_high_band_center, dusk_band_center, eased),
+		dusk_band_width, dusk_color_layer_strength, dusk_color_layer_scale)
+	if t >= 1.0:
+		_dusk_active = false
+	return true
 
 
 ## 统一大气透视入口：颜色会按比例受天空 horizon/tint 影响。
@@ -117,15 +151,23 @@ func _apply_motion() -> void:
 
 ## 方便运行时/Inspector 调分界线，不需要手动改 shader 参数名。
 func _apply_dusk_sky_params() -> void:
+	_apply_dusk_values(dusk_gradient_start, dusk_gradient_end, dusk_band_center,
+		dusk_band_width, dusk_color_layer_strength, dusk_color_layer_scale)
+
+
+func _apply_dusk_values(gradient_start: float, gradient_end: float, band_center: float,
+		band_width: float, layer_strength: float, layer_scale: float) -> void:
+	if ctx == null or ctx.background == null:
+		return
 	var dome := ctx.background.get_node_or_null("SkyDome") as MeshInstance3D
 	if dome == null:
 		return
 	var mat := dome.material_override as ShaderMaterial
 	if mat == null:
 		return
-	mat.set_shader_parameter("dusk_gradient_start", dusk_gradient_start)
-	mat.set_shader_parameter("dusk_gradient_end", dusk_gradient_end)
-	mat.set_shader_parameter("dusk_band_center", dusk_band_center)
-	mat.set_shader_parameter("dusk_band_width", dusk_band_width)
-	mat.set_shader_parameter("color_layer_strength", dusk_color_layer_strength)
-	mat.set_shader_parameter("color_layer_scale", dusk_color_layer_scale)
+	mat.set_shader_parameter("dusk_gradient_start", gradient_start)
+	mat.set_shader_parameter("dusk_gradient_end", gradient_end)
+	mat.set_shader_parameter("dusk_band_center", band_center)
+	mat.set_shader_parameter("dusk_band_width", band_width)
+	mat.set_shader_parameter("color_layer_strength", layer_strength)
+	mat.set_shader_parameter("color_layer_scale", layer_scale)
