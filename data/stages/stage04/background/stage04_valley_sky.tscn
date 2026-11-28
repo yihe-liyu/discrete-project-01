@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=18 format=3]
 
 
 
@@ -12,6 +12,9 @@
 
 [ext_resource type="Shader" path="res://gdshader/stage04_sky_dome.gdshader" id="6_sky"]
 
+[ext_resource type="Shader" path="res://gdshader/stage04_ground.gdshader" id="8_ground"]
+
+[ext_resource type="Script" path="res://data/stages/stage04/background/stage04_stones.gd" id="9_stones"]
 
 
 
@@ -20,6 +23,8 @@ radius = 4000.0
 height = 4000.0
 radial_segments = 64
 rings = 24
+
+
 
 
 
@@ -38,12 +43,28 @@ shader = ExtResource("6_sky")
 
 
 
+
+
+[sub_resource type="PlaneMesh" id="GroundMesh"]
+size = Vector2(2200, 8000)
+
+
+[sub_resource type="ShaderMaterial" id="GroundMat"]
+shader = ExtResource("8_ground")
+
+
+
+
+
+
 [node name="Stage04ValleySky" instance=ExtResource("1_base")]
 env_preset = ExtResource("2_env")
 override_camera_home = true
-camera_home_position = Vector3(0, 300, 25)
-camera_home_rotation_degrees = Vector3(-16, 0, 0)
-camera_home_fov = 58.0
+camera_home_position = Vector3(0, 210, 25)
+camera_home_rotation_degrees = Vector3(-12, 0, 0)
+camera_home_fov = 62.0
+
+
 
 
 
@@ -59,12 +80,20 @@ cast_shadow = 0
 
 
 
+
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, -3000)
+mesh = SubResource("GroundMesh")
+material_override = SubResource("GroundMat")
+
+
 [node name="Valley" type="Node3D" parent="."]
 script = ExtResource("3_valley")
 chunk_length = 1200.0
 chunk_count = 4
 width = 850.0
-valley_half_width = 65.0
+valley_half_width = 110.0
 wall_height = 560.0
 z_segments = 96
 noise_seed = 41
@@ -75,6 +104,8 @@ build_floor = false
 build_forest = false
 base_color = Color(0.12, 0.2, 0.2, 1)
 peak_color = Color(0.42, 0.55, 0.56, 1)
+
+
 
 
 
@@ -94,12 +125,19 @@ shadow_enabled = false
 
 
 
+
+
 [node name="FillLight" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-20, 145, 0)
 light_color = Color(0.62, 0.78, 0.96, 1)
 light_energy = 0.35
 light_specular = 0.0
 shadow_enabled = false
+
+
+
+[node name="Stones" type="Node3D" parent="."]
+script = ExtResource("9_stones")
 
 [node name="Decor" type="Node" parent="."]
 script = ExtResource("4_decor")
