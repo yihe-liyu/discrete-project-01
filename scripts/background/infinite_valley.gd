@@ -19,6 +19,10 @@ extends Node3D
 @export var width_variation: float = 0.28
 ## 近景树线高度（世界单位）
 @export var tree_height: float = 90.0
+## 是否生成谷底（Stage04 原型关闭：谷底网格太抽象）
+@export var build_floor: bool = true
+## 是否生成山脚森林剪影（Stage04 原型关闭：会形成黑色条纹）
+@export var build_forest: bool = true
 
 const SIDE_T := [0.0, 0.18, 0.38, 0.62, 0.82, 1.0]
 const LEFT_H := [0.0, 0.14, 0.34, 0.6, 0.84, 1.0]
@@ -71,9 +75,11 @@ func _build_chunk(chunk: Node3D) -> void:
 		child.queue_free()
 	_add_wall(chunk, -1.0, LEFT_H)
 	_add_wall(chunk, 1.0, RIGHT_H)
-	_add_floor(chunk)
-	_add_forest_line(chunk, -1.0)
-	_add_forest_line(chunk, 1.0)
+	if build_floor:
+		_add_floor(chunk)
+	if build_forest:
+		_add_forest_line(chunk, -1.0)
+		_add_forest_line(chunk, 1.0)
 
 
 func _add_wall(chunk: Node3D, side: float, profile: Array) -> void:
