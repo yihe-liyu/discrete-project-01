@@ -36,6 +36,26 @@ stage04_sky_light={
 "value": Vector3(0.62, 0.76, 0.9)
 }
 
+stage04_atmosphere_color={
+"type": "vec3",
+"value": Vector3(0.68, 0.55, 0.56)
+}
+
+stage04_atmosphere_start={
+"type": "float",
+"value": 600.0
+}
+
+stage04_atmosphere_end={
+"type": "float",
+"value": 4500.0
+}
+
+stage04_atmosphere_strength={
+"type": "float",
+"value": 0.9
+}
+
 [debug]
 
 gdscript/warnings/unassigned_variable=2

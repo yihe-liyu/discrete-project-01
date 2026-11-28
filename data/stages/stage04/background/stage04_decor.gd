@@ -8,6 +8,14 @@ extends CoroutineScript
 @export_range(0.2, 2.0, 0.01) var ground_brightness: float = 1.10
 @export_range(0.2, 2.0, 0.01) var rock_brightness: float = 1.0
 
+@export_group("大气透视")
+## 基础雾色；会按 atmosphere_sky_blend 混入天空 horizon/tint。
+@export var atmosphere_color: Color = Color(0.68, 0.55, 0.56)
+@export_range(0.0, 1.0, 0.01) var atmosphere_sky_blend: float = 0.35
+@export_range(0.0, 8000.0, 10.0) var atmosphere_start: float = 600.0
+@export_range(1000.0, 8000.0, 10.0) var atmosphere_end: float = 4500.0
+@export_range(0.0, 1.0, 0.01) var atmosphere_strength: float = 0.9
+
 @export_group("前进速度")
 ## 山谷 / 地面 / 彩石统一前进速度。改这里三处一起变。
 @export var forward_speed: float = 80.0
@@ -32,6 +40,7 @@ func _on_start() -> void:
 		return
 	_apply_motion()
 	apply_brightness()
+	apply_atmosphere()
 	var bg: StageBackground = ctx.background
 	var we := bg.world_environment
 	if we == null or we.environment == null or we.environment.sky == null:
@@ -47,6 +56,28 @@ func _on_start() -> void:
 		RenderingServer.global_shader_parameter_set(
 			"stage04_sky_light", Vector3(sky.r, sky.g, sky.b))
 	_apply_dusk_sky_params()
+
+
+## 统一大气透视入口：颜色会按比例受天空 horizon/tint 影响。
+func apply_atmosphere() -> void:
+	if ctx == null or ctx.background == null:
+		return
+	var bg: StageBackground = ctx.background
+	var color := atmosphere_color
+	if bg.world_environment and bg.world_environment.environment:
+		var env := bg.world_environment.environment
+		if env.sky and env.sky.sky_material is ShaderMaterial:
+			var sm := env.sky.sky_material as ShaderMaterial
+			var horizon: Color = sm.get_shader_parameter("sky_horizon")
+			var tint_a: Color = sm.get_shader_parameter("tint_a")
+			var tint_b: Color = sm.get_shader_parameter("tint_b")
+			var sky_dusk := horizon.lerp(tint_a, 0.35).lerp(tint_b, 0.15)
+			color = color.lerp(sky_dusk, atmosphere_sky_blend)
+	RenderingServer.global_shader_parameter_set(
+		"stage04_atmosphere_color", Vector3(color.r, color.g, color.b))
+	RenderingServer.global_shader_parameter_set("stage04_atmosphere_start", atmosphere_start)
+	RenderingServer.global_shader_parameter_set("stage04_atmosphere_end", atmosphere_end)
+	RenderingServer.global_shader_parameter_set("stage04_atmosphere_strength", atmosphere_strength)
 
 
 ## 统一亮度入口：Inspector 或代码调完参数后可再次调用。

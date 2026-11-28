@@ -75,9 +75,9 @@ void fragment() {
 	// 天空色乘法染色：保留山壁本身明暗，只改变色彩倾向。
 	final_color *= mix(vec3(1.0), sky_light * 1.55, 0.10 + sky_lift * 0.12);
 	float atmo = atmosphere_factor(length(VERTEX));
-	ALBEDO = mix(final_color * 2.4 * brightness, atmosphere_color, atmo);
+	ALBEDO = mix(final_color * 2.4 * brightness, stage04_atmosphere_color, atmo);
 	EMISSION = mix(final_color * (0.30 + 0.85 * sky_lift) * brightness,
-		atmosphere_color * 0.28, atmo);
+		stage04_atmosphere_color * 0.28, atmo);
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.08;
 }

@@ -61,8 +61,8 @@ void fragment() {
 	col += vec3(0.035, 0.05, 0.06) * fleck;
 
 	float atmo = atmosphere_factor(length(VERTEX));
-	ALBEDO = mix(col * brightness, atmosphere_color, atmo);
-	EMISSION = mix(col * 0.12 * brightness, atmosphere_color * 0.04, atmo);
+	ALBEDO = mix(col * brightness, stage04_atmosphere_color, atmo);
+	EMISSION = mix(col * 0.12 * brightness, stage04_atmosphere_color * 0.04, atmo);
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.1;
 }

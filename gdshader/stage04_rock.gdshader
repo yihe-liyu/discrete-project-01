@@ -23,9 +23,9 @@ void fragment() {
 	vec3 col = v_color * (1.15 + 0.45 * facet);
 	col *= mix(vec3(1.0), stage04_sky_light * 1.45, 0.10);
 	float atmo = atmosphere_factor(length(VERTEX));
-	ALBEDO = mix(col * 1.35 * brightness, atmosphere_color, atmo);
+	ALBEDO = mix(col * 1.35 * brightness, stage04_atmosphere_color, atmo);
 	// 少量自发光，让石头在雾里也有一点可读的亮部。
 	EMISSION = mix(col * (0.12 + 0.10 * facet) * brightness,
-		atmosphere_color * 0.04, atmo);
+		stage04_atmosphere_color * 0.04, atmo);
 	ROUGHNESS = 0.95;
 }
