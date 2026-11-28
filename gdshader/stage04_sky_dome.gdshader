@@ -16,6 +16,9 @@ uniform float dusk_gradient_end : hint_range(0.0, 1.0) = 0.82;
 // 暖色彩带中心 / 宽度；想让橙色带更高就调大 center。
 uniform float dusk_band_center : hint_range(0.0, 1.0) = 0.30;
 uniform float dusk_band_width : hint_range(0.01, 0.6) = 0.24;
+// 记忆值水面的彩色层：低频有机噪声，五段色相。
+uniform float color_layer_strength : hint_range(0.0, 0.6) = 0.48;
+uniform float color_layer_scale : hint_range(0.5, 8.0) = 3.2;
 
 varying vec3 v_world;
 
@@ -42,6 +45,26 @@ float fbm(float x) {
 	return v;
 }
 
+float fbm2(vec2 p) {
+	float v = 0.0;
+	float a = 0.5;
+	for (int i = 0; i < 4; i++) {
+		v += a * noise(p);
+		p *= 2.03;
+		a *= 0.5;
+	}
+	return v;
+}
+
+vec3 memory_palette(float hue) {
+	if (hue < 0.2)      return mix(vec3(0.20, 0.30, 1.00), vec3(0.10, 0.60, 0.90), hue / 0.2);
+	else if (hue < 0.4) return mix(vec3(0.10, 0.60, 0.90), vec3(0.15, 0.75, 0.70), (hue - 0.2) / 0.2);
+	else if (hue < 0.6) return mix(vec3(0.15, 0.75, 0.70), vec3(0.60, 0.65, 0.25), (hue - 0.4) / 0.2);
+	else if (hue < 0.8) return mix(vec3(0.60, 0.65, 0.25), vec3(0.85, 0.40, 0.30), (hue - 0.6) / 0.2);
+	else                return mix(vec3(0.85, 0.40, 0.30), vec3(0.70, 0.20, 0.55), (hue - 0.8) / 0.2);
+}
+
+
 void vertex() {
 	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
@@ -58,6 +81,15 @@ void fragment() {
 	iri = mix(iri, tint_c, smoothstep(0.18, 0.45, h) * 0.45);
 	col = mix(col, iri, band * iridescence);
 	col = mix(col, tint_b, smoothstep(0.55, 0.9, h) * 0.10);
+
+	// 一层类似记忆值水面的彩色流动带：低频噪声，不画成硬色块。
+	vec2 layer_uv = SCREEN_UV * vec2(1.6, 1.0) * color_layer_scale;
+	float n1 = fbm2(layer_uv + vec2(TIME * 0.012, TIME * 0.006));
+	float n2 = fbm2(layer_uv * 1.9 + vec2(-TIME * 0.008, TIME * 0.010) + 11.0);
+	float hue = fract(n1 * 1.25 + n2 * 0.75 + TIME * 0.012);
+	float mask = smoothstep(0.42, 0.70, n1 * 0.65 + n2 * 0.35);
+	mask *= smoothstep(0.08, 0.30, h) * (1.0 - smoothstep(0.72, 0.96, h));
+	col = mix(col, memory_palette(hue), mask * color_layer_strength);
 
 	ALBEDO = col;
 }

@@ -8,6 +8,9 @@ extends CoroutineScript
 ## 暖色彩带中心高度；调大 = 橙色带往上移。
 @export_range(0.0, 1.0, 0.01) var dusk_band_center: float = 0.30
 @export_range(0.01, 0.6, 0.01) var dusk_band_width: float = 0.24
+## 类似记忆值水面的彩色流动层强度。
+@export_range(0.0, 0.6, 0.01) var dusk_color_layer_strength: float = 0.48
+@export_range(0.5, 8.0, 0.1) var dusk_color_layer_scale: float = 3.2
 
 
 func _on_start() -> void:
@@ -42,3 +45,5 @@ func _apply_dusk_sky_params() -> void:
 	mat.set_shader_parameter("dusk_gradient_end", dusk_gradient_end)
 	mat.set_shader_parameter("dusk_band_center", dusk_band_center)
 	mat.set_shader_parameter("dusk_band_width", dusk_band_width)
+	mat.set_shader_parameter("color_layer_strength", dusk_color_layer_strength)
+	mat.set_shader_parameter("color_layer_scale", dusk_color_layer_scale)
