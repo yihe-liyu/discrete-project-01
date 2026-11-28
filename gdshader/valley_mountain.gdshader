@@ -45,7 +45,10 @@ void fragment() {
 	vec3 base = mix(low_color, rock_color, 0.55);
 	// 大尺度岩体色差：用世界坐标的低频噪声，不跟三角面插值走。
 	float rock_noise = fbm(v_world_pos.xz * 0.018);
-	base = mix(base, rock_color, smoothstep(0.35, 0.72, rock_noise) * 0.35);
+	base = mix(base, rock_color, smoothstep(0.35, 0.72, rock_noise) * 0.45);
+	// 低频岩层：只做非常缓的横向色差，不形成亮暗条纹。
+	float strata = sin(v_world_pos.y * 0.012 + fbm(v_world_pos.xz * 0.01) * 3.0);
+	base *= 0.94 + 0.06 * strata;
 	vec3 final_color = mix(base, high_color, sky_lift * 0.45);
 	final_color = mix(final_color, haze_color, haze * 0.3);
 	ALBEDO = final_color * 2.4;

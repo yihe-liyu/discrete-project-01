@@ -7,6 +7,9 @@ uniform vec3 tint_a : source_color = vec3(0.48, 0.74, 0.8);
 uniform vec3 tint_b : source_color = vec3(0.7, 0.58, 0.84);
 uniform vec3 tint_c : source_color = vec3(0.9, 0.78, 0.56);
 uniform float iridescence : hint_range(0.0, 1.0) = 0.32;
+uniform vec3 sun_direction = vec3(0.0, 0.12, -1.0);
+uniform vec3 sun_color : source_color = vec3(1.0, 0.86, 0.64);
+uniform float sun_glow : hint_range(0.0, 1.0) = 0.22;
 
 varying vec3 v_world;
 
